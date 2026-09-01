@@ -1,0 +1,39 @@
+project_id: evidence-support-demo
+research_direction: Validate conflict-aware research control
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 1.0
+  max_experiments: 2
+  max_wall_time_hours: 1.0
+  max_api_cost_usd: 0.0
+claim:
+  claim_id: claim-matched-performance
+  text: Conflict-aware ranking improves correct pivots under matched compute.
+  claim_type: performance
+  strength: moderate
+  required_evidence_types: [matched held-out benchmark]
+  scientific_importance: 0.9
+  claim_relevance: 0.95
+result:
+  result_id: result-support
+  experiment_id: experiment-support
+  summary: Matched evaluation completed successfully.
+  metrics: {correct_pivot_delta: 0.11}
+  cost: {gpu_hours: 0.2, experiments: 1.0}
+interpretation:
+  claim_id: claim-matched-performance
+  evidence_type: matched held-out benchmark
+  expected: Conflict-aware ranking should improve correct pivot rate.
+  observed: Correct pivot rate improves reproducibly under matched inference compute.
+  relation: supports
+  reproducible: true
+  stability: 0.9
+  statistical_uncertainty: 0.04
+  confounders: []
+  alternative_explanations: []
+  benchmark_artifacts: []
+  compute_mismatch: false
+  data_leakage: false
+  implementation_artifacts: []
+pivot: null

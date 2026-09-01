@@ -19,6 +19,12 @@ class ProvenanceRecord(LibraryModel):
     version: str | None = None
     content_hash: str | None = None
     accessed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    license_id: str | None = None
+    license_url: str | None = None
+    access_scope: str | None = None
+    derivation_method: str | None = None
+    redistributable: bool | None = None
+    personal_data_removed: bool | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -55,6 +61,11 @@ class TasteCase(LibraryModel):
     venue_tags: list[str] = Field(default_factory=list)
     rhetorical_role: str | None = None
     figure_role: str | None = None
+    label_basis: str = "project_curated"
+    extractor_version: str | None = None
+    human_verified: bool = False
+    outcome_horizon: str | None = None
+    source_action_id: str | None = None
 
     @field_validator("preferred_action")
     @classmethod

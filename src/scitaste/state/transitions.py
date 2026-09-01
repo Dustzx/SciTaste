@@ -52,7 +52,17 @@ class TransitionError(ValueError):
     """Raised when a decision cannot be replayed against the supplied state."""
 
 
-def next_stage(action: MetaAction) -> ResearchStage:
+def next_stage(
+    action: MetaAction,
+    *,
+    from_stage: ResearchStage | None = None,
+) -> ResearchStage:
+    if action == MetaAction.ADVANCE and from_stage == ResearchStage.PILOT:
+        return ResearchStage.EVIDENCE
+    if action == MetaAction.ADVANCE and from_stage == ResearchStage.EVIDENCE:
+        return ResearchStage.COMMUNICATION
+    if action == MetaAction.REPRODUCE and from_stage == ResearchStage.EVIDENCE:
+        return ResearchStage.EVIDENCE
     try:
         return ACTION_STAGE[action]
     except KeyError as exc:  # pragma: no cover - enum/map completeness guard
@@ -62,8 +72,8 @@ def next_stage(action: MetaAction) -> ResearchStage:
 def apply_transition(state: ResearchState, decision: ResearchDecision) -> ResearchState:
     """Return the next state and append both decision and transition audit records."""
 
-    if state.status == ProjectStatus.COMPLETED:
-        raise TransitionError("a completed project cannot transition")
+    if state.status in {ProjectStatus.COMPLETED, ProjectStatus.DROPPED}:
+        raise TransitionError(f"a {state.status.value.lower()} project cannot transition")
     if decision.stage != state.current_stage.value:
         raise TransitionError(
             f"decision stage {decision.stage!r} does not match state stage "
@@ -75,12 +85,14 @@ def apply_transition(state: ResearchState, decision: ResearchDecision) -> Resear
         raise TransitionError("decision does not reference the current state snapshot")
 
     updated = state.model_copy(deep=True)
-    destination = next_stage(decision.selected_action.type)
+    destination = next_stage(decision.selected_action.type, from_stage=state.current_stage)
     revision = state.revision + 1
     updated.revision = revision
     updated.current_stage = destination
     if decision.selected_action.type == MetaAction.STOP:
         updated.status = ProjectStatus.COMPLETED
+    elif decision.selected_action.type == MetaAction.DROP:
+        updated.status = ProjectStatus.DROPPED
 
     updated.decision_history.append(decision.model_copy(deep=True))
     updated.transition_history.append(

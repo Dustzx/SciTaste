@@ -59,6 +59,31 @@ def test_stop_completes_and_prevents_more_transitions(research_state: ResearchSt
         apply_transition(completed, make_decision(completed, MetaAction.SEARCH, "late"))
 
 
+def test_drop_marks_project_terminal(research_state: ResearchState) -> None:
+    dropped = apply_transition(
+        research_state,
+        make_decision(research_state, MetaAction.DROP, "drop"),
+    )
+
+    assert dropped.status == ProjectStatus.DROPPED
+    with pytest.raises(TransitionError, match="dropped"):
+        apply_transition(dropped, make_decision(dropped, MetaAction.SEARCH, "late"))
+
+
+def test_advance_is_contextual_between_pilot_evidence_and_communication(
+    research_state: ResearchState,
+) -> None:
+    pilot = research_state.model_copy(update={"current_stage": ResearchStage.PILOT})
+    evidence = apply_transition(pilot, make_decision(pilot, MetaAction.ADVANCE, "evidence"))
+    communication = apply_transition(
+        evidence,
+        make_decision(evidence, MetaAction.ADVANCE, "communication"),
+    )
+
+    assert evidence.current_stage == ResearchStage.EVIDENCE
+    assert communication.current_stage == ResearchStage.COMMUNICATION
+
+
 def test_rejects_stale_and_duplicate_decisions(research_state: ResearchState) -> None:
     decision = make_decision(research_state, MetaAction.IDEATE, "idea")
     updated = apply_transition(research_state, decision)

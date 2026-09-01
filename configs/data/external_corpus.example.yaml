@@ -1,0 +1,36 @@
+schema_version: "1.0"
+
+# Unknown licences are rejected unless this is explicitly changed after review.
+allow_unknown_licenses: false
+
+# Paths are local and relative to this manifest. SciTaste never downloads them.
+# Keep local source snapshots outside Git.
+sources:
+  - source_id: openreview_reviews
+    source_type: openreview
+    path: ../../data/local/openreview_reviews.jsonl
+    format: jsonl
+    default_record_kind: taste
+    license:
+      status: unknown
+
+  - source_id: aries_revision_cases
+    source_type: aries
+    path: ../../data/local/aries_cases.json
+    default_record_kind: taste
+    license:
+      status: unknown
+
+  - source_id: casimir_decisions
+    source_type: casimir
+    path: ../../data/local/casimir_cases.jsonl
+    default_record_kind: taste
+    license:
+      status: unknown
+
+  - source_id: selected_accepted_papers
+    source_type: accepted_papers
+    path: ../../data/local/accepted_papers.jsonl
+    default_record_kind: knowledge
+    license:
+      status: unknown

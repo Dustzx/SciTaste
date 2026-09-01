@@ -51,6 +51,13 @@ class ResourceBudget(SciTasteModel):
     compute_constraints: list[str] = Field(default_factory=list)
 
 
+class ResourceUsage(SciTasteModel):
+    gpu_hours: float = Field(default=0.0, ge=0)
+    experiments: float = Field(default=0.0, ge=0)
+    wall_time_hours: float = Field(default=0.0, ge=0)
+    api_cost_usd: float = Field(default=0.0, ge=0)
+
+
 class LiteratureLandscape(SciTasteModel):
     solved_problems: list[str] = Field(default_factory=list)
     active_problems: list[str] = Field(default_factory=list)
@@ -157,17 +164,41 @@ class ExperimentPlan(SciTasteModel):
     objective: str
     falsifies: list[str] = Field(default_factory=list)
     estimated_cost: dict[str, float] = Field(default_factory=dict)
+    target_claim_ids: list[str] = Field(default_factory=list)
+    target_evidence_type: str | None = None
+    counterfactuals: list[str] = Field(default_factory=list)
+    matched_baselines: list[str] = Field(default_factory=list)
+    negative_controls: list[str] = Field(default_factory=list)
+    expected_information_gain: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class EvidenceItem(SciTasteModel):
     evidence_id: str
     source_type: str
+    evidence_type: str = "unspecified"
     experiment_id: str | None = None
     observation: str
     supports_claim_ids: list[str] = Field(default_factory=list)
     contradicts_claim_ids: list[str] = Field(default_factory=list)
+    relates_to_claim_ids: list[str] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
+    stability: float = Field(default=1.0, ge=0.0, le=1.0)
     cost: dict[str, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def claim_relations_do_not_overlap(self) -> EvidenceItem:
+        relations = [
+            set(self.supports_claim_ids),
+            set(self.contradicts_claim_ids),
+            set(self.relates_to_claim_ids),
+        ]
+        if (
+            relations[0] & relations[1]
+            or relations[0] & relations[2]
+            or relations[1] & relations[2]
+        ):
+            raise ValueError("one evidence item cannot have multiple relations to the same claim")
+        return self
 
 
 class EvidenceGraph(SciTasteModel):
@@ -184,6 +215,15 @@ class ScientificClaim(SciTasteModel):
     supporting_evidence_ids: list[str] = Field(default_factory=list)
     contradicting_evidence_ids: list[str] = Field(default_factory=list)
     status: str = "unsupported"
+    scientific_importance: float = Field(default=0.5, ge=0.0, le=1.0)
+    claim_relevance: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def evidence_roles_do_not_overlap(self) -> ScientificClaim:
+        overlap = set(self.supporting_evidence_ids) & set(self.contradicting_evidence_ids)
+        if overlap:
+            raise ValueError(f"evidence cannot both support and contradict: {sorted(overlap)}")
+        return self
 
 
 class NarrativeSpine(SciTasteModel):
@@ -251,6 +291,7 @@ class ResearchState(SciTasteModel):
     target_domain: str
     target_venue: str | None = None
     resource_budget: ResourceBudget = Field(default_factory=ResourceBudget)
+    resource_usage: ResourceUsage = Field(default_factory=ResourceUsage)
 
     literature_landscape: LiteratureLandscape | None = None
     research_intuitions: list[ResearchIntuition] = Field(default_factory=list)
@@ -272,6 +313,7 @@ class ResearchState(SciTasteModel):
 
     evidence_graph: EvidenceGraph = Field(default_factory=EvidenceGraph)
     claims: list[ScientificClaim] = Field(default_factory=list)
+    interpretation_history: list[dict[str, Any]] = Field(default_factory=list)
 
     narrative_spine: NarrativeSpine | None = None
     writing_state: WritingState | None = None
@@ -311,4 +353,24 @@ class ResearchState(SciTasteModel):
             unknown = portfolio_ids - idea_ids
             if unknown:
                 raise ValueError(f"idea portfolio references unknown ids: {sorted(unknown)}")
+        claim_ids = [claim.claim_id for claim in self.claims]
+        evidence_ids = [item.evidence_id for item in self.evidence_graph.items]
+        if len(claim_ids) != len(set(claim_ids)):
+            raise ValueError("claim ids must be unique")
+        if len(evidence_ids) != len(set(evidence_ids)):
+            raise ValueError("evidence ids must be unique")
+        known_claims = set(claim_ids)
+        known_evidence = set(evidence_ids)
+        for item in self.evidence_graph.items:
+            targets = {
+                *item.supports_claim_ids,
+                *item.contradicts_claim_ids,
+                *item.relates_to_claim_ids,
+            }
+            if targets - known_claims:
+                raise ValueError(f"evidence {item.evidence_id!r} references unknown claims")
+        for claim in self.claims:
+            linked = {*claim.supporting_evidence_ids, *claim.contradicting_evidence_ids}
+            if linked - known_evidence:
+                raise ValueError(f"claim {claim.claim_id!r} references unknown evidence")
         return self

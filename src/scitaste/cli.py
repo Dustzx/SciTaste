@@ -16,9 +16,11 @@ from scitaste.backends.openai_compatible import (
 )
 from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
+from scitaste.data.ingestion import ingest_corpus
 from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
+from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
@@ -89,6 +91,15 @@ def build_parser() -> argparse.ArgumentParser:
     library_build = library_commands.add_parser("build", help="Build separate local stores")
     _add_common_options(library_build, default_output="outputs/library")
     library_build.set_defaults(handler=_handle_library_build)
+    library_ingest = library_commands.add_parser(
+        "ingest", help="Ingest license-reviewed local corpus snapshots"
+    )
+    _add_common_options(
+        library_ingest,
+        default_output="outputs/library-ingest",
+        default_backend="local",
+    )
+    library_ingest.set_defaults(handler=_handle_library_ingest)
     discover = commands.add_parser("discover", help="Run the unified discovery loop")
     _add_common_options(discover, default_output="outputs/discovery")
     discover.set_defaults(handler=_handle_discover)
@@ -97,7 +108,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_single_planned(commands, "reformulate", "Phase 4")
     _add_single_planned(commands, "ideate", "Phase 4")
     _add_nested_planned(commands, "portfolio", "select", "Phase 4")
-    _add_nested_planned(commands, "evidence", "plan", "Phase 5")
+    evidence = commands.add_parser("evidence", help="Evidence-loop workflows")
+    evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)
+    evidence_plan = evidence_commands.add_parser("plan", help="Plan and evaluate one evidence gap")
+    _add_common_options(evidence_plan, default_output="outputs/evidence")
+    evidence_plan.add_argument("--state", type=Path, default=None)
+    evidence_plan.set_defaults(handler=_handle_evidence_plan)
     _add_single_planned(commands, "write", "Phase 6")
     _add_single_planned(commands, "review", "Phase 6")
     _add_nested_planned(commands, "figure", "build", "Phase 7")
@@ -232,6 +248,25 @@ def _handle_library_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_library_ingest(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("library ingestion supports only --backend local")
+    if args.config is None:
+        raise ValueError("library ingest requires --config PATH")
+    if args.dry_run:
+        config = _load_config(args.config)
+        print(
+            json.dumps(
+                {"status": "planned", "source_count": len(config.get("sources", []))},
+                indent=2,
+            )
+        )
+        return 0
+    report = ingest_corpus(args.config, args.output)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 0
+
+
 def _handle_discover(args: argparse.Namespace) -> int:
     if args.backend != "mock":
         raise ValueError("offline Phase 4 discovery currently supports only --backend mock")
@@ -251,6 +286,33 @@ def _handle_discover(args: argparse.Namespace) -> int:
         )
         return 0
     summary = DiscoveryLoop(seed=args.seed).run(scenario, output_dir=args.output)
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_evidence_plan(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("offline Phase 5 evidence workflow supports only --backend mock")
+    config_path = args.config or Path("configs/evidence/contradiction_demo.yaml")
+    scenario = load_evidence_scenario(config_path)
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": scenario.project_id,
+                    "claim_id": scenario.claim.claim_id,
+                    "resume_state": str(args.state) if args.state else None,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    summary = EvidenceWorkflow(seed=args.seed).run(
+        scenario,
+        output_dir=args.output,
+        state_path=args.state,
+    )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 

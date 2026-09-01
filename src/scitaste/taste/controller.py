@@ -10,6 +10,7 @@ from scitaste.schema.actions import ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.persistence import snapshot_id
 from scitaste.state.research_state import ResearchState, ResourceBudget
+from scitaste.state.resources import remaining_budget
 from scitaste.taste.retriever import TasteQuery, TasteRetrievalPolicy, TasteRetriever
 from scitaste.taste.utility import UtilityPolicy
 
@@ -58,7 +59,7 @@ class TasteController:
         if len({action.action_id for action in actions}) != len(actions):
             raise ValueError("candidate action ids must be unique")
 
-        active_budget = budget or state.resource_budget
+        active_budget = budget or remaining_budget(state.resource_budget, state.resource_usage)
         assessments = [self.policy.assess(action, active_budget) for action in actions]
         feasible = [item for item in assessments if item.feasible]
         if not feasible:

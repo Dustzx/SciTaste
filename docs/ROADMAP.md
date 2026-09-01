@@ -9,8 +9,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 2 — intrinsic calibration | done | reproducible Idea, Experiment, Evidence, Writing, and Review taste profiles |
 | Phase 3 — taste library | in progress | knowledge/taste stores are independent; provenance and stage retrieval tested |
 | Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
-| Phase 5 — evidence loop | next | claims update from evidence; gaps and contradictory-evidence pivots work |
-| Phase 6 — communication loop | planned | narrative/contracts/review obligations can route back to experiments |
+| Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
+| Phase 6 — communication loop | next | narrative/contracts/review obligations can route back to experiments |
 | Phase 7 — figures | planned | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 8 — SciTasteBench | deferred | intrinsic/augmented evaluation is controlled and reproducible |
 | Phase 9 — matched-budget study | deferred | baseline/system comparisons use identical tasks and budgets |
@@ -31,6 +31,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Remaining Phase 3 corpus work: ingest and license-check selected OpenReview,
   ARIES, CASIMIR, and accepted-paper records. The current seed corpus comes only
   from the project specification and exists to test the pipeline.
+- Done: local JSON/JSONL ingestion, explicit Knowledge/Taste routing, content
+  hashing, per-library deduplication, idempotency, and reject-by-default license
+  policy. No external source content is committed or downloaded automatically.
 
 ## Phase 4 completion
 
@@ -46,6 +49,21 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Integration acceptance: weak intuition takes two probes and reformulates;
   strong prior evidence takes one sanity probe. Both finish at `PILOT` through
   the same loop implementation.
+
+## Phase 5 completion
+
+- Typed claim/evidence graphs and five claim states: supported, partially
+  supported, unsupported, contradicted, and overclaimed.
+- Evidence-gap planning ranks information value and always specifies a
+  falsification test, counterfactual, matched baseline, and negative control.
+- Interpretation keeps raw result, observation, interpretation, and claim update
+  distinct; leakage, confounders, artifacts, mismatch, or instability prevent
+  direct claim promotion.
+- Unsupported claims route to evidence collection, uncertain results to
+  reproduction, supported claims forward, and stable contradictions to pivot.
+- Phase 4 `PILOT` state can resume into `PILOT → ANALYZE → EVIDENCE`; a stable
+  contradiction retains its evidence and creates a traceable problem/new idea.
+- Resource checks use cumulative project usage, and `DROP` is terminal.
 
 ## Project controls
 

@@ -10,8 +10,8 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phase 0/1, Phase 2 calibration, and Phase 4 Discovery Loop are implemented; the
-Phase 3 library core is usable while external corpus expansion continues:
+Phases 0/1, 2, 4, and 5 are implemented; the Phase 3 library and ingestion core
+is usable while license-reviewed external corpus expansion continues:
 
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
@@ -30,7 +30,11 @@ Phase 3 library core is usable while external corpus expansion continues:
   decision log;
 - one adaptive Hypothesis–Probe–Reformulate loop with structured literature
   landscape, falsifiable hypotheses, diagnostic probes, problem formation,
-  normalized mature ideas, portfolios, and evidence-backed ideation.
+  normalized mature ideas, portfolios, and evidence-backed ideation;
+- claim/evidence graphs, evidence-gap planning, interpretation criticism,
+  cumulative resource accounting, and contradiction-driven pivots;
+- local-only, license-gated ingestion for OpenReview-, ARIES-, CASIMIR-, and
+  accepted-paper-shaped snapshots.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -109,6 +113,40 @@ The first trajectory probes, is contradicted, reformulates, and probes again.
 The second performs one sanity check before maturing an idea. `evidence-first-like`
 and `idea-first-like` are computed descriptions of those trajectories, not
 hard-coded execution modes.
+
+## Offline Evidence Loop
+
+Run a supported claim or a stable contradictory result:
+
+```bash
+.venv/bin/scitaste evidence plan \
+  --config configs/evidence/support_demo.yaml \
+  --output outputs/evidence-support --seed 7
+.venv/bin/scitaste evidence plan \
+  --config configs/evidence/contradiction_demo.yaml \
+  --state outputs/discovery-strong/research_state.json \
+  --output outputs/evidence-pivot --seed 7
+```
+
+The second command explicitly resumes the Phase 4 `PILOT`, executes and analyzes
+it, records evidence and interpretation, then pivots without discarding the
+contradictory result. Plans include a falsification test, counterfactual, matched
+baseline, and negative control.
+
+## License-gated corpus ingestion
+
+Copy `configs/data/external_corpus.example.yaml`, point it to local snapshots,
+and mark a source `permitted` only after recording its license identifier and
+authoritative terms URL:
+
+```bash
+.venv/bin/scitaste library ingest \
+  --backend local --config path/to/reviewed-manifest.yaml \
+  --output outputs/external-library
+```
+
+No downloader is included. Unknown/restricted licenses and incomplete decision
+precedents are rejected. See [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
 
 ## AutoResearchClaw baseline
 

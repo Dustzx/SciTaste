@@ -1,0 +1,50 @@
+project_id: evidence-contradiction-demo
+research_direction: Test whether conflict-aware control improves research pivots
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 1.0
+  max_experiments: 3
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+claim:
+  claim_id: claim-conflict-controller
+  text: Conflict-aware ranking improves correct pivots under matched compute.
+  claim_type: performance
+  strength: moderate
+  required_evidence_types: [matched held-out benchmark]
+  scientific_importance: 0.9
+  claim_relevance: 0.95
+result:
+  result_id: result-conflict-pilot
+  experiment_id: experiment-conflict-pilot
+  summary: Matched pilot completed successfully.
+  metrics: {correct_pivot_delta: -0.07}
+  cost: {gpu_hours: 0.2, experiments: 1.0}
+interpretation:
+  claim_id: claim-conflict-controller
+  evidence_type: matched held-out benchmark
+  expected: Conflict-aware ranking should improve correct pivot rate.
+  observed: The controller reliably improves clear cases but becomes worse at balanced conflict boundaries.
+  relation: contradicts
+  reproducible: true
+  stability: 0.9
+  statistical_uncertainty: 0.05
+  confounders: []
+  alternative_explanations: []
+  benchmark_artifacts: []
+  compute_mismatch: false
+  data_leakage: false
+  implementation_artifacts: []
+pivot:
+  explanation_gap: The current conflict scalar cannot represent balanced but structurally different evidence.
+  importance: The boundary predicts incorrect and expensive research pivots.
+  boundary_conditions: [balanced support and contradiction, matched compute]
+  idea_seed:
+    generator: evidence-backed
+    hypothesis: Typed evidence topology distinguishes conflicts with identical scalar scores.
+    proposed_mechanism: Replace scalar conflict with typed support/contradiction graph features.
+    expected_validation: [boundary-stratified pilot, topology ablation]
+    expected_cost: {gpu_hours: 0.3, experiments: 1.0, implementation_risk: 0.3}
+    expected_value: {problem_validity: 0.95, novelty: 0.85, feasibility: 0.85}
+    main_risk: Evidence-edge extraction may introduce annotation noise.
