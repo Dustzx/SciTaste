@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a reproducible SciTaste defect
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected invariant or behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SciTaste and substrate versions
+    validations:
+      required: true

@@ -1,0 +1,30 @@
+name: Milestone feature
+description: Propose implementation work tied to the project specification
+title: "[Phase N] "
+labels: [enhancement]
+body:
+  - type: input
+    id: phase
+    attributes:
+      label: Roadmap phase
+      placeholder: "Phase 2"
+    validations:
+      required: true
+  - type: textarea
+    id: clauses
+    attributes:
+      label: Specification clauses
+      description: Name the authoritative sections this issue implements.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: List observable behavior and tests required to close the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and deferred work

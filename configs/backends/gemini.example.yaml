@@ -1,0 +1,10 @@
+provider: google-gemini
+base_url: https://generativelanguage.googleapis.com/v1beta/openai
+model: gemini-3.7-flash
+api_key_env: GEMINI_API_KEY
+api_style: chat_completions
+timeout_seconds: 180
+max_retries: 2
+json_mode: false
+extra_headers: {}
+extra_body: {}

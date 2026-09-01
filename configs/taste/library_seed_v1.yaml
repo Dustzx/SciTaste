@@ -1,0 +1,96 @@
+knowledge_documents:
+  - document_id: knowledge-discovery-loop
+    title: SciTaste Hypothesis–Probe–Reformulate specification
+    abstract: The discovery loop separates intuition, working hypothesis, targeted probe, problem, and mature idea.
+    content: Cheap diagnostic probes should reduce uncertainty before expensive method commitment when problem evidence is weak.
+    domain_tags: [autonomous-research, discovery]
+    method_tags: [diagnostic-probe]
+    provenance:
+      - source_type: project_specification
+        locator: PROJECT_SPEC.md
+        version: v1.1
+
+  - document_id: knowledge-evidence-loop
+    title: SciTaste evidence-loop specification
+    abstract: Evidence may support, remain inconclusive, or contradict an active hypothesis.
+    content: Contradictory evidence must be retained and can generate an observation, a new problem, and a new candidate idea.
+    domain_tags: [autonomous-research, evidence]
+    method_tags: [evidence-backed-ideation]
+    provenance:
+      - source_type: project_specification
+        locator: PROJECT_SPEC.md
+        version: v1.1
+
+taste_cases:
+  - case_id: taste-probe-before-commitment
+    stage: DISCOVERY
+    context_summary: Problem evidence is weak, behavior is unclear, and a low-cost controlled probe can resolve competing explanations.
+    problem_pattern: Premature commitment under high uncertainty.
+    evidence_state: Only a speculative working hypothesis is available.
+    candidate_actions: [PROBE, IDEATE]
+    preferred_action: PROBE
+    rejected_actions: [IDEATE]
+    decision_principle: Prefer the cheapest action that materially reduces decision-relevant uncertainty.
+    why_preferred: A probe establishes whether a mature problem exists before implementation cost is incurred.
+    outcome_summary: A stable contradiction exposed a more useful failure boundary.
+    confidence: 0.9
+    domain_tags: [autonomous-research]
+    venue_tags: []
+    provenance:
+      - source_type: project_specification
+        locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#12.4
+        version: v1.1
+
+  - case_id: taste-review-add-baseline
+    stage: REVIEW
+    context_summary: A reviewer identifies a missing baseline that could change the central empirical conclusion.
+    reviewer_context: The comparison is required to establish that gains do not come from extra compute.
+    candidate_actions: [RESPOND, ADD_BASELINE, NARROW_CLAIM]
+    preferred_action: ADD_BASELINE
+    rejected_actions: [RESPOND]
+    decision_principle: Route evidence-bearing reviewer concerns back into the Evidence Loop.
+    why_preferred: Rewriting cannot close an obligation whose truth depends on a new controlled result.
+    outcome_summary: The matched baseline determines whether the claim survives or must be narrowed.
+    confidence: 0.95
+    domain_tags: [autonomous-research]
+    venue_tags: [general-ml]
+    provenance:
+      - source_type: project_specification
+        locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#21.4
+        version: v1.1
+
+  - case_id: taste-introduction-limitation
+    stage: COMMUNICATION
+    context_summary: The introduction must transition from prior progress to a specific unresolved failure.
+    candidate_actions: [WRITE, NARROW_CLAIM]
+    preferred_action: WRITE
+    rejected_actions: []
+    decision_principle: Use the paragraph to expose the evidence-backed limitation, not to repeat background.
+    why_preferred: The rhetorical move makes the research need legible before presenting the method.
+    outcome_summary: The narrative spine remains aligned with the supported problem.
+    confidence: 0.8
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    rhetorical_role: expose limitation
+    provenance:
+      - source_type: project_specification
+        locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#19.2
+        version: v1.1
+
+  - case_id: taste-figure-mechanism
+    stage: COMMUNICATION
+    context_summary: A method figure should explain which evidence enters the controller and which selected action reaches the executor.
+    candidate_actions: [DESIGN_FIGURE, WRITE]
+    preferred_action: DESIGN_FIGURE
+    rejected_actions: [WRITE]
+    decision_principle: Visualize the scientific relation that is difficult to recover from prose alone.
+    why_preferred: The control boundary and feedback loop are the intended reader takeaway.
+    outcome_summary: The figure contract emphasizes controller ownership and executor isolation.
+    confidence: 0.85
+    domain_tags: [autonomous-research]
+    venue_tags: [general-ml]
+    figure_role: mechanism
+    provenance:
+      - source_type: project_specification
+        locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#20.1
+        version: v1.1

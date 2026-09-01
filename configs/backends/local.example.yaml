@@ -1,0 +1,10 @@
+provider: local-openai-compatible
+base_url: http://127.0.0.1:8000/v1
+model: replace-with-served-model-id
+api_key_env: null
+api_style: chat_completions
+timeout_seconds: 180
+max_retries: 1
+json_mode: true
+extra_headers: {}
+extra_body: {}

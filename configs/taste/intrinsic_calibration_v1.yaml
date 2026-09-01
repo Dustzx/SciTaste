@@ -1,0 +1,73 @@
+suite_id: scitaste-intrinsic-smoke
+version: "1.0"
+description: Offline fixed-candidate smoke suite for five scientific-taste stages.
+cases:
+  - case_id: idea-weak-problem-evidence
+    task: idea
+    stage: DISCOVERY
+    decision_context: A polished method idea exists, but the alleged failure boundary has not been reproduced and a cheap controlled probe is available.
+    preferred_action_id: idea-probe
+    scripted_selection_id: idea-probe
+    candidate_actions:
+      - action_id: idea-commit
+        type: IDEATE
+        description: Commit to the polished mechanism and begin full implementation.
+      - action_id: idea-probe
+        type: PROBE
+        description: Reproduce and stratify the alleged failure before mature ideation.
+
+  - case_id: experiment-confounder
+    task: experiment
+    stage: EVIDENCE
+    decision_context: The proposed method improves accuracy but uses twice the compute and a larger training set than the baseline.
+    preferred_action_id: experiment-matched
+    scripted_selection_id: experiment-matched
+    candidate_actions:
+      - action_id: experiment-scale
+        type: EXPERIMENT
+        description: Run more seeds using the current unmatched setup.
+      - action_id: experiment-matched
+        type: ADD_BASELINE
+        description: Add a compute- and data-matched baseline before strengthening the claim.
+
+  - case_id: evidence-contradiction
+    task: evidence
+    stage: EVIDENCE
+    decision_context: A preregistered falsification test contradicts the mechanism claim while the aggregate benchmark score remains positive.
+    preferred_action_id: evidence-reformulate
+    scripted_selection_id: evidence-reformulate
+    candidate_actions:
+      - action_id: evidence-ignore
+        type: COLLECT_EVIDENCE
+        description: Collect additional supportive aggregate benchmarks and omit the falsification result.
+      - action_id: evidence-reformulate
+        type: PIVOT
+        description: Preserve the contradiction, narrow the claim, and formulate the unexpected pattern as a new problem.
+
+  - case_id: writing-overclaim
+    task: writing
+    stage: COMMUNICATION
+    decision_context: Evidence supports two vision datasets, but the draft claims universal cross-domain generalization.
+    preferred_action_id: writing-narrow
+    scripted_selection_id: writing-narrow
+    candidate_actions:
+      - action_id: writing-polish
+        type: WRITE
+        description: Keep the universal claim and improve its rhetorical confidence.
+      - action_id: writing-narrow
+        type: NARROW_CLAIM
+        description: Restrict the claim to the tested settings and state the untested scope.
+
+  - case_id: review-new-evidence
+    task: review
+    stage: REVIEW
+    decision_context: A reviewer identifies a missing strong baseline that could reverse the main empirical conclusion.
+    preferred_action_id: review-baseline
+    scripted_selection_id: review-clarify
+    candidate_actions:
+      - action_id: review-clarify
+        type: RESPOND
+        description: Rewrite the related-work paragraph to explain why the baseline was omitted.
+      - action_id: review-baseline
+        type: ADD_BASELINE
+        description: Run the missing baseline under matched conditions and update claims from the result.

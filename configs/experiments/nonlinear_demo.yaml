@@ -1,0 +1,12 @@
+project_id: nonlinear-demo
+research_direction: Diagnose brittle scientific-agent decisions
+target_domain: autonomous-research
+target_venue: null
+seed: 7
+budget:
+  gpu_hours: 1.0
+  max_experiments: 3
+  max_wall_time_hours: 1.0
+  max_api_cost_usd: 0.0
+  dataset_constraints: []
+  compute_constraints: ["CPU-only demo"]

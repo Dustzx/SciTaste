@@ -1,0 +1,76 @@
+# Architecture
+
+## Boundary
+
+```text
+ResearchState → candidate ResearchAction set → TasteController
+      ↑                                      ↓
+      └──── outcome ← ResearchExecutor ← ResearchDecision
+```
+
+SciTaste owns the state, action ranking, transition, and decision log. An executor
+returns observations and artifacts but cannot select the next global action.
+
+## Phase 0-3 components
+
+- `schema`: stable action and decision interchange models.
+- `state`: the canonical state, nonlinear transition reducer, and atomic store.
+- `taste`: deterministic, training-free ranking, intrinsic calibration,
+  stage-aware precedent retrieval, and budget-aware utility.
+- `backends`: fixed-candidate provider-neutral contract, scripted/replay modes,
+  and an explicitly invoked OpenAI-compatible HTTP adapter.
+- `data`: separate typed Knowledge and Taste stores with source provenance.
+- `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
+- `cli`: thin composition root; domain behavior stays in the packages above.
+
+## Invariants
+
+1. Every selected action belongs to the supplied candidate set.
+2. Every transition references a logged decision.
+3. State revisions increase monotonically.
+4. State snapshots are content-addressed and atomically replaced.
+5. Ties are deterministic for a fixed seed.
+6. `STOP` is the only action that completes a project.
+7. Backend-specific details do not enter taste utility or state schemas.
+8. Intrinsic calibration performs no retrieval; augmented decisions log every
+   retrieved taste-case identifier.
+9. Knowledge documents cannot be inserted into the Taste store, and taste cases
+   cannot be inserted into the Knowledge store.
+10. Live backends read secrets from environment variables and are never selected
+    implicitly or by test fallback.
+
+## Architecture decision records
+
+### ADR-001: Pydantic JSON models
+
+Status: accepted. Persistent and boundary-crossing models use Pydantic v2 for
+validation and forward-compatible JSON serialization.
+
+### ADR-002: Reducer-style transitions
+
+Status: accepted. `apply_transition` returns a deep copy rather than mutating the
+input, making replay and rollback predictable.
+
+### ADR-003: Pinned substrate submodule
+
+Status: accepted. AutoResearchClaw is pinned at v0.5.0 (`12d3fd8`) and loaded
+lazily through an adapter. SciTaste remains importable and testable without
+installing the substrate package.
+
+### ADR-004: Deterministic controller before LLM controller
+
+Status: accepted. Phase 1 uses explicit utility reasoning and stable tie-breaking.
+Phase 2 can add fixed-prompt backends without changing the controller contract.
+
+### ADR-005: Exact recording/replay before live-provider dependence
+
+Status: accepted. A live request is fingerprinted from its complete fixed
+candidate contract and can be recorded once, then replayed only when the request
+matches exactly. Offline development therefore remains possible without silently
+changing the experimental condition.
+
+### ADR-006: Knowledge and taste are different data products
+
+Status: accepted. Factual documents and decision precedents use different schemas,
+files, retrieval queries, and runtime type checks. Taste cases preserve the source,
+the rejected alternatives, and the reason one action was preferable.

@@ -1,0 +1,10 @@
+provider: deepseek
+base_url: https://api.deepseek.com
+model: deepseek-v4-pro
+api_key_env: DEEPSEEK_API_KEY
+api_style: chat_completions
+timeout_seconds: 180
+max_retries: 2
+json_mode: true
+extra_headers: {}
+extra_body: {}

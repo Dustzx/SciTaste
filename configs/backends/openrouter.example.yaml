@@ -1,0 +1,15 @@
+provider: openrouter
+base_url: https://openrouter.ai/api/v1
+model: openai/gpt-5.6-terra
+api_key_env: OPENROUTER_API_KEY
+api_style: chat_completions
+timeout_seconds: 180
+max_retries: 2
+json_mode: false
+extra_headers:
+  HTTP-Referer: https://github.com/Dustzx/SciTaste
+  X-Title: SciTaste
+extra_body:
+  provider:
+    allow_fallbacks: false
+    data_collection: deny
