@@ -1,0 +1,83 @@
+project_id: discovery-weak-intuition
+research_direction: Diagnose brittle scientific-agent decisions
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 2.0
+  max_experiments: 4
+  max_wall_time_hours: 3.0
+  max_api_cost_usd: 0.0
+  compute_constraints: [CPU-compatible diagnostics]
+landscape_findings:
+  - category: active_problem
+    statement: Research agents make unstable decisions under ambiguous evidence.
+    source_ids: [project-spec-6.1]
+  - category: evaluation_gap
+    statement: Aggregate success rates hide why research trajectories fail.
+    source_ids: [project-spec-12.3]
+  - category: unexplained_failure
+    statement: Larger models still pivot inconsistently when evidence conflicts.
+    source_ids: [project-spec-42.3]
+intuition:
+  statement: Model scale may be the primary cause of unstable research decisions.
+  source: literature
+  confidence: 0.3
+initial_hypothesis:
+  statement: Insufficient model scale causes most unstable research decisions.
+  falsifiable_predictions:
+    - Larger models should fail substantially less in every evidence stratum.
+  proposed_probe_types: [cross-model comparison]
+  confidence: 0.3
+reformulations:
+  - statement: Evidence-conflict boundaries, rather than model scale, cause unstable decisions.
+    falsifiable_predictions:
+      - Instability should concentrate in matched cases with contradictory evidence.
+    proposed_probe_types: [failure stratification]
+    confidence: 0.55
+probe_signals:
+  - observation: Model size has little effect after matching the evidence-conflict stratum.
+    expected: false
+    reproducible: true
+    stability: 0.9
+    effect_size: 0.08
+    boundary_conditions: [matched task difficulty, contradictory evidence]
+    alternative_explanations: [prompt sensitivity]
+  - observation: Decision instability rises sharply only at reproducible evidence-conflict boundaries.
+    expected: true
+    reproducible: true
+    stability: 0.88
+    effect_size: 0.72
+    boundary_conditions: [contradictory evidence, similar aggregate utility]
+    alternative_explanations: [calibration error]
+problem:
+  explanation_gap: Aggregate utility scores do not represent conflict structure or targeted uncertainty reduction.
+  importance: Unstable choices waste experiments and make autonomous research trajectories irreproducible.
+idea_seeds:
+  - generator: failure-mechanism
+    hypothesis: Explicit evidence-conflict features improve decision stability.
+    proposed_mechanism: Conflict-aware action ranking with targeted re-probing.
+    expected_validation: [matched conflict benchmark, correct pivot rate, decision stability]
+    expected_cost: {gpu_hours: 0.2, experiments: 1, implementation_risk: 0.2}
+    expected_value: {problem_validity: 0.95, novelty: 0.85, feasibility: 0.9, expected_empirical_signal: 0.85}
+    main_risk: Synthetic evidence conflicts may not transfer to full research trajectories.
+  - generator: representation-change
+    hypothesis: Representing support and contradiction separately prevents unstable aggregation.
+    proposed_mechanism: Signed evidence graph features for candidate-action comparison.
+    expected_validation: [ablation, conflict sensitivity, calibration]
+    expected_cost: {gpu_hours: 0.3, experiments: 1, implementation_risk: 0.35}
+    expected_value: {problem_validity: 0.9, novelty: 0.8, feasibility: 0.8, expected_empirical_signal: 0.75}
+    main_risk: Graph construction could introduce subjective labels.
+  - generator: evaluation-centric
+    hypothesis: Existing aggregate metrics obscure scientifically important pivot failures.
+    proposed_mechanism: A diagnostic suite stratified by evidence-conflict geometry.
+    expected_validation: [inter-rater agreement, failure predictiveness]
+    expected_cost: {gpu_hours: 0.05, experiments: 1, implementation_risk: 0.15}
+    expected_value: {problem_validity: 0.9, novelty: 0.65, feasibility: 0.95, evidence_tractability: 0.9}
+    main_risk: A diagnostic contribution alone may have limited venue fit.
+  - generator: system-level
+    hypothesis: Larger deliberation budgets resolve evidence conflict.
+    proposed_mechanism: Multi-agent deliberation before every research decision.
+    expected_validation: [budget-matched comparison, latency analysis]
+    expected_cost: {gpu_hours: 1.5, experiments: 2, implementation_risk: 0.8}
+    expected_value: {problem_validity: 0.5, novelty: 0.35, feasibility: 0.45, expected_empirical_signal: 0.5}
+    main_risk: Gains may come only from additional inference compute.

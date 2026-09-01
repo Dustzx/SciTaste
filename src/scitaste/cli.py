@@ -18,6 +18,7 @@ from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
+from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
@@ -88,7 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
     library_build = library_commands.add_parser("build", help="Build separate local stores")
     _add_common_options(library_build, default_output="outputs/library")
     library_build.set_defaults(handler=_handle_library_build)
-    _add_single_planned(commands, "discover", "Phase 4")
+    discover = commands.add_parser("discover", help="Run the unified discovery loop")
+    _add_common_options(discover, default_output="outputs/discovery")
+    discover.set_defaults(handler=_handle_discover)
     _add_single_planned(commands, "hypothesize", "Phase 4")
     _add_single_planned(commands, "probe", "Phase 4")
     _add_single_planned(commands, "reformulate", "Phase 4")
@@ -226,6 +229,29 @@ def _handle_library_build(args: argparse.Namespace) -> int:
         return 0
     manifest = build_libraries(config_path, args.output)
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_discover(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("offline Phase 4 discovery currently supports only --backend mock")
+    config_path = args.config or Path("configs/experiments/discovery_weak.yaml")
+    scenario = load_discovery_scenario(config_path)
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": scenario.project_id,
+                    "probe_signal_count": len(scenario.probe_signals),
+                    "candidate_idea_count": len(scenario.idea_seeds),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    summary = DiscoveryLoop(seed=args.seed).run(scenario, output_dir=args.output)
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 
 

@@ -53,6 +53,7 @@ class PreferenceResponse(BaseModel):
     raw_response: str | None = None
     raw_response_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     latency_ms: float | None = Field(default=None, ge=0)
+    semantic_attempts: int = Field(default=1, ge=1)
     usage: Usage = Field(default_factory=Usage)
     cached: bool = False
 

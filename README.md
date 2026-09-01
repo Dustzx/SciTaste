@@ -10,7 +10,8 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phase 0/1 is implemented, and the Phase 2/3 offline foundation is now usable:
+Phase 0/1, Phase 2 calibration, and Phase 4 Discovery Loop are implemented; the
+Phase 3 library core is usable while external corpus expansion continues:
 
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
@@ -26,7 +27,10 @@ Phase 0/1 is implemented, and the Phase 2/3 offline foundation is now usable:
 - physically and schematically separate Knowledge and Taste libraries;
 - provenance-preserving taste cases and stage-aware precedent retrieval;
 - intrinsic and retrieval-augmented controller modes with precedent IDs in the
-  decision log.
+  decision log;
+- one adaptive Hypothesis–Probe–Reformulate loop with structured literature
+  landscape, falsifiable hypotheses, diagnostic probes, problem formation,
+  normalized mature ideas, portfolios, and evidence-backed ideation.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -87,6 +91,24 @@ export BAILIAN_BASE_URL='https://dashscope.aliyuncs.com/compatible-mode/v1'
 No live provider is contacted by tests, installation, library building, demo, or
 dry-run commands. See [`docs/API_PROVIDERS.md`](docs/API_PROVIDERS.md) for the
 recommended provider strategy and reproducibility controls.
+
+## Offline Discovery Loop
+
+Run the weak-intuition and strong-hypothesis scenarios through the same engine:
+
+```bash
+.venv/bin/scitaste discover \
+  --config configs/experiments/discovery_weak.yaml \
+  --output outputs/discovery-weak --seed 7
+.venv/bin/scitaste discover \
+  --config configs/experiments/discovery_strong.yaml \
+  --output outputs/discovery-strong --seed 7
+```
+
+The first trajectory probes, is contradicted, reformulates, and probes again.
+The second performs one sanity check before maturing an idea. `evidence-first-like`
+and `idea-first-like` are computed descriptions of those trajectories, not
+hard-coded execution modes.
 
 ## AutoResearchClaw baseline
 

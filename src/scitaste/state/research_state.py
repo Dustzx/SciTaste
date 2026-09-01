@@ -34,6 +34,14 @@ class ProjectStatus(StrEnum):
     DROPPED = "DROPPED"
 
 
+class WorkingHypothesisStatus(StrEnum):
+    PROVISIONAL = "provisional"
+    SUPPORTED = "supported"
+    REFINED = "refined"
+    CONTRADICTED = "contradicted"
+    DISCARDED = "discarded"
+
+
 class ResourceBudget(SciTasteModel):
     gpu_hours: float | None = Field(default=None, ge=0)
     max_experiments: int | None = Field(default=None, ge=0)
@@ -66,21 +74,27 @@ class WorkingHypothesis(SciTasteModel):
     hypothesis_id: str
     statement: str
     derived_from_intuition_ids: list[str] = Field(default_factory=list)
+    derived_from_hypothesis_ids: list[str] = Field(default_factory=list)
     falsifiable_predictions: list[str] = Field(default_factory=list)
     proposed_probe_types: list[str] = Field(default_factory=list)
     supporting_evidence_ids: list[str] = Field(default_factory=list)
     contradicting_evidence_ids: list[str] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
-    status: str = "provisional"
+    status: WorkingHypothesisStatus = WorkingHypothesisStatus.PROVISIONAL
 
 
 class ResearchObservation(SciTasteModel):
     observation_id: str
     statement: str
     source_result_id: str | None = None
+    hypothesis_id: str | None = None
+    probe_type: str | None = None
     reproducible: bool | None = None
     stability: float | None = Field(default=None, ge=0.0, le=1.0)
     expected: bool | None = None
+    effect_size: float | None = None
+    boundary_conditions: list[str] = Field(default_factory=list)
+    alternative_explanations: list[str] = Field(default_factory=list)
 
 
 class ResearchProblem(SciTasteModel):
@@ -101,7 +115,11 @@ class ResearchIdea(SciTasteModel):
     proposed_mechanism: str
     expected_validation: list[str] = Field(default_factory=list)
     expected_cost: dict[str, float] = Field(default_factory=dict)
+    expected_value: dict[str, float] = Field(default_factory=dict)
     main_risk: str
+    generator: str | None = None
+    source_problem_ids: list[str] = Field(default_factory=list)
+    source_observation_ids: list[str] = Field(default_factory=list)
     status: str = "candidate"
 
 
@@ -282,4 +300,15 @@ class ResearchState(SciTasteModel):
         for active_id, known_ids, label in checks:
             if active_id is not None and active_id not in known_ids:
                 raise ValueError(f"active {label} id {active_id!r} is not present in state")
+        if self.idea_portfolio is not None:
+            portfolio_ids = {
+                self.idea_portfolio.primary_idea_id,
+                self.idea_portfolio.low_risk_backup_id,
+                self.idea_portfolio.high_risk_high_reward_id,
+                *self.idea_portfolio.diagnostic_only_ids,
+                *self.idea_portfolio.dropped_ids,
+            } - {None}
+            unknown = portfolio_ids - idea_ids
+            if unknown:
+                raise ValueError(f"idea portfolio references unknown ids: {sorted(unknown)}")
         return self

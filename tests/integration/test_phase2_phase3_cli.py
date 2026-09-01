@@ -31,3 +31,28 @@ def test_calibration_and_library_cli_work_offline(tmp_path) -> None:
     assert report["overall"]["accuracy"] == 0.8
     assert manifest["knowledge_count"] == 2
     assert manifest["taste_count"] == 4
+
+
+def test_discovery_cli_runs_the_strong_hypothesis_path(tmp_path) -> None:
+    output = tmp_path / "discovery"
+
+    assert (
+        main(
+            [
+                "discover",
+                "--backend",
+                "mock",
+                "--config",
+                "configs/experiments/discovery_strong.yaml",
+                "--output",
+                str(output),
+                "--seed",
+                "7",
+            ]
+        )
+        == 0
+    )
+
+    summary = json.loads((output / "discovery_summary.json").read_text())
+    assert summary["trajectory_class"] == "idea-first-like"
+    assert summary["final_stage"] == "PILOT"

@@ -20,6 +20,9 @@ returns observations and artifacts but cannot select the next global action.
 - `backends`: fixed-candidate provider-neutral contract, scripted/replay modes,
   and an explicitly invoked OpenAI-compatible HTTP adapter.
 - `data`: separate typed Knowledge and Taste stores with source provenance.
+- `discovery`: structured landscape, intuition/hypothesis lifecycle, diagnostic
+  probes, problem formation, normalized ideas, portfolio selection, and
+  evidence-backed ideation.
 - `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
@@ -38,6 +41,10 @@ returns observations and artifacts but cannot select the next global action.
    cannot be inserted into the Knowledge store.
 10. Live backends read secrets from environment variables and are never selected
     implicitly or by test fallback.
+11. Idea-First and Evidence-First are post-hoc trajectory descriptions; no mode
+    switch selects a separate discovery pipeline.
+12. Applying a decision deep-copies state, so domain updates reacquire objects
+    from the new state rather than mutating stale pre-transition references.
 
 ## Architecture decision records
 
@@ -74,3 +81,17 @@ changing the experimental condition.
 Status: accepted. Factual documents and decision precedents use different schemas,
 files, retrieval queries, and runtime type checks. Taste cases preserve the source,
 the rejected alternatives, and the reason one action was preferable.
+
+### ADR-007: One adaptive discovery loop
+
+Status: accepted. Both weak and strong starting beliefs enter the same
+Hypothesis-Probe-Reformulate engine. Evidence strength, probe stability, and
+contradiction determine whether another probe or reformulation occurs. A stable
+contradiction remains an observation and is eligible to seed a new problem.
+
+### ADR-008: Strict live schemas with bounded semantic repair
+
+Status: accepted. Transport retries cover transient HTTP failures. Separately, a
+schema-incomplete model response receives a bounded format-repair retry against
+the same provider and model. The backend never silently falls back to another
+experimental condition.

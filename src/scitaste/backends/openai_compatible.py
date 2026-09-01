@@ -106,10 +106,19 @@ class OpenAICompatibleBackend:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         started = time.perf_counter()
-        data = self._post_with_retry(endpoint, headers, payload)
+        semantic_attempts = 0
+        while True:
+            semantic_attempts += 1
+            data = self._post_with_retry(endpoint, headers, payload)
+            raw_text = _response_text(data, self.config.api_style)
+            try:
+                parsed = _parse_json_object(raw_text)
+                break
+            except ValueError:
+                if semantic_attempts > self.config.max_retries:
+                    raise
+                payload = _add_format_repair(payload, self.config.api_style)
         latency_ms = (time.perf_counter() - started) * 1000
-        raw_text = _response_text(data, self.config.api_style)
-        parsed = _parse_json_object(raw_text)
         selected_action_id = str(parsed["selected_action_id"])
         candidate_ids = {action.action_id for action in request.candidate_actions}
         if selected_action_id not in candidate_ids:
@@ -128,6 +137,7 @@ class OpenAICompatibleBackend:
             raw_response=raw_text,
             raw_response_sha256=hashlib.sha256(raw_text.encode()).hexdigest(),
             latency_ms=latency_ms,
+            semantic_attempts=semantic_attempts,
             usage=Usage(input_tokens=int(input_tokens), output_tokens=int(output_tokens)),
         )
 
@@ -245,6 +255,20 @@ def _parse_json_object(text: str) -> dict[str, Any]:
     if missing:
         raise ValueError(f"model response is missing: {', '.join(sorted(missing))}")
     return value
+
+
+def _add_format_repair(payload: dict[str, Any], style: APIStyle) -> dict[str, Any]:
+    repaired = dict(payload)
+    reminder = (
+        "Your previous response violated the required schema. Return exactly one JSON object "
+        "containing all three keys: selected_action_id (string), rationale (non-empty string), "
+        "and confidence (number from 0 to 1)."
+    )
+    if style == APIStyle.RESPONSES:
+        repaired["input"] = f"{payload['input']}\n\n{reminder}"
+    else:
+        repaired["messages"] = [*payload["messages"], {"role": "user", "content": reminder}]
+    return repaired
 
 
 def _expand_environment(value: Any) -> Any:

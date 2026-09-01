@@ -6,10 +6,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 |---|---|---|
 | Phase 0 — substrate control | done | official AutoResearchClaw release pinned; adapter and baseline dry-run work |
 | Phase 1 — state/controller skeleton | done | nonlinear mock loop includes `PROBE` and `PIVOT`; unit/integration tests pass |
-| Phase 2 — intrinsic calibration | in progress | reproducible Idea, Experiment, Evidence, Writing, and Review taste profiles |
+| Phase 2 — intrinsic calibration | done | reproducible Idea, Experiment, Evidence, Writing, and Review taste profiles |
 | Phase 3 — taste library | in progress | knowledge/taste stores are independent; provenance and stage retrieval tested |
-| Phase 4 — discovery loop | planned | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
-| Phase 5 — evidence loop | planned | claims update from evidence; gaps and contradictory-evidence pivots work |
+| Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
+| Phase 5 — evidence loop | next | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | planned | narrative/contracts/review obligations can route back to experiments |
 | Phase 7 — figures | planned | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 8 — SciTasteBench | deferred | intrinsic/augmented evaluation is controlled and reproducible |
@@ -26,11 +26,26 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   per-task reports.
 - Done: separate typed Knowledge/Taste JSONL stores, provenance schema,
   stage/role-aware retrieval, and decision-log precedent IDs.
-- Remaining Phase 2 gate: execute and archive at least one pre-registered live
-  model profile; API credentials are intentionally user-supplied.
+- Done: a five-case `qwen3.7-plus` live smoke profile is archived as an aggregate
+  manifest with hashes; secrets, exact recordings, and raw responses remain local.
 - Remaining Phase 3 corpus work: ingest and license-check selected OpenReview,
   ARIES, CASIMIR, and accepted-paper records. The current seed corpus comes only
   from the project specification and exists to test the pipeline.
+
+## Phase 4 completion
+
+- Structured, source-linked literature landscape construction.
+- Separate Research Intuition and falsifiable Working Hypothesis formation.
+- Cheap diagnostic probe plans with reproducibility, stability, effect size,
+  boundary, alternative-explanation, and disposition records.
+- Stable contradictions persist as observations and can trigger first-class
+  `REFORMULATE_HYPOTHESIS` decisions.
+- Problem formation, style-normalized divergent ideas, controller-ranked idea
+  selection, and multi-slot portfolios.
+- Stable contradictory pilot evidence can produce a new problem and idea.
+- Integration acceptance: weak intuition takes two probes and reformulates;
+  strong prior evidence takes one sanity probe. Both finish at `PILOT` through
+  the same loop implementation.
 
 ## Project controls
 

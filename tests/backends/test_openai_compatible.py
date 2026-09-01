@@ -50,6 +50,23 @@ class FlakyTransport(StubTransport):
         return super().post(url, headers=headers, payload=payload, timeout=timeout)
 
 
+class SequenceTransport(StubTransport):
+    def __init__(self, responses: list[dict[str, Any]]) -> None:
+        super().__init__({})
+        self.responses = responses
+
+    def post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        payload: dict[str, Any],
+        timeout: float,
+    ) -> dict[str, Any]:
+        self.calls.append({"url": url, "headers": headers, "payload": payload, "timeout": timeout})
+        return self.responses[len(self.calls) - 1]
+
+
 def request() -> PreferenceRequest:
     return PreferenceRequest(
         request_id="case-live-1",
@@ -214,6 +231,33 @@ def test_provider_cannot_select_an_action_outside_candidates(monkeypatch) -> Non
 
     with pytest.raises(ValueError, match="unknown action"):
         OpenAICompatibleBackend(config(), transport=transport).rank(request())
+
+
+def test_schema_violation_gets_one_bounded_repair_attempt(monkeypatch) -> None:
+    monkeypatch.setenv("SCITASTE_TEST_API_KEY", "secret-for-test")
+    transport = SequenceTransport(
+        [
+            {"choices": [{"message": {"content": '{"selected_action_id":"probe"}'}}]},
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"selected_action_id":"probe","rationale":"Repaired",'
+                                '"confidence":0.8}'
+                            )
+                        }
+                    }
+                ]
+            },
+        ]
+    )
+
+    response = OpenAICompatibleBackend(config(), transport=transport).rank(request())
+
+    assert response.semantic_attempts == 2
+    assert len(transport.calls) == 2
+    assert "previous response violated" in transport.calls[1]["payload"]["messages"][-1]["content"]
 
 
 def test_non_local_plain_http_endpoint_is_rejected() -> None:

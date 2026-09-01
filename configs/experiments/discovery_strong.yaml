@@ -1,0 +1,70 @@
+project_id: discovery-strong-hypothesis
+research_direction: Test a clear evidence-graph formulation for research control
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 2.0
+  max_experiments: 3
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+landscape_findings:
+  - category: active_problem
+    statement: Research controllers collapse heterogeneous evidence into one score.
+    source_ids: [project-spec-6.1]
+  - category: methodological_bottleneck
+    statement: Contradictions are often discarded instead of represented explicitly.
+    source_ids: [project-spec-16]
+  - category: evaluation_gap
+    statement: Matched tests of conflict-aware decisions are missing.
+    source_ids: [project-spec-12.4]
+intuition:
+  statement: A signed evidence representation should improve research pivots.
+  source: prior_evidence
+  confidence: 0.82
+initial_hypothesis:
+  statement: Separating supporting and contradicting evidence improves correct pivot decisions.
+  falsifiable_predictions:
+    - A signed representation should beat scalar aggregation on matched conflict cases.
+  proposed_probe_types: [controlled perturbation]
+  confidence: 0.85
+reformulations: []
+probe_signals:
+  - observation: Signed evidence improves correct pivots under matched compute without harming clear cases.
+    expected: true
+    reproducible: true
+    stability: 0.92
+    effect_size: 0.61
+    boundary_conditions: [matched inference compute, identical candidate actions]
+    alternative_explanations: [prompt ordering]
+problem:
+  explanation_gap: Scalar aggregation loses the direction and interaction of conflicting evidence.
+  importance: Correct pivots determine whether an autonomous researcher spends budget on viable claims.
+idea_seeds:
+  - generator: representation-change
+    hypothesis: Signed evidence topology improves action selection under conflict.
+    proposed_mechanism: Typed support/contradiction edges exposed to the taste controller.
+    expected_validation: [matched conflict benchmark, edge ablation, clear-case regression]
+    expected_cost: {gpu_hours: 0.25, experiments: 1, implementation_risk: 0.25}
+    expected_value: {problem_validity: 0.95, novelty: 0.85, feasibility: 0.9, expected_empirical_signal: 0.9}
+    main_risk: Evidence-edge extraction may be noisy.
+  - generator: training-objective
+    hypothesis: Contrastive supervision can teach conflict-sensitive preferences.
+    proposed_mechanism: Train a preference adapter on matched support/contradiction pairs.
+    expected_validation: [held-out preference ranking, transfer test]
+    expected_cost: {gpu_hours: 1.5, experiments: 2, implementation_risk: 0.7}
+    expected_value: {problem_validity: 0.8, novelty: 0.7, feasibility: 0.55, expected_empirical_signal: 0.75}
+    main_risk: Training weakens attribution and exceeds the v1 training-free scope.
+  - generator: evaluation-centric
+    hypothesis: Conflict-stratified evaluation predicts downstream research waste.
+    proposed_mechanism: A matched evaluation suite with explicit pivot obligations.
+    expected_validation: [predictive validity, reviewer agreement]
+    expected_cost: {gpu_hours: 0.05, experiments: 1, implementation_risk: 0.1}
+    expected_value: {problem_validity: 0.9, novelty: 0.6, feasibility: 0.95, evidence_tractability: 0.95}
+    main_risk: Evaluation alone may not solve the control failure.
+  - generator: system-level
+    hypothesis: Repeated debate resolves conflicting evidence.
+    proposed_mechanism: Add a multi-agent debate before every pivot decision.
+    expected_validation: [budget-matched comparison, latency]
+    expected_cost: {gpu_hours: 1.2, experiments: 2, implementation_risk: 0.75}
+    expected_value: {problem_validity: 0.55, novelty: 0.35, feasibility: 0.5, expected_empirical_signal: 0.55}
+    main_risk: Improvements may be explained by extra inference compute.
