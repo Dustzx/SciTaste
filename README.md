@@ -10,7 +10,7 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0 through 6 are implemented; license-reviewed external corpus expansion
+Phases 0 through 7 are implemented; license-reviewed external corpus expansion
 continues as a data operation:
 
 - canonical, versioned `ResearchState`;
@@ -39,7 +39,10 @@ continues as a data operation:
   external Taste Cases until human verification;
 - evidence-gated narrative and writing contracts, rhetorical-role taste
   retrieval, decomposed writing critics, reviewer obligations, and review-driven
-  evidence collection returning to paper revision.
+  evidence collection returning to paper revision;
+- claim-linked Figure Contracts, visual-role retrieval, semantic object
+  reconstruction, editable SVG/draw.io export, split visual critics, and
+  traceable object-level patches.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -153,6 +156,20 @@ taste precedents. A missing-baseline review concern routes to the Evidence Loop;
 matching new evidence closes the obligation and produces revision 2. This tests
 research control and traceability rather than model prose quality. See
 [`docs/COMMUNICATION_LOOP.md`](docs/COMMUNICATION_LOOP.md).
+
+## Offline Figure Loop
+
+Build the mechanism-figure acceptance fixture:
+
+```bash
+.venv/bin/scitaste figure build \
+  --config configs/visual/mechanism_demo.yaml \
+  --output outputs/figure-demo --seed 7
+```
+
+The scenario intentionally introduces misleading emphasis, records the visual
+critic findings, applies one object-level patch, and exports editable SVG and
+uncompressed draw.io artifacts. See [`docs/FIGURE_SYSTEM.md`](docs/FIGURE_SYSTEM.md).
 
 ## License-gated corpus ingestion
 

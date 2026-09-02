@@ -28,6 +28,7 @@ from scitaste.taste.intrinsic import (
     load_calibration_suite,
     save_calibration_report,
 )
+from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
 from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
 
@@ -147,7 +148,13 @@ def build_parser() -> argparse.ArgumentParser:
     review = commands.add_parser("review", help="Run reviewer-driven research and revision")
     _add_common_options(review, default_output="outputs/review")
     review.set_defaults(handler=_handle_communication)
-    _add_nested_planned(commands, "figure", "build", "Phase 7")
+    figure = commands.add_parser("figure", help="Contract-first editable figure workflows")
+    figure_commands = figure.add_subparsers(dest="figure_command", required=True)
+    figure_build = figure_commands.add_parser(
+        "build", help="Build, critique, and patch an editable scientific figure"
+    )
+    _add_common_options(figure_build, default_output="outputs/figure")
+    figure_build.set_defaults(handler=_handle_figure_build)
     _add_nested_planned(commands, "benchmark", "run", "Phase 8")
     return parser
 
@@ -394,6 +401,30 @@ def _handle_communication(args: argparse.Namespace) -> int:
         )
         return 0
     summary = CommunicationWorkflow(seed=args.seed).run(scenario, output_dir=args.output)
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_figure_build(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("offline Phase 7 figure workflow currently supports only --backend mock")
+    config_path = args.config or Path("configs/visual/mechanism_demo.yaml")
+    scenario = load_figure_scenario(config_path)
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": scenario.project_id,
+                    "figure_id": scenario.contract.figure_id,
+                    "panel_count": len(scenario.contract.panel_plan),
+                    "required_entity_count": len(scenario.contract.required_entities),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    summary = FigureWorkflow(seed=args.seed).run(scenario, output_dir=args.output)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 

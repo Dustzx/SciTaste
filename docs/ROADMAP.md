@@ -11,8 +11,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
-| Phase 7 — figures | next | figure contract produces editable, reviewed SVG/draw.io output |
-| Phase 8 — SciTasteBench | deferred | intrinsic/augmented evaluation is controlled and reproducible |
+| Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
+| Phase 8 — SciTasteBench | next | intrinsic/augmented evaluation is controlled and reproducible |
 | Phase 9 — matched-budget study | deferred | baseline/system comparisons use identical tasks and budgets |
 
 ## Phase 2/3 progress
@@ -82,6 +82,23 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Acceptance trajectory: a missing-baseline concern selects `ADD_BASELINE`, the
   existing Evidence Loop records matched-baseline evidence, the obligation
   closes, and the paper returns to `COMMUNICATION` for revision 2.
+
+## Phase 7 completion
+
+- Figure-need assessment precedes rendering and records why prose alone is
+  insufficient.
+- A typed Figure Contract binds purpose, target claims, reader takeaway,
+  entities, relations, forbidden emphasis, panels, and retrieved references.
+- Deterministic semantic reconstruction exports stable object IDs to editable
+  SVG and uncompressed draw.io XML.
+- Ten visual critics separate scientific communication from aesthetics and run
+  both before and after patching.
+- Object-level patches preserve field-level old/new values and rationales in
+  `ResearchState`.
+- Acceptance trajectory detects forbidden executor emphasis in two critic
+  dimensions, deduplicates it to one patch, and clears all final findings.
+- A five-case Bailian `qwen3.8-max` visual-taste smoke run passed the fixed
+  candidate protocol; raw responses remain local and ignored.
 
 ## Project controls
 

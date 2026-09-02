@@ -11,7 +11,7 @@ ResearchState → candidate ResearchAction set → TasteController
 SciTaste owns the state, action ranking, transition, and decision log. An executor
 returns observations and artifacts but cannot select the next global action.
 
-## Phase 0-6 components
+## Phase 0-7 components
 
 - `schema`: stable action and decision interchange models.
 - `state`: the canonical state, nonlinear transition reducer, and atomic store.
@@ -30,6 +30,8 @@ returns observations and artifacts but cannot select the next global action.
   and the state-integrated Communication Loop.
 - `review`: structured concerns, stage-specific research obligations, action
   routing, and evidence-aware closure.
+- `visual`: figure-need detection, claim-linked contracts, semantic object
+  reconstruction, editable vector export, split visual criticism, and patches.
 - `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
@@ -66,6 +68,10 @@ returns observations and artifacts but cannot select the next global action.
     requires new, claim-linked evidence of the requested type.
 19. Writing contracts and Narrative Spine references resolve against canonical
     claim/evidence IDs before a draft is accepted.
+20. Figure entities, relations, panels, and target claims resolve before export;
+    a figure with unresolved critic findings cannot become the final artifact.
+21. Visual patching changes named semantic objects and persists old/new field
+    values; it never relies on an untraceable whole-image rewrite.
 
 ## Architecture decision records
 
@@ -149,3 +155,11 @@ Evidence Loop, and only matching new evidence can close the obligation. The
 updated state then returns to Communication for a contract-preserving revision.
 This prevents a missing experiment or baseline from being treated as a wording
 problem.
+
+### ADR-013: Contract-first semantic vector reconstruction
+
+Status: accepted. Figure generation begins with a claim-linked contract and may
+request a conceptual draft from an executor, but the publication artifact is
+rebuilt as named semantic objects. SVG and uncompressed draw.io exports therefore
+remain editable, while communication and aesthetic criticism produce object-level
+patches that can be replayed and audited from `ResearchState`.

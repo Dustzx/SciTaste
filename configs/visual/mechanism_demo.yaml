@@ -1,0 +1,79 @@
+project_id: scitaste-figure-acceptance
+research_direction: Taste-guided control for autonomous scientific research
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  max_api_cost_usd: 0
+claims:
+  - claim_id: claim-control-boundary
+    text: SciTaste selects research actions while the executor only carries out the selected action.
+    claim_type: mechanism
+    strength: scoped
+    supporting_evidence_ids: [evidence-transition-trace]
+    status: supported
+evidence:
+  - evidence_id: evidence-transition-trace
+    source_type: integration_test
+    evidence_type: execution trace
+    observation: Every executor call is preceded by a logged controller decision.
+    supports_claim_ids: [claim-control-boundary]
+    confidence: 1.0
+    stability: 1.0
+source_text: The controller observes paper state and evidence, selects one action, and delegates that bounded action to an executor. Outcomes return to state instead of letting the executor own the trajectory.
+figure_role: mechanism
+contract:
+  figure_id: fig-control-boundary
+  purpose: Explain the controller/executor ownership boundary and feedback loop.
+  target_claim_ids: [claim-control-boundary]
+  intended_reader_takeaway: SciTaste owns research decisions; the executor performs bounded work and returns outcomes.
+  required_entities:
+    - entity_id: paper-state
+      label: Paper & evidence state
+      role: input
+    - entity_id: taste-controller
+      label: SciTaste controller
+      role: decision-owner
+    - entity_id: selected-action
+      label: Selected action
+      role: bounded-command
+    - entity_id: executor
+      label: Research executor
+      role: execution-only
+    - entity_id: outcome
+      label: Observation & artifacts
+      role: feedback
+  required_relations:
+    - relation_id: relation-state-controller
+      source_entity_id: paper-state
+      target_entity_id: taste-controller
+      label: informs
+    - relation_id: relation-controller-action
+      source_entity_id: taste-controller
+      target_entity_id: selected-action
+      label: selects
+    - relation_id: relation-action-executor
+      source_entity_id: selected-action
+      target_entity_id: executor
+      label: delegates
+    - relation_id: relation-executor-outcome
+      source_entity_id: executor
+      target_entity_id: outcome
+      label: returns
+    - relation_id: relation-outcome-state
+      source_entity_id: outcome
+      target_entity_id: paper-state
+      label: updates
+  optional_entities: []
+  forbidden_emphasis: [executor]
+  panel_plan:
+    - panel_id: panel-decision
+      title: Decision ownership
+      objective: Show state entering the controller and becoming one selected action.
+      entity_ids: [paper-state, taste-controller, selected-action]
+    - panel_id: panel-execution
+      title: Bounded execution
+      objective: Show executor isolation and feedback into canonical state.
+      entity_ids: [executor, outcome]
+  reference_figure_ids: []
+initial_emphasis:
+  executor: prominent

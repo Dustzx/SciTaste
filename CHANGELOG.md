@@ -34,6 +34,11 @@ semantic versioning.
   concerns, research obligations, evidence-aware closure, and paper revision.
 - Offline support, uncertainty, overclaim, contradiction, Phase 4 resume, and
   evidence-backed pivot acceptance scenarios.
+- Phase 7 Figure Contract, figure-need assessment, visual-role retrieval,
+  semantic reconstruction, editable SVG/draw.io export, ten-dimension visual
+  criticism, and object-level patch history.
+- A five-case visual-taste calibration suite and aggregate Bailian
+  `qwen3.8-max` smoke-run manifest.
 
 ### Changed
 
@@ -41,3 +46,5 @@ semantic versioning.
   record attempt count, latency, and raw-response hash.
 - Resource feasibility now uses cumulative usage; `ADVANCE` is stage-contextual
   and `DROP` creates a terminal project state.
+- The Bailian example backend now pins `qwen3.8-max` for the current opt-in smoke
+  contract.

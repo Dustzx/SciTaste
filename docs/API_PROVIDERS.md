@@ -65,6 +65,11 @@ scitaste taste calibrate \
   --output outputs/bailian
 ```
 
+For Phase 7 visual-taste connectivity, replace the suite with
+`configs/taste/visual_calibration_v1.yaml`. The committed Bailian example pins
+`qwen3.8-max`; confirm account entitlement and current provider availability
+before a new run because model aliases can change.
+
 Avoid unregistered resellers or shared-key relay services. They obscure model
 version, token accounting, retention, rate limits, and legal responsibility—the
 exact variables SciTaste needs to log and control.

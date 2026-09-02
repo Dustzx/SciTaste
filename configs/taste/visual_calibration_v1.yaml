@@ -1,0 +1,73 @@
+suite_id: scitaste-visual-smoke
+version: "1.0"
+description: Fixed-candidate visual scientific-taste smoke suite for editable, claim-linked figures.
+cases:
+  - case_id: visual-contract-before-render
+    task: visual
+    stage: COMMUNICATION
+    decision_context: A mechanism paragraph contains three causal relations, but no explicit reader takeaway or target claim has been assigned to the planned figure.
+    preferred_action_id: visual-contract
+    scripted_selection_id: visual-contract
+    candidate_actions:
+      - action_id: visual-render
+        type: DESIGN_FIGURE
+        description: Render a polished image immediately from the paragraph.
+      - action_id: visual-contract
+        type: BUILD_STORY
+        description: Define the target claim, reader takeaway, required entities, relations, and forbidden emphasis first.
+
+  - case_id: visual-editable-reconstruction
+    task: visual
+    stage: COMMUNICATION
+    decision_context: An image-model draft communicates the broad concept but labels and arrows must remain correctable after scientific review.
+    preferred_action_id: visual-reconstruct
+    scripted_selection_id: visual-reconstruct
+    candidate_actions:
+      - action_id: visual-freeze
+        type: DESIGN_FIGURE
+        description: Export only the raster draft because it already looks polished.
+      - action_id: visual-reconstruct
+        type: REFINE
+        description: Reconstruct named objects and relations into editable SVG and draw.io files.
+
+  - case_id: visual-misleading-emphasis
+    task: visual
+    stage: COMMUNICATION
+    decision_context: The figure contract says the controller owns decisions, but the executor box is the largest, darkest element in the draft.
+    preferred_action_id: visual-patch
+    scripted_selection_id: visual-patch
+    candidate_actions:
+      - action_id: visual-keep
+        type: WRITE
+        description: Keep the layout and explain the ownership boundary in the caption.
+      - action_id: visual-patch
+        type: REFINE
+        description: Patch the executor object emphasis and rerun the visual critic.
+
+  - case_id: visual-unsupported-claim
+    task: visual
+    stage: COMMUNICATION
+    decision_context: A result panel visually implies universal robustness while the evidence graph covers only two datasets.
+    preferred_action_id: visual-narrow
+    scripted_selection_id: visual-narrow
+    candidate_actions:
+      - action_id: visual-polish
+        type: DESIGN_FIGURE
+        description: Retain the universal label and improve the palette.
+      - action_id: visual-narrow
+        type: NARROW_CLAIM
+        description: Restrict the visual claim to the tested datasets and show the evidence scope.
+
+  - case_id: visual-density
+    task: visual
+    stage: COMMUNICATION
+    decision_context: One panel contains nine equally weighted objects, and readers cannot identify the scientific relation that supports the main claim.
+    preferred_action_id: visual-hierarchy
+    scripted_selection_id: visual-hierarchy
+    candidate_actions:
+      - action_id: visual-shrink
+        type: DESIGN_FIGURE
+        description: Reduce font and object sizes until all content fits in one panel.
+      - action_id: visual-hierarchy
+        type: REFINE
+        description: Split the panel and establish hierarchy around the claim-supporting relation.

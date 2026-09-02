@@ -278,9 +278,135 @@ class WritingState(SciTasteModel):
     revision: int = Field(default=0, ge=0)
 
 
+class FigureEntity(SciTasteModel):
+    entity_id: str
+    label: str
+    role: str
+
+
+class FigureRelation(SciTasteModel):
+    relation_id: str
+    source_entity_id: str
+    target_entity_id: str
+    label: str
+
+
+class FigurePanelPlan(SciTasteModel):
+    panel_id: str
+    title: str
+    objective: str
+    entity_ids: list[str] = Field(min_length=1)
+
+
+class FigureContract(SciTasteModel):
+    figure_id: str
+    purpose: str
+    target_claim_ids: list[str] = Field(min_length=1)
+    intended_reader_takeaway: str
+    required_entities: list[FigureEntity] = Field(min_length=1)
+    required_relations: list[FigureRelation] = Field(default_factory=list)
+    optional_entities: list[FigureEntity] = Field(default_factory=list)
+    forbidden_emphasis: list[str] = Field(default_factory=list)
+    panel_plan: list[FigurePanelPlan] = Field(min_length=1)
+    reference_figure_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def internal_references_exist(self) -> FigureContract:
+        entity_ids = [
+            *(item.entity_id for item in self.required_entities),
+            *(item.entity_id for item in self.optional_entities),
+        ]
+        if len(entity_ids) != len(set(entity_ids)):
+            raise ValueError("figure entity ids must be unique")
+        known = set(entity_ids)
+        relation_ids = [item.relation_id for item in self.required_relations]
+        if len(relation_ids) != len(set(relation_ids)):
+            raise ValueError("figure relation ids must be unique")
+        for relation in self.required_relations:
+            if {relation.source_entity_id, relation.target_entity_id} - known:
+                raise ValueError(f"relation {relation.relation_id!r} references unknown entity")
+        panel_ids = [panel.panel_id for panel in self.panel_plan]
+        if len(panel_ids) != len(set(panel_ids)):
+            raise ValueError("figure panel ids must be unique")
+        assigned = [entity_id for panel in self.panel_plan for entity_id in panel.entity_ids]
+        if set(assigned) - known:
+            raise ValueError("panel plan references unknown entity")
+        if len(assigned) != len(set(assigned)):
+            raise ValueError("an entity cannot be assigned to multiple figure panels")
+        if set(item.entity_id for item in self.required_entities) - set(assigned):
+            raise ValueError("every required entity must be assigned to a panel")
+        if set(self.forbidden_emphasis) - known:
+            raise ValueError("forbidden_emphasis references unknown entity")
+        return self
+
+
+class FigureObject(SciTasteModel):
+    object_id: str
+    label: str
+    role: str
+    panel_id: str
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    emphasis: str = "normal"
+
+
+class FigureCritique(SciTasteModel):
+    dimension: str
+    category: str
+    score: int = Field(ge=1, le=5)
+    severity: str
+    message: str
+    object_ids: list[str] = Field(default_factory=list)
+    suggested_operation: str | None = None
+
+
+class FigurePatch(SciTasteModel):
+    operation: str
+    object_id: str
+    field: str
+    old_value: str
+    new_value: str
+    rationale: str
+
+
 class FigureState(SciTasteModel):
     status: str = "not_started"
     figure_refs: list[str] = Field(default_factory=list)
+    contract: FigureContract | None = None
+    semantic_objects: list[FigureObject] = Field(default_factory=list)
+    initial_critic_report: list[FigureCritique] = Field(default_factory=list)
+    final_critic_report: list[FigureCritique] = Field(default_factory=list)
+    patch_history: list[FigurePatch] = Field(default_factory=list)
+    retrieved_taste_case_ids: list[str] = Field(default_factory=list)
+    revision: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def semantic_objects_match_contract(self) -> FigureState:
+        if self.contract is None or not self.semantic_objects:
+            return self
+        entity_ids = {
+            item.entity_id
+            for item in [*self.contract.required_entities, *self.contract.optional_entities]
+        }
+        object_ids = [item.object_id for item in self.semantic_objects]
+        if len(object_ids) != len(set(object_ids)):
+            raise ValueError("figure semantic object ids must be unique")
+        if set(object_ids) - entity_ids:
+            raise ValueError("figure state contains objects outside its contract")
+        declared_panels = {
+            entity_id: panel.panel_id
+            for panel in self.contract.panel_plan
+            for entity_id in panel.entity_ids
+        }
+        if any(
+            item.panel_id != declared_panels.get(item.object_id) for item in self.semantic_objects
+        ):
+            raise ValueError("figure semantic object violates the declared panel plan")
+        if set(patch.object_id for patch in self.patch_history) - set(object_ids):
+            raise ValueError("figure patch references an unknown semantic object")
+        return self
 
 
 class ReviewerConcern(SciTasteModel):
@@ -441,6 +567,10 @@ class ResearchState(SciTasteModel):
                     raise ValueError("paragraph contract references unknown claims")
                 if set(contract.evidence_ids) - known_evidence:
                     raise ValueError("paragraph contract references unknown evidence")
+        if self.figure_state is not None and self.figure_state.contract is not None:
+            contract = self.figure_state.contract
+            if set(contract.target_claim_ids) - known_claims:
+                raise ValueError("figure contract references unknown claims")
         concern_ids = [concern.concern_id for concern in self.reviewer_concerns]
         obligation_ids = [item.obligation_id for item in self.open_research_obligations]
         if len(concern_ids) != len(set(concern_ids)):
