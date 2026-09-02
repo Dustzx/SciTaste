@@ -10,7 +10,7 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0 through 7 and the Phase 7.5 real-substrate gate are implemented;
+Phases 0 through 8, including the Phase 7.5 real-substrate gate, are implemented;
 license-reviewed external corpus expansion continues as a data operation:
 
 - canonical, versioned `ResearchState`;
@@ -45,7 +45,10 @@ license-reviewed external corpus expansion continues as a data operation:
   traceable object-level patches;
 - a pinned, unmodified AutoResearchClaw adapter with prerequisite checks,
   contract-validated artifact manifests, stable session identity, runtime
-  accounting, and a successful live Stage 1–3 vertical slice.
+  accounting, and a successful live Stage 1–3 vertical slice;
+- an independent six-family SciTasteBench smoke suite with five isolated
+  intrinsic/augmentation conditions, transfer and robustness diagnostics,
+  paired comparisons, exact replay support, and content-hashed reports.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -87,6 +90,18 @@ build the two libraries, and verify exact replay with:
 The scripted fixture deliberately scores 4/5 so the report exercises incorrect
 as well as correct judgments. It validates the evaluation pipeline, not a real
 model's scientific taste.
+
+Run the independent Phase 8 controlled benchmark offline with:
+
+```bash
+.venv/bin/scitaste benchmark run \
+  --backend scripted --seed 7 \
+  --output outputs/scitastebench-phase8-offline
+```
+
+This synthetic suite validates Base versus Knowledge RAG, Taste Library, Taste
+Critics, and Full SciTaste comparisons; its programmed scores are not an
+effectiveness claim. See [`docs/SCITASTEBENCH.md`](docs/SCITASTEBENCH.md).
 
 ## Opt-in live calibration
 

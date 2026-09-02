@@ -16,6 +16,13 @@ from scitaste.backends.openai_compatible import (
 )
 from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
+from scitaste.benchmark import (
+    BenchmarkCondition,
+    SciTasteBenchRunner,
+    load_benchmark_suite,
+    save_benchmark_report,
+    scripted_selections,
+)
 from scitaste.data.curation import CurationFormat, curate_snapshot
 from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
 from scitaste.data.store import build_libraries
@@ -185,7 +192,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_common_options(figure_build, default_output="outputs/figure")
     figure_build.set_defaults(handler=_handle_figure_build)
-    _add_nested_planned(commands, "benchmark", "run", "Phase 8")
+    benchmark = commands.add_parser("benchmark", help="Controlled SciTasteBench evaluation")
+    benchmark_commands = benchmark.add_subparsers(dest="benchmark_command", required=True)
+    benchmark_run = benchmark_commands.add_parser(
+        "run", help="Compare intrinsic and augmented taste conditions"
+    )
+    _add_common_options(
+        benchmark_run,
+        default_output="outputs/benchmark",
+        default_backend="scripted",
+    )
+    benchmark_run.add_argument(
+        "--suite",
+        type=Path,
+        default=Path("configs/benchmark/scitastebench_v1.yaml"),
+    )
+    benchmark_run.add_argument(
+        "--condition",
+        action="append",
+        choices=[condition.value for condition in BenchmarkCondition],
+        default=None,
+        help="Condition to run; repeat to select multiple conditions (base is required)",
+    )
+    benchmark_run.add_argument("--replay", type=Path, default=None)
+    benchmark_run.add_argument("--record", type=Path, default=None)
+    benchmark_run.set_defaults(handler=_handle_benchmark_run)
     return parser
 
 
@@ -505,6 +536,65 @@ def _handle_figure_build(args: argparse.Namespace) -> int:
         return 0
     summary = FigureWorkflow(seed=args.seed).run(scenario, output_dir=args.output)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_benchmark_run(args: argparse.Namespace) -> int:
+    suite = load_benchmark_suite(args.suite)
+    conditions = (
+        [BenchmarkCondition(condition) for condition in args.condition]
+        if args.condition
+        else suite.conditions
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "suite_id": suite.suite_id,
+                    "suite_sha256": suite.sha256,
+                    "case_count": len(suite.cases),
+                    "headline_case_count": sum(case.headline_eligible for case in suite.cases),
+                    "conditions": [condition.value for condition in conditions],
+                },
+                indent=2,
+            )
+        )
+        return 0
+    if args.backend == "scripted":
+        backend = ScriptedPreferenceBackend(scripted_selections(suite, conditions))
+    elif args.backend == "replay":
+        if args.replay is None:
+            raise ValueError("--backend replay requires --replay PATH")
+        backend = ReplayBackend(args.replay)
+    elif args.backend == "openai-compatible":
+        if args.config is None:
+            raise ValueError("--backend openai-compatible requires --config PATH")
+        backend = OpenAICompatibleBackend(load_openai_compatible_config(args.config))
+    else:
+        raise ValueError("supported benchmark backends: scripted, replay, openai-compatible")
+    if args.record:
+        backend = RecordingBackend(backend, args.record)
+    report = SciTasteBenchRunner(backend, seed=args.seed).evaluate(suite, conditions=conditions)
+    manifest = save_benchmark_report(report, args.output)
+    base = report.conditions[BenchmarkCondition.BASE].headline
+    print(
+        json.dumps(
+            {
+                "suite_id": report.suite_id,
+                "backend": report.backend,
+                "model": report.model,
+                "base_pairwise_accuracy": base.pairwise_accuracy,
+                "comparisons_to_base": {
+                    condition.value: comparison.model_dump(mode="json")
+                    for condition, comparison in report.comparisons_to_base.items()
+                },
+                "report": manifest["report"],
+                "manifest": manifest["manifest"],
+            },
+            indent=2,
+        )
+    )
     return 0
 
 

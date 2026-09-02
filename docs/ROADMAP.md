@@ -13,8 +13,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
-| Phase 8 — SciTasteBench | next | intrinsic/augmented evaluation is controlled and reproducible |
-| Phase 9 — matched-budget study | deferred | baseline/system comparisons use identical tasks and budgets |
+| Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
+| Phase 9 — matched-budget study | next | baseline/system comparisons use identical tasks and budgets |
 
 ## Phase 2/3 progress
 
@@ -116,6 +116,22 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   cost log.
 - SciTaste's own adapter decision is preserved as a dogfooding case, explicitly
   excluded from Phase 8 headline effectiveness evaluation.
+
+## Phase 8 completion
+
+- A versioned independent smoke suite covers Idea, Experiment, Evidence, Writing,
+  Review, and Visual fixed-pair decisions.
+- Base, Knowledge RAG, Taste Library, Taste Critics, and Full SciTaste conditions
+  construct isolated, fingerprinted requests through one backend contract.
+- Reports include pairwise accuracy, expert agreement, confidence calibration,
+  wrong-level decisions, per-task metrics, three transfer slices, style
+  invariance, paraphrase consistency, and paired changes from Base.
+- Self-referential cases are schema-blocked from headline metrics; the SciTaste
+  self-iteration case remains dogfooding only.
+- Ranking correlation is unavailable under the pair-selection response contract,
+  and Phase 9 system outcomes are explicitly deferred rather than approximated.
+- Deterministic offline acceptance spans all conditions and stores content hashes;
+  scripted scores verify the evaluator, not SciTaste effectiveness.
 
 ## Project controls
 

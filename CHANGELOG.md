@@ -44,6 +44,9 @@ semantic versioning.
   bootstrap, and one-action substrate workflow/CLI.
 - A real qwen3.8-max AutoResearchClaw Stage 1–3 aggregate acceptance manifest and
   a regression-tested SciTaste self-iteration dogfooding case.
+- Phase 8 SciTasteBench schemas, an independent six-family fixed-pair suite, five
+  condition-isolated evaluation modes, robustness/transfer/calibration metrics,
+  paired Base comparisons, exact backend replay support, and hashed reports.
 
 ### Changed
 

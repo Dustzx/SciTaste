@@ -11,7 +11,7 @@ ResearchState → candidate ResearchAction set → TasteController
 SciTaste owns the state, action ranking, transition, and decision log. An executor
 returns observations and artifacts but cannot select the next global action.
 
-## Phase 0-7 components
+## Phase 0-8 components
 
 - `schema`: stable action and decision interchange models.
 - `state`: the canonical state, nonlinear transition reducer, and atomic store.
@@ -33,6 +33,8 @@ returns observations and artifacts but cannot select the next global action.
 - `visual`: figure-need detection, claim-linked contracts, semantic object
   reconstruction, editable vector export, split visual criticism, and patches.
 - `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
+- `benchmark`: evaluation-only fixed-pair suites, isolated augmentation
+  conditions, robustness/transfer metrics, and paired Base comparisons.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
 ## Invariants
@@ -78,6 +80,11 @@ returns observations and artifacts but cannot select the next global action.
     both upstream identifiers for audit.
 24. Missing executor cost telemetry is recorded as unavailable, never assumed to
     be zero in a matched-budget comparison.
+25. Benchmark labels, scripted selections, and condition-excluded context never
+    enter a backend request.
+26. Self-referential dogfooding cases cannot enter headline benchmark metrics.
+27. Unsupported metrics are reported as unavailable rather than synthesized from
+    a weaker measurement contract.
 
 ## Architecture decision records
 
@@ -178,3 +185,13 @@ content-hashed artifacts, derives a stable session identity from the run
 directory, and advances state only after execution succeeds. Optional prompt and
 token bounds are explicit experimental conditions implemented in a process-local
 bootstrap; omitting them preserves the original upstream invocation.
+
+### ADR-015: Evaluation subsystem with condition-isolated requests
+
+Status: accepted. SciTasteBench uses the existing fixed-candidate backend
+boundary but owns separate cases, condition construction, metrics, and reports.
+Base sees only the decision context; each augmented condition receives only its
+declared information, while Full receives all declared signals. Condition and
+content changes alter the request fingerprint, preventing cross-condition replay.
+The initial synthetic suite is an engineering acceptance fixture, not evidence of
+model quality. Matched-budget system outcomes remain a Phase 9 protocol.

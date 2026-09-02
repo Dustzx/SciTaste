@@ -1,0 +1,280 @@
+suite_id: scitastebench-independent-smoke
+version: "1.0"
+description: Independent synthetic acceptance suite spanning all six v1 taste task families; not a publication-effectiveness dataset.
+conditions: [base, knowledge_rag, taste_library, taste_critics, full_scitaste]
+cases:
+  - case_id: idea-boundary-neutral
+    task: idea
+    stage: DISCOVERY
+    domain: graph-learning
+    venue: independent-synthetic
+    publication_year: 2027
+    decision_context: A proposed graph-learning mechanism assumes a degree-specific failure, but that boundary has not been reproduced. A two-hour stratified probe is available before a multi-day implementation.
+    preferred_action_id: idea-neutral-probe
+    wrong_level_action_ids: [idea-neutral-commit]
+    action_roles:
+      idea-neutral-probe: probe_boundary
+      idea-neutral-commit: commit_method
+    expert_distribution:
+      idea-neutral-probe: 0.85
+      idea-neutral-commit: 0.15
+    transfer_axes: [cross_domain]
+    style_group: idea-boundary
+    knowledge_context: Prior diagnostic studies show that aggregate graph accuracy can conceal degree-stratified reversals.
+    taste_principle: Validate the problem boundary cheaply before committing to a polished mechanism.
+    critic_feedback: The causal premise is currently unsupported; the proposed implementation cannot distinguish a real boundary from an aggregate artifact.
+    controller_context: Discovery stage, high uncertainty, 2 probe-hours available, no mature idea selected.
+    candidate_actions:
+      - action_id: idea-neutral-probe
+        type: PROBE
+        description: Run the controlled degree-stratified reproduction before ideation.
+      - action_id: idea-neutral-commit
+        type: IDEATE
+        description: Commit to the mechanism and begin the full implementation now.
+    scripted_selections:
+      base: idea-neutral-commit
+      knowledge_rag: idea-neutral-commit
+      taste_library: idea-neutral-probe
+      taste_critics: idea-neutral-commit
+      full_scitaste: idea-neutral-probe
+
+  - case_id: idea-boundary-polished
+    task: idea
+    stage: DISCOVERY
+    domain: graph-learning
+    venue: independent-synthetic
+    publication_year: 2027
+    decision_context: The mechanism is elegantly written and resembles a publishable contribution. Its motivating degree-specific failure is still an unverified anecdote, while a cheap stratified check is ready.
+    preferred_action_id: idea-polished-probe
+    wrong_level_action_ids: [idea-polished-commit]
+    action_roles:
+      idea-polished-probe: probe_boundary
+      idea-polished-commit: commit_method
+    expert_distribution:
+      idea-polished-probe: 0.85
+      idea-polished-commit: 0.15
+    transfer_axes: [cross_domain]
+    style_group: idea-boundary
+    knowledge_context: Published aggregate results do not establish the claimed degree-specific boundary.
+    taste_principle: Conceptual elegance is not evidence; probe the uncertain premise before expensive development.
+    critic_feedback: The framing quality may create a style shortcut that hides the missing diagnostic evidence.
+    controller_context: Discovery stage, high premise uncertainty, cheap falsification available.
+    candidate_actions:
+      - action_id: idea-polished-commit
+        type: IDEATE
+        description: Preserve momentum by implementing the polished mechanism immediately.
+      - action_id: idea-polished-probe
+        type: PROBE
+        description: Test the motivating boundary under controlled degree strata first.
+    scripted_selections:
+      base: idea-polished-commit
+      knowledge_rag: idea-polished-probe
+      taste_library: idea-polished-probe
+      taste_critics: idea-polished-commit
+      full_scitaste: idea-polished-probe
+
+  - case_id: experiment-compute-confound
+    task: experiment
+    stage: EVIDENCE
+    domain: language-modeling
+    venue: independent-synthetic
+    publication_year: 2028
+    decision_context: The new method beats the reported baseline, but it uses twice the training tokens and compute. The remaining budget can fund either more unmatched seeds or one matched baseline.
+    preferred_action_id: experiment-matched
+    wrong_level_action_ids: [experiment-more-seeds]
+    action_roles:
+      experiment-matched: fix_confound
+      experiment-more-seeds: scale_unmatched
+    expert_distribution:
+      experiment-matched: 0.9
+      experiment-more-seeds: 0.1
+    transfer_axes: [future_year]
+    knowledge_context: Scaling laws predict gains from the extra tokens even without the proposed method.
+    taste_principle: Resolve design confounds before reducing variance in a biased comparison.
+    critic_feedback: More seeds cannot repair a compute mismatch between method and baseline.
+    controller_context: Evidence stage, one experiment slot remains, primary efficacy claim unresolved.
+    candidate_actions:
+      - action_id: experiment-more-seeds
+        type: EXPERIMENT
+        description: Add five seeds to the current unmatched comparison.
+      - action_id: experiment-matched
+        type: ADD_BASELINE
+        description: Run a token- and compute-matched baseline before interpreting the gain.
+    scripted_selections:
+      base: experiment-matched
+      knowledge_rag: experiment-matched
+      taste_library: experiment-matched
+      taste_critics: experiment-matched
+      full_scitaste: experiment-matched
+
+  - case_id: evidence-preregistered-contradiction
+    task: evidence
+    stage: EVIDENCE
+    domain: computer-vision
+    venue: independent-synthetic
+    publication_year: 2028
+    decision_context: Aggregate accuracy is positive, but a preregistered falsification test contradicts the proposed mechanism. Additional aggregate benchmarks are cheaper than reformulating the claim.
+    preferred_action_id: evidence-pivot
+    wrong_level_action_ids: [evidence-accumulate]
+    action_roles:
+      evidence-pivot: preserve_and_reformulate
+      evidence-accumulate: accumulate_support
+    expert_distribution:
+      evidence-pivot: 0.88
+      evidence-accumulate: 0.12
+    transfer_axes: [future_year]
+    knowledge_context: Aggregate improvements and mechanism validity are distinct claims requiring different evidence.
+    taste_principle: Preserve contradictory evidence and narrow or reformulate the mechanism claim.
+    critic_feedback: Collecting more aggregate results does not answer the failed falsification test.
+    controller_context: Evidence stage, mechanism claim blocked, contradiction has high information value.
+    candidate_actions:
+      - action_id: evidence-accumulate
+        type: COLLECT_EVIDENCE
+        description: Add supportive aggregate datasets and retain the original mechanism claim.
+      - action_id: evidence-pivot
+        type: PIVOT
+        description: Preserve the contradiction, narrow the claim, and investigate the unexpected pattern.
+    scripted_selections:
+      base: evidence-accumulate
+      knowledge_rag: evidence-pivot
+      taste_library: evidence-pivot
+      taste_critics: evidence-pivot
+      full_scitaste: evidence-pivot
+
+  - case_id: writing-scope-neutral
+    task: writing
+    stage: COMMUNICATION
+    domain: multimodal-learning
+    venue: venue-transfer-a
+    publication_year: 2026
+    decision_context: Results cover two English-language vision datasets, while the draft claims universal cross-domain and multilingual generalization.
+    preferred_action_id: writing-neutral-narrow
+    wrong_level_action_ids: [writing-neutral-polish]
+    action_roles:
+      writing-neutral-narrow: narrow_claim
+      writing-neutral-polish: polish_overclaim
+    expert_distribution:
+      writing-neutral-narrow: 0.92
+      writing-neutral-polish: 0.08
+    transfer_axes: [cross_venue]
+    paraphrase_group: writing-scope
+    knowledge_context: The cited studies do not evaluate multilingual transfer or domains beyond vision.
+    taste_principle: Match claim scope to demonstrated evidence and state untested boundaries.
+    critic_feedback: The universal quantifier is unsupported by the current experiment matrix.
+    controller_context: Communication stage, evidence collection closed, claim scope remains editable.
+    candidate_actions:
+      - action_id: writing-neutral-narrow
+        type: NARROW_CLAIM
+        description: Restrict the claim to the tested datasets and name the untested scope.
+      - action_id: writing-neutral-polish
+        type: WRITE
+        description: Retain the universal claim and make its presentation more confident.
+    scripted_selections:
+      base: writing-neutral-narrow
+      knowledge_rag: writing-neutral-narrow
+      taste_library: writing-neutral-narrow
+      taste_critics: writing-neutral-narrow
+      full_scitaste: writing-neutral-narrow
+
+  - case_id: writing-scope-confident
+    task: writing
+    stage: COMMUNICATION
+    domain: multimodal-learning
+    venue: venue-transfer-b
+    publication_year: 2026
+    decision_context: A forceful conclusion says the approach generalizes across languages and scientific domains. The experiments in fact contain only two English vision benchmarks.
+    preferred_action_id: writing-confident-narrow
+    wrong_level_action_ids: [writing-confident-polish]
+    action_roles:
+      writing-confident-narrow: narrow_claim
+      writing-confident-polish: polish_overclaim
+    expert_distribution:
+      writing-confident-narrow: 0.92
+      writing-confident-polish: 0.08
+    transfer_axes: [cross_venue]
+    paraphrase_group: writing-scope
+    knowledge_context: No multilingual or non-vision result is present in the evidence inventory.
+    taste_principle: Rhetorical confidence must not expand empirical scope.
+    critic_feedback: The conclusion promotes an untested extrapolation into the headline claim.
+    controller_context: Communication stage, unsupported-claim critic is active, no new experiments planned.
+    candidate_actions:
+      - action_id: writing-confident-polish
+        type: WRITE
+        description: Keep the broad conclusion and strengthen its rhetorical clarity.
+      - action_id: writing-confident-narrow
+        type: NARROW_CLAIM
+        description: Limit the conclusion to tested English vision settings and acknowledge the gap.
+    scripted_selections:
+      base: writing-confident-polish
+      knowledge_rag: writing-confident-polish
+      taste_library: writing-confident-narrow
+      taste_critics: writing-confident-narrow
+      full_scitaste: writing-confident-narrow
+
+  - case_id: review-missing-strong-baseline
+    task: review
+    stage: REVIEW
+    domain: reinforcement-learning
+    venue: venue-transfer-c
+    publication_year: 2027
+    decision_context: A reviewer identifies an omitted strong baseline that may reverse the main empirical conclusion. The response deadline permits one matched run or a prose clarification.
+    preferred_action_id: review-run-baseline
+    wrong_level_action_ids: [review-explain-away]
+    action_roles:
+      review-run-baseline: collect_decisive_evidence
+      review-explain-away: prose_only_response
+    expert_distribution:
+      review-run-baseline: 0.9
+      review-explain-away: 0.1
+    transfer_axes: [future_year, cross_venue]
+    knowledge_context: The omitted method is the current strongest comparable baseline under the same observation setting.
+    taste_principle: Route potentially conclusion-changing reviewer concerns back to evidence collection.
+    critic_feedback: A prose explanation cannot establish whether the headline comparison survives.
+    controller_context: Review stage, concern classified as evidence-critical, one matched run is feasible.
+    candidate_actions:
+      - action_id: review-explain-away
+        type: CLARIFY_EXISTING_TEXT
+        description: Explain in prose why the baseline was omitted and leave results unchanged.
+      - action_id: review-run-baseline
+        type: ADD_BASELINE
+        description: Run the missing matched baseline and update the claims from its result.
+    scripted_selections:
+      base: review-explain-away
+      knowledge_rag: review-explain-away
+      taste_library: review-run-baseline
+      taste_critics: review-run-baseline
+      full_scitaste: review-run-baseline
+
+  - case_id: visual-misleading-encoding
+    task: visual
+    stage: COMMUNICATION
+    domain: computational-biology
+    venue: independent-synthetic
+    publication_year: 2027
+    decision_context: A result figure uses inconsistent y-axis ranges that visually exaggerate the proposed method's advantage. Both the caption and the editable chart remain changeable.
+    preferred_action_id: visual-fix-encoding
+    wrong_level_action_ids: [visual-caption-only]
+    action_roles:
+      visual-fix-encoding: repair_visual_semantics
+      visual-caption-only: explain_misleading_chart
+    expert_distribution:
+      visual-fix-encoding: 0.94
+      visual-caption-only: 0.06
+    transfer_axes: [cross_domain]
+    knowledge_context: Shared-scale comparisons are required when panel magnitudes support the same visual claim.
+    taste_principle: Repair a misleading encoding at the semantic-object level rather than explaining it away.
+    critic_feedback: The axis mismatch changes the visual conclusion and is not resolved by a caption note.
+    controller_context: Communication stage, editable figure contract available, high-severity visual finding open.
+    candidate_actions:
+      - action_id: visual-caption-only
+        type: WRITE
+        description: Keep the chart and add a caption note describing the different scales.
+      - action_id: visual-fix-encoding
+        type: DESIGN_FIGURE
+        description: Patch the editable axes to a comparable scale and rerun visual review.
+    scripted_selections:
+      base: visual-fix-encoding
+      knowledge_rag: visual-fix-encoding
+      taste_library: visual-fix-encoding
+      taste_critics: visual-fix-encoding
+      full_scitaste: visual-fix-encoding
