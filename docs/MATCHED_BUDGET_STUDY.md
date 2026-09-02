@@ -18,6 +18,21 @@ Library, and Full SciTaste. Three fixed seeds produce 48 cells. Sibyl and AI
 Scientist-v2 are registered but disabled until pinned, license-reviewed adapters
 with complete budget telemetry are available.
 
+Here, `disabled` means optional external-baseline integration is pending. It does
+not mean a mock implementation is substituted, and it does not block local
+experiments on the four core conditions. Sibyl currently requires a separate
+Claude Code/agent-team/MCP environment and broad execution permissions. AI
+Scientist-v2 executes LLM-written code and explicitly requires a controlled
+sandbox. Each must pass repository/version pinning, license review, isolated
+execution, artifact mapping, and all six telemetry dimensions before it can be
+enabled. Until then, both remain visible in the protocol as unavailable rather
+than contributing fabricated results.
+
+Integration assessments must use the official
+[Sibyl repository](https://github.com/Sibyl-Research-Team/AutoResearch-SibylSystem)
+and [AI Scientist-v2 repository](https://github.com/SakanaAI/AI-Scientist-v2),
+not similarly named forks.
+
 Every enabled cell inherits the same:
 
 - Qwen base-model declaration and frozen revision;
@@ -91,6 +106,11 @@ both markers as blockers. Real execution additionally requires:
   run did not emit an API cost log;
 - pinned Sibyl/AI Scientist-v2 adapters if they prove practical;
 - independent experts, conflict adjudication, and reviewer identity hashes.
+
+A local Qwen3-VL-4B decision-backend smoke run is complete on one RTX 3090. It
+validates model loading and the preference protocol only; it is not a complete
+system cell and therefore does not clear the executor, search-snapshot, or expert
+review requirements above.
 
 These are operational/research prerequisites, not reasons to weaken the audit
 contract or modify AutoResearchClaw internals.

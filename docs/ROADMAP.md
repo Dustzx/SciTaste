@@ -147,6 +147,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - System metrics and deltas against AutoResearchClaw are implemented. Synthetic
   fixtures can only produce `acceptance_only`; headline eligibility requires real
   executions and valid external expert panels.
+- A pinned, local-only Qwen3-VL-4B Transformers backend passed a Base/Full
+  SciTasteBench smoke run on one RTX 3090. This clears local decision-backend
+  feasibility, not the full matched-system execution gate.
+- Sibyl and AI Scientist-v2 are optional external integrations still to be
+  implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: freeze a provider-resolved model revision,
   materialize the search snapshot, add complete API/token accounting, validate
   downstream substrate stages, run the matrix, and collect external reviews.

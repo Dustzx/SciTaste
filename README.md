@@ -136,6 +136,28 @@ No live provider is contacted by tests, installation, library building, demo, or
 dry-run commands. See [`docs/API_PROVIDERS.md`](docs/API_PROVIDERS.md) for the
 recommended provider strategy and reproducibility controls.
 
+## Local single-GPU model
+
+The optional text-only Transformers backend runs preference calibration and
+SciTasteBench directly from an existing local checkpoint. It never downloads a
+model implicitly:
+
+```bash
+.venv/bin/pip install -e '.[local-gpu]'
+export SCITASTE_LOCAL_MODEL_PATH=/absolute/path/to/Qwen3-VL-4B-Instruct
+.venv/bin/scitaste benchmark run \
+  --backend local-transformers \
+  --config configs/backends/local_transformers_qwen3vl4b.example.yaml \
+  --condition base --condition full_scitaste \
+  --record outputs/qwen3vl4b-local/recording.jsonl \
+  --output outputs/qwen3vl4b-local --seed 7
+```
+
+The example pins the official Qwen checkpoint revision. Keep one process alive
+for a multi-case run so model weights load only once. The local backend is a
+model-decision backend, not a replacement for a complete Phase 9 system
+executor.
+
 ## Offline Discovery Loop
 
 Run the weak-intuition and strong-hypothesis scenarios through the same engine:

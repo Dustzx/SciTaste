@@ -18,7 +18,8 @@ returns observations and artifacts but cannot select the next global action.
 - `taste`: deterministic, training-free ranking, intrinsic calibration,
   stage-aware precedent retrieval, and budget-aware utility.
 - `backends`: fixed-candidate provider-neutral contract, scripted/replay modes,
-  and an explicitly invoked OpenAI-compatible HTTP adapter.
+  an explicitly invoked OpenAI-compatible HTTP adapter, and a lazy local-only
+  Transformers adapter for text decisions.
 - `data`: separate typed Knowledge and Taste stores with source provenance.
 - `discovery`: structured landscape, intuition/hypothesis lifecycle, diagnostic
   probes, problem formation, normalized ideas, portfolio selection, and
@@ -92,6 +93,8 @@ returns observations and artifacts but cannot select the next global action.
     headline evidence.
 30. Disabled competitors and unresolved model/search snapshots remain explicit
     plan metadata, never silent substitutions.
+31. A local-model backend may load only an explicitly configured local path; it
+    cannot download a checkpoint or silently replace the pinned model revision.
 
 ## Architecture decision records
 
@@ -211,3 +214,12 @@ search snapshot, code revision, task assets, and resource ceilings. Execution
 records are imported rather than fabricated by the evaluator, and blinded panel
 reviews attach through opaque IDs. Incomplete telemetry, over-budget cells,
 synthetic evidence, or internal review cannot support headline comparisons.
+
+### ADR-017: Direct local inference stays behind the backend boundary
+
+Status: accepted. Local Transformers inference is an optional, lazy dependency
+that implements the same fixed-candidate contract as hosted providers. The
+checkpoint path is explicit, network download is disabled, greedy decoding is
+used for repeatability, and the reported model identity includes its upstream
+revision. This makes one-GPU feasibility testing possible without coupling
+Transformers or Qwen internals to the controller, state, or executor layers.

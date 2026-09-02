@@ -50,6 +50,9 @@ semantic versioning.
 - Phase 9 matched-budget protocol schemas, four-category task assets,
   deterministic/blinded run-matrix planning, six-dimensional budget and
   telemetry audits, expert-panel eligibility gates, and system-metric comparison.
+- An opt-in, lazy, local-only Transformers preference backend with pinned model
+  identity, greedy decoding, exact recording support, and a Qwen3-VL-4B example.
+- An aggregate RTX 3090 Qwen3-VL-4B Base/Full SciTasteBench smoke record.
 
 ### Changed
 

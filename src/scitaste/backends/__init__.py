@@ -6,6 +6,11 @@ from scitaste.backends.base import (
     PreferenceResponse,
     Usage,
 )
+from scitaste.backends.local_transformers import (
+    LocalTransformersBackend,
+    LocalTransformersConfig,
+    load_local_transformers_config,
+)
 from scitaste.backends.openai_compatible import (
     APIStyle,
     OpenAICompatibleBackend,
@@ -17,6 +22,8 @@ from scitaste.backends.scripted import ScriptedPreferenceBackend, ScriptedSelect
 
 __all__ = [
     "APIStyle",
+    "LocalTransformersBackend",
+    "LocalTransformersConfig",
     "OpenAICompatibleBackend",
     "OpenAICompatibleConfig",
     "PreferenceBackend",
@@ -28,5 +35,6 @@ __all__ = [
     "ScriptedPreferenceBackend",
     "ScriptedSelection",
     "Usage",
+    "load_local_transformers_config",
     "load_openai_compatible_config",
 ]

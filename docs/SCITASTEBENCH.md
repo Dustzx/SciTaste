@@ -74,7 +74,9 @@ the comparison remains controlled:
   --output outputs/scitastebench-base-full
 ```
 
-For a real model, select `--backend openai-compatible`, pass a provider config,
-and use `--record` to preserve exact request/response pairs. Tests and default
-commands never contact a provider. Generated reports remain ignored; only
-aggregate acceptance manifests and hashes are committed.
+For a real model, select `--backend openai-compatible` for a provider or
+`--backend local-transformers` for an existing local checkpoint, pass the
+matching config, and use `--record` to preserve exact request/response pairs.
+Tests and default commands never contact a provider or load a checkpoint.
+Generated reports remain ignored; only aggregate acceptance manifests and hashes
+are committed.

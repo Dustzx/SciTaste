@@ -10,6 +10,10 @@ from typing import Any
 
 import yaml
 
+from scitaste.backends.local_transformers import (
+    LocalTransformersBackend,
+    load_local_transformers_config,
+)
 from scitaste.backends.openai_compatible import (
     OpenAICompatibleBackend,
     load_openai_compatible_config,
@@ -376,8 +380,15 @@ def _handle_taste_calibrate(args: argparse.Namespace) -> int:
         if args.config is None:
             raise ValueError("--backend openai-compatible requires --config PATH")
         backend = OpenAICompatibleBackend(load_openai_compatible_config(args.config))
+    elif args.backend == "local-transformers":
+        if args.config is None:
+            raise ValueError("--backend local-transformers requires --config PATH")
+        backend = LocalTransformersBackend(load_local_transformers_config(args.config))
     else:
-        raise ValueError("supported calibration backends: scripted, replay, openai-compatible")
+        raise ValueError(
+            "supported calibration backends: scripted, replay, openai-compatible, "
+            "local-transformers"
+        )
     if args.record:
         backend = RecordingBackend(backend, args.record)
     report = IntrinsicTasteCalibrator(backend, seed=args.seed).evaluate(suite)
@@ -593,8 +604,14 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
         if args.config is None:
             raise ValueError("--backend openai-compatible requires --config PATH")
         backend = OpenAICompatibleBackend(load_openai_compatible_config(args.config))
+    elif args.backend == "local-transformers":
+        if args.config is None:
+            raise ValueError("--backend local-transformers requires --config PATH")
+        backend = LocalTransformersBackend(load_local_transformers_config(args.config))
     else:
-        raise ValueError("supported benchmark backends: scripted, replay, openai-compatible")
+        raise ValueError(
+            "supported benchmark backends: scripted, replay, openai-compatible, local-transformers"
+        )
     if args.record:
         backend = RecordingBackend(backend, args.record)
     report = SciTasteBenchRunner(backend, seed=args.seed).evaluate(suite, conditions=conditions)

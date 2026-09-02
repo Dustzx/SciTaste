@@ -21,6 +21,12 @@ dev = [
   "pytest-cov>=5.0",
   "ruff>=0.8",
 ]
+local-gpu = [
+  "accelerate>=1.1,<2",
+  "safetensors>=0.4,<1",
+  "torch>=2.5,<2.6",
+  "transformers>=4.57,<4.58",
+]
 [project.scripts]
 scitaste = "scitaste.cli:main"
 

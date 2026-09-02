@@ -33,7 +33,7 @@ linked official page before purchasing credits or fixing an experiment manifest.
 | Gemini API direct | cross-family comparison | official OpenAI compatibility and Batch pricing | Google account/region/data terms | OpenAI-compatible |
 | Anthropic direct | optional independent critic | strong long-context reviewer family | native Messages behavior differs from the current adapter | native adapter still pending |
 | OpenRouter | short-lived model scouting | one interface for many providers | intermediary routing, privacy, and reproducibility | OpenAI-compatible, provider pinned |
-| Local open-weight endpoint | confidential or zero-marginal-call experiments | data stays under project control | hardware, serving, and model quality | any local OpenAI-compatible server |
+| Local open-weight runtime | confidential or zero-marginal-call experiments | data stays under project control | hardware, serving, and model quality | direct text-only Transformers or any compatible server |
 
 For a university or company deployment, buy credits/contracts from the model
 vendor or its named cloud platform under the institution's account. Do not buy a
@@ -64,6 +64,21 @@ scitaste taste calibrate \
   --record outputs/bailian/recording.jsonl \
   --output outputs/bailian
 ```
+
+An existing local Qwen checkpoint can instead run without a server or API key:
+
+```bash
+export SCITASTE_LOCAL_MODEL_PATH=/absolute/path/to/Qwen3-VL-4B-Instruct
+scitaste taste calibrate \
+  --backend local-transformers \
+  --config configs/backends/local_transformers_qwen3vl4b.example.yaml \
+  --record outputs/local-qwen/recording.jsonl \
+  --output outputs/local-qwen
+```
+
+The direct backend uses local files only, greedy decoding, and a pinned upstream
+revision. It deliberately exposes only text decisions even when the checkpoint
+also supports vision.
 
 For Phase 7 visual-taste connectivity, replace the suite with
 `configs/taste/visual_calibration_v1.yaml`. The committed Bailian example pins
