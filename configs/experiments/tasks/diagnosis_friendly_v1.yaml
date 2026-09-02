@@ -1,0 +1,17 @@
+task_id: diagnosis-friendly-v1
+category: diagnosis_friendly
+research_direction: Diagnose a reproducible failure boundary in long-context scientific claim verification.
+domain: scientific-language-modeling
+starting_evidence:
+  - Aggregate verification accuracy falls as evidence packets become longer.
+  - It is unknown whether position, contradiction density, or citation structure drives the decline.
+constraints:
+  - Use only a frozen literature/search snapshot supplied to every condition.
+  - Run inexpensive factor probes before committing to a new method.
+  - Report stable contradictions and alternative explanations.
+deliverables:
+  - failure-boundary diagnosis
+  - working hypothesis
+  - controlled pilot
+  - evidence inventory
+  - evidence-linked paper draft

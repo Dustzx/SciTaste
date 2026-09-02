@@ -1,0 +1,17 @@
+task_id: new-formulation-v1
+category: new_formulation
+research_direction: Define a diagnostic benchmark for evidence-grounded scientific-agent pivots.
+domain: autonomous-science-evaluation
+starting_evidence:
+  - Existing aggregate task-completion scores do not identify whether a pivot preserves contradictory evidence.
+  - A useful formulation must distinguish evidence collection from rhetorical reframing.
+constraints:
+  - Use only a frozen literature/search snapshot supplied to every condition.
+  - Produce a falsifiable task definition and leakage-resistant evaluation protocol.
+  - Do not assume SciTaste-specific state fields are available to competitors.
+deliverables:
+  - problem statement
+  - benchmark task schema
+  - negative controls
+  - pilot result
+  - evidence-linked paper draft

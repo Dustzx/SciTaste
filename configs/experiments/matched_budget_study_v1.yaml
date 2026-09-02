@@ -1,0 +1,91 @@
+study_id: scitaste-matched-budget-v1
+version: "1.0"
+description: Preregistered four-category system study; execution remains pending until frozen search assets, external competitors, and expert panel operations are available.
+base_model: qwen3.8-max
+base_model_revision: bailian-model-snapshot-required-at-execution
+codebase_commit: 4eb735dc7b3497a91fab414e2d73bb5f0396f854
+search_access:
+  policy_id: frozen-search-snapshot-v1
+  provider: frozen-local-corpus
+  frozen_snapshot: pending-content-addressed-snapshot
+budget:
+  gpu_hours: 4.0
+  max_experiments: 8
+  max_wall_time_hours: 8.0
+  max_api_cost_usd: 20.0
+  max_search_queries: 50
+  max_llm_tokens: 200000
+seeds: [7, 19, 31]
+repetitions_per_seed: 1
+tasks:
+  - task_id: diagnosis-friendly-v1
+    category: diagnosis_friendly
+    research_direction: Diagnose a reproducible failure boundary in long-context scientific claim verification.
+    domain: scientific-language-modeling
+    asset_path: configs/experiments/tasks/diagnosis_friendly_v1.yaml
+    asset_sha256: c52ef752505360f439305d68a040c407e1643a8793db890f2ad438fb9a375340
+    expected_discovery_behavior: Probe-heavy diagnosis before method commitment.
+  - task_id: clear-hypothesis-v1
+    category: clear_hypothesis
+    research_direction: Test uncertainty-weighted evidence aggregation for contradictory-claim verification.
+    domain: scientific-language-modeling
+    asset_path: configs/experiments/tasks/clear_hypothesis_v1.yaml
+    asset_sha256: 5870e7513b797786232cedb748f373ed4ef1924ea01604fc149b43ac259f1b69
+    expected_discovery_behavior: One bounded sanity probe before pilot execution.
+  - task_id: new-formulation-v1
+    category: new_formulation
+    research_direction: Define a diagnostic benchmark for evidence-grounded scientific-agent pivots.
+    domain: autonomous-science-evaluation
+    asset_path: configs/experiments/tasks/new_formulation_v1.yaml
+    asset_sha256: 2f2e87cb25d338b935b328fd98c1729e218287330a8147920d0d56e5d0047a8d
+    expected_discovery_behavior: Literature and evaluation design dominate early work.
+  - task_id: ambiguous-direction-v1
+    category: ambiguous_direction
+    research_direction: Investigate when retrieval augmentation harms scientific decision quality.
+    domain: retrieval-augmented-reasoning
+    asset_path: configs/experiments/tasks/ambiguous_direction_v1.yaml
+    asset_sha256: 237d71997fdbdef597c995ea3cea52ccbbd8b09cd9fdf4c71dfb2adca1cc6896
+    expected_discovery_behavior: Adaptive probes precede expensive method development.
+conditions:
+  - condition: autoresearchclaw
+    enabled: true
+    implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
+  - condition: knowledge_rag
+    enabled: true
+    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:knowledge-rag
+  - condition: taste_library
+    enabled: true
+    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:taste-library
+  - condition: full_scitaste
+    enabled: true
+    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:full
+  - condition: sibyl
+    enabled: false
+    unavailable_reason: No pinned, license-reviewed integration has passed the SciTaste executor contract.
+  - condition: ai_scientist_v2
+    enabled: false
+    unavailable_reason: No pinned, budget-telemetry-complete integration is currently available.
+expert_panel:
+  rubric_version: scitaste-system-rubric-v1
+  min_reviewers_per_cell: 2
+  condition_blinded: true
+  adjudication_required_on_conflict: true
+  dimensions:
+    - problem_quality
+    - idea_quality
+    - evidence_quality
+    - story_quality
+    - writing_quality
+    - figure_quality
+    - final_preference_score
+preregistered_outcomes:
+  - research_yield_per_gpu_hour
+  - idea_yield
+  - invalid_idea_rate
+  - unproductive_experiment_rate
+  - gpu_hours_before_useful_signal
+  - evidence_sufficiency
+  - reviewer_concern_closure_rate
+  - unsupported_claim_rate
+  - correct_pivot_rate
+  - final_expert_preference

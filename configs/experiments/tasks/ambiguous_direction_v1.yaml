@@ -1,0 +1,17 @@
+task_id: ambiguous-direction-v1
+category: ambiguous_direction
+research_direction: Investigate when retrieval augmentation harms scientific decision quality.
+domain: retrieval-augmented-reasoning
+starting_evidence:
+  - Retrieval sometimes improves factual coverage while increasing anchoring to popular explanations.
+  - The responsible boundary, mechanism, and measurement protocol are unspecified.
+constraints:
+  - Use only a frozen literature/search snapshot supplied to every condition.
+  - Spend no more than one quarter of the experiment budget before stating a working hypothesis.
+  - Preserve negative and contradictory probes in the final artifact trail.
+deliverables:
+  - diagnostic landscape
+  - working hypothesis and alternatives
+  - probe plan
+  - pilot result
+  - evidence-linked paper draft

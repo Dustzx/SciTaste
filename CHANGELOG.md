@@ -47,6 +47,9 @@ semantic versioning.
 - Phase 8 SciTasteBench schemas, an independent six-family fixed-pair suite, five
   condition-isolated evaluation modes, robustness/transfer/calibration metrics,
   paired Base comparisons, exact backend replay support, and hashed reports.
+- Phase 9 matched-budget protocol schemas, four-category task assets,
+  deterministic/blinded run-matrix planning, six-dimensional budget and
+  telemetry audits, expert-panel eligibility gates, and system-metric comparison.
 
 ### Changed
 

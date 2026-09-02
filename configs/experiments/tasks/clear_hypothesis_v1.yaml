@@ -1,0 +1,17 @@
+task_id: clear-hypothesis-v1
+category: clear_hypothesis
+research_direction: Test whether uncertainty-weighted evidence aggregation improves contradictory-claim verification.
+domain: scientific-language-modeling
+starting_evidence:
+  - A fixed uncertainty-weighted aggregation rule is specified before the study.
+  - Prior small-scale observations support the mechanism but do not establish robustness.
+constraints:
+  - Use only a frozen literature/search snapshot supplied to every condition.
+  - Perform a bounded sanity probe before full pilot execution.
+  - Compare against compute- and data-matched aggregation baselines.
+deliverables:
+  - sanity-check result
+  - matched experiment plan
+  - controlled pilot
+  - evidence inventory
+  - evidence-linked paper draft

@@ -10,8 +10,9 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0 through 8, including the Phase 7.5 real-substrate gate, are implemented;
-license-reviewed external corpus expansion continues as a data operation:
+Phases 0 through 8, including the Phase 7.5 real-substrate gate, are implemented.
+The Phase 9 matched-budget protocol is in progress; license-reviewed external
+corpus expansion continues as a data operation:
 
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
@@ -48,7 +49,10 @@ license-reviewed external corpus expansion continues as a data operation:
   accounting, and a successful live Stage 1–3 vertical slice;
 - an independent six-family SciTasteBench smoke suite with five isolated
   intrinsic/augmentation conditions, transfer and robustness diagnostics,
-  paired comparisons, exact replay support, and content-hashed reports.
+  paired comparisons, exact replay support, and content-hashed reports;
+- a deterministic four-category matched-budget study planner with blinded expert
+  review contracts, complete resource auditing, eligibility gates, and explicit
+  readiness blockers.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -102,6 +106,16 @@ Run the independent Phase 8 controlled benchmark offline with:
 This synthetic suite validates Base versus Knowledge RAG, Taste Library, Taste
 Critics, and Full SciTaste comparisons; its programmed scores are not an
 effectiveness claim. See [`docs/SCITASTEBENCH.md`](docs/SCITASTEBENCH.md).
+
+Inspect the Phase 9 system-study matrix without launching any experiment:
+
+```bash
+.venv/bin/scitaste study plan --dry-run
+```
+
+The current 48-cell plan remains blocked from real execution until the provider
+model revision and frozen search snapshot are resolved. See
+[`docs/MATCHED_BUDGET_STUDY.md`](docs/MATCHED_BUDGET_STUDY.md).
 
 ## Opt-in live calibration
 

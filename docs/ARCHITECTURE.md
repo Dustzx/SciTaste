@@ -34,7 +34,8 @@ returns observations and artifacts but cannot select the next global action.
   reconstruction, editable vector export, split visual criticism, and patches.
 - `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
 - `benchmark`: evaluation-only fixed-pair suites, isolated augmentation
-  conditions, robustness/transfer metrics, and paired Base comparisons.
+  conditions, robustness/transfer metrics, paired Base comparisons, and the
+  matched-budget system-study planner/auditor.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
 ## Invariants
@@ -85,6 +86,12 @@ returns observations and artifacts but cannot select the next global action.
 26. Self-referential dogfooding cases cannot enter headline benchmark metrics.
 27. Unsupported metrics are reported as unavailable rather than synthesized from
     a weaker measurement contract.
+28. A system-study cell is headline-eligible only with complete budget telemetry,
+    real artifacts, and condition-blinded external panel review.
+29. Synthetic study records may validate the evaluator but can never become
+    headline evidence.
+30. Disabled competitors and unresolved model/search snapshots remain explicit
+    plan metadata, never silent substitutions.
 
 ## Architecture decision records
 
@@ -195,3 +202,12 @@ declared information, while Full receives all declared signals. Condition and
 content changes alter the request fingerprint, preventing cross-condition replay.
 The initial synthetic suite is an engineering acceptance fixture, not evidence of
 model quality. Matched-budget system outcomes remain a Phase 9 protocol.
+
+### ADR-016: Preregistered matrix before system execution
+
+Status: accepted. Phase 9 creates the full task/condition/seed matrix from one
+content-hashed protocol before any run. The protocol owns the shared base model,
+search snapshot, code revision, task assets, and resource ceilings. Execution
+records are imported rather than fabricated by the evaluator, and blinded panel
+reviews attach through opaque IDs. Incomplete telemetry, over-budget cells,
+synthetic evidence, or internal review cannot support headline comparisons.

@@ -18,9 +18,15 @@ from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.benchmark import (
     BenchmarkCondition,
+    MatchedStudyEvaluator,
+    MatchedStudyPlanner,
     SciTasteBenchRunner,
     load_benchmark_suite,
+    load_study_protocol,
+    load_study_results,
     save_benchmark_report,
+    save_study_plan,
+    save_study_report,
     scripted_selections,
 )
 from scitaste.data.curation import CurationFormat, curate_snapshot
@@ -217,6 +223,22 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_run.add_argument("--replay", type=Path, default=None)
     benchmark_run.add_argument("--record", type=Path, default=None)
     benchmark_run.set_defaults(handler=_handle_benchmark_run)
+
+    study = commands.add_parser("study", help="Matched-budget system-study operations")
+    study_commands = study.add_subparsers(dest="study_command", required=True)
+    study_plan = study_commands.add_parser("plan", help="Create a deterministic run matrix")
+    _add_common_options(study_plan, default_output="outputs/matched-study", default_backend="local")
+    study_plan.set_defaults(handler=_handle_study_plan)
+    study_evaluate = study_commands.add_parser(
+        "evaluate", help="Audit completed cells and blinded expert reviews"
+    )
+    _add_common_options(
+        study_evaluate,
+        default_output="outputs/matched-study-evaluation",
+        default_backend="local",
+    )
+    study_evaluate.add_argument("--results", type=Path, required=True)
+    study_evaluate.set_defaults(handler=_handle_study_evaluate)
     return parser
 
 
@@ -596,6 +618,52 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _handle_study_plan(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("study planning supports only --backend local")
+    protocol_path = args.config or Path("configs/experiments/matched_budget_study_v1.yaml")
+    protocol = load_study_protocol(protocol_path)
+    plan = MatchedStudyPlanner().plan(protocol)
+    payload = {
+        "study_id": protocol.study_id,
+        "protocol_sha256": protocol.sha256,
+        "plan_sha256": plan.sha256,
+        "planned_cells": len(plan.cells),
+        "disabled_conditions": {
+            condition.value: reason for condition, reason in plan.disabled_conditions.items()
+        },
+        "readiness_blockers": plan.readiness_blockers,
+    }
+    if args.dry_run:
+        print(json.dumps({"status": "planned", **payload}, indent=2))
+        return 0
+    path = save_study_plan(plan, args.output)
+    print(json.dumps({**payload, "plan": str(path)}, indent=2))
+    return 0
+
+
+def _handle_study_evaluate(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("study evaluation supports only --backend local")
+    protocol_path = args.config or Path("configs/experiments/matched_budget_study_v1.yaml")
+    protocol = load_study_protocol(protocol_path)
+    report = MatchedStudyEvaluator().evaluate(protocol, load_study_results(args.results))
+    payload = {
+        "study_id": report.study_id,
+        "status": report.status.value,
+        "headline_eligible": report.headline_eligible,
+        "planned_cells": report.planned_cells,
+        "completed_cells": report.completed_cells,
+        "blockers": report.blockers,
+    }
+    if args.dry_run:
+        print(json.dumps(payload, indent=2))
+        return 0
+    path = save_study_report(report, args.output)
+    print(json.dumps({**payload, "report": str(path)}, indent=2))
+    return 0 if not report.blockers else 1
 
 
 def _handle_planned(args: argparse.Namespace) -> int:

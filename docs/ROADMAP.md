@@ -14,7 +14,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
-| Phase 9 — matched-budget study | next | baseline/system comparisons use identical tasks and budgets |
+| Phase 9 — matched-budget study | in progress | protocol/planner/auditor done; real matched runs and external expert review pending |
 
 ## Phase 2/3 progress
 
@@ -132,6 +132,24 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and Phase 9 system outcomes are explicitly deferred rather than approximated.
 - Deterministic offline acceptance spans all conditions and stores content hashes;
   scripted scores verify the evaluator, not SciTaste effectiveness.
+
+## Phase 9 progress
+
+- A content-hashed protocol covers diagnosis-friendly, clear-hypothesis,
+  new-formulation, and ambiguous-direction tasks.
+- AutoResearchClaw, Knowledge RAG, Taste Library, and Full SciTaste are enabled;
+  Sibyl and AI Scientist-v2 remain explicitly unavailable pending pinned adapters.
+- Three seeds generate 48 deterministic cells with opaque blind-review IDs and
+  identical GPU, experiment, wall-time, API-cost, search, and token budgets.
+- The evaluator rejects missing cells, failed execution, missing telemetry,
+  over-budget usage, inconsistent experiment counts, internal/missing review,
+  and unresolved protocol readiness markers.
+- System metrics and deltas against AutoResearchClaw are implemented. Synthetic
+  fixtures can only produce `acceptance_only`; headline eligibility requires real
+  executions and valid external expert panels.
+- Pending before the exit gate: freeze a provider-resolved model revision,
+  materialize the search snapshot, add complete API/token accounting, validate
+  downstream substrate stages, run the matrix, and collect external reviews.
 
 ## Project controls
 
