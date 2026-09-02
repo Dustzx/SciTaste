@@ -11,7 +11,7 @@ ResearchState → candidate ResearchAction set → TasteController
 SciTaste owns the state, action ranking, transition, and decision log. An executor
 returns observations and artifacts but cannot select the next global action.
 
-## Phase 0-5 components
+## Phase 0-6 components
 
 - `schema`: stable action and decision interchange models.
 - `state`: the canonical state, nonlinear transition reducer, and atomic store.
@@ -25,6 +25,11 @@ returns observations and artifacts but cannot select the next global action.
   evidence-backed ideation.
 - `evidence`: claim/evidence graphs, gap analysis, information-value experiment
   planning, interpretation critic, routing, and a state-integrated workflow.
+- `writing`: evidence-gated narrative, section/paragraph contracts,
+  rhetorical-role taste retrieval, deterministic drafting, decomposed critics,
+  and the state-integrated Communication Loop.
+- `review`: structured concerns, stage-specific research obligations, action
+  routing, and evidence-aware closure.
 - `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
@@ -57,6 +62,10 @@ returns observations and artifacts but cannot select the next global action.
     source by implication; article text requires per-record permission.
 17. Externally projected Taste Cases are quarantined from retrieval until human
     verification and personal-data review are recorded.
+18. An evidence-bearing review obligation cannot close from prose alone; closure
+    requires new, claim-linked evidence of the requested type.
+19. Writing contracts and Narrative Spine references resolve against canonical
+    claim/evidence IDs before a draft is accepted.
 
 ## Architecture decision records
 
@@ -131,3 +140,12 @@ that exact scope. Deterministic ARIES/CASIMIR projections preserve observable
 alignment or metadata without promoting them into scientific quality judgments.
 External Taste Cases default to retrieval-ineligible and enter controller memory
 only after explicit human verification, derivation, and personal-data checks.
+
+### ADR-012: Reviewer feedback routes through research obligations
+
+Status: accepted. Review is decomposed into typed concerns before the controller
+selects an action. Evidence-bearing concerns transition back to the existing
+Evidence Loop, and only matching new evidence can close the obligation. The
+updated state then returns to Communication for a contract-preserving revision.
+This prevents a missing experiment or baseline from being treated as a wording
+problem.

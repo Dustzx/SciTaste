@@ -1,0 +1,124 @@
+project_id: communication-review-demo
+research_direction: Explain and validate conflict-aware research control
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 2.0
+  max_experiments: 3
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+
+claims:
+  - claim_id: claim-conflict-control
+    text: Conflict-aware control improves correct research pivots.
+    claim_type: performance
+    strength: moderate
+    required_evidence_types: [controlled pilot]
+    supporting_evidence_ids: [evidence-controlled-pilot]
+    status: supported
+    scientific_importance: 0.9
+    claim_relevance: 0.95
+
+evidence:
+  - evidence_id: evidence-controlled-pilot
+    source_type: experiment
+    evidence_type: controlled pilot
+    experiment_id: experiment-controlled-pilot
+    observation: Correct pivot rate increases in a controlled pilot.
+    supports_claim_ids: [claim-conflict-control]
+    confidence: 0.85
+    stability: 0.9
+
+narrative:
+  core_problem: Autonomous research pipelines commit too early under uncertain evidence.
+  overlooked_failure: Fixed pipelines do not preserve contradictions as decision-relevant evidence.
+  key_observation: Stable contradictory evidence exposes useful failure boundaries.
+  central_insight: A taste controller should select the next research action instead of following a fixed stage sequence.
+  proposed_solution: Use evidence-aware action ranking with persistent claims and decision logs.
+  evidence_chain: [evidence-controlled-pilot]
+  broader_implication: Research agents can improve scientific yield by allocating effort to uncertainty-reducing actions.
+  contribution_order: [claim-conflict-control]
+
+section_contracts:
+  - section_name: Introduction
+    purpose: Establish the failure and state the evidence-backed contribution.
+    required_claim_ids: [claim-conflict-control]
+    required_evidence_ids: [evidence-controlled-pilot]
+    rhetorical_moves: [prior progress, expose limitation, state contribution]
+    word_budget: 240
+  - section_name: Results
+    purpose: Report the controlled evidence without overclaiming.
+    required_claim_ids: [claim-conflict-control]
+    required_evidence_ids: [evidence-controlled-pilot]
+    rhetorical_moves: [state comparison, report evidence, delimit conclusion]
+    word_budget: 220
+
+paragraph_contracts:
+  - section_name: Introduction
+    paragraph_index: 1
+    rhetorical_role: expose limitation
+    input_context: Fixed autonomous-research pipelines and their failure under contradiction.
+    intended_takeaway: Fixed sequencing obscures when contradictory evidence should change the research problem.
+    claim_ids: [claim-conflict-control]
+    evidence_ids: [evidence-controlled-pilot]
+    transition_out: This motivates conflict-aware control.
+  - section_name: Results
+    paragraph_index: 1
+    rhetorical_role: report evidence
+    input_context: Controlled pilot result and its stability.
+    intended_takeaway: The controlled pilot supports improved pivot selection within the tested setting.
+    claim_ids: [claim-conflict-control]
+    evidence_ids: [evidence-controlled-pilot]
+    transition_in: We evaluate the central control claim.
+
+review_feedback:
+  - concern_id: review-matched-baseline
+    category: missing_baseline
+    severity: high
+    target_claim_ids: [claim-conflict-control]
+    target_section: Results
+    text: The current comparison does not establish that gains survive a matched-compute baseline.
+    requires_new_evidence: true
+    requires_new_experiment: true
+    required_evidence_types: [matched baseline]
+
+review_resolution:
+  project_id: communication-review-demo
+  research_direction: Explain and validate conflict-aware research control
+  target_domain: autonomous-research
+  target_venue: general-ml
+  resource_budget:
+    gpu_hours: 2.0
+    max_experiments: 3
+    max_wall_time_hours: 2.0
+    max_api_cost_usd: 0.0
+  claim:
+    claim_id: claim-conflict-control
+    text: Conflict-aware control improves correct research pivots.
+    claim_type: performance
+    strength: moderate
+    required_evidence_types: [matched baseline]
+    scientific_importance: 0.9
+    claim_relevance: 0.95
+  result:
+    result_id: result-matched-baseline
+    experiment_id: experiment-matched-baseline
+    summary: Matched-compute comparison completed.
+    metrics: {correct_pivot_delta: 0.08}
+    cost: {gpu_hours: 0.2, experiments: 1.0}
+  interpretation:
+    claim_id: claim-conflict-control
+    evidence_type: matched baseline
+    expected: Conflict-aware control should retain its advantage under matched compute.
+    observed: Correct pivot rate remains higher under matched inference compute.
+    relation: supports
+    reproducible: true
+    stability: 0.92
+    statistical_uncertainty: 0.03
+    confounders: []
+    alternative_explanations: []
+    benchmark_artifacts: []
+    compute_mismatch: false
+    data_leakage: false
+    implementation_artifacts: []
+  pivot: null

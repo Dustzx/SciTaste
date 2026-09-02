@@ -47,9 +47,21 @@ class TasteRetriever:
         self.library = library
 
     def retrieve(self, query: TasteQuery, *, limit: int = 5) -> list[RetrievedTasteCase]:
-        results = [
-            self._score(case, query) for case in self.library.all() if case.retrieval_eligible
-        ]
+        cases = [case for case in self.library.all() if case.retrieval_eligible]
+        if query.policy == TasteRetrievalPolicy.RHETORICAL_ROLE and query.rhetorical_role:
+            cases = [
+                case
+                for case in cases
+                if case.rhetorical_role
+                and case.rhetorical_role.casefold() == query.rhetorical_role.casefold()
+            ]
+        if query.policy == TasteRetrievalPolicy.VISUAL_ROLE and query.figure_role:
+            cases = [
+                case
+                for case in cases
+                if case.figure_role and case.figure_role.casefold() == query.figure_role.casefold()
+            ]
+        results = [self._score(case, query) for case in cases]
         positive = [result for result in results if result.score > 0]
         return sorted(positive, key=lambda result: (-result.score, result.case.case_id))[:limit]
 

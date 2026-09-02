@@ -28,6 +28,7 @@ from scitaste.taste.intrinsic import (
     load_calibration_suite,
     save_calibration_report,
 )
+from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
 
 def _add_common_options(
@@ -140,8 +141,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common_options(evidence_plan, default_output="outputs/evidence")
     evidence_plan.add_argument("--state", type=Path, default=None)
     evidence_plan.set_defaults(handler=_handle_evidence_plan)
-    _add_single_planned(commands, "write", "Phase 6")
-    _add_single_planned(commands, "review", "Phase 6")
+    write = commands.add_parser("write", help="Run the evidence-grounded communication loop")
+    _add_common_options(write, default_output="outputs/communication")
+    write.set_defaults(handler=_handle_communication)
+    review = commands.add_parser("review", help="Run reviewer-driven research and revision")
+    _add_common_options(review, default_output="outputs/review")
+    review.set_defaults(handler=_handle_communication)
     _add_nested_planned(commands, "figure", "build", "Phase 7")
     _add_nested_planned(commands, "benchmark", "run", "Phase 8")
     return parser
@@ -366,6 +371,29 @@ def _handle_evidence_plan(args: argparse.Namespace) -> int:
         output_dir=args.output,
         state_path=args.state,
     )
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_communication(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("offline Phase 6 communication currently supports only --backend mock")
+    config_path = args.config or Path("configs/writing/reviewer_experiment_demo.yaml")
+    scenario = load_communication_scenario(config_path)
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": scenario.project_id,
+                    "section_count": len(scenario.section_contracts),
+                    "review_concern_count": len(scenario.review_feedback),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    summary = CommunicationWorkflow(seed=args.seed).run(scenario, output_dir=args.output)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 

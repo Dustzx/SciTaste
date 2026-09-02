@@ -10,8 +10,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 3 — taste library | done | knowledge/taste stores are independent; rights-scoped provenance, quarantine, and stage retrieval tested |
 | Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
-| Phase 6 — communication loop | next | narrative/contracts/review obligations can route back to experiments |
-| Phase 7 — figures | planned | figure contract produces editable, reviewed SVG/draw.io output |
+| Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
+| Phase 7 — figures | next | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 8 — SciTasteBench | deferred | intrinsic/augmented evaluation is controlled and reproducible |
 | Phase 9 — matched-budget study | deferred | baseline/system comparisons use identical tasks and budgets |
 
@@ -69,6 +69,19 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Phase 4 `PILOT` state can resume into `PILOT → ANALYZE → EVIDENCE`; a stable
   contradiction retains its evidence and creates a traceable problem/new idea.
 - Resource checks use cumulative project usage, and `DROP` is terminal.
+
+## Phase 6 completion
+
+- Evidence-linked Narrative Spine must pass a taste review before drafting.
+- Section and paragraph contracts reference canonical claim/evidence IDs.
+- Rhetorical-role retrieval supplies traceable writing precedents.
+- Nine distinct critics cover substance, narrative, claim/evidence, redundancy,
+  style, venue style, terminology, citation, and global coherence.
+- Reviewer feedback becomes typed concerns and research obligations with
+  stage-specific actions rather than an unconditional rewrite.
+- Acceptance trajectory: a missing-baseline concern selects `ADD_BASELINE`, the
+  existing Evidence Loop records matched-baseline evidence, the obligation
+  closes, and the paper returns to `COMMUNICATION` for revision 2.
 
 ## Project controls
 

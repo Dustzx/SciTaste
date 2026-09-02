@@ -237,9 +237,45 @@ class NarrativeSpine(SciTasteModel):
     contribution_order: list[str] = Field(default_factory=list)
 
 
+class SectionContract(SciTasteModel):
+    section_name: str
+    purpose: str
+    required_claim_ids: list[str] = Field(default_factory=list)
+    required_evidence_ids: list[str] = Field(default_factory=list)
+    rhetorical_moves: list[str] = Field(default_factory=list)
+    word_budget: int = Field(gt=0)
+
+
+class ParagraphContract(SciTasteModel):
+    section_name: str
+    paragraph_index: int = Field(ge=1)
+    rhetorical_role: str
+    input_context: str
+    intended_takeaway: str
+    claim_ids: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    transition_in: str | None = None
+    transition_out: str | None = None
+
+
+class WritingCritique(SciTasteModel):
+    critic: str
+    severity: str
+    message: str
+    section_name: str | None = None
+    claim_ids: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+
+
 class WritingState(SciTasteModel):
     status: str = "not_started"
     artifact_refs: list[str] = Field(default_factory=list)
+    section_contracts: list[SectionContract] = Field(default_factory=list)
+    paragraph_contracts: list[ParagraphContract] = Field(default_factory=list)
+    section_drafts: dict[str, str] = Field(default_factory=dict)
+    critic_findings: list[WritingCritique] = Field(default_factory=list)
+    retrieved_taste_case_ids: list[str] = Field(default_factory=list)
+    revision: int = Field(default=0, ge=0)
 
 
 class FigureState(SciTasteModel):
@@ -256,6 +292,7 @@ class ReviewerConcern(SciTasteModel):
     text: str
     requires_new_evidence: bool = False
     requires_new_experiment: bool = False
+    required_evidence_types: list[str] = Field(default_factory=list)
     status: str = "open"
 
 
@@ -267,6 +304,10 @@ class ResearchObligation(SciTasteModel):
     target_claim_ids: list[str] = Field(default_factory=list)
     required_evidence_types: list[str] = Field(default_factory=list)
     estimated_cost: dict[str, float] = Field(default_factory=dict)
+    evidence_ids_at_open: list[str] = Field(default_factory=list)
+    resolution_evidence_ids: list[str] = Field(default_factory=list)
+    resolution_summary: str | None = None
+    opened_at_revision: int = Field(default=0, ge=0)
     status: str = "open"
 
 
@@ -373,4 +414,54 @@ class ResearchState(SciTasteModel):
             linked = {*claim.supporting_evidence_ids, *claim.contradicting_evidence_ids}
             if linked - known_evidence:
                 raise ValueError(f"claim {claim.claim_id!r} references unknown evidence")
+        if self.narrative_spine is not None:
+            unknown = set(self.narrative_spine.evidence_chain) - known_evidence
+            if unknown:
+                raise ValueError(f"narrative spine references unknown evidence: {sorted(unknown)}")
+            unknown = set(self.narrative_spine.contribution_order) - known_claims
+            if unknown:
+                raise ValueError(f"narrative spine references unknown claims: {sorted(unknown)}")
+        if self.writing_state is not None:
+            section_names = [item.section_name for item in self.writing_state.section_contracts]
+            if len(section_names) != len(set(section_names)):
+                raise ValueError("section contract names must be unique")
+            for contract in self.writing_state.section_contracts:
+                if set(contract.required_claim_ids) - known_claims:
+                    raise ValueError(f"section {contract.section_name!r} references unknown claims")
+                if set(contract.required_evidence_ids) - known_evidence:
+                    raise ValueError(
+                        f"section {contract.section_name!r} references unknown evidence"
+                    )
+            for contract in self.writing_state.paragraph_contracts:
+                if contract.section_name not in set(section_names):
+                    raise ValueError(
+                        f"paragraph references unknown section {contract.section_name!r}"
+                    )
+                if set(contract.claim_ids) - known_claims:
+                    raise ValueError("paragraph contract references unknown claims")
+                if set(contract.evidence_ids) - known_evidence:
+                    raise ValueError("paragraph contract references unknown evidence")
+        concern_ids = [concern.concern_id for concern in self.reviewer_concerns]
+        obligation_ids = [item.obligation_id for item in self.open_research_obligations]
+        if len(concern_ids) != len(set(concern_ids)):
+            raise ValueError("reviewer concern ids must be unique")
+        if len(obligation_ids) != len(set(obligation_ids)):
+            raise ValueError("research obligation ids must be unique")
+        known_concerns = set(concern_ids)
+        for concern in self.reviewer_concerns:
+            if set(concern.target_claim_ids) - known_claims:
+                raise ValueError(f"concern {concern.concern_id!r} references unknown claims")
+        for obligation in self.open_research_obligations:
+            if obligation.concern_id not in known_concerns:
+                raise ValueError(
+                    f"obligation {obligation.obligation_id!r} references unknown concern"
+                )
+            if set(obligation.target_claim_ids) - known_claims:
+                raise ValueError(
+                    f"obligation {obligation.obligation_id!r} references unknown claims"
+                )
+            if set(obligation.resolution_evidence_ids) - known_evidence:
+                raise ValueError(
+                    f"obligation {obligation.obligation_id!r} references unknown evidence"
+                )
         return self

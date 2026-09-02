@@ -29,6 +29,9 @@ semantic versioning.
   and a real-source aggregate acceptance manifest.
 - Phase 5 claim/evidence graphs, gap analysis, experiment planning,
   interpretation criticism, routing, and state-integrated evidence workflow.
+- Phase 6 evidence-gated Narrative Spine, hierarchical writing contracts,
+  rhetorical-role retrieval, decomposed writing critics, structured reviewer
+  concerns, research obligations, evidence-aware closure, and paper revision.
 - Offline support, uncertainty, overclaim, contradiction, Phase 4 resume, and
   evidence-backed pivot acceptance scenarios.
 

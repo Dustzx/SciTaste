@@ -10,7 +10,7 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0 through 5 are implemented; license-reviewed external corpus expansion
+Phases 0 through 6 are implemented; license-reviewed external corpus expansion
 continues as a data operation:
 
 - canonical, versioned `ResearchState`;
@@ -36,7 +36,10 @@ continues as a data operation:
 - local-only, license-gated ingestion for OpenReview-, ARIES-, CASIMIR-, and
   accepted-paper-shaped snapshots;
 - rights-scope preflight, deterministic ARIES/CASIMIR curation, and quarantine of
-  external Taste Cases until human verification.
+  external Taste Cases until human verification;
+- evidence-gated narrative and writing contracts, rhetorical-role taste
+  retrieval, decomposed writing critics, reviewer obligations, and review-driven
+  evidence collection returning to paper revision.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -134,6 +137,22 @@ The second command explicitly resumes the Phase 4 `PILOT`, executes and analyzes
 it, records evidence and interpretation, then pivots without discarding the
 contradictory result. Plans include a falsification test, counterfactual, matched
 baseline, and negative control.
+
+## Offline Communication Loop
+
+Run the evidence-backed writing and reviewer-driven research acceptance path:
+
+```bash
+.venv/bin/scitaste write \
+  --config configs/writing/reviewer_experiment_demo.yaml \
+  --output outputs/communication --seed 7
+```
+
+The deterministic draft is built from claim/evidence contracts and rhetorical
+taste precedents. A missing-baseline review concern routes to the Evidence Loop;
+matching new evidence closes the obligation and produces revision 2. This tests
+research control and traceability rather than model prose quality. See
+[`docs/COMMUNICATION_LOOP.md`](docs/COMMUNICATION_LOOP.md).
 
 ## License-gated corpus ingestion
 
