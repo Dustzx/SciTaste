@@ -1,0 +1,62 @@
+project_id: scitaste-self-iteration-phase75
+research_direction: Decide how SciTaste should deepen AutoResearchClaw integration before benchmarking
+target_domain: autonomous-research
+target_venue: software-artifact
+resource_budget:
+  gpu_hours: 0.1
+  max_experiments: 2
+  max_wall_time_hours: 4.0
+  max_api_cost_usd: 5.0
+landscape_findings:
+  - category: active_problem
+    statement: Benchmarking only mock execution would not validate real substrate boundaries.
+    source_ids: [docs-ROADMAP-known-integration-issue]
+  - category: methodological_bottleneck
+    statement: Explicit staged AutoResearchClaw calls reuse artifacts but change the upstream run identifier.
+    source_ids: [phase75-real-checkpoint-audit]
+  - category: evaluation_gap
+    statement: The adapter previously captured stdout but did not validate or hash stage-contract artifacts.
+    source_ids: [executor-adapter-pre-phase75]
+intuition:
+  statement: A contract-validating external adapter can provide a real vertical slice without forking AutoResearchClaw.
+  source: code-and-runtime-audit
+  confidence: 0.86
+initial_hypothesis:
+  statement: Keeping upstream immutable while validating inputs, outputs, sessions, and costs will produce an auditable real execution boundary.
+  falsifiable_predictions:
+    - A pinned qwen3.8-max Stage 1-3 run should yield validated artifacts and one SciTaste-linked transition without modifying the submodule.
+  proposed_probe_types: [real-substrate-vertical-slice]
+  confidence: 0.88
+reformulations: []
+probe_signals:
+  - observation: AutoResearchClaw stages 1-3 completed with qwen3.8-max; Stage 3 produced three hashed contract artifacts and one SciTaste decision/transition while the submodule remained clean.
+    expected: true
+    reproducible: true
+    stability: 0.9
+    boundary_conditions: [bounded prompt override, 512 output-token ceiling, web search disabled]
+    alternative_explanations: [single-run connectivity success does not establish research quality]
+problem:
+  explanation_gap: A raw subprocess exit code cannot prove artifact validity or session continuity across staged executor calls.
+  importance: Phase 8 needs a trustworthy boundary so benchmark differences can be attributed to research control instead of integration failures.
+idea_seeds:
+  - generator: system-level
+    hypothesis: Contract validation and stable adapter sessions are sufficient for an auditable first real integration.
+    proposed_mechanism: Keep AutoResearchClaw pinned and add prerequisite checks, artifact manifests, stable session identity, resource accounting, and explicit compatibility controls in SciTaste.
+    expected_validation: [offline contract faults, real stage 1-3 run, clean submodule audit]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.2}
+    expected_value: {problem_validity: 0.98, novelty: 0.65, feasibility: 0.95, evidence_tractability: 0.95, expected_empirical_signal: 0.9}
+    main_risk: Upstream internal contracts may change on a future pinned-version update.
+  - generator: method-change
+    hypothesis: Direct upstream changes would make every SciTaste action native to AutoResearchClaw.
+    proposed_mechanism: Fork AutoResearchClaw and insert SciTaste state and controller logic into its pipeline runner.
+    expected_validation: [fork integration test, upstream merge simulation]
+    expected_cost: {gpu_hours: 0.0, experiments: 2, implementation_risk: 0.9}
+    expected_value: {problem_validity: 0.75, novelty: 0.45, feasibility: 0.35, evidence_tractability: 0.4}
+    main_risk: The fork destroys baseline comparability and creates permanent merge debt.
+  - generator: evaluation-centric
+    hypothesis: Adapter integration can wait until after synthetic benchmarking.
+    proposed_mechanism: Proceed directly to SciTasteBench using only MockExecutor and replay traces.
+    expected_validation: [offline benchmark completion]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.15}
+    expected_value: {problem_validity: 0.5, novelty: 0.35, feasibility: 0.9, evidence_tractability: 0.5}
+    main_risk: Later real integration could invalidate benchmark conclusions and force reruns.

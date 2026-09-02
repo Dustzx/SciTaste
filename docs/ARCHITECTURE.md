@@ -72,6 +72,12 @@ returns observations and artifacts but cannot select the next global action.
     a figure with unresolved critic findings cannot become the final artifact.
 21. Visual patching changes named semantic objects and persists old/new field
     values; it never relies on an untraceable whole-image rewrite.
+22. An external executor's zero exit code cannot advance state unless its stage
+    completion and required artifacts validate.
+23. SciTaste session identity is stable across upstream run-ID changes and keeps
+    both upstream identifiers for audit.
+24. Missing executor cost telemetry is recorded as unavailable, never assumed to
+    be zero in a matched-budget comparison.
 
 ## Architecture decision records
 
@@ -163,3 +169,12 @@ request a conceptual draft from an executor, but the publication artifact is
 rebuilt as named semantic objects. SVG and uncompressed draw.io exports therefore
 remain editable, while communication and aesthetic criticism produce object-level
 patches that can be replayed and audited from `ResearchState`.
+
+### ADR-014: Immutable substrate with contract-validating compatibility layer
+
+Status: accepted. AutoResearchClaw remains pinned and unmodified. SciTaste checks
+the public stage contracts before and after a bounded subprocess call, imports
+content-hashed artifacts, derives a stable session identity from the run
+directory, and advances state only after execution succeeds. Optional prompt and
+token bounds are explicit experimental conditions implemented in a process-local
+bootstrap; omitting them preserves the original upstream invocation.

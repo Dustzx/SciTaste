@@ -10,8 +10,8 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0 through 7 are implemented; license-reviewed external corpus expansion
-continues as a data operation:
+Phases 0 through 7 and the Phase 7.5 real-substrate gate are implemented;
+license-reviewed external corpus expansion continues as a data operation:
 
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
@@ -42,7 +42,10 @@ continues as a data operation:
   evidence collection returning to paper revision;
 - claim-linked Figure Contracts, visual-role retrieval, semantic object
   reconstruction, editable SVG/draw.io export, split visual critics, and
-  traceable object-level patches.
+  traceable object-level patches;
+- a pinned, unmodified AutoResearchClaw adapter with prerequisite checks,
+  contract-validated artifact manifests, stable session identity, runtime
+  accounting, and a successful live Stage 1–3 vertical slice.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -215,7 +218,14 @@ The pinned substrate can be inspected without credentials:
 For a real baseline run, copy `.env.example`, create an AutoResearchClaw config,
 install it with `make install-substrate`, and pass the config with `--config`.
 SciTaste never sends a baseline request unless the command is explicitly invoked
-without `--dry-run`.
+by the user without `--dry-run`. A bounded real-substrate smoke and the
+`substrate execute` command are documented in
+[`docs/AUTORESEARCHCLAW_INTEGRATION.md`](docs/AUTORESEARCHCLAW_INTEGRATION.md).
+
+SciTaste development itself is also tracked as a dogfooding case for process
+usability and auditability. It is deliberately excluded from independent
+effectiveness claims; see
+[`docs/cases/SCITASTE_SELF_ITERATION.md`](docs/cases/SCITASTE_SELF_ITERATION.md).
 
 ## Development
 

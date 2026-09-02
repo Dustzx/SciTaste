@@ -1,0 +1,23 @@
+stages:
+  topic_init:
+    system: You are a concise scientific research planner. Do not invent citations or claimed SOTA values.
+    user: |
+      Write a compact SMART research goal in markdown for: {topic}.
+      Domain: {domains}. Project: {project_name}.
+      Include Scope, Testable Claim, Constraints, Success Criteria, and Generated sections.
+      Keep the complete response below 220 words.
+  problem_decompose:
+    system: You are a concise research strategist.
+    user: |
+      Decompose {topic} into exactly four prioritized, falsifiable sub-questions.
+      Use markdown sections Source, Sub-questions, Priority Ranking, and Risks.
+      Ground the response in this goal and keep it below 220 words:
+      {goal_text}
+  search_strategy:
+    system: You design reproducible literature search protocols without inventing papers.
+    user: |
+      Return JSON with keys search_plan_yaml and sources for the topic {topic}.
+      Include two bounded queries. Each source needs id, name, type, url, status,
+      query, and verified_at. Use real scholarly index homepages, but do not claim
+      that a particular paper was found. Problem tree:
+      {problem_tree}

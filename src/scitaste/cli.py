@@ -23,6 +23,9 @@ from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
+from scitaste.executor.workflow import build_autoresearchclaw_workflow
+from scitaste.schema.actions import MetaAction, ResearchAction
+from scitaste.state.research_state import ResearchState
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
@@ -60,8 +63,35 @@ def build_parser() -> argparse.ArgumentParser:
     baseline_run = baseline_commands.add_parser("run", help="Run the original substrate")
     baseline_run.add_argument("--topic", required=True)
     baseline_run.add_argument("--to-stage", default=None)
+    baseline_run.add_argument("--max-output-tokens", type=int, default=None)
     _add_common_options(baseline_run, default_output="outputs/baseline")
     baseline_run.set_defaults(handler=_handle_baseline_run)
+
+    substrate = commands.add_parser("substrate", help="Execute auditable substrate actions")
+    substrate_commands = substrate.add_subparsers(dest="substrate_command", required=True)
+    substrate_execute = substrate_commands.add_parser(
+        "execute", help="Run one SciTaste-selected action through AutoResearchClaw"
+    )
+    _add_common_options(
+        substrate_execute,
+        default_output="outputs/substrate-action",
+        default_backend="autoresearchclaw",
+    )
+    substrate_execute.add_argument(
+        "--action",
+        choices=[item.value for item in MetaAction],
+        required=True,
+    )
+    substrate_execute.add_argument("--run-dir", type=Path, required=True)
+    substrate_execute.add_argument("--state", type=Path, default=None)
+    substrate_execute.add_argument("--project-id", default="scitaste-substrate-smoke")
+    substrate_execute.add_argument(
+        "--topic", default="Taste-guided control for autonomous scientific research"
+    )
+    substrate_execute.add_argument("--target-domain", default="autonomous-research")
+    substrate_execute.add_argument("--timeout-seconds", type=float, default=1800.0)
+    substrate_execute.add_argument("--max-output-tokens", type=int, default=1024)
+    substrate_execute.set_defaults(handler=_handle_substrate_execute)
 
     run = commands.add_parser("run", help="End-to-end workflows")
     run_commands = run.add_subparsers(dest="run_command", required=True)
@@ -209,7 +239,11 @@ def _handle_demo(args: argparse.Namespace) -> int:
 
 
 def _handle_baseline_run(args: argparse.Namespace) -> int:
-    executor = AutoResearchClawExecutor(config_path=args.config, dry_run=args.dry_run)
+    executor = AutoResearchClawExecutor(
+        config_path=args.config,
+        dry_run=args.dry_run,
+        max_output_tokens=args.max_output_tokens,
+    )
     result = executor.baseline_run(
         topic=args.topic,
         output_dir=args.output,
@@ -217,6 +251,51 @@ def _handle_baseline_run(args: argparse.Namespace) -> int:
     )
     print(result.model_dump_json(indent=2))
     return 0 if result.status.value in {"PLANNED", "SUCCEEDED"} else 1
+
+
+def _handle_substrate_execute(args: argparse.Namespace) -> int:
+    if args.backend != "autoresearchclaw":
+        raise ValueError("substrate execute supports only --backend autoresearchclaw")
+    if args.config is None:
+        raise ValueError("substrate execute requires an AutoResearchClaw --config PATH")
+    action_type = MetaAction(args.action)
+    if args.dry_run:
+        result = AutoResearchClawExecutor(
+            config_path=args.config,
+            dry_run=True,
+            timeout_seconds=args.timeout_seconds,
+            max_output_tokens=args.max_output_tokens,
+        ).execute(
+            ResearchState(
+                project_id=args.project_id,
+                research_direction=args.topic,
+                target_domain=args.target_domain,
+                executor_context={"autoresearchclaw_run_dir": str(args.run_dir.resolve())},
+            ),
+            ResearchAction(
+                action_id=f"dry-run-{action_type.value.casefold()}",
+                type=action_type,
+                description="Validate an AutoResearchClaw action contract",
+            ),
+        )
+        print(result.model_dump_json(indent=2))
+        return 0 if result.status.value in {"PLANNED", "SKIPPED"} else 1
+    summary = build_autoresearchclaw_workflow(
+        config_path=args.config,
+        seed=args.seed,
+        timeout_seconds=args.timeout_seconds,
+        max_output_tokens=args.max_output_tokens,
+    ).run(
+        action_type=action_type,
+        run_dir=args.run_dir,
+        output_dir=args.output,
+        state_path=args.state,
+        project_id=args.project_id,
+        topic=args.topic,
+        target_domain=args.target_domain,
+    )
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0 if summary["execution_status"] == "SUCCEEDED" else 1
 
 
 def _handle_taste_calibrate(args: argparse.Namespace) -> int:

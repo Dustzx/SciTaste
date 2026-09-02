@@ -12,6 +12,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
+| Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench | next | intrinsic/augmented evaluation is controlled and reproducible |
 | Phase 9 — matched-budget study | deferred | baseline/system comparisons use identical tasks and budgets |
 
@@ -100,6 +101,22 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A five-case Bailian `qwen3.8-max` visual-taste smoke run passed the fixed
   candidate protocol; raw responses remain local and ignored.
 
+## Phase 7.5 completion
+
+- AutoResearchClaw remains an unmodified `v0.5.0` submodule.
+- Supported action mappings now enforce upstream prerequisites and output
+  contracts instead of trusting subprocess exit codes.
+- Artifact manifests preserve path, type, size, file count, and SHA-256.
+- Stable SciTaste session identity spans upstream run-ID changes in one run
+  directory; both IDs remain visible.
+- Failed execution does not advance canonical state; successful execution logs
+  the decision, result, transition, artifacts, and measured wall time.
+- A Bailian `qwen3.8-max` live slice completed Stages 1–3 and imported all three
+  Stage 3 artifacts. API cost remains unavailable because upstream produced no
+  cost log.
+- SciTaste's own adapter decision is preserved as a dogfooding case, explicitly
+  excluded from Phase 8 headline effectiveness evaluation.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.
@@ -112,9 +129,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 
 ## Known integration issue
 
-A real AutoResearchClaw run requires a user-managed backend configuration and may
-incur network/API/compute cost. CI and the default demo therefore exercise the
-adapter in dry-run mode and use `MockExecutor` for behavioral acceptance.
+A real AutoResearchClaw Stage 1–3 slice has passed with a user-provided Bailian
+key. Broader stages still require user-managed configuration and may incur
+network/API/compute cost. CI therefore uses contract fixtures and dry-run rather
+than contacting the provider.
 
 Live taste calibration is also opt-in. Until credentials are provided, scripted
 and replay backends support all implementation, regression, and integration work;

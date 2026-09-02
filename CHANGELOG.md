@@ -39,6 +39,11 @@ semantic versioning.
   criticism, and object-level patch history.
 - A five-case visual-taste calibration suite and aggregate Bailian
   `qwen3.8-max` smoke-run manifest.
+- Phase 7.5 AutoResearchClaw prerequisite/output validation, hashed artifact
+  import, stable adapter sessions, wall-time accounting, bounded compatibility
+  bootstrap, and one-action substrate workflow/CLI.
+- A real qwen3.8-max AutoResearchClaw Stage 1–3 aggregate acceptance manifest and
+  a regression-tested SciTaste self-iteration dogfooding case.
 
 ### Changed
 
