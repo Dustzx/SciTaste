@@ -53,6 +53,10 @@ returns observations and artifacts but cannot select the next global action.
     original total in isolation.
 15. External ingestion is local-only and license-deny-by-default; raw corpora are
     outside Git.
+16. A licence declaration covers explicit content scopes, not an entire mixed
+    source by implication; article text requires per-record permission.
+17. Externally projected Taste Cases are quarantined from retrieval until human
+    verification and personal-data review are recorded.
 
 ## Architecture decision records
 
@@ -118,3 +122,12 @@ must explicitly classify each source's license; unknown/restricted records are
 rejected, and a permitted declaration requires an identifier and terms locator.
 Knowledge and Taste records remain separately normalized, deduplicated, and
 stored.
+
+### ADR-011: Rights scopes and quarantine-first external taste
+
+Status: accepted. External sources declare whether records contain metadata,
+public comments, derived annotations, or article text, and a licence must cover
+that exact scope. Deterministic ARIES/CASIMIR projections preserve observable
+alignment or metadata without promoting them into scientific quality judgments.
+External Taste Cases default to retrieval-ineligible and enter controller memory
+only after explicit human verification, derivation, and personal-data checks.

@@ -10,8 +10,8 @@ own SciTaste's global trajectory.
 
 ## Current milestone
 
-Phases 0/1, 2, 4, and 5 are implemented; the Phase 3 library and ingestion core
-is usable while license-reviewed external corpus expansion continues:
+Phases 0 through 5 are implemented; license-reviewed external corpus expansion
+continues as a data operation:
 
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
@@ -34,7 +34,9 @@ is usable while license-reviewed external corpus expansion continues:
 - claim/evidence graphs, evidence-gap planning, interpretation criticism,
   cumulative resource accounting, and contradiction-driven pivots;
 - local-only, license-gated ingestion for OpenReview-, ARIES-, CASIMIR-, and
-  accepted-paper-shaped snapshots.
+  accepted-paper-shaped snapshots;
+- rights-scope preflight, deterministic ARIES/CASIMIR curation, and quarantine of
+  external Taste Cases until human verification.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -140,13 +142,28 @@ and mark a source `permitted` only after recording its license identifier and
 authoritative terms URL:
 
 ```bash
+.venv/bin/scitaste library audit \
+  --config path/to/reviewed-manifest.yaml \
+  --output outputs/corpus-audit
 .venv/bin/scitaste library ingest \
   --backend local --config path/to/reviewed-manifest.yaml \
   --output outputs/external-library
 ```
 
-No downloader is included. Unknown/restricted licenses and incomplete decision
-precedents are rejected. See [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+No downloader is included. Unknown/restricted licenses, uncovered content scopes,
+article text without per-record permission, and incomplete decision precedents
+are rejected. External Taste Cases remain retrieval-ineligible until human
+verification. See [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
+
+Supported deterministic projections can prepare official local snapshots without
+claiming that observed revisions are good scientific decisions:
+
+```bash
+.venv/bin/scitaste library curate \
+  --source-format aries-alignment \
+  --input path/to/alignment_human_eval.jsonl \
+  --output outputs/aries-curated
+```
 
 ## AutoResearchClaw baseline
 

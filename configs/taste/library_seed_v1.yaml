@@ -34,6 +34,7 @@ taste_cases:
     why_preferred: A probe establishes whether a mature problem exists before implementation cost is incurred.
     outcome_summary: A stable contradiction exposed a more useful failure boundary.
     confidence: 0.9
+    retrieval_eligible: true
     domain_tags: [autonomous-research]
     venue_tags: []
     provenance:
@@ -52,6 +53,7 @@ taste_cases:
     why_preferred: Rewriting cannot close an obligation whose truth depends on a new controlled result.
     outcome_summary: The matched baseline determines whether the claim survives or must be narrowed.
     confidence: 0.95
+    retrieval_eligible: true
     domain_tags: [autonomous-research]
     venue_tags: [general-ml]
     provenance:
@@ -69,6 +71,7 @@ taste_cases:
     why_preferred: The rhetorical move makes the research need legible before presenting the method.
     outcome_summary: The narrative spine remains aligned with the supported problem.
     confidence: 0.8
+    retrieval_eligible: true
     domain_tags: [scientific-writing]
     venue_tags: [general-ml]
     rhetorical_role: expose limitation
@@ -87,6 +90,7 @@ taste_cases:
     why_preferred: The control boundary and feedback loop are the intended reader takeaway.
     outcome_summary: The figure contract emphasizes controller ownership and executor isolation.
     confidence: 0.85
+    retrieval_eligible: true
     domain_tags: [autonomous-research]
     venue_tags: [general-ml]
     figure_role: mechanism

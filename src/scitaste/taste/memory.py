@@ -54,6 +54,7 @@ class TasteMemory:
                 )
             ],
             confidence=decision.confidence,
+            retrieval_eligible=True,
             domain_tags=domain_tags or [],
             venue_tags=venue_tags or [],
         )

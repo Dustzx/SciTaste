@@ -6,13 +6,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from scitaste.data.ingestion import ingest_corpus, normalize_corpus
+from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus, normalize_corpus
 from scitaste.data.store import KnowledgeLibrary, TasteLibrary
 
 PERMITTED = {
     "status": "permitted",
     "identifier": "CC-BY-4.0",
     "locator": "https://creativecommons.org/licenses/by/4.0/",
+    "applies_to": ["metadata", "public_comment", "derived_annotation", "article_text"],
+    "reviewed_at": "2026-09-02",
 }
 
 
@@ -53,6 +55,7 @@ def test_normalizes_all_source_families_with_separate_schemas_and_provenance(tmp
                 "title": "Diagnostic control selection",
                 "content": "A controlled intervention separates two explanations.",
                 "domain_tags": ["machine-learning"],
+                "license": PERMITTED,
             }
         ],
     )
@@ -95,10 +98,12 @@ def test_normalizes_all_source_families_with_separate_schemas_and_provenance(tmp
     assert provenance.content_hash.startswith("sha256:")
     assert provenance.metadata["license_identifier"] == "CC-BY-4.0"
     assert provenance.metadata["record_kind"] == "taste"
+    assert provenance.metadata["content_scope"] == "public_comment"
     assert provenance.license_id == "CC-BY-4.0"
     assert provenance.redistributable is True
     assert corpus.taste_cases[0].label_basis == "annotated"
     assert corpus.taste_cases[0].human_verified is False
+    assert corpus.taste_cases[0].retrieval_eligible is False
 
 
 def test_unannotated_review_is_not_promoted_to_taste_case(tmp_path) -> None:
@@ -184,6 +189,128 @@ def test_rejects_remote_paths_and_untraceable_permitted_license(tmp_path) -> Non
         normalize_corpus(invalid)
 
 
+def test_rejects_uncovered_scope_and_source_level_article_license(tmp_path) -> None:
+    source_path = tmp_path / "records.jsonl"
+    write_jsonl(
+        source_path,
+        [
+            {
+                "record_kind": "knowledge",
+                "title": "Uncovered metadata",
+                "content": "Metadata whose declaration covers comments only.",
+                "content_scope": "metadata",
+            },
+            {
+                "record_kind": "knowledge",
+                "title": "Article without a record licence",
+                "content": "Source-level permission is insufficient for article text.",
+                "content_scope": "article_text",
+            },
+        ],
+    )
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text(
+        yaml.safe_dump(
+            {
+                "sources": [
+                    {
+                        "source_id": "rights",
+                        "source_type": "accepted_papers",
+                        "path": str(source_path),
+                        "license": {
+                            **PERMITTED,
+                            "applies_to": ["public_comment", "article_text"],
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    corpus = normalize_corpus(manifest)
+
+    assert corpus.knowledge_documents == []
+    assert [item.reason for item in corpus.rejected] == [
+        "license does not cover content_scope metadata",
+        "article_text requires an explicit per-record license declaration",
+    ]
+
+
+def test_external_taste_case_requires_human_gate_before_retrieval(tmp_path) -> None:
+    source_path = tmp_path / "taste.jsonl"
+    write_jsonl(
+        source_path,
+        [
+            {**taste_record("quarantined"), "retrieval_eligible": False},
+            {
+                **taste_record("not-reviewed"),
+                "retrieval_eligible": True,
+                "derivation_method": "manual decision extraction",
+                "personal_data_removed": True,
+            },
+            {
+                **taste_record("reviewed"),
+                "human_verified": True,
+                "retrieval_eligible": True,
+                "derivation_method": "manual decision extraction",
+                "personal_data_removed": True,
+            },
+        ],
+    )
+    manifest = _manifest(tmp_path, source_path, default_kind="taste")
+
+    corpus = normalize_corpus(manifest)
+
+    assert [case.case_id for case in corpus.taste_cases] == ["quarantined", "reviewed"]
+    assert corpus.taste_cases[0].retrieval_eligible is False
+    assert corpus.taste_cases[1].retrieval_eligible is True
+    assert len(corpus.rejected) == 1
+    assert "must be human_verified" in corpus.rejected[0].reason
+
+
+def test_manifest_audit_does_not_require_local_snapshots(tmp_path) -> None:
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text(
+        yaml.safe_dump(
+            {
+                "sources": [
+                    {
+                        "source_id": "comments",
+                        "source_type": "openreview",
+                        "path": "not-downloaded.jsonl",
+                        "content_scope": "public_comment",
+                        "license": {
+                            **PERMITTED,
+                            "applies_to": ["public_comment"],
+                        },
+                    },
+                    {
+                        "source_id": "papers",
+                        "source_type": "accepted_papers",
+                        "path": "also-not-downloaded.jsonl",
+                        "content_scope": "article_text",
+                        "license": {
+                            **PERMITTED,
+                            "applies_to": ["article_text"],
+                        },
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "audit.json"
+
+    report = audit_corpus_manifest(manifest, output)
+
+    assert report["status_summary"] == {"conditional": 1, "ready": 1}
+    assert report["sources"][1]["requirements"] == [
+        "every record must carry its own permitted license declaration"
+    ]
+    assert json.loads(output.read_text())["source_count"] == 2
+
+
 def _source(
     source_id: str,
     source_type: str,
@@ -191,11 +318,18 @@ def _source(
     default_kind: str | None,
     license_declaration: dict[str, str],
 ) -> dict[str, object]:
+    scopes = {
+        "openreview": "public_comment",
+        "aries": "derived_annotation",
+        "casimir": "derived_annotation",
+        "accepted_papers": "article_text",
+    }
     return {
         "source_id": source_id,
         "source_type": source_type,
         "path": str(path),
         "default_record_kind": default_kind,
+        "content_scope": scopes[source_type],
         "license": license_declaration,
         "accessed_at": "2026-01-01T00:00:00Z",
     }

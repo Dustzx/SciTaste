@@ -24,6 +24,9 @@ semantic versioning.
 - Aggregate manifest for the first Bailian/Qwen intrinsic calibration smoke run.
 - Phase 3 local-only, license-gated corpus ingestion with provenance hashing,
   deduplication, rejection reporting, and separate Knowledge/Taste persistence.
+- Phase 3 rights-scope auditing, per-record article licence enforcement,
+  quarantine-first external Taste Cases, deterministic ARIES/CASIMIR projections,
+  and a real-source aggregate acceptance manifest.
 - Phase 5 claim/evidence graphs, gap analysis, experiment planning,
   interpretation criticism, routing, and state-integrated evidence workflow.
 - Offline support, uncertainty, overclaim, contradiction, Phase 4 resume, and

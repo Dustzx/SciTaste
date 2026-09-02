@@ -13,7 +13,7 @@ import os
 import tempfile
 import unicodedata
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,16 @@ class LicenseStatus(StrEnum):
     RESTRICTED = "restricted"
 
 
+class ContentScope(StrEnum):
+    """Rights-bearing content class represented by a local snapshot record."""
+
+    UNSPECIFIED = "unspecified"
+    METADATA = "metadata"
+    PUBLIC_COMMENT = "public_comment"
+    DERIVED_ANNOTATION = "derived_annotation"
+    ARTICLE_TEXT = "article_text"
+
+
 class _StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -52,6 +62,8 @@ class LicenseDeclaration(_StrictModel):
     identifier: str | None = None
     locator: str | None = None
     notes: str | None = None
+    applies_to: list[ContentScope] = Field(default_factory=list)
+    reviewed_at: date | None = None
 
     @model_validator(mode="after")
     def permitted_license_is_traceable(self) -> LicenseDeclaration:
@@ -66,6 +78,7 @@ class CorpusSource(_StrictModel):
     path: str = Field(min_length=1)
     format: str = "auto"
     default_record_kind: RecordKind | None = None
+    content_scope: ContentScope = ContentScope.UNSPECIFIED
     license: LicenseDeclaration = Field(default_factory=LicenseDeclaration)
     accessed_at: datetime | None = None
     defaults: dict[str, Any] = Field(default_factory=dict)
@@ -100,6 +113,58 @@ class NormalizedCorpus(_StrictModel):
     rejected: list[RejectedInput]
     duplicates: list[DuplicateInput]
     license_summary: dict[str, int]
+    content_scope_summary: dict[str, int]
+
+
+def audit_corpus_manifest(
+    manifest_path: str | Path, output_path: str | Path | None = None
+) -> dict[str, Any]:
+    """Audit declared rights without opening or downloading source snapshots."""
+
+    manifest = Path(manifest_path).resolve()
+    raw_config = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+    config = IngestionConfig.model_validate(raw_config)
+    sources: list[dict[str, Any]] = []
+    status_counts: Counter[str] = Counter()
+    for source in config.sources:
+        blockers: list[str] = []
+        requirements: list[str] = []
+        if source.license.status != LicenseStatus.PERMITTED:
+            blockers.append(f"license status is {source.license.status.value}")
+        if source.content_scope == ContentScope.UNSPECIFIED:
+            blockers.append("content_scope is unspecified")
+        elif source.content_scope not in source.license.applies_to:
+            blockers.append(f"license does not cover content_scope {source.content_scope.value}")
+        if source.content_scope == ContentScope.ARTICLE_TEXT:
+            requirements.append("every record must carry its own permitted license declaration")
+        status = "blocked" if blockers else "conditional" if requirements else "ready"
+        status_counts[status] += 1
+        sources.append(
+            {
+                "source_id": source.source_id,
+                "source_type": source.source_type.value,
+                "content_scope": source.content_scope.value,
+                "license_status": source.license.status.value,
+                "license_identifier": source.license.identifier,
+                "license_locator": source.license.locator,
+                "license_reviewed_at": source.license.reviewed_at.isoformat()
+                if source.license.reviewed_at
+                else None,
+                "status": status,
+                "blockers": blockers,
+                "requirements": requirements,
+            }
+        )
+    report: dict[str, Any] = {
+        "schema_version": "1.0",
+        "manifest": str(manifest),
+        "source_count": len(config.sources),
+        "status_summary": dict(sorted(status_counts.items())),
+        "sources": sources,
+    }
+    if output_path is not None:
+        _atomic_json(Path(output_path), report)
+    return report
 
 
 def normalize_corpus(manifest_path: str | Path) -> NormalizedCorpus:
@@ -114,6 +179,7 @@ def normalize_corpus(manifest_path: str | Path) -> NormalizedCorpus:
     duplicates: list[DuplicateInput] = []
     seen: dict[RecordKind, set[str]] = {RecordKind.KNOWLEDGE: set(), RecordKind.TASTE: set()}
     license_counts: Counter[str] = Counter()
+    scope_counts: Counter[str] = Counter()
     input_count = 0
 
     for source in config.sources:
@@ -123,8 +189,21 @@ def normalize_corpus(manifest_path: str | Path) -> NormalizedCorpus:
         for index, raw in enumerate(records, 1):
             input_count += 1
             locator = _input_locator(source_path, index, raw)
-            declaration = _record_license(raw, source.license)
+            try:
+                declaration = _record_license(raw, source.license)
+                content_scope = _record_content_scope(raw, source)
+            except (TypeError, ValueError, ValidationError) as exc:
+                rejected.append(
+                    RejectedInput(
+                        source_id=source.source_id,
+                        record_index=index,
+                        locator=locator,
+                        reason=_compact_error(exc),
+                    )
+                )
+                continue
             license_counts[declaration.status.value] += 1
+            scope_counts[content_scope.value] += 1
             if declaration.status == LicenseStatus.RESTRICTED or (
                 declaration.status == LicenseStatus.UNKNOWN and not config.allow_unknown_licenses
             ):
@@ -137,10 +216,28 @@ def normalize_corpus(manifest_path: str | Path) -> NormalizedCorpus:
                     )
                 )
                 continue
+            rights_error = _rights_error(raw, content_scope, declaration)
+            if rights_error:
+                rejected.append(
+                    RejectedInput(
+                        source_id=source.source_id,
+                        record_index=index,
+                        locator=locator,
+                        reason=rights_error,
+                    )
+                )
+                continue
             try:
                 kind = _record_kind(raw, source)
                 record, content_hash = _normalize_record(
-                    raw, source, kind, declaration, accessed_at, locator, index
+                    raw,
+                    source,
+                    kind,
+                    declaration,
+                    content_scope,
+                    accessed_at,
+                    locator,
+                    index,
                 )
             except (TypeError, ValueError, ValidationError) as exc:
                 rejected.append(
@@ -177,6 +274,7 @@ def normalize_corpus(manifest_path: str | Path) -> NormalizedCorpus:
         rejected=rejected,
         duplicates=duplicates,
         license_summary=dict(sorted(license_counts.items())),
+        content_scope_summary=dict(sorted(scope_counts.items())),
     )
 
 
@@ -193,6 +291,7 @@ def ingest_corpus(manifest_path: str | Path, output_dir: str | Path) -> dict[str
         corpus.knowledge_documents, knowledge_store, existing_knowledge
     )
     imported_taste = _persist_new(corpus.taste_cases, taste_store, existing_taste)
+    stored_taste = taste_store.all()
     report: dict[str, Any] = {
         "schema_version": "1.0",
         "source_count": corpus.source_count,
@@ -208,6 +307,9 @@ def ingest_corpus(manifest_path: str | Path, output_dir: str | Path) -> dict[str
         - imported_taste,
         "rejected_count": len(corpus.rejected),
         "license_summary": corpus.license_summary,
+        "content_scope_summary": corpus.content_scope_summary,
+        "retrieval_eligible_taste_count": sum(case.retrieval_eligible for case in stored_taste),
+        "quarantined_taste_count": sum(not case.retrieval_eligible for case in stored_taste),
         "knowledge_path": str(knowledge_store.path),
         "taste_path": str(taste_store.path),
         "rejections": [item.model_dump(mode="json") for item in corpus.rejected],
@@ -268,6 +370,32 @@ def _record_license(raw: dict[str, Any], default: LicenseDeclaration) -> License
     return LicenseDeclaration.model_validate({**default.model_dump(), **override})
 
 
+def _record_content_scope(raw: dict[str, Any], source: CorpusSource) -> ContentScope:
+    value = raw.get("content_scope", source.content_scope)
+    if isinstance(value, ContentScope):
+        return value
+    try:
+        return ContentScope(str(value).casefold())
+    except ValueError as exc:
+        raise ValueError(f"unsupported content_scope {value!r}") from exc
+
+
+def _rights_error(
+    raw: dict[str, Any], scope: ContentScope, declaration: LicenseDeclaration
+) -> str | None:
+    if scope == ContentScope.UNSPECIFIED:
+        return "content_scope is unspecified"
+    if scope not in declaration.applies_to:
+        return f"license does not cover content_scope {scope.value}"
+    if scope == ContentScope.ARTICLE_TEXT:
+        override = raw.get("license")
+        if not isinstance(override, dict):
+            return "article_text requires an explicit per-record license declaration"
+        if LicenseDeclaration.model_validate(override).status != LicenseStatus.PERMITTED:
+            return "article_text requires a permitted per-record license declaration"
+    return None
+
+
 def _record_kind(raw: dict[str, Any], source: CorpusSource) -> RecordKind:
     value = raw.get("record_kind") or raw.get("entry_type") or source.default_record_kind
     aliases = {
@@ -297,6 +425,7 @@ def _normalize_record(
     source: CorpusSource,
     kind: RecordKind,
     license_declaration: LicenseDeclaration,
+    content_scope: ContentScope,
     accessed_at: datetime,
     locator: str,
     index: int,
@@ -314,7 +443,15 @@ def _normalize_record(
         }
         content_hash = _content_hash(core)
         provenance = _provenance(
-            raw, source, kind, license_declaration, accessed_at, locator, index, content_hash
+            raw,
+            source,
+            kind,
+            license_declaration,
+            content_scope,
+            accessed_at,
+            locator,
+            index,
+            content_hash,
         )
         identifier = _identifier(
             raw,
@@ -347,12 +484,31 @@ def _normalize_record(
         "label_basis": _text(_pick(raw, defaults, "label_basis", default="annotated")),
         "extractor_version": _optional_text(_pick(raw, defaults, "extractor_version")),
         "human_verified": _boolean(_pick(raw, defaults, "human_verified", default=False)),
+        "retrieval_eligible": _boolean(_pick(raw, defaults, "retrieval_eligible", default=False)),
         "outcome_horizon": _optional_text(_pick(raw, defaults, "outcome_horizon")),
         "source_action_id": _optional_text(_pick(raw, defaults, "source_action_id")),
     }
+    if core["retrieval_eligible"]:
+        if not core["human_verified"]:
+            raise ValueError("retrieval-eligible taste cases must be human_verified")
+        if not _optional_text(_pick(raw, defaults, "derivation_method")):
+            raise ValueError("retrieval-eligible taste cases require derivation_method")
+        personal_data_removed = _optional_boolean(
+            _pick(raw, defaults, "personal_data_removed", default=None)
+        )
+        if personal_data_removed is not True:
+            raise ValueError("retrieval-eligible taste cases require personal_data_removed=true")
     content_hash = _content_hash(core)
     provenance = _provenance(
-        raw, source, kind, license_declaration, accessed_at, locator, index, content_hash
+        raw,
+        source,
+        kind,
+        license_declaration,
+        content_scope,
+        accessed_at,
+        locator,
+        index,
+        content_hash,
     )
     identifier = _identifier(
         raw, "case_id", fallback=f"{source.source_id}-taste-{content_hash[-12:]}"
@@ -365,6 +521,7 @@ def _provenance(
     source: CorpusSource,
     kind: RecordKind,
     declaration: LicenseDeclaration,
+    content_scope: ContentScope,
     accessed_at: datetime,
     locator: str,
     index: int,
@@ -378,6 +535,11 @@ def _provenance(
         "license_status": declaration.status.value,
         "license_identifier": declaration.identifier,
         "license_locator": declaration.locator,
+        "content_scope": content_scope.value,
+        "license_applies_to": [scope.value for scope in declaration.applies_to],
+        "license_reviewed_at": declaration.reviewed_at.isoformat()
+        if declaration.reviewed_at
+        else None,
     }
     return ProvenanceRecord(
         source_type=source.source_type.value,

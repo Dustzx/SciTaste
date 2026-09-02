@@ -11,26 +11,34 @@ sources:
     path: ../../data/local/openreview_reviews.jsonl
     format: jsonl
     default_record_kind: taste
+    content_scope: public_comment
     license:
       status: unknown
+      applies_to: [public_comment]
 
   - source_id: aries_revision_cases
     source_type: aries
     path: ../../data/local/aries_cases.json
     default_record_kind: taste
+    content_scope: derived_annotation
     license:
       status: unknown
+      applies_to: [derived_annotation]
 
   - source_id: casimir_decisions
     source_type: casimir
     path: ../../data/local/casimir_cases.jsonl
     default_record_kind: taste
+    content_scope: derived_annotation
     license:
       status: unknown
+      applies_to: [derived_annotation]
 
   - source_id: selected_accepted_papers
     source_type: accepted_papers
     path: ../../data/local/accepted_papers.jsonl
     default_record_kind: knowledge
+    content_scope: article_text
     license:
       status: unknown
+      applies_to: [article_text]

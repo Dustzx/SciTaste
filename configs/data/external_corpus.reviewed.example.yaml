@@ -1,0 +1,66 @@
+schema_version: "1.0"
+allow_unknown_licenses: false
+
+# This is a rights-scoped intake template, not permission to redistribute source
+# records. Paths remain local and outside Git. Re-check authoritative terms at
+# collection time and update reviewed_at.
+sources:
+  - source_id: openreview_public_comments
+    source_type: openreview
+    path: ../../data/local/openreview_public_comments.jsonl
+    format: jsonl
+    default_record_kind: taste
+    content_scope: public_comment
+    license:
+      status: permitted
+      identifier: CC-BY-4.0
+      locator: https://openreview.net/legal/terms
+      applies_to: [public_comment]
+      reviewed_at: 2026-09-02
+    defaults:
+      retrieval_eligible: false
+      derivation_method: human-curated decision extraction from a public comment
+
+  - source_id: aries_alignment_annotations
+    source_type: aries
+    path: ../../data/local/aries_alignment_cases.jsonl
+    format: jsonl
+    default_record_kind: taste
+    content_scope: derived_annotation
+    license:
+      status: permitted
+      identifier: ODC-BY-1.0
+      locator: https://github.com/allenai/aries
+      applies_to: [derived_annotation]
+      reviewed_at: 2026-09-02
+    defaults:
+      retrieval_eligible: false
+      derivation_method: curated decision extraction from ARIES alignment annotations
+
+  - source_id: casimir_revision_mappings
+    source_type: casimir
+    path: ../../data/local/casimir_revision_mappings.jsonl
+    format: jsonl
+    default_record_kind: knowledge
+    content_scope: derived_annotation
+    license:
+      status: permitted
+      identifier: MIT
+      locator: https://huggingface.co/datasets/taln-ls2n/CASIMIR
+      applies_to: [derived_annotation]
+      reviewed_at: 2026-09-02
+    defaults:
+      derivation_method: metadata-only projection of CASIMIR revision mappings
+
+  - source_id: selected_accepted_paper_metadata
+    source_type: accepted_papers
+    path: ../../data/local/accepted_paper_metadata.jsonl
+    format: jsonl
+    default_record_kind: knowledge
+    content_scope: metadata
+    license:
+      status: permitted
+      identifier: CC0-1.0
+      locator: https://openreview.net/legal/terms
+      applies_to: [metadata]
+      reviewed_at: 2026-09-02

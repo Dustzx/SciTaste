@@ -7,7 +7,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 0 — substrate control | done | official AutoResearchClaw release pinned; adapter and baseline dry-run work |
 | Phase 1 — state/controller skeleton | done | nonlinear mock loop includes `PROBE` and `PIVOT`; unit/integration tests pass |
 | Phase 2 — intrinsic calibration | done | reproducible Idea, Experiment, Evidence, Writing, and Review taste profiles |
-| Phase 3 — taste library | in progress | knowledge/taste stores are independent; provenance and stage retrieval tested |
+| Phase 3 — taste library | done | knowledge/taste stores are independent; rights-scoped provenance, quarantine, and stage retrieval tested |
 | Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | next | narrative/contracts/review obligations can route back to experiments |
@@ -28,12 +28,17 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stage/role-aware retrieval, and decision-log precedent IDs.
 - Done: a five-case `qwen3.7-plus` live smoke profile is archived as an aggregate
   manifest with hashes; secrets, exact recordings, and raw responses remain local.
-- Remaining Phase 3 corpus work: ingest and license-check selected OpenReview,
-  ARIES, CASIMIR, and accepted-paper records. The current seed corpus comes only
-  from the project specification and exists to test the pipeline.
 - Done: local JSON/JSONL ingestion, explicit Knowledge/Taste routing, content
   hashing, per-library deduplication, idempotency, and reject-by-default license
   policy. No external source content is committed or downloaded automatically.
+- Done: rights-scope auditing distinguishes metadata, public comments, derived
+  annotations, and article text; article text needs per-record permission.
+- Done: deterministic ARIES/CASIMIR projections and a real-source acceptance run
+  imported 29 metadata/annotation Knowledge Documents and quarantined 25 observed
+  revision cases. Direct OpenReview collection remains user-managed because its
+  API challenged the unattended request.
+- Ongoing data operation: expand the local corpus and human-verify selected cases.
+  This changes library population, not the Phase 3 code or acceptance gate.
 
 ## Phase 4 completion
 

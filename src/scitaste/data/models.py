@@ -64,6 +64,7 @@ class TasteCase(LibraryModel):
     label_basis: str = "project_curated"
     extractor_version: str | None = None
     human_verified: bool = False
+    retrieval_eligible: bool = False
     outcome_horizon: str | None = None
     source_action_id: str | None = None
 

@@ -93,3 +93,25 @@ def test_role_conditioned_retrieval(tmp_path) -> None:
 
     assert writing[0].case.case_id == "taste-introduction-limitation"
     assert visual[0].case.case_id == "taste-figure-mechanism"
+
+
+def test_retrieval_excludes_quarantined_external_precedents(tmp_path) -> None:
+    library = TasteLibrary(tmp_path / "taste" / "records.jsonl")
+    common = {
+        "stage": "REVIEW",
+        "context_summary": "A reviewer requests a diagnostic baseline.",
+        "candidate_actions": ["ADD_BASELINE", "REWRITE_ONLY"],
+        "preferred_action": "ADD_BASELINE",
+        "decision_principle": "Test the alternative explanation.",
+        "why_preferred": "A rewrite cannot supply missing evidence.",
+        "provenance": provenance(),
+        "confidence": 0.9,
+    }
+    library.add(TasteCase(case_id="quarantined", retrieval_eligible=False, **common))
+    library.add(TasteCase(case_id="verified", retrieval_eligible=True, **common))
+
+    results = TasteRetriever(library).retrieve(
+        TasteQuery(text="reviewer diagnostic baseline", stage="REVIEW"), limit=5
+    )
+
+    assert [result.case.case_id for result in results] == ["verified"]

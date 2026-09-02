@@ -16,7 +16,8 @@ from scitaste.backends.openai_compatible import (
 )
 from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
-from scitaste.data.ingestion import ingest_corpus
+from scitaste.data.curation import CurationFormat, curate_snapshot
+from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
 from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
@@ -100,6 +101,31 @@ def build_parser() -> argparse.ArgumentParser:
         default_backend="local",
     )
     library_ingest.set_defaults(handler=_handle_library_ingest)
+    library_audit = library_commands.add_parser(
+        "audit", help="Audit corpus rights declarations without reading snapshots"
+    )
+    _add_common_options(
+        library_audit,
+        default_output="outputs/library-audit",
+        default_backend="local",
+    )
+    library_audit.set_defaults(handler=_handle_library_audit)
+    library_curate = library_commands.add_parser(
+        "curate", help="Project supported source snapshots into quarantined intake records"
+    )
+    _add_common_options(
+        library_curate,
+        default_output="outputs/library-curation",
+        default_backend="local",
+    )
+    library_curate.add_argument("--input", type=Path, required=True)
+    library_curate.add_argument(
+        "--source-format",
+        choices=[item.value for item in CurationFormat],
+        required=True,
+    )
+    library_curate.add_argument("--limit", type=int, default=None)
+    library_curate.set_defaults(handler=_handle_library_curate)
     discover = commands.add_parser("discover", help="Run the unified discovery loop")
     _add_common_options(discover, default_output="outputs/discovery")
     discover.set_defaults(handler=_handle_discover)
@@ -263,6 +289,33 @@ def _handle_library_ingest(args: argparse.Namespace) -> int:
         )
         return 0
     report = ingest_corpus(args.config, args.output)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_library_audit(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("library audit supports only --backend local")
+    if args.config is None:
+        raise ValueError("library audit requires --config PATH")
+    output_path = None if args.dry_run else args.output / "corpus_audit.json"
+    report = audit_corpus_manifest(args.config, output_path)
+    if output_path is not None:
+        report["report"] = str(output_path)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 1 if report["status_summary"].get("blocked", 0) else 0
+
+
+def _handle_library_curate(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("library curation supports only --backend local")
+    report = curate_snapshot(
+        args.source_format,
+        args.input,
+        args.output,
+        limit=args.limit,
+        write=not args.dry_run,
+    )
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0
 

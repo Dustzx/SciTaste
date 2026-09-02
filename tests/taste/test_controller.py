@@ -108,6 +108,7 @@ def test_augmented_controller_logs_and_uses_retrieved_precedent(
             why_preferred="The diagnostic is cheap.",
             provenance=[ProvenanceRecord(source_type="test", locator="fixture://probe")],
             confidence=1.0,
+            retrieval_eligible=True,
             domain_tags=["testing"],
         )
     )

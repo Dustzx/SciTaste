@@ -47,7 +47,9 @@ class TasteRetriever:
         self.library = library
 
     def retrieve(self, query: TasteQuery, *, limit: int = 5) -> list[RetrievedTasteCase]:
-        results = [self._score(case, query) for case in self.library.all()]
+        results = [
+            self._score(case, query) for case in self.library.all() if case.retrieval_eligible
+        ]
         positive = [result for result in results if result.score > 0]
         return sorted(positive, key=lambda result: (-result.score, result.case.case_id))[:limit]
 
