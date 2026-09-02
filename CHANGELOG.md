@@ -53,3 +53,8 @@ semantic versioning.
   and `DROP` creates a terminal project state.
 - The Bailian example backend now pins `qwen3.8-max` for the current opt-in smoke
   contract.
+
+### Fixed
+
+- CI now initializes the pinned AutoResearchClaw submodule before running the
+  substrate verification test.
