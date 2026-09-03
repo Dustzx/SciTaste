@@ -278,9 +278,11 @@ condition-blind, publication-facing terminology. Final artifact audit rejects a
 successful experiment described as non-executed, a missing selected primary metric,
 or any internal identifier exposed in the task manuscript. Stage 14 runs as a
 separate bounded subprocess and must pass this evidence check before any paper
-tokens are spent. Exact registered identifiers are deterministically replaced in
-prose with before/after hashes retained in a sanitization log. The evidence
-contract also distinguishes CPU synthetic simulation from neural-model inference;
-the gate rejects affirmative model-result claims while allowing explicit
-limitations and corrections that deny such inference. This compatibility logic
-remains outside the pinned AutoResearchClaw submodule.
+tokens are spent. Stages 15--17 then run as a second bounded subprocess; the draft
+must pass the same evidence and publication-language contract before Stage 18 can
+spend peer-review tokens. Exact registered identifiers are deterministically
+replaced in prose with before/after hashes retained in a sanitization log. The
+evidence contract also distinguishes CPU synthetic simulation from neural-model
+inference; the gate rejects affirmative model-result claims while allowing
+explicit limitations and corrections that deny such inference. This compatibility
+logic remains outside the pinned AutoResearchClaw submodule.

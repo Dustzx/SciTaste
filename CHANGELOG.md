@@ -73,6 +73,8 @@ semantic versioning.
   audit metadata.
 - A pre-paper Stage 14 evidence gate and hash-logged exact identifier sanitizer,
   preventing a contradictory analysis from spending paper-generation tokens.
+- A pre-review Stage 17 draft gate, preventing an evidence-inconsistent manuscript
+  from spending peer-review tokens.
 - Synthetic-execution semantics in the selected-evidence contract, with
   assertion-aware checks that prevent CPU simulations from being presented as
   language-model inference while retaining valid negations and limitations.

@@ -156,7 +156,9 @@ def run_study_cell(
         if finalize_existing:
             completed = subprocess.CompletedProcess(args=[], returncode=0)
         else:
-            if _stage_number(resume_from_stage) <= 14 <= _stage_number(to_stage):
+            completed = subprocess.CompletedProcess(args=[], returncode=0)
+            target_stage_number = _stage_number(to_stage)
+            if _stage_number(resume_from_stage) <= 14 <= target_stage_number:
                 completed = subprocess.run(
                     upstream_command("RESULT_ANALYSIS", "RESULT_ANALYSIS"),
                     cwd=UPSTREAM,
@@ -179,26 +181,77 @@ def run_study_cell(
                         )
                         _write_result(result_file, result)
                         return result
-                if completed.returncode == 0 and _stage_number(to_stage) > 14:
-                    completed = subprocess.run(
-                        upstream_command("RESEARCH_DECISION", to_stage),
-                        cwd=UPSTREAM,
-                        env=environment,
-                        check=False,
-                        text=True,
-                    )
+                next_stage = "RESEARCH_DECISION"
             else:
                 _sanitize_publication_artifacts(
                     upstream_run, task, relative_paths=("stage-14/analysis.md",)
                 )
                 _validate_analysis_artifact(upstream_run, task)
-                completed = subprocess.run(
-                    upstream_command(resume_from_stage, to_stage),
-                    cwd=UPSTREAM,
-                    env=environment,
-                    check=False,
-                    text=True,
-                )
+                next_stage = resume_from_stage
+
+            if completed.returncode == 0 and _stage_number(next_stage) <= target_stage_number:
+                next_stage_number = _stage_number(next_stage)
+                if next_stage_number <= 17 <= target_stage_number:
+                    completed = subprocess.run(
+                        upstream_command(next_stage, "PAPER_DRAFT"),
+                        cwd=UPSTREAM,
+                        env=environment,
+                        check=False,
+                        text=True,
+                    )
+                    next_stage = "PEER_REVIEW"
+                    next_stage_number = 18
+                    if completed.returncode == 0:
+                        try:
+                            _sanitize_publication_artifacts(
+                                upstream_run,
+                                task,
+                                relative_paths=(
+                                    "stage-14/analysis.md",
+                                    "stage-16/outline.md",
+                                    "stage-17/paper_draft.md",
+                                ),
+                            )
+                            _validate_paper_draft_artifact(upstream_run, task)
+                        except (OSError, ValueError) as exc:
+                            result = LauncherResult(
+                                status=CellStatus.FAILED,
+                                evidence_class=EvidenceClass.REAL,
+                                usage=_usage(telemetry_path, task, experiments=1),
+                                error=f"paper pre-review audit failed: {exc}",
+                            )
+                            _write_result(result_file, result)
+                            return result
+                elif next_stage_number > 17:
+                    try:
+                        _sanitize_publication_artifacts(
+                            upstream_run,
+                            task,
+                            relative_paths=(
+                                "stage-14/analysis.md",
+                                "stage-16/outline.md",
+                                "stage-17/paper_draft.md",
+                            ),
+                        )
+                        _validate_paper_draft_artifact(upstream_run, task)
+                    except (OSError, ValueError) as exc:
+                        result = LauncherResult(
+                            status=CellStatus.FAILED,
+                            evidence_class=EvidenceClass.REAL,
+                            usage=_usage(telemetry_path, task, experiments=1),
+                            error=f"paper pre-review audit failed: {exc}",
+                        )
+                        _write_result(result_file, result)
+                        return result
+
+                if completed.returncode == 0 and next_stage_number <= target_stage_number:
+                    completed = subprocess.run(
+                        upstream_command(next_stage, to_stage),
+                        cwd=UPSTREAM,
+                        env=environment,
+                        check=False,
+                        text=True,
+                    )
     else:
         completed = experiment_process
     elapsed = time.perf_counter() - started
@@ -1443,6 +1496,22 @@ def _validate_analysis_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str
     _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
     return _analysis_consistency_audit(
         analysis=analysis_path.read_text(encoding="utf-8", errors="replace"),
+        selected_run=selected_run,
+        task=task,
+    )
+
+
+def _validate_paper_draft_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
+    analysis_path = run_dir / "stage-14" / "analysis.md"
+    paper_path = run_dir / "stage-17" / "paper_draft.md"
+    if not analysis_path.is_file():
+        raise ValueError("result analysis artifact is missing")
+    if not paper_path.is_file():
+        raise ValueError("paper draft artifact is missing")
+    _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    return _artifact_consistency_audit(
+        analysis=analysis_path.read_text(encoding="utf-8", errors="replace"),
+        paper=paper_path.read_text(encoding="utf-8", errors="replace"),
         selected_run=selected_run,
         task=task,
     )

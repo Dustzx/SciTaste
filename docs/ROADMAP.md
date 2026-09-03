@@ -177,8 +177,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   now projects one hashed successful experiment into analysis/writing, separates
   publication language from audit identifiers, and rejects contradictory or
   internal-ID-bearing manuscripts. Analysis is now a pre-paper gate so a known-bad
-  synthesis cannot consume drafting tokens. A clean rerun remains required; the
-  original artifact is retained only as a failure fixture.
+  synthesis cannot consume drafting tokens; the resulting draft is independently
+  gated before peer review. A clean rerun remains required; the original artifact
+  is retained only as a failure fixture.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48
