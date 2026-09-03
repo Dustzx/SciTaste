@@ -288,4 +288,6 @@ explicit limitations and corrections that deny such inference. This compatibilit
 logic remains outside the pinned AutoResearchClaw submodule. A process-local
 sandbox wrapper additionally records the exact return code, metrics, bounded raw
 output, output hashes, and executed-source hashes before upstream compaction. A
-successful post-repair result without this source-verified trace is inadmissible.
+successful post-repair result without this source-verified trace is inadmissible;
+metrics added by the adapter's format normalizer are independently recomputed from
+the traced source values rather than expected to exist in the earlier raw parser.

@@ -661,6 +661,16 @@ def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> No
                     "elapsed_sec": 1.25,
                     "metrics": metrics,
                 },
+                "metric_normalization": {
+                    "method": "stdout-registered-condition-mean-v1",
+                    "source_conditions": [
+                        "majority_vote",
+                        "confidence_weighted_vote",
+                        "position_aware_probe",
+                    ],
+                    "source_values": [0.7, 0.8, 0.75],
+                    "aggregate": "arithmetic_mean",
+                },
             }
         ],
     }
@@ -672,14 +682,19 @@ def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> No
 
     trace_dir = tmp_path / "stage-13" / "refine_sandbox_v1_fix"
     trace_dir.mkdir()
-    stdout = "Seed 7\nSeed 19\nSeed 31\nbalanced_accuracy: 0.75\n"
+    stdout = (
+        "Seed 7\nSeed 19\nSeed 31\n"
+        "majority_vote: balanced_accuracy=0.7\n"
+        "confidence_weighted_vote: balanced_accuracy=0.8\n"
+        "position_aware_probe: balanced_accuracy=0.75\n"
+    )
     trace = {
         "schema_version": "1.0",
         "method": "process-local-sandbox-result-trace-v1",
         "returncode": 0,
         "timed_out": False,
         "elapsed_sec": 1.25,
-        "metrics": metrics,
+        "metrics": {},
         "project_source_sha256": {"main.py": hashlib.sha256(source.read_bytes()).hexdigest()},
         "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
         "stderr_sha256": hashlib.sha256(b"").hexdigest(),

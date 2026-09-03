@@ -1169,8 +1169,45 @@ def _selected_execution_trace(
     if bool(trace.get("timed_out", False)) != bool(sandbox.get("timed_out", False)):
         raise ValueError("selected sandbox trace timeout status does not match refinement log")
     trace_metrics = trace.get("metrics") or {}
+    trace_stdout = str(trace.get("stdout_excerpt", ""))
+    normalization = iteration.get("metric_normalization") or {}
+    source_conditions = list(normalization.get("source_conditions") or [])
+    source_values = list(normalization.get("source_values") or [])
+    normalized_names: set[str] = set()
+    if source_conditions and len(source_conditions) == len(source_values):
+        normalized_sources_verified = True
+        numeric_source_values: list[float] = []
+        for name, value in zip(source_conditions, source_values, strict=True):
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                normalized_sources_verified = False
+                break
+            traced_value = trace_metrics.get(name)
+            trace_metric_matches = False
+            if traced_value is not None:
+                try:
+                    trace_metric_matches = abs(float(traced_value) - numeric_value) <= 1e-9
+                except (TypeError, ValueError):
+                    trace_metric_matches = False
+            if not trace_metric_matches and not _text_reports_metric(
+                trace_stdout, str(name), numeric_value
+            ):
+                normalized_sources_verified = False
+                break
+            numeric_source_values.append(numeric_value)
+        if normalized_sources_verified:
+            normalized_names.update(str(name) for name in source_conditions)
+            aggregate = sum(numeric_source_values) / len(numeric_source_values)
+            normalized_names.update(
+                str(name)
+                for name, value in (sandbox.get("metrics") or {}).items()
+                if isinstance(value, (int, float)) and abs(float(value) - aggregate) <= 1e-9
+            )
     for name, value in (sandbox.get("metrics") or {}).items():
         if name not in trace_metrics:
+            if name in normalized_names:
+                continue
             raise ValueError(f"selected sandbox trace metric is missing: {name}")
         traced_value = trace_metrics.get(name)
         if isinstance(value, (int, float)):

@@ -76,7 +76,8 @@ semantic versioning.
 - A pre-review Stage 17 draft gate, preventing an evidence-inconsistent manuscript
   from spending peer-review tokens.
 - Process-local source-verified sandbox traces for runtime-repaired experiments,
-  preserving raw-output hashes and registered seed evidence that upstream omits.
+  preserving raw-output hashes and registered seed evidence that upstream omits;
+  normalized metrics are rechecked against those traced raw values.
 - Synthetic-execution semantics in the selected-evidence contract, with
   assertion-aware checks that prevent CPU simulations from being presented as
   language-model inference while retaining valid negations and limitations.
