@@ -1339,9 +1339,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         stdout_sha256 = hashlib.sha256(stdout.encode()).hexdigest()
         stderr_sha256 = hashlib.sha256(stderr.encode()).hexdigest()
         execution_trace_summary = None
-    stdout_seed_ids = sorted(
-        {int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}
-    )
+    stdout_seed_ids = _stdout_seed_ids(stdout)
     per_seed_metrics, dispersion_metrics = _parse_seed_evidence(stdout, primary_metric)
     metric_sources = {str(name): "sandbox-structured-metric" for name in metrics}
     normalization = selected.get("metric_normalization") or {}
@@ -1602,6 +1600,20 @@ def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
     return "\n".join(lines[-160:])[-16000:]
 
 
+def _stdout_seed_ids(stdout: str) -> list[int]:
+    """Read seed identifiers from common human-readable assignment styles."""
+
+    return sorted(
+        {
+            int(item)
+            for item in re.findall(
+                r"(?im)(?<!per )\bseed\s*(?:[=:]\s*)?([0-9]+)\b",
+                stdout,
+            )
+        }
+    )
+
+
 def _parse_seed_evidence(
     stdout: str, primary_metric: str
 ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
@@ -1614,7 +1626,7 @@ def _parse_seed_evidence(
     per_seed: dict[str, dict[str, float]] = {}
     current_seed: str | None = None
     current_condition: str | None = None
-    seed_pattern = re.compile(r"(?i)\bseed\s+([0-9]+)\b")
+    seed_pattern = re.compile(r"(?i)(?<!per )\bseed\s*(?:[=:]\s*)?([0-9]+)\b")
     seed_metric_pattern = re.compile(
         rf"(?i)\bseed\s+([0-9]+)\s*:\s*.*?\b{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?)"
@@ -1636,6 +1648,12 @@ def _parse_seed_evidence(
     seed_condition_metric_pattern = re.compile(
         rf"^\s*condition\s*=\s*([A-Za-z][A-Za-z0-9_-]*)\b.*?"
         rf"\bmean_{metric_alias}\s*=\s*([-+]?\d+(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
+    bracketed_condition_seed_metric_pattern = re.compile(
+        rf"^\s*\[([A-Za-z][A-Za-z0-9_-]*)\]\s*"
+        rf"seed\s*(?:[=:]\s*)?([0-9]+)\s+{re.escape(primary_metric)}\s*=\s*"
+        r"([-+]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
     inline_dispersion_pattern = re.compile(
@@ -1669,6 +1687,14 @@ def _parse_seed_evidence(
             if condition_match:
                 current_condition = condition_match.group(1)
                 break
+
+        bracketed_match = bracketed_condition_seed_metric_pattern.search(line)
+        if bracketed_match:
+            condition, seed, value = bracketed_match.groups()
+            per_seed.setdefault(seed, {})[condition] = float(value)
+            current_condition = condition
+            current_seed = seed
+            continue
 
         seed_metric_match = seed_metric_pattern.search(line)
         if seed_metric_match and current_condition is not None:

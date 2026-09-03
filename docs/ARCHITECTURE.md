@@ -340,6 +340,13 @@ missing or changed seeds, factor levels, sample count, methods, metrics, or
 generator identity remain fatal, and the generated source is never rewritten to
 manufacture compliance.
 
+The machine matrix and the human-readable seed coverage are deliberately checked
+independently. Human rows may spell an identifier as `Seed 7`, `seed=7`, or
+`seed: 7`; aggregate phrases such as `total per seed: 648` are excluded before
+the observed identifier set is compared with the registered seeds. The machine
+record remains the value authority, while the independent rendering check makes
+omitted or misleading stdout visible.
+
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
 Status: accepted. Generic upstream writing instructions can conflict with a

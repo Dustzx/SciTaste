@@ -25,6 +25,7 @@ from scitaste.benchmark.study_adapter import (
     _sanitize_publication_artifacts,
     _selected_experiment,
     _stage_completed,
+    _stdout_seed_ids,
     _usage,
     _validate_outline_artifact,
     _validate_paper_draft_artifact,
@@ -974,6 +975,26 @@ Primary metric balanced_accuracy: 0.81
         {"mean": 0.91, "std": 0.01632993162}
     )
     assert "partial_eta" not in dispersion
+
+
+def test_seed_evidence_parser_handles_bracketed_condition_seed_assignments() -> None:
+    stdout = """Grid size: 54, Examples per cell: 12, Total per seed: 648
+[majority_vote] seed=7 balanced_accuracy=0.81
+[confidence_weighted_vote] seed: 7 balanced_accuracy=0.82
+[majority_vote] seed=19 balanced_accuracy=0.83
+[confidence_weighted_vote] seed: 19 balanced_accuracy=0.84
+[majority_vote] seed=31 balanced_accuracy=0.85
+[confidence_weighted_vote] seed: 31 balanced_accuracy=0.86
+"""
+
+    per_seed, dispersion = _parse_seed_evidence(stdout, "balanced_accuracy")
+
+    assert _stdout_seed_ids(stdout) == [7, 19, 31]
+    assert per_seed["19"] == {
+        "majority_vote": 0.83,
+        "confidence_weighted_vote": 0.84,
+    }
+    assert dispersion["majority_vote"] == pytest.approx({"mean": 0.83, "std": 0.01632993162})
 
 
 def test_seed_evidence_parser_prefers_verified_machine_record() -> None:

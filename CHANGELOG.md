@@ -155,6 +155,10 @@ semantic versioning.
   when its nested factor, seed, sample, method, metric, and generator values
   exactly normalize to the registered contract. The canonical declaration
   remains preferred, and any changed registered field is still rejected.
+- Independent stdout seed-coverage validation now recognizes `seed=<id>` and
+  `seed: <id>` condition rows while excluding aggregate phrases such as
+  `examples per seed: 648`; machine evidence still supplies the authoritative
+  condition-by-seed values.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

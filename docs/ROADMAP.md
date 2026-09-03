@@ -204,8 +204,14 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   field-by-field normalization now accepts that representation without modifying
   generated source; the failed run remains a fixture, while its Stage 13 output
   passes the corrected experiment gate only in an isolated offline replay. A new
-  clean end-to-end rerun remains required. Interrupted and original artifacts are
-  retained only as failure fixtures.
+  clean end-to-end rerun remains required. An eighth invocation produced a
+  source-verified 3×3 matrix and canonical contract but rendered its human rows
+  as `seed=<id>`; the original seed scanner rejected them. The corrected scanner
+  accepts assignment-style identifiers, rejects `per seed` sample-count text,
+  and replays that Stage 13 output at a derived aggregate of 0.803657979. The
+  invocation's unintended second selected seed cell was stopped after the shared
+  parser issue was known, and the entire directory remains a failed fixture.
+  Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48
