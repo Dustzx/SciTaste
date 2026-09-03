@@ -100,6 +100,9 @@ semantic versioning.
 - Formal metric normalization now accepts a complete registered condition-score
   vector and derives the preregistered aggregate only when every condition is
   present and numeric.
+- Formal metric normalization now accepts complete
+  `condition: overall_<primary_metric>=...` summaries while still rejecting
+  partial registered-condition vectors.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

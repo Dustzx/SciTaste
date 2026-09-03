@@ -912,8 +912,11 @@ def _selected_stdout_summary(stdout: str) -> str:
         "total cells",
         "total examples",
         "primary metric summary",
+        "primary metric ",
         "condition:",
         "seed ",
+        ": mean=",
+        "overall_",
         "aggregate ",
         "dispersion ",
         "effect size",
@@ -1028,9 +1031,15 @@ def _normalize_refinement_metrics(
                 for name in condition_names:
                     condition_pattern = re.compile(
                         rf"(?im)^\s*{re.escape(name)}\s*:\s*"
+                        rf"(?:(?:mean|(?:overall_)?{escaped})\s*[=:]\s*)?"
+                        r"([-+]?\d+(?:\.\d+)?)"
+                    )
+                    block_pattern = re.compile(
+                        rf"(?im)^\s*condition\s*:\s*{re.escape(name)}\s*$"
+                        rf"[\s\S]{{0,240}}?^\s*(?:primary\s+metric\s+)?{escaped}\s*:\s*"
                         r"(?:mean\s*[=:]\s*)?([-+]?\d+(?:\.\d+)?)"
                     )
-                    matches = condition_pattern.findall(stdout)
+                    matches = condition_pattern.findall(stdout) or block_pattern.findall(stdout)
                     if not matches:
                         condition_values = []
                         break

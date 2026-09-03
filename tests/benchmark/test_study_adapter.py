@@ -368,6 +368,51 @@ def test_metric_normalization_reads_condition_mean_summary(tmp_path) -> None:
     assert record["metric_normalization"]["method"] == ("stdout-registered-condition-mean-v1")
 
 
+def test_metric_normalization_reads_overall_named_condition_summary(tmp_path) -> None:
+    stage = tmp_path / "stage-13"
+    stage.mkdir()
+    path = stage / "refinement_log.json"
+    conditions = load_task()["benchmark"]["conditions"]
+    path.write_text(
+        json.dumps(
+            {
+                "best_metric": 0.9,
+                "best_version": "experiment/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {},
+                            "stdout": (
+                                "PRIMARY METRIC SUMMARY: balanced_accuracy\n"
+                                "majority_vote: overall_balanced_accuracy=0.81\n"
+                                "confidence_weighted_vote: overall_balanced_accuracy=0.84\n"
+                                "position_aware_probe: overall_balanced_accuracy=0.80\n"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _normalize_refinement_metrics(
+        tmp_path, "balanced_accuracy", "maximize", condition_names=conditions
+    )
+    normalized = json.loads(path.read_text(encoding="utf-8"))
+
+    assert normalized["best_version"] == "experiment_v1/"
+    assert normalized["best_metric"] == pytest.approx((0.81 + 0.84 + 0.8) / 3)
+    assert normalized["iterations"][0]["sandbox"]["metrics"] == {
+        "majority_vote": 0.81,
+        "confidence_weighted_vote": 0.84,
+        "position_aware_probe": 0.8,
+        "balanced_accuracy": pytest.approx((0.81 + 0.84 + 0.8) / 3),
+    }
+
+
 def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:
     telemetry = tmp_path / "telemetry.jsonl"
     telemetry.write_text(
