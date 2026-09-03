@@ -76,6 +76,22 @@ def _install_sandbox_trace() -> None:
     ExperimentSandbox.run_project = traced_run_project
 
 
+def _install_offline_literature() -> None:
+    """Disable every upstream literature-network path for frozen-snapshot cells."""
+
+    from researchclaw.literature import search as literature_search
+    from researchclaw.literature import verify as literature_verify
+
+    literature_search.search_papers = lambda *args, **kwargs: []
+    literature_search.search_papers_multi_query = lambda *args, **kwargs: []
+
+    def verify_frozen_citations(bib_text: str, **_kwargs: Any):
+        entries = literature_verify.parse_bibtex_entries(bib_text)
+        return literature_verify.VerificationReport(total=len(entries), skipped=len(entries))
+
+    literature_verify.verify_citations = verify_frozen_citations
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run unmodified ResearchClaw with an explicit per-call output-token ceiling."""
 
@@ -85,10 +101,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if os.environ.get("SCITASTE_ARC_TRACE_SANDBOX", "").casefold() in {"1", "true", "yes"}:
         _install_sandbox_trace()
     if os.environ.get("SCITASTE_ARC_OFFLINE", "").casefold() in {"1", "true", "yes"}:
-        from researchclaw.literature import search as literature_search
-
-        literature_search.search_papers = lambda *args, **kwargs: []
-        literature_search.search_papers_multi_query = lambda *args, **kwargs: []
+        _install_offline_literature()
     if os.environ.get("SCITASTE_ARC_DISABLE_THINKING", "").casefold() in {"1", "true", "yes"}:
         import urllib.request
 

@@ -24,6 +24,7 @@ from typing import Any
 
 import yaml
 
+from scitaste.benchmark.manuscript import materialize_manuscript
 from scitaste.benchmark.study_execution import LauncherResult, LauncherUsage
 from scitaste.benchmark.study_models import (
     CellStatus,
@@ -297,7 +298,12 @@ def run_study_cell(
         outcome, experiments, audit = _audit_upstream_run(
             upstream_run, elapsed_seconds=elapsed, task=task
         )
-        artifact_paths = _materialize_artifacts(cell_dir, upstream_run, controller_trace, audit)
+        artifact_paths = _materialize_artifacts(
+            cell_dir,
+            upstream_run,
+            controller_trace,
+            audit,
+        )
         result = LauncherResult(
             status=CellStatus.SUCCEEDED,
             evidence_class=EvidenceClass.REAL,
@@ -476,7 +482,13 @@ def _prepare_stage_seven(
     stage.mkdir(parents=True, exist_ok=True)
     common = task["research_brief"].strip()
     cards = "\n\n".join(
-        f"### {item['title']} [{item['document_id']}]\n{item['content']}"
+        f"### {item['title']} [{item['document_id']}]\n"
+        + (
+            f"Registered citation key: [{item['citation']['key']}]\n"
+            if isinstance(item.get("citation"), dict)
+            else ""
+        )
+        + str(item["content"])
         for item in task.get("knowledge_documents", [])
     )
     synthesis = f"# Frozen synthesis: {task['research_direction']}\n\n{common}\n"
@@ -488,6 +500,7 @@ def _prepare_stage_seven(
     (stage / "topic_manifest.json").write_text(
         json.dumps(task, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+    _write_frozen_bibliography(stage, task)
     checkpoint = {
         "last_completed_stage": 7,
         "last_completed_name": "SYNTHESIS",
@@ -501,6 +514,67 @@ def _prepare_stage_seven(
     (run_dir / "condition_trace.json").write_text(
         json.dumps(trace, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+
+
+def _write_frozen_bibliography(stage_dir: Path, task: dict[str, Any]) -> tuple[Path, Path] | None:
+    """Expose only task-registered scholarly sources to upstream writing stages."""
+
+    citations = [
+        item["citation"]
+        for item in task.get("knowledge_documents", [])
+        if isinstance(item.get("citation"), dict)
+    ]
+    if not citations:
+        return None
+    required = ("key", "title", "authors", "venue", "year", "url")
+    for citation in citations:
+        missing = [name for name in required if not citation.get(name)]
+        if missing:
+            raise ValueError("registered citation is incomplete: " + ", ".join(sorted(missing)))
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", str(citation["key"])):
+            raise ValueError(f"invalid registered citation key: {citation['key']!r}")
+        if not isinstance(citation["authors"], list) or not all(
+            isinstance(author, str) and author.strip() for author in citation["authors"]
+        ):
+            raise ValueError(f"registered citation authors are invalid: {citation['key']}")
+
+    bibliography = []
+    candidates = []
+    for citation in citations:
+        key = str(citation["key"])
+        fields = [
+            ("title", str(citation["title"])),
+            ("author", " and ".join(str(author) for author in citation["authors"])),
+            ("journal", str(citation["venue"])),
+            ("year", str(citation["year"])),
+            ("url", str(citation["url"])),
+        ]
+        for optional in ("volume", "pages", "doi"):
+            if citation.get(optional):
+                fields.append((optional, str(citation[optional])))
+        rendered_fields = ",\n".join(f"  {name} = {{{value}}}" for name, value in fields)
+        bibliography.append(f"@article{{{key},\n{rendered_fields}\n}}")
+        candidates.append(
+            {
+                "cite_key": key,
+                "title": citation["title"],
+                "authors": list(citation["authors"]),
+                "venue": citation["venue"],
+                "year": int(citation["year"]),
+                "url": citation["url"],
+                "doi": citation.get("doi"),
+                "citation_count": 0,
+                "source": "frozen-task-snapshot",
+            }
+        )
+    bib_path = stage_dir / "references.bib"
+    bib_path.write_text("\n\n".join(bibliography) + "\n", encoding="utf-8")
+    candidates_path = stage_dir / "candidates.jsonl"
+    candidates_path.write_text(
+        "".join(json.dumps(item, ensure_ascii=False) + "\n" for item in candidates),
+        encoding="utf-8",
+    )
+    return bib_path, candidates_path
 
 
 def _write_upstream_config(
@@ -697,6 +771,23 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                 ),
                 "max_tokens": 2048,
             },
+            "paper_draft": {
+                "system": (
+                    "You write an evidence-bounded scientific manuscript from a frozen "
+                    "experiment record. The pipeline calls you three times for disjoint section "
+                    "batches. In every call, output only the sections explicitly requested by "
+                    "the current user message; never repeat an earlier section or complete the "
+                    "whole paper early. The authoritative selected-experiment evidence overrides "
+                    "generic paper-writing requirements. With three registered seeds, report a "
+                    "compact per-seed table and the observed descriptive dispersion; never emit "
+                    "N=1, zero dispersion, or Min=Max=Mean summaries. Use only citation keys "
+                    "listed under AVAILABLE REFERENCES, even when a generic instruction requests "
+                    "more citations. Never invent numeric citations. Include a figure only when "
+                    "its exact file is listed as available experiment evidence; never emit a "
+                    "framework-diagram or chart placeholder. Do not claim neural-model execution "
+                    "for a deterministic CPU simulation."
+                ),
+            },
         },
         "sub_prompts": {
             "code_repair": {
@@ -871,6 +962,8 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
 
     benchmark = task["benchmark"]
     public_conditions = ", ".join(_public_term(str(item)) for item in benchmark["conditions"])
+    citation_keys = _registered_citation_keys(task)
+    citation_text = ", ".join(f"[{key}]" for key in citation_keys) or "none"
     text = (
         "Write the scientific analysis and manuscript for external readers, not an internal "
         "run report. The study topic is: "
@@ -887,7 +980,11 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         "measurement of neural attention, calibration, internal confidence, or model latency. "
         "Describe the three methods as synthetic decision rules and their measurements as "
         "benchmark-simulation results; any connection to language-model behavior is a future "
-        "empirical hypothesis, not an observed result."
+        "empirical hypothesis, not an observed result. The only registered scholarly citation "
+        f"keys are: {citation_text}. Use no other citation marker and never invent numbered "
+        "references. A generic request for a larger bibliography does not override the frozen "
+        "source set. Do not include an image, figure callout, or diagram placeholder unless its "
+        "exact file is present in the supplied experiment artifacts."
     )
     if evidence is None:
         return text + (
@@ -913,8 +1010,9 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         "never as the scientific result. "
         f"This selected execution contains {len(seed_ids)} registered seeds ({seed_text}). "
         "The pipeline count of one means one selected run, not statistical N=1; never reproduce "
-        "a Min=Max=Mean or N=1 table. Preserve per-seed values and descriptive dispersion from "
-        "the evidence below.\n" + stdout_summary
+        "a Min=Max=Mean or N=1 table. Include one compact table containing every supplied "
+        "per-seed value for every method, plus each method's observed mean and standard "
+        "deviation; do not replace the matrix with selected examples.\n" + stdout_summary
     )
 
 
@@ -922,12 +1020,26 @@ def _public_term(value: str) -> str:
     return re.sub(r"\s+", " ", value.replace("_", " ").replace("-", " ")).strip()
 
 
+def _registered_citation_keys(task: dict[str, Any]) -> list[str]:
+    return sorted(
+        str(citation["key"])
+        for item in task.get("knowledge_documents", [])
+        if isinstance((citation := item.get("citation")), dict) and citation.get("key")
+    )
+
+
 def _publication_safe_text(text: str, task: dict[str, Any]) -> str:
+    generator = str(task["benchmark"]["contract"].get("generator", ""))
+    if generator:
+        text = re.sub(
+            rf"(?i)(?:the\s+)?frozen\s+synthetic\s+benchmark\s+contract\s+"
+            rf"{re.escape(generator)}",
+            "the preregistered factorial benchmark",
+            text,
+        )
     replacements = {
         str(task.get("task_id", "")): "the preregistered task",
-        str(task["benchmark"]["contract"].get("generator", "")): (
-            "the preregistered factorial benchmark"
-        ),
+        generator: "the preregistered factorial benchmark",
         str(task["benchmark"].get("primary_metric", "")): _public_term(
             str(task["benchmark"].get("primary_metric", ""))
         ),
@@ -944,6 +1056,17 @@ def _publication_safe_text(text: str, task: dict[str, Any]) -> str:
     for source, target in sorted(replacements.items(), key=lambda pair: len(pair[0]), reverse=True):
         if source:
             text = re.sub(re.escape(source), target, text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"(?i)\bthe preregistered factorial benchmark\s+(?:the preregistered factorial "
+        r"benchmark|benchmark)\b",
+        "the preregistered factorial benchmark",
+        text,
+    )
+    text = re.sub(
+        r"(?i)\bthe\s+the preregistered factorial benchmark\b",
+        "the preregistered factorial benchmark",
+        text,
+    )
     return text
 
 
@@ -1127,6 +1250,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
     stdout_seed_ids = sorted(
         {int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}
     )
+    per_seed_metrics, dispersion_metrics = _parse_seed_evidence(stdout, primary_metric)
     declared_contract = _extract_declared_contract(sources) or {}
     declared_seed_ids = sorted(
         int(item)
@@ -1153,6 +1277,8 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "stdout_summary": _selected_stdout_summary(stdout, primary_metric),
         "seed_ids": declared_seed_ids or stdout_seed_ids,
         "stdout_observed_seed_ids": stdout_seed_ids,
+        "per_seed_metrics": per_seed_metrics,
+        "dispersion_metrics": dispersion_metrics,
         "metric_normalization": selected.get("metric_normalization"),
         "source_sha256": source_sha256,
         "execution_trace": execution_trace_summary,
@@ -1317,6 +1443,46 @@ def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
     return "\n".join(lines[-160:])[-16000:]
 
 
+def _parse_seed_evidence(
+    stdout: str, primary_metric: str
+) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
+    """Parse the registered per-seed matrix and descriptive dispersion from stdout."""
+
+    per_seed: dict[str, dict[str, float]] = {}
+    current_seed: str | None = None
+    seed_pattern = re.compile(r"(?i)\bseed\s+([0-9]+)\b")
+    metric_pattern = re.compile(
+        rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*{re.escape(primary_metric)}\s*="
+        r"\s*([-+]?\d+(?:\.\d+)?)"
+    )
+    dispersion_pattern = re.compile(
+        rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*mean_{re.escape(primary_metric)}\s*="
+        r"\s*([-+]?\d+(?:\.\d+)?),\s*std\s*=\s*([-+]?\d+(?:\.\d+)?)"
+        r"(?:,\s*variance\s*=\s*([-+]?\d+(?:\.\d+)?))?",
+        re.IGNORECASE,
+    )
+    dispersion: dict[str, dict[str, float]] = {}
+    for line in stdout.splitlines():
+        seed_match = seed_pattern.search(line)
+        if seed_match and not metric_pattern.search(line):
+            current_seed = seed_match.group(1)
+            per_seed.setdefault(current_seed, {})
+            continue
+        metric_match = metric_pattern.search(line)
+        if metric_match and current_seed is not None:
+            per_seed[current_seed][metric_match.group(1)] = float(metric_match.group(2))
+        dispersion_match = dispersion_pattern.search(line)
+        if dispersion_match:
+            values = {
+                "mean": float(dispersion_match.group(2)),
+                "std": float(dispersion_match.group(3)),
+            }
+            if dispersion_match.group(4) is not None:
+                values["variance"] = float(dispersion_match.group(4))
+            dispersion[dispersion_match.group(1)] = values
+    return per_seed, dispersion
+
+
 def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
     """Persist the sole authoritative execution projection used after Stage 13."""
 
@@ -1358,6 +1524,8 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "stdout_summary": selected["stdout_summary"],
         "seed_ids": selected["seed_ids"],
         "stdout_observed_seed_ids": selected["stdout_observed_seed_ids"],
+        "per_seed_metrics": selected["per_seed_metrics"],
+        "dispersion_metrics": selected["dispersion_metrics"],
         "source_sha256": selected["source_sha256"],
         "execution_trace": selected["execution_trace"],
     }
@@ -1487,6 +1655,41 @@ def _validate_selected_experiment(run_dir: Path, task: dict[str, Any]) -> None:
     expected_seeds = sorted(int(item) for item in task["benchmark"]["contract"].get("seeds", []))
     if selected["seed_ids"] != expected_seeds:
         raise ValueError("selected experiment does not preserve the registered seed set")
+    if selected["stdout_observed_seed_ids"] != expected_seeds:
+        raise ValueError("selected execution stdout does not cover every registered seed")
+    expected_conditions = [str(item) for item in task["benchmark"]["conditions"]]
+    per_seed = selected["per_seed_metrics"]
+    missing_seed_values = [
+        f"seed={seed}:{condition}"
+        for seed in expected_seeds
+        for condition in expected_conditions
+        if condition not in per_seed.get(str(seed), {})
+    ]
+    if missing_seed_values:
+        raise ValueError(
+            "selected execution lacks registered per-seed values: " + ", ".join(missing_seed_values)
+        )
+    dispersion = selected["dispersion_metrics"]
+    missing_dispersion = [
+        condition
+        for condition in expected_conditions
+        if not {"mean", "std"}.issubset(dispersion.get(condition, {}))
+    ]
+    if missing_dispersion:
+        raise ValueError(
+            "selected execution lacks registered seed dispersion: " + ", ".join(missing_dispersion)
+        )
+    inconsistent_means = [
+        condition
+        for condition in expected_conditions
+        if condition in selected["metrics"]
+        and abs(float(selected["metrics"][condition]) - dispersion[condition]["mean"]) > 5e-6
+    ]
+    if inconsistent_means:
+        raise ValueError(
+            "selected seed dispersion disagrees with registered metrics: "
+            + ", ".join(inconsistent_means)
+        )
     forbidden_network = re.compile(
         r"(?i)(https?://|\brequests\.|urllib\.request|load_dataset\s*\(|download\s*\()"
     )
@@ -1585,6 +1788,37 @@ def _text_reports_metric(text: str, name: str, value: float) -> bool:
     return False
 
 
+def _text_contains_value(text: str, value: float, *, tolerance: float = 0.00005) -> bool:
+    number = re.compile(r"(?<![A-Za-z0-9])[-+]?\d+(?:\.\d+)?%?")
+    for match in number.findall(text):
+        observed = float(match.rstrip("%"))
+        if match.endswith("%"):
+            observed /= 100
+        if abs(observed - value) <= tolerance:
+            return True
+    return False
+
+
+def _seed_evidence_reporting_violations(
+    text: str, selected_run: dict[str, Any], task: dict[str, Any]
+) -> list[str]:
+    violations: set[str] = set()
+    for condition in task["benchmark"]["conditions"]:
+        name = str(condition)
+        value = selected_run.get("metrics", {}).get(name)
+        if isinstance(value, (int, float)) and not _text_reports_metric(text, name, float(value)):
+            violations.add(f"condition-mean-omitted:{name}")
+    for seed, values in selected_run.get("per_seed_metrics", {}).items():
+        for condition, value in values.items():
+            if isinstance(value, (int, float)) and not _text_contains_value(text, float(value)):
+                violations.add(f"per-seed-value-omitted:{condition}:seed-{seed}")
+    for condition, values in selected_run.get("dispersion_metrics", {}).items():
+        std = values.get("std") if isinstance(values, dict) else None
+        if isinstance(std, (int, float)) and not _text_contains_value(text, float(std)):
+            violations.add(f"seed-std-omitted:{condition}")
+    return sorted(violations)
+
+
 _FAILURE_CLAIMS = {
     "experiment-did-not-execute": r"(?i)\b(?:the |this )?experiment did not execute\b",
     "no-scientific-test": (
@@ -1651,6 +1885,27 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
         if corrective.search(line):
             continue
         violations.update(name for name, pattern in patterns.items() if re.search(pattern, line))
+        public_method = re.search(
+            r"(?i)(?:majority vote|confidence weighted vote|position aware probe|"
+            r"cross[- ]method aggregate)",
+            line,
+        )
+        if public_method and re.search(r"(?:±|\\pm\$?)\s*0(?:\.0+)?\b", line):
+            violations.add("zero-seed-dispersion")
+        if public_method and re.search(r"(?:\||&)\s*1\s*(?:\||\\\\|$)", line):
+            violations.add("single-seed-table")
+    if re.search(
+        r"(?is)\bmean\b.{0,40}\b(?:standard deviation|std)\b.{0,40}"
+        r"\bacross (?:the )?seeds?\b.{0,40}\b(?:identical|zero)\b",
+        text,
+    ):
+        violations.add("zero-seed-dispersion")
+    if re.search(
+        r"(?is)\bmin(?:imum)?\b.{0,30}\bmax(?:imum)?\b.{0,30}\bmean\b.{0,30}"
+        r"\b(?:identical|equal)\b",
+        text,
+    ):
+        violations.add("single-seed-collapse")
     has_seed_count = bool(
         re.search(r"(?i)\b(?:three|3)\s+(?:(?:distinct|fixed|registered)\s+)*seeds?\b", text)
     )
@@ -1659,6 +1914,96 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
     )
     if not has_seed_count and not has_seed_ids:
         violations.add("registered-seed-set-omitted")
+    return sorted(violations)
+
+
+_REQUIRED_MANUSCRIPT_SECTIONS = (
+    "title",
+    "abstract",
+    "introduction",
+    "related work",
+    "method",
+    "experiments",
+    "results",
+    "discussion",
+    "limitations",
+    "conclusion",
+)
+
+
+def _canonical_manuscript_heading(heading: str) -> str:
+    normalized = re.sub(r"^[0-9]+(?:\.[0-9]+)*[.)]?\s*", "", heading)
+    normalized = re.sub(r"[*_`:#]", "", normalized).strip().casefold()
+    aliases = {
+        "methods": "method",
+        "methodology": "method",
+        "experiment": "experiments",
+        "experimental setup": "experiments",
+        "result": "results",
+        "limitation": "limitations",
+        "limitations and future work": "limitations",
+        "conclusions": "conclusion",
+    }
+    return aliases.get(normalized, normalized)
+
+
+def _manuscript_structure_violations(text: str) -> list[str]:
+    headings = [
+        _canonical_manuscript_heading(match.group(2))
+        for match in re.finditer(r"(?m)^(#{1,2})\s+(.+?)\s*$", text)
+    ]
+    violations = {
+        f"missing-section:{section}"
+        for section in _REQUIRED_MANUSCRIPT_SECTIONS
+        if section not in headings
+    }
+    violations.update(
+        f"duplicate-section:{section}"
+        for section in _REQUIRED_MANUSCRIPT_SECTIONS
+        if headings.count(section) > 1
+    )
+    if re.search(r"(?i)\b(?:placeholder|(?:to|will) be (?:generated|inserted|completed))\b", text):
+        violations.add("publication-placeholder")
+    return sorted(violations)
+
+
+def _citation_violations(text: str, task: dict[str, Any]) -> list[str]:
+    allowed = set(_registered_citation_keys(task))
+    without_math = re.sub(r"\$\$.*?\$\$|\$.*?\$", "", text, flags=re.DOTALL)
+    numeric = set(re.findall(r"\[((?:\s*\d+\s*,)*\s*\d+\s*)\](?!\()", without_math))
+    bracket_keys = set(
+        re.findall(
+            r"\[([A-Za-z][A-Za-z0-9_-]*\d{4}[A-Za-z0-9_-]*)\](?!\()",
+            without_math,
+        )
+    )
+    latex_keys: set[str] = set()
+    for group in re.findall(r"\\cite[pt]?\{([^}]+)\}", without_math):
+        latex_keys.update(key.strip() for key in group.split(",") if key.strip())
+    violations = {"invented-numeric-citations"} if numeric else set()
+    violations.update(
+        f"unregistered-citation:{key}" for key in (bracket_keys | latex_keys) - allowed
+    )
+    if allowed and not (allowed & (bracket_keys | latex_keys)):
+        violations.add("registered-citation-omitted")
+    return sorted(violations)
+
+
+def _publication_asset_violations(text: str, run_dir: Path) -> list[str]:
+    violations: set[str] = set()
+    for raw_target in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text):
+        target = raw_target.strip().split(maxsplit=1)[0].strip("<>")
+        relative = Path(target)
+        if relative.is_absolute() or ".." in relative.parts:
+            violations.add(f"unsafe-image:{target}")
+            continue
+        if re.match(r"(?i)https?://", target):
+            violations.add(f"remote-image:{target}")
+            continue
+        candidates = [run_dir / "stage-17" / target, run_dir / target]
+        candidates.extend(stage / target for stage in run_dir.glob("stage-14*"))
+        if not any(path.is_file() for path in candidates):
+            violations.add(f"missing-image:{target}")
     return sorted(violations)
 
 
@@ -1723,12 +2068,20 @@ def _validate_paper_draft_artifact(run_dir: Path, task: dict[str, Any]) -> dict[
     if not paper_path.is_file():
         raise ValueError("paper draft artifact is missing")
     _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
-    return _artifact_consistency_audit(
+    audit = _artifact_consistency_audit(
         analysis=analysis_path.read_text(encoding="utf-8", errors="replace"),
         paper=paper_path.read_text(encoding="utf-8", errors="replace"),
         selected_run=selected_run,
         task=task,
     )
+    audit.update(
+        _complete_manuscript_audit(
+            paper_path.read_text(encoding="utf-8", errors="replace"),
+            task=task,
+            run_dir=run_dir,
+        )
+    )
+    return audit
 
 
 def _validate_outline_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
@@ -1775,6 +2128,11 @@ def _artifact_consistency_audit(
         raise ValueError(
             "paper exposes internal-only identifiers: " + ", ".join(identifier_violations)
         )
+    seed_evidence_violations = _seed_evidence_reporting_violations(paper, selected_run, task)
+    if seed_evidence_violations:
+        raise ValueError(
+            "paper omits selected seed evidence: " + ", ".join(seed_evidence_violations)
+        )
     return {
         "schema_version": "1.0",
         "method": "selected-evidence-publication-consistency-v1",
@@ -1787,6 +2145,26 @@ def _artifact_consistency_audit(
         "failure_claim_contradictions": [],
         "analysis_identifier_violations": [],
         "publication_identifier_violations": [],
+        "seed_evidence_reporting_violations": [],
+    }
+
+
+def _complete_manuscript_audit(
+    paper: str, *, task: dict[str, Any], run_dir: Path
+) -> dict[str, Any]:
+    structure = _manuscript_structure_violations(paper)
+    citations = _citation_violations(paper, task)
+    assets = _publication_asset_violations(paper, run_dir)
+    violations = structure + citations + assets
+    if violations:
+        raise ValueError("paper is not publication-complete: " + ", ".join(violations))
+    return {
+        "manuscript_structure_complete": True,
+        "registered_citations_only": True,
+        "publication_assets_resolved": True,
+        "manuscript_structure_violations": [],
+        "citation_violations": [],
+        "publication_asset_violations": [],
     }
 
 
@@ -1835,6 +2213,7 @@ def _audit_upstream_run(
         selected_run=selected_run,
         task=task,
     )
+    consistency.update(_complete_manuscript_audit(paper, task=task, run_dir=run_dir))
     decision = (
         decision_path.read_text(encoding="utf-8", errors="replace")
         if decision_path.is_file()
@@ -1911,6 +2290,16 @@ def _materialize_artifacts(
     paper_source = run_dir / audit["paper_source"]
     paper_target = cell_dir / "paper.md"
     shutil.copy2(paper_source, paper_target)
+    manuscript_paths = materialize_manuscript(
+        markdown_path=paper_source,
+        target_dir=cell_dir / "manuscript",
+        bibliography_path=run_dir / "stage-07" / "references.bib",
+        asset_roots=(
+            run_dir / "stage-17",
+            run_dir,
+            *tuple(sorted(run_dir.glob("stage-14*"), reverse=True)),
+        ),
+    )
     evidence_source = run_dir / "scitaste_selected_experiment_evidence.json"
     if not evidence_source.is_file():
         raise ValueError("selected experiment evidence projection is missing")
@@ -1945,16 +2334,14 @@ def _materialize_artifacts(
         + "\n",
         encoding="utf-8",
     )
-    return [
-        path.name
-        for path in (
-            paper_target,
-            evidence_target,
-            trace_path,
-            audit_path,
-            manifest_path,
-        )
-    ]
+    core_paths = (
+        paper_target,
+        evidence_target,
+        trace_path,
+        audit_path,
+        manifest_path,
+    )
+    return [path.relative_to(cell_dir).as_posix() for path in (*core_paths, *manuscript_paths)]
 
 
 def _usage(path: Path, task: dict[str, Any], *, experiments: int) -> LauncherUsage:

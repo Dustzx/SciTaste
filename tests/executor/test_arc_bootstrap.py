@@ -7,7 +7,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from scitaste.executor.arc_bootstrap import main
+from scitaste.executor.arc_bootstrap import _install_offline_literature, main
 
 
 def test_bootstrap_clamps_upstream_output_tokens(monkeypatch) -> None:
@@ -47,6 +47,31 @@ def test_bootstrap_preserves_upstream_defaults_without_limit(monkeypatch) -> Non
     monkeypatch.delenv("SCITASTE_ARC_MAX_OUTPUT_TOKENS", raising=False)
 
     assert main(None) == 3
+
+
+def test_bootstrap_offline_mode_disables_search_and_citation_network(monkeypatch) -> None:
+    literature = ModuleType("researchclaw.literature")
+    search = ModuleType("researchclaw.literature.search")
+    verify = ModuleType("researchclaw.literature.verify")
+    search.search_papers = lambda *_args, **_kwargs: ["network"]
+    search.search_papers_multi_query = lambda *_args, **_kwargs: ["network"]
+    verify.parse_bibtex_entries = lambda _text: [{"key": "a"}, {"key": "b"}]
+    verify.VerificationReport = lambda **kwargs: SimpleNamespace(**kwargs)
+    verify.verify_citations = lambda *_args, **_kwargs: "network"
+    literature.search = search
+    literature.verify = verify
+    monkeypatch.setitem(sys.modules, "researchclaw", ModuleType("researchclaw"))
+    monkeypatch.setitem(sys.modules, "researchclaw.literature", literature)
+    monkeypatch.setitem(sys.modules, "researchclaw.literature.search", search)
+    monkeypatch.setitem(sys.modules, "researchclaw.literature.verify", verify)
+
+    _install_offline_literature()
+
+    assert search.search_papers("query") == []
+    assert search.search_papers_multi_query(["query"]) == []
+    report = verify.verify_citations("frozen")
+    assert report.total == 2
+    assert report.skipped == 2
 
 
 def test_bootstrap_stops_after_exact_total_token_overrun(monkeypatch) -> None:

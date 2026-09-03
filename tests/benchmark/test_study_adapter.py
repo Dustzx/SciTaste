@@ -11,11 +11,15 @@ from scitaste.benchmark.study_adapter import (
     _analysis_consistency_audit,
     _artifact_consistency_audit,
     _audit_upstream_run,
+    _citation_violations,
     _compact_refinement_log,
     _condition_context,
     _contract_matches,
     _guidance,
+    _manuscript_structure_violations,
     _normalize_refinement_metrics,
+    _prepare_stage_seven,
+    _publication_asset_violations,
     _sanitize_publication_artifacts,
     _selected_experiment,
     _stage_completed,
@@ -54,6 +58,39 @@ def request(condition: SystemCondition):
             },
         },
     }
+
+
+def complete_paper(metric: float = 0.75) -> str:
+    return f"""## Title
+FROST: A Synthetic Factorial Diagnosis
+
+## Abstract
+Balanced accuracy was {metric:.6f} across three seeds (7, 19, and 31).
+
+## Introduction
+Position sensitivity motivates the controlled simulation [liu-etal-2024-lost].
+
+## Related Work
+Prior long-context evaluation separates position from length [liu-etal-2024-lost].
+
+## Method
+We execute three synthetic decision rules without neural inference.
+
+## Experiments
+The registered seeds are 7, 19, and 31.
+
+## Results
+Balanced accuracy was {metric:.6f} across three seeds (7, 19, and 31).
+
+## Discussion
+The measurements characterize the synthetic simulation only.
+
+## Limitations
+Transfer to language models remains untested.
+
+## Conclusion
+The synthetic benchmark completed and retained descriptive seed variation.
+"""
 
 
 def test_condition_context_keeps_ablations_distinct(tmp_path) -> None:
@@ -144,13 +181,36 @@ def test_guidance_separates_execution_and_publication_language() -> None:
     assert "majority vote=0.800000" in guidance["paper_draft"]
     assert "supersedes every earlier failed attempt" in guidance["result_analysis"]
     assert "does not run, train, probe, or evaluate a language model" in guidance["paper_draft"]
+    assert "[liu-etal-2024-lost]" in guidance["paper_draft"]
+    assert "never invent numbered references" in guidance["paper_draft"]
+
+
+def test_stage_seven_materializes_only_registered_frozen_citations(tmp_path) -> None:
+    run_dir = tmp_path / "run"
+    _prepare_stage_seven(
+        run_dir,
+        load_task(),
+        SystemCondition.KNOWLEDGE_RAG,
+        {"controller_decision": None},
+    )
+
+    bibliography = (run_dir / "stage-07" / "references.bib").read_text()
+    candidates = [
+        json.loads(line)
+        for line in (run_dir / "stage-07" / "candidates.jsonl").read_text().splitlines()
+    ]
+    assert "@article{liu-etal-2024-lost" in bibliography
+    assert "10.1162/tacl_a_00638" in bibliography
+    assert [item["cite_key"] for item in candidates] == ["liu-etal-2024-lost"]
 
 
 def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> None:
     analysis = tmp_path / "stage-14" / "analysis.md"
     analysis.parent.mkdir()
     analysis.write_text(
-        "The diagnosis-factorial-v1 result compares majority_vote.", encoding="utf-8"
+        "Execute the frozen synthetic benchmark contract diagnosis-factorial-v1; "
+        "the diagnosis-factorial-v1 result compares majority_vote.",
+        encoding="utf-8",
     )
 
     _sanitize_publication_artifacts(tmp_path, load_task(), relative_paths=("stage-14/analysis.md",))
@@ -159,6 +219,9 @@ def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> N
     assert "diagnosis-factorial-v1" not in sanitized
     assert "majority_vote" not in sanitized
     assert "preregistered factorial benchmark" in sanitized
+    assert "contract the preregistered" not in sanitized
+    assert "benchmark benchmark" not in sanitized
+    assert "the the preregistered" not in sanitized
     log = json.loads((tmp_path / "scitaste_publication_sanitization.json").read_text())
     assert log["artifacts"][0]["path"] == "stage-14/analysis.md"
     assert log["artifacts"][0]["before_sha256"] != log["artifacts"][0]["after_sha256"]
@@ -177,6 +240,10 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "numpy.random.default_rng" in design
     assert "never assert that condition outputs" in code
     assert "Do not add an LLM call" in code
+    paper_system = override["stages"]["paper_draft"]["system"]
+    assert "three times for disjoint section batches" in paper_system
+    assert "never invent numeric citations" in paper_system.casefold()
+    assert "never emit a framework-diagram" in paper_system
     improve = override["sub_prompts"]["iterative_improve"]["user"]
     assert "[7, 19, 31]" in improve
     assert "do not add, remove, rename" in improve
@@ -517,7 +584,7 @@ def test_artifact_audit_requires_real_run_and_paper(tmp_path) -> None:
     )
     (tmp_path / "stage-17").mkdir()
     (tmp_path / "stage-17" / "paper_draft.md").write_text(
-        "The balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+        complete_paper(),
         encoding="utf-8",
     )
 
@@ -556,6 +623,34 @@ def test_consistency_audit_rejects_internal_identifier_and_false_failure_story()
         )
 
 
+def test_manuscript_gate_rejects_duplicate_sections_and_placeholders() -> None:
+    paper = complete_paper() + "\n## Results\nDuplicated.\n"
+    assert _manuscript_structure_violations(paper) == ["duplicate-section:results"]
+
+    placeholder = complete_paper().replace(
+        "The measurements characterize the synthetic simulation only.",
+        "A framework diagram will be inserted later.",
+    )
+    assert "publication-placeholder" in _manuscript_structure_violations(placeholder)
+
+
+def test_manuscript_gate_rejects_unregistered_citations_and_missing_images(tmp_path) -> None:
+    task = load_task()
+    assert _citation_violations(complete_paper(), task) == []
+    assert _citation_violations(complete_paper() + "\nPrior work [1, 2].", task) == [
+        "invented-numeric-citations"
+    ]
+    assert _citation_violations(
+        complete_paper().replace("liu-etal-2024-lost", "invented2026paper"), task
+    ) == [
+        "registered-citation-omitted",
+        "unregistered-citation:invented2026paper",
+    ]
+    assert _publication_asset_violations(
+        "![Framework](charts/framework_diagram.png)", tmp_path
+    ) == ["missing-image:charts/framework_diagram.png"]
+
+
 def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
     task = load_task()
     selected = {
@@ -569,6 +664,17 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
     with pytest.raises(ValueError, match="single-seed-collapse"):
         _analysis_consistency_audit(
             analysis=("Balanced accuracy was 0.75, but n=1 and min=max=mean indicate a collapse."),
+            selected_run=selected,
+            task=task,
+        )
+
+    with pytest.raises(ValueError, match="zero-seed-dispersion"):
+        _artifact_consistency_audit(
+            analysis="Balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+            paper=(
+                "Balanced accuracy was 0.75 across three seeds (7, 19, and 31).\n"
+                "Majority Vote & 0.7500 $\\pm$ 0.0000 & 1 \\\\"
+            ),
             selected_run=selected,
             task=task,
         )
@@ -708,10 +814,21 @@ def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> No
     trace_dir = tmp_path / "stage-13" / "refine_sandbox_v1_fix"
     trace_dir.mkdir()
     stdout = (
-        "Seed 7\nSeed 19\nSeed 31\n"
-        "majority_vote: balanced_accuracy=0.7\n"
-        "confidence_weighted_vote: balanced_accuracy=0.8\n"
+        "Seed 7\n"
+        "majority_vote: balanced_accuracy=0.69\n"
+        "confidence_weighted_vote: balanced_accuracy=0.79\n"
+        "position_aware_probe: balanced_accuracy=0.74\n"
+        "Seed 19\n"
+        "majority_vote: balanced_accuracy=0.70\n"
+        "confidence_weighted_vote: balanced_accuracy=0.80\n"
         "position_aware_probe: balanced_accuracy=0.75\n"
+        "Seed 31\n"
+        "majority_vote: balanced_accuracy=0.71\n"
+        "confidence_weighted_vote: balanced_accuracy=0.81\n"
+        "position_aware_probe: balanced_accuracy=0.76\n"
+        "majority_vote: mean_balanced_accuracy=0.70, std=0.01\n"
+        "confidence_weighted_vote: mean_balanced_accuracy=0.80, std=0.01\n"
+        "position_aware_probe: mean_balanced_accuracy=0.75, std=0.01\n"
     )
     trace = {
         "schema_version": "1.0",
@@ -738,6 +855,8 @@ def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> No
 
     assert evidence["seed_ids"] == [7, 19, 31]
     assert evidence["stdout_observed_seed_ids"] == [7, 19, 31]
+    assert evidence["per_seed_metrics"]["19"]["confidence_weighted_vote"] == 0.8
+    assert evidence["dispersion_metrics"]["position_aware_probe"]["std"] == 0.01
     assert evidence["stdout_sha256"] == hashlib.sha256(stdout.encode()).hexdigest()
     assert evidence["execution_trace"]["path"] == (
         "stage-13/refine_sandbox_v1_fix/scitaste_execution_trace.json"

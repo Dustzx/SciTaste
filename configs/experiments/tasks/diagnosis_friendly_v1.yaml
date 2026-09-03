@@ -43,6 +43,23 @@ knowledge_documents:
   - document_id: liu-2023-lost-middle
     title: Position sensitivity in long contexts
     content: Relevant evidence position and context length are separate causal factors; report their interaction rather than only aggregate accuracy.
+    citation:
+      key: liu-etal-2024-lost
+      title: "Lost in the Middle: How Language Models Use Long Contexts"
+      authors:
+        - Nelson F. Liu
+        - Kevin Lin
+        - John Hewitt
+        - Ashwin Paranjape
+        - Michele Bevilacqua
+        - Fabio Petroni
+        - Percy Liang
+      venue: Transactions of the Association for Computational Linguistics
+      volume: "12"
+      pages: 157--173
+      year: 2024
+      doi: 10.1162/tacl_a_00638
+      url: https://aclanthology.org/2024.tacl-1.9/
   - document_id: fixed-generator-protocol-v1
     title: Factorial diagnosis contract
     content: Preserve ground truth and fixed seeds, report per-factor effects and include a no-contradiction negative control.

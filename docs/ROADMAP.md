@@ -181,8 +181,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and the resulting draft is independently gated before peer review. Three-seed
   evidence and dispersion cannot be flattened into an `N=1` summary. The adapter
   also preserves source-verified raw sandbox traces when upstream runtime repair
-  retains only parsed metrics. A clean rerun remains required; interrupted and
-  original artifacts are retained only as failure fixtures.
+  retains only parsed metrics. Formal drafts now also require a complete 3×3 seed
+  matrix, real dispersion, unique core sections, registered citations, and resolved
+  figures. Passing drafts are deterministically packaged as self-contained
+  Markdown/TeX/PDF deliverables without another model call. A clean rerun remains
+  required; interrupted and original artifacts are retained only as failure
+  fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

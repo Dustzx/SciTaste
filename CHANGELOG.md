@@ -83,6 +83,15 @@ semantic versioning.
 - Synthetic-execution semantics in the selected-evidence contract, with
   assertion-aware checks that prevent CPU simulations from being presented as
   language-model inference while retaining valid negations and limitations.
+- Structured frozen-source bibliography projection for formal tasks, allowing
+  writing stages to cite only registered sources without live search; offline
+  cells also suppress upstream Crossref/arXiv citation verification.
+- Publication-completeness gates for duplicate/missing sections, placeholders,
+  invented citations, unresolved figures, complete per-seed matrices, and
+  descriptive dispersion.
+- A deterministic offline manuscript packager that emits Markdown, standalone
+  TeX, bibliography, copied figure assets, a build record, and PDF when XeLaTeX
+  is available, without an additional model call.
 
 ### Changed
 

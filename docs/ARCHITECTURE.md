@@ -107,6 +107,12 @@ returns observations and artifacts but cannot select the next global action.
 36. A task manuscript cannot expose internal task, generator, condition, document,
     case, action, cell, stage, adapter, or framework identifiers, and it must report
     the selected primary metric before the cell can pass artifact audit.
+37. A formal manuscript must preserve the complete registered seed matrix and
+    descriptive dispersion, contain each required section exactly once, cite only
+    frozen registered sources, and resolve every referenced local figure.
+38. Publication packaging is a deterministic post-audit projection: it may render
+    Markdown into a self-contained TeX/PDF bundle but cannot add scientific prose,
+    citations, measurements, or model calls.
 
 ## Architecture decision records
 
@@ -296,3 +302,26 @@ the traced source values rather than expected to exist in the earlier raw parser
 Publication evidence retains primary-metric seed rows and descriptive dispersion;
 analysis, outline, and draft audits reject a one-run `N=1` or
 `Min=Max=Mean` summary when three registered seeds were executed.
+
+### ADR-021: Audited manuscripts receive deterministic publication bundles
+
+Status: accepted. Generic upstream writing instructions can conflict with a
+small frozen study—for example, demanding unavailable figures, dozens of
+references, or a single-run statistics table. The SciTaste prompt overlay makes
+the authoritative evidence contract dominant and constrains each of the three
+Stage 17 calls to its assigned, non-overlapping sections. Before peer review, the
+adapter rejects duplicate or missing core sections, placeholders, invented or
+unregistered citations, unresolved image paths, zero-dispersion summaries, and
+omission of any registered per-seed value or method-level standard deviation.
+
+Task assets may carry structured, source-verified citation metadata. Stage 7
+projects only those entries into `references.bib` and `candidates.jsonl`, keeping
+the no-live-search comparison frozen and identical across conditions. The
+process-local offline control also skips upstream Crossref/arXiv citation
+verification, preventing a bibliography from opening an undeclared network path.
+Once the
+manuscript passes the evidence and publication gates, a first-party offline
+renderer creates `manuscript/main.md`, `main.tex`, `references.bib`, copied figure
+assets, a hashed build record, and `main.pdf` when XeLaTeX is available. This
+projection performs no LLM call and leaves the pinned AutoResearchClaw submodule
+unchanged.
