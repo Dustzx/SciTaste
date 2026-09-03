@@ -4,7 +4,7 @@ scope: formal
 description: Preregistered four-category study using real generated experiments on fixed synthetic task generators; external validity and headline eligibility still require blinded expert review.
 base_model: qwen3.8-max
 base_model_revision: qwen3.8-max-2026-09-02
-codebase_commit: 7235ef473bc0779f18444d7264beec0cb55f6d67
+codebase_commit: 271bf0da5cc50d5734d57ce01bb088ec3e59a20a
 search_access:
   policy_id: frozen-search-snapshot-v1
   provider: frozen-local-corpus
@@ -53,13 +53,13 @@ conditions:
     implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
   - condition: knowledge_rag
     enabled: true
-    implementation_ref: scitaste@7235ef473bc0779f18444d7264beec0cb55f6d67:knowledge-rag
+    implementation_ref: scitaste@271bf0da5cc50d5734d57ce01bb088ec3e59a20a:knowledge-rag
   - condition: taste_library
     enabled: true
-    implementation_ref: scitaste@7235ef473bc0779f18444d7264beec0cb55f6d67:taste-library
+    implementation_ref: scitaste@271bf0da5cc50d5734d57ce01bb088ec3e59a20a:taste-library
   - condition: full_scitaste
     enabled: true
-    implementation_ref: scitaste@7235ef473bc0779f18444d7264beec0cb55f6d67:full
+    implementation_ref: scitaste@271bf0da5cc50d5734d57ce01bb088ec3e59a20a:full
   - condition: sibyl
     enabled: false
     unavailable_reason: No pinned, license-reviewed integration has passed the SciTaste executor contract.
