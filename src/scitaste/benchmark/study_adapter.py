@@ -815,6 +815,12 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         f"{public_conditions}. Knowledge-card IDs are provenance metadata, not citations; use "
         "ordinary scholarly citations instead. Preserve negative results and methodological "
         "limitations, but never infer execution failure from a superseded attempt."
+        " This registered experiment is a deterministic, CPU-executable synthetic simulation. "
+        "It does not run, train, probe, or evaluate a language model and provides no direct "
+        "measurement of neural attention, calibration, internal confidence, or model latency. "
+        "Describe the three methods as synthetic decision rules and their measurements as "
+        "benchmark-simulation results; any connection to language-model behavior is a future "
+        "empirical hypothesis, not an observed result."
     )
     if evidence is None:
         return text + (
@@ -1088,6 +1094,12 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "method": "selected-successful-refinement-evidence-v1",
         "authority": "supersedes-earlier-experiment-attempts",
         "execution_status": "completed",
+        "execution_semantics": {
+            "synthetic_data": True,
+            "cpu_executable": True,
+            "language_model_inference": False,
+            "neural_model_training": False,
+        },
         "returncode": selected["returncode"],
         "timed_out": selected["timed_out"],
         "elapsed_sec": selected["elapsed_sec"],
@@ -1337,6 +1349,37 @@ _FAILURE_CLAIMS = {
 }
 
 
+def _synthetic_claim_violations(text: str) -> list[str]:
+    patterns = {
+        "claimed-model-inference": (
+            r"(?i)\b(?:actual|real|hosted|local) (?:LLM |language-model |model )?inference\b"
+        ),
+        "claimed-model-evaluation": (
+            r"(?i)\b(?:language|large language) models? "
+            r"(?:was|were|is|are|has been|have been) (?:evaluated|tested|run|trained)\b"
+        ),
+        "claimed-small-model-result": r"(?i)\b(?:using|with) smaller-scale models?\b",
+        "claimed-internal-model-signal": (
+            r"(?i)\b(?:internal (?:model )?(?:uncertainty|confidence|attention)|"
+            r"leveraging model uncertainty)\b"
+        ),
+        "claimed-model-score": (
+            r"(?i)\b(?:language|large language) models? "
+            r"(?:achieved|obtained|scored|outperformed)\b"
+        ),
+    }
+    corrective = re.compile(
+        r"(?i)\b(?:does not|did not|no direct|not an? |rather than|incorrect|"
+        r"erroneous|future (?:empirical )?hypothesis|cannot be attributed)\b"
+    )
+    violations: set[str] = set()
+    for line in text.splitlines():
+        if corrective.search(line):
+            continue
+        violations.update(name for name, pattern in patterns.items() if re.search(pattern, line))
+    return sorted(violations)
+
+
 def _analysis_consistency_audit(
     *, analysis: str, selected_run: dict[str, Any], task: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1357,9 +1400,18 @@ def _analysis_consistency_audit(
             "variance-unavailable": r"(?i)\binsufficient for variance estimation\b",
             "deterministic-collapse": r"(?i)\bdeterministic collapse(?:/bug)?\b",
         }
-        contradictions.extend(
-            name for name, pattern in seed_claims.items() if re.search(pattern, analysis)
-        )
+        for line in analysis.splitlines():
+            if re.search(
+                r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
+                r"denotes (?:exactly )?one selected run)\b",
+                line,
+            ):
+                continue
+            contradictions.extend(
+                name for name, pattern in seed_claims.items() if re.search(pattern, line)
+            )
+    contradictions = sorted(set(contradictions))
+    contradictions.extend(_synthetic_claim_violations(analysis))
     contradictions = sorted(set(contradictions))
     if contradictions:
         raise ValueError(
@@ -1407,6 +1459,8 @@ def _artifact_consistency_audit(
     contradictions = sorted(
         name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, paper)
     )
+    contradictions.extend(_synthetic_claim_violations(paper))
+    contradictions = sorted(set(contradictions))
     if contradictions:
         raise ValueError(
             "paper contradicts the successful selected experiment: " + ", ".join(contradictions)

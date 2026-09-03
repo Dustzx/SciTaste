@@ -139,6 +139,7 @@ def test_guidance_separates_execution_and_publication_language() -> None:
     assert "SCITASTE_BENCHMARK_CONTRACT" not in guidance["paper_draft"]
     assert "majority vote=0.800000" in guidance["paper_draft"]
     assert "supersedes every earlier failed attempt" in guidance["result_analysis"]
+    assert "does not run, train, probe, or evaluate a language model" in guidance["paper_draft"]
 
 
 def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> None:
@@ -556,6 +557,24 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
             selected_run=selected,
             task=task,
         )
+
+    with pytest.raises(ValueError, match="claimed-model-inference"):
+        _analysis_consistency_audit(
+            analysis="Balanced accuracy was 0.75 after actual model inference.",
+            selected_run=selected,
+            task=task,
+        )
+
+    accepted = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75. A summary n=1 denotes exactly one selected run, "
+            "not one seed and not zero variance. The simulation provides no direct "
+            "measurement of internal model confidence and does not perform model inference."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert accepted["analysis_reports_primary_metric"] is True
     with pytest.raises(ValueError, match="contradicts the successful"):
         _artifact_consistency_audit(
             analysis="Balanced accuracy was 0.75, but the experiment did not execute.",
