@@ -1,0 +1,10 @@
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.2
+api_key_env: ZAI_API_KEY
+api_style: chat_completions
+timeout_seconds: 600
+max_retries: 2
+json_mode: false
+extra_headers: {}
+extra_body: {}
