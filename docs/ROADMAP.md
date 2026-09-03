@@ -177,11 +177,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   now projects one hashed successful experiment into analysis/writing, separates
   publication language from audit identifiers, and rejects contradictory or
   internal-ID-bearing manuscripts. Analysis is now a pre-paper gate so a known-bad
-  synthesis cannot consume drafting tokens; the resulting draft is independently
-  gated before peer review. The adapter also preserves source-verified raw sandbox
-  traces when upstream runtime repair retains only parsed metrics. A clean rerun
-  remains required; interrupted and original artifacts are retained only as failure
-  fixtures.
+  synthesis cannot consume drafting tokens; the outline is checked before drafting,
+  and the resulting draft is independently gated before peer review. Three-seed
+  evidence and dispersion cannot be flattened into an `N=1` summary. The adapter
+  also preserves source-verified raw sandbox traces when upstream runtime repair
+  retains only parsed metrics. A clean rerun remains required; interrupted and
+  original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

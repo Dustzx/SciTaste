@@ -20,6 +20,7 @@ from scitaste.benchmark.study_adapter import (
     _selected_experiment,
     _stage_completed,
     _usage,
+    _validate_outline_artifact,
     _validate_paper_draft_artifact,
     _validate_selected_experiment,
     _write_analysis_synthesis_override,
@@ -504,18 +505,26 @@ def test_artifact_audit_requires_real_run_and_paper(tmp_path) -> None:
     )
     (tmp_path / "stage-14").mkdir()
     (tmp_path / "stage-14" / "analysis.md").write_text(
-        "## Result\nBalanced accuracy was 0.75.", encoding="utf-8"
+        "## Result\nBalanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+        encoding="utf-8",
     )
     (tmp_path / "stage-15").mkdir()
     (tmp_path / "stage-15" / "decision.md").write_text("## Decision\nPIVOT\n", encoding="utf-8")
+    (tmp_path / "stage-16").mkdir()
+    (tmp_path / "stage-16" / "outline.md").write_text(
+        "Balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+        encoding="utf-8",
+    )
     (tmp_path / "stage-17").mkdir()
     (tmp_path / "stage-17" / "paper_draft.md").write_text(
-        "The balanced accuracy was 0.75.", encoding="utf-8"
+        "The balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+        encoding="utf-8",
     )
 
     outcome, experiments, audit = _audit_upstream_run(
         tmp_path, elapsed_seconds=360, task=load_task()
     )
+    outline_audit = _validate_outline_artifact(tmp_path, load_task())
     draft_audit = _validate_paper_draft_artifact(tmp_path, load_task())
 
     assert experiments == outcome.total_experiments == 1
@@ -526,6 +535,7 @@ def test_artifact_audit_requires_real_run_and_paper(tmp_path) -> None:
     assert audit["numerical_evidence_present"] is True
     assert audit["selected_experiment"]["metric"] == 0.75
     assert audit["artifact_consistency"]["paper_reports_primary_metric"] is True
+    assert outline_audit["paper_reports_primary_metric"] is True
     assert draft_audit["paper_reports_primary_metric"] is True
 
 
@@ -572,9 +582,10 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
 
     accepted = _analysis_consistency_audit(
         analysis=(
-            "Balanced accuracy was 0.75. A summary n=1 denotes exactly one selected run, "
-            "not one seed and not zero variance. The simulation provides no direct "
-            "measurement of internal model confidence and does not perform model inference."
+            "Balanced accuracy was 0.75 across three seeds (7, 19, and 31). A summary n=1 "
+            "denotes exactly one selected run, not one seed and not zero variance. The "
+            "simulation provides no direct measurement of internal model confidence and "
+            "does not perform model inference."
         ),
         selected_run=selected,
         task=task,
@@ -582,8 +593,22 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
     assert accepted["analysis_reports_primary_metric"] is True
     with pytest.raises(ValueError, match="contradicts the successful"):
         _artifact_consistency_audit(
-            analysis="Balanced accuracy was 0.75, but the experiment did not execute.",
-            paper="The balanced accuracy was 0.75.",
+            analysis=(
+                "Balanced accuracy was 0.75 across three seeds (7, 19, and 31), but the "
+                "experiment did not execute."
+            ),
+            paper="The balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+            selected_run=selected,
+            task=task,
+        )
+
+    with pytest.raises(ValueError, match="single-seed-collapse"):
+        _artifact_consistency_audit(
+            analysis="Balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
+            paper=(
+                "Balanced accuracy was 0.75 across three seeds (7, 19, and 31). "
+                "The statistical summary reports N=1 and Min=Max=Mean."
+            ),
             selected_run=selected,
             task=task,
         )

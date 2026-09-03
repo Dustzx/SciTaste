@@ -278,10 +278,12 @@ condition-blind, publication-facing terminology. Final artifact audit rejects a
 successful experiment described as non-executed, a missing selected primary metric,
 or any internal identifier exposed in the task manuscript. Stage 14 runs as a
 separate bounded subprocess and must pass this evidence check before any paper
-tokens are spent. Stages 15--17 then run as a second bounded subprocess; the draft
-must pass the same evidence and publication-language contract before Stage 18 can
-spend peer-review tokens. Exact registered identifiers are deterministically
-replaced in prose with before/after hashes retained in a sanitization log. The
+tokens are spent. Stages 15--16 then run as a second bounded subprocess; the
+outline must preserve the registered seed design before draft tokens are spent.
+Stage 17 runs separately, and its draft must pass the same evidence and
+publication-language contract before Stage 18 can spend peer-review tokens. Exact
+registered identifiers are deterministically replaced in prose with before/after
+hashes retained in a sanitization log. The
 evidence contract also distinguishes CPU synthetic simulation from neural-model
 inference; the gate rejects affirmative model-result claims while allowing
 explicit limitations and corrections that deny such inference. This compatibility
@@ -291,3 +293,6 @@ output, output hashes, and executed-source hashes before upstream compaction. A
 successful post-repair result without this source-verified trace is inadmissible;
 metrics added by the adapter's format normalizer are independently recomputed from
 the traced source values rather than expected to exist in the earlier raw parser.
+Publication evidence retains primary-metric seed rows and descriptive dispersion;
+analysis, outline, and draft audits reject a one-run `N=1` or
+`Min=Max=Mean` summary when three registered seeds were executed.

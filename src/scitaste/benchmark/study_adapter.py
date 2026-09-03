@@ -190,9 +190,41 @@ def run_study_cell(
                 _validate_analysis_artifact(upstream_run, task)
                 next_stage = resume_from_stage
 
-            if completed.returncode == 0 and _stage_number(next_stage) <= target_stage_number:
-                next_stage_number = _stage_number(next_stage)
-                if next_stage_number <= 17 <= target_stage_number:
+            next_stage_number = _stage_number(next_stage)
+            if completed.returncode == 0 and target_stage_number >= 16:
+                if next_stage_number <= 16:
+                    completed = subprocess.run(
+                        upstream_command(next_stage, "PAPER_OUTLINE"),
+                        cwd=UPSTREAM,
+                        env=environment,
+                        check=False,
+                        text=True,
+                    )
+                    next_stage = "PAPER_DRAFT"
+                    next_stage_number = 17
+                if completed.returncode == 0:
+                    try:
+                        _sanitize_publication_artifacts(
+                            upstream_run,
+                            task,
+                            relative_paths=(
+                                "stage-14/analysis.md",
+                                "stage-16/outline.md",
+                            ),
+                        )
+                        _validate_outline_artifact(upstream_run, task)
+                    except (OSError, ValueError) as exc:
+                        result = LauncherResult(
+                            status=CellStatus.FAILED,
+                            evidence_class=EvidenceClass.REAL,
+                            usage=_usage(telemetry_path, task, experiments=1),
+                            error=f"outline pre-draft audit failed: {exc}",
+                        )
+                        _write_result(result_file, result)
+                        return result
+
+            if completed.returncode == 0 and target_stage_number >= 17:
+                if next_stage_number <= 17:
                     completed = subprocess.run(
                         upstream_command(next_stage, "PAPER_DRAFT"),
                         cwd=UPSTREAM,
@@ -202,28 +234,7 @@ def run_study_cell(
                     )
                     next_stage = "PEER_REVIEW"
                     next_stage_number = 18
-                    if completed.returncode == 0:
-                        try:
-                            _sanitize_publication_artifacts(
-                                upstream_run,
-                                task,
-                                relative_paths=(
-                                    "stage-14/analysis.md",
-                                    "stage-16/outline.md",
-                                    "stage-17/paper_draft.md",
-                                ),
-                            )
-                            _validate_paper_draft_artifact(upstream_run, task)
-                        except (OSError, ValueError) as exc:
-                            result = LauncherResult(
-                                status=CellStatus.FAILED,
-                                evidence_class=EvidenceClass.REAL,
-                                usage=_usage(telemetry_path, task, experiments=1),
-                                error=f"paper pre-review audit failed: {exc}",
-                            )
-                            _write_result(result_file, result)
-                            return result
-                elif next_stage_number > 17:
+                if completed.returncode == 0:
                     try:
                         _sanitize_publication_artifacts(
                             upstream_run,
@@ -245,14 +256,14 @@ def run_study_cell(
                         _write_result(result_file, result)
                         return result
 
-                if completed.returncode == 0 and next_stage_number <= target_stage_number:
-                    completed = subprocess.run(
-                        upstream_command(next_stage, to_stage),
-                        cwd=UPSTREAM,
-                        env=environment,
-                        check=False,
-                        text=True,
-                    )
+            if completed.returncode == 0 and next_stage_number <= target_stage_number:
+                completed = subprocess.run(
+                    upstream_command(next_stage, to_stage),
+                    cwd=UPSTREAM,
+                    env=environment,
+                    check=False,
+                    text=True,
+                )
     else:
         completed = experiment_process
     elapsed = time.perf_counter() - started
@@ -759,7 +770,9 @@ def _write_analysis_synthesis_override(
             "Correct rather than repeat any perspective that conflicts with the authoritative "
             "evidence. Explicitly report every registered method metric and the registered "
             "cross-method primary aggregate. A summary count of one denotes one selected run, "
-            "not one seed and not zero variance. Do not expose any internal identifier.\n\n"
+            "not one seed and not zero variance. Preserve the three-seed measurements and "
+            "descriptive dispersion; never emit an N=1 or Min=Max=Mean statistical summary. "
+            "Do not expose any internal identifier.\n\n"
             "Perspectives:\n{perspectives}\n\n"
             f"{publication}"
         ),
@@ -889,13 +902,19 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         if isinstance(value, (int, float))
     )
     stdout_summary = _publication_safe_text(str(evidence.get("stdout_summary", "")), task)
+    seed_ids = [int(item) for item in evidence.get("seed_ids", [])]
+    seed_text = ", ".join(str(item) for item in seed_ids)
     return (
         text + "\n\nAUTHORITATIVE SELECTED-EXPERIMENT EVIDENCE (this supersedes every earlier "
         "failed attempt): execution completed with return code 0; "
         f"elapsed={float(evidence.get('elapsed_sec') or 0):.6f} seconds; {metric_lines}. "
         "Treat these as executed measurements, not cached, phantom, fabricated, or missing "
         "metrics. Any earlier crash may be mentioned only as a repaired implementation attempt, "
-        "never as the scientific result.\n" + stdout_summary
+        "never as the scientific result. "
+        f"This selected execution contains {len(seed_ids)} registered seeds ({seed_text}). "
+        "The pipeline count of one means one selected run, not statistical N=1; never reproduce "
+        "a Min=Max=Mean or N=1 table. Preserve per-seed values and descriptive dispersion from "
+        "the evidence below.\n" + stdout_summary
     )
 
 
@@ -908,6 +927,9 @@ def _publication_safe_text(text: str, task: dict[str, Any]) -> str:
         str(task.get("task_id", "")): "the preregistered task",
         str(task["benchmark"]["contract"].get("generator", "")): (
             "the preregistered factorial benchmark"
+        ),
+        str(task["benchmark"].get("primary_metric", "")): _public_term(
+            str(task["benchmark"].get("primary_metric", ""))
         ),
         "SCITASTE_BENCHMARK_CONTRACT": "the preregistered benchmark specification",
     }
@@ -1128,7 +1150,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "timed_out": bool(sandbox.get("timed_out", False)),
         "stdout_sha256": stdout_sha256,
         "stderr_sha256": stderr_sha256,
-        "stdout_summary": _selected_stdout_summary(stdout),
+        "stdout_summary": _selected_stdout_summary(stdout, primary_metric),
         "seed_ids": declared_seed_ids or stdout_seed_ids,
         "stdout_observed_seed_ids": stdout_seed_ids,
         "metric_normalization": selected.get("metric_normalization"),
@@ -1266,7 +1288,7 @@ def _best_successful_sandbox(iteration: dict[str, Any]) -> dict[str, Any] | None
     )
 
 
-def _selected_stdout_summary(stdout: str) -> str:
+def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
     """Retain bounded, human-auditable measurements from selected stdout."""
 
     markers = (
@@ -1284,6 +1306,8 @@ def _selected_stdout_summary(stdout: str) -> str:
         "interaction:",
         "drop(",
         "benchmark execution complete",
+        primary_metric.casefold(),
+        _public_term(primary_metric).casefold(),
     )
     lines = [
         line.rstrip()
@@ -1607,6 +1631,34 @@ def _synthetic_claim_violations(text: str) -> list[str]:
     return sorted(violations)
 
 
+def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
+    if len(seed_ids) < 3:
+        return []
+    patterns = {
+        "single-seed-collapse": r"(?i)(?:\bn\s*=\s*1\b|\bmin\s*=\s*max\s*=\s*mean\b)",
+        "variance-unavailable": r"(?i)\binsufficient for variance estimation\b",
+        "deterministic-collapse": r"(?i)\bdeterministic collapse(?:/bug)?\b",
+    }
+    corrective = re.compile(
+        r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
+        r"denotes (?:exactly )?one selected run|must not be reported as n\s*=\s*1)\b"
+    )
+    violations: set[str] = set()
+    for line in text.splitlines():
+        if corrective.search(line):
+            continue
+        violations.update(name for name, pattern in patterns.items() if re.search(pattern, line))
+    has_seed_count = bool(
+        re.search(r"(?i)\b(?:three|3)\s+(?:(?:distinct|fixed|registered)\s+)*seeds?\b", text)
+    )
+    has_seed_ids = "seed" in text.casefold() and all(
+        re.search(rf"(?<!\d){seed}(?!\d)", text) for seed in seed_ids
+    )
+    if not has_seed_count and not has_seed_ids:
+        violations.add("registered-seed-set-omitted")
+    return sorted(violations)
+
+
 def _analysis_consistency_audit(
     *, analysis: str, selected_run: dict[str, Any], task: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1621,22 +1673,7 @@ def _analysis_consistency_audit(
         name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, analysis)
     )
     seed_ids = selected_run.get("seed_ids") or []
-    if len(seed_ids) >= 3:
-        seed_claims = {
-            "single-seed-collapse": r"(?i)(?:\bn\s*=\s*1\b|\bmin\s*=\s*max\s*=\s*mean\b)",
-            "variance-unavailable": r"(?i)\binsufficient for variance estimation\b",
-            "deterministic-collapse": r"(?i)\bdeterministic collapse(?:/bug)?\b",
-        }
-        for line in analysis.splitlines():
-            if re.search(
-                r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
-                r"denotes (?:exactly )?one selected run)\b",
-                line,
-            ):
-                continue
-            contradictions.extend(
-                name for name, pattern in seed_claims.items() if re.search(pattern, line)
-            )
+    contradictions.extend(_seed_claim_violations(analysis, seed_ids))
     contradictions = sorted(set(contradictions))
     contradictions.extend(_synthetic_claim_violations(analysis))
     contradictions = sorted(set(contradictions))
@@ -1691,6 +1728,22 @@ def _validate_paper_draft_artifact(run_dir: Path, task: dict[str, Any]) -> dict[
     )
 
 
+def _validate_outline_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
+    analysis_path = run_dir / "stage-14" / "analysis.md"
+    outline_path = run_dir / "stage-16" / "outline.md"
+    if not analysis_path.is_file():
+        raise ValueError("result analysis artifact is missing")
+    if not outline_path.is_file():
+        raise ValueError("paper outline artifact is missing")
+    _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    return _artifact_consistency_audit(
+        analysis=analysis_path.read_text(encoding="utf-8", errors="replace"),
+        paper=outline_path.read_text(encoding="utf-8", errors="replace"),
+        selected_run=selected_run,
+        task=task,
+    )
+
+
 def _artifact_consistency_audit(
     *, analysis: str, paper: str, selected_run: dict[str, Any], task: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1703,6 +1756,7 @@ def _artifact_consistency_audit(
         name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, paper)
     )
     contradictions.extend(_synthetic_claim_violations(paper))
+    contradictions.extend(_seed_claim_violations(paper, analysis_audit["seed_ids"]))
     contradictions = sorted(set(contradictions))
     if contradictions:
         raise ValueError(

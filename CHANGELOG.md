@@ -75,6 +75,8 @@ semantic versioning.
   preventing a contradictory analysis from spending paper-generation tokens.
 - A pre-review Stage 17 draft gate, preventing an evidence-inconsistent manuscript
   from spending peer-review tokens.
+- A pre-draft Stage 16 outline gate and three-seed publication checks, rejecting
+  flattened `N=1`/`Min=Max=Mean` summaries before they propagate into a manuscript.
 - Process-local source-verified sandbox traces for runtime-repaired experiments,
   preserving raw-output hashes and registered seed evidence that upstream omits;
   normalized metrics are rechecked against those traced raw values.
