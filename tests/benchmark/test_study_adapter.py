@@ -117,6 +117,7 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "SCITASTE_BENCHMARK_CONTRACT" in code
     assert "exactly one" in override["stages"]["code_generation"]["system"]
     assert "diagnosis-factorial-v1" in design
+    assert "numpy.random.default_rng" in design
     assert "never assert that condition outputs" in code
     assert "Do not add an LLM call" in code
     improve = override["sub_prompts"]["iterative_improve"]["user"]
@@ -294,6 +295,46 @@ def test_metric_normalization_aggregates_every_registered_condition(tmp_path) ->
     record = normalized["iterations"][0]
     assert record["sandbox"]["metrics"]["balanced_accuracy"] == pytest.approx(0.8)
     assert record["metric_normalization"]["source_conditions"] == conditions
+
+
+def test_metric_normalization_reads_condition_mean_summary(tmp_path) -> None:
+    stage = tmp_path / "stage-13"
+    stage.mkdir()
+    path = stage / "refinement_log.json"
+    conditions = load_task()["benchmark"]["conditions"]
+    path.write_text(
+        json.dumps(
+            {
+                "best_metric": None,
+                "best_version": "experiment/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {},
+                            "stdout": (
+                                "PRIMARY METRIC SUMMARY: balanced_accuracy\n"
+                                "  majority_vote: mean=0.81, dispersion=0.09\n"
+                                "  confidence_weighted_vote: mean=0.84, dispersion=0.03\n"
+                                "  position_aware_probe: mean=0.80, dispersion=0.04\n"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _normalize_refinement_metrics(
+        tmp_path, "balanced_accuracy", "maximize", condition_names=conditions
+    )
+    normalized = json.loads(path.read_text(encoding="utf-8"))
+
+    assert normalized["best_metric"] == pytest.approx((0.81 + 0.84 + 0.8) / 3)
+    record = normalized["iterations"][0]
+    assert record["metric_normalization"]["method"] == ("stdout-registered-condition-mean-v1")
 
 
 def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:

@@ -515,11 +515,11 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "{preamble}\n\nProduce YAML with keys objectives, datasets, baselines, "
                     "proposed_methods, ablations, metrics, risks, compute_budget. Execute this "
                     f"immutable contract exactly: {contract}. Required conditions: {conditions}. "
-                    "Use only deterministic synthetic data, numpy.default_rng with the listed "
-                    "seeds, one CPU process, no GPU, no network, and no external dataset. Do not "
-                    "add, remove, rename, or substitute factors, counts, conditions, metrics, or "
-                    "seeds. The hypotheses below may motivate interpretation but may not alter "
-                    "the benchmark.\n\n{hypotheses}"
+                    "Use only deterministic synthetic data, numpy.random.default_rng with the "
+                    "listed seeds, one CPU process, no GPU, no network, and no external dataset. "
+                    "Do not add, remove, rename, or substitute factors, counts, conditions, "
+                    "metrics, or seeds. The hypotheses below may motivate interpretation but "
+                    "may not alter the benchmark.\n\n{hypotheses}"
                 ),
                 "max_tokens": 4096,
             },
@@ -837,7 +837,7 @@ def _normalize_refinement_metrics(
                 sources = [float(metrics[name]) for name in condition_names]
             except (TypeError, ValueError):
                 sources = []
-            if sources:
+            if sources and value is None:
                 value = sum(sources) / len(sources)
                 metrics[primary_metric] = round(value, 10)
                 sandbox["metrics"] = metrics
@@ -849,12 +849,37 @@ def _normalize_refinement_metrics(
                 }
         if value is None:
             stdout = str(sandbox.get("stdout", ""))
-            sources = [float(item) for item in overall_pattern.findall(stdout)]
+            if condition_names:
+                condition_values: list[float] = []
+                for name in condition_names:
+                    condition_pattern = re.compile(
+                        rf"(?im)^\s*{re.escape(name)}\s*:\s*"
+                        r"(?:mean\s*[=:]\s*)?([-+]?\d+(?:\.\d+)?)"
+                    )
+                    matches = condition_pattern.findall(stdout)
+                    if not matches:
+                        condition_values = []
+                        break
+                    condition_values.append(float(matches[-1]))
+                if condition_values:
+                    sources = condition_values
+                    value = sum(sources) / len(sources)
+                    metrics.update(dict(zip(condition_names, sources, strict=True)))
+                    metrics[primary_metric] = round(value, 10)
+                    sandbox["metrics"] = metrics
+                    iteration["metric_normalization"] = {
+                        "method": "stdout-registered-condition-mean-v1",
+                        "source_conditions": condition_names,
+                        "source_values": sources,
+                        "aggregate": "arithmetic_mean",
+                    }
+            if value is None:
+                sources = [float(item) for item in overall_pattern.findall(stdout)]
             if not sources:
                 sources = [float(item) for item in aggregate_pattern.findall(stdout)]
             if not sources:
                 sources = [float(item) for item in direct_pattern.findall(stdout)]
-            if sources:
+            if sources and value is None:
                 value = sum(sources) / len(sources)
                 metrics[primary_metric] = round(value, 10)
                 sandbox["metrics"] = metrics

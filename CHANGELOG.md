@@ -82,6 +82,8 @@ semantic versioning.
   final concern-closure judgment.
 - A clean, frozen-protocol Qwen3.8-Max base cell now passes the complete formal
   launcher with content-addressed paper, audit, trace, and upstream manifest.
+- Fixed the formal generator instruction to use `numpy.random.default_rng` and
+  added complete-condition parsing for `condition: mean=...` metric summaries.
 
 ### Fixed
 

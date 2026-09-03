@@ -74,3 +74,23 @@ equally by the matched-budget harness, but this cell does not demonstrate useful
 RTX 3090 computation. External validity, the four-condition comparison, all
 three repetitions, and two condition-blinded independent reviewers per cell are
 still required before any headline result.
+
+## Four-condition extension finding
+
+An attempted continuation to the other three conditions was stopped after the
+Knowledge RAG cell exposed another valid metric representation:
+`condition: mean=...` lines in stdout with no structured metric object. Offline
+audit recovered all three registered values (0.809026, 0.839988, and 0.806441)
+and the registered aggregate 0.818485. A budget-continuing manual resume then
+completed a 7,432-word paper and peer review at 155,940 cumulative tokens and
+estimated API cost USD 0.43116. Its condition trace contains the two registered
+knowledge document IDs and no Taste IDs or controller decision, confirming
+condition isolation.
+
+Because its analysis stages were manually resumed after the runner marked the
+first attempt failed, this Knowledge RAG artifact is adapter preacceptance, not a
+comparable formal timing observation. Taste Library and Full SciTaste were not
+run. The parser now accepts this representation only when every registered
+condition is present and numeric. The repeated `np.default_rng` runtime repair
+was traced to a typo in SciTaste's own prompt and corrected to
+`numpy.random.default_rng` before the next protocol freeze.
