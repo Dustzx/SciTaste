@@ -827,6 +827,15 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
         task=task,
     )
     assert corrected["analysis_reports_primary_metric"] is True
+    instructional = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75 across seeds 7, 19, and 31. The paper must "
+            "not infer N=1 from one selected pipeline run."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert instructional["analysis_reports_primary_metric"] is True
     with pytest.raises(ValueError, match="contradicts the successful"):
         _artifact_consistency_audit(
             analysis=(

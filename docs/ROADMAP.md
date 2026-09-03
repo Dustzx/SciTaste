@@ -223,6 +223,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   free-text seed scanner mistook `Total/seed: 648` for an identifier. Explicit
   seed-row parsing now replays that experiment gate at a derived aggregate of
   0.8069381276; the original run remains failed and was not resumed.
+  An eleventh single-cell attempt passed the experiment and Stage 14 analysis
+  gates, then stopped before drafting because the outline instruction `Do not
+  infer N=1` was read as an affirmative claim. Prohibitive `do not infer/derive`
+  language is now accepted while unqualified N=1 claims remain rejected.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

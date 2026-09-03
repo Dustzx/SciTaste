@@ -164,6 +164,8 @@ semantic versioning.
   live in the Stage 10 system prompt as well as its initial user prompt. Upstream
   code-review fixes and topic-alignment regeneration therefore receive the same
   constraints instead of silently dropping them.
+- Three-seed publication audits now classify `do not infer N=1` and `do not
+  derive N=1` as prohibitions rather than affirmative single-seed claims.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.
