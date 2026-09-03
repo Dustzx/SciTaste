@@ -330,6 +330,16 @@ requirement in generation and every repair prompt. Publication prompts consume
 a deterministic rendering of this audited matrix rather than inferring table
 structure from prose formatting.
 
+The code-generation prompt continues to require the flat
+`SCITASTE_BENCHMARK_CONTRACT` declaration. For compatibility with upstream
+review-driven regeneration, the static gate may also read a literal nested
+`CONTRACT_SPEC`: it maps only the known singular factor keys, `contract_id`, and
+`scoring_methods` into the canonical schema, then compares every registered
+field exactly. This is a representation normalization, not a contract repair;
+missing or changed seeds, factor levels, sample count, methods, metrics, or
+generator identity remain fatal, and the generated source is never rewritten to
+manufacture compliance.
+
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
 Status: accepted. Generic upstream writing instructions can conflict with a

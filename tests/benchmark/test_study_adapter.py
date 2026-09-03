@@ -15,6 +15,7 @@ from scitaste.benchmark.study_adapter import (
     _compact_refinement_log,
     _condition_context,
     _contract_matches,
+    _extract_declared_contract,
     _guidance,
     _manuscript_structure_violations,
     _normalize_refinement_metrics,
@@ -281,6 +282,74 @@ def test_contract_match_accepts_equivalent_upstream_labels() -> None:
     observed["derived_total"] = 1944
 
     assert _contract_matches(observed, expected)
+
+
+def test_contract_match_accepts_complete_nested_contract_spec() -> None:
+    expected = load_task()["benchmark"]["contract"]
+    observed = {
+        "contract_id": expected["generator"],
+        "version": "1.0.0",
+        "frozen": True,
+        "seeds": expected["seeds"],
+        "examples_per_cell": expected["examples_per_cell"],
+        "factors": {
+            "citation_topology": expected["citation_topologies"],
+            "packet_length": expected["packet_lengths"],
+            "contradiction_density": expected["contradiction_densities"],
+            "target_position": expected["target_positions"],
+        },
+        "scoring_methods": expected["conditions"],
+        "baselines": [],
+        "metrics": expected["metrics"],
+    }
+
+    assert _contract_matches(observed, expected)
+
+
+def test_contract_match_rejects_nested_contract_with_changed_factor() -> None:
+    expected = load_task()["benchmark"]["contract"]
+    observed = {
+        "contract_id": expected["generator"],
+        "seeds": expected["seeds"],
+        "examples_per_cell": expected["examples_per_cell"],
+        "factors": {
+            "citation_topology": expected["citation_topologies"],
+            "packet_length": [8, 32],
+            "contradiction_density": expected["contradiction_densities"],
+            "target_position": expected["target_positions"],
+        },
+        "scoring_methods": expected["conditions"],
+        "metrics": expected["metrics"],
+    }
+
+    assert not _contract_matches(observed, expected)
+
+
+def test_extract_declared_contract_reads_literal_compatible_name(tmp_path) -> None:
+    source = tmp_path / "main.py"
+    expected = load_task()["benchmark"]["contract"]
+    source.write_text(
+        "CONTRACT_SPEC = "
+        + pprint.pformat(
+            {
+                "contract_id": expected["generator"],
+                "seeds": expected["seeds"],
+                "examples_per_cell": expected["examples_per_cell"],
+                "factors": {
+                    "citation_topology": expected["citation_topologies"],
+                    "packet_length": expected["packet_lengths"],
+                    "contradiction_density": expected["contradiction_densities"],
+                    "target_position": expected["target_positions"],
+                },
+                "scoring_methods": expected["conditions"],
+                "metrics": expected["metrics"],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert _contract_matches(_extract_declared_contract([source]), expected)
 
 
 def test_compaction_preserves_full_log_and_summary_metrics(tmp_path) -> None:

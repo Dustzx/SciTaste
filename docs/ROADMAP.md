@@ -198,8 +198,14 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   replays cleanly. A sixth attempt exposed disagreement between heuristic stdout
   metrics and the complete machine matrix; canonical condition means now win,
   and the primary aggregate is deterministically recomputed. Attempts 4–6 all
-  replay through experiment acceptance under the combined fixes. Interrupted
-  and original artifacts are retained only as failure fixtures.
+  replay through experiment acceptance under the combined fixes. A seventh
+  attempt emitted a complete source-verified matrix but used a semantically
+  equivalent nested `CONTRACT_SPEC` after upstream review regeneration. Strict
+  field-by-field normalization now accepts that representation without modifying
+  generated source; the failed run remains a fixture, while its Stage 13 output
+  passes the corrected experiment gate only in an isolated offline replay. A new
+  clean end-to-end rerun remains required. Interrupted and original artifacts are
+  retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

@@ -151,6 +151,10 @@ semantic versioning.
   complete condition-by-seed matrix is verified. The cross-method primary
   aggregate is recomputed from registered condition means, and its derived
   provenance is recorded separately from directly observed condition metrics.
+- Frozen-contract validation now accepts an AST-literal `CONTRACT_SPEC` only
+  when its nested factor, seed, sample, method, metric, and generator values
+  exactly normalize to the registered contract. The canonical declaration
+  remains preferred, and any changed registered field is still rejected.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

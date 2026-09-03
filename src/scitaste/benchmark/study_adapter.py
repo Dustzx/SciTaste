@@ -1169,6 +1169,7 @@ def _sanitize_publication_artifacts(
 
 
 def _extract_declared_contract(source_paths: list[Path]) -> dict[str, Any] | None:
+    compatible_contract: dict[str, Any] | None = None
     for path in source_paths:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
@@ -1178,25 +1179,55 @@ def _extract_declared_contract(source_paths: list[Path]) -> dict[str, Any] | Non
             if not isinstance(node, (ast.Assign, ast.AnnAssign)):
                 continue
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            if not any(
-                isinstance(target, ast.Name) and target.id == "SCITASTE_BENCHMARK_CONTRACT"
-                for target in targets
-            ):
+            names = {target.id for target in targets if isinstance(target, ast.Name)}
+            declaration = next(
+                (
+                    name
+                    for name in ("SCITASTE_BENCHMARK_CONTRACT", "CONTRACT_SPEC")
+                    if name in names
+                ),
+                None,
+            )
+            if declaration is None:
                 continue
             try:
                 value = ast.literal_eval(node.value)
             except (TypeError, ValueError):
-                return None
-            return value if isinstance(value, dict) else None
-    return None
+                if declaration == "SCITASTE_BENCHMARK_CONTRACT":
+                    return None
+                continue
+            if declaration == "SCITASTE_BENCHMARK_CONTRACT":
+                return value if isinstance(value, dict) else None
+            if isinstance(value, dict) and compatible_contract is None:
+                compatible_contract = value
+    return compatible_contract
 
 
 def _contract_matches(observed: dict[str, Any] | None, expected: dict[str, Any]) -> bool:
     if observed is None:
         return False
     normalized = dict(observed)
-    normalized.setdefault("generator", normalized.get("name"))
-    normalized.setdefault("conditions", normalized.get("baselines"))
+    factors = normalized.get("factors")
+    factors = factors if isinstance(factors, dict) else {}
+    aliases = {
+        "generator": ("name", "contract_id"),
+        "conditions": ("scoring_methods", "baselines"),
+        "target_positions": ("target_position",),
+        "packet_lengths": ("packet_length",),
+        "contradiction_densities": ("contradiction_density",),
+        "citation_topologies": ("citation_topology",),
+    }
+    for canonical, alternatives in aliases.items():
+        if normalized.get(canonical) is not None:
+            continue
+        normalized[canonical] = next(
+            (
+                normalized.get(alias, factors.get(alias))
+                for alias in alternatives
+                if normalized.get(alias, factors.get(alias)) is not None
+            ),
+            None,
+        )
     if "metrics" not in normalized:
         normalized["metrics"] = [
             value
