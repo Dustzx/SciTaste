@@ -300,8 +300,9 @@ successful post-repair result without this source-verified trace is inadmissible
 metrics added by the adapter's format normalizer are independently recomputed from
 the traced source values rather than expected to exist in the earlier raw parser.
 Publication evidence retains primary-metric seed rows and descriptive dispersion;
-analysis, outline, and draft audits reject a one-run `N=1` or
-`Min=Max=Mean` summary when three registered seeds were executed.
+analysis, outline, and draft audits reject treating one pipeline run as
+statistical `N=1`, while exact reported dispersion is checked against the three
+registered seed values so a genuine zero remains admissible.
 
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
@@ -311,8 +312,8 @@ references, or a single-run statistics table. The SciTaste prompt overlay makes
 the authoritative evidence contract dominant and constrains each of the three
 Stage 17 calls to its assigned, non-overlapping sections. Before peer review, the
 adapter rejects duplicate or missing core sections, placeholders, invented or
-unregistered citations, unresolved image paths, zero-dispersion summaries, and
-omission of any registered per-seed value or method-level standard deviation.
+unregistered citations, unresolved image paths, evidence-inconsistent dispersion,
+and omission of any registered per-seed value or method-level standard deviation.
 
 Task assets may carry structured, source-verified citation metadata. Stage 7
 projects only those entries into `references.bib` and `candidates.jsonl`, keeping
