@@ -1251,24 +1251,29 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
             )
         except (OSError, json.JSONDecodeError):
             rich_selected = selected
-    sandbox = _best_successful_sandbox(rich_selected) or compact_sandbox
-    if sandbox is None:
-        raise ValueError("selected refined experiment did not exit successfully")
-    sandbox_key = next(
-        (key for key in ("sandbox_after_fix", "sandbox") if rich_selected.get(key) is sandbox),
-        "sandbox",
-    )
-    metrics = dict(sandbox.get("metrics") or {})
-    if compact_sandbox is not None:
-        metrics.update(compact_sandbox.get("metrics") or {})
-    if primary_metric not in metrics and not any(
-        str(key).endswith(f"/{primary_metric}") for key in metrics
-    ):
-        raise ValueError(f"selected refined experiment lacks {primary_metric}")
     source_dir = log_path.parent / best_version
     sources = sorted(source_dir.rglob("*.py"))
     if not sources:
         raise ValueError("selected refined experiment source is missing")
+    matched = _source_matched_successful_sandbox(log_path, rich_selected)
+    if matched is None:
+        sandbox = _best_successful_sandbox(rich_selected) or compact_sandbox
+        if sandbox is None:
+            raise ValueError("selected refined experiment did not exit successfully")
+        sandbox_key = next(
+            (key for key in ("sandbox_after_fix", "sandbox") if rich_selected.get(key) is sandbox),
+            "sandbox",
+        )
+    else:
+        sandbox_key, sandbox = matched
+    metrics = dict(sandbox.get("metrics") or {})
+    compact_peer = selected.get(sandbox_key)
+    if isinstance(compact_peer, dict) and int(compact_peer.get("returncode", 1)) == 0:
+        metrics.update(compact_peer.get("metrics") or {})
+    if primary_metric not in metrics and not any(
+        str(key).endswith(f"/{primary_metric}") for key in metrics
+    ):
+        raise ValueError(f"selected refined experiment lacks {primary_metric}")
     stdout = str(sandbox.get("stdout", ""))
     stderr = str(sandbox.get("stderr", ""))
     execution_trace = _selected_execution_trace(
@@ -1362,12 +1367,7 @@ def _selected_execution_trace(
     iteration_number = int(iteration.get("iteration", 0) or 0)
     if iteration_number <= 0:
         return None
-    suffix = "_fix" if sandbox_key == "sandbox_after_fix" else ""
-    trace_path = (
-        log_path.parent
-        / f"refine_sandbox_v{iteration_number}{suffix}"
-        / "scitaste_execution_trace.json"
-    )
+    trace_path = _sandbox_trace_path(log_path, iteration_number, sandbox_key)
     if not trace_path.is_file():
         return None
     try:
@@ -1489,6 +1489,41 @@ def _best_successful_sandbox(iteration: dict[str, Any]) -> dict[str, Any] | None
         candidates,
         key=lambda item: (bool(item.get("metrics")), len(str(item.get("stdout", "")))),
     )
+
+
+def _sandbox_trace_path(log_path: Path, iteration: int, sandbox_key: str) -> Path:
+    suffix = "_fix" if sandbox_key == "sandbox_after_fix" else ""
+    return (
+        log_path.parent / f"refine_sandbox_v{iteration}{suffix}" / ("scitaste_execution_trace.json")
+    )
+
+
+def _source_matched_successful_sandbox(
+    log_path: Path, iteration: dict[str, Any]
+) -> tuple[str, dict[str, Any]] | None:
+    """Pair a mutable version directory with the sandbox that executed its bytes."""
+
+    iteration_number = int(iteration.get("iteration", 0) or 0)
+    source_dir = log_path.parent / str(iteration.get("version_dir", ""))
+    sources = sorted(source_dir.rglob("*.py")) if source_dir.is_dir() else []
+    if iteration_number <= 0 or not sources:
+        return None
+    expected_sources = {path.relative_to(source_dir).as_posix(): _sha256(path) for path in sources}
+    for sandbox_key in ("sandbox_after_fix", "sandbox"):
+        sandbox = iteration.get(sandbox_key)
+        if not isinstance(sandbox, dict) or int(sandbox.get("returncode", 1)) != 0:
+            continue
+        trace_path = _sandbox_trace_path(log_path, iteration_number, sandbox_key)
+        if not trace_path.is_file():
+            continue
+        try:
+            trace = json.loads(trace_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        traced_sources = trace.get("project_source_sha256") or {}
+        if all(traced_sources.get(name) == digest for name, digest in expected_sources.items()):
+            return sandbox_key, sandbox
+    return None
 
 
 def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
@@ -1807,7 +1842,8 @@ def _normalize_refinement_metrics(
         rf"(?im)^\s*(?:primary\s+metric\s+)?{escaped}\s*[=:]\s*([-+]?\d+(?:\.\d+)?)"
     )
     for iteration in data.get("iterations", []):
-        sandbox = _best_successful_sandbox(iteration)
+        matched = _source_matched_successful_sandbox(path, iteration)
+        sandbox_key, sandbox = matched or ("sandbox", _best_successful_sandbox(iteration))
         if sandbox is None:
             continue
         metrics = sandbox.get("metrics") or {}
@@ -1834,6 +1870,16 @@ def _normalize_refinement_metrics(
                 }
         if value is None:
             stdout = str(sandbox.get("stdout", ""))
+            if not stdout and matched is not None:
+                trace_path = _sandbox_trace_path(
+                    path, int(iteration.get("iteration", 0) or 0), sandbox_key
+                )
+                try:
+                    stdout = str(
+                        json.loads(trace_path.read_text(encoding="utf-8")).get("stdout_excerpt", "")
+                    )
+                except (OSError, json.JSONDecodeError):
+                    stdout = ""
             if condition_names:
                 condition_values: list[float] = []
                 for name in condition_names:

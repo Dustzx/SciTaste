@@ -1043,6 +1043,113 @@ def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> No
     assert evidence["execution_trace"]["source_verified"] is True
 
 
+def test_selected_experiment_pairs_mutated_version_with_matching_fix_trace(tmp_path) -> None:
+    task = load_task()
+    stage = tmp_path / "stage-13"
+    selected_dir = stage / "experiment_v1"
+    selected_dir.mkdir(parents=True)
+    fixed_source = (
+        "SCITASTE_BENCHMARK_CONTRACT = "
+        + pprint.pformat(task["benchmark"]["contract"])
+        + "\nprint('fixed')\n"
+    )
+    original_source = fixed_source.replace("fixed", "original")
+    (selected_dir / "main.py").write_text(fixed_source, encoding="utf-8")
+    iteration = {
+        "iteration": 1,
+        "version_dir": "experiment_v1/",
+        "metric": 0.5,
+        "sandbox": {
+            "returncode": 0,
+            "timed_out": False,
+            "elapsed_sec": 1.0,
+            "metrics": {"balanced_accuracy": 0.5},
+            "stdout": "initial output is intentionally longer than repaired output",
+        },
+        "sandbox_after_fix": {
+            "returncode": 0,
+            "timed_out": False,
+            "elapsed_sec": 1.0,
+            "metrics": {},
+            "stdout": "",
+        },
+    }
+    log_path = stage / "refinement_log.json"
+    log_path.write_text(
+        json.dumps(
+            {
+                "best_version": "experiment_v1/",
+                "best_metric": 0.5,
+                "iterations": [iteration],
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_payload = {
+        "schema_version": "1.0",
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.6},
+        "conditions": {
+            name: {
+                "per_seed": {"7": 0.6, "19": 0.6, "31": 0.6},
+                "mean": 0.6,
+                "std": 0.0,
+            }
+            for name in task["benchmark"]["conditions"]
+        },
+    }
+    repaired_stdout = (
+        "Seed 7\nSeed 19\nSeed 31\nPrimary metric balanced_accuracy: 0.6\n"
+        "SCITASTE_EVIDENCE_JSON=" + json.dumps(evidence_payload, separators=(",", ":"))
+    )
+
+    def write_trace(directory, source, stdout, metrics):
+        directory.mkdir()
+        trace = {
+            "schema_version": "1.0",
+            "method": "process-local-sandbox-result-trace-v1",
+            "returncode": 0,
+            "timed_out": False,
+            "elapsed_sec": 1.0,
+            "metrics": metrics,
+            "project_source_sha256": {"main.py": hashlib.sha256(source.encode()).hexdigest()},
+            "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
+            "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+            "stdout_bytes": len(stdout.encode()),
+            "stderr_bytes": 0,
+            "stdout_excerpt": stdout,
+            "stderr_excerpt": "",
+            "stdout_truncated": False,
+            "stderr_truncated": False,
+        }
+        (directory / "scitaste_execution_trace.json").write_text(
+            json.dumps(trace), encoding="utf-8"
+        )
+
+    write_trace(
+        stage / "refine_sandbox_v1",
+        original_source,
+        "initial output is intentionally longer than repaired output",
+        {"balanced_accuracy": 0.5},
+    )
+    write_trace(stage / "refine_sandbox_v1_fix", fixed_source, repaired_stdout, {})
+
+    _normalize_refinement_metrics(
+        tmp_path,
+        "balanced_accuracy",
+        "maximize",
+        condition_names=list(task["benchmark"]["conditions"]),
+    )
+    _validate_selected_experiment(tmp_path, task)
+    _, selected = _selected_experiment(tmp_path, "balanced_accuracy")
+
+    assert selected["execution_trace"]["sandbox_record"] == "sandbox_after_fix"
+    assert selected["metrics"]["balanced_accuracy"] == 0.6
+    assert (
+        selected["source_sha256"]["stage-13/experiment_v1/main.py"]
+        == hashlib.sha256(fixed_source.encode()).hexdigest()
+    )
+
+
 def test_artifact_audit_rejects_failed_selected_experiment(tmp_path) -> None:
     selected = tmp_path / "stage-13" / "experiment_v1"
     selected.mkdir(parents=True)

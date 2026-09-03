@@ -190,8 +190,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   blocks and `condition=<name> mean_ba=<value>` rows before paper generation.
   Those layouts are regression fixtures, and new executions must emit one
   internally verified machine-readable evidence record. A clean rerun remains
-  required; interrupted and original artifacts are retained only as failure
-  fixtures.
+  required. A fourth clean attempt emitted that record but exposed an ambiguous
+  initial-versus-repaired sandbox pairing; source-hash-based trace selection now
+  regression-tests that case. Interrupted and original artifacts are retained
+  only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

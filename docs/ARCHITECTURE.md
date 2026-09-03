@@ -299,6 +299,11 @@ output, output hashes, and executed-source hashes before upstream compaction. A
 successful post-repair result without this source-verified trace is inadmissible;
 metrics added by the adapter's format normalizer are independently recomputed from
 the traced source values rather than expected to exist in the earlier raw parser.
+If an initial sandbox and its repaired sandbox both return successfully, the
+mutable version directory can contain only the repaired bytes. Selection is
+therefore keyed by equality between the archived source hashes and each
+process-local trace, not by stdout length or metric count; records from a
+different successful source version cannot be merged into the selected result.
 Publication evidence retains primary-metric seed rows and descriptive dispersion;
 analysis, outline, and draft audits reject treating one pipeline run as
 statistical `N=1`, while exact reported dispersion is checked against the three

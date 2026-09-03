@@ -140,6 +140,10 @@ semantic versioning.
   under their enclosing seed blocks. Evidence fields lacking a complete seed
   vector are excluded, preventing similarly named factor-effect rows from being
   promoted to registered methods.
+- When both an initial and runtime-repaired sandbox succeed, formal selection
+  now pairs the retained mutable version directory with the sandbox trace whose
+  executed-source hashes match it. Metrics and stdout are never borrowed from a
+  successful but superseded source version.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.
