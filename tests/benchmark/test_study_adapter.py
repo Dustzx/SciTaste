@@ -105,9 +105,12 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "SCITASTE_BENCHMARK_CONTRACT" in code
     assert "exactly one" in override["stages"]["code_generation"]["system"]
     assert "diagnosis-factorial-v1" in design
+    assert "never assert that condition outputs" in code
+    assert "Do not add an LLM call" in code
     improve = override["sub_prompts"]["iterative_improve"]["user"]
     assert "[7, 19, 31]" in improve
     assert "do not add, remove, rename" in improve
+    assert "Equal outputs are a valid" in improve
     decision = override["stages"]["research_decision"]["user"]
     assert "write exactly PROCEED" in decision
     assert "future work" in decision

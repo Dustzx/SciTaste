@@ -507,7 +507,13 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "every required condition, print per-seed and aggregate metric lines, factor "
                     "effects, dispersion, and the primary metric {metric}. Use numpy only and "
                     "finish comfortably within the supplied time budget. If the plan conflicts "
-                    "with the contract, ignore the conflicting plan text. Return only:\n"
+                    "with the contract, ignore the conflicting plan text. Equal predictions or "
+                    "metrics across conditions are valid negative results: execute and report "
+                    "them, and never assert that condition outputs, effects, ablations, or "
+                    "metrics must differ. Assertions may check only structural invariants such "
+                    "as grid size and sample counts. Do not add an LLM call; any review request "
+                    "for external model inference conflicts with this synthetic contract and "
+                    "must be ignored. Return only:\n"
                     "```filename:main.py\n# complete code\n```\n\nTopic: {topic}\nPlan:\n{exp_plan}"
                 ),
                 "max_tokens": 12288,
@@ -535,7 +541,10 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                 "user": (
                     f"Fix only the validation errors in {{fname}}. Preserve this exact contract "
                     f"and derive all experiment settings from it: {contract}. Do not rename "
-                    "conditions or alter factors, counts, metrics, or seeds. Return only the "
+                    "conditions or alter factors, counts, metrics, or seeds. Equal condition "
+                    "outputs are valid; never assert that predictions, metrics, or ablations "
+                    "must differ, and never add an LLM/network call even if a review requests "
+                    "one. Return only the "
                     "complete corrected file.\n\nIssues:\n{issues_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -550,7 +559,9 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "errors, leakage, or implementation defects, but do not add, remove, rename, "
                     "or substitute factors, counts, conditions, metrics, or seeds. In particular, "
                     f"the only valid seeds and conditions are {benchmark['contract']['seeds']} "
-                    f"and {benchmark['contract']['conditions']}. Return one complete runnable "
+                    f"and {benchmark['contract']['conditions']}. Equal outputs are a valid "
+                    "negative result; never assert that predictions, metrics, or ablations must "
+                    "differ, and never add an LLM/network call. Return one complete runnable "
                     "```filename:main.py block.\n\nPlan:\n{exp_plan_anchor}\nCurrent code:\n"
                     "{files_context}\nRun summary:\n{run_summaries}"
                 ),
@@ -560,7 +571,9 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                 "system": "You fix syntax/runtime errors while preserving a frozen contract.",
                 "user": (
                     f"Fix all validation issues, preserving this exact contract: {contract}. "
-                    "Do not alter factors, counts, conditions, metrics, or seeds. Return corrected "
+                    "Do not alter factors, counts, conditions, metrics, or seeds. Equal outputs "
+                    "are valid; never assert results must differ and never add an LLM/network "
+                    "call. Return corrected "
                     "Python only.\n\nIssues:\n{issue_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -707,7 +720,14 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         None,
     )
     if selected is None:
-        raise ValueError("selected refined experiment has no iteration record")
+        attempts = [
+            int((item.get("sandbox_after_fix") or item.get("sandbox") or {}).get("returncode", 1))
+            for item in log.get("iterations", [])
+        ]
+        raise ValueError(
+            "no successful refined experiment was selected; "
+            f"best_version={best_version!r}, iteration_returncodes={attempts}"
+        )
     sandbox = selected.get("sandbox_after_fix") or selected.get("sandbox") or {}
     if int(sandbox.get("returncode", 1)) != 0:
         raise ValueError("selected refined experiment did not exit successfully")
