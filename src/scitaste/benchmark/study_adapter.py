@@ -852,7 +852,8 @@ def _machine_evidence_instruction(task: dict[str, Any]) -> str:
     return (
         f"The final stdout line must begin exactly `{MACHINE_EVIDENCE_PREFIX}` and continue "
         "with one compact JSON object. It must contain schema_version='1.0'; primary_metric "
-        f"with name='{benchmark['primary_metric']}' and its observed numeric value; and a "
+        f"with name='{benchmark['primary_metric']}' and its observed numeric value, which must "
+        "equal the arithmetic mean of the condition means; and a "
         "conditions object with exactly these keys: "
         f"{benchmark['conditions']}. Each condition must contain a per_seed object with "
         f"exactly the keys {benchmark['contract']['seeds']}, plus its observed numeric mean "
@@ -1312,6 +1313,18 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
     )
     per_seed_metrics, dispersion_metrics = _parse_seed_evidence(stdout, primary_metric)
     metric_sources = {str(name): "sandbox-structured-metric" for name in metrics}
+    normalization = selected.get("metric_normalization") or {}
+    if normalization.get("method") == "machine-evidence-condition-mean-v1":
+        normalized_conditions = [str(item) for item in normalization.get("source_conditions", [])]
+        metric_sources.update(
+            {
+                name: "source-verified-machine-evidence"
+                for name in normalized_conditions
+                if name in metrics
+            }
+        )
+        if primary_metric in metrics:
+            metric_sources[primary_metric] = "derived-from-source-verified-machine-condition-means"
     for condition, values in dispersion_metrics.items():
         mean = values.get("mean")
         if condition not in metrics and isinstance(mean, (int, float)):
@@ -1440,7 +1453,7 @@ def _selected_execution_trace(
                 matches = abs(float(value) - float(traced_value)) <= 1e-9
             except (TypeError, ValueError):
                 matches = False
-            if not matches:
+            if not matches and name not in normalized_names:
                 raise ValueError(f"selected sandbox trace metric does not match: {name}")
     expected_sources = {path.relative_to(source_dir).as_posix(): _sha256(path) for path in sources}
     traced_sources = trace.get("project_source_sha256") or {}
@@ -1846,14 +1859,51 @@ def _normalize_refinement_metrics(
         sandbox_key, sandbox = matched or ("sandbox", _best_successful_sandbox(iteration))
         if sandbox is None:
             continue
-        metrics = sandbox.get("metrics") or {}
-        value = metrics.get(primary_metric)
-        if iteration.get("metric_normalization", {}).get("method") == (
-            "stdout-numeric-equals-to-structured-v1"
-        ):
-            value = None
+        metrics = dict(sandbox.get("metrics") or {})
+        stdout = str(sandbox.get("stdout", ""))
+        if not stdout and matched is not None:
+            trace_path = _sandbox_trace_path(
+                path, int(iteration.get("iteration", 0) or 0), sandbox_key
+            )
+            try:
+                stdout = str(
+                    json.loads(trace_path.read_text(encoding="utf-8")).get("stdout_excerpt", "")
+                )
+            except (OSError, json.JSONDecodeError):
+                stdout = ""
         sources: list[float] = []
-        if value is None and condition_names and all(name in metrics for name in condition_names):
+        machine_evidence = _parse_machine_seed_evidence(stdout, primary_metric)
+        if machine_evidence is not None:
+            _, machine_dispersion = machine_evidence
+            machine_conditions = condition_names or list(machine_dispersion)
+            missing = [name for name in machine_conditions if name not in machine_dispersion]
+            if missing:
+                raise ValueError(
+                    "selected machine evidence lacks registered conditions: " + ", ".join(missing)
+                )
+            sources = [float(machine_dispersion[name]["mean"]) for name in machine_conditions]
+            value = sum(sources) / len(sources)
+            metrics.update(dict(zip(machine_conditions, sources, strict=True)))
+            metrics[primary_metric] = round(value, 10)
+            sandbox["metrics"] = metrics
+            iteration["metric_normalization"] = {
+                "method": "machine-evidence-condition-mean-v1",
+                "source_conditions": machine_conditions,
+                "source_values": sources,
+                "aggregate": "arithmetic_mean",
+            }
+        else:
+            value = metrics.get(primary_metric)
+            if iteration.get("metric_normalization", {}).get("method") == (
+                "stdout-numeric-equals-to-structured-v1"
+            ):
+                value = None
+        if (
+            machine_evidence is None
+            and value is None
+            and condition_names
+            and all(name in metrics for name in condition_names)
+        ):
             try:
                 sources = [float(metrics[name]) for name in condition_names]
             except (TypeError, ValueError):
@@ -1869,17 +1919,6 @@ def _normalize_refinement_metrics(
                     "aggregate": "arithmetic_mean",
                 }
         if value is None:
-            stdout = str(sandbox.get("stdout", ""))
-            if not stdout and matched is not None:
-                trace_path = _sandbox_trace_path(
-                    path, int(iteration.get("iteration", 0) or 0), sandbox_key
-                )
-                try:
-                    stdout = str(
-                        json.loads(trace_path.read_text(encoding="utf-8")).get("stdout_excerpt", "")
-                    )
-                except (OSError, json.JSONDecodeError):
-                    stdout = ""
             if condition_names:
                 condition_values: list[float] = []
                 for name in condition_names:
@@ -1960,6 +1999,14 @@ def _validate_selected_experiment(run_dir: Path, task: dict[str, Any]) -> None:
         raise ValueError("selected execution stdout does not cover every registered seed")
     expected_conditions = [str(item) for item in task["benchmark"]["conditions"]]
     per_seed = selected["per_seed_metrics"]
+    matrix_seed_ids = sorted(int(seed) for seed in per_seed)
+    if matrix_seed_ids != expected_seeds:
+        raise ValueError("selected evidence matrix does not preserve the registered seed set")
+    matrix_conditions = sorted(
+        {condition for seed_values in per_seed.values() for condition in seed_values}
+    )
+    if matrix_conditions != sorted(expected_conditions):
+        raise ValueError("selected evidence matrix does not preserve registered conditions")
     missing_seed_values = [
         f"seed={seed}:{condition}"
         for seed in expected_seeds

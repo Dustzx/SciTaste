@@ -320,10 +320,15 @@ Generated experiments must now finish stdout with one
 `SCITASTE_EVIDENCE_JSON` record. The record carries the primary metric and the
 complete condition-by-seed matrix; the adapter checks numeric finiteness and
 recomputes each condition mean and population standard deviation before using
-it. Older human-readable layouts remain importable for provenance fixtures, but
-new formal runs receive the machine-record requirement in generation and every
-repair prompt. Publication prompts consume a deterministic rendering of this
-audited matrix rather than inferring table structure from prose formatting.
+it. The redundant primary field is type-checked but is not authoritative: the
+registered cross-method aggregate is recomputed as the arithmetic mean of the
+verified condition means and labeled as derived provenance. This prevents a
+generic stdout parser—or an executor that labels one baseline as primary—from
+overriding the complete matrix. Older human-readable layouts remain importable
+for provenance fixtures, but new formal runs receive the machine-record
+requirement in generation and every repair prompt. Publication prompts consume
+a deterministic rendering of this audited matrix rather than inferring table
+structure from prose formatting.
 
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 

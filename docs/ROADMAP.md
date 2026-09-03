@@ -195,8 +195,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   regression-tests that case. A fifth attempt passed experiment acceptance and
   produced a correct three-seed analysis, exposing only an overly narrow
   corrective-language matcher before outline generation; that analysis now
-  replays cleanly. Interrupted and original artifacts are retained only as
-  failure fixtures.
+  replays cleanly. A sixth attempt exposed disagreement between heuristic stdout
+  metrics and the complete machine matrix; canonical condition means now win,
+  and the primary aggregate is deterministically recomputed. Attempts 4–6 all
+  replay through experiment acceptance under the combined fixes. Interrupted
+  and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

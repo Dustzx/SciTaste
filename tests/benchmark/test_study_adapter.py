@@ -952,6 +952,27 @@ def test_seed_evidence_parser_rejects_inconsistent_machine_record() -> None:
         _parse_seed_evidence("SCITASTE_EVIDENCE_JSON=" + json.dumps(payload), "balanced_accuracy")
 
 
+def test_seed_evidence_parser_does_not_trust_redundant_machine_primary() -> None:
+    payload = {
+        "schema_version": "1.0",
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.9},
+        "conditions": {
+            "majority_vote": {
+                "per_seed": {"7": 0.7, "19": 0.7, "31": 0.7},
+                "mean": 0.7,
+                "std": 0.0,
+            }
+        },
+    }
+
+    per_seed, dispersion = _parse_seed_evidence(
+        "SCITASTE_EVIDENCE_JSON=" + json.dumps(payload), "balanced_accuracy"
+    )
+
+    assert per_seed["19"]["majority_vote"] == 0.7
+    assert dispersion["majority_vote"] == {"mean": 0.7, "std": 0.0}
+
+
 def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> None:
     task = load_task()
     selected = tmp_path / "stage-13" / "experiment_v1"
@@ -1080,7 +1101,12 @@ def test_selected_experiment_pairs_mutated_version_with_matching_fix_trace(tmp_p
             "returncode": 0,
             "timed_out": False,
             "elapsed_sec": 1.0,
-            "metrics": {},
+            "metrics": {
+                "majority_vote": 0.61,
+                "confidence_weighted_vote": 0.61,
+                "position_aware_probe": 0.61,
+                "balanced_accuracy": 0.61,
+            },
             "stdout": "",
         },
     }
@@ -1097,7 +1123,7 @@ def test_selected_experiment_pairs_mutated_version_with_matching_fix_trace(tmp_p
     )
     evidence_payload = {
         "schema_version": "1.0",
-        "primary_metric": {"name": "balanced_accuracy", "value": 0.6},
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.62},
         "conditions": {
             name: {
                 "per_seed": {"7": 0.6, "19": 0.6, "31": 0.6},
@@ -1141,7 +1167,18 @@ def test_selected_experiment_pairs_mutated_version_with_matching_fix_trace(tmp_p
         "initial output is intentionally longer than repaired output",
         {"balanced_accuracy": 0.5},
     )
-    write_trace(stage / "refine_sandbox_v1_fix", fixed_source, repaired_stdout, {})
+    repaired_parser_metrics = {
+        "majority_vote": 0.61,
+        "confidence_weighted_vote": 0.61,
+        "position_aware_probe": 0.61,
+        "balanced_accuracy": 0.61,
+    }
+    write_trace(
+        stage / "refine_sandbox_v1_fix",
+        fixed_source,
+        repaired_stdout,
+        repaired_parser_metrics,
+    )
 
     _normalize_refinement_metrics(
         tmp_path,
@@ -1154,6 +1191,9 @@ def test_selected_experiment_pairs_mutated_version_with_matching_fix_trace(tmp_p
 
     assert selected["execution_trace"]["sandbox_record"] == "sandbox_after_fix"
     assert selected["metrics"]["balanced_accuracy"] == 0.6
+    assert selected["metric_sources"]["balanced_accuracy"] == (
+        "derived-from-source-verified-machine-condition-means"
+    )
     assert (
         selected["source_sha256"]["stage-13/experiment_v1/main.py"]
         == hashlib.sha256(fixed_source.encode()).hexdigest()

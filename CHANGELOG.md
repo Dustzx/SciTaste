@@ -147,6 +147,10 @@ semantic versioning.
 - The three-seed analysis audit now recognizes `erroneously claimed N=1` as an
   explicit correction while continuing to reject unqualified single-seed
   assertions.
+- Canonical machine evidence now overrides heuristic stdout metrics after its
+  complete condition-by-seed matrix is verified. The cross-method primary
+  aggregate is recomputed from registered condition means, and its derived
+  provenance is recorded separately from directly observed condition metrics.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.
