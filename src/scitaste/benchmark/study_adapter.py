@@ -1532,14 +1532,8 @@ def _parse_seed_evidence(
         if metric_match and current_seed is not None:
             per_seed[current_seed][metric_match.group(1)] = float(metric_match.group(2))
         scoped_seed_metric_match = scoped_seed_metric_pattern.search(line)
-        if (
-            scoped_seed_metric_match
-            and current_seed is not None
-            and current_condition is not None
-        ):
-            per_seed[current_seed][current_condition] = float(
-                scoped_seed_metric_match.group(1)
-            )
+        if scoped_seed_metric_match and current_seed is not None and current_condition is not None:
+            per_seed[current_seed][current_condition] = float(scoped_seed_metric_match.group(1))
 
         dispersion_match = inline_dispersion_pattern.search(line)
         if dispersion_match:
@@ -1579,9 +1573,7 @@ def _parse_seed_evidence(
         observed.setdefault("mean", derived_mean)
         observed.setdefault(
             "std",
-            math.sqrt(
-                sum((value - derived_mean) ** 2 for value in values) / len(values)
-            ),
+            math.sqrt(sum((value - derived_mean) ** 2 for value in values) / len(values)),
         )
     return per_seed, dispersion
 
