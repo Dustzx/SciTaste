@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from scitaste.benchmark.study_adapter import (
+    _analysis_consistency_audit,
     _artifact_consistency_audit,
     _audit_upstream_run,
     _compact_refinement_log,
@@ -14,9 +15,11 @@ from scitaste.benchmark.study_adapter import (
     _contract_matches,
     _guidance,
     _normalize_refinement_metrics,
+    _sanitize_publication_artifacts,
     _selected_experiment,
     _stage_completed,
     _usage,
+    _write_analysis_synthesis_override,
     _write_prompt_overrides,
     _write_selected_experiment_evidence,
 )
@@ -138,6 +141,24 @@ def test_guidance_separates_execution_and_publication_language() -> None:
     assert "supersedes every earlier failed attempt" in guidance["result_analysis"]
 
 
+def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> None:
+    analysis = tmp_path / "stage-14" / "analysis.md"
+    analysis.parent.mkdir()
+    analysis.write_text(
+        "The diagnosis-factorial-v1 result compares majority_vote.", encoding="utf-8"
+    )
+
+    _sanitize_publication_artifacts(tmp_path, load_task(), relative_paths=("stage-14/analysis.md",))
+
+    sanitized = analysis.read_text(encoding="utf-8")
+    assert "diagnosis-factorial-v1" not in sanitized
+    assert "majority_vote" not in sanitized
+    assert "preregistered factorial benchmark" in sanitized
+    log = json.loads((tmp_path / "scitaste_publication_sanitization.json").read_text())
+    assert log["artifacts"][0]["path"] == "stage-14/analysis.md"
+    assert log["artifacts"][0]["before_sha256"] != log["artifacts"][0]["after_sha256"]
+
+
 def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     path = _write_prompt_overrides(tmp_path, load_task())
     override = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -158,6 +179,21 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     decision = override["stages"]["research_decision"]["user"]
     assert "write exactly PROCEED" in decision
     assert "future work" in decision
+
+    _write_analysis_synthesis_override(
+        tmp_path,
+        load_task(),
+        {
+            "registered_metrics": {"balanced_accuracy": 0.75},
+            "elapsed_sec": 2.0,
+            "stdout_summary": "Seed 7: balanced_accuracy = 0.75",
+        },
+    )
+    refreshed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    synthesis = refreshed["sub_prompts"]["analysis_synthesize"]
+    assert "authoritative selected-experiment evidence" in synthesis["system"]
+    assert "balanced accuracy=0.750000" in synthesis["user"]
+    assert "{perspectives}" in synthesis["user"]
 
 
 def test_contract_match_accepts_equivalent_upstream_labels() -> None:
@@ -499,6 +535,24 @@ def test_consistency_audit_rejects_internal_identifier_and_false_failure_story()
         _artifact_consistency_audit(
             analysis="Balanced accuracy was 0.75.",
             paper="The diagnosis-factorial-v1 balanced accuracy was 0.75.",
+            selected_run=selected,
+            task=task,
+        )
+
+
+def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
+    task = load_task()
+    selected = {
+        "returncode": 0,
+        "timed_out": False,
+        "metric": 0.75,
+        "metrics": {"balanced_accuracy": 0.75},
+        "seed_ids": [7, 19, 31],
+    }
+
+    with pytest.raises(ValueError, match="single-seed-collapse"):
+        _analysis_consistency_audit(
+            analysis=("Balanced accuracy was 0.75, but n=1 and min=max=mean indicate a collapse."),
             selected_run=selected,
             task=task,
         )

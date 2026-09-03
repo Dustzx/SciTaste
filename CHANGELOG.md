@@ -71,6 +71,8 @@ semantic versioning.
 - A content-hashed selected-experiment evidence projection with registered metrics,
   bounded per-seed stdout evidence, source hashes, and publication consistency
   audit metadata.
+- A pre-paper Stage 14 evidence gate and hash-logged exact identifier sanitizer,
+  preventing a contradictory analysis from spending paper-generation tokens.
 
 ### Changed
 

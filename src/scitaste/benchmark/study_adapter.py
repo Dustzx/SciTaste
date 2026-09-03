@@ -142,6 +142,7 @@ def run_study_cell(
                 upstream_run,
                 _guidance(task, condition, controller_trace, evidence=selected_evidence),
             )
+            _write_analysis_synthesis_override(upstream_run, task, selected_evidence)
             _compact_refinement_log(upstream_run)
         except (OSError, ValueError) as exc:
             result = LauncherResult(
@@ -155,13 +156,49 @@ def run_study_cell(
         if finalize_existing:
             completed = subprocess.CompletedProcess(args=[], returncode=0)
         else:
-            completed = subprocess.run(
-                upstream_command(resume_from_stage, to_stage),
-                cwd=UPSTREAM,
-                env=environment,
-                check=False,
-                text=True,
-            )
+            if _stage_number(resume_from_stage) <= 14 <= _stage_number(to_stage):
+                completed = subprocess.run(
+                    upstream_command("RESULT_ANALYSIS", "RESULT_ANALYSIS"),
+                    cwd=UPSTREAM,
+                    env=environment,
+                    check=False,
+                    text=True,
+                )
+                if completed.returncode == 0:
+                    try:
+                        _sanitize_publication_artifacts(
+                            upstream_run, task, relative_paths=("stage-14/analysis.md",)
+                        )
+                        _validate_analysis_artifact(upstream_run, task)
+                    except (OSError, ValueError) as exc:
+                        result = LauncherResult(
+                            status=CellStatus.FAILED,
+                            evidence_class=EvidenceClass.REAL,
+                            usage=_usage(telemetry_path, task, experiments=1),
+                            error=f"analysis pre-paper audit failed: {exc}",
+                        )
+                        _write_result(result_file, result)
+                        return result
+                if completed.returncode == 0 and _stage_number(to_stage) > 14:
+                    completed = subprocess.run(
+                        upstream_command("RESEARCH_DECISION", to_stage),
+                        cwd=UPSTREAM,
+                        env=environment,
+                        check=False,
+                        text=True,
+                    )
+            else:
+                _sanitize_publication_artifacts(
+                    upstream_run, task, relative_paths=("stage-14/analysis.md",)
+                )
+                _validate_analysis_artifact(upstream_run, task)
+                completed = subprocess.run(
+                    upstream_command(resume_from_stage, to_stage),
+                    cwd=UPSTREAM,
+                    env=environment,
+                    check=False,
+                    text=True,
+                )
     else:
         completed = experiment_process
     elapsed = time.perf_counter() - started
@@ -176,6 +213,20 @@ def run_study_cell(
         )
         _write_result(result_file, result)
         return result
+
+    _sanitize_publication_artifacts(
+        upstream_run,
+        task,
+        relative_paths=(
+            "stage-14/analysis.md",
+            "stage-16/outline.md",
+            "stage-17/paper_draft.md",
+            "stage-18/reviews.md",
+            "stage-19/paper_revised.md",
+            "stage-22/paper_final.md",
+            "stage-22/paper.tex",
+        ),
+    )
 
     try:
         outcome, experiments, audit = _audit_upstream_run(
@@ -224,21 +275,30 @@ def _recorded_stage_seconds(run_dir: Path) -> float:
     return total
 
 
+_STAGE_NUMBERS = {
+    "ITERATIVE_REFINE": 13,
+    "RESULT_ANALYSIS": 14,
+    "RESEARCH_DECISION": 15,
+    "PAPER_OUTLINE": 16,
+    "PAPER_DRAFT": 17,
+    "PEER_REVIEW": 18,
+    "PAPER_REVISION": 19,
+    "QUALITY_GATE": 20,
+    "KNOWLEDGE_ARCHIVE": 21,
+    "EXPORT_PUBLISH": 22,
+    "CITATION_VERIFY": 23,
+}
+
+
+def _stage_number(stage: str) -> int:
+    try:
+        return _STAGE_NUMBERS[stage.upper()]
+    except KeyError as exc:
+        raise ValueError(f"unknown study adapter stage: {stage}") from exc
+
+
 def _stage_completed(run_dir: Path, stage: str) -> bool:
-    numbers = {
-        "ITERATIVE_REFINE": 13,
-        "RESULT_ANALYSIS": 14,
-        "RESEARCH_DECISION": 15,
-        "PAPER_OUTLINE": 16,
-        "PAPER_DRAFT": 17,
-        "PEER_REVIEW": 18,
-        "PAPER_REVISION": 19,
-        "QUALITY_GATE": 20,
-        "KNOWLEDGE_ARCHIVE": 21,
-        "EXPORT_PUBLISH": 22,
-        "CITATION_VERIFY": 23,
-    }
-    number = numbers.get(stage.upper())
+    number = _STAGE_NUMBERS.get(stage.upper())
     if number is None:
         return False
     for path in run_dir.glob(f"stage-{number:02d}*/stage_health.json"):
@@ -623,6 +683,38 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     return path
 
 
+def _write_analysis_synthesis_override(
+    run_dir: Path, task: dict[str, Any], evidence: dict[str, Any]
+) -> Path:
+    """Bind the debate synthesizer to selected evidence before Stage 14 starts."""
+
+    path = run_dir / "scitaste_prompt_overrides.yaml"
+    if not path.is_file():
+        raise ValueError("prompt override file is missing")
+    override = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    publication = _publication_guidance(task, evidence=evidence)
+    override.setdefault("sub_prompts", {})["analysis_synthesize"] = {
+        "system": (
+            "You synthesize scientific analyses under a strict evidence contract. The "
+            "authoritative selected-experiment evidence in the user prompt overrides every "
+            "conflicting perspective, legacy run, inferred failure, or flattened summary."
+        ),
+        "user": (
+            "Synthesize the perspectives into Metrics Summary, Consensus Findings, Contested "
+            "Points, Statistical Checks, Methodology Audit, Limitations, and Conclusion. "
+            "Correct rather than repeat any perspective that conflicts with the authoritative "
+            "evidence. Explicitly report every registered method metric and the registered "
+            "cross-method primary aggregate. A summary count of one denotes one selected run, "
+            "not one seed and not zero variance. Do not expose any internal identifier.\n\n"
+            "Perspectives:\n{perspectives}\n\n"
+            f"{publication}"
+        ),
+        "max_tokens": 8192,
+    }
+    path.write_text(yaml.safe_dump(override, sort_keys=False), encoding="utf-8")
+    return path
+
+
 def _write_guidance_files(run_dir: Path, guidance: dict[str, str]) -> dict[str, str]:
     prompt_dir = run_dir / "scitaste_prompts"
     prompt_dir.mkdir(parents=True, exist_ok=True)
@@ -773,6 +865,48 @@ def _publication_safe_text(text: str, task: dict[str, Any]) -> str:
     return text
 
 
+def _sanitize_publication_artifacts(
+    run_dir: Path, task: dict[str, Any], *, relative_paths: tuple[str, ...]
+) -> None:
+    """Replace exact audit identifiers in prose while retaining a hash trail."""
+
+    log_path = run_dir / "scitaste_publication_sanitization.json"
+    if log_path.is_file():
+        try:
+            log = json.loads(log_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            log = {"schema_version": "1.0", "method": "exact-identifier-replacement-v1"}
+    else:
+        log = {"schema_version": "1.0", "method": "exact-identifier-replacement-v1"}
+    entries = list(log.get("artifacts", []))
+    seen = {(item.get("path"), item.get("before_sha256")) for item in entries}
+    for relative in relative_paths:
+        path = run_dir / relative
+        if not path.is_file():
+            continue
+        before = path.read_text(encoding="utf-8", errors="replace")
+        after = _publication_safe_text(before, task)
+        if after == before:
+            continue
+        before_sha = hashlib.sha256(before.encode()).hexdigest()
+        key = (relative, before_sha)
+        if key in seen:
+            continue
+        path.write_text(after, encoding="utf-8")
+        entries.append(
+            {
+                "path": relative,
+                "before_sha256": before_sha,
+                "after_sha256": hashlib.sha256(after.encode()).hexdigest(),
+                "replacement_scope": "registered exact internal identifiers only",
+            }
+        )
+        seen.add(key)
+    if entries:
+        log["artifacts"] = entries
+        log_path.write_text(json.dumps(log, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def _extract_declared_contract(source_paths: list[Path]) -> dict[str, Any] | None:
     for path in source_paths:
         try:
@@ -884,6 +1018,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
         "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest(),
         "stdout_summary": _selected_stdout_summary(stdout),
+        "seed_ids": sorted({int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}),
         "metric_normalization": selected.get("metric_normalization"),
         "source_sha256": {str(path.relative_to(run_dir)): _sha256(path) for path in sources},
     }
@@ -965,6 +1100,7 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "stdout_sha256": selected["stdout_sha256"],
         "stderr_sha256": selected["stderr_sha256"],
         "stdout_summary": selected["stdout_summary"],
+        "seed_ids": selected["seed_ids"],
         "source_sha256": selected["source_sha256"],
     }
     path = run_dir / "scitaste_selected_experiment_evidence.json"
@@ -1186,8 +1322,23 @@ def _text_reports_metric(text: str, name: str, value: float) -> bool:
     return False
 
 
-def _artifact_consistency_audit(
-    *, analysis: str, paper: str, selected_run: dict[str, Any], task: dict[str, Any]
+_FAILURE_CLAIMS = {
+    "experiment-did-not-execute": r"(?i)\b(?:the |this )?experiment did not execute\b",
+    "no-scientific-test": (
+        r"(?i)\bno scientific (?:hypothesis|computation|experiment) "
+        r"(?:was|were) (?:tested|executed|performed)\b"
+    ),
+    "phantom-selected-metrics": (
+        r"(?i)\b(?:reported|selected|resulting) metrics?.{0,80}"
+        r"\b(?:phantom|cached|fabricated|epistemically void)\b"
+    ),
+    "failed-final-run": r"(?i)\brun status\s*[:=-]?\s*(?:was\s+)?failed\b",
+    "false-positive-emission": r"(?i)\bfalse-positive emission rate\b",
+}
+
+
+def _analysis_consistency_audit(
+    *, analysis: str, selected_run: dict[str, Any], task: dict[str, Any]
 ) -> dict[str, Any]:
     primary = str(task["benchmark"]["primary_metric"])
     value = selected_run["metrics"].get(primary, selected_run.get("metric"))
@@ -1196,41 +1347,74 @@ def _artifact_consistency_audit(
     if int(selected_run.get("returncode", 1)) != 0 or selected_run.get("timed_out"):
         raise ValueError("selected experiment evidence is not a completed execution")
 
-    failure_claims = {
-        "experiment-did-not-execute": r"(?i)\b(?:the |this )?experiment did not execute\b",
-        "no-scientific-test": (
-            r"(?i)\bno scientific (?:hypothesis|computation|experiment) "
-            r"(?:was|were) (?:tested|executed|performed)\b"
-        ),
-        "phantom-selected-metrics": (
-            r"(?i)\b(?:reported|selected|resulting) metrics?.{0,80}"
-            r"\b(?:phantom|cached|fabricated|epistemically void)\b"
-        ),
-        "failed-final-run": r"(?i)\brun status\s*[:=-]?\s*(?:was\s+)?failed\b",
-        "false-positive-emission": r"(?i)\bfalse-positive emission rate\b",
-    }
     contradictions = sorted(
-        name
-        for name, pattern in failure_claims.items()
-        if re.search(pattern, analysis) or re.search(pattern, paper)
+        name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, analysis)
+    )
+    seed_ids = selected_run.get("seed_ids") or []
+    if len(seed_ids) >= 3:
+        seed_claims = {
+            "single-seed-collapse": r"(?i)(?:\bn\s*=\s*1\b|\bmin\s*=\s*max\s*=\s*mean\b)",
+            "variance-unavailable": r"(?i)\binsufficient for variance estimation\b",
+            "deterministic-collapse": r"(?i)\bdeterministic collapse(?:/bug)?\b",
+        }
+        contradictions.extend(
+            name for name, pattern in seed_claims.items() if re.search(pattern, analysis)
+        )
+    contradictions = sorted(set(contradictions))
+    if contradictions:
+        raise ValueError(
+            "analysis contradicts the successful selected experiment: " + ", ".join(contradictions)
+        )
+    metric_present = _text_reports_metric(analysis, primary, float(value))
+    if not metric_present:
+        raise ValueError(f"selected {primary}={float(value):.6f} is absent from analysis")
+    identifier_violations = _publication_identifier_violations(analysis, task)
+    if identifier_violations:
+        raise ValueError(
+            "analysis exposes internal-only identifiers: " + ", ".join(identifier_violations)
+        )
+    return {
+        "selected_execution_completed": True,
+        "primary_metric": primary,
+        "primary_metric_value": float(value),
+        "analysis_reports_primary_metric": True,
+        "seed_ids": seed_ids,
+        "failure_claim_contradictions": [],
+        "analysis_identifier_violations": [],
+    }
+
+
+def _validate_analysis_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
+    analysis_path = run_dir / "stage-14" / "analysis.md"
+    if not analysis_path.is_file():
+        raise ValueError("result analysis artifact is missing")
+    _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    return _analysis_consistency_audit(
+        analysis=analysis_path.read_text(encoding="utf-8", errors="replace"),
+        selected_run=selected_run,
+        task=task,
+    )
+
+
+def _artifact_consistency_audit(
+    *, analysis: str, paper: str, selected_run: dict[str, Any], task: dict[str, Any]
+) -> dict[str, Any]:
+    analysis_audit = _analysis_consistency_audit(
+        analysis=analysis, selected_run=selected_run, task=task
+    )
+    primary = analysis_audit["primary_metric"]
+    value = analysis_audit["primary_metric_value"]
+    contradictions = sorted(
+        name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, paper)
     )
     if contradictions:
         raise ValueError(
-            "analysis/paper contradicts the successful selected experiment: "
-            + ", ".join(contradictions)
+            "paper contradicts the successful selected experiment: " + ", ".join(contradictions)
         )
 
-    analysis_metric = _text_reports_metric(analysis, primary, float(value))
     paper_metric = _text_reports_metric(paper, primary, float(value))
-    if not analysis_metric or not paper_metric:
-        missing = [
-            label
-            for label, present in (("analysis", analysis_metric), ("paper", paper_metric))
-            if not present
-        ]
-        raise ValueError(
-            f"selected {primary}={float(value):.6f} is absent from " + ", ".join(missing)
-        )
+    if not paper_metric:
+        raise ValueError(f"selected {primary}={float(value):.6f} is absent from paper")
 
     identifier_violations = _publication_identifier_violations(paper, task)
     if identifier_violations:
@@ -1243,9 +1427,11 @@ def _artifact_consistency_audit(
         "selected_execution_completed": True,
         "primary_metric": primary,
         "primary_metric_value": float(value),
-        "analysis_reports_primary_metric": analysis_metric,
+        "analysis_reports_primary_metric": True,
         "paper_reports_primary_metric": paper_metric,
+        "seed_ids": analysis_audit["seed_ids"],
         "failure_claim_contradictions": [],
+        "analysis_identifier_violations": [],
         "publication_identifier_violations": [],
     }
 
