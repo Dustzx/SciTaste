@@ -4,7 +4,7 @@ scope: formal
 description: Preregistered four-category study using real generated experiments on fixed synthetic task generators; external validity and headline eligibility still require blinded expert review.
 base_model: qwen3.8-max
 base_model_revision: qwen3.8-max-2026-09-02
-codebase_commit: 501868230cd677afe01ff8f52484610927a46a62
+codebase_commit: 4f1c7637bf44467cf9494d4044e2b2c393f04c34
 search_access:
   policy_id: frozen-search-snapshot-v1
   provider: frozen-local-corpus
