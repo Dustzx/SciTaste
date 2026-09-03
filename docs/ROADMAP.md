@@ -235,6 +235,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   the factor effect `seed: 0.008292` as seed zero while missing condition-first
   measurement rows. Decimal-safe matching and the explicit
   `Condition=... Seed=... BalancedAccuracy=...` form now cover that output.
+  A fourteenth attempt passed the experiment gate but stopped after Stage 14
+  because `collapsing the data into an N=1 ... summary is prohibited` was read as
+  an affirmative collapse. Explicitly prohibited, forbidden, rejected, and
+  avoided summaries are now corrective language; bare N=1 remains inadmissible.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

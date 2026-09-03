@@ -315,7 +315,8 @@ not relabel the differently scoped spread as cross-seed uncertainty.
 Audits classify these claims line by line: an unqualified `N=1` assertion is a
 contradiction, whereas an explicit statement that a perspective incorrectly or
 erroneously made that claim—or an instruction not to infer or derive it—is
-retained as a scientifically useful correction or constraint.
+retained as a scientifically useful correction or constraint. The same applies
+when an N=1 collapse is explicitly prohibited, forbidden, rejected, or avoided.
 
 Generated experiments must now finish stdout with one
 `SCITASTE_EVIDENCE_JSON` record. The record carries the primary metric and the

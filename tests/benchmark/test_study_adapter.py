@@ -836,6 +836,15 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
         task=task,
     )
     assert instructional["analysis_reports_primary_metric"] is True
+    prohibited = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75 across seeds 7, 19, and 31. Collapsing the "
+            "matrix into an N=1 summary is prohibited."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert prohibited["analysis_reports_primary_metric"] is True
     limited = _analysis_consistency_audit(
         analysis=(
             "Balanced accuracy was 0.75 across seeds 7, 19, and 31. These findings do "

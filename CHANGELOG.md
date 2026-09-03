@@ -169,6 +169,8 @@ semantic versioning.
   constraints instead of silently dropping them.
 - Three-seed publication audits now classify `do not infer N=1` and `do not
   derive N=1` as prohibitions rather than affirmative single-seed claims.
+- Single-seed audits now also recognize prohibited, forbidden, rejected, or
+  avoided N=1 summaries as corrective language rather than evidence collapse.
 - Synthetic-scope audits now recognize `do not` and `must not` limitations on
   internal model signals while retaining rejection of affirmative neural-model
   measurement claims.
