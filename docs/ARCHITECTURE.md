@@ -347,6 +347,13 @@ the observed identifier set is compared with the registered seeds. The machine
 record remains the value authority, while the independent rendering check makes
 omitted or misleading stdout visible.
 
+AutoResearchClaw's Stage 10 can replace an initially compliant file after code
+review or topic-alignment review. Those regeneration branches reuse the stage
+system prompt but construct a new user prompt. SciTaste therefore repeats the
+canonical literal and machine-evidence requirements in the system prompt; all
+initial, repaired, and regenerated source variants receive the same immutable
+contract without modifying the pinned substrate.
+
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
 Status: accepted. Generic upstream writing instructions can conflict with a

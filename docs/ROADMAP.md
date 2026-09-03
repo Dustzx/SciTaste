@@ -211,6 +211,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and replays that Stage 13 output at a derived aggregate of 0.803657979. The
   invocation's unintended second selected seed cell was stopped after the shared
   parser issue was known, and the entire directory remains a failed fixture.
+  A ninth single-cell attempt confirmed the runner cap, but Stage 10 alignment
+  regeneration discarded the canonical declaration while retaining scattered
+  factor values; the strict gate rejected it before analysis at 64,678 tokens.
+  Contract and machine-evidence requirements now appear in the Stage 10 system
+  prompt used by initial generation, code-review fixes, and alignment
+  regeneration. The scattered-value output remains rejected rather than being
+  retrospectively inferred as compliant.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

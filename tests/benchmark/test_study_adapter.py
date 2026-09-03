@@ -238,7 +238,12 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     code = override["stages"]["code_generation"]["user"]
     assert "no GPU, no network, and no external dataset" in design
     assert "SCITASTE_BENCHMARK_CONTRACT" in code
-    assert "exactly one" in override["stages"]["code_generation"]["system"]
+    code_system = override["stages"]["code_generation"]["system"]
+    assert "exactly one" in code_system
+    assert "Every initial, review-fixed, or alignment-regenerated main.py MUST" in code_system
+    assert "SCITASTE_BENCHMARK_CONTRACT" in code_system
+    assert "diagnosis-factorial-v1" in code_system
+    assert "SCITASTE_EVIDENCE_JSON=" in code_system
     assert "diagnosis-factorial-v1" in design
     assert "numpy.random.default_rng" in design
     assert "never assert that condition outputs" in code

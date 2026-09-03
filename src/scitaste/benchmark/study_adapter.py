@@ -737,7 +737,12 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                 "system": (
                     "You write compact, deterministic scientific Python. Return exactly one "
                     "complete runnable main.py file and no prose. Never use the network, external "
-                    "datasets, subprocesses, GPUs, fabricated fixed metrics, or random scores."
+                    "datasets, subprocesses, GPUs, fabricated fixed metrics, or random scores. "
+                    "Every initial, review-fixed, or alignment-regenerated main.py MUST begin "
+                    "with this exact module-level literal assignment and derive all experiment "
+                    f"settings from it: SCITASTE_BENCHMARK_CONTRACT = {contract}. Never rename, "
+                    "remove, restructure, or replace that declaration, even when a reviewer asks "
+                    f"for regeneration. {machine_evidence}"
                 ),
                 "user": (
                     "Implement the fixed synthetic benchmark as one self-contained Python file. "
