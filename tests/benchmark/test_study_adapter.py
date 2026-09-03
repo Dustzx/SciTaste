@@ -830,6 +830,42 @@ Condition: confidence_weighted_vote
     assert dispersion["confidence_weighted_vote"] == {"mean": 0.814815, "std": 0.013629}
 
 
+def test_seed_evidence_parser_handles_seed_scoped_condition_blocks() -> None:
+    stdout = """--- Seed 7 ---
+  Condition: majority_vote
+    balanced_accuracy: mean=0.8450, std=0.1315
+  Condition: confidence_weighted_vote
+    balanced_accuracy: mean=0.8108, std=0.1386
+--- Seed 19 ---
+  Condition: majority_vote
+    balanced_accuracy: mean=0.8303, std=0.1647
+  Condition: confidence_weighted_vote
+    balanced_accuracy: mean=0.7869, std=0.1740
+--- Seed 31 ---
+  Condition: majority_vote
+    balanced_accuracy: mean=0.8281, std=0.1601
+  Condition: confidence_weighted_vote
+    balanced_accuracy: mean=0.7990, std=0.1525
+AGGREGATE METRICS ACROSS SEEDS
+Condition: majority_vote
+  Overall balanced_accuracy: 0.8344 +/- 0.1182
+Condition: confidence_weighted_vote
+  Overall balanced_accuracy: 0.7989 +/- 0.1279
+"""
+
+    per_seed, dispersion = _parse_seed_evidence(stdout, "balanced_accuracy")
+
+    assert per_seed == {
+        "7": {"majority_vote": 0.845, "confidence_weighted_vote": 0.8108},
+        "19": {"majority_vote": 0.8303, "confidence_weighted_vote": 0.7869},
+        "31": {"majority_vote": 0.8281, "confidence_weighted_vote": 0.799},
+    }
+    assert dispersion["majority_vote"]["mean"] == 0.8344
+    assert dispersion["majority_vote"]["std"] == pytest.approx(0.00750214784)
+    assert dispersion["confidence_weighted_vote"]["mean"] == 0.7989
+    assert dispersion["confidence_weighted_vote"]["std"] == pytest.approx(0.00975739036)
+
+
 def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> None:
     task = load_task()
     selected = tmp_path / "stage-13" / "experiment_v1"

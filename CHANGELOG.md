@@ -129,6 +129,10 @@ semantic versioning.
   `Condition '<name>': primary metric ...` summaries and condition-scoped
   `Seed <n>: ...` rows. Adapter-derived aggregates remain admissible only when
   every source value is present in the source-verified raw trace.
+- Formal seed-evidence parsing now accepts seed-scoped `Condition` blocks whose
+  metric is emitted on the following `primary_metric: mean=...` line. It derives
+  population cross-seed dispersion from the complete registered seed vector
+  instead of mistaking an across-cell spread for cross-seed uncertainty.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

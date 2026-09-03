@@ -302,7 +302,11 @@ the traced source values rather than expected to exist in the earlier raw parser
 Publication evidence retains primary-metric seed rows and descriptive dispersion;
 analysis, outline, and draft audits reject treating one pipeline run as
 statistical `N=1`, while exact reported dispersion is checked against the three
-registered seed values so a genuine zero remains admissible.
+registered seed values so a genuine zero remains admissible. If an executor
+emits seed-scoped condition blocks but labels its aggregate spread over cells,
+the adapter retains the aggregate mean and deterministically computes the
+population standard deviation over the complete registered seed vector; it does
+not relabel the differently scoped spread as cross-seed uncertainty.
 
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 

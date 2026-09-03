@@ -12,6 +12,7 @@ import argparse
 import ast
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -1480,6 +1481,11 @@ def _parse_seed_evidence(
         rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?)"
     )
+    scoped_seed_metric_pattern = re.compile(
+        rf"^\s*{re.escape(primary_metric)}\s*:\s*(?:mean\s*=\s*)?"
+        r"([-+]?\d+(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
     inline_dispersion_pattern = re.compile(
         rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*mean_{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?),\s*std\s*=\s*([-+]?\d+(?:\.\d+)?)"
@@ -1494,9 +1500,17 @@ def _parse_seed_evidence(
         rf"(?i)\bprimary\s+metric\s+{re.escape(primary_metric)}\s*[=:]\s*"
         r"([-+]?\d+(?:\.\d+)?)"
     )
+    overall_mean_pattern = re.compile(
+        rf"^\s*overall\s+{re.escape(primary_metric)}\s*:\s*"
+        r"([-+]?\d+(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
     cross_seed_std_pattern = re.compile(r"(?i)\bcross[- ]seed\s+std\s*:\s*([-+]?\d+(?:\.\d+)?)")
     dispersion: dict[str, dict[str, float]] = {}
     for line in stdout.splitlines():
+        if "aggregate metrics across seeds" in line.casefold():
+            current_seed = None
+
         for condition_pattern in condition_header_patterns:
             condition_match = condition_pattern.search(line)
             if condition_match:
@@ -1517,6 +1531,15 @@ def _parse_seed_evidence(
         metric_match = condition_metric_pattern.search(line)
         if metric_match and current_seed is not None:
             per_seed[current_seed][metric_match.group(1)] = float(metric_match.group(2))
+        scoped_seed_metric_match = scoped_seed_metric_pattern.search(line)
+        if (
+            scoped_seed_metric_match
+            and current_seed is not None
+            and current_condition is not None
+        ):
+            per_seed[current_seed][current_condition] = float(
+                scoped_seed_metric_match.group(1)
+            )
 
         dispersion_match = inline_dispersion_pattern.search(line)
         if dispersion_match:
@@ -1530,6 +1553,11 @@ def _parse_seed_evidence(
             continue
 
         if current_condition is not None:
+            overall_mean_match = overall_mean_pattern.search(line)
+            if overall_mean_match:
+                dispersion.setdefault(current_condition, {})["mean"] = float(
+                    overall_mean_match.group(1)
+                )
             mean_match = condition_mean_pattern.search(line)
             if mean_match:
                 dispersion.setdefault(current_condition, {})["mean"] = float(mean_match.group(1))
@@ -1538,6 +1566,23 @@ def _parse_seed_evidence(
                 dispersion.setdefault(current_condition, {})["std"] = float(
                     cross_seed_std_match.group(1)
                 )
+
+    values_by_condition: dict[str, list[float]] = {}
+    for seed_values in per_seed.values():
+        for condition, value in seed_values.items():
+            values_by_condition.setdefault(condition, []).append(value)
+    for condition, values in values_by_condition.items():
+        if not values:
+            continue
+        derived_mean = sum(values) / len(values)
+        observed = dispersion.setdefault(condition, {})
+        observed.setdefault("mean", derived_mean)
+        observed.setdefault(
+            "std",
+            math.sqrt(
+                sum((value - derived_mean) ** 2 for value in values) / len(values)
+            ),
+        )
     return per_seed, dispersion
 
 
