@@ -1621,7 +1621,8 @@ def _synthetic_claim_violations(text: str) -> list[str]:
     }
     corrective = re.compile(
         r"(?i)\b(?:does not|did not|no direct|not an? |rather than|incorrect|"
-        r"erroneous|future (?:empirical )?hypothesis|cannot be attributed)\b"
+        r"incorrectly|invalid|falsely|erroneous|superseded|without (?:a )?neural|"
+        r"future (?:empirical )?hypothesis|cannot be attributed)\b"
     )
     violations: set[str] = set()
     for line in text.splitlines():
@@ -1642,7 +1643,8 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
     corrective = re.compile(
         r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
         r"denotes (?:exactly )?one selected run|must not be reported as n\s*=\s*1|"
-        r"not statistical n\s*=\s*1|do not reproduce|never (?:emit|report|reproduce))\b"
+        r"not statistical n\s*=\s*1|not an? n\s*=\s*1|incorrect|falsely|preclude|"
+        r"superseded|do not reproduce|never (?:emit|report|reproduce))\b"
     )
     violations: set[str] = set()
     for line in text.splitlines():
