@@ -19,6 +19,7 @@ from scitaste.benchmark.study_adapter import (
     _guidance,
     _manuscript_structure_violations,
     _normalize_refinement_metrics,
+    _outline_with_evidence_checkpoint,
     _parse_seed_evidence,
     _prepare_stage_seven,
     _publication_asset_violations,
@@ -741,6 +742,41 @@ def test_consistency_audit_rejects_internal_identifier_and_false_failure_story()
             selected_run=selected,
             task=task,
         )
+
+
+def test_outline_checkpoint_materializes_missing_seed_table(tmp_path) -> None:
+    task = load_task()
+    selected_run = {
+        "metrics": {
+            "majority_vote": 0.0,
+            "confidence_weighted_vote": 0.0,
+            "position_aware_probe": 0.0,
+            "balanced_accuracy": 0.0,
+        },
+        "seed_ids": [7, 19, 31],
+        "per_seed_metrics": {
+            str(seed): {
+                "majority_vote": 0.0,
+                "confidence_weighted_vote": 0.0,
+                "position_aware_probe": 0.0,
+            }
+            for seed in (7, 19, 31)
+        },
+        "dispersion_metrics": {
+            "majority_vote": {"mean": 0.0, "std": 0.0},
+            "confidence_weighted_vote": {"mean": 0.0, "std": 0.0},
+            "position_aware_probe": {"mean": 0.0, "std": 0.0},
+        },
+    }
+    outline = "## Results\nA compact evidence table will be included in the manuscript.\n"
+
+    repaired, changed = _outline_with_evidence_checkpoint(outline, selected_run, task)
+    assert changed is True
+    assert "Primary metric — balanced accuracy: 0.000000" in repaired
+    assert "majority vote | 0.000000 | 0.000000 | 0.000000 | 0.000000 | 0.000000" in repaired
+    unchanged, changed = _outline_with_evidence_checkpoint(repaired, selected_run, task)
+    assert changed is False
+    assert unchanged == repaired
 
 
 def test_manuscript_gate_rejects_duplicate_sections_and_placeholders() -> None:

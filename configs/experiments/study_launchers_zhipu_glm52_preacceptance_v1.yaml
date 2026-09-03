@@ -13,6 +13,8 @@ launchers:
       - PEER_REVIEW
       - --max-output-tokens
       - "12288"
+      - --resume-from-stage
+      - PAPER_DRAFT
       - --reuse-existing
     gpu_count: 1
     timeout_seconds: 7200

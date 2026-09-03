@@ -215,6 +215,7 @@ def run_study_cell(
                                 "stage-16/outline.md",
                             ),
                         )
+                        _ensure_outline_evidence_checkpoint(upstream_run, task)
                         _validate_outline_artifact(upstream_run, task)
                     except (OSError, ValueError) as exc:
                         result = LauncherResult(
@@ -2517,6 +2518,50 @@ def _validate_outline_artifact(run_dir: Path, task: dict[str, Any]) -> dict[str,
         selected_run=selected_run,
         task=task,
     )
+
+
+def _ensure_outline_evidence_checkpoint(run_dir: Path, task: dict[str, Any]) -> bool:
+    """Append audited numeric evidence when an outline only promises a future table."""
+
+    outline_path = run_dir / "stage-16" / "outline.md"
+    if not outline_path.is_file():
+        raise ValueError("paper outline artifact is missing")
+    _, selected_run = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    outline = outline_path.read_text(encoding="utf-8", errors="replace")
+    repaired, changed = _outline_with_evidence_checkpoint(outline, selected_run, task)
+    if changed:
+        outline_path.write_text(repaired, encoding="utf-8")
+    return changed
+
+
+def _outline_with_evidence_checkpoint(
+    outline: str, selected_run: dict[str, Any], task: dict[str, Any]
+) -> tuple[str, bool]:
+    """Return an outline with source-verified numeric evidence materialized once."""
+
+    primary = str(task["benchmark"]["primary_metric"])
+    primary_value = selected_run.get("metrics", {}).get(primary)
+    metric_missing = isinstance(primary_value, (int, float)) and not _text_reports_metric(
+        outline, primary, float(primary_value)
+    )
+    evidence_missing = _seed_evidence_reporting_violations(outline, selected_run, task)
+    if not metric_missing and not evidence_missing:
+        return outline, False
+
+    checkpoint = [
+        "## Evidence checkpoint for drafting",
+        "",
+        (
+            "The manuscript must preserve the following audited measurements exactly; "
+            "this table reports observations rather than planned analyses."
+        ),
+    ]
+    if isinstance(primary_value, (int, float)):
+        checkpoint.extend(
+            ["", f"Primary metric — {_public_term(primary)}: {float(primary_value):.6f}."]
+        )
+    checkpoint.extend(["", _publication_evidence_matrix(selected_run)])
+    return outline.rstrip() + "\n\n" + "\n".join(checkpoint) + "\n", True
 
 
 def _artifact_consistency_audit(
