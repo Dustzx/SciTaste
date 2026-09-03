@@ -244,6 +244,15 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   Bailian returned provider code `Arrearage` on every request and recorded zero
   tokens. Online reruns are paused until the provider account returns to good
   standing; offline regression and artifact auditing remain available.
+  A separate pilot-scoped Zhipu GLM-5.2 Knowledge RAG cell then completed the
+  full experiment, analysis, drafting, packaging, and peer-review lifecycle at
+  117,429 cumulative wire tokens. Its first two passes correctly stopped when
+  the outline only promised a seed table and when the draft referenced a missing
+  image. Source-verified outline checkpointing and missing-local-image removal
+  now regression-test those provider-output forms. The final Markdown/TeX/PDF
+  package is cross-provider engineering evidence only: the gate-driven direct
+  continuation prevents duration comparison, 23 review concerns remain open,
+  and no GLM result is mixed into the registered Qwen comparison.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

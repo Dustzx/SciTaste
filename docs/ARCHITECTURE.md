@@ -332,6 +332,14 @@ requirement in generation and every repair prompt. Publication prompts consume
 a deterministic rendering of this audited matrix rather than inferring table
 structure from prose formatting.
 
+If a generated outline promises a seed table without actually containing its
+rows, the adapter appends a drafting checkpoint rendered from that same audited
+matrix before rerunning the consistency gate. This is deterministic evidence
+materialization, not a model-generated observation or a gate waiver. Likewise,
+a draft reference to a nonexistent local image is removed together with its
+adjacent caption rather than replaced by a fabricated asset. Existing local
+images remain intact, and remote or path-escaping targets remain inadmissible.
+
 The code-generation prompt continues to require the flat
 `SCITASTE_BENCHMARK_CONTRACT` declaration. For compatibility with upstream
 review-driven regeneration, the static gate may also read a literal nested

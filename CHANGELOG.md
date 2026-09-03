@@ -96,6 +96,8 @@ semantic versioning.
 - A canonical `SCITASTE_EVIDENCE_JSON` stdout record for generated formal
   experiments, with exact condition/seed keys and internally verified mean and
   population-standard-deviation values.
+- A pilot-scoped Zhipu GLM-5.2 matched-study protocol and launcher for
+  cross-provider preacceptance without contaminating the registered Qwen study.
 
 ### Changed
 
@@ -117,6 +119,10 @@ semantic versioning.
 
 - CI now initializes the pinned AutoResearchClaw submodule before running the
   substrate verification test.
+- Outlines that merely promise a later evidence table now receive a deterministic
+  checkpoint from the source-verified seed matrix before the draft gate; missing
+  local draft images and their adjacent captions are removed rather than
+  fabricated, while unsafe and remote image targets remain rejected.
 - Interrupted study runners terminate their isolated child process group so an
   orphan cannot contaminate a later attempt for the same cell.
 - Formal metric normalization now prefers complete successful execution evidence
