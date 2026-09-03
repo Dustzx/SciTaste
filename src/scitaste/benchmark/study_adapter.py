@@ -249,6 +249,9 @@ def run_study_cell(
                                 "stage-17/paper_draft.md",
                             ),
                         )
+                        _remove_missing_publication_images(
+                            upstream_run / "stage-17" / "paper_draft.md", upstream_run
+                        )
                         _validate_paper_draft_artifact(upstream_run, task)
                     except (OSError, ValueError) as exc:
                         result = LauncherResult(
@@ -2425,6 +2428,52 @@ def _publication_asset_violations(text: str, run_dir: Path) -> list[str]:
         if not any(path.is_file() for path in candidates):
             violations.add(f"missing-image:{target}")
     return sorted(violations)
+
+
+def _remove_missing_publication_images(path: Path, run_dir: Path) -> bool:
+    """Remove only unresolved local image markup and its adjacent caption."""
+
+    if not path.is_file():
+        raise ValueError("paper draft artifact is missing")
+    before = path.read_text(encoding="utf-8", errors="replace")
+    lines = before.splitlines()
+    repaired: list[str] = []
+    remove_caption = False
+    image_pattern = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+    for line in lines:
+        if remove_caption and re.match(r"(?i)^\s*(?:\*\*)?figure\s+\d+[.:]", line):
+            remove_caption = False
+            continue
+        remove_caption = False
+        matches = list(image_pattern.finditer(line))
+        missing: list[re.Match[str]] = []
+        for match in matches:
+            raw_target = match.group(1)
+            target = raw_target.strip().split(maxsplit=1)[0].strip("<>")
+            relative = Path(target)
+            if relative.is_absolute() or ".." in relative.parts:
+                continue
+            if re.match(r"(?i)https?://", target):
+                continue
+            candidates = [run_dir / "stage-17" / target, run_dir / target]
+            candidates.extend(stage / target for stage in run_dir.glob("stage-14*"))
+            if not any(candidate.is_file() for candidate in candidates):
+                missing.append(match)
+        if not missing:
+            repaired.append(line)
+            continue
+        replacement = line
+        for match in reversed(missing):
+            replacement = replacement[: match.start()] + replacement[match.end() :]
+        if replacement.strip():
+            repaired.append(replacement.rstrip())
+        else:
+            remove_caption = True
+    after = "\n".join(repaired).rstrip() + "\n"
+    if after == before:
+        return False
+    path.write_text(after, encoding="utf-8")
+    return True
 
 
 def _analysis_consistency_audit(

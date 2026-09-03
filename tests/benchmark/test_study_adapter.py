@@ -23,6 +23,7 @@ from scitaste.benchmark.study_adapter import (
     _parse_seed_evidence,
     _prepare_stage_seven,
     _publication_asset_violations,
+    _remove_missing_publication_images,
     _sanitize_publication_artifacts,
     _selected_experiment,
     _stage_completed,
@@ -805,6 +806,39 @@ def test_manuscript_gate_rejects_unregistered_citations_and_missing_images(tmp_p
     assert _publication_asset_violations(
         "![Framework](charts/framework_diagram.png)", tmp_path
     ) == ["missing-image:charts/framework_diagram.png"]
+
+
+def test_missing_publication_image_is_removed_without_fabricating_asset(tmp_path) -> None:
+    draft = tmp_path / "stage-17" / "paper_draft.md"
+    draft.parent.mkdir()
+    draft.write_text(
+        "## Method\n\n![Framework](charts/missing.png)\n"
+        "**Figure 1.** Planned framework.\n\nThe method remains described in prose.\n",
+        encoding="utf-8",
+    )
+
+    assert _remove_missing_publication_images(draft, tmp_path) is True
+    repaired = draft.read_text(encoding="utf-8")
+    assert "missing.png" not in repaired
+    assert "Figure 1" not in repaired
+    assert "The method remains described in prose." in repaired
+    assert _remove_missing_publication_images(draft, tmp_path) is False
+
+
+def test_publication_image_cleanup_preserves_existing_and_unsafe_targets(tmp_path) -> None:
+    existing = tmp_path / "stage-14" / "charts" / "observed.png"
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b"observed")
+    draft = tmp_path / "stage-17" / "paper_draft.md"
+    draft.parent.mkdir()
+    draft.write_text(
+        "![Observed](charts/observed.png)\n![Unsafe](../outside.png)\n",
+        encoding="utf-8",
+    )
+
+    assert _remove_missing_publication_images(draft, tmp_path) is False
+    assert "charts/observed.png" in draft.read_text(encoding="utf-8")
+    assert "../outside.png" in draft.read_text(encoding="utf-8")
 
 
 def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
