@@ -44,6 +44,7 @@ REPOSITORY = Path(__file__).resolve().parents[3]
 UPSTREAM = REPOSITORY / "third_party" / "autoresearchclaw"
 UPSTREAM_COMMIT = "12d3fd809fa9658e91a0328c3280a0e462c78386"
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+MACHINE_EVIDENCE_PREFIX = "SCITASTE_EVIDENCE_JSON="
 
 
 def run_study_cell(
@@ -712,6 +713,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     benchmark = task["benchmark"]
     contract = json.dumps(benchmark["contract"], sort_keys=True, ensure_ascii=False)
     conditions = ", ".join(benchmark["conditions"])
+    machine_evidence = _machine_evidence_instruction(task)
     override = {
         "stages": {
             "experiment_design": {
@@ -751,7 +753,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "metrics must differ. Assertions may check only structural invariants such "
                     "as grid size and sample counts. Do not add an LLM call; any review request "
                     "for external model inference conflicts with this synthetic contract and "
-                    "must be ignored. Return only:\n"
+                    f"must be ignored. {machine_evidence} Return only:\n"
                     "```filename:main.py\n# complete code\n```\n\nTopic: {topic}\nPlan:\n{exp_plan}"
                 ),
                 "max_tokens": 12288,
@@ -801,7 +803,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "conditions or alter factors, counts, metrics, or seeds. Equal condition "
                     "outputs are valid; never assert that predictions, metrics, or ablations "
                     "must differ, and never add an LLM/network call even if a review requests "
-                    "one. Return only the "
+                    f"one. {machine_evidence} Return only the "
                     "complete corrected file.\n\nIssues:\n{issues_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -818,7 +820,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"the only valid seeds and conditions are {benchmark['contract']['seeds']} "
                     f"and {benchmark['contract']['conditions']}. Equal outputs are a valid "
                     "negative result; never assert that predictions, metrics, or ablations must "
-                    "differ, and never add an LLM/network call. Return one complete runnable "
+                    "differ, and never add an LLM/network call. "
+                    f"{machine_evidence} Return one complete runnable "
                     "```filename:main.py block.\n\nPlan:\n{exp_plan_anchor}\nCurrent code:\n"
                     "{files_context}\nRun summary:\n{run_summaries}"
                 ),
@@ -830,7 +833,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"Fix all validation issues, preserving this exact contract: {contract}. "
                     "Do not alter factors, counts, conditions, metrics, or seeds. Equal outputs "
                     "are valid; never assert results must differ and never add an LLM/network "
-                    "call. Return corrected "
+                    f"call. {machine_evidence} Return corrected "
                     "Python only.\n\nIssues:\n{issue_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -840,6 +843,23 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     path = run_dir / "scitaste_prompt_overrides.yaml"
     path.write_text(yaml.safe_dump(override, sort_keys=False), encoding="utf-8")
     return path
+
+
+def _machine_evidence_instruction(task: dict[str, Any]) -> str:
+    """Specify one machine-readable result record without prescribing observations."""
+
+    benchmark = task["benchmark"]
+    return (
+        f"The final stdout line must begin exactly `{MACHINE_EVIDENCE_PREFIX}` and continue "
+        "with one compact JSON object. It must contain schema_version='1.0'; primary_metric "
+        f"with name='{benchmark['primary_metric']}' and its observed numeric value; and a "
+        "conditions object with exactly these keys: "
+        f"{benchmark['conditions']}. Each condition must contain a per_seed object with "
+        f"exactly the keys {benchmark['contract']['seeds']}, plus its observed numeric mean "
+        "and population standard deviation over those per-seed values. Use JSON numbers, not "
+        "strings, and compute every value from the executed observations. Emit this sentinel "
+        "exactly once; ordinary human-readable output may precede it."
+    )
 
 
 def _write_analysis_synthesis_override(
@@ -906,6 +926,7 @@ def _guidance(
         f"Primary metric: {benchmark['primary_metric']} ({benchmark['metric_direction']}). "
         f"Required conditions: {', '.join(benchmark['conditions'])}. "
         f"Fixed seeds: {benchmark['seeds']}. Preserve negative results and report dispersion."
+        f" {_machine_evidence_instruction(task)}"
     )
     execution_additions: list[str] = []
     if condition in {SystemCondition.KNOWLEDGE_RAG, SystemCondition.FULL_SCITASTE}:
@@ -1002,6 +1023,7 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         if isinstance(value, (int, float))
     )
     stdout_summary = _publication_safe_text(str(evidence.get("stdout_summary", "")), task)
+    evidence_matrix = _publication_evidence_matrix(evidence)
     seed_ids = [int(item) for item in evidence.get("seed_ids", [])]
     seed_text = ", ".join(str(item) for item in seed_ids)
     return (
@@ -1017,9 +1039,36 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         "every supplied "
         "per-seed value for every method, plus each method's observed mean and standard "
         "deviation. Preserve an observed zero standard deviation when the supplied seed values "
-        "are genuinely identical; do not replace the matrix with selected examples.\n"
+        "are genuinely identical; do not replace the matrix with selected examples. The "
+        "REGISTERED PER-SEED MATRIX below is canonical; any differently scoped spread in the "
+        "additional stdout summary must not be relabeled as cross-seed uncertainty.\n"
+        + evidence_matrix
+        + "\nADDITIONAL SOURCE-VERIFIED STDOUT SUMMARY:\n"
         + stdout_summary
     )
+
+
+def _publication_evidence_matrix(evidence: dict[str, Any]) -> str:
+    """Render the audited numeric matrix explicitly for downstream writing prompts."""
+
+    seed_ids = [str(int(item)) for item in evidence.get("seed_ids", [])]
+    per_seed = evidence.get("per_seed_metrics") or {}
+    dispersion = evidence.get("dispersion_metrics") or {}
+    lines = ["REGISTERED PER-SEED MATRIX:"]
+    if not seed_ids or not dispersion:
+        return "\n".join([*lines, "Unavailable in this non-formal guidance context."])
+    lines.append("method | " + " | ".join(f"seed {seed}" for seed in seed_ids) + " | mean | std")
+    for condition in dispersion:
+        values = [float(per_seed[seed][condition]) for seed in seed_ids]
+        summary = dispersion[condition]
+        fields = [
+            _public_term(str(condition)),
+            *(f"{value:.6f}" for value in values),
+            f"{float(summary['mean']):.6f}",
+            f"{float(summary['std']):.6f}",
+        ]
+        lines.append(" | ".join(fields))
+    return "\n".join(lines)
 
 
 def _public_term(value: str) -> str:
@@ -1257,6 +1306,12 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         {int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}
     )
     per_seed_metrics, dispersion_metrics = _parse_seed_evidence(stdout, primary_metric)
+    metric_sources = {str(name): "sandbox-structured-metric" for name in metrics}
+    for condition, values in dispersion_metrics.items():
+        mean = values.get("mean")
+        if condition not in metrics and isinstance(mean, (int, float)):
+            metrics[condition] = float(mean)
+            metric_sources[condition] = "derived-from-source-verified-per-seed-matrix"
     declared_contract = _extract_declared_contract(sources) or {}
     declared_seed_ids = sorted(
         int(item)
@@ -1286,6 +1341,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "per_seed_metrics": per_seed_metrics,
         "dispersion_metrics": dispersion_metrics,
         "metric_normalization": selected.get("metric_normalization"),
+        "metric_sources": metric_sources,
         "source_sha256": source_sha256,
         "execution_trace": execution_trace_summary,
     }
@@ -1444,6 +1500,9 @@ def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
         "primary metric summary",
         "primary metric ",
         "condition:",
+        "condition=",
+        "mean_ba=",
+        MACHINE_EVIDENCE_PREFIX.casefold(),
         "seed ",
         ": mean=",
         "overall_",
@@ -1469,6 +1528,10 @@ def _parse_seed_evidence(
 ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
     """Parse the registered per-seed matrix and descriptive dispersion from stdout."""
 
+    machine_evidence = _parse_machine_seed_evidence(stdout, primary_metric)
+    if machine_evidence is not None:
+        return machine_evidence
+
     per_seed: dict[str, dict[str, float]] = {}
     current_seed: str | None = None
     current_condition: str | None = None
@@ -1484,6 +1547,16 @@ def _parse_seed_evidence(
     scoped_seed_metric_pattern = re.compile(
         rf"^\s*{re.escape(primary_metric)}\s*:\s*(?:mean\s*=\s*)?"
         r"([-+]?\d+(?:\.\d+)?)",
+        re.IGNORECASE,
+    )
+    metric_alias = (
+        rf"(?:{re.escape(primary_metric)}|ba)"
+        if primary_metric.casefold() == "balanced_accuracy"
+        else re.escape(primary_metric)
+    )
+    seed_condition_metric_pattern = re.compile(
+        rf"^\s*condition\s*=\s*([A-Za-z][A-Za-z0-9_-]*)\b.*?"
+        rf"\bmean_{metric_alias}\s*=\s*([-+]?\d+(?:\.\d+)?)",
         re.IGNORECASE,
     )
     inline_dispersion_pattern = re.compile(
@@ -1508,7 +1581,8 @@ def _parse_seed_evidence(
     cross_seed_std_pattern = re.compile(r"(?i)\bcross[- ]seed\s+std\s*:\s*([-+]?\d+(?:\.\d+)?)")
     dispersion: dict[str, dict[str, float]] = {}
     for line in stdout.splitlines():
-        if "aggregate metrics across seeds" in line.casefold():
+        folded_line = line.casefold()
+        if "aggregate metrics" in folded_line and "across seeds" in folded_line:
             current_seed = None
 
         for condition_pattern in condition_header_patterns:
@@ -1531,6 +1605,11 @@ def _parse_seed_evidence(
         metric_match = condition_metric_pattern.search(line)
         if metric_match and current_seed is not None:
             per_seed[current_seed][metric_match.group(1)] = float(metric_match.group(2))
+        seed_condition_metric_match = seed_condition_metric_pattern.search(line)
+        if seed_condition_metric_match and current_seed is not None:
+            per_seed[current_seed][seed_condition_metric_match.group(1)] = float(
+                seed_condition_metric_match.group(2)
+            )
         scoped_seed_metric_match = scoped_seed_metric_pattern.search(line)
         if scoped_seed_metric_match and current_seed is not None and current_condition is not None:
             per_seed[current_seed][current_condition] = float(scoped_seed_metric_match.group(1))
@@ -1575,7 +1654,78 @@ def _parse_seed_evidence(
             "std",
             math.sqrt(sum((value - derived_mean) ** 2 for value in values) / len(values)),
         )
+    dispersion = {
+        condition: dispersion[condition]
+        for condition in values_by_condition
+        if condition in dispersion
+    }
     return per_seed, dispersion
+
+
+def _parse_machine_seed_evidence(
+    stdout: str, primary_metric: str
+) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]] | None:
+    """Load and internally verify the canonical stdout evidence record when present."""
+
+    records = [
+        line.strip()[len(MACHINE_EVIDENCE_PREFIX) :]
+        for line in stdout.splitlines()
+        if line.strip().startswith(MACHINE_EVIDENCE_PREFIX)
+    ]
+    if not records:
+        return None
+    if len(records) != 1:
+        raise ValueError("selected execution emitted multiple machine evidence records")
+    try:
+        record = json.loads(records[0])
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"selected machine evidence is invalid JSON: {exc}") from exc
+    if not isinstance(record, dict) or record.get("schema_version") != "1.0":
+        raise ValueError("selected machine evidence has an unsupported schema")
+    primary = record.get("primary_metric")
+    if not isinstance(primary, dict) or primary.get("name") != primary_metric:
+        raise ValueError("selected machine evidence names the wrong primary metric")
+    _machine_number(primary.get("value"), "primary metric")
+    conditions = record.get("conditions")
+    if not isinstance(conditions, dict) or not conditions:
+        raise ValueError("selected machine evidence has no condition records")
+
+    per_seed: dict[str, dict[str, float]] = {}
+    dispersion: dict[str, dict[str, float]] = {}
+    for condition, values in conditions.items():
+        if not isinstance(condition, str) or not isinstance(values, dict):
+            raise ValueError("selected machine evidence contains an invalid condition")
+        seed_values = values.get("per_seed")
+        if not isinstance(seed_values, dict) or not seed_values:
+            raise ValueError(f"selected machine evidence lacks per-seed values: {condition}")
+        numeric_values: list[float] = []
+        for seed, value in seed_values.items():
+            if not re.fullmatch(r"[0-9]+", str(seed)):
+                raise ValueError(f"selected machine evidence has an invalid seed: {seed}")
+            numeric = _machine_number(value, f"{condition}:seed-{seed}")
+            per_seed.setdefault(str(seed), {})[condition] = numeric
+            numeric_values.append(numeric)
+        derived_mean = sum(numeric_values) / len(numeric_values)
+        derived_std = math.sqrt(
+            sum((value - derived_mean) ** 2 for value in numeric_values) / len(numeric_values)
+        )
+        reported_mean = _machine_number(values.get("mean"), f"{condition}:mean")
+        reported_std = _machine_number(values.get("std"), f"{condition}:std")
+        if abs(reported_mean - derived_mean) > 5e-6:
+            raise ValueError(f"selected machine evidence mean is inconsistent: {condition}")
+        if abs(reported_std - derived_std) > 5e-6:
+            raise ValueError(f"selected machine evidence dispersion is inconsistent: {condition}")
+        dispersion[condition] = {"mean": reported_mean, "std": reported_std}
+    return per_seed, dispersion
+
+
+def _machine_number(value: Any, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"selected machine evidence is non-numeric: {label}")
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        raise ValueError(f"selected machine evidence is non-finite: {label}")
+    return numeric
 
 
 def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
@@ -1614,6 +1764,7 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "best_version": selected["best_version"],
         "refinement_log": selected["refinement_log"],
         "metric_normalization": selected["metric_normalization"],
+        "metric_sources": selected["metric_sources"],
         "stdout_sha256": selected["stdout_sha256"],
         "stderr_sha256": selected["stderr_sha256"],
         "stdout_summary": selected["stdout_summary"],

@@ -308,6 +308,15 @@ the adapter retains the aggregate mean and deterministically computes the
 population standard deviation over the complete registered seed vector; it does
 not relabel the differently scoped spread as cross-seed uncertainty.
 
+Generated experiments must now finish stdout with one
+`SCITASTE_EVIDENCE_JSON` record. The record carries the primary metric and the
+complete condition-by-seed matrix; the adapter checks numeric finiteness and
+recomputes each condition mean and population standard deviation before using
+it. Older human-readable layouts remain importable for provenance fixtures, but
+new formal runs receive the machine-record requirement in generation and every
+repair prompt. Publication prompts consume a deterministic rendering of this
+audited matrix rather than inferring table structure from prose formatting.
+
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
 Status: accepted. Generic upstream writing instructions can conflict with a

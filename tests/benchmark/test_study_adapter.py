@@ -241,6 +241,7 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "numpy.random.default_rng" in design
     assert "never assert that condition outputs" in code
     assert "Do not add an LLM call" in code
+    assert "SCITASTE_EVIDENCE_JSON=" in code
     paper_system = override["stages"]["paper_draft"]["system"]
     assert "three times for disjoint section batches" in paper_system
     assert "never invent numeric citations" in paper_system.casefold()
@@ -249,6 +250,7 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "[7, 19, 31]" in improve
     assert "do not add, remove, rename" in improve
     assert "Equal outputs are a valid" in improve
+    assert "SCITASTE_EVIDENCE_JSON=" in improve
     decision = override["stages"]["research_decision"]["user"]
     assert "write exactly PROCEED" in decision
     assert "future work" in decision
@@ -864,6 +866,80 @@ Condition: confidence_weighted_vote
     assert dispersion["majority_vote"]["std"] == pytest.approx(0.00750214784)
     assert dispersion["confidence_weighted_vote"]["mean"] == 0.7989
     assert dispersion["confidence_weighted_vote"]["std"] == pytest.approx(0.00975739036)
+
+
+def test_seed_evidence_parser_handles_condition_assignments_under_seed_blocks() -> None:
+    stdout = """[Seed 7] balanced_accuracy = 0.80
+Seed 7:
+  condition=majority_vote mean_ba=0.77 std=0.2
+  condition=confidence_weighted_vote mean_ba=0.89 std=0.1
+Seed 19:
+  condition=majority_vote mean_ba=0.75 std=0.2
+  condition=confidence_weighted_vote mean_ba=0.93 std=0.1
+Seed 31:
+  condition=majority_vote mean_ba=0.76 std=0.2
+  condition=confidence_weighted_vote mean_ba=0.91 std=0.1
+AGGREGATE METRICS (across seeds)
+  condition           : partial_eta^2 = 0.42
+Primary metric balanced_accuracy: 0.81
+"""
+
+    per_seed, dispersion = _parse_seed_evidence(stdout, "balanced_accuracy")
+
+    assert per_seed["19"] == {
+        "majority_vote": 0.75,
+        "confidence_weighted_vote": 0.93,
+    }
+    assert dispersion["majority_vote"] == pytest.approx({"mean": 0.76, "std": 0.00816496581})
+    assert dispersion["confidence_weighted_vote"] == pytest.approx(
+        {"mean": 0.91, "std": 0.01632993162}
+    )
+    assert "partial_eta" not in dispersion
+
+
+def test_seed_evidence_parser_prefers_verified_machine_record() -> None:
+    payload = {
+        "schema_version": "1.0",
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.75},
+        "conditions": {
+            "majority_vote": {
+                "per_seed": {"7": 0.7, "19": 0.7, "31": 0.7},
+                "mean": 0.7,
+                "std": 0.0,
+            },
+            "confidence_weighted_vote": {
+                "per_seed": {"7": 0.7, "19": 0.8, "31": 0.9},
+                "mean": 0.8,
+                "std": 0.08165,
+            },
+        },
+    }
+    stdout = "Seed 7: bad_condition: balanced_accuracy=0.1\nSCITASTE_EVIDENCE_JSON=" + json.dumps(
+        payload, separators=(",", ":")
+    )
+
+    per_seed, dispersion = _parse_seed_evidence(stdout, "balanced_accuracy")
+
+    assert "bad_condition" not in per_seed["7"]
+    assert per_seed["31"]["confidence_weighted_vote"] == 0.9
+    assert dispersion["majority_vote"] == {"mean": 0.7, "std": 0.0}
+
+
+def test_seed_evidence_parser_rejects_inconsistent_machine_record() -> None:
+    payload = {
+        "schema_version": "1.0",
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.7},
+        "conditions": {
+            "majority_vote": {
+                "per_seed": {"7": 0.6, "19": 0.7, "31": 0.8},
+                "mean": 0.1,
+                "std": 0.0,
+            }
+        },
+    }
+
+    with pytest.raises(ValueError, match="mean is inconsistent"):
+        _parse_seed_evidence("SCITASTE_EVIDENCE_JSON=" + json.dumps(payload), "balanced_accuracy")
 
 
 def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> None:

@@ -93,6 +93,9 @@ semantic versioning.
 - A deterministic offline manuscript packager that emits Markdown, standalone
   TeX, bibliography, copied figure assets, a build record, and PDF when XeLaTeX
   is available, without an additional model call.
+- A canonical `SCITASTE_EVIDENCE_JSON` stdout record for generated formal
+  experiments, with exact condition/seed keys and internally verified mean and
+  population-standard-deviation values.
 
 ### Changed
 
@@ -133,6 +136,10 @@ semantic versioning.
   metric is emitted on the following `primary_metric: mean=...` line. It derives
   population cross-seed dispersion from the complete registered seed vector
   instead of mistaking an across-cell spread for cross-seed uncertainty.
+- Legacy formal outputs using `condition=<name> mean_ba=<value>` rows are parsed
+  under their enclosing seed blocks. Evidence fields lacking a complete seed
+  vector are excluded, preventing similarly named factor-effect rows from being
+  promoted to registered methods.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.
