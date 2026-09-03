@@ -285,4 +285,7 @@ replaced in prose with before/after hashes retained in a sanitization log. The
 evidence contract also distinguishes CPU synthetic simulation from neural-model
 inference; the gate rejects affirmative model-result claims while allowing
 explicit limitations and corrections that deny such inference. This compatibility
-logic remains outside the pinned AutoResearchClaw submodule.
+logic remains outside the pinned AutoResearchClaw submodule. A process-local
+sandbox wrapper additionally records the exact return code, metrics, bounded raw
+output, output hashes, and executed-source hashes before upstream compaction. A
+successful post-repair result without this source-verified trace is inadmissible.

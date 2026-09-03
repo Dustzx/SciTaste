@@ -2,12 +2,78 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+
+_TRACE_EXCERPT_CHARS = 262_144
+
+
+def _bounded_excerpt(value: str) -> tuple[str, bool]:
+    if len(value) <= _TRACE_EXCERPT_CHARS * 2:
+        return value, False
+    omitted = len(value) - (_TRACE_EXCERPT_CHARS * 2)
+    return (
+        value[:_TRACE_EXCERPT_CHARS]
+        + f"\n... [SciTaste trace omitted {omitted} characters] ...\n"
+        + value[-_TRACE_EXCERPT_CHARS:],
+        True,
+    )
+
+
+def _install_sandbox_trace() -> None:
+    """Persist the exact successful runtime result that upstream may summarize away."""
+
+    from researchclaw.experiment.sandbox import ExperimentSandbox
+
+    upstream_run_project = ExperimentSandbox.run_project
+    if getattr(upstream_run_project, "_scitaste_traced", False):
+        return
+
+    def traced_run_project(self, project_dir, *args, **kwargs):
+        project = Path(project_dir).resolve()
+        source_sha256 = {
+            path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(project.rglob("*"))
+            if path.is_file() and not path.is_symlink()
+        }
+        result = upstream_run_project(self, project_dir, *args, **kwargs)
+        stdout = str(getattr(result, "stdout", "") or "")
+        stderr = str(getattr(result, "stderr", "") or "")
+        stdout_excerpt, stdout_truncated = _bounded_excerpt(stdout)
+        stderr_excerpt, stderr_truncated = _bounded_excerpt(stderr)
+        payload = {
+            "schema_version": "1.0",
+            "method": "process-local-sandbox-result-trace-v1",
+            "returncode": int(getattr(result, "returncode", -1)),
+            "timed_out": bool(getattr(result, "timed_out", False)),
+            "elapsed_sec": float(getattr(result, "elapsed_sec", 0.0)),
+            "metrics": getattr(result, "metrics", {}) or {},
+            "project_source_sha256": source_sha256,
+            "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
+            "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest(),
+            "stdout_bytes": len(stdout.encode()),
+            "stderr_bytes": len(stderr.encode()),
+            "stdout_excerpt": stdout_excerpt,
+            "stderr_excerpt": stderr_excerpt,
+            "stdout_truncated": stdout_truncated,
+            "stderr_truncated": stderr_truncated,
+        }
+        destination = Path(self.workdir) / "scitaste_execution_trace.json"
+        temporary = destination.with_suffix(".json.tmp")
+        temporary.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temporary, destination)
+        return result
+
+    traced_run_project._scitaste_traced = True
+    ExperimentSandbox.run_project = traced_run_project
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -16,6 +82,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     raw_limit = os.environ.get("SCITASTE_ARC_MAX_OUTPUT_TOKENS", "")
     raw_total_limit = os.environ.get("SCITASTE_ARC_MAX_TOTAL_TOKENS", "")
     telemetry_path = os.environ.get("SCITASTE_ARC_TELEMETRY_PATH", "")
+    if os.environ.get("SCITASTE_ARC_TRACE_SANDBOX", "").casefold() in {"1", "true", "yes"}:
+        _install_sandbox_trace()
     if os.environ.get("SCITASTE_ARC_OFFLINE", "").casefold() in {"1", "true", "yes"}:
         from researchclaw.literature import search as literature_search
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import pprint
 
@@ -20,6 +21,7 @@ from scitaste.benchmark.study_adapter import (
     _stage_completed,
     _usage,
     _validate_paper_draft_artifact,
+    _validate_selected_experiment,
     _write_analysis_synthesis_override,
     _write_prompt_overrides,
     _write_selected_experiment_evidence,
@@ -628,6 +630,79 @@ def test_selected_experiment_evidence_preserves_successful_stdout(tmp_path) -> N
     assert evidence["registered_metrics"]["balanced_accuracy"] == 0.75
     assert "Seed 7" in evidence["stdout_summary"]
     assert (tmp_path / "scitaste_selected_experiment_evidence.json").is_file()
+
+
+def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> None:
+    task = load_task()
+    selected = tmp_path / "stage-13" / "experiment_v1"
+    selected.mkdir(parents=True)
+    source = selected / "main.py"
+    source.write_text(
+        "SCITASTE_BENCHMARK_CONTRACT = " + pprint.pformat(task["benchmark"]["contract"]) + "\n",
+        encoding="utf-8",
+    )
+    metrics = {
+        "majority_vote": 0.7,
+        "confidence_weighted_vote": 0.8,
+        "position_aware_probe": 0.75,
+        "balanced_accuracy": 0.75,
+    }
+    refinement = {
+        "best_version": "experiment_v1/",
+        "iterations": [
+            {
+                "iteration": 1,
+                "version_dir": "experiment_v1/",
+                "metric": 0.75,
+                "sandbox": {"returncode": 1, "metrics": {}, "stdout": "failed"},
+                "sandbox_after_fix": {
+                    "returncode": 0,
+                    "timed_out": False,
+                    "elapsed_sec": 1.25,
+                    "metrics": metrics,
+                },
+            }
+        ],
+    }
+    log_path = tmp_path / "stage-13" / "refinement_log.json"
+    log_path.write_text(json.dumps(refinement), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="lacks an exact sandbox trace"):
+        _write_selected_experiment_evidence(tmp_path, task)
+
+    trace_dir = tmp_path / "stage-13" / "refine_sandbox_v1_fix"
+    trace_dir.mkdir()
+    stdout = "Seed 7\nSeed 19\nSeed 31\nbalanced_accuracy: 0.75\n"
+    trace = {
+        "schema_version": "1.0",
+        "method": "process-local-sandbox-result-trace-v1",
+        "returncode": 0,
+        "timed_out": False,
+        "elapsed_sec": 1.25,
+        "metrics": metrics,
+        "project_source_sha256": {"main.py": hashlib.sha256(source.read_bytes()).hexdigest()},
+        "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
+        "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+        "stdout_bytes": len(stdout.encode()),
+        "stderr_bytes": 0,
+        "stdout_excerpt": stdout,
+        "stderr_excerpt": "",
+        "stdout_truncated": False,
+        "stderr_truncated": False,
+    }
+    trace_path = trace_dir / "scitaste_execution_trace.json"
+    trace_path.write_text(json.dumps(trace), encoding="utf-8")
+
+    evidence = _write_selected_experiment_evidence(tmp_path, task)
+    _validate_selected_experiment(tmp_path, task)
+
+    assert evidence["seed_ids"] == [7, 19, 31]
+    assert evidence["stdout_observed_seed_ids"] == [7, 19, 31]
+    assert evidence["stdout_sha256"] == hashlib.sha256(stdout.encode()).hexdigest()
+    assert evidence["execution_trace"]["path"] == (
+        "stage-13/refine_sandbox_v1_fix/scitaste_execution_trace.json"
+    )
+    assert evidence["execution_trace"]["source_verified"] is True
 
 
 def test_artifact_audit_rejects_failed_selected_experiment(tmp_path) -> None:

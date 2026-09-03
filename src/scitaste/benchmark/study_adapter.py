@@ -97,6 +97,7 @@ def run_study_cell(
     environment["SCITASTE_ARC_TELEMETRY_PATH"] = str(telemetry_path)
     environment["SCITASTE_ARC_DISABLE_THINKING"] = "1"
     environment["SCITASTE_ARC_OFFLINE"] = "1"
+    environment["SCITASTE_ARC_TRACE_SANDBOX"] = "1"
 
     def upstream_command(from_stage: str, through_stage: str) -> list[str]:
         return [
@@ -1053,6 +1054,10 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
     sandbox = _best_successful_sandbox(rich_selected) or compact_sandbox
     if sandbox is None:
         raise ValueError("selected refined experiment did not exit successfully")
+    sandbox_key = next(
+        (key for key in ("sandbox_after_fix", "sandbox") if rich_selected.get(key) is sandbox),
+        "sandbox",
+    )
     metrics = dict(sandbox.get("metrics") or {})
     if compact_sandbox is not None:
         metrics.update(compact_sandbox.get("metrics") or {})
@@ -1066,6 +1071,53 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         raise ValueError("selected refined experiment source is missing")
     stdout = str(sandbox.get("stdout", ""))
     stderr = str(sandbox.get("stderr", ""))
+    execution_trace = _selected_execution_trace(
+        run_dir=run_dir,
+        log_path=log_path,
+        iteration=rich_selected,
+        sandbox_key=sandbox_key,
+        sandbox=sandbox,
+        source_dir=source_dir,
+        sources=sources,
+    )
+    if execution_trace is not None:
+        stdout = str(execution_trace.get("stdout_excerpt", ""))
+        stderr = str(execution_trace.get("stderr_excerpt", ""))
+        stdout_sha256 = str(execution_trace["stdout_sha256"])
+        stderr_sha256 = str(execution_trace["stderr_sha256"])
+        execution_trace_summary: dict[str, Any] | None = {
+            "path": execution_trace["relative_path"],
+            "sha256": execution_trace["trace_sha256"],
+            "sandbox_record": sandbox_key,
+            "iteration": int(rich_selected.get("iteration", 0) or 0),
+            "stdout_bytes": execution_trace["stdout_bytes"],
+            "stderr_bytes": execution_trace["stderr_bytes"],
+            "stdout_truncated": execution_trace["stdout_truncated"],
+            "stderr_truncated": execution_trace["stderr_truncated"],
+            "source_verified": True,
+        }
+    else:
+        if sandbox_key == "sandbox_after_fix" and not stdout:
+            raise ValueError("successful post-repair execution lacks an exact sandbox trace")
+        stdout_sha256 = hashlib.sha256(stdout.encode()).hexdigest()
+        stderr_sha256 = hashlib.sha256(stderr.encode()).hexdigest()
+        execution_trace_summary = None
+    stdout_seed_ids = sorted(
+        {int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}
+    )
+    declared_contract = _extract_declared_contract(sources) or {}
+    declared_seed_ids = sorted(
+        int(item)
+        for item in declared_contract.get("seeds", [])
+        if isinstance(item, int) and not isinstance(item, bool)
+    )
+    unexpected_seed_ids = sorted(set(stdout_seed_ids) - set(declared_seed_ids))
+    if declared_seed_ids and unexpected_seed_ids:
+        raise ValueError(
+            "selected execution reports seeds outside its declared contract: "
+            + ", ".join(str(item) for item in unexpected_seed_ids)
+        )
+    source_sha256 = {str(path.relative_to(run_dir)): _sha256(path) for path in sources}
     return sources, {
         "refinement_log": str(log_path.relative_to(run_dir)),
         "best_version": best_version,
@@ -1074,12 +1126,90 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "elapsed_sec": sandbox.get("elapsed_sec"),
         "returncode": int(sandbox.get("returncode", 1)),
         "timed_out": bool(sandbox.get("timed_out", False)),
-        "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
-        "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest(),
+        "stdout_sha256": stdout_sha256,
+        "stderr_sha256": stderr_sha256,
         "stdout_summary": _selected_stdout_summary(stdout),
-        "seed_ids": sorted({int(item) for item in re.findall(r"(?im)\bseed\s+([0-9]+)\b", stdout)}),
+        "seed_ids": declared_seed_ids or stdout_seed_ids,
+        "stdout_observed_seed_ids": stdout_seed_ids,
         "metric_normalization": selected.get("metric_normalization"),
-        "source_sha256": {str(path.relative_to(run_dir)): _sha256(path) for path in sources},
+        "source_sha256": source_sha256,
+        "execution_trace": execution_trace_summary,
+    }
+
+
+def _selected_execution_trace(
+    *,
+    run_dir: Path,
+    log_path: Path,
+    iteration: dict[str, Any],
+    sandbox_key: str,
+    sandbox: dict[str, Any],
+    source_dir: Path,
+    sources: list[Path],
+) -> dict[str, Any] | None:
+    """Load and verify the process-local trace for the selected sandbox execution."""
+
+    iteration_number = int(iteration.get("iteration", 0) or 0)
+    if iteration_number <= 0:
+        return None
+    suffix = "_fix" if sandbox_key == "sandbox_after_fix" else ""
+    trace_path = (
+        log_path.parent
+        / f"refine_sandbox_v{iteration_number}{suffix}"
+        / "scitaste_execution_trace.json"
+    )
+    if not trace_path.is_file():
+        return None
+    try:
+        trace = json.loads(trace_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"selected sandbox trace is unreadable: {exc}") from exc
+    if int(trace.get("returncode", -1)) != int(sandbox.get("returncode", 1)):
+        raise ValueError("selected sandbox trace return code does not match refinement log")
+    if bool(trace.get("timed_out", False)) != bool(sandbox.get("timed_out", False)):
+        raise ValueError("selected sandbox trace timeout status does not match refinement log")
+    trace_metrics = trace.get("metrics") or {}
+    for name, value in (sandbox.get("metrics") or {}).items():
+        if name not in trace_metrics:
+            raise ValueError(f"selected sandbox trace metric is missing: {name}")
+        traced_value = trace_metrics.get(name)
+        if isinstance(value, (int, float)):
+            try:
+                matches = abs(float(value) - float(traced_value)) <= 1e-9
+            except (TypeError, ValueError):
+                matches = False
+            if not matches:
+                raise ValueError(f"selected sandbox trace metric does not match: {name}")
+    expected_sources = {path.relative_to(source_dir).as_posix(): _sha256(path) for path in sources}
+    traced_sources = trace.get("project_source_sha256") or {}
+    mismatched_sources = sorted(
+        name for name, digest in expected_sources.items() if traced_sources.get(name) != digest
+    )
+    if mismatched_sources:
+        raise ValueError(
+            "selected sandbox trace source does not match: " + ", ".join(mismatched_sources)
+        )
+    required = (
+        "stdout_sha256",
+        "stderr_sha256",
+        "stdout_bytes",
+        "stderr_bytes",
+        "stdout_truncated",
+        "stderr_truncated",
+    )
+    missing = [name for name in required if name not in trace]
+    if missing:
+        raise ValueError("selected sandbox trace fields are missing: " + ", ".join(missing))
+    if not trace["stdout_truncated"]:
+        stdout = str(trace.get("stdout_excerpt", ""))
+        if len(stdout.encode()) != int(trace["stdout_bytes"]):
+            raise ValueError("selected sandbox trace stdout byte count does not match")
+        if hashlib.sha256(stdout.encode()).hexdigest() != trace["stdout_sha256"]:
+            raise ValueError("selected sandbox trace stdout hash does not match")
+    return {
+        **trace,
+        "relative_path": trace_path.relative_to(run_dir).as_posix(),
+        "trace_sha256": _sha256(trace_path),
     }
 
 
@@ -1166,7 +1296,9 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "stderr_sha256": selected["stderr_sha256"],
         "stdout_summary": selected["stdout_summary"],
         "seed_ids": selected["seed_ids"],
+        "stdout_observed_seed_ids": selected["stdout_observed_seed_ids"],
         "source_sha256": selected["source_sha256"],
+        "execution_trace": selected["execution_trace"],
     }
     path = run_dir / "scitaste_selected_experiment_evidence.json"
     path.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -1285,10 +1417,15 @@ def _normalize_refinement_metrics(
 
 
 def _validate_selected_experiment(run_dir: Path, task: dict[str, Any]) -> None:
-    sources, _ = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    sources, selected = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
     observed = _extract_declared_contract(sources)
     if not _contract_matches(observed, task["benchmark"]["contract"]):
         raise ValueError("selected experiment does not preserve the frozen benchmark contract")
+    if selected["execution_trace"] is None:
+        raise ValueError("selected experiment lacks a source-verified sandbox trace")
+    expected_seeds = sorted(int(item) for item in task["benchmark"]["contract"].get("seeds", []))
+    if selected["seed_ids"] != expected_seeds:
+        raise ValueError("selected experiment does not preserve the registered seed set")
     forbidden_network = re.compile(
         r"(?i)(https?://|\brequests\.|urllib\.request|load_dataset\s*\(|download\s*\()"
     )
