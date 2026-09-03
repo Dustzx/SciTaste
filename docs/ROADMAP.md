@@ -239,6 +239,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   because `collapsing the data into an N=1 ... summary is prohibited` was read as
   an affirmative collapse. Explicitly prohibited, forbidden, rejected, and
   avoided summaries are now corrective language; bare N=1 remains inadmissible.
+  Current code replays v11 analysis/outline and v12/v14 analysis through their
+  corrected gates. A fifteenth clean attempt could not start model work because
+  Bailian returned provider code `Arrearage` on every request and recorded zero
+  tokens. Online reruns are paused until the provider account returns to good
+  standing; offline regression and artifact auditing remain available.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
