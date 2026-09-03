@@ -218,6 +218,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   prompt used by initial generation, code-review fixes, and alignment
   regeneration. The scattered-value output remains rejected rather than being
   retrospectively inferred as compliant.
+  A tenth single-cell attempt verified that the regeneration-safe prompt retains
+  the canonical declaration and produced a valid 3×3 machine matrix, but the
+  free-text seed scanner mistook `Total/seed: 648` for an identifier. Explicit
+  seed-row parsing now replays that experiment gate at a derived aggregate of
+  0.8069381276; the original run remains failed and was not resumed.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

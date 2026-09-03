@@ -984,6 +984,7 @@ Primary metric balanced_accuracy: 0.81
 
 def test_seed_evidence_parser_handles_bracketed_condition_seed_assignments() -> None:
     stdout = """Grid size: 54, Examples per cell: 12, Total per seed: 648
+Grid cells: 54, Examples/cell: 12, Total/seed: 648
 [majority_vote] seed=7 balanced_accuracy=0.81
 [confidence_weighted_vote] seed: 7 balanced_accuracy=0.82
 [majority_vote] seed=19 balanced_accuracy=0.83

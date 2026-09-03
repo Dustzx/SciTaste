@@ -157,8 +157,9 @@ semantic versioning.
   remains preferred, and any changed registered field is still rejected.
 - Independent stdout seed-coverage validation now recognizes `seed=<id>` and
   `seed: <id>` condition rows while excluding aggregate phrases such as
-  `examples per seed: 648`; machine evidence still supplies the authoritative
-  condition-by-seed values.
+  `examples per seed: 648` and `Total/seed: 648`. Identification is restricted
+  to explicit seed rows instead of scanning arbitrary prose; machine evidence
+  still supplies the authoritative condition-by-seed values.
 - The immutable contract literal and canonical machine-evidence requirement now
   live in the Stage 10 system prompt as well as its initial user prompt. Upstream
   code-review fixes and topic-alignment regeneration therefore receive the same

@@ -347,6 +347,11 @@ the observed identifier set is compared with the registered seeds. The machine
 record remains the value authority, while the independent rendering check makes
 omitted or misleading stdout visible.
 
+Seed discovery is line-shaped rather than a free-text search: accepted rows
+start with a seed header or with a bracketed registered condition followed by a
+seed assignment. This excludes sample-count summaries such as `Total/seed: 648`
+without maintaining an open-ended list of prose exceptions.
+
 AutoResearchClaw's Stage 10 can replace an initially compliant file after code
 review or topic-alignment review. Those regeneration branches reuse the stage
 system prompt but construct a new user prompt. SciTaste therefore repeats the
