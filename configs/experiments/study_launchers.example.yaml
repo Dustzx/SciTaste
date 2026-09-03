@@ -1,0 +1,34 @@
+schema_version: "1.0"
+launchers:
+  autoresearchclaw:
+    command:
+      - replace-with-autoresearchclaw-study-adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+    gpu_count: 1
+  knowledge_rag:
+    command:
+      - replace-with-knowledge-rag-study-adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+    gpu_count: 1
+  taste_library:
+    command:
+      - replace-with-taste-library-study-adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+    gpu_count: 1
+  full_scitaste:
+    command:
+      - replace-with-full-scitaste-study-adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+    gpu_count: 1

@@ -95,6 +95,10 @@ returns observations and artifacts but cannot select the next global action.
     plan metadata, never silent substitutions.
 31. A local-model backend may load only an explicitly configured local path; it
     cannot download a checkpoint or silently replace the pinned model revision.
+32. Study adapters run without a shell in isolated cell directories; successful
+    results require complete counters and runner-hashed in-cell artifacts.
+33. Pilot protocols can validate execution mechanics but can never produce
+    headline-eligible evidence.
 
 ## Architecture decision records
 
@@ -223,3 +227,14 @@ checkpoint path is explicit, network download is disabled, greedy decoding is
 used for repeatability, and the reported model identity includes its upstream
 revision. This makes one-GPU feasibility testing possible without coupling
 Transformers or Qwen internals to the controller, state, or executor layers.
+
+### ADR-018: External systems communicate through a cell result contract
+
+Status: accepted. Matched-system execution is subprocess-based rather than
+implemented inside the evaluator. Each condition receives the same serialized
+cell/task/model/search/budget request and must emit a typed result with real
+resource counters, outcomes, and artifact paths. The runner owns wall/GPU
+allocation measurement, process-group timeout, path containment, content hashes,
+and atomic resume state. This contract applies equally to first-party conditions
+and future Sibyl or AI Scientist-v2 adapters, so no external framework internals
+enter SciTaste's controller or evaluation schema.

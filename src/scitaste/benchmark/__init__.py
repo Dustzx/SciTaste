@@ -21,11 +21,18 @@ from scitaste.benchmark.study import (
     save_study_plan,
     save_study_report,
 )
+from scitaste.benchmark.study_execution import (
+    MatchedStudyRunner,
+    StudyLaunchConfig,
+    StudyRunSummary,
+    load_study_launch_config,
+)
 from scitaste.benchmark.study_models import (
     MatchedStudyProtocol,
     MatchedStudyReport,
     StudyPlan,
     StudyResults,
+    StudyScope,
     StudyStatus,
     SystemCondition,
 )
@@ -39,13 +46,18 @@ __all__ = [
     "MatchedStudyPlanner",
     "MatchedStudyProtocol",
     "MatchedStudyReport",
+    "MatchedStudyRunner",
     "SciTasteBenchRunner",
+    "StudyLaunchConfig",
     "StudyPlan",
     "StudyResults",
+    "StudyRunSummary",
+    "StudyScope",
     "StudyStatus",
     "SystemCondition",
     "TransferAxis",
     "load_benchmark_suite",
+    "load_study_launch_config",
     "load_study_protocol",
     "load_study_results",
     "save_benchmark_report",

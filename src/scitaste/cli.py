@@ -24,8 +24,11 @@ from scitaste.benchmark import (
     BenchmarkCondition,
     MatchedStudyEvaluator,
     MatchedStudyPlanner,
+    MatchedStudyRunner,
     SciTasteBenchRunner,
+    SystemCondition,
     load_benchmark_suite,
+    load_study_launch_config,
     load_study_protocol,
     load_study_results,
     save_benchmark_report,
@@ -233,6 +236,26 @@ def build_parser() -> argparse.ArgumentParser:
     study_plan = study_commands.add_parser("plan", help="Create a deterministic run matrix")
     _add_common_options(study_plan, default_output="outputs/matched-study", default_backend="local")
     study_plan.set_defaults(handler=_handle_study_plan)
+    study_run = study_commands.add_parser(
+        "run", help="Run isolated study cells through configured system launchers"
+    )
+    _add_common_options(
+        study_run,
+        default_output="outputs/matched-study-run",
+        default_backend="local",
+    )
+    study_run.add_argument("--launch-config", type=Path, required=True)
+    study_run.add_argument("--task", action="append", default=None)
+    study_run.add_argument(
+        "--condition",
+        action="append",
+        choices=[condition.value for condition in SystemCondition],
+        default=None,
+    )
+    study_run.add_argument("--cell-id", action="append", default=None)
+    study_run.add_argument("--max-cells", type=int, default=None)
+    study_run.add_argument("--no-resume", action="store_true")
+    study_run.set_defaults(handler=_handle_study_run)
     study_evaluate = study_commands.add_parser(
         "evaluate", help="Audit completed cells and blinded expert reviews"
     )
@@ -659,6 +682,30 @@ def _handle_study_plan(args: argparse.Namespace) -> int:
     path = save_study_plan(plan, args.output)
     print(json.dumps({**payload, "plan": str(path)}, indent=2))
     return 0
+
+
+def _handle_study_run(args: argparse.Namespace) -> int:
+    if args.backend != "local":
+        raise ValueError("study execution supports only --backend local")
+    protocol_path = args.config or Path("configs/experiments/matched_budget_study_v1.yaml")
+    protocol = load_study_protocol(protocol_path)
+    launch_config = load_study_launch_config(args.launch_config)
+    summary = MatchedStudyRunner(
+        protocol,
+        launch_config,
+        output_dir=args.output,
+    ).run(
+        task_ids=args.task,
+        conditions=(
+            [SystemCondition(condition) for condition in args.condition] if args.condition else None
+        ),
+        cell_ids=args.cell_id,
+        max_cells=args.max_cells,
+        resume=not args.no_resume,
+        dry_run=args.dry_run,
+    )
+    print(summary.model_dump_json(indent=2))
+    return 0 if summary.failed_cells == 0 else 1
 
 
 def _handle_study_evaluate(args: argparse.Namespace) -> int:

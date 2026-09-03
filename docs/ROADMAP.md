@@ -150,6 +150,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A pinned, local-only Qwen3-VL-4B Transformers backend passed a Base/Full
   SciTasteBench smoke run on one RTX 3090. This clears local decision-backend
   feasibility, not the full matched-system execution gate.
+- A shell-free, resumable `study run` harness now isolates cells, terminates
+  timed-out process groups, measures allocated GPU/wall time, validates adapter
+  counters and outcomes, and independently hashes in-cell artifacts.
+- A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
+  non-headline; its four launcher commands remain explicit adapter work rather
+  than synthetic substitutes.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: freeze a provider-resolved model revision,

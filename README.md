@@ -117,6 +117,22 @@ The current 48-cell plan remains blocked from real execution until the provider
 model revision and frozen search snapshot are resolved. See
 [`docs/MATCHED_BUDGET_STUDY.md`](docs/MATCHED_BUDGET_STUDY.md).
 
+Dry-run the non-headline, 16-cell local RTX 3090 pilot through the standard
+launcher boundary:
+
+```bash
+.venv/bin/scitaste study run \
+  --config configs/experiments/matched_budget_local_pilot_v1.yaml \
+  --launch-config configs/experiments/study_launchers.example.yaml \
+  --task diagnosis-friendly-v1 --dry-run
+```
+
+The committed launcher file is a template, not an implementation. Replace each
+command with a real condition adapter before removing `--dry-run`; missing or
+invalid adapters produce explicit failed cells rather than surrogate outputs.
+See [`docs/EXTERNAL_SYSTEM_ADAPTERS.md`](docs/EXTERNAL_SYSTEM_ADAPTERS.md) for
+the adapter and sandbox boundary.
+
 ## Opt-in live calibration
 
 Provider examples are in `configs/backends/`. Put the secret in the environment,

@@ -37,10 +37,10 @@ cannot be reused as a matched-budget result.
 
 | Artifact | SHA-256 |
 |---|---|
-| Protocol YAML | `4cd298a8a5058f83d40799e65284cbd5741f1c4aa85c1f95ea1d79534965f228` |
-| Validated protocol payload | `6234523f4fcb0f4f337d84295e3957653883d0b5f0bd259205121b76ebb34c29` |
-| Validated plan payload | `66592d23e79028989178ffb41164657c66ff44be2b7420c707491fc35dfda531` |
-| Generated plan file | `7c2a34a048443aa3cdb71e0e6bd58e9b5afbb75be0a1e9c20c862a060b82d32f` |
+| Protocol YAML | `170f58efdd8a87887fa3c74c73c01bac956c793e0a3f359c1c8cbde7d75d43ae` |
+| Validated protocol payload | `6015ddb5375a4e419f2691afd255411dc738c54c686be175ea60c6d9387a8d6b` |
+| Validated plan payload | `ed1ef93145608ed1c675e58b19e0cd4b184ec0fd038f1bd49c17d2b38908f91e` |
+| Generated plan file | `994a6492d3ec1bcc159dbe245e44cda72cb2cadd4ad0a7a62a30d02fc4cff7a9` |
 
 Generated plan files remain under ignored `outputs/`; the protocol, independent
 task assets, aggregate facts, and hashes are versioned.

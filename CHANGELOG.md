@@ -53,6 +53,11 @@ semantic versioning.
 - An opt-in, lazy, local-only Transformers preference backend with pinned model
   identity, greedy decoding, exact recording support, and a Qwen3-VL-4B example.
 - An aggregate RTX 3090 Qwen3-VL-4B Base/Full SciTasteBench smoke record.
+- Phase 9-B shell-free, isolated and resumable study-cell execution with bounded
+  process groups, standard adapter results, runner-owned timing, artifact
+  containment/hashing, and atomic per-cell checkpoints.
+- Formal/pilot protocol scope enforcement and a 16-cell local Qwen3-VL-4B pilot
+  plan that cannot become headline evidence.
 
 ### Changed
 

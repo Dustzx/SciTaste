@@ -31,6 +31,11 @@ class StudyStatus(StrEnum):
     ELIGIBLE = "eligible"
 
 
+class StudyScope(StrEnum):
+    FORMAL = "formal"
+    PILOT = "pilot"
+
+
 class CellStatus(StrEnum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
@@ -117,6 +122,7 @@ class MatchedStudyProtocol(BaseModel):
 
     study_id: str
     version: str
+    scope: StudyScope
     description: str
     base_model: str
     base_model_revision: str

@@ -1,22 +1,22 @@
-study_id: scitaste-matched-budget-v1
+study_id: scitaste-local-3090-pilot-v1
 version: "1.0"
-scope: formal
-description: Preregistered four-category system study; execution remains pending until frozen search assets, external competitors, and expert panel operations are available.
-base_model: qwen3.8-max
-base_model_revision: bailian-model-snapshot-required-at-execution
-codebase_commit: 4eb735dc7b3497a91fab414e2d73bb5f0396f854
+scope: pilot
+description: Non-headline single-GPU execution pilot for validating four core condition launchers and telemetry before the formal matched-budget study.
+base_model: Qwen/Qwen3-VL-4B-Instruct
+base_model_revision: ebb281ec70b05090aa6165b016eac8ec08e71b17
+codebase_commit: b9a0147af2a61f737d270fc14abde9831e8c62f0
 search_access:
-  policy_id: frozen-search-snapshot-v1
-  provider: frozen-local-corpus
-  frozen_snapshot: pending-content-addressed-snapshot
+  policy_id: frozen-empty-search-pilot-v1
+  provider: disabled-local-search
+  frozen_snapshot: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 budget:
-  gpu_hours: 4.0
-  max_experiments: 8
-  max_wall_time_hours: 8.0
-  max_api_cost_usd: 20.0
-  max_search_queries: 50
-  max_llm_tokens: 200000
-seeds: [7, 19, 31]
+  gpu_hours: 0.5
+  max_experiments: 2
+  max_wall_time_hours: 0.5
+  max_api_cost_usd: 0.01
+  max_search_queries: 0
+  max_llm_tokens: 20000
+seeds: [7]
 repetitions_per_seed: 1
 tasks:
   - task_id: diagnosis-friendly-v1
@@ -53,19 +53,19 @@ conditions:
     implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
   - condition: knowledge_rag
     enabled: true
-    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:knowledge-rag
+    implementation_ref: scitaste@b9a0147af2a61f737d270fc14abde9831e8c62f0:knowledge-rag
   - condition: taste_library
     enabled: true
-    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:taste-library
+    implementation_ref: scitaste@b9a0147af2a61f737d270fc14abde9831e8c62f0:taste-library
   - condition: full_scitaste
     enabled: true
-    implementation_ref: scitaste@4eb735dc7b3497a91fab414e2d73bb5f0396f854:full
+    implementation_ref: scitaste@b9a0147af2a61f737d270fc14abde9831e8c62f0:full
   - condition: sibyl
     enabled: false
-    unavailable_reason: No pinned, license-reviewed integration has passed the SciTaste executor contract.
+    unavailable_reason: External Sibyl adapter has not passed isolation, version, license, artifact, and telemetry gates.
   - condition: ai_scientist_v2
     enabled: false
-    unavailable_reason: No pinned, budget-telemetry-complete integration is currently available.
+    unavailable_reason: External AI Scientist-v2 adapter has not passed sandbox, version, license, artifact, and telemetry gates.
 expert_panel:
   rubric_version: scitaste-system-rubric-v1
   min_reviewers_per_cell: 2

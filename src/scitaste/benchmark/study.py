@@ -20,6 +20,7 @@ from scitaste.benchmark.study_models import (
     StudyExecutionRecord,
     StudyPlan,
     StudyResults,
+    StudyScope,
     StudyStatus,
     SystemComparison,
     SystemCondition,
@@ -147,7 +148,7 @@ class MatchedStudyEvaluator:
 
         if blockers:
             status = StudyStatus.INCOMPLETE
-        elif synthetic:
+        elif synthetic or protocol.scope == StudyScope.PILOT:
             status = StudyStatus.ACCEPTANCE_ONLY
         else:
             status = StudyStatus.ELIGIBLE

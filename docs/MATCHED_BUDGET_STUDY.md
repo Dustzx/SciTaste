@@ -95,6 +95,28 @@ Audit externally produced execution records and blinded panel reviews:
 Planning and evaluation are local operations. They never invoke an LLM or launch
 an experiment implicitly.
 
+Run selected execution-ready cells through explicit command adapters:
+
+```bash
+.venv/bin/scitaste study run \
+  --config configs/experiments/matched_budget_local_pilot_v1.yaml \
+  --launch-config path/to/reviewed-launchers.yaml \
+  --task diagnosis-friendly-v1 \
+  --output outputs/local-study-pilot
+```
+
+`study run` creates an isolated directory per cell, writes a complete request,
+starts the adapter without a shell, bounds the process by wall/GPU allocation,
+captures logs, validates its standard result, re-hashes declared artifacts, and
+atomically checkpoints aggregate results after every cell. Successful cells are
+resumed by default. A timed-out process group, missing executable, non-zero exit,
+missing telemetry, path-escaping artifact, or invalid result becomes a failed
+record; none is replaced with synthetic success.
+
+Protocols declare either `formal` or `pilot` scope. A pilot remains
+`acceptance_only` even if every execution and external review is otherwise
+complete, preventing engineering trials from becoming headline evidence.
+
 ## Current readiness blockers
 
 The committed v1 draft deliberately contains explicit pending markers for the

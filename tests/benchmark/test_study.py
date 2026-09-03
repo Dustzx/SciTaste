@@ -171,6 +171,41 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
     assert report.blockers == []
 
 
+def test_pilot_scope_cannot_become_headline_evidence() -> None:
+    protocol = load_study_protocol("configs/experiments/matched_budget_local_pilot_v1.yaml")
+    synthetic = synthetic_results(protocol)
+    real = synthetic.model_copy(
+        update={
+            "records": [
+                record.model_copy(
+                    update={
+                        "evidence_class": EvidenceClass.REAL,
+                        "usage": record.usage.model_copy(
+                            update={
+                                "gpu_hours": 0.1,
+                                "wall_time_hours": 0.1,
+                                "api_cost_usd": 0,
+                                "search_queries": 0,
+                                "llm_tokens": 100,
+                            }
+                        ),
+                    }
+                )
+                for record in synthetic.records
+            ],
+            "expert_reviews": [
+                review.model_copy(update={"source": ReviewSource.EXTERNAL})
+                for review in synthetic.expert_reviews
+            ],
+        }
+    )
+
+    report = MatchedStudyEvaluator().evaluate(protocol, real)
+
+    assert report.status == StudyStatus.ACCEPTANCE_ONLY
+    assert report.headline_eligible is False
+
+
 def test_budget_or_telemetry_violation_blocks_study() -> None:
     protocol = ready_protocol()
     results = synthetic_results(protocol)
