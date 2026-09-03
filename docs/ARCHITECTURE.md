@@ -312,6 +312,9 @@ emits seed-scoped condition blocks but labels its aggregate spread over cells,
 the adapter retains the aggregate mean and deterministically computes the
 population standard deviation over the complete registered seed vector; it does
 not relabel the differently scoped spread as cross-seed uncertainty.
+Audits classify these claims line by line: an unqualified `N=1` assertion is a
+contradiction, whereas an explicit statement that a perspective incorrectly or
+erroneously made that claim is retained as a scientifically useful correction.
 
 Generated experiments must now finish stdout with one
 `SCITASTE_EVIDENCE_JSON` record. The record carries the primary metric and the

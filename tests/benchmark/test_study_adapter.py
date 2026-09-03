@@ -742,6 +742,16 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
         task=task,
     )
     assert accepted["analysis_reports_primary_metric"] is True
+    corrected = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75 across seeds 7, 19, and 31. A conflicting "
+            "perspective erroneously claimed the experiment had N=1; the evidence "
+            "contains three seeds and nonzero dispersion."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert corrected["analysis_reports_primary_metric"] is True
     with pytest.raises(ValueError, match="contradicts the successful"):
         _artifact_consistency_audit(
             analysis=(

@@ -192,8 +192,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   internally verified machine-readable evidence record. A clean rerun remains
   required. A fourth clean attempt emitted that record but exposed an ambiguous
   initial-versus-repaired sandbox pairing; source-hash-based trace selection now
-  regression-tests that case. Interrupted and original artifacts are retained
-  only as failure fixtures.
+  regression-tests that case. A fifth attempt passed experiment acceptance and
+  produced a correct three-seed analysis, exposing only an overly narrow
+  corrective-language matcher before outline generation; that analysis now
+  replays cleanly. Interrupted and original artifacts are retained only as
+  failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

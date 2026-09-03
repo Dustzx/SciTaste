@@ -144,6 +144,9 @@ semantic versioning.
   now pairs the retained mutable version directory with the sandbox trace whose
   executed-source hashes match it. Metrics and stdout are never borrowed from a
   successful but superseded source version.
+- The three-seed analysis audit now recognizes `erroneously claimed N=1` as an
+  explicit correction while continuing to reject unqualified single-seed
+  assertions.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

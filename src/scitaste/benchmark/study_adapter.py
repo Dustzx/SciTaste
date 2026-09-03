@@ -2190,7 +2190,7 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
         r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
         r"denotes (?:exactly )?one selected run|must not be reported as n\s*=\s*1|"
         r"not statistical n\s*=\s*1|not an? n\s*=\s*1|incorrect|falsely|preclude|"
-        r"superseded|do not reproduce|never (?:emit|report|reproduce))\b"
+        r"erroneously|superseded|do not reproduce|never (?:emit|report|reproduce))\b"
     )
     violations: set[str] = set()
     for line in text.splitlines():
