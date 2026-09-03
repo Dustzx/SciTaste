@@ -779,8 +779,10 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "the current user message; never repeat an earlier section or complete the "
                     "whole paper early. The authoritative selected-experiment evidence overrides "
                     "generic paper-writing requirements. With three registered seeds, report a "
-                    "compact per-seed table and the observed descriptive dispersion; never emit "
-                    "N=1, zero dispersion, or Min=Max=Mean summaries. Use only citation keys "
+                    "compact per-seed table and the exact observed descriptive dispersion, "
+                    "including a zero standard deviation only when the seed values prove it; "
+                    "never derive N=1 or zero dispersion from the pipeline run count. Use only "
+                    "citation keys "
                     "listed under AVAILABLE REFERENCES, even when a generic instruction requests "
                     "more citations. Never invent numeric citations. Include a figure only when "
                     "its exact file is listed as available experiment evidence; never emit a "
@@ -1009,10 +1011,13 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         "metrics. Any earlier crash may be mentioned only as a repaired implementation attempt, "
         "never as the scientific result. "
         f"This selected execution contains {len(seed_ids)} registered seeds ({seed_text}). "
-        "The pipeline count of one means one selected run, not statistical N=1; never reproduce "
-        "a Min=Max=Mean or N=1 table. Include one compact table containing every supplied "
+        "The pipeline count of one means one selected run, not statistical N=1; never infer "
+        "N=1 or zero dispersion from that pipeline count. Include one compact table containing "
+        "every supplied "
         "per-seed value for every method, plus each method's observed mean and standard "
-        "deviation; do not replace the matrix with selected examples.\n" + stdout_summary
+        "deviation. Preserve an observed zero standard deviation when the supplied seed values "
+        "are genuinely identical; do not replace the matrix with selected examples.\n"
+        + stdout_summary
     )
 
 
@@ -1352,6 +1357,21 @@ def _selected_execution_trace(
                 for name, value in (sandbox.get("metrics") or {}).items()
                 if isinstance(value, (int, float)) and abs(float(value) - aggregate) <= 1e-9
             )
+    elif normalization.get("method") == "stdout-numeric-equals-to-structured-v1" and source_values:
+        try:
+            numeric_source_values = [float(value) for value in source_values]
+        except (TypeError, ValueError):
+            numeric_source_values = []
+        if numeric_source_values and all(
+            _text_contains_value(trace_stdout, value, tolerance=1e-9)
+            for value in numeric_source_values
+        ):
+            aggregate = sum(numeric_source_values) / len(numeric_source_values)
+            normalized_names.update(
+                str(name)
+                for name, value in (sandbox.get("metrics") or {}).items()
+                if isinstance(value, (int, float)) and abs(float(value) - aggregate) <= 1e-9
+            )
     for name, value in (sandbox.get("metrics") or {}).items():
         if name not in trace_metrics:
             if name in normalized_names:
@@ -1450,28 +1470,55 @@ def _parse_seed_evidence(
 
     per_seed: dict[str, dict[str, float]] = {}
     current_seed: str | None = None
+    current_condition: str | None = None
     seed_pattern = re.compile(r"(?i)\bseed\s+([0-9]+)\b")
-    metric_pattern = re.compile(
+    seed_metric_pattern = re.compile(
+        rf"(?i)\bseed\s+([0-9]+)\s*:\s*.*?\b{re.escape(primary_metric)}\s*="
+        r"\s*([-+]?\d+(?:\.\d+)?)"
+    )
+    condition_metric_pattern = re.compile(
         rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?)"
     )
-    dispersion_pattern = re.compile(
+    inline_dispersion_pattern = re.compile(
         rf"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*mean_{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?),\s*std\s*=\s*([-+]?\d+(?:\.\d+)?)"
         r"(?:,\s*variance\s*=\s*([-+]?\d+(?:\.\d+)?))?",
         re.IGNORECASE,
     )
+    condition_header_patterns = (
+        re.compile(r"(?i)^\s*(?:--\s*)?condition\s*:\s*([A-Za-z][A-Za-z0-9_-]*)"),
+        re.compile(r"(?i)^\s*condition\s+['\"]([A-Za-z][A-Za-z0-9_-]*)['\"]"),
+    )
+    condition_mean_pattern = re.compile(
+        rf"(?i)\bprimary\s+metric\s+{re.escape(primary_metric)}\s*[=:]\s*"
+        r"([-+]?\d+(?:\.\d+)?)"
+    )
+    cross_seed_std_pattern = re.compile(r"(?i)\bcross[- ]seed\s+std\s*:\s*([-+]?\d+(?:\.\d+)?)")
     dispersion: dict[str, dict[str, float]] = {}
     for line in stdout.splitlines():
+        for condition_pattern in condition_header_patterns:
+            condition_match = condition_pattern.search(line)
+            if condition_match:
+                current_condition = condition_match.group(1)
+                break
+
+        seed_metric_match = seed_metric_pattern.search(line)
+        if seed_metric_match and current_condition is not None:
+            seed = seed_metric_match.group(1)
+            per_seed.setdefault(seed, {})[current_condition] = float(seed_metric_match.group(2))
+            current_seed = seed
+            continue
+
         seed_match = seed_pattern.search(line)
-        if seed_match and not metric_pattern.search(line):
+        if seed_match:
             current_seed = seed_match.group(1)
             per_seed.setdefault(current_seed, {})
-            continue
-        metric_match = metric_pattern.search(line)
+        metric_match = condition_metric_pattern.search(line)
         if metric_match and current_seed is not None:
             per_seed[current_seed][metric_match.group(1)] = float(metric_match.group(2))
-        dispersion_match = dispersion_pattern.search(line)
+
+        dispersion_match = inline_dispersion_pattern.search(line)
         if dispersion_match:
             values = {
                 "mean": float(dispersion_match.group(2)),
@@ -1480,6 +1527,17 @@ def _parse_seed_evidence(
             if dispersion_match.group(4) is not None:
                 values["variance"] = float(dispersion_match.group(4))
             dispersion[dispersion_match.group(1)] = values
+            continue
+
+        if current_condition is not None:
+            mean_match = condition_mean_pattern.search(line)
+            if mean_match:
+                dispersion.setdefault(current_condition, {})["mean"] = float(mean_match.group(1))
+            cross_seed_std_match = cross_seed_std_pattern.search(line)
+            if cross_seed_std_match:
+                dispersion.setdefault(current_condition, {})["std"] = float(
+                    cross_seed_std_match.group(1)
+                )
     return per_seed, dispersion
 
 
@@ -1601,7 +1659,16 @@ def _normalize_refinement_metrics(
                         rf"[\s\S]{{0,240}}?^\s*(?:primary\s+metric\s+)?{escaped}\s*:\s*"
                         r"(?:mean\s*[=:]\s*)?([-+]?\d+(?:\.\d+)?)"
                     )
-                    matches = condition_pattern.findall(stdout) or block_pattern.findall(stdout)
+                    quoted_summary_pattern = re.compile(
+                        rf"(?im)^\s*condition\s+['\"]?{re.escape(name)}['\"]?\s*:\s*"
+                        rf"primary\s+metric\s+{escaped}\s*[=:]\s*"
+                        r"([-+]?\d+(?:\.\d+)?)"
+                    )
+                    matches = (
+                        condition_pattern.findall(stdout)
+                        or block_pattern.findall(stdout)
+                        or quoted_summary_pattern.findall(stdout)
+                    )
                     if not matches:
                         condition_values = []
                         break
@@ -1799,6 +1866,15 @@ def _text_contains_value(text: str, value: float, *, tolerance: float = 0.00005)
     return False
 
 
+def _text_reports_labeled_value(text: str, label: str, value: float) -> bool:
+    public_label = re.escape(_public_term(label)).replace(r"\ ", r"[\s_-]+")
+    return any(
+        re.search(public_label, _public_term(line), re.IGNORECASE)
+        and _text_contains_value(line, value)
+        for line in text.splitlines()
+    )
+
+
 def _seed_evidence_reporting_violations(
     text: str, selected_run: dict[str, Any], task: dict[str, Any]
 ) -> list[str]:
@@ -1814,7 +1890,9 @@ def _seed_evidence_reporting_violations(
                 violations.add(f"per-seed-value-omitted:{condition}:seed-{seed}")
     for condition, values in selected_run.get("dispersion_metrics", {}).items():
         std = values.get("std") if isinstance(values, dict) else None
-        if isinstance(std, (int, float)) and not _text_contains_value(text, float(std)):
+        if isinstance(std, (int, float)) and not _text_reports_labeled_value(
+            text, str(condition), float(std)
+        ):
             violations.add(f"seed-std-omitted:{condition}")
     return sorted(violations)
 
@@ -1870,7 +1948,7 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
     if len(seed_ids) < 3:
         return []
     patterns = {
-        "single-seed-collapse": r"(?i)(?:\bn\s*=\s*1\b|\bmin\s*=\s*max\s*=\s*mean\b)",
+        "single-seed-collapse": r"(?i)\bn\s*=\s*1\b",
         "variance-unavailable": r"(?i)\binsufficient for variance estimation\b",
         "deterministic-collapse": r"(?i)\bdeterministic collapse(?:/bug)?\b",
     }
@@ -1890,22 +1968,8 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
             r"cross[- ]method aggregate)",
             line,
         )
-        if public_method and re.search(r"(?:±|\\pm\$?)\s*0(?:\.0+)?\b", line):
-            violations.add("zero-seed-dispersion")
         if public_method and re.search(r"(?:\||&)\s*1\s*(?:\||\\\\|$)", line):
             violations.add("single-seed-table")
-    if re.search(
-        r"(?is)\bmean\b.{0,40}\b(?:standard deviation|std)\b.{0,40}"
-        r"\bacross (?:the )?seeds?\b.{0,40}\b(?:identical|zero)\b",
-        text,
-    ):
-        violations.add("zero-seed-dispersion")
-    if re.search(
-        r"(?is)\bmin(?:imum)?\b.{0,30}\bmax(?:imum)?\b.{0,30}\bmean\b.{0,30}"
-        r"\b(?:identical|equal)\b",
-        text,
-    ):
-        violations.add("single-seed-collapse")
     has_seed_count = bool(
         re.search(r"(?i)\b(?:three|3)\s+(?:(?:distinct|fixed|registered)\s+)*seeds?\b", text)
     )

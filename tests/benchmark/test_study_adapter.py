@@ -18,6 +18,7 @@ from scitaste.benchmark.study_adapter import (
     _guidance,
     _manuscript_structure_violations,
     _normalize_refinement_metrics,
+    _parse_seed_evidence,
     _prepare_stage_seven,
     _publication_asset_violations,
     _sanitize_publication_artifacts,
@@ -521,6 +522,48 @@ def test_metric_normalization_reads_overall_named_condition_summary(tmp_path) ->
     }
 
 
+def test_metric_normalization_reads_quoted_primary_summary(tmp_path) -> None:
+    stage = tmp_path / "stage-13"
+    stage.mkdir()
+    path = stage / "refinement_log.json"
+    conditions = load_task()["benchmark"]["conditions"]
+    path.write_text(
+        json.dumps(
+            {
+                "best_metric": None,
+                "best_version": "experiment/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {},
+                            "stdout": (
+                                "Condition 'majority_vote': primary metric "
+                                "balanced_accuracy = 0.83\n"
+                                "Condition 'confidence_weighted_vote': primary metric "
+                                "balanced_accuracy = 0.81\n"
+                                "Condition 'position_aware_probe': primary metric "
+                                "balanced_accuracy = 0.80\n"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _normalize_refinement_metrics(
+        tmp_path, "balanced_accuracy", "maximize", condition_names=conditions
+    )
+    record = json.loads(path.read_text())["iterations"][0]
+
+    assert record["metric_normalization"]["method"] == "stdout-registered-condition-mean-v1"
+    assert record["metric_normalization"]["source_conditions"] == conditions
+    assert record["sandbox"]["metrics"]["balanced_accuracy"] == pytest.approx(0.8133333333)
+
+
 def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:
     telemetry = tmp_path / "telemetry.jsonl"
     telemetry.write_text(
@@ -668,7 +711,7 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
             task=task,
         )
 
-    with pytest.raises(ValueError, match="zero-seed-dispersion"):
+    with pytest.raises(ValueError, match="single-seed-table"):
         _artifact_consistency_audit(
             analysis="Balanced accuracy was 0.75 across three seeds (7, 19, and 31).",
             paper=(
@@ -761,6 +804,30 @@ def test_selected_experiment_evidence_preserves_successful_stdout(tmp_path) -> N
     assert evidence["registered_metrics"]["balanced_accuracy"] == 0.75
     assert "Seed 7" in evidence["stdout_summary"]
     assert (tmp_path / "scitaste_selected_experiment_evidence.json").is_file()
+
+
+def test_seed_evidence_parser_handles_condition_blocks_and_true_zero_dispersion() -> None:
+    stdout = """Condition: majority_vote
+  Seed 7: balanced_accuracy=0.833333, std=0.2
+  Seed 19: balanced_accuracy=0.833333, std=0.2
+  Seed 31: balanced_accuracy=0.833333, std=0.2
+  Primary metric balanced_accuracy=0.833333
+Condition: confidence_weighted_vote
+  Seed 7: balanced_accuracy=0.810185, std=0.2
+  Seed 19: balanced_accuracy=0.800926, std=0.2
+  Seed 31: balanced_accuracy=0.833333, std=0.2
+  Primary metric balanced_accuracy=0.814815
+Condition: majority_vote
+  Cross-seed std: 0.000000
+Condition: confidence_weighted_vote
+  Cross-seed std: 0.013629
+"""
+
+    per_seed, dispersion = _parse_seed_evidence(stdout, "balanced_accuracy")
+
+    assert per_seed["19"]["confidence_weighted_vote"] == 0.800926
+    assert dispersion["majority_vote"] == {"mean": 0.833333, "std": 0.0}
+    assert dispersion["confidence_weighted_vote"] == {"mean": 0.814815, "std": 0.013629}
 
 
 def test_selected_experiment_evidence_recovers_post_repair_trace(tmp_path) -> None:

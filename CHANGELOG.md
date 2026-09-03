@@ -76,7 +76,8 @@ semantic versioning.
 - A pre-review Stage 17 draft gate, preventing an evidence-inconsistent manuscript
   from spending peer-review tokens.
 - A pre-draft Stage 16 outline gate and three-seed publication checks, rejecting
-  flattened `N=1`/`Min=Max=Mean` summaries before they propagate into a manuscript.
+  a pipeline-run count misreported as statistical `N=1` while preserving genuine
+  zero dispersion when the registered seed matrix supports it.
 - Process-local source-verified sandbox traces for runtime-repaired experiments,
   preserving raw-output hashes and registered seed evidence that upstream omits;
   normalized metrics are rechecked against those traced raw values.
@@ -124,6 +125,10 @@ semantic versioning.
 - Formal metric normalization now accepts complete
   `condition: overall_<primary_metric>=...` summaries while still rejecting
   partial registered-condition vectors.
+- Formal metric normalization and seed-evidence parsing now accept
+  `Condition '<name>': primary metric ...` summaries and condition-scoped
+  `Seed <n>: ...` rows. Adapter-derived aggregates remain admissible only when
+  every source value is present in the source-verified raw trace.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.
