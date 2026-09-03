@@ -13,6 +13,7 @@ launchers:
       - PEER_REVIEW
       - --max-output-tokens
       - "12288"
+      - --reuse-existing
     gpu_count: 1
     timeout_seconds: 7200
     pass_environment: [DASHSCOPE_API_KEY]

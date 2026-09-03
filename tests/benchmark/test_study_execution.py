@@ -115,6 +115,14 @@ class NeverRunner:
         return ProcessResult(returncode=0)
 
 
+class FailThenSucceedRunner(SuccessfulRunner):
+    def run(self, command, **kwargs):
+        if not self.calls:
+            self.calls.append({"command": command})
+            return ProcessResult(returncode=2)
+        return super().run(command, **kwargs)
+
+
 def clock(*values):
     readings = iter(values)
     return lambda: next(readings)
@@ -217,6 +225,27 @@ def test_timeout_is_an_honest_failed_record(tmp_path) -> None:
     assert results["records"][0]["status"] == "failed"
     assert "timed out" in results["records"][0]["error"]
     assert results["records"][0]["outcome"] is None
+
+
+def test_failed_retry_accumulates_runner_owned_time(tmp_path) -> None:
+    protocol = load_study_protocol(PILOT_PROTOCOL)
+    process = FailThenSucceedRunner()
+    runner = MatchedStudyRunner(
+        protocol,
+        launch_config(),
+        output_dir=tmp_path,
+        process_runner=process,
+        clock=clock(10, 370, 500, 680),
+    )
+
+    first = runner.run(max_cells=1)
+    second = runner.run(max_cells=1)
+
+    assert first.failed_cells == 1
+    assert second.succeeded_cells == 1
+    results = json.loads((tmp_path / "study_results.json").read_text())
+    assert results["records"][0]["usage"]["wall_time_hours"] == pytest.approx(0.15)
+    assert results["records"][0]["usage"]["gpu_hours"] == pytest.approx(0.15)
 
 
 def test_artifact_cannot_escape_cell_directory(tmp_path) -> None:

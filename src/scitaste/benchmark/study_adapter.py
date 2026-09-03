@@ -53,9 +53,8 @@ def run_study_cell(
     resume_existing: bool = False,
     resume_from_stage: str = "RESULT_ANALYSIS",
     finalize_existing: bool = False,
+    reuse_existing: bool = False,
 ) -> LauncherResult:
-    if finalize_existing:
-        resume_existing = True
     request_file = Path(request_path).resolve()
     result_file = Path(result_path).resolve()
     cell_dir = request_file.parent
@@ -68,6 +67,13 @@ def run_study_cell(
     upstream_run = cell_dir / "upstream_run"
     upstream_run.mkdir(parents=True, exist_ok=True)
     telemetry_path = cell_dir / "llm_telemetry.jsonl"
+    if reuse_existing:
+        if _stage_completed(upstream_run, to_stage):
+            finalize_existing = True
+        elif _stage_completed(upstream_run, "ITERATIVE_REFINE"):
+            resume_existing = True
+    if finalize_existing:
+        resume_existing = True
     if resume_existing:
         trace_path = upstream_run / "condition_trace.json"
         config_path = upstream_run / "config.yaml"
@@ -210,6 +216,29 @@ def _recorded_stage_seconds(run_dir: Path) -> float:
         except (OSError, TypeError, ValueError, json.JSONDecodeError):
             continue
     return total
+
+
+def _stage_completed(run_dir: Path, stage: str) -> bool:
+    numbers = {
+        "ITERATIVE_REFINE": 13,
+        "RESULT_ANALYSIS": 14,
+        "RESEARCH_DECISION": 15,
+        "PAPER_OUTLINE": 16,
+        "PAPER_DRAFT": 17,
+        "PEER_REVIEW": 18,
+        "PAPER_REVISION": 19,
+        "CITATION_VERIFY": 21,
+    }
+    number = numbers.get(stage.upper())
+    if number is None:
+        return False
+    for path in run_dir.glob(f"stage-{number:02d}*/stage_health.json"):
+        try:
+            if json.loads(path.read_text(encoding="utf-8")).get("status") == "done":
+                return True
+        except (OSError, json.JSONDecodeError):
+            continue
+    return False
 
 
 def _validate_inputs(request: dict[str, Any], task_path: Path) -> None:
@@ -728,8 +757,8 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
             "no successful refined experiment was selected; "
             f"best_version={best_version!r}, iteration_returncodes={attempts}"
         )
-    sandbox = selected.get("sandbox_after_fix") or selected.get("sandbox") or {}
-    if int(sandbox.get("returncode", 1)) != 0:
+    sandbox = _best_successful_sandbox(selected)
+    if sandbox is None:
         raise ValueError("selected refined experiment did not exit successfully")
     metrics = sandbox.get("metrics") or {}
     if primary_metric not in metrics and not any(
@@ -749,6 +778,22 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
     }
 
 
+def _best_successful_sandbox(iteration: dict[str, Any]) -> dict[str, Any] | None:
+    """Choose the richest successful execution record retained by upstream."""
+
+    candidates = [
+        item
+        for item in (iteration.get("sandbox_after_fix"), iteration.get("sandbox"))
+        if isinstance(item, dict) and int(item.get("returncode", 1)) == 0
+    ]
+    if not candidates:
+        return None
+    return max(
+        candidates,
+        key=lambda item: (bool(item.get("metrics")), len(str(item.get("stdout", "")))),
+    )
+
+
 def _normalize_refinement_metrics(
     run_dir: Path, primary_metric: str, metric_direction: str
 ) -> None:
@@ -764,18 +809,29 @@ def _normalize_refinement_metrics(
     data = json.loads(path.read_text(encoding="utf-8"))
     successful: list[tuple[float, dict[str, Any]]] = []
     escaped = re.escape(primary_metric)
+    overall_pattern = re.compile(
+        rf"(?im)^\s*overall\s+(?:mean\s+)?{escaped}\s*[=:]\s*([-+]?\d+(?:\.\d+)?)"
+    )
     aggregate_pattern = re.compile(rf"(?im)^.*{escaped}.*?aggregate\s*[=:]\s*([-+]?\d+(?:\.\d+)?)")
-    direct_pattern = re.compile(rf"(?i){escaped}\s*[=:]\s*([-+]?\d+(?:\.\d+)?)")
+    direct_pattern = re.compile(
+        rf"(?im)^\s*(?:primary\s+metric\s+)?{escaped}\s*[=:]\s*([-+]?\d+(?:\.\d+)?)"
+    )
     for iteration in data.get("iterations", []):
-        sandbox = iteration.get("sandbox_after_fix") or iteration.get("sandbox") or {}
-        if int(sandbox.get("returncode", 1)) != 0:
+        sandbox = _best_successful_sandbox(iteration)
+        if sandbox is None:
             continue
         metrics = sandbox.get("metrics") or {}
         value = metrics.get(primary_metric)
+        if iteration.get("metric_normalization", {}).get("method") == (
+            "stdout-numeric-equals-to-structured-v1"
+        ):
+            value = None
         sources: list[float] = []
         if value is None:
             stdout = str(sandbox.get("stdout", ""))
-            sources = [float(item) for item in aggregate_pattern.findall(stdout)]
+            sources = [float(item) for item in overall_pattern.findall(stdout)]
+            if not sources:
+                sources = [float(item) for item in aggregate_pattern.findall(stdout)]
             if not sources:
                 sources = [float(item) for item in direct_pattern.findall(stdout)]
             if sources:
@@ -1052,6 +1108,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume-existing", action="store_true")
     parser.add_argument("--resume-from-stage", default="RESULT_ANALYSIS")
     parser.add_argument("--finalize-existing", action="store_true")
+    parser.add_argument("--reuse-existing", action="store_true")
     args = parser.parse_args(argv)
     result = run_study_cell(
         request_path=args.request,
@@ -1061,6 +1118,7 @@ def main(argv: list[str] | None = None) -> int:
         resume_existing=args.resume_existing,
         resume_from_stage=args.resume_from_stage,
         finalize_existing=args.finalize_existing,
+        reuse_existing=args.reuse_existing,
     )
     print(result.model_dump_json(indent=2))
     return 0 if result.status == CellStatus.SUCCEEDED else 1

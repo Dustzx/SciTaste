@@ -14,6 +14,7 @@ from scitaste.benchmark.study_adapter import (
     _guidance,
     _normalize_refinement_metrics,
     _selected_experiment,
+    _stage_completed,
     _usage,
     _write_prompt_overrides,
 )
@@ -80,6 +81,17 @@ def test_condition_context_keeps_ablations_distinct(tmp_path) -> None:
     assert full["controller_decision"]["retrieved_taste_cases"] == [
         "diagnosis-factor-before-method-v1"
     ]
+
+
+def test_stage_completed_requires_done_health_record(tmp_path) -> None:
+    stage = tmp_path / "stage-18_v1"
+    stage.mkdir()
+    health = stage / "stage_health.json"
+    health.write_text(json.dumps({"status": "failed"}), encoding="utf-8")
+    assert not _stage_completed(tmp_path, "PEER_REVIEW")
+    health.write_text(json.dumps({"status": "done"}), encoding="utf-8")
+    assert _stage_completed(tmp_path, "PEER_REVIEW")
+    assert not _stage_completed(tmp_path, "UNKNOWN")
 
 
 def test_guidance_only_exposes_registered_augmentation() -> None:
@@ -185,6 +197,11 @@ def test_metric_normalization_uses_real_stdout_aggregates(tmp_path) -> None:
                                 "method_b: mean_balanced_accuracy=0.6, aggregate=0.6"
                             ),
                         },
+                        "sandbox_after_fix": {
+                            "returncode": 0,
+                            "metrics": {},
+                            "stdout": "",
+                        },
                     }
                 ],
             }
@@ -200,6 +217,43 @@ def test_metric_normalization_uses_real_stdout_aggregates(tmp_path) -> None:
     record = normalized["iterations"][0]
     assert record["sandbox"]["metrics"]["balanced_accuracy"] == pytest.approx(0.7)
     assert record["metric_normalization"]["source_values"] == [0.8, 0.6]
+
+
+def test_metric_normalization_prefers_overall_mean_over_dispersion(tmp_path) -> None:
+    stage = tmp_path / "stage-13"
+    stage.mkdir()
+    path = stage / "refinement_log.json"
+    path.write_text(
+        json.dumps(
+            {
+                "best_metric": None,
+                "best_version": "experiment/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "metric": None,
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {},
+                            "stdout": (
+                                "Seed 7: mean_balanced_accuracy=0.5\n"
+                                "Overall mean balanced_accuracy: 0.5\n"
+                                "Overall std balanced_accuracy: 0.0\n"
+                            ),
+                        },
+                        "sandbox_after_fix": {"returncode": 0, "metrics": {}},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _normalize_refinement_metrics(tmp_path, "balanced_accuracy", "maximize")
+    normalized = json.loads(path.read_text(encoding="utf-8"))
+
+    assert normalized["best_metric"] == pytest.approx(0.5)
+    assert normalized["iterations"][0]["metric_normalization"]["source_values"] == [0.5]
 
 
 def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:

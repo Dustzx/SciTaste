@@ -66,6 +66,8 @@ semantic versioning.
 - Formal-adapter contract gates for generated experiments, exact cumulative
   token ceilings, resumable/finalizable upstream runs, metric normalization, and
   bounded refinement-log retention.
+- Idempotent formal-cell finalization and cumulative runner-owned wall/GPU
+  accounting across failed or interrupted cell retries.
 
 ### Changed
 
@@ -85,3 +87,6 @@ semantic versioning.
   substrate verification test.
 - Interrupted study runners terminate their isolated child process group so an
   orphan cannot contaminate a later attempt for the same cell.
+- Formal metric normalization now prefers complete successful execution evidence
+  when an upstream repaired-run record omits stdout, and excludes dispersion
+  values from primary-metric aggregation.

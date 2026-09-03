@@ -325,6 +325,7 @@ class MatchedStudyRunner:
         record_path = cell_dir / "execution_record.json"
         stdout_path = cell_dir / "stdout.log"
         stderr_path = cell_dir / "stderr.log"
+        prior_elapsed = _prior_elapsed_seconds(record_path, cell.cell_id)
         _atomic_json_write(request_path, self._request_payload(cell, result_path))
         if result_path.exists():
             result_path.unlink()
@@ -333,7 +334,7 @@ class MatchedStudyRunner:
         try:
             environment = self._environment(launcher, request_path, result_path, cell_dir)
         except ValueError as exc:
-            record = self._failed_record(cell, 0.0, launcher.gpu_count, str(exc))
+            record = self._failed_record(cell, prior_elapsed, launcher.gpu_count, str(exc))
             _atomic_json_write(record_path, record.model_dump(mode="json"))
             return record
         timeout = self._timeout_seconds(cell, launcher)
@@ -348,20 +349,20 @@ class MatchedStudyRunner:
                 timeout_seconds=timeout,
             )
         except subprocess.TimeoutExpired:
-            elapsed = max(0.0, self.clock() - started)
+            elapsed = prior_elapsed + max(0.0, self.clock() - started)
             record = self._failed_record(
                 cell, elapsed, launcher.gpu_count, f"launcher timed out after {timeout:.3f}s"
             )
             _atomic_json_write(record_path, record.model_dump(mode="json"))
             return record
         except OSError as exc:
-            elapsed = max(0.0, self.clock() - started)
+            elapsed = prior_elapsed + max(0.0, self.clock() - started)
             record = self._failed_record(
                 cell, elapsed, launcher.gpu_count, f"launcher could not start: {exc}"
             )
             _atomic_json_write(record_path, record.model_dump(mode="json"))
             return record
-        elapsed = max(0.0, self.clock() - started)
+        elapsed = prior_elapsed + max(0.0, self.clock() - started)
         if process.returncode != 0:
             record = self._failed_record(
                 cell,
@@ -561,6 +562,20 @@ class MatchedStudyRunner:
             expert_reviews=reviews,
         )
         _atomic_json_write(self.output_dir / "study_results.json", results.model_dump(mode="json"))
+
+
+def _prior_elapsed_seconds(record_path: Path, cell_id: str) -> float:
+    """Keep runner-owned wall/GPU accounting cumulative across cell retries."""
+
+    if not record_path.is_file():
+        return 0.0
+    try:
+        record = StudyExecutionRecord.model_validate_json(record_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0.0
+    if record.cell_id != cell_id:
+        return 0.0
+    return float(record.usage.wall_time_hours) * 3600
 
 
 def load_study_launch_config(path: str | Path) -> StudyLaunchConfig:
