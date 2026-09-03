@@ -351,7 +351,10 @@ omitted or misleading stdout visible.
 Seed discovery is line-shaped rather than a free-text search: accepted rows
 start with a seed header or with a bracketed registered condition followed by a
 seed assignment. This excludes sample-count summaries such as `Total/seed: 648`
-without maintaining an open-ended list of prose exceptions.
+without maintaining an open-ended list of prose exceptions. A condition-first
+assignment row is also accepted when it contains an explicit balanced-accuracy
+measurement. Identifier matches cannot stop before a decimal point, so a factor
+effect such as `seed: 0.008292` is not misread as seed zero.
 
 AutoResearchClaw's Stage 10 can replace an initially compliant file after code
 review or topic-alignment review. Those regeneration branches reuse the stage

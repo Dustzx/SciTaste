@@ -1021,6 +1021,17 @@ Grid cells: 54, Examples/cell: 12, Total/seed: 648
     assert dispersion["majority_vote"] == pytest.approx({"mean": 0.83, "std": 0.01632993162})
 
 
+def test_stdout_seed_ids_accept_condition_rows_but_not_factor_effects() -> None:
+    stdout = """Condition=majority_vote Seed=7 BalancedAccuracy=0.54
+Condition=majority_vote Seed=19 BalancedAccuracy=0.51
+Condition=majority_vote Seed=31 BalancedAccuracy=0.50
+Factor effects:
+  seed: 0.008292
+"""
+
+    assert _stdout_seed_ids(stdout) == [7, 19, 31]
+
+
 def test_seed_evidence_parser_prefers_verified_machine_record() -> None:
     payload = {
         "schema_version": "1.0",

@@ -1609,10 +1609,14 @@ def _stdout_seed_ids(stdout: str) -> list[int]:
     """Read seed identifiers from common human-readable assignment styles."""
 
     seed_row_patterns = (
-        re.compile(r"(?i)^\s*(?:---\s*|\[\s*)?seed\s*(?:[=:]\s*)?([0-9]+)\b"),
+        re.compile(r"(?i)^\s*(?:---\s*|\[\s*)?seed\s*(?:[=:]\s*)?([0-9]+)(?![0-9.])"),
         re.compile(
             r"(?i)^\s*\[[A-Za-z][A-Za-z0-9_-]*\]\s*"
-            r"seed\s*(?:[=:]\s*)?([0-9]+)\b"
+            r"seed\s*(?:[=:]\s*)?([0-9]+)(?![0-9.])"
+        ),
+        re.compile(
+            r"(?i)^\s*condition\s*=\s*[A-Za-z][A-Za-z0-9_-]*\s+"
+            r"seed\s*=\s*([0-9]+)(?![0-9.])\s+balanced_?accuracy\s*="
         ),
     )
     return sorted(
@@ -1637,7 +1641,7 @@ def _parse_seed_evidence(
     per_seed: dict[str, dict[str, float]] = {}
     current_seed: str | None = None
     current_condition: str | None = None
-    seed_pattern = re.compile(r"(?i)^\s*(?:---\s*|\[\s*)?seed\s*(?:[=:]\s*)?([0-9]+)\b")
+    seed_pattern = re.compile(r"(?i)^\s*(?:---\s*|\[\s*)?seed\s*(?:[=:]\s*)?([0-9]+)(?![0-9.])")
     seed_metric_pattern = re.compile(
         rf"(?i)\bseed\s+([0-9]+)\s*:\s*.*?\b{re.escape(primary_metric)}\s*="
         r"\s*([-+]?\d+(?:\.\d+)?)"

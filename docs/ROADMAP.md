@@ -231,6 +231,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `do not serve as direct measurements of ... internal confidence` was treated
   as affirmative model-signal language. Synthetic-scope auditing now recognizes
   `do not` and `must not` limitations while preserving positive-claim rejection.
+  A thirteenth attempt stopped before analysis because the seed-row scanner read
+  the factor effect `seed: 0.008292` as seed zero while missing condition-first
+  measurement rows. Decimal-safe matching and the explicit
+  `Condition=... Seed=... BalancedAccuracy=...` form now cover that output.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

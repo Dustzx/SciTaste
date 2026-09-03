@@ -160,6 +160,9 @@ semantic versioning.
   `examples per seed: 648` and `Total/seed: 648`. Identification is restricted
   to explicit seed rows instead of scanning arbitrary prose; machine evidence
   still supplies the authoritative condition-by-seed values.
+- Seed-row discovery now accepts `Condition=<name> Seed=<id>
+  BalancedAccuracy=<value>` records and rejects decimal factor-effect rows such
+  as `seed: 0.008292` rather than truncating the decimal into an identifier.
 - The immutable contract literal and canonical machine-evidence requirement now
   live in the Stage 10 system prompt as well as its initial user prompt. Upstream
   code-review fixes and topic-alignment regeneration therefore receive the same
