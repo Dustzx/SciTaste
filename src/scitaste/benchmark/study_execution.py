@@ -163,14 +163,21 @@ class SubprocessRunner:
             try:
                 returncode = process.wait(timeout=timeout_seconds)
             except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGTERM)
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+                _terminate_process_group(process)
+                raise
+            except BaseException:
+                _terminate_process_group(process)
                 raise
         return ProcessResult(returncode=returncode)
+
+
+def _terminate_process_group(process: subprocess.Popen[bytes]) -> None:
+    os.killpg(process.pid, signal.SIGTERM)
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
 
 
 class MatchedStudyRunner:
@@ -456,6 +463,7 @@ class MatchedStudyRunner:
             "cell_request": str(cell_dir / "cell_request.json"),
             "cell_result": str(cell_dir / "launcher_result.json"),
             "task_asset": str((self.asset_root / task.asset_path).resolve()),
+            "asset_root": str(self.asset_root.resolve()),
         }
         rendered: list[str] = []
         for argument in self.launch_config.launchers[cell.condition].command:

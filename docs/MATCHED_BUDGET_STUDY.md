@@ -117,22 +117,33 @@ Protocols declare either `formal` or `pilot` scope. A pilot remains
 `acceptance_only` even if every execution and external review is otherwise
 complete, preventing engineering trials from becoming headline evidence.
 
-## Current readiness blockers
+## Current execution state
 
-The committed v1 draft deliberately contains explicit pending markers for the
-provider-resolved Qwen revision and frozen search snapshot. The planner surfaces
-both markers as blockers. Real execution additionally requires:
+The formal protocol pins Bailian `qwen3.8-max-2026-09-02` and a
+content-addressed local snapshot. Fixed synthetic generators provide controlled
+internal comparisons; transfer to natural scientific corpora remains an explicit
+limitation.
 
-- end-to-end condition launchers through later AutoResearchClaw stages;
-- externally measured API/token cost, because the accepted Stage 1–3 substrate
-  run did not emit an API cost log;
-- pinned Sibyl/AI Scientist-v2 adapters if they prove practical;
-- independent experts, conflict adjudication, and reviewer identity hashes.
+The four first-party launchers run unmodified AutoResearchClaw from hypothesis
+generation through peer review. The adapter isolates Knowledge and Taste
+augmentation, records the Full SciTaste controller decision, captures exact wire
+tokens, estimates API cost from the frozen posted-price schedule, and rejects
+generated experiment code containing network access. Upstream novelty,
+benchmark, and code search are disabled so `search_queries=0` is enforced.
 
-A local Qwen3-VL-4B decision-backend smoke run is complete on one RTX 3090. It
-validates model loading and the preference protocol only; it is not a complete
-system cell and therefore does not clear the executor, search-snapshot, or expert
-review requirements above.
+The peer-review endpoint is intentional: a real preacceptance cell consumed
+190,688 of its 200,000-token allowance before AutoResearchClaw attempted a
+second paper-revision pass. Ending at peer review keeps every condition inside
+the preregistered budget and leaves concern closure to the independent blinded
+panel instead of allowing unequal revision retries.
 
-These are operational/research prerequisites, not reasons to weaken the audit
-contract or modify AutoResearchClaw internals.
+Remaining exit-gate work is operational:
+
+- pass four-condition preacceptance and then all 48 registered cells;
+- inspect every generated code/result/paper manifest and budget audit;
+- collect independent condition-blinded reviews and adjudicate conflicts;
+- optionally enable Sibyl/AI Scientist-v2 after their separate gates pass.
+
+Until external reviews arrive, completed executions remain `incomplete` for
+headline eligibility. This does not weaken their execution evidence or modify
+AutoResearchClaw internals.

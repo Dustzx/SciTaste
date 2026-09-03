@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "snapshot_id": "scitaste-phase9-frozen-search-2026-09-03",
+  "frozen_at": "2026-09-03T00:00:00+08:00",
+  "policy": "No live retrieval during a study cell; every condition receives this same snapshot.",
+  "sources": [
+    {
+      "source_id": "liu-2023-lost-middle",
+      "title": "Lost in the Middle: How Language Models Use Long Contexts",
+      "locator": "https://arxiv.org/abs/2307.03172",
+      "derived_summary": "Relevant-information position can materially affect long-context task performance; position and length should be controlled independently."
+    },
+    {
+      "source_id": "amiraz-2025-distracting-effect",
+      "title": "The Distracting Effect: Understanding Irrelevant Passages in RAG",
+      "locator": "https://arxiv.org/abs/2505.06914",
+      "derived_summary": "Irrelevant passages are not uniformly benign; some are hard distractors whose effect should be measured rather than inferred from relevance labels alone."
+    },
+    {
+      "source_id": "fixed-generator-protocol-v1",
+      "title": "SciTaste controlled evidence-conflict generator protocol",
+      "locator": "configs/experiments/tasks/*.yaml",
+      "derived_summary": "Factorial generators must expose ground truth, preserve fixed seeds, report per-factor results and include matched negative controls."
+    },
+    {
+      "source_id": "scitaste-spec-v1.1",
+      "title": "SciTaste Full Project Codex Specification v1.1",
+      "locator": "SciTaste_Full_Project_Codex_Spec_v1.1.md",
+      "derived_summary": "Knowledge records answer what is known, while Taste Cases encode which decision was preferable under a prior decision context."
+    }
+  ]
+}

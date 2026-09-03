@@ -156,11 +156,22 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
   non-headline; its four launcher commands remain explicit adapter work rather
   than synthetic substitutes.
+- The formal protocol now pins `qwen3.8-max-2026-09-02`, a content-addressed
+  no-live-search snapshot, and fixed-generator contracts for all four tasks.
+- A first-party adapter runs unmodified AutoResearchClaw Stage 8–18 for the four
+  core conditions. Knowledge and decision-precedent context remain isolated;
+  Full additionally persists a real `TasteController` decision.
+- Process-local controls disable hidden upstream retrieval, bound Qwen output,
+  capture wire-token/cost telemetry, and reject generated experiment sources
+  that violate the frozen-network policy.
+- A real Qwen3.8-Max diagnosis/base preacceptance reached peer review with one
+  valid generated experiment, a 0.828558 balanced-accuracy result, and a
+  7,821-word paper draft. This validates one cell, not the four-condition or
+  48-cell comparison.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
-- Pending before the exit gate: freeze a provider-resolved model revision,
-  materialize the search snapshot, add complete API/token accounting, validate
-  downstream substrate stages, run the matrix, and collect external reviews.
+- Pending before the exit gate: pass four-condition preacceptance, run all 48
+  commit-pinned cells, audit their artifacts, and collect external reviews.
 
 ## Project controls
 

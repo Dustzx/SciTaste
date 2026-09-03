@@ -115,10 +115,7 @@ def test_planner_builds_deterministic_matched_matrix() -> None:
         SystemCondition.SIBYL,
         SystemCondition.AI_SCIENTIST_V2,
     }
-    assert first.readiness_blockers == [
-        "base model revision is not frozen",
-        "search snapshot is not materialized",
-    ]
+    assert first.readiness_blockers == []
 
 
 def test_synthetic_complete_matrix_is_acceptance_only() -> None:

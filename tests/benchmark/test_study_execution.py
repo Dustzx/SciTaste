@@ -170,11 +170,23 @@ def test_dry_run_does_not_create_output(tmp_path) -> None:
     assert list(tmp_path.iterdir()) == []
 
 
-def test_formal_protocol_with_readiness_blockers_cannot_execute(tmp_path) -> None:
+def test_formal_protocol_is_execution_ready_after_assets_are_frozen(tmp_path) -> None:
     protocol = load_study_protocol("configs/experiments/matched_budget_study_v1.yaml")
+    config = StudyLaunchConfig(
+        launchers={
+            condition: CommandLauncherConfig(command=["adapter", "{cell_request}"])
+            for condition in (
+                SystemCondition.AUTORESEARCHCLAW,
+                SystemCondition.KNOWLEDGE_RAG,
+                SystemCondition.TASTE_LIBRARY,
+                SystemCondition.FULL_SCITASTE,
+            )
+        }
+    )
 
-    with pytest.raises(ValueError, match="not execution-ready"):
-        MatchedStudyRunner(protocol, launch_config(), output_dir=tmp_path).run(dry_run=True)
+    summary = MatchedStudyRunner(protocol, config, output_dir=tmp_path).run(dry_run=True)
+
+    assert summary.selected_cells == 48
 
 
 def test_missing_launcher_is_rejected(tmp_path) -> None:

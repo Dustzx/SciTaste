@@ -99,6 +99,8 @@ returns observations and artifacts but cannot select the next global action.
     results require complete counters and runner-hashed in-cell artifacts.
 33. Pilot protocols can validate execution mechanics but can never produce
     headline-eligible evidence.
+34. Formal cells may contact only the declared model endpoint; hidden novelty,
+    benchmark, code-search, or generated-experiment retrieval invalidates a cell.
 
 ## Architecture decision records
 
@@ -238,3 +240,22 @@ allocation measurement, process-group timeout, path containment, content hashes,
 and atomic resume state. This contract applies equally to first-party conditions
 and future Sibyl or AI Scientist-v2 adapters, so no external framework internals
 enter SciTaste's controller or evaluation schema.
+
+### ADR-019: Frozen task substrate with isolated system augmentation
+
+Status: accepted. The initial formal study starts pinned, unmodified
+AutoResearchClaw at hypothesis generation from one content-addressed task
+synthesis and continues through peer review. Base receives the shared
+snapshot, Knowledge RAG adds structured factual cards, Taste Library adds
+decision precedents, and Full receives both plus a persisted `TasteController`
+action. A process-local bootstrap bounds output, disables hosted-model thinking
+for predictable cost, records wire usage, and suppresses upstream retrieval that
+would violate the snapshot. Experiments execute for real; fixed synthetic
+generators improve internal control but remain an explicit external-validity
+limitation.
+
+The registered endpoint is peer review rather than paper revision. The initial
+real preacceptance showed that revision retries can exhaust the common token
+ceiling after a complete draft and review already exist. A common earlier
+endpoint is therefore more comparable across conditions and delegates concern
+closure to the separately blinded expert panel.

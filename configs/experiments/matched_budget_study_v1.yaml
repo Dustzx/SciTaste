@@ -1,14 +1,14 @@
 study_id: scitaste-matched-budget-v1
 version: "1.0"
 scope: formal
-description: Preregistered four-category system study; execution remains pending until frozen search assets, external competitors, and expert panel operations are available.
+description: Preregistered four-category study using real generated experiments on fixed synthetic task generators; external validity and headline eligibility still require blinded expert review.
 base_model: qwen3.8-max
-base_model_revision: bailian-model-snapshot-required-at-execution
+base_model_revision: qwen3.8-max-2026-09-02
 codebase_commit: 4eb735dc7b3497a91fab414e2d73bb5f0396f854
 search_access:
   policy_id: frozen-search-snapshot-v1
   provider: frozen-local-corpus
-  frozen_snapshot: pending-content-addressed-snapshot
+  frozen_snapshot: sha256:a0275a5312046080cf2de22faf0fb0a5e09780bc8ee3e0420dee43468fc2c043
 budget:
   gpu_hours: 4.0
   max_experiments: 8
@@ -24,28 +24,28 @@ tasks:
     research_direction: Diagnose a reproducible failure boundary in long-context scientific claim verification.
     domain: scientific-language-modeling
     asset_path: configs/experiments/tasks/diagnosis_friendly_v1.yaml
-    asset_sha256: c52ef752505360f439305d68a040c407e1643a8793db890f2ad438fb9a375340
+    asset_sha256: 0524d9d3115510d8a20c3f4f87cf8e8981cf4923834e7d8c5e494ab7c41d5501
     expected_discovery_behavior: Probe-heavy diagnosis before method commitment.
   - task_id: clear-hypothesis-v1
     category: clear_hypothesis
     research_direction: Test uncertainty-weighted evidence aggregation for contradictory-claim verification.
     domain: scientific-language-modeling
     asset_path: configs/experiments/tasks/clear_hypothesis_v1.yaml
-    asset_sha256: 5870e7513b797786232cedb748f373ed4ef1924ea01604fc149b43ac259f1b69
+    asset_sha256: bc3aa052bfe7bbdd157aad7ea3ae8ffc6ed69cbfda487b092cf9b9bc8f3a69ef
     expected_discovery_behavior: One bounded sanity probe before pilot execution.
   - task_id: new-formulation-v1
     category: new_formulation
     research_direction: Define a diagnostic benchmark for evidence-grounded scientific-agent pivots.
     domain: autonomous-science-evaluation
     asset_path: configs/experiments/tasks/new_formulation_v1.yaml
-    asset_sha256: 2f2e87cb25d338b935b328fd98c1729e218287330a8147920d0d56e5d0047a8d
+    asset_sha256: 7b32da232f8a759ec8bedd445d27910f1ef9527ef801000ce3f60ad83da21e31
     expected_discovery_behavior: Literature and evaluation design dominate early work.
   - task_id: ambiguous-direction-v1
     category: ambiguous_direction
     research_direction: Investigate when retrieval augmentation harms scientific decision quality.
     domain: retrieval-augmented-reasoning
     asset_path: configs/experiments/tasks/ambiguous_direction_v1.yaml
-    asset_sha256: 237d71997fdbdef597c995ea3cea52ccbbd8b09cd9fdf4c71dfb2adca1cc6896
+    asset_sha256: f3ffaf892de1da8e757e41f4cd6514b9efeae6e4b58bd1bb1b59363790eabe0d
     expected_discovery_behavior: Adaptive probes precede expensive method development.
 conditions:
   - condition: autoresearchclaw

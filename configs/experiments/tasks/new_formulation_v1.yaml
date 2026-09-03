@@ -15,3 +15,65 @@ deliverables:
   - negative controls
   - pilot result
   - evidence-linked paper draft
+research_brief: |
+  Formulate and pilot a leakage-resistant benchmark for scientific-agent pivots.
+  Generate short research trajectories containing an initial hypothesis, a
+  contradictory or confirming observation, a proposed next action, and a final
+  claim. Ground-truth labels distinguish evidence-preserving pivots, rhetorical
+  relabeling, premature abandonment, and justified continuation. Templates used
+  in evaluation must be held out by family. Compare keyword, evidence-link, and
+  transition-consistency scorers and include label-shuffle and evidence-removal
+  negative controls.
+benchmark:
+  primary_metric: macro_f1
+  metric_direction: maximize
+  conditions: [keyword_scorer, evidence_link_scorer, transition_consistency_scorer]
+  seeds: [7, 19, 31]
+  max_runs: 8
+  fixed_generator: "Four trajectory classes, 250 cases/class/seed, template-family held-out split."
+  contract:
+    generator: evidence-pivot-trajectories-v1
+    trajectory_classes: [evidence_preserving_pivot, rhetorical_relabeling, premature_abandonment, justified_continuation]
+    cases_per_class_per_seed: 250
+    split_unit: template_family
+    conditions: [keyword_scorer, evidence_link_scorer, transition_consistency_scorer]
+    negative_controls: [label_shuffle, evidence_removal]
+    metrics: [macro_f1, per_class_confusion]
+    seeds: [7, 19, 31]
+knowledge_documents:
+  - document_id: pivot-task-definition-v1
+    title: Operational pivot definition
+    content: A correct pivot retains the contradiction, changes the hypothesis or method it invalidates, and does not strengthen unsupported claims.
+  - document_id: fixed-generator-protocol-v1
+    title: Leakage-resistant benchmark contract
+    content: Split by template family, publish negative controls, and score both macro-F1 and per-class confusion.
+candidate_actions:
+  - action_id: formalize-task
+    type: FORMULATE_PROBLEM
+    description: Formalize observable pivot criteria and leakage controls before proposing a scorer.
+    expected_cost: {wall_time_hours: 0.05}
+    expected_value: {information_gain: 0.85, problem_validity: 0.95}
+  - action_id: build-keyword-scorer
+    type: IDEATE
+    description: Implement a keyword scorer before the task definition and negative controls are fixed.
+    expected_cost: {experiments: 2.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.25, problem_validity: 0.3}
+taste_cases:
+  - case_id: benchmark-definition-before-method-v1
+    stage: DISCOVERY
+    context_summary: Existing aggregate scores do not isolate the target scientific behavior.
+    problem_pattern: A new benchmark formulation with shortcut and leakage risks.
+    evidence_state: Construct validity is unresolved.
+    candidate_actions: [FORMULATE_PROBLEM, IDEATE]
+    preferred_action: FORMULATE_PROBLEM
+    rejected_actions: [IDEATE]
+    decision_principle: Define observable success and negative controls before optimizing a metric.
+    why_preferred: Otherwise a scorer may reward rhetorical surface changes instead of evidence-preserving pivots.
+    confidence: 0.95
+    domain_tags: [autonomous-science-evaluation]
+pricing:
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+  snapshot_model: qwen3.8-max-2026-09-02
+  input_cny_per_million: 12.0
+  output_cny_per_million: 36.0
+  cny_per_usd: 7.2

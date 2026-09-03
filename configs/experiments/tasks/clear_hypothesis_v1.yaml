@@ -15,3 +15,64 @@ deliverables:
   - controlled pilot
   - evidence inventory
   - evidence-linked paper draft
+research_brief: |
+  Test a preregistered mechanism on generated contradictory evidence. For every
+  seed, sample latent binary truths, evidence reliability in [0.55, 0.95], and
+  evidence votes conditionally on reliability. Cross contradiction density
+  (0.10/0.30/0.50) with calibration corruption (none/overconfident/underconfident).
+  Compare majority vote, raw confidence weighting, calibrated uncertainty
+  weighting, and an oracle-reliability upper bound. Fit calibration on a disjoint
+  split and report accuracy, Brier score, ECE, and bootstrap uncertainty.
+benchmark:
+  primary_metric: brier_score
+  metric_direction: minimize
+  conditions: [majority_vote, raw_confidence_weighting, calibrated_uncertainty_weighting, oracle_reliability]
+  seeds: [7, 19, 31]
+  max_runs: 8
+  fixed_generator: "2000 train-calibration cases and 2000 held-out cases per seed; numpy.default_rng(seed)."
+  contract:
+    generator: uncertainty-aggregation-v1
+    contradiction_densities: [0.1, 0.3, 0.5]
+    calibration_corruptions: [none, overconfident, underconfident]
+    calibration_cases_per_seed: 2000
+    heldout_cases_per_seed: 2000
+    conditions: [majority_vote, raw_confidence_weighting, calibrated_uncertainty_weighting, oracle_reliability]
+    metrics: [accuracy, brier_score, ece]
+    seeds: [7, 19, 31]
+knowledge_documents:
+  - document_id: fixed-generator-protocol-v1
+    title: Matched aggregation comparison
+    content: All aggregation rules must receive identical evidence votes and splits; calibration fitting cannot inspect the held-out labels.
+  - document_id: uncertainty-proper-scoring-v1
+    title: Proper-scoring evaluation
+    content: Accuracy alone cannot distinguish calibrated aggregation; include Brier score and expected calibration error with bootstrap intervals.
+candidate_actions:
+  - action_id: bounded-sanity-probe
+    type: PROBE
+    description: Verify that the generator and calibration split recover the oracle ordering on one bounded seed.
+    expected_cost: {experiments: 1.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.75, problem_validity: 0.8}
+  - action_id: matched-pilot
+    type: PILOT
+    description: Run the complete matched aggregation pilot immediately.
+    expected_cost: {experiments: 4.0, gpu_hours: 0.0}
+    expected_value: {expected_empirical_signal: 0.8, evidence_tractability: 0.8}
+taste_cases:
+  - case_id: clear-hypothesis-sanity-v1
+    stage: DISCOVERY
+    context_summary: A falsifiable mechanism and matched experiment are already specified.
+    problem_pattern: Clear hypothesis with risk of implementation or generator error.
+    evidence_state: Prior signal exists but robustness is unknown.
+    candidate_actions: [PROBE, PILOT]
+    preferred_action: PROBE
+    rejected_actions: [PILOT]
+    decision_principle: Use one bounded sanity check, then advance without an open-ended diagnostic phase.
+    why_preferred: The cheap check protects the full pilot from implementation errors while preserving the preregistered test.
+    confidence: 0.9
+    domain_tags: [scientific-language-modeling]
+pricing:
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+  snapshot_model: qwen3.8-max-2026-09-02
+  input_cny_per_million: 12.0
+  output_cny_per_million: 36.0
+  cny_per_usd: 7.2

@@ -27,6 +27,13 @@ local-gpu = [
   "torch>=2.5,<2.6",
   "transformers>=4.57,<4.58",
 ]
+study = [
+  "matplotlib>=3.7,<4",
+  "numpy>=1.24,<3",
+  "pandas>=2,<3",
+  "scikit-learn>=1.4,<2",
+  "scipy>=1.10,<2",
+]
 [project.scripts]
 scitaste = "scitaste.cli:main"
 

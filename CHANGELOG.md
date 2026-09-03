@@ -58,6 +58,14 @@ semantic versioning.
   containment/hashing, and atomic per-cell checkpoints.
 - Formal/pilot protocol scope enforcement and a 16-cell local Qwen3-VL-4B pilot
   plan that cannot become headline evidence.
+- Content-addressed fixed-generator task contracts, a frozen no-live-search
+  snapshot, and the pinned Bailian `qwen3.8-max-2026-09-02` formal protocol.
+- Real four-condition adapters over unmodified AutoResearchClaw Stage 8–18,
+  including isolated Knowledge/Taste augmentation, Full controller traces,
+  wire-token/cost telemetry, frozen-network controls, and artifact audits.
+- Formal-adapter contract gates for generated experiments, exact cumulative
+  token ceilings, resumable/finalizable upstream runs, metric normalization, and
+  bounded refinement-log retention.
 
 ### Changed
 
@@ -67,8 +75,13 @@ semantic versioning.
   and `DROP` creates a terminal project state.
 - The Bailian example backend now pins `qwen3.8-max` for the current opt-in smoke
   contract.
+- The formal matched-budget endpoint is peer review (Stage 18); independent
+  blinded reviewers, rather than condition-dependent revision retries, own the
+  final concern-closure judgment.
 
 ### Fixed
 
 - CI now initializes the pinned AutoResearchClaw submodule before running the
   substrate verification test.
+- Interrupted study runners terminate their isolated child process group so an
+  orphan cannot contaminate a later attempt for the same cell.

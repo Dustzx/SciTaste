@@ -1,0 +1,21 @@
+schema_version: "1.0"
+launchers:
+  autoresearchclaw: &core_launcher
+    command:
+      - "{asset_root}/.venv/bin/python"
+      - -m
+      - scitaste.benchmark.study_adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+      - --to-stage
+      - PEER_REVIEW
+      - --max-output-tokens
+      - "12288"
+    gpu_count: 1
+    timeout_seconds: 7200
+    pass_environment: [DASHSCOPE_API_KEY]
+  knowledge_rag: *core_launcher
+  taste_library: *core_launcher
+  full_scitaste: *core_launcher

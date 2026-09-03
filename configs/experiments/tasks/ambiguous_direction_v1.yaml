@@ -15,3 +15,65 @@ deliverables:
   - probe plan
   - pilot result
   - evidence-linked paper draft
+research_brief: |
+  Diagnose when retrieval hurts a controlled binary scientific decision task.
+  Generate queries with one ground-truth evidence card plus retrieved sets that
+  cross relevant coverage (present/absent), distractor count (0/2/8), distractor
+  lexical similarity (low/high), and popularity cue (absent/present). Compare no
+  retrieval, top-k concatenation, relevance thresholding, and contradiction-aware
+  filtering. Measure decision accuracy, selective risk, contradiction retention,
+  and harm rate relative to no retrieval by factor stratum.
+benchmark:
+  primary_metric: decision_accuracy
+  metric_direction: maximize
+  conditions: [no_retrieval, top_k, relevance_threshold, contradiction_aware_filter]
+  seeds: [7, 19, 31]
+  max_runs: 8
+  fixed_generator: "Full factorial with 100 queries/cell/seed; numpy.default_rng(seed)."
+  contract:
+    generator: retrieval-harm-factorial-v1
+    relevant_coverage: [present, absent]
+    distractor_counts: [0, 2, 8]
+    distractor_similarity: [low, high]
+    popularity_cue: [absent, present]
+    queries_per_cell_per_seed: 100
+    conditions: [no_retrieval, top_k, relevance_threshold, contradiction_aware_filter]
+    metrics: [decision_accuracy, selective_risk, contradiction_retention, harm_rate]
+    seeds: [7, 19, 31]
+knowledge_documents:
+  - document_id: amiraz-2025-distracting-effect
+    title: Hard distractors in retrieval
+    content: Irrelevant passages differ in their actual distracting effect, so similarity and realized answer harm must be analyzed separately.
+  - document_id: fixed-generator-protocol-v1
+    title: Retrieval-harm counterfactual
+    content: Every retrieved condition must be paired with the same query under no retrieval to identify harm rather than raw task difficulty.
+candidate_actions:
+  - action_id: retrieval-factor-probe
+    type: PROBE
+    description: Probe distractor similarity, count, coverage, and popularity before selecting a mitigation.
+    expected_cost: {experiments: 1.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.9, problem_validity: 0.85}
+  - action_id: implement-reranker
+    type: IDEATE
+    description: Commit to a generic reranker before locating the retrieval-harm boundary.
+    expected_cost: {experiments: 3.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.25, problem_validity: 0.25}
+taste_cases:
+  - case_id: ambiguous-retrieval-probe-v1
+    stage: DISCOVERY
+    context_summary: Retrieval sometimes helps coverage and sometimes causes anchoring, with no known boundary.
+    problem_pattern: Ambiguous direction with multiple plausible mechanisms.
+    evidence_state: Mixed aggregate observations without paired counterfactuals.
+    candidate_actions: [PROBE, IDEATE]
+    preferred_action: PROBE
+    rejected_actions: [IDEATE]
+    decision_principle: Spend the initial budget on paired factor probes and state a hypothesis only after locating a stable harm stratum.
+    why_preferred: A generic reranker cannot distinguish missing relevance from high-similarity distraction or popularity anchoring.
+    confidence: 0.95
+    domain_tags: [retrieval-augmented-reasoning]
+pricing:
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+  snapshot_model: qwen3.8-max-2026-09-02
+  input_cny_per_million: 12.0
+  output_cny_per_million: 36.0
+  cny_per_usd: 7.2

@@ -50,8 +50,7 @@ def test_study_evaluate_cli_reports_incomplete_matrix(tmp_path) -> None:
     assert report["status"] == "incomplete"
     assert report["headline_eligible"] is False
     assert report["completed_cells"] == 0
-    assert "base model revision is not frozen" in report["blockers"]
-    assert "search snapshot is not materialized" in report["blockers"]
+    assert "48 planned cells have no execution record" in report["blockers"]
     assert "48 planned cells have no execution record" in report["blockers"]
 
 

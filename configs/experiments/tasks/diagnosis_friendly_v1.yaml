@@ -15,3 +15,64 @@ deliverables:
   - controlled pilot
   - evidence inventory
   - evidence-linked paper draft
+research_brief: |
+  Build a controlled, CPU-executable diagnosis of claim-verification failures.
+  Generate evidence packets from a fixed factorial design crossing relevant-item
+  position (start/middle/end), packet length (8/32/128 statements), contradiction
+  density (0/0.25/0.50), and citation topology (flat/chain). Each packet contains
+  an explicit binary ground truth and seeded distractors. First diagnose factor
+  effects with a transparent baseline; only then test one bounded mitigation.
+benchmark:
+  primary_metric: balanced_accuracy
+  metric_direction: maximize
+  conditions: [majority_vote, confidence_weighted_vote, position_aware_probe]
+  seeds: [7, 19, 31]
+  max_runs: 8
+  fixed_generator: "Full factorial above; 12 examples per cell; numpy.default_rng(seed)."
+  contract:
+    generator: diagnosis-factorial-v1
+    target_positions: [start, middle, end]
+    packet_lengths: [8, 32, 128]
+    contradiction_densities: [0.0, 0.25, 0.5]
+    citation_topologies: [flat, chain]
+    examples_per_cell: 12
+    conditions: [majority_vote, confidence_weighted_vote, position_aware_probe]
+    metrics: [balanced_accuracy, factor_effects]
+    seeds: [7, 19, 31]
+knowledge_documents:
+  - document_id: liu-2023-lost-middle
+    title: Position sensitivity in long contexts
+    content: Relevant evidence position and context length are separate causal factors; report their interaction rather than only aggregate accuracy.
+  - document_id: fixed-generator-protocol-v1
+    title: Factorial diagnosis contract
+    content: Preserve ground truth and fixed seeds, report per-factor effects and include a no-contradiction negative control.
+candidate_actions:
+  - action_id: run-factor-probe
+    type: PROBE
+    description: Run the preregistered low-cost factorial diagnosis before method commitment.
+    expected_cost: {experiments: 1.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.95, problem_validity: 0.9}
+  - action_id: commit-position-method
+    type: IDEATE
+    description: Commit immediately to a position-aware method without separating factors.
+    expected_cost: {experiments: 2.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.2, problem_validity: 0.25}
+taste_cases:
+  - case_id: diagnosis-factor-before-method-v1
+    stage: DISCOVERY
+    context_summary: Aggregate performance declines while several causal factors are confounded.
+    problem_pattern: Unknown failure boundary under a factorial alternative set.
+    evidence_state: Aggregate trend only; no controlled factor evidence.
+    candidate_actions: [PROBE, IDEATE]
+    preferred_action: PROBE
+    rejected_actions: [IDEATE]
+    decision_principle: Separate plausible causal factors with the cheapest discriminating probe before method commitment.
+    why_preferred: A factorial probe can falsify multiple explanations and prevents optimizing for the wrong boundary.
+    confidence: 0.95
+    domain_tags: [scientific-language-modeling]
+pricing: &bailian_pricing
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+  snapshot_model: qwen3.8-max-2026-09-02
+  input_cny_per_million: 12.0
+  output_cny_per_million: 36.0
+  cny_per_usd: 7.2
