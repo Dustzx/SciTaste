@@ -80,6 +80,8 @@ semantic versioning.
 - The formal matched-budget endpoint is peer review (Stage 18); independent
   blinded reviewers, rather than condition-dependent revision retries, own the
   final concern-closure judgment.
+- A clean, frozen-protocol Qwen3.8-Max base cell now passes the complete formal
+  launcher with content-addressed paper, audit, trace, and upstream manifest.
 
 ### Fixed
 

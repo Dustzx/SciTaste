@@ -168,6 +168,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   valid generated experiment, a 0.828558 balanced-accuracy result, and a
   7,821-word paper draft. This validates one cell, not the four-condition or
   48-cell comparison.
+- A clean commit-pinned formal base cell subsequently passed in one runner
+  lifecycle with complete wall/GPU accounting, 138,157 provider tokens, one
+  repaired real experiment, a 0.615945 registered aggregate, and Stage 18
+  artifacts. The other 47 cells and external blinded reviews remain pending.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48
