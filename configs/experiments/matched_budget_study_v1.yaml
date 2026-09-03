@@ -4,7 +4,7 @@ scope: formal
 description: Preregistered four-category study using real generated experiments on fixed synthetic task generators; external validity and headline eligibility still require blinded expert review.
 base_model: qwen3.8-max
 base_model_revision: qwen3.8-max-2026-09-02
-codebase_commit: ef1a16785c207e3a599eda908b0d19313df5eaf7
+codebase_commit: 221c2847a357d8333443637c0514682534d2b08f
 search_access:
   policy_id: frozen-search-snapshot-v1
   provider: frozen-local-corpus
@@ -24,7 +24,7 @@ tasks:
     research_direction: Diagnose a reproducible failure boundary in long-context scientific claim verification.
     domain: scientific-language-modeling
     asset_path: configs/experiments/tasks/diagnosis_friendly_v1.yaml
-    asset_sha256: 0524d9d3115510d8a20c3f4f87cf8e8981cf4923834e7d8c5e494ab7c41d5501
+    asset_sha256: 83ed4c7b89494b8d8475a991f0e652812a6dde1724c345956896ebfef8b50755
     expected_discovery_behavior: Probe-heavy diagnosis before method commitment.
   - task_id: clear-hypothesis-v1
     category: clear_hypothesis
