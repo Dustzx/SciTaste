@@ -134,6 +134,7 @@ def run_study_cell(
                 upstream_run,
                 str(task["benchmark"]["primary_metric"]),
                 str(task["benchmark"]["metric_direction"]),
+                condition_names=[str(item) for item in task["benchmark"]["conditions"]],
             )
             _validate_selected_experiment(upstream_run, task)
             _compact_refinement_log(upstream_run)
@@ -795,7 +796,11 @@ def _best_successful_sandbox(iteration: dict[str, Any]) -> dict[str, Any] | None
 
 
 def _normalize_refinement_metrics(
-    run_dir: Path, primary_metric: str, metric_direction: str
+    run_dir: Path,
+    primary_metric: str,
+    metric_direction: str,
+    *,
+    condition_names: list[str] | None = None,
 ) -> None:
     """Normalize real numeric stdout when upstream's parser misses ``name=value``."""
 
@@ -827,6 +832,21 @@ def _normalize_refinement_metrics(
         ):
             value = None
         sources: list[float] = []
+        if value is None and condition_names and all(name in metrics for name in condition_names):
+            try:
+                sources = [float(metrics[name]) for name in condition_names]
+            except (TypeError, ValueError):
+                sources = []
+            if sources:
+                value = sum(sources) / len(sources)
+                metrics[primary_metric] = round(value, 10)
+                sandbox["metrics"] = metrics
+                iteration["metric_normalization"] = {
+                    "method": "registered-condition-mean-to-structured-v1",
+                    "source_conditions": condition_names,
+                    "source_values": sources,
+                    "aggregate": "arithmetic_mean",
+                }
         if value is None:
             stdout = str(sandbox.get("stdout", ""))
             sources = [float(item) for item in overall_pattern.findall(stdout)]

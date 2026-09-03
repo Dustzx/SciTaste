@@ -256,6 +256,46 @@ def test_metric_normalization_prefers_overall_mean_over_dispersion(tmp_path) -> 
     assert normalized["iterations"][0]["metric_normalization"]["source_values"] == [0.5]
 
 
+def test_metric_normalization_aggregates_every_registered_condition(tmp_path) -> None:
+    stage = tmp_path / "stage-13"
+    stage.mkdir()
+    path = stage / "refinement_log.json"
+    path.write_text(
+        json.dumps(
+            {
+                "best_metric": None,
+                "best_version": "experiment/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {
+                                "majority_vote": 0.8,
+                                "confidence_weighted_vote": 0.9,
+                                "position_aware_probe": 0.7,
+                            },
+                            "stdout": "",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    conditions = load_task()["benchmark"]["conditions"]
+    _normalize_refinement_metrics(
+        tmp_path, "balanced_accuracy", "maximize", condition_names=conditions
+    )
+    normalized = json.loads(path.read_text(encoding="utf-8"))
+
+    assert normalized["best_metric"] == pytest.approx(0.8)
+    record = normalized["iterations"][0]
+    assert record["sandbox"]["metrics"]["balanced_accuracy"] == pytest.approx(0.8)
+    assert record["metric_normalization"]["source_conditions"] == conditions
+
+
 def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:
     telemetry = tmp_path / "telemetry.jsonl"
     telemetry.write_text(

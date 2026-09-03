@@ -90,3 +90,6 @@ semantic versioning.
 - Formal metric normalization now prefers complete successful execution evidence
   when an upstream repaired-run record omits stdout, and excludes dispersion
   values from primary-metric aggregation.
+- Formal metric normalization now accepts a complete registered condition-score
+  vector and derives the preregistered aggregate only when every condition is
+  present and numeric.
