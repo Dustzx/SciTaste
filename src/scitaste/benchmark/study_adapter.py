@@ -2281,7 +2281,7 @@ def _synthetic_claim_violations(text: str) -> list[str]:
         ),
     }
     corrective = re.compile(
-        r"(?i)\b(?:does not|did not|no direct|not an? |rather than|incorrect|"
+        r"(?i)\b(?:does not|did not|do not|must not|no direct|not an? |rather than|incorrect|"
         r"incorrectly|invalid|falsely|erroneous|superseded|without (?:a )?neural|"
         r"future (?:empirical )?hypothesis|cannot be attributed)\b"
     )

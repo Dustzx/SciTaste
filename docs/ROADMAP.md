@@ -227,6 +227,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   gates, then stopped before drafting because the outline instruction `Do not
   infer N=1` was read as an affirmative claim. Prohibitive `do not infer/derive`
   language is now accepted while unqualified N=1 claims remain rejected.
+  A twelfth attempt passed the experiment gate but stopped after Stage 14 because
+  `do not serve as direct measurements of ... internal confidence` was treated
+  as affirmative model-signal language. Synthetic-scope auditing now recognizes
+  `do not` and `must not` limitations while preserving positive-claim rejection.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

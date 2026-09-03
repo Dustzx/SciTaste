@@ -166,6 +166,9 @@ semantic versioning.
   constraints instead of silently dropping them.
 - Three-seed publication audits now classify `do not infer N=1` and `do not
   derive N=1` as prohibitions rather than affirmative single-seed claims.
+- Synthetic-scope audits now recognize `do not` and `must not` limitations on
+  internal model signals while retaining rejection of affirmative neural-model
+  measurement claims.
 - Formal analysis and paper prompts now treat the successful Stage 13 refinement
   as authoritative over superseded failures, while task manuscripts reject
   internal generator/provenance identifiers and missing selected primary metrics.

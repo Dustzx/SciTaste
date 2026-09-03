@@ -360,6 +360,11 @@ canonical literal and machine-evidence requirements in the system prompt; all
 initial, repaired, and regenerated source variants receive the same immutable
 contract without modifying the pinned substrate.
 
+Synthetic-scope claim classification is also line-local and polarity-aware.
+Statements that the benchmark `does not`, `do not`, or `must not` measure an
+internal model signal are limitations; the same internal-confidence or attention
+phrases without a negation remain contradictory neural-evaluation claims.
+
 ### ADR-021: Audited manuscripts receive deterministic publication bundles
 
 Status: accepted. Generic upstream writing instructions can conflict with a
