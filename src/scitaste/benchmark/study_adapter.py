@@ -137,6 +137,11 @@ def run_study_cell(
                 condition_names=[str(item) for item in task["benchmark"]["conditions"]],
             )
             _validate_selected_experiment(upstream_run, task)
+            selected_evidence = _write_selected_experiment_evidence(upstream_run, task)
+            _write_guidance_files(
+                upstream_run,
+                _guidance(task, condition, controller_trace, evidence=selected_evidence),
+            )
             _compact_refinement_log(upstream_run)
         except (OSError, ValueError) as exc:
             result = LauncherResult(
@@ -228,7 +233,10 @@ def _stage_completed(run_dir: Path, stage: str) -> bool:
         "PAPER_DRAFT": 17,
         "PEER_REVIEW": 18,
         "PAPER_REVISION": 19,
-        "CITATION_VERIFY": 21,
+        "QUALITY_GATE": 20,
+        "KNOWLEDGE_ARCHIVE": 21,
+        "EXPORT_PUBLISH": 22,
+        "CITATION_VERIFY": 23,
     }
     number = numbers.get(stage.upper())
     if number is None:
@@ -627,11 +635,15 @@ def _write_guidance_files(run_dir: Path, guidance: dict[str, str]) -> dict[str, 
 
 
 def _guidance(
-    task: dict[str, Any], condition: SystemCondition, trace: dict[str, Any]
+    task: dict[str, Any],
+    condition: SystemCondition,
+    trace: dict[str, Any],
+    *,
+    evidence: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     benchmark = task["benchmark"]
     serialized_contract = json.dumps(benchmark["contract"], sort_keys=True, ensure_ascii=False)
-    common = (
+    execution_common = (
         "Use only the frozen task synthesis. Do not perform live retrieval. "
         "The benchmark contract below is IMMUTABLE: do not replace factors, sample "
         "counts, conditions, metrics, or seeds with alternatives. In every generated "
@@ -642,15 +654,15 @@ def _guidance(
         f"Required conditions: {', '.join(benchmark['conditions'])}. "
         f"Fixed seeds: {benchmark['seeds']}. Preserve negative results and report dispersion."
     )
-    additions: list[str] = []
+    execution_additions: list[str] = []
     if condition in {SystemCondition.KNOWLEDGE_RAG, SystemCondition.FULL_SCITASTE}:
-        additions.append(
+        execution_additions.append(
             "Treat the 'Retrieved structured knowledge' cards as factual constraints and "
-            "cite their document IDs when they affect a hypothesis, method, or claim."
+            "retain their document IDs in the internal evidence trail."
         )
     if condition in {SystemCondition.TASTE_LIBRARY, SystemCondition.FULL_SCITASTE}:
         cases = task.get("taste_cases", [])
-        additions.append(
+        execution_additions.append(
             "Apply these decision precedents without treating them as factual evidence:\n"
             + "\n".join(
                 f"- {item['case_id']}: {item['decision_principle']} "
@@ -660,27 +672,32 @@ def _guidance(
         )
     if condition == SystemCondition.FULL_SCITASTE:
         decision = trace["controller_decision"]
-        additions.append(
+        execution_additions.append(
             "SciTaste selected the next high-level action before upstream execution: "
             f"{decision['selected_action']['type']} — "
             f"{decision['selected_action']['description']}. Follow this ordering and preserve "
             "the alternatives in the analysis."
         )
-    text = common + ("\n\n" + "\n\n".join(additions) if additions else "")
+    execution_text = execution_common + (
+        "\n\n" + "\n\n".join(execution_additions) if execution_additions else ""
+    )
+    publication_text = _publication_guidance(task, evidence=evidence)
     guidance = {
-        name: text
-        for name in (
-            "hypothesis_gen",
-            "experiment_design",
-            "code_generation",
-            "result_analysis",
-            "research_decision",
-            "paper_outline",
-            "paper_draft",
-            "peer_review",
-            "paper_revision",
-        )
+        name: execution_text for name in ("hypothesis_gen", "experiment_design", "code_generation")
     }
+    guidance.update(
+        {
+            name: publication_text
+            for name in (
+                "result_analysis",
+                "research_decision",
+                "paper_outline",
+                "paper_draft",
+                "peer_review",
+                "paper_revision",
+            )
+        }
+    )
     guidance["research_decision"] += (
         "\n\nThis matched-budget cell is a fixed single-pass execution. Preserve any "
         "recommended pivot or refinement as a written finding, but the structured "
@@ -688,6 +705,72 @@ def _guidance(
         "completed without rerunning earlier stages."
     )
     return guidance
+
+
+def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | None = None) -> str:
+    """Build condition-blind, publication-facing guidance for analysis and writing."""
+
+    benchmark = task["benchmark"]
+    public_conditions = ", ".join(_public_term(str(item)) for item in benchmark["conditions"])
+    text = (
+        "Write the scientific analysis and manuscript for external readers, not an internal "
+        "run report. The study topic is: "
+        f"{task['research_direction']} Use the descriptive phrase 'the preregistered "
+        "factorial benchmark' rather than any generator, task, document, case, action, cell, "
+        "stage, adapter, or framework identifier. Do not emit code variable names, serialized "
+        "contracts, snake_case labels, run paths, or the names of compared orchestration "
+        "conditions. Refer to the experimental methods in prose as "
+        f"{public_conditions}. Knowledge-card IDs are provenance metadata, not citations; use "
+        "ordinary scholarly citations instead. Preserve negative results and methodological "
+        "limitations, but never infer execution failure from a superseded attempt."
+    )
+    if evidence is None:
+        return text + (
+            " The adapter will append the authoritative selected-experiment evidence before "
+            "analysis starts; do not substitute metrics from earlier attempts."
+        )
+
+    metrics = evidence.get("registered_metrics", {})
+    metric_lines = "; ".join(
+        f"{_public_term(str(name))}={float(value):.6f}"
+        for name, value in metrics.items()
+        if isinstance(value, (int, float))
+    )
+    stdout_summary = _publication_safe_text(str(evidence.get("stdout_summary", "")), task)
+    return (
+        text + "\n\nAUTHORITATIVE SELECTED-EXPERIMENT EVIDENCE (this supersedes every earlier "
+        "failed attempt): execution completed with return code 0; "
+        f"elapsed={float(evidence.get('elapsed_sec') or 0):.6f} seconds; {metric_lines}. "
+        "Treat these as executed measurements, not cached, phantom, fabricated, or missing "
+        "metrics. Any earlier crash may be mentioned only as a repaired implementation attempt, "
+        "never as the scientific result.\n" + stdout_summary
+    )
+
+
+def _public_term(value: str) -> str:
+    return re.sub(r"\s+", " ", value.replace("_", " ").replace("-", " ")).strip()
+
+
+def _publication_safe_text(text: str, task: dict[str, Any]) -> str:
+    replacements = {
+        str(task.get("task_id", "")): "the preregistered task",
+        str(task["benchmark"]["contract"].get("generator", "")): (
+            "the preregistered factorial benchmark"
+        ),
+        "SCITASTE_BENCHMARK_CONTRACT": "the preregistered benchmark specification",
+    }
+    for condition_name in task["benchmark"]["conditions"]:
+        replacements[str(condition_name)] = _public_term(str(condition_name))
+    for item in task.get("knowledge_documents", []):
+        replacements[str(item.get("document_id", ""))] = str(item.get("title", "the source"))
+    for item in task.get("taste_cases", []):
+        replacements[str(item.get("case_id", ""))] = "the registered decision precedent"
+    for item in task.get("candidate_actions", []):
+        replacements[str(item.get("action_id", ""))] = _public_term(str(item.get("type", "action")))
+    for source, target in sorted(replacements.items(), key=lambda pair: len(pair[0]), reverse=True):
+        if source:
+            text = re.sub(re.escape(source), target, text, flags=re.IGNORECASE)
+    return text
 
 
 def _extract_declared_contract(source_paths: list[Path]) -> dict[str, Any] | None:
@@ -758,10 +841,28 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
             "no successful refined experiment was selected; "
             f"best_version={best_version!r}, iteration_returncodes={attempts}"
         )
-    sandbox = _best_successful_sandbox(selected)
+    compact_sandbox = _best_successful_sandbox(selected)
+    rich_selected = selected
+    full_log_path = log_path.with_name("refinement_log.full.json")
+    if full_log_path.is_file():
+        try:
+            full_log = json.loads(full_log_path.read_text(encoding="utf-8"))
+            rich_selected = next(
+                (
+                    item
+                    for item in full_log.get("iterations", [])
+                    if str(item.get("version_dir", "")) == best_version
+                ),
+                selected,
+            )
+        except (OSError, json.JSONDecodeError):
+            rich_selected = selected
+    sandbox = _best_successful_sandbox(rich_selected) or compact_sandbox
     if sandbox is None:
         raise ValueError("selected refined experiment did not exit successfully")
-    metrics = sandbox.get("metrics") or {}
+    metrics = dict(sandbox.get("metrics") or {})
+    if compact_sandbox is not None:
+        metrics.update(compact_sandbox.get("metrics") or {})
     if primary_metric not in metrics and not any(
         str(key).endswith(f"/{primary_metric}") for key in metrics
     ):
@@ -770,12 +871,21 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
     sources = sorted(source_dir.rglob("*.py"))
     if not sources:
         raise ValueError("selected refined experiment source is missing")
+    stdout = str(sandbox.get("stdout", ""))
+    stderr = str(sandbox.get("stderr", ""))
     return sources, {
         "refinement_log": str(log_path.relative_to(run_dir)),
         "best_version": best_version,
         "metric": selected.get("metric"),
         "metrics": metrics,
         "elapsed_sec": sandbox.get("elapsed_sec"),
+        "returncode": int(sandbox.get("returncode", 1)),
+        "timed_out": bool(sandbox.get("timed_out", False)),
+        "stdout_sha256": hashlib.sha256(stdout.encode()).hexdigest(),
+        "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest(),
+        "stdout_summary": _selected_stdout_summary(stdout),
+        "metric_normalization": selected.get("metric_normalization"),
+        "source_sha256": {str(path.relative_to(run_dir)): _sha256(path) for path in sources},
     }
 
 
@@ -793,6 +903,70 @@ def _best_successful_sandbox(iteration: dict[str, Any]) -> dict[str, Any] | None
         candidates,
         key=lambda item: (bool(item.get("metrics")), len(str(item.get("stdout", "")))),
     )
+
+
+def _selected_stdout_summary(stdout: str) -> str:
+    """Retain bounded, human-auditable measurements from selected stdout."""
+
+    markers = (
+        "total cells",
+        "total examples",
+        "primary metric summary",
+        "condition:",
+        "seed ",
+        "aggregate ",
+        "dispersion ",
+        "effect size",
+        "interaction:",
+        "drop(",
+        "benchmark execution complete",
+    )
+    lines = [
+        line.rstrip()
+        for line in stdout.splitlines()
+        if any(marker in line.casefold() for marker in markers)
+    ]
+    return "\n".join(lines[-160:])[-16000:]
+
+
+def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> dict[str, Any]:
+    """Persist the sole authoritative execution projection used after Stage 13."""
+
+    _, selected = _selected_experiment(run_dir, str(task["benchmark"]["primary_metric"]))
+    registered_names = [
+        *[str(item) for item in task["benchmark"]["conditions"]],
+        str(task["benchmark"]["primary_metric"]),
+    ]
+    registered_metrics = {
+        name: float(selected["metrics"][name])
+        for name in registered_names
+        if name in selected["metrics"] and isinstance(selected["metrics"][name], (int, float))
+    }
+    primary = str(task["benchmark"]["primary_metric"])
+    if primary not in registered_metrics:
+        raise ValueError(f"selected evidence lacks registered primary metric {primary}")
+    evidence = {
+        "schema_version": "1.0",
+        "method": "selected-successful-refinement-evidence-v1",
+        "authority": "supersedes-earlier-experiment-attempts",
+        "execution_status": "completed",
+        "returncode": selected["returncode"],
+        "timed_out": selected["timed_out"],
+        "elapsed_sec": selected["elapsed_sec"],
+        "primary_metric": primary,
+        "primary_metric_value": registered_metrics[primary],
+        "registered_metrics": registered_metrics,
+        "best_version": selected["best_version"],
+        "refinement_log": selected["refinement_log"],
+        "metric_normalization": selected["metric_normalization"],
+        "stdout_sha256": selected["stdout_sha256"],
+        "stderr_sha256": selected["stderr_sha256"],
+        "stdout_summary": selected["stdout_summary"],
+        "source_sha256": selected["source_sha256"],
+    }
+    path = run_dir / "scitaste_selected_experiment_evidence.json"
+    path.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return evidence
 
 
 def _normalize_refinement_metrics(
@@ -962,6 +1136,111 @@ def _compact_refinement_log(run_dir: Path) -> Path:
     return full_path
 
 
+def _publication_identifier_violations(text: str, task: dict[str, Any]) -> list[str]:
+    terms = {
+        "SCITASTE_BENCHMARK_CONTRACT",
+        str(task.get("task_id", "")),
+        str(task["benchmark"]["contract"].get("generator", "")),
+        *[str(item) for item in task["benchmark"]["conditions"]],
+        *[str(item.get("document_id", "")) for item in task.get("knowledge_documents", [])],
+        *[str(item.get("case_id", "")) for item in task.get("taste_cases", [])],
+        *[str(item.get("action_id", "")) for item in task.get("candidate_actions", [])],
+        "Knowledge RAG",
+        "Taste Library",
+        "Full SciTaste",
+        "AutoResearchClaw",
+    }
+    violations = sorted(
+        term for term in terms if term and re.search(re.escape(term), text, re.IGNORECASE)
+    )
+    if re.search(r"(?i)\bstage-\d{2}\b", text):
+        violations.append("stage-<number>")
+    if re.search(r"(?i)\bcell-[0-9a-f]{8,}\b", text):
+        violations.append("cell-<opaque-id>")
+    if re.search(r"(?i)(?:^|[/\\])upstream_run(?:[/\\]|$)", text):
+        violations.append("upstream_run path")
+    return violations
+
+
+def _text_reports_metric(text: str, name: str, value: float) -> bool:
+    label = re.escape(_public_term(name)).replace(r"\ ", r"[\s_-]+")
+    number = re.compile(r"(?<![A-Za-z0-9])[-+]?\d+(?:\.\d+)?%?")
+    for line in text.splitlines():
+        if not re.search(label, _public_term(line), re.IGNORECASE):
+            continue
+        for match in number.findall(line):
+            observed = float(match.rstrip("%"))
+            if match.endswith("%"):
+                observed /= 100
+            if abs(observed - value) <= 0.0005:
+                return True
+    return False
+
+
+def _artifact_consistency_audit(
+    *, analysis: str, paper: str, selected_run: dict[str, Any], task: dict[str, Any]
+) -> dict[str, Any]:
+    primary = str(task["benchmark"]["primary_metric"])
+    value = selected_run["metrics"].get(primary, selected_run.get("metric"))
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"selected experiment has no numeric {primary}")
+    if int(selected_run.get("returncode", 1)) != 0 or selected_run.get("timed_out"):
+        raise ValueError("selected experiment evidence is not a completed execution")
+
+    failure_claims = {
+        "experiment-did-not-execute": r"(?i)\b(?:the |this )?experiment did not execute\b",
+        "no-scientific-test": (
+            r"(?i)\bno scientific (?:hypothesis|computation|experiment) "
+            r"(?:was|were) (?:tested|executed|performed)\b"
+        ),
+        "phantom-selected-metrics": (
+            r"(?i)\b(?:reported|selected|resulting) metrics?.{0,80}"
+            r"\b(?:phantom|cached|fabricated|epistemically void)\b"
+        ),
+        "failed-final-run": r"(?i)\brun status\s*[:=-]?\s*(?:was\s+)?failed\b",
+        "false-positive-emission": r"(?i)\bfalse-positive emission rate\b",
+    }
+    contradictions = sorted(
+        name
+        for name, pattern in failure_claims.items()
+        if re.search(pattern, analysis) or re.search(pattern, paper)
+    )
+    if contradictions:
+        raise ValueError(
+            "analysis/paper contradicts the successful selected experiment: "
+            + ", ".join(contradictions)
+        )
+
+    analysis_metric = _text_reports_metric(analysis, primary, float(value))
+    paper_metric = _text_reports_metric(paper, primary, float(value))
+    if not analysis_metric or not paper_metric:
+        missing = [
+            label
+            for label, present in (("analysis", analysis_metric), ("paper", paper_metric))
+            if not present
+        ]
+        raise ValueError(
+            f"selected {primary}={float(value):.6f} is absent from " + ", ".join(missing)
+        )
+
+    identifier_violations = _publication_identifier_violations(paper, task)
+    if identifier_violations:
+        raise ValueError(
+            "paper exposes internal-only identifiers: " + ", ".join(identifier_violations)
+        )
+    return {
+        "schema_version": "1.0",
+        "method": "selected-evidence-publication-consistency-v1",
+        "selected_execution_completed": True,
+        "primary_metric": primary,
+        "primary_metric_value": float(value),
+        "analysis_reports_primary_metric": analysis_metric,
+        "paper_reports_primary_metric": paper_metric,
+        "failure_claim_contradictions": [],
+        "publication_identifier_violations": [],
+    }
+
+
 def _audit_upstream_run(
     run_dir: Path, *, elapsed_seconds: float, task: dict[str, Any]
 ) -> tuple[StudyOutcome, int, dict[str, Any]]:
@@ -1000,6 +1279,13 @@ def _audit_upstream_run(
 
     hypothesis_text = hypotheses_path.read_text(encoding="utf-8", errors="replace")
     analysis = analysis_path.read_text(encoding="utf-8", errors="replace")
+    paper = paper_path.read_text(encoding="utf-8", errors="replace")
+    consistency = _artifact_consistency_audit(
+        analysis=analysis,
+        paper=paper,
+        selected_run=selected_run,
+        task=task,
+    )
     decision = (
         decision_path.read_text(encoding="utf-8", errors="replace")
         if decision_path.is_file()
@@ -1009,7 +1295,7 @@ def _audit_upstream_run(
     metric_files = [p for p in run_files if p.suffix.casefold() in {".json", ".csv"}]
     experiments = 1
     proposed = max(1, len(re.findall(r"(?im)^#{1,3}\s*(?:hypothesis|h\d+)", hypothesis_text)))
-    numerical_evidence = bool(re.search(r"(?<![A-Za-z])\d+(?:\.\d+)?%?", analysis))
+    numerical_evidence = consistency["analysis_reports_primary_metric"]
     useful = int(bool(run_files) and numerical_evidence)
     pivot = int(bool(re.search(r"(?im)^\s*(?:#+\s*)?(?:\*\*)?PIVOT\b", decision)))
     review_path = run_dir / "stage-18" / "reviews.md"
@@ -1043,8 +1329,8 @@ def _audit_upstream_run(
         unsupported_claims=unsupported,
     )
     audit = {
-        "schema_version": "1.0",
-        "method": "mechanical-artifact-audit-v1",
+        "schema_version": "1.1",
+        "method": "mechanical-artifact-and-consistency-audit-v2",
         "paper_source": str(paper_path.relative_to(run_dir)),
         "hypothesis_headings": proposed,
         "run_file_count": len(run_files),
@@ -1052,6 +1338,7 @@ def _audit_upstream_run(
         "experiment_source_count": len(experiment_sources),
         "declared_benchmark_contract": declared_contract,
         "selected_experiment": selected_run,
+        "artifact_consistency": consistency,
         "network_source_violations": network_sources,
         "numerical_evidence_present": numerical_evidence,
         "decision_pivot_detected": bool(pivot),
@@ -1075,6 +1362,11 @@ def _materialize_artifacts(
     paper_source = run_dir / audit["paper_source"]
     paper_target = cell_dir / "paper.md"
     shutil.copy2(paper_source, paper_target)
+    evidence_source = run_dir / "scitaste_selected_experiment_evidence.json"
+    if not evidence_source.is_file():
+        raise ValueError("selected experiment evidence projection is missing")
+    evidence_target = cell_dir / "selected_experiment_evidence.json"
+    shutil.copy2(evidence_source, evidence_target)
     trace_path = cell_dir / "condition_trace.json"
     trace_path.write_text(json.dumps(trace, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     audit_path = cell_dir / "outcome_audit.json"
@@ -1104,7 +1396,16 @@ def _materialize_artifacts(
         + "\n",
         encoding="utf-8",
     )
-    return [path.name for path in (paper_target, trace_path, audit_path, manifest_path)]
+    return [
+        path.name
+        for path in (
+            paper_target,
+            evidence_target,
+            trace_path,
+            audit_path,
+            manifest_path,
+        )
+    ]
 
 
 def _usage(path: Path, task: dict[str, Any], *, experiments: int) -> LauncherUsage:

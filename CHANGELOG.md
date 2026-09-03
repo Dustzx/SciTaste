@@ -68,6 +68,9 @@ semantic versioning.
   bounded refinement-log retention.
 - Idempotent formal-cell finalization and cumulative runner-owned wall/GPU
   accounting across failed or interrupted cell retries.
+- A content-hashed selected-experiment evidence projection with registered metrics,
+  bounded per-seed stdout evidence, source hashes, and publication consistency
+  audit metadata.
 
 ### Changed
 
@@ -97,3 +100,8 @@ semantic versioning.
 - Formal metric normalization now accepts a complete registered condition-score
   vector and derives the preregistered aggregate only when every condition is
   present and numeric.
+- Formal analysis and paper prompts now treat the successful Stage 13 refinement
+  as authoritative over superseded failures, while task manuscripts reject
+  internal generator/provenance identifiers and missing selected primary metrics.
+- Corrected finalization stage detection for quality gate, knowledge archive,
+  publication export, and Stage 23 citation verification.

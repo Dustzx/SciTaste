@@ -172,6 +172,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   lifecycle with complete wall/GPU accounting, 138,157 provider tokens, one
   repaired real experiment, a 0.615945 registered aggregate, and Stage 18
   artifacts. The other 47 cells and external blinded reviews remain pending.
+- The Knowledge RAG preacceptance exposed a Stage 12 failure/Stage 13 repair
+  provenance ambiguity and internal identifier leakage into its draft. The adapter
+  now projects one hashed successful experiment into analysis/writing, separates
+  publication language from audit identifiers, and rejects contradictory or
+  internal-ID-bearing manuscripts. A clean rerun remains required; the original
+  artifact is retained only as a failure fixture.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: pass four-condition preacceptance, run all 48

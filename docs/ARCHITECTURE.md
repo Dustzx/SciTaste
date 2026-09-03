@@ -101,6 +101,12 @@ returns observations and artifacts but cannot select the next global action.
     headline-eligible evidence.
 34. Formal cells may contact only the declared model endpoint; hidden novelty,
     benchmark, code-search, or generated-experiment retrieval invalidates a cell.
+35. Analysis and writing consume one content-hashed, successful selected-experiment
+    projection; failed or superseded attempts remain provenance but cannot define
+    the scientific result.
+36. A task manuscript cannot expose internal task, generator, condition, document,
+    case, action, cell, stage, adapter, or framework identifiers, and it must report
+    the selected primary metric before the cell can pass artifact audit.
 
 ## Architecture decision records
 
@@ -259,3 +265,16 @@ real preacceptance showed that revision retries can exhaust the common token
 ceiling after a complete draft and review already exist. A common earlier
 endpoint is therefore more comparable across conditions and delegates concern
 closure to the separately blinded expert panel.
+
+### ADR-020: Selected evidence and publication language are separate contracts
+
+Status: accepted. After iterative refinement, the study adapter selects only a
+successful execution, hashes its source and stdout, retains registered metrics and
+bounded per-seed evidence, and writes one authoritative evidence projection before
+analysis starts. Later prompts explicitly treat earlier failed attempts as
+superseded implementation history. Internal provenance identifiers remain in the
+task, trace, and manifests, while analysis and manuscript stages receive
+condition-blind, publication-facing terminology. Final artifact audit rejects a
+successful experiment described as non-executed, a missing selected primary metric,
+or any internal identifier exposed in the task manuscript. This compatibility
+logic remains outside the pinned AutoResearchClaw submodule.

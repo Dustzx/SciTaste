@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from scitaste.benchmark.study_adapter import (
+    _artifact_consistency_audit,
     _audit_upstream_run,
     _compact_refinement_log,
     _condition_context,
@@ -17,6 +18,7 @@ from scitaste.benchmark.study_adapter import (
     _stage_completed,
     _usage,
     _write_prompt_overrides,
+    _write_selected_experiment_evidence,
 )
 from scitaste.benchmark.study_models import SystemCondition
 
@@ -93,6 +95,11 @@ def test_stage_completed_requires_done_health_record(tmp_path) -> None:
     assert _stage_completed(tmp_path, "PEER_REVIEW")
     assert not _stage_completed(tmp_path, "UNKNOWN")
 
+    citation = tmp_path / "stage-23"
+    citation.mkdir()
+    (citation / "stage_health.json").write_text(json.dumps({"status": "done"}), encoding="utf-8")
+    assert _stage_completed(tmp_path, "CITATION_VERIFY")
+
 
 def test_guidance_only_exposes_registered_augmentation() -> None:
     task = load_task()
@@ -105,6 +112,30 @@ def test_guidance_only_exposes_registered_augmentation() -> None:
     assert "factual constraints" in knowledge
     assert "decision precedents" in taste
     assert "decision precedents" not in knowledge
+
+
+def test_guidance_separates_execution_and_publication_language() -> None:
+    task = load_task()
+    guidance = _guidance(
+        task,
+        SystemCondition.KNOWLEDGE_RAG,
+        {"controller_decision": None},
+        evidence={
+            "registered_metrics": {
+                "majority_vote": 0.8,
+                "balanced_accuracy": 0.75,
+            },
+            "elapsed_sec": 2.0,
+            "stdout_summary": "Condition: majority_vote",
+        },
+    )
+
+    assert "diagnosis-factorial-v1" in guidance["code_generation"]
+    assert "SCITASTE_BENCHMARK_CONTRACT" in guidance["code_generation"]
+    assert "diagnosis-factorial-v1" not in guidance["paper_draft"]
+    assert "SCITASTE_BENCHMARK_CONTRACT" not in guidance["paper_draft"]
+    assert "majority vote=0.800000" in guidance["paper_draft"]
+    assert "supersedes every earlier failed attempt" in guidance["result_analysis"]
 
 
 def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
@@ -393,7 +424,9 @@ def test_artifact_audit_requires_real_run_and_paper(tmp_path) -> None:
     (tmp_path / "stage-15").mkdir()
     (tmp_path / "stage-15" / "decision.md").write_text("## Decision\nPIVOT\n", encoding="utf-8")
     (tmp_path / "stage-17").mkdir()
-    (tmp_path / "stage-17" / "paper_draft.md").write_text("paper", encoding="utf-8")
+    (tmp_path / "stage-17" / "paper_draft.md").write_text(
+        "The balanced accuracy was 0.75.", encoding="utf-8"
+    )
 
     outcome, experiments, audit = _audit_upstream_run(
         tmp_path, elapsed_seconds=360, task=load_task()
@@ -406,6 +439,74 @@ def test_artifact_audit_requires_real_run_and_paper(tmp_path) -> None:
     assert outcome.correct_pivots == 0
     assert audit["numerical_evidence_present"] is True
     assert audit["selected_experiment"]["metric"] == 0.75
+    assert audit["artifact_consistency"]["paper_reports_primary_metric"] is True
+
+
+def test_consistency_audit_rejects_internal_identifier_and_false_failure_story() -> None:
+    task = load_task()
+    selected = {
+        "returncode": 0,
+        "timed_out": False,
+        "metric": 0.75,
+        "metrics": {"balanced_accuracy": 0.75},
+    }
+    with pytest.raises(ValueError, match="internal-only identifiers"):
+        _artifact_consistency_audit(
+            analysis="Balanced accuracy was 0.75.",
+            paper="The diagnosis-factorial-v1 balanced accuracy was 0.75.",
+            selected_run=selected,
+            task=task,
+        )
+    with pytest.raises(ValueError, match="contradicts the successful"):
+        _artifact_consistency_audit(
+            analysis="Balanced accuracy was 0.75, but the experiment did not execute.",
+            paper="The balanced accuracy was 0.75.",
+            selected_run=selected,
+            task=task,
+        )
+
+
+def test_selected_experiment_evidence_preserves_successful_stdout(tmp_path) -> None:
+    task = load_task()
+    selected = tmp_path / "stage-13" / "experiment_v1"
+    selected.mkdir(parents=True)
+    (selected / "main.py").write_text("print('ok')\n", encoding="utf-8")
+    (tmp_path / "stage-13" / "refinement_log.json").write_text(
+        json.dumps(
+            {
+                "best_version": "experiment_v1/",
+                "iterations": [
+                    {
+                        "version_dir": "experiment_v1/",
+                        "metric": 0.75,
+                        "sandbox": {
+                            "returncode": 0,
+                            "metrics": {
+                                "majority_vote": 0.7,
+                                "confidence_weighted_vote": 0.8,
+                                "position_aware_probe": 0.75,
+                                "balanced_accuracy": 0.75,
+                            },
+                            "elapsed_sec": 2.0,
+                            "stdout": (
+                                "Condition: majority_vote\n"
+                                "  Seed 7: balanced_accuracy = 0.70\n"
+                                "  Aggregate balanced_accuracy = 0.70\n"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    evidence = _write_selected_experiment_evidence(tmp_path, task)
+
+    assert evidence["execution_status"] == "completed"
+    assert evidence["registered_metrics"]["balanced_accuracy"] == 0.75
+    assert "Seed 7" in evidence["stdout_summary"]
+    assert (tmp_path / "scitaste_selected_experiment_evidence.json").is_file()
 
 
 def test_artifact_audit_rejects_failed_selected_experiment(tmp_path) -> None:
