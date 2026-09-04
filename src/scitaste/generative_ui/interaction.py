@@ -85,18 +85,20 @@ class SurfaceSession:
     """Hold one current surface and reject stale or replayed client events."""
 
     def __init__(self, surface: SurfaceSpec) -> None:
-        self._surface = surface
+        self._surface = _validated_surface_copy(surface)
         self._accepted_event_ids: set[str] = set()
         self._lock = RLock()
 
     @property
     def surface(self) -> SurfaceSpec:
-        return self._surface
+        with self._lock:
+            return _validated_surface_copy(self._surface)
 
     def activate(self, event: SurfaceEvent) -> ProposalReceipt:
         """Resolve a declared proposal without running it or changing research state."""
 
         with self._lock:
+            event = SurfaceEvent.model_validate(event.model_dump(mode="json"))
             if event.event_id in self._accepted_event_ids:
                 raise DuplicateEventError(f"surface event {event.event_id!r} was already accepted")
             self._validate_event_binding(event)
@@ -118,7 +120,7 @@ class SurfaceSession:
                 snapshot_revision=self._surface.snapshot.snapshot_revision,
                 snapshot_sha256=self._surface.snapshot.snapshot_sha256,
                 action_id=action.action_id,
-                proposal=action.proposal,
+                proposal=ActionProposal.model_validate(action.proposal.model_dump(mode="json")),
             )
             self._accepted_event_ids.add(event.event_id)
             return receipt
@@ -127,6 +129,7 @@ class SurfaceSession:
         """Atomically replace the document when its optimistic base still matches."""
 
         with self._lock:
+            revision = SurfaceRevision.model_validate(revision.model_dump(mode="json"))
             current = self._surface
             replacement = revision.surface
             if revision.surface_id != current.surface_id:
@@ -143,13 +146,13 @@ class SurfaceSession:
                 raise RevisionConflictError("surface replacement regresses the project snapshot")
             if (
                 new_snapshot.snapshot_revision == old_snapshot.snapshot_revision
-                and new_snapshot.snapshot_sha256 != old_snapshot.snapshot_sha256
+                and new_snapshot != old_snapshot
             ):
                 raise RevisionConflictError(
-                    "one snapshot revision cannot identify two different content hashes"
+                    "one snapshot revision cannot identify two different snapshot bindings"
                 )
-            self._surface = replacement
-            return replacement
+            self._surface = _validated_surface_copy(replacement)
+            return _validated_surface_copy(self._surface)
 
     def _validate_event_binding(self, event: SurfaceEvent) -> None:
         current = self._surface
@@ -182,6 +185,7 @@ def make_surface_event(
 ) -> SurfaceEvent:
     """Build the identity envelope a renderer emits for a selected action."""
 
+    surface = _validated_surface_copy(surface)
     return SurfaceEvent(
         event_id=event_id,
         project_id=surface.project_id,
@@ -192,6 +196,10 @@ def make_surface_event(
         snapshot_sha256=surface.snapshot.snapshot_sha256,
         action_id=action_id,
     )
+
+
+def _validated_surface_copy(surface: SurfaceSpec) -> SurfaceSpec:
+    return SurfaceSpec.model_validate(surface.model_dump(mode="json"))
 
 
 def _fingerprint(payload: dict[str, object]) -> str:

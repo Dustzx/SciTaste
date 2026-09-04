@@ -61,6 +61,15 @@ class ApprovalSubject(StrEnum):
     BLOCKER_DISPOSITION = "blocker_disposition"
 
 
+APPROVAL_EVIDENCE_KINDS: dict[ApprovalSubject, frozenset[EvidenceKind]] = {
+    ApprovalSubject.TRANSITION: frozenset({EvidenceKind.DECISION}),
+    ApprovalSubject.ARTIFACT_RELEASE: frozenset({EvidenceKind.ARTIFACT, EvidenceKind.PAPER}),
+    ApprovalSubject.PAPER_SELECTION: frozenset({EvidenceKind.PAPER}),
+    ApprovalSubject.RUN_SELECTION: frozenset({EvidenceKind.RUN_RECORD}),
+    ApprovalSubject.BLOCKER_DISPOSITION: frozenset({EvidenceKind.BLOCKER}),
+}
+
+
 @dataclass(frozen=True)
 class ComponentPolicy:
     """Evidence kinds that must ground one trusted component."""

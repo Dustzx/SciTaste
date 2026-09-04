@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Annotated, Literal
+from collections.abc import Iterable
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
 
 from scitaste.generative_ui.registry import (
+    APPROVAL_EVIDENCE_KINDS,
     COMPONENT_REGISTRY,
     ApprovalSubject,
     EvidenceKind,
@@ -22,12 +32,23 @@ from scitaste.generative_ui.safety import (
     SafeLocator,
     SafeText,
     Sha256,
-    contains_key,
     declarative_dict,
 )
 from scitaste.schema.actions import MetaAction
 
-_MODEL_CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+_MODEL_CONFIG = ConfigDict(
+    extra="forbid",
+    frozen=True,
+    str_strip_whitespace=True,
+    revalidate_instances="always",
+)
+_DATA_MODEL_CONFIG = ConfigDict(
+    extra="forbid",
+    frozen=True,
+    str_strip_whitespace=True,
+    allow_inf_nan=False,
+    revalidate_instances="always",
+)
 
 
 class EvidenceRef(BaseModel):
@@ -43,6 +64,28 @@ class EvidenceRef(BaseModel):
     label: SafeText
 
 
+def compute_snapshot_sha256(
+    *,
+    project_id: str,
+    snapshot_revision: int,
+    evidence_refs: Iterable[EvidenceRef],
+) -> str:
+    """Hash the canonical trusted-evidence manifest for a project snapshot."""
+
+    refs = sorted(
+        (item.model_dump(mode="json") for item in evidence_refs),
+        key=lambda item: item["evidence_id"],
+    )
+    return _fingerprint(
+        {
+            "schema_version": "1.0",
+            "project_id": project_id,
+            "snapshot_revision": snapshot_revision,
+            "evidence_refs": refs,
+        }
+    )
+
+
 class SnapshotBinding(BaseModel):
     """Immutable identity of the project state used to generate a surface."""
 
@@ -53,17 +96,320 @@ class SnapshotBinding(BaseModel):
     snapshot_sha256: Sha256
     evidence_refs: list[EvidenceRef] = Field(min_length=1)
 
+    @classmethod
+    def from_trusted_evidence(
+        cls,
+        *,
+        project_id: str,
+        snapshot_revision: int,
+        evidence_refs: Iterable[EvidenceRef],
+    ) -> SnapshotBinding:
+        """Build a binding only after a trusted adapter resolves and hashes evidence."""
+
+        refs = [EvidenceRef.model_validate(item.model_dump(mode="json")) for item in evidence_refs]
+        return cls(
+            project_id=project_id,
+            snapshot_revision=snapshot_revision,
+            snapshot_sha256=compute_snapshot_sha256(
+                project_id=project_id,
+                snapshot_revision=snapshot_revision,
+                evidence_refs=refs,
+            ),
+            evidence_refs=refs,
+        )
+
     @model_validator(mode="after")
     def evidence_belongs_to_one_snapshot(self) -> SnapshotBinding:
         ids = [item.evidence_id for item in self.evidence_refs]
         if len(ids) != len(set(ids)):
             raise ValueError("snapshot evidence IDs must be unique")
+        locators = [item.locator for item in self.evidence_refs]
+        if len(locators) != len(set(locators)):
+            raise ValueError("snapshot evidence locators must be unique")
         foreign = [
             item.evidence_id for item in self.evidence_refs if item.project_id != self.project_id
         ]
         if foreign:
             raise ValueError(f"snapshot evidence belongs to another project: {sorted(foreign)}")
+        expected_hash = compute_snapshot_sha256(
+            project_id=self.project_id,
+            snapshot_revision=self.snapshot_revision,
+            evidence_refs=self.evidence_refs,
+        )
+        if self.snapshot_sha256 != expected_hash:
+            raise ValueError("snapshot hash does not match its canonical evidence manifest")
+        object.__setattr__(
+            self,
+            "evidence_refs",
+            sorted(self.evidence_refs, key=lambda item: item.evidence_id),
+        )
         return self
+
+
+class ProjectSummaryData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    project_ref_id: SafeIdentifier
+    project_status: SafeIdentifier
+    publication_ready: bool
+    current_focus: SafeText
+
+
+class StageTimelineItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    stage_ref_id: SafeIdentifier
+    stage: int = Field(ge=0)
+    status: SafeIdentifier
+
+
+class StageTimelineData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    stages: tuple[StageTimelineItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def stage_rows_are_unique(self) -> StageTimelineData:
+        identities = [(item.stage_ref_id, item.stage) for item in self.stages]
+        if len(identities) != len(set(identities)):
+            raise ValueError("stage timeline rows must be unique")
+        return self
+
+
+class BlockerItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    blocker_ref_id: SafeIdentifier
+    blocker_id: SafeIdentifier
+    severity: Literal["low", "medium", "high", "critical"]
+    status: SafeIdentifier
+    summary: SafeText
+
+
+class BlockerListData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    blockers: tuple[BlockerItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def blocker_rows_are_unique(self) -> BlockerListData:
+        ids = [item.blocker_id for item in self.blockers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("blocker IDs must be unique")
+        return self
+
+
+class RunHealthData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_status: SafeIdentifier
+    failure_stage: int | None = Field(default=None, ge=0)
+    retry_safe: bool | None = None
+    schema_valid: bool | None = None
+
+
+class BudgetResourceItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    resource: SafeIdentifier
+    used: float = Field(ge=0)
+    limit: float = Field(gt=0)
+    unit: SafeIdentifier
+
+
+class BudgetMeterData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    usage_ref_id: SafeIdentifier
+    resources: tuple[BudgetResourceItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def resource_rows_are_unique(self) -> BudgetMeterData:
+        resources = [item.resource for item in self.resources]
+        if len(resources) != len(set(resources)):
+            raise ValueError("budget resources must be unique")
+        return self
+
+
+class TransitionDecisionData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    view: Literal["transition"]
+    decision_ref_id: SafeIdentifier
+    run_ref_id: SafeIdentifier
+    status: SafeIdentifier
+    current_stage: SafeIdentifier
+    recommended_action: MetaAction
+    alternative_action: MetaAction
+
+    @model_validator(mode="after")
+    def actions_are_distinct(self) -> TransitionDecisionData:
+        if self.recommended_action == self.alternative_action:
+            raise ValueError("decision comparison actions must be distinct")
+        return self
+
+
+class RunComparisonData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    view: Literal["run_comparison"]
+    decision_ref_id: SafeIdentifier
+    baseline_run_ref_id: SafeIdentifier
+    candidate_run_ref_id: SafeIdentifier
+    baseline_score: float
+    candidate_score: float
+    metric: SafeIdentifier
+
+    @model_validator(mode="after")
+    def runs_are_distinct(self) -> RunComparisonData:
+        if self.baseline_run_ref_id == self.candidate_run_ref_id:
+            raise ValueError("run comparison data requires two distinct run references")
+        return self
+
+
+DecisionComparisonData = Annotated[
+    TransitionDecisionData | RunComparisonData,
+    Field(discriminator="view"),
+]
+
+
+class EvidenceGraphNode(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    evidence_ref_id: SafeIdentifier
+    kind: EvidenceKind
+    label: SafeText
+
+
+class EvidenceGraphEdge(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    source_ref_id: SafeIdentifier
+    target_ref_id: SafeIdentifier
+    relation: SafeIdentifier
+
+
+class EvidenceGraphData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    nodes: tuple[EvidenceGraphNode, ...] = Field(min_length=1)
+    edges: tuple[EvidenceGraphEdge, ...] = ()
+
+    @model_validator(mode="after")
+    def graph_is_closed(self) -> EvidenceGraphData:
+        node_ids = [item.evidence_ref_id for item in self.nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError("evidence graph node IDs must be unique")
+        unknown = {
+            ref_id
+            for edge in self.edges
+            for ref_id in (edge.source_ref_id, edge.target_ref_id)
+            if ref_id not in node_ids
+        }
+        if unknown:
+            raise ValueError(f"evidence graph edges reference missing nodes: {sorted(unknown)}")
+        return self
+
+
+class ClaimMatrixRow(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    claim_ref_id: SafeIdentifier
+    statement: SafeText
+    status: SafeIdentifier
+    evidence_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def evidence_ids_are_unique(self) -> ClaimMatrixRow:
+        if len(self.evidence_ref_ids) != len(set(self.evidence_ref_ids)):
+            raise ValueError("claim evidence references must be unique")
+        return self
+
+
+class ClaimMatrixData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    claims: tuple[ClaimMatrixRow, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def claim_rows_are_unique(self) -> ClaimMatrixData:
+        refs = [item.claim_ref_id for item in self.claims]
+        if len(refs) != len(set(refs)):
+            raise ValueError("claim matrix references must be unique")
+        return self
+
+
+class ReviewerQueueItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    review_ref_id: SafeIdentifier
+    status: SafeIdentifier
+    summary: SafeText
+
+
+class ReviewerQueueData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    reviews: tuple[ReviewerQueueItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def review_rows_are_unique(self) -> ReviewerQueueData:
+        refs = [item.review_ref_id for item in self.reviews]
+        if len(refs) != len(set(refs)):
+            raise ValueError("review queue references must be unique")
+        return self
+
+
+class ArtifactViewerData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    artifact_ref_id: SafeIdentifier
+    artifact_path: SafeLocator
+    media_type: str = Field(pattern=r"^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$")
+
+
+class PaperPreviewData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    paper_ref_id: SafeIdentifier
+    paper_title: SafeText
+    paper_status: SafeIdentifier
+    publication_ready: bool
+    excerpt: SafeText
+
+
+_COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
+    TrustedComponent.PROJECT_SUMMARY_CARD: TypeAdapter(ProjectSummaryData),
+    TrustedComponent.STAGE_TIMELINE: TypeAdapter(StageTimelineData),
+    TrustedComponent.BLOCKER_LIST: TypeAdapter(BlockerListData),
+    TrustedComponent.RUN_HEALTH: TypeAdapter(RunHealthData),
+    TrustedComponent.BUDGET_METER: TypeAdapter(BudgetMeterData),
+    TrustedComponent.DECISION_COMPARISON: TypeAdapter(DecisionComparisonData),
+    TrustedComponent.EVIDENCE_GRAPH: TypeAdapter(EvidenceGraphData),
+    TrustedComponent.CLAIM_MATRIX: TypeAdapter(ClaimMatrixData),
+    TrustedComponent.REVIEWER_QUEUE: TypeAdapter(ReviewerQueueData),
+    TrustedComponent.ARTIFACT_VIEWER: TypeAdapter(ArtifactViewerData),
+    TrustedComponent.PAPER_PREVIEW: TypeAdapter(PaperPreviewData),
+}
+
+
+def validate_component_data(
+    component: TrustedComponent,
+    value: dict[str, JsonValue],
+) -> dict[str, JsonValue]:
+    """Validate and normalize one component's closed field contract."""
+
+    parsed = _COMPONENT_DATA_ADAPTERS[component].validate_python(value)
+    if not isinstance(parsed, BaseModel):  # both union members are models
+        raise TypeError("component data schema must produce a model")
+    return declarative_dict(parsed.model_dump(mode="json"))
+
+
+def component_data_json_schema(component: TrustedComponent) -> dict[str, Any]:
+    """Expose the exact receiver/adapter contract for one registered component."""
+
+    return _COMPONENT_DATA_ADAPTERS[component].json_schema()
 
 
 class ComponentSpec(BaseModel):
@@ -75,7 +421,7 @@ class ComponentSpec(BaseModel):
     component: TrustedComponent
     title: SafeText
     evidence_ref_ids: list[SafeIdentifier] = Field(min_length=1)
-    data: dict[str, JsonValue] = Field(default_factory=dict)
+    data: dict[str, JsonValue]
 
     @field_validator("data")
     @classmethod
@@ -83,9 +429,10 @@ class ComponentSpec(BaseModel):
         return declarative_dict(value)
 
     @model_validator(mode="after")
-    def evidence_ids_are_unique(self) -> ComponentSpec:
+    def data_and_evidence_ids_are_valid(self) -> ComponentSpec:
         if len(self.evidence_ref_ids) != len(set(self.evidence_ref_ids)):
             raise ValueError("component evidence references must be unique")
+        object.__setattr__(self, "data", validate_component_data(self.component, self.data))
         return self
 
 
@@ -337,25 +684,34 @@ def _validate_component_evidence(
         raise ValueError(
             f"component {component.component_id!r} lacks required evidence kinds: {values}"
         )
-    if contains_key(component.data, {"paper_path", "paper_status", "paper_title"}) and (
-        EvidenceKind.PAPER not in kinds
-    ):
-        raise ValueError(f"component {component.component_id!r} has an ungrounded paper claim")
-    if contains_key(
-        component.data,
-        {"health_status", "project_status", "publication_ready", "run_status", "status"},
-    ) and not kinds.intersection(
-        {
-            EvidenceKind.PROJECT_MANIFEST,
-            EvidenceKind.STAGE_RECORD,
-            EvidenceKind.BLOCKER,
-            EvidenceKind.RUN_RECORD,
-            EvidenceKind.DECISION,
-            EvidenceKind.REVIEW,
-            EvidenceKind.PAPER,
-        }
-    ):
-        raise ValueError(f"component {component.component_id!r} has an ungrounded status claim")
+    data_refs = list(_iter_data_ref_fields(component.data))
+    outside_component = {ref_id for _, ref_id in data_refs} - set(component.evidence_ref_ids)
+    if outside_component:
+        raise ValueError(
+            f"component {component.component_id!r} data references undeclared evidence: "
+            f"{sorted(outside_component)}"
+        )
+    for field_name, ref_id in data_refs:
+        allowed_kinds = _DATA_REF_EVIDENCE_KINDS.get(field_name)
+        if allowed_kinds is not None and evidence[ref_id].kind not in allowed_kinds:
+            values = sorted(item.value for item in allowed_kinds)
+            raise ValueError(
+                f"component {component.component_id!r} field {field_name!r} requires "
+                f"evidence kinds {values}"
+            )
+    if component.component == TrustedComponent.ARTIFACT_VIEWER:
+        artifact_ref = str(component.data["artifact_ref_id"])
+        if component.data["artifact_path"] != evidence[artifact_ref].locator:
+            raise ValueError(
+                "artifact viewer path must match its content-addressed evidence locator"
+            )
+    if component.component == TrustedComponent.EVIDENCE_GRAPH:
+        for node in component.data["nodes"]:
+            if not isinstance(node, dict):  # schema validation guarantees this
+                raise TypeError("evidence graph node must be an object")
+            ref_id = str(node["evidence_ref_id"])
+            if node["kind"] != evidence[ref_id].kind.value:
+                raise ValueError("evidence graph node kind must match its evidence reference")
 
 
 def _validate_proposal_evidence(
@@ -375,3 +731,46 @@ def _validate_proposal_evidence(
     elif isinstance(payload, ProposeTransitionPayload):
         if evidence[payload.decision_ref_id].kind != EvidenceKind.DECISION:
             raise ValueError("propose_transition must cite decision evidence")
+    elif isinstance(payload, RequestApprovalPayload):
+        allowed_kinds = APPROVAL_EVIDENCE_KINDS[payload.subject]
+        invalid = [
+            item for item in payload.subject_ref_ids if evidence[item].kind not in allowed_kinds
+        ]
+        if invalid:
+            values = sorted(item.value for item in allowed_kinds)
+            raise ValueError(
+                f"{payload.subject.value} approval requires evidence kinds {values}: "
+                f"{sorted(invalid)}"
+            )
+
+
+_DATA_REF_EVIDENCE_KINDS: dict[str, frozenset[EvidenceKind]] = {
+    "project_ref_id": frozenset({EvidenceKind.PROJECT_MANIFEST}),
+    "stage_ref_id": frozenset({EvidenceKind.STAGE_RECORD}),
+    "blocker_ref_id": frozenset({EvidenceKind.BLOCKER}),
+    "run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
+    "baseline_run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
+    "candidate_run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
+    "usage_ref_id": frozenset({EvidenceKind.RESOURCE_USAGE}),
+    "decision_ref_id": frozenset({EvidenceKind.DECISION}),
+    "claim_ref_id": frozenset({EvidenceKind.CLAIM}),
+    "review_ref_id": frozenset({EvidenceKind.REVIEW}),
+    "artifact_ref_id": frozenset({EvidenceKind.ARTIFACT}),
+    "paper_ref_id": frozenset({EvidenceKind.PAPER}),
+    "evidence_ref_ids": frozenset({EvidenceKind.EVIDENCE_RECORD}),
+}
+
+
+def _iter_data_ref_fields(
+    value: JsonValue,
+) -> Iterable[tuple[str, str]]:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key.endswith("_ref_id") and isinstance(child, str):
+                yield key, child
+            elif key.endswith("_ref_ids") and isinstance(child, list):
+                yield from ((key, item) for item in child if isinstance(item, str))
+            yield from _iter_data_ref_fields(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _iter_data_ref_fields(child)

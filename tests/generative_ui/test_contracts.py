@@ -6,19 +6,27 @@ import pytest
 from pydantic import ValidationError
 
 from scitaste.generative_ui import (
+    APPROVAL_EVIDENCE_KINDS,
     COMPONENT_REGISTRY,
     ActionProposal,
+    ApprovalSubject,
     ComponentSpec,
+    EvidenceRef,
     ProposalKind,
     ProposeTransitionPayload,
+    SnapshotBinding,
     SurfacePurpose,
     SurfaceRevision,
     SurfaceSpec,
     TrustedComponent,
+    build_blocked_run_fixture,
     build_fixture_surfaces,
     build_paper_status_fixture,
     build_project_overview_fixture,
     build_run_comparison_fixture,
+    component_data_json_schema,
+    compute_snapshot_sha256,
+    fixture_snapshot_binding,
 )
 from scitaste.schema.actions import MetaAction
 
@@ -38,6 +46,7 @@ def test_registry_is_closed_and_contains_all_initial_trusted_components() -> Non
         "ArtifactViewer",
         "PaperPreview",
     }
+    assert set(APPROVAL_EVIDENCE_KINDS) == set(ApprovalSubject)
 
 
 def test_five_deterministic_fixture_surfaces_are_evidence_grounded() -> None:
@@ -50,6 +59,10 @@ def test_five_deterministic_fixture_surfaces_are_evidence_grounded() -> None:
         assert surface.snapshot.evidence_refs
         assert all(component.evidence_ref_ids for component in surface.components)
         assert len(surface.fingerprint) == 64
+    covered = {
+        component.component for surface in surfaces.values() for component in surface.components
+    }
+    assert covered == set(COMPONENT_REGISTRY)
 
 
 def test_surface_json_round_trip_and_fingerprint_are_stable() -> None:
@@ -76,37 +89,83 @@ def test_fingerprint_changes_when_visible_content_changes() -> None:
 
 
 @pytest.mark.parametrize(
-    "data",
+    "unsafe_text",
     [
-        {"summary": "<script>alert(1)</script>"},
-        {"summary": "javascript:alert(1)"},
-        {"summary": "rm -rf /tmp/project"},
-        {"summary": "https://attacker.example/payload"},
-        {"artifact_path": "../../etc/passwd"},
-        {"score": float("nan")},
-        {"score": float("inf")},
+        "<script>alert(1)</script>",
+        "<!doctype html>",
+        "javascript:alert(1)",
+        "alert(1)",
+        "fetch('/api')",
+        "rm -rf /tmp/project",
+        "/bin/sh -c id",
+        "cat /etc/passwd",
+        "touch /tmp/project",
+        "https://attacker.example/payload",
+        "//attacker.example/payload",
+        "ws://attacker.example/socket",
+        "ssh://attacker.example/payload",
     ],
 )
-def test_component_rejects_active_or_unsafe_payloads(data) -> None:
+def test_component_rejects_common_active_or_unsafe_text(unsafe_text: str) -> None:
+    payload = build_paper_status_fixture().model_dump(mode="json")
+    payload["components"][0]["data"]["excerpt"] = unsafe_text
     with pytest.raises(ValidationError):
-        ComponentSpec(
-            component_id="unsafe-component",
-            component=TrustedComponent.ARTIFACT_VIEWER,
-            title="Unsafe component",
-            evidence_ref_ids=["paper-artifact"],
-            data=data,
-        )
+        SurfaceSpec.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "unsafe_path",
+    [
+        "../../etc/passwd",
+        "papers//paper.pdf",
+        "papers/./paper.pdf",
+        "papers/paper.pdf/",
+        "papers/%2e%2e/etc/passwd",
+        "papers/%252e%252e%252fetc/passwd",
+    ],
+)
+def test_component_rejects_traversal_or_non_normalized_locators(unsafe_path: str) -> None:
+    payload = build_paper_status_fixture().model_dump(mode="json")
+    payload["components"][1]["data"]["artifact_path"] = unsafe_path
+    with pytest.raises(ValidationError):
+        SurfaceSpec.model_validate(payload)
+
+
+@pytest.mark.parametrize("unsafe_number", [float("nan"), float("inf")])
+def test_component_rejects_non_finite_numbers(unsafe_number: float) -> None:
+    payload = build_run_comparison_fixture().model_dump(mode="json")
+    payload["components"][0]["data"]["baseline_score"] = unsafe_number
+    with pytest.raises(ValidationError):
+        SurfaceSpec.model_validate(payload)
 
 
 def test_component_rejects_executable_keys_and_unregistered_types() -> None:
     with pytest.raises(ValidationError, match="executable content"):
         ComponentSpec(
             component_id="unsafe-component",
-            component=TrustedComponent.ARTIFACT_VIEWER,
+            component=TrustedComponent.PAPER_PREVIEW,
             title="Unsafe component",
-            evidence_ref_ids=["paper-artifact"],
+            evidence_ref_ids=["paper-record"],
             data={"command": "render"},
         )
+
+
+def test_every_component_uses_a_closed_required_data_schema() -> None:
+    for component in TrustedComponent:
+        schema_json = json.dumps(component_data_json_schema(component), sort_keys=True)
+        assert '"additionalProperties": false' in schema_json
+
+    for surface in build_fixture_surfaces().values():
+        for component in surface.components:
+            payload = component.model_dump(mode="json")
+            payload["data"]["unexpected_field"] = "not registered"
+            with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+                ComponentSpec.model_validate(payload)
+
+            payload = component.model_dump(mode="json")
+            payload["data"] = {}
+            with pytest.raises(ValidationError):
+                ComponentSpec.model_validate(payload)
     with pytest.raises(ValidationError):
         ComponentSpec.model_validate(
             {
@@ -146,12 +205,12 @@ def test_surface_rejects_missing_evidence_and_unknown_component_binding() -> Non
 def test_surface_rejects_unsubstantiated_status_and_paper_claims() -> None:
     status = build_paper_status_fixture().model_dump(mode="json")
     status["components"][1]["data"]["status"] = "publication_ready"
-    with pytest.raises(ValidationError, match="ungrounded status claim"):
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         SurfaceSpec.model_validate(status)
 
     paper = build_run_comparison_fixture().model_dump(mode="json")
     paper["components"][1]["data"]["paper_title"] = "Unsupported paper title"
-    with pytest.raises(ValidationError, match="ungrounded paper claim"):
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         SurfaceSpec.model_validate(paper)
 
 
@@ -161,6 +220,24 @@ def test_surface_rejects_component_with_wrong_evidence_kind() -> None:
 
     with pytest.raises(ValidationError, match="required evidence kinds"):
         SurfaceSpec.model_validate(payload)
+
+
+def test_component_data_references_and_artifact_locator_are_evidence_bound() -> None:
+    outside = build_project_overview_fixture().model_dump(mode="json")
+    outside["components"][0]["data"]["project_ref_id"] = "stage-analysis"
+    with pytest.raises(ValidationError, match="data references undeclared evidence"):
+        SurfaceSpec.model_validate(outside)
+
+    wrong_kind = build_project_overview_fixture().model_dump(mode="json")
+    wrong_kind["components"][0]["evidence_ref_ids"].append("stage-analysis")
+    wrong_kind["components"][0]["data"]["project_ref_id"] = "stage-analysis"
+    with pytest.raises(ValidationError, match="requires evidence kinds"):
+        SurfaceSpec.model_validate(wrong_kind)
+
+    wrong_path = build_paper_status_fixture().model_dump(mode="json")
+    wrong_path["components"][1]["data"]["artifact_path"] = "papers/paper-a/other.pdf"
+    with pytest.raises(ValidationError, match="path must match"):
+        SurfaceSpec.model_validate(wrong_path)
 
 
 def test_action_proposal_has_no_execution_authority_or_command_slot() -> None:
@@ -211,6 +288,62 @@ def test_compare_runs_requires_run_record_evidence() -> None:
 
     with pytest.raises(ValidationError, match="two run records"):
         SurfaceSpec.model_validate(payload)
+
+
+def test_approval_subject_requires_matching_evidence_kind() -> None:
+    payload = build_blocked_run_fixture().model_dump(mode="json")
+    payload["actions"][0]["proposal"]["payload"]["subject"] = "paper_selection"
+
+    with pytest.raises(ValidationError, match="paper_selection approval requires"):
+        SurfaceSpec.model_validate(payload)
+
+
+def test_snapshot_hash_is_canonical_and_manifest_bound() -> None:
+    snapshot = fixture_snapshot_binding()
+    assert snapshot.snapshot_sha256 == (
+        "b54d7b362d979e69ebd709ca2d347cfef09ae600b0ff00d8f1937acac7bb0fdb"
+    )
+    assert snapshot.snapshot_sha256 == compute_snapshot_sha256(
+        project_id=snapshot.project_id,
+        snapshot_revision=snapshot.snapshot_revision,
+        evidence_refs=reversed(snapshot.evidence_refs),
+    )
+    assert snapshot == SnapshotBinding.from_trusted_evidence(
+        project_id=snapshot.project_id,
+        snapshot_revision=snapshot.snapshot_revision,
+        evidence_refs=reversed(snapshot.evidence_refs),
+    )
+
+    payload = snapshot.model_dump(mode="json")
+    payload["evidence_refs"][0]["sha256"] = "f" * 64
+    with pytest.raises(ValidationError, match="canonical evidence manifest"):
+        SnapshotBinding.model_validate(payload)
+
+
+def test_project_identifier_is_canonical_kebab_case_without_normalization() -> None:
+    valid = fixture_snapshot_binding().evidence_refs[0].model_dump(mode="json")
+    for project_id in ["Project_1", " project-one", "project-one "]:
+        invalid = {**valid, "project_id": project_id}
+        with pytest.raises(ValidationError):
+            EvidenceRef.model_validate(invalid)
+
+
+def test_snapshot_rejects_duplicate_locators() -> None:
+    snapshot = fixture_snapshot_binding()
+    refs = [item.model_copy() for item in snapshot.evidence_refs]
+    refs[1] = refs[1].model_copy(update={"locator": refs[0].locator})
+    digest = compute_snapshot_sha256(
+        project_id=snapshot.project_id,
+        snapshot_revision=snapshot.snapshot_revision,
+        evidence_refs=refs,
+    )
+    with pytest.raises(ValidationError, match="locators must be unique"):
+        SnapshotBinding(
+            project_id=snapshot.project_id,
+            snapshot_revision=snapshot.snapshot_revision,
+            snapshot_sha256=digest,
+            evidence_refs=refs,
+        )
 
 
 def test_surface_revision_is_auditable_and_round_trips() -> None:

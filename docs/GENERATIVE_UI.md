@@ -3,8 +3,9 @@
 SciTaste's generative interface uses a fixed, trusted application shell and a
 dynamically selected research workspace. The generated object is data, not code:
 it can choose from registered native components and bind those components to a
-specific project snapshot, but it cannot emit HTML, JavaScript, commands, tool
-calls, or state mutations.
+specific project snapshot, but it cannot define HTML/JavaScript renderers,
+command-bearing fields, callbacks, tool calls, or state mutations. Text is always
+untrusted display text and is never evaluated.
 
 This module is a contract and interaction-boundary layer only. It includes a
 framework-neutral renderer document, but not a web server, actual renderer,
@@ -16,12 +17,44 @@ model call, project-runtime adapter, or task executor.
 hash, and content-addressed `EvidenceRef` records used by a surface. An evidence
 locator is project-relative and cannot traverse outside the project.
 
+The snapshot hash has one normative representation: SHA-256 over compact,
+key-sorted UTF-8 JSON containing `schema_version: 1.0`, the canonical project ID,
+the snapshot revision, and the full evidence records sorted by `evidence_id`.
+`SnapshotBinding.from_trusted_evidence` is the adapter entry point and validation
+recomputes the same hash. Only a trusted project-runtime adapter may call it,
+after resolving every locator beneath the project root and recomputing each
+evidence hash.
+
 `SurfaceSpec` binds that snapshot to one or more `ComponentSpec` objects. Each
 component is selected from the closed `TrustedComponent` registry and cites the
 evidence IDs supporting its visible data. The registry also declares the evidence
 kinds required by each component. For example, `PaperPreview` requires paper
 evidence, `RunHealth` requires a run record, and `ClaimMatrix` requires both claim
 and evidence records.
+
+Every registered component has a closed data model. Unknown or missing fields are
+invalid, and visible rows carry typed evidence-reference fields that must resolve
+within the component. `DecisionComparison` uses a discriminated `view` field for
+transition and run-comparison data. Artifact paths must exactly match the locator
+of their content-addressed artifact evidence.
+
+| Component | Closed data model |
+|---|---|
+| `ProjectSummaryCard` | `ProjectSummaryData` |
+| `StageTimeline` | `StageTimelineData` |
+| `BlockerList` | `BlockerListData` |
+| `RunHealth` | `RunHealthData` |
+| `BudgetMeter` | `BudgetMeterData` |
+| `DecisionComparison` | `DecisionComparisonData` |
+| `EvidenceGraph` | `EvidenceGraphData` |
+| `ClaimMatrix` | `ClaimMatrixData` |
+| `ReviewerQueue` | `ReviewerQueueData` |
+| `ArtifactViewer` | `ArtifactViewerData` |
+| `PaperPreview` | `PaperPreviewData` |
+
+Adapters and receivers can obtain the exact JSON Schema for any registry member
+with `component_data_json_schema`; every object in those schemas forbids extra
+properties.
 
 `ActionBinding` attaches an `ActionProposal` to a visible component. The only
 initial proposal kinds are:
@@ -34,7 +67,9 @@ initial proposal kinds are:
 Every proposal serializes `authority: proposal_only`. It has no command, URL,
 tool name, callback, or executor field. Transition and approval proposals must
 set `requires_approval`; a later deterministic controller decides whether a
-proposal is feasible and accepted.
+proposal is feasible and accepted. Each approval subject is also restricted to
+its corresponding evidence kind: decision, artifact/paper, paper, run record, or
+blocker evidence.
 
 `SurfaceRevision` replaces a prior surface as an auditable, fingerprint-linked
 document. It does not patch `ResearchState` and cannot execute its declared
@@ -66,9 +101,12 @@ research state. Accepted event IDs cannot be replayed.
 
 `SurfaceSession.replace` applies a complete `SurfaceRevision` only when the
 previous revision and fingerprint still match. It rejects project changes,
-snapshot regression, and two content hashes claiming the same snapshot revision.
-This optimistic check prevents a stale browser tab from proposing against a new
-research state.
+snapshot regression, and any difference in the complete `SnapshotBinding` for an
+unchanged snapshot revision. The session revalidates deep serialized copies at
+construction and replacement, returns copies rather than its internal surface,
+and does not share receipt proposals with internal state. This prevents nested
+list/dictionary mutation from bypassing validation or a stale browser tab from
+proposing against a new research state.
 
 ## Trusted components
 
@@ -80,12 +118,20 @@ An unknown component is invalid rather than a request to generate new UI code.
 
 ## Validation and threat boundary
 
-The Pydantic contracts reject:
+The primary content-safety boundary is the per-component closed field schema:
+generated data cannot introduce a URL, callback, command, handler, source, or
+other unregistered slot. Defense-in-depth text checks reject common active
+content, but intentionally do not claim to recognize every programming language
+or command written as prose. Trusted renderers must always render text as text and
+must never evaluate it.
 
-- raw HTML and JavaScript;
-- shell syntax and command-bearing keys;
-- active or arbitrary remote URI schemes;
-- absolute paths, backslashes, and parent-directory traversal;
+Together, the Pydantic contracts and closed schemas reject:
+
+- raw HTML markers and common active JavaScript forms;
+- common shell syntax/commands and every command-bearing field;
+- registered or protocol-relative remote URI forms;
+- absolute paths, backslashes, encoded traversal, repeated separators, and dot
+  segments;
 - unknown components and unknown evidence IDs;
 - duplicate component, action, metric, or evidence IDs;
 - action evidence that is outside the component to which the action is bound;
@@ -95,18 +141,26 @@ The Pydantic contracts reject:
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
 - surface revisions based on stale fingerprints or inconsistent snapshot hashes.
 
-A valid hash and locator prove that the surface is bound to an evidence identity;
-they do not by themselves prove that a file exists. The future project-runtime
-adapter must resolve the locator inside the project root, recompute its hash, and
-construct `SnapshotBinding`. Renderers must never accept a binding authored by an
-untrusted client as proof of existence.
+A valid binding proves that its evidence manifest matches its snapshot hash; it
+does not by itself prove that a file exists. The future project-runtime adapter
+must resolve the locator inside the project root, recompute each file hash, and
+construct the binding through `from_trusted_evidence`. Renderers must never accept
+a binding authored by an untrusted client as proof of existence.
+
+Project-runtime identity is canonical lowercase kebab-case. Existing
+`ResearchState` records historically allowed arbitrary strings; an adapter must
+reject or explicitly migrate a non-canonical ID before snapshot construction. It
+must not silently lowercase, trim, or replace characters because that could merge
+two project identities.
 
 ## Deterministic fixtures
 
 `scitaste.generative_ui.fixtures` provides five data-only surfaces for project
 overview, paper status, blocked-run diagnosis, next-step proposal, and run
 comparison. They use clearly named fixture evidence and are intended only for
-contract, renderer, and integration tests. They are not research evidence.
+contract, renderer, and integration tests. Across those surfaces every one of the
+11 registered component data schemas is instantiated. They are not research
+evidence.
 
 All surface fields have stable canonical JSON and a SHA-256 content fingerprint.
 Object key order does not change the fingerprint; any visible value or binding

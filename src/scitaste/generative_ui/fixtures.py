@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 
 from scitaste.generative_ui.models import (
     ActionBinding,
@@ -57,13 +56,9 @@ def fixture_snapshot_binding() -> SnapshotBinding:
         )
         for evidence_id, kind, locator in specifications
     ]
-    snapshot_payload = [item.model_dump(mode="json") for item in refs]
-    return SnapshotBinding(
+    return SnapshotBinding.from_trusted_evidence(
         project_id=_PROJECT_ID,
         snapshot_revision=7,
-        snapshot_sha256=_digest(
-            json.dumps(snapshot_payload, separators=(",", ":"), sort_keys=True)
-        ),
         evidence_refs=refs,
     )
 
@@ -86,6 +81,7 @@ def build_project_overview_fixture(
                 title="SciTaste fixture project",
                 evidence_ref_ids=["project-manifest"],
                 data={
+                    "project_ref_id": "project-manifest",
                     "project_status": "active",
                     "publication_ready": False,
                     "current_focus": "Evidence-grounded interface contracts",
@@ -98,8 +94,91 @@ def build_project_overview_fixture(
                 evidence_ref_ids=["stage-analysis"],
                 data={
                     "stages": [
-                        {"stage": 13, "status": "completed"},
-                        {"stage": 14, "status": "active"},
+                        {
+                            "stage_ref_id": "stage-analysis",
+                            "stage": 13,
+                            "status": "completed",
+                        },
+                        {
+                            "stage_ref_id": "stage-analysis",
+                            "stage": 14,
+                            "status": "active",
+                        },
+                    ]
+                },
+            ),
+            ComponentSpec(
+                component_id="budget-meter",
+                component=TrustedComponent.BUDGET_METER,
+                title="Resource budget",
+                evidence_ref_ids=["resource-usage"],
+                data={
+                    "usage_ref_id": "resource-usage",
+                    "resources": [
+                        {
+                            "resource": "model-tokens",
+                            "used": 2400,
+                            "limit": 10000,
+                            "unit": "tokens",
+                        }
+                    ],
+                },
+            ),
+            ComponentSpec(
+                component_id="evidence-graph",
+                component=TrustedComponent.EVIDENCE_GRAPH,
+                title="Evidence graph",
+                evidence_ref_ids=["evidence-record", "claim-record"],
+                data={
+                    "nodes": [
+                        {
+                            "evidence_ref_id": "evidence-record",
+                            "kind": "evidence_record",
+                            "label": "Registered evidence",
+                        },
+                        {
+                            "evidence_ref_id": "claim-record",
+                            "kind": "claim",
+                            "label": "Registered claim",
+                        },
+                    ],
+                    "edges": [
+                        {
+                            "source_ref_id": "evidence-record",
+                            "target_ref_id": "claim-record",
+                            "relation": "supports",
+                        }
+                    ],
+                },
+            ),
+            ComponentSpec(
+                component_id="claim-matrix",
+                component=TrustedComponent.CLAIM_MATRIX,
+                title="Claim coverage",
+                evidence_ref_ids=["claim-record", "evidence-record"],
+                data={
+                    "claims": [
+                        {
+                            "claim_ref_id": "claim-record",
+                            "statement": "The registered claim has supporting evidence.",
+                            "status": "supported",
+                            "evidence_ref_ids": ["evidence-record"],
+                        }
+                    ]
+                },
+            ),
+            ComponentSpec(
+                component_id="reviewer-queue",
+                component=TrustedComponent.REVIEWER_QUEUE,
+                title="Reviewer queue",
+                evidence_ref_ids=["review-record"],
+                data={
+                    "reviews": [
+                        {
+                            "review_ref_id": "review-record",
+                            "status": "open",
+                            "summary": "One registered review remains open.",
+                        }
                     ]
                 },
             ),
@@ -123,6 +202,7 @@ def build_paper_status_fixture(snapshot: SnapshotBinding | None = None) -> Surfa
                 title="Current manuscript",
                 evidence_ref_ids=["paper-record"],
                 data={
+                    "paper_ref_id": "paper-record",
                     "paper_title": "Evidence-Grounded Research Interface",
                     "paper_status": "peer_reviewed_draft",
                     "publication_ready": False,
@@ -135,6 +215,7 @@ def build_paper_status_fixture(snapshot: SnapshotBinding | None = None) -> Surfa
                 title="Paper artifact",
                 evidence_ref_ids=["paper-artifact"],
                 data={
+                    "artifact_ref_id": "paper-artifact",
                     "artifact_path": "papers/paper-a/paper.pdf",
                     "media_type": "application/pdf",
                 },
@@ -176,6 +257,7 @@ def build_blocked_run_fixture(snapshot: SnapshotBinding | None = None) -> Surfac
                 data={
                     "blockers": [
                         {
+                            "blocker_ref_id": "blocker-record",
                             "blocker_id": "provider-format",
                             "severity": "high",
                             "status": "open",
@@ -190,6 +272,7 @@ def build_blocked_run_fixture(snapshot: SnapshotBinding | None = None) -> Surfac
                 title="Run health",
                 evidence_ref_ids=["run-a"],
                 data={
+                    "run_ref_id": "run-a",
                     "run_status": "failed",
                     "failure_stage": 14,
                     "retry_safe": True,
@@ -233,10 +316,13 @@ def build_next_step_fixture(snapshot: SnapshotBinding | None = None) -> SurfaceS
                 title="Candidate transition",
                 evidence_ref_ids=["decision-record", "run-b"],
                 data={
+                    "view": "transition",
+                    "decision_ref_id": "decision-record",
+                    "run_ref_id": "run-b",
                     "status": "proposed",
                     "current_stage": "evidence",
-                    "recommended_action": "collect_evidence",
-                    "alternative_action": "write",
+                    "recommended_action": "COLLECT_EVIDENCE",
+                    "alternative_action": "WRITE",
                 },
             )
         ],
@@ -277,6 +363,10 @@ def build_run_comparison_fixture(snapshot: SnapshotBinding | None = None) -> Sur
                 title="Baseline and candidate",
                 evidence_ref_ids=["decision-record", "run-a", "run-b"],
                 data={
+                    "view": "run_comparison",
+                    "decision_ref_id": "decision-record",
+                    "baseline_run_ref_id": "run-a",
+                    "candidate_run_ref_id": "run-b",
                     "baseline_score": 0.71,
                     "candidate_score": 0.82,
                     "metric": "balanced_accuracy",
@@ -287,14 +377,14 @@ def build_run_comparison_fixture(snapshot: SnapshotBinding | None = None) -> Sur
                 component=TrustedComponent.RUN_HEALTH,
                 title="Baseline health",
                 evidence_ref_ids=["run-a"],
-                data={"run_status": "succeeded", "schema_valid": True},
+                data={"run_ref_id": "run-a", "run_status": "succeeded", "schema_valid": True},
             ),
             ComponentSpec(
                 component_id="candidate-health",
                 component=TrustedComponent.RUN_HEALTH,
                 title="Candidate health",
                 evidence_ref_ids=["run-b"],
-                data={"run_status": "succeeded", "schema_valid": True},
+                data={"run_ref_id": "run-b", "run_status": "succeeded", "schema_valid": True},
             ),
         ],
         actions=[

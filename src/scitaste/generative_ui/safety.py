@@ -6,20 +6,30 @@ import math
 import re
 from pathlib import PurePosixPath
 from typing import Annotated, Any
+from urllib.parse import unquote
 
-from pydantic import AfterValidator, Field, JsonValue
+from pydantic import AfterValidator, BeforeValidator, Field, JsonValue
 
-_REMOTE_OR_ACTIVE_URI = re.compile(r"(?:https?|ftp|file|data|javascript|vbscript):", re.IGNORECASE)
-_HTML_TAG = re.compile(r"<\s*/?\s*[a-z][^>]*>", re.IGNORECASE)
-_JAVASCRIPT = re.compile(
-    r"(?:\b(?:document|window)\s*\.|\b(?:eval|function)\s*\(|<\s*script\b)",
+_REMOTE_OR_ACTIVE_URI = re.compile(
+    r"(?:\b[a-z][a-z0-9+.-]*://|(?:^|[\s(\[{'\"])/{2,}|"
+    r"(?:javascript|vbscript|data|file|mailto):)",
     re.IGNORECASE,
 )
-_SHELL_META = re.compile(r"(?:&&|\|\||\$\(|`)")
+_HTML_TAG = re.compile(r"<\s*(?:!doctype\b|!--|/?\s*[a-z][^>]*>)", re.IGNORECASE)
+_JAVASCRIPT = re.compile(
+    r"(?:\b(?:document|window|globalThis|location|localStorage|sessionStorage|console|"
+    r"process)\s*(?:\.|\[)|\b(?:eval|function|alert|fetch|require|import|importScripts|"
+    r"setTimeout|setInterval)\s*\(|"
+    r"\bnew\s+Function\b|=>|\bon[a-z]+\s*=|<\s*script\b)",
+    re.IGNORECASE,
+)
+_SHELL_META = re.compile(r"(?:&&|\|\||\$\(|`|\b(?:os\.system|subprocess\.[a-z_]+)\s*\()")
 _SHELL_COMMAND = re.compile(
     r"(?:^|[\s;|&])(?:sudo\s+)?"
-    r"(?:bash|sh|zsh|fish|powershell|cmd(?:\.exe)?|rm|chmod|chown|curl|wget|"
-    r"python(?:3(?:\.\d+)?)?|node|npm|git)\s+",
+    r"(?:(?:/[a-z0-9_.-]+)+/)?"
+    r"(?:bash|sh|zsh|fish|powershell|cmd(?:\.exe)?|rm|chmod|chown|curl|wget|cat|"
+    r"touch|cp|mv|dd|echo|env|perl|ruby|php|python(?:3(?:\.\d+)?)?|node|npm|git|make|ssh|"
+    r"scp|nc|netcat)\b(?:\s|$)",
     re.IGNORECASE,
 )
 _TRAVERSAL = re.compile(r"(?:^|[\\/])\.\.(?:[\\/]|$)")
@@ -47,7 +57,13 @@ _FORBIDDEN_KEYS = {
 
 
 def ensure_safe_text(value: str) -> str:
-    """Reject executable, active-content, remote, or path-traversal strings."""
+    """Apply defense-in-depth checks to text already constrained by a field schema.
+
+    These checks intentionally do not claim to recognize every programming or
+    command language. The primary boundary is the component-specific field
+    allowlist; this helper rejects common active-content forms that must never be
+    interpreted by a renderer.
+    """
 
     if not value.strip():
         raise ValueError("text must not be blank")
@@ -59,7 +75,7 @@ def ensure_safe_text(value: str) -> str:
         raise ValueError("JavaScript is not allowed")
     if _SHELL_META.search(value) or _SHELL_COMMAND.search(value):
         raise ValueError("shell commands are not allowed")
-    if _TRAVERSAL.search(value):
+    if _TRAVERSAL.search(value) or _TRAVERSAL.search(_repeatedly_unquote(value)):
         raise ValueError("path traversal is not allowed")
     return value
 
@@ -70,12 +86,39 @@ def ensure_safe_locator(value: str) -> str:
     ensure_safe_text(value)
     if "\\" in value or _WINDOWS_ABSOLUTE.match(value):
         raise ValueError("locator must be a POSIX project-relative path")
+    decoded = _repeatedly_unquote(value)
+    if "\\" in decoded or _WINDOWS_ABSOLUTE.match(decoded) or _TRAVERSAL.search(decoded):
+        raise ValueError("locator contains encoded traversal or separators")
+    decoded_parts = decoded.split("/")
+    if decoded != value and any(part in {"", ".", ".."} for part in decoded_parts):
+        raise ValueError("locator contains encoded traversal or separators")
+    raw_parts = value.split("/")
+    if any(part in {"", ".", ".."} for part in raw_parts):
+        raise ValueError("locator must be normalized without duplicate or dot segments")
     path = PurePosixPath(value)
     if path.is_absolute() or not path.parts:
         raise ValueError("locator must be project-relative")
     if any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError("locator must be normalized without traversal")
     return value
+
+
+def ensure_canonical_project_identifier(value: Any) -> Any:
+    """Reject legacy/non-canonical IDs instead of silently normalizing them."""
+
+    if isinstance(value, str) and value != value.strip():
+        raise ValueError("project identifier must already be canonical")
+    return value
+
+
+def _repeatedly_unquote(value: str) -> str:
+    decoded = value
+    for _ in range(3):
+        expanded = unquote(decoded)
+        if expanded == decoded:
+            break
+        decoded = expanded
+    return decoded
 
 
 def validate_declarative_value(value: JsonValue, *, location: str = "data") -> JsonValue:
@@ -105,14 +148,6 @@ def validate_declarative_value(value: JsonValue, *, location: str = "data") -> J
     return value
 
 
-def contains_key(value: JsonValue, keys: set[str]) -> bool:
-    if isinstance(value, dict):
-        return any(key in keys or contains_key(child, keys) for key, child in value.items())
-    if isinstance(value, list):
-        return any(contains_key(child, keys) for child in value)
-    return False
-
-
 SafeText = Annotated[str, Field(min_length=1, max_length=4000), AfterValidator(ensure_safe_text)]
 SafeIdentifier = Annotated[
     str,
@@ -120,6 +155,7 @@ SafeIdentifier = Annotated[
 ]
 ProjectIdentifier = Annotated[
     str,
+    BeforeValidator(ensure_canonical_project_identifier),
     Field(min_length=1, max_length=128, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$"),
 ]
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]

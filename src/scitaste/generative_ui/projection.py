@@ -8,7 +8,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
-from scitaste.generative_ui.models import SnapshotBinding, SurfaceSpec
+from scitaste.generative_ui.models import (
+    ComponentSpec,
+    SnapshotBinding,
+    SurfaceSpec,
+    _validate_component_evidence,
+    validate_component_data,
+)
 from scitaste.generative_ui.registry import ProposalKind, TrustedComponent
 from scitaste.generative_ui.safety import (
     ProjectIdentifier,
@@ -60,9 +66,10 @@ class RendererComponent(BaseModel):
         return declarative_dict(value)
 
     @model_validator(mode="after")
-    def evidence_ids_are_unique(self) -> RendererComponent:
+    def data_and_evidence_ids_are_valid(self) -> RendererComponent:
         if len(self.evidence_ref_ids) != len(set(self.evidence_ref_ids)):
             raise ValueError("renderer component evidence references must be unique")
+        object.__setattr__(self, "data", validate_component_data(self.renderer, self.data))
         return self
 
 
@@ -122,12 +129,23 @@ class RendererDocument(BaseModel):
         unknown = {item.component_id for item in self.actions} - set(component_ids)
         if unknown:
             raise ValueError(f"renderer actions reference unknown components: {sorted(unknown)}")
+        evidence = {item.evidence_id: item for item in self.snapshot.evidence_refs}
+        for item in self.components:
+            component = ComponentSpec(
+                component_id=item.component_id,
+                component=item.renderer,
+                title=item.title,
+                evidence_ref_ids=list(item.evidence_ref_ids),
+                data=item.data,
+            )
+            _validate_component_evidence(component, evidence)
         return self
 
 
 def project_surface(surface: SurfaceSpec) -> RendererDocument:
     """Create a data-only renderer document from an already validated surface."""
 
+    surface = SurfaceSpec.model_validate(surface.model_dump(mode="json"))
     return RendererDocument(
         shell=FixedApplicationShell(),
         project_id=surface.project_id,

@@ -10,6 +10,7 @@ from scitaste.generative_ui import (
     RendererComponent,
     RendererDocument,
     RevisionConflictError,
+    SnapshotBinding,
     StaleSurfaceError,
     SurfaceEvent,
     SurfaceRevision,
@@ -71,6 +72,36 @@ def test_renderer_contract_rejects_a_mutable_shell_or_unsafe_component_data() ->
         )
 
 
+def test_renderer_document_revalidates_evidence_closure_and_component_policy() -> None:
+    missing = project_surface(build_paper_status_fixture()).model_dump(mode="json")
+    missing["components"][0]["evidence_ref_ids"] = ["missing-evidence"]
+    missing["components"][0]["data"]["paper_ref_id"] = "missing-evidence"
+    with pytest.raises(ValidationError, match="missing evidence"):
+        RendererDocument.model_validate(missing)
+
+    wrong_kind = project_surface(build_paper_status_fixture()).model_dump(mode="json")
+    wrong_kind["components"][0].update(
+        {
+            "renderer": "RunHealth",
+            "evidence_ref_ids": ["paper-record"],
+            "data": {
+                "run_ref_id": "paper-record",
+                "run_status": "succeeded",
+            },
+        }
+    )
+    with pytest.raises(ValidationError, match="required evidence kinds"):
+        RendererDocument.model_validate(wrong_kind)
+
+
+def test_projection_revalidates_mutated_nested_models() -> None:
+    surface = build_paper_status_fixture()
+    surface.snapshot.evidence_refs.clear()
+
+    with pytest.raises(ValidationError):
+        project_surface(surface)
+
+
 def test_identity_only_event_round_trips_and_rejects_arbitrary_payload() -> None:
     surface = build_paper_status_fixture()
     event = make_surface_event(surface, event_id="event-one", action_id="inspect-paper")
@@ -97,6 +128,26 @@ def test_session_activation_returns_pending_proposal_without_execution_authority
     assert receipt.execution_authority == "none"
     assert receipt.next_boundary == "deterministic_controller"
     assert receipt.event_fingerprint == event.fingerprint
+
+
+def test_session_owns_and_returns_deeply_independent_surface_copies() -> None:
+    source = build_paper_status_fixture()
+    session = SurfaceSession(source)
+
+    source.snapshot.evidence_refs.clear()
+    source.actions[0].proposal.evidence_ref_ids.append("paper-record")
+    exposed = session.surface
+    exposed.snapshot.evidence_refs.clear()
+    exposed.actions[0].proposal.evidence_ref_ids.append("paper-record")
+
+    current = session.surface
+    assert current.snapshot.evidence_refs
+    assert current.actions[0].proposal.evidence_ref_ids == ["paper-artifact"]
+
+    event = make_surface_event(current, event_id="copy-event", action_id="inspect-paper")
+    receipt = session.activate(event)
+    receipt.proposal.evidence_ref_ids.append("paper-record")
+    assert session.surface.actions[0].proposal.evidence_ref_ids == ["paper-artifact"]
 
 
 @pytest.mark.parametrize(
@@ -163,14 +214,26 @@ def test_session_rejects_a_stale_revision_base() -> None:
 
 def test_session_rejects_snapshot_regression_or_hash_collision() -> None:
     previous = build_paper_status_fixture()
-    regressed_snapshot = previous.snapshot.model_copy(update={"snapshot_revision": 6})
+    regressed_snapshot = SnapshotBinding.from_trusted_evidence(
+        project_id=previous.project_id,
+        snapshot_revision=6,
+        evidence_refs=previous.snapshot.evidence_refs,
+    )
     regressed_surface = previous.model_copy(update={"revision": 2, "snapshot": regressed_snapshot})
     with pytest.raises(RevisionConflictError, match="regresses"):
         SurfaceSession(previous).replace(_revision(previous, regressed_surface))
 
-    colliding_snapshot = previous.snapshot.model_copy(update={"snapshot_sha256": "f" * 64})
+    changed_refs = list(previous.snapshot.evidence_refs)
+    changed_refs[0] = changed_refs[0].model_copy(
+        update={"locator": "alternate/PROJECT.json", "sha256": "f" * 64}
+    )
+    colliding_snapshot = SnapshotBinding.from_trusted_evidence(
+        project_id=previous.project_id,
+        snapshot_revision=previous.snapshot.snapshot_revision,
+        evidence_refs=changed_refs,
+    )
     colliding_surface = previous.model_copy(update={"revision": 2, "snapshot": colliding_snapshot})
-    with pytest.raises(RevisionConflictError, match="two different content hashes"):
+    with pytest.raises(RevisionConflictError, match="two different snapshot bindings"):
         SurfaceSession(previous).replace(_revision(previous, colliding_surface))
 
 
