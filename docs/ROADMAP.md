@@ -255,13 +255,17 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and no GLM result is mixed into the registered Qwen comparison.
   The same pilot protocol has now completed Base, Knowledge RAG, Taste Library,
   and Full SciTaste on the frozen diagnosis task through Stage 18. The four cells
-  contain real experiments and self-contained Markdown/TeX/PDF packages,
-  consuming 531,179 cumulative wire tokens. This clears four-condition
+  contain real experiments and self-contained Markdown/TeX/PDF packages. A
+  replacement Full rerun reduced selected-experiment time from 734.58 seconds to
+  0.63 seconds while preserving the 1,944-packet three-seed matrix. Using that
+  replacement, the four conditions consumed 499,524 cumulative wire tokens.
+  This clears four-condition
   engineering preacceptance, not effectiveness acceptance. Runs were continued
   after adapter gates exposed missing-stage resume, corrective `N=1` language,
-  and an incorrect contract-derived packet total. Full SciTaste also required an
-  automatic runtime repair and retained a 734.58-second inefficient selected
-  experiment, so its duration is excluded from matched efficiency claims.
+  an incorrect contract-derived packet total, condition-first metric aliases,
+  and corrective stale-failure language. The replacement was still continued
+  after those adapter fixes, so runner duration remains excluded from matched
+  efficiency claims despite the selected experiment's corrected performance.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.

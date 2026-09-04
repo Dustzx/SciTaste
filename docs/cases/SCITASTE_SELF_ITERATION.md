@@ -39,13 +39,15 @@ The Zhipu GLM-5.2 preacceptance is a second dogfooding episode. Four real system
 conditions completed one frozen task, while failed gates exposed a resume-order
 bug, a negation-sensitive evidence audit, a wrong derived grid count, an empty
 factor slice, and an expensive per-example refit. The resulting fixes are
-regression-tested and the failed Full attempt is retained alongside the raw run.
+regression-tested and the failed/slow Full attempts are retained alongside the
+raw runs. A fresh Full selected experiment reduced execution from 734.58 seconds
+to 0.63 seconds after the prompt began enforcing feature reuse.
 
 This episode supports claims about traceability and defect discovery only. It is
 not evidence that Full SciTaste outperforms the other conditions: the cells were
-continued after fixes, and the Full runtime is anomalous. Promotion of any lesson
-from this episode into the Taste Library still requires a separate outcome review
-and human verification.
+continued after fixes, so runner duration is not a matched comparison. Promotion
+of any lesson from this episode into the Taste Library still requires a separate
+outcome review and human verification.
 
 ## Anti-self-confirmation rules
 

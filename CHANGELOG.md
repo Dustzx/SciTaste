@@ -128,6 +128,9 @@ semantic versioning.
   corrective `incorrectly asserted N=1` prose no longer trips the single-seed
   gate; formal prompts inject the contract-derived packet total and prohibit
   per-example model refitting.
+- Condition-first `mean_balanced_accuracy` seed rows and explicitly superseded
+  cached/fabricated-metric prose now pass evidence auditing; repeated manuscript
+  image references no longer duplicate artifact-path entries.
 
 - CI now initializes the pinned AutoResearchClaw submodule before running the
   substrate verification test.
