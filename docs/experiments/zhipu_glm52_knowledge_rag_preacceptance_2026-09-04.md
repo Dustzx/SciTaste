@@ -71,8 +71,8 @@ single-lifecycle cell. Token accounting is cumulative and complete.
 
 ## Remaining boundary
 
-This run clears provider connectivity and one Knowledge RAG lifecycle. It does
-not clear the four-condition preacceptance, the 48-cell matched study, external
-blinded review, or publication-quality revision. A same-provider four-condition
-pilot is the next useful portability check. The registered headline experiment
-must later run every compared condition on the same frozen model/provider.
+This run cleared provider connectivity and one Knowledge RAG lifecycle. It was
+subsequently joined by successful same-provider Base, Taste Library, and Full
+SciTaste cells, as recorded in
+`zhipu_glm52_four_condition_preacceptance_2026-09-04.md`. The 48-cell matched
+study, external blinded review, and publication-quality revision remain open.

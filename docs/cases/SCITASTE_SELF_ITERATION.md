@@ -33,6 +33,20 @@ The scenario and its expected selection are regression-tested. Generated state,
 decision logs, and summaries remain ignored because they contain runtime paths
 and timestamps.
 
+## Phase 9 four-condition case
+
+The Zhipu GLM-5.2 preacceptance is a second dogfooding episode. Four real system
+conditions completed one frozen task, while failed gates exposed a resume-order
+bug, a negation-sensitive evidence audit, a wrong derived grid count, an empty
+factor slice, and an expensive per-example refit. The resulting fixes are
+regression-tested and the failed Full attempt is retained alongside the raw run.
+
+This episode supports claims about traceability and defect discovery only. It is
+not evidence that Full SciTaste outperforms the other conditions: the cells were
+continued after fixes, and the Full runtime is anomalous. Promotion of any lesson
+from this episode into the Taste Library still requires a separate outcome review
+and human verification.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

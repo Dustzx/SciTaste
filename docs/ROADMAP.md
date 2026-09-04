@@ -253,11 +253,20 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   package is cross-provider engineering evidence only: the gate-driven direct
   continuation prevents duration comparison, 23 review concerns remain open,
   and no GLM result is mixed into the registered Qwen comparison.
+  The same pilot protocol has now completed Base, Knowledge RAG, Taste Library,
+  and Full SciTaste on the frozen diagnosis task through Stage 18. The four cells
+  contain real experiments and self-contained Markdown/TeX/PDF packages,
+  consuming 531,179 cumulative wire tokens. This clears four-condition
+  engineering preacceptance, not effectiveness acceptance. Runs were continued
+  after adapter gates exposed missing-stage resume, corrective `N=1` language,
+  and an incorrect contract-derived packet total. Full SciTaste also required an
+  automatic runtime repair and retained a 734.58-second inefficient selected
+  experiment, so its duration is excluded from matched efficiency claims.
   Interrupted and original artifacts are retained only as failure fixtures.
 - Sibyl and AI Scientist-v2 are optional external integrations still to be
   implemented and acceptance-tested; no surrogate output is used while disabled.
-- Pending before the exit gate: pass four-condition preacceptance, run all 48
-  commit-pinned cells, audit their artifacts, and collect external reviews.
+- Pending before the exit gate: run all 48 commit-pinned cells without manual
+  continuation, audit their artifacts, and collect external reviews.
 
 ## Project controls
 

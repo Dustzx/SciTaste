@@ -14,6 +14,10 @@ Phases 0 through 8, including the Phase 7.5 real-substrate gate, are implemented
 The Phase 9 matched-budget protocol is in progress; license-reviewed external
 corpus expansion continues as a data operation:
 
+The four enabled core conditions have passed a same-provider GLM-5.2 engineering
+preacceptance on one frozen task. The complete 48-cell run and external blinded
+review remain pending, so no effectiveness claim is made from that pilot.
+
 - canonical, versioned `ResearchState`;
 - typed research actions and auditable decisions;
 - nonlinear, decision-driven transitions including `PROBE` and `PIVOT`;

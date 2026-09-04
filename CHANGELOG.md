@@ -102,6 +102,9 @@ semantic versioning.
   `outputs/projects/<project-id>/` ownership boundary, global paper aliases,
   per-project current-run Stage browser, bilingual 23-stage reference, and
   stable naming rules for future runs.
+- A same-provider Zhipu GLM-5.2 four-condition engineering preacceptance with
+  real Stage 8–18 experiments and independently packaged Markdown/TeX/PDF
+  manuscripts for Base, Knowledge RAG, Taste Library, and Full SciTaste.
 
 ### Changed
 
@@ -120,6 +123,11 @@ semantic versioning.
   added complete-condition parsing for `condition: mean=...` metric summaries.
 
 ### Fixed
+
+- Study-cell resume now rewinds to the earliest missing publication stage;
+  corrective `incorrectly asserted N=1` prose no longer trips the single-seed
+  gate; formal prompts inject the contract-derived packet total and prohibit
+  per-example model refitting.
 
 - CI now initializes the pinned AutoResearchClaw submodule before running the
   substrate verification test.
