@@ -107,11 +107,53 @@ text and belong under ignored project outputs, never in Git.
 
 ## Live-model promotion boundary
 
-This iteration deliberately has no live structured-generation adapter and makes
-no model-quality or autonomy claim. A later pilot may bind the generic protocol
-to Zhipu `glm-5.3-flash`, local 2B/4B text models, and Qwen3-VL-4B for a separate
-visual node. Each provider/model is a distinct registered condition and must
-report real tokens, latency, and cost; missing cost is not treated as zero.
+`StructuredOpenAICompatibleBackend` provides a provider-SDK-free Chat
+Completions adapter for a later live pilot. It sends the node's exact system
+instruction separately from a canonical user payload containing the complete
+bounded input, output JSON Schema, request fingerprint, state and policy
+identities, prompt version, and seed. The configured model and seed are also
+top-level request fields. The adapter requests `json_object` output; strict
+schema validation remains in the deterministic node boundary.
+
+Live use has three independent fail-closed switches:
+
+1. `live_enabled` must be true;
+2. finite non-negative USD input/output token rates with a timezone-aware
+   capture timestamp and source must be present and explicitly confirmed;
+3. the configured API-key environment variable must contain a value.
+
+The key value is read only immediately before a call and is never stored in the
+configuration, prompt, response, or logs. Provider usage must contain explicit
+input/output token counts; supported aliases are `prompt_tokens` /
+`completion_tokens` and `input_tokens` / `output_tokens`. Missing or conflicting
+usage fails instead of becoming zero. The calculated USD cost and its full
+pricing provenance are retained in `StructuredModelResponse` and record/replay.
+
+The exact decoded provider response body and its SHA-256 are retained together.
+The provider's returned model identity is retained verbatim when present, so a
+silent alias or fallback becomes a policy rejection. The adapter never executes
+provider tool calls: supported function-call structures become
+`ToolCallProposal` values for later deterministic review, while unknown tool
+types and malformed arguments fail closed. Transport retries are bounded to the
+configured count and apply only to transport failures, HTTP 429, and HTTP 5xx;
+HTTP 4xx and malformed semantic responses are not retried.
+
+The committed
+`configs/model_nodes/zhipu_glm53_flash.example.yaml` pins the general prepaid
+OpenAI-compatible endpoint, `glm-5.3-flash`, and `ZAI_API_KEY`, but is intentionally
+disabled and contains no guessed price. Before any live call, replace the null
+pricing placeholder with rates verified for the account and billing route, add
+their provenance, set `pricing_confirmed: true`, and only then set
+`live_enabled: true`. Coding Plan credentials or endpoints are a separate
+condition and must not be substituted silently. The example also keeps retries
+at zero because a timeout or 5xx may be ambiguous about whether inference and
+billing already occurred; enable retries only with a provider-specific accounting
+rule for those attempts.
+
+No real Zhipu call, model-quality assessment, or autonomy claim is made by this
+implementation. The later pilot may compare Zhipu `glm-5.3-flash`, local 2B/4B
+text models, and Qwen3-VL-4B for a separate visual node. Each provider/model is a
+distinct registered condition.
 
 ADR-022 must stay proposed until the local self-development record verifies at
 least the registered gates: schema success rate 0.98, zero deterministic-gate
@@ -132,4 +174,7 @@ The tests cover accepted proposals, strict schema rejection, invented references
 and actions, disabled nodes, clear-margin bypass, provider/model drift, token,
 finite cumulative cost and latency limits, missing cost telemetry, unallowlisted
 tools, raw hash validation, boundary mutation detection, exact recording/replay
-of accepted and rejected responses, and replay misses.
+of accepted and rejected responses, replay misses, missing-key and disabled-live
+preflight, request identity, provider model drift, token aliases, explicit price
+calculation, malformed live responses, bounded HTTP retry behavior, and live
+adapter record/replay through fake transports. Tests never access the network.

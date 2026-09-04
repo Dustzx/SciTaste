@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from enum import StrEnum
 from typing import Generic, Literal, TypeVar
 
@@ -28,6 +29,25 @@ class ToolCallProposal(BaseModel):
 
     name: str = Field(min_length=1)
     arguments: dict[str, JsonValue] = Field(default_factory=dict)
+
+
+class ModelCostProvenance(BaseModel):
+    """Auditable USD rates used to derive one provider response cost."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    currency: Literal["USD"] = "USD"
+    input_usd_per_million_tokens: float = Field(ge=0, allow_inf_nan=False)
+    output_usd_per_million_tokens: float = Field(ge=0, allow_inf_nan=False)
+    captured_at: datetime
+    source: str = Field(min_length=1)
+
+    @field_validator("captured_at")
+    @classmethod
+    def captured_at_is_timezone_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("captured_at must include a timezone")
+        return value
 
 
 class NodeContext(BaseModel):
@@ -146,6 +166,7 @@ class StructuredModelResponse(BaseModel):
     raw_response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     latency_ms: float = Field(ge=0, allow_inf_nan=False)
     usage: Usage
+    cost_provenance: ModelCostProvenance | None = None
     tool_calls: list[ToolCallProposal] = Field(default_factory=list)
     cached: bool = False
 

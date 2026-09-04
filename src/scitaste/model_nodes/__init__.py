@@ -6,6 +6,7 @@ from scitaste.model_nodes.backends import (
     StructuredModelBackend,
 )
 from scitaste.model_nodes.models import (
+    ModelCostProvenance,
     NodeContext,
     NodePolicy,
     NodeResult,
@@ -21,6 +22,16 @@ from scitaste.model_nodes.nodes import (
     NodeNotApplicableError,
     NodePolicyViolationError,
     ReviewSemanticNode,
+)
+from scitaste.model_nodes.openai_compatible import (
+    HttpxStructuredTransport,
+    StructuredBackendDisabledError,
+    StructuredHTTPResponse,
+    StructuredHTTPTransport,
+    StructuredOpenAICompatibleBackend,
+    StructuredOpenAICompatibleConfig,
+    StructuredProviderResponseError,
+    load_structured_openai_compatible_config,
 )
 from scitaste.model_nodes.replay import (
     RecordingStructuredBackend,
@@ -44,9 +55,11 @@ __all__ = [
     "AmbiguousActionInput",
     "AmbiguousActionNode",
     "AmbiguousActionOutput",
+    "HttpxStructuredTransport",
     "InterpretationThreatInput",
     "InterpretationThreatNode",
     "InterpretationThreatOutput",
+    "ModelCostProvenance",
     "ModelNode",
     "NodeContext",
     "NodeNotApplicableError",
@@ -62,12 +75,19 @@ __all__ = [
     "ReviewSemanticOutput",
     "ScriptedStructuredBackend",
     "ScriptedStructuredReply",
+    "StructuredBackendDisabledError",
+    "StructuredHTTPResponse",
+    "StructuredHTTPTransport",
     "StructuredModelBackend",
     "StructuredModelRequest",
     "StructuredModelResponse",
+    "StructuredOpenAICompatibleBackend",
+    "StructuredOpenAICompatibleConfig",
+    "StructuredProviderResponseError",
     "StructuredReplayMissError",
     "StructuredReplayRecord",
     "ToolCallProposal",
     "ValidityThreatKind",
     "ValidityThreatProposal",
+    "load_structured_openai_compatible_config",
 ]
