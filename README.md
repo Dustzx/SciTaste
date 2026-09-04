@@ -76,16 +76,19 @@ complete decision trail.
 
 ## Finding generated outputs
 
-Use `outputs/INDEX.md` as the human-readable entry point. Reader-facing papers
-are collected under `outputs/papers/`; the newest bundle is always available at
-`outputs/papers/latest/`. Refresh the run and paper catalog after an execution:
+Use `outputs/INDEX.md` as the human-readable entry point. The canonical unit is
+`outputs/projects/<project-id>/`, which owns its runs, evidence, reviews, and
+paper versions. `outputs/papers/` is only a global shortcut layer; the newest
+bundle remains available at `outputs/papers/latest/`. Refresh the catalog after
+an execution:
 
 ```bash
 .venv/bin/python scripts/catalog_outputs.py outputs
 ```
 
-The catalog explains every `stage-NN` directory and separates successful paper
-bundles from failed or resumable raw runs. See
+The catalog groups paper versions beneath their project, explains every
+`stage-NN` directory, and separates successful bundles from failed or resumable
+raw runs. See
 [`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md) for the naming convention. Old
 run directories remain in place so checkpoints and artifact hashes stay valid.
 

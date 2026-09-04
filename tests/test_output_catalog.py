@@ -27,13 +27,29 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
-    bundle = outputs / "papers" / "2026-09-04__model__condition__task__stage-18"
+    project = outputs / "projects" / "readable-research-project"
+    project.mkdir(parents=True)
+    bundle_name = "2026-09-04__model__knowledge-rag__stage-18"
+    bundle = project / "papers" / bundle_name
     bundle.mkdir(parents=True)
+    (project / "PROJECT.json").write_text(
+        json.dumps(
+            {
+                "project_id": "readable-research-project",
+                "title": "Readable research project",
+                "research_direction": "Test a clear output hierarchy.",
+                "status": "preacceptance",
+                "current_paper": f"papers/{bundle_name}",
+            }
+        ),
+        encoding="utf-8",
+    )
     (bundle / "paper.pdf").write_bytes(b"pdf")
     (bundle / "MANIFEST.json").write_text(
         json.dumps(
             {
                 "paper_id": "paper-test",
+                "project_id": "readable-research-project",
                 "title": "Readable paper",
                 "status": "peer_reviewed",
                 "evidence_scope": "pilot",
@@ -45,16 +61,24 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
-    (outputs / "papers" / "latest").symlink_to(bundle.name)
+    aliases = outputs / "papers"
+    aliases.mkdir()
+    (aliases / "latest").symlink_to(bundle, target_is_directory=True)
 
     index_path, catalog_path = refresh_catalog(outputs)
 
     index = index_path.read_text(encoding="utf-8")
+    assert "Readable research project" in index
     assert "Readable paper" in index
-    assert "[PDF](papers/2026-09-04__model__condition__task__stage-18/paper.pdf)" in index
+    assert (
+        "[PDF](projects/readable-research-project/papers/"
+        "2026-09-04__model__knowledge-rag__stage-18/paper.pdf)" in index
+    )
     assert "[论文](legacy-run/cells/cell-test/paper.md)" in index
     assert "Stage 18" in index
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    assert len(catalog["projects"]) == 1
+    assert catalog["projects"][0]["project_id"] == "readable-research-project"
     assert len(catalog["papers"]) == 1
     assert catalog["papers"][0]["paper_id"] == "paper-test"
     assert catalog["runs"][0]["status"] == "succeeded"

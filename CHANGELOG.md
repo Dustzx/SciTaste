@@ -98,7 +98,8 @@ semantic versioning.
   population-standard-deviation values.
 - A pilot-scoped Zhipu GLM-5.2 matched-study protocol and launcher for
   cross-provider preacceptance without contaminating the registered Qwen study.
-- A generated output catalog, canonical `outputs/papers/` publication entry,
+- A generated, project-centric output catalog, canonical
+  `outputs/projects/<project-id>/` ownership boundary, global paper aliases,
   bilingual 23-stage reference, and stable naming rules for future runs.
 
 ### Changed

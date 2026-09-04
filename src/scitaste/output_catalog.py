@@ -96,15 +96,43 @@ def discover_runs(outputs_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
     return runs, errors
 
 
+def discover_projects(outputs_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    """Load project manifests, which are the primary ownership boundary."""
+
+    projects: list[dict[str, Any]] = []
+    errors: list[str] = []
+    project_root = outputs_root / "projects"
+    if not project_root.is_dir():
+        return projects, errors
+    for manifest_path in sorted(project_root.glob("*/PROJECT.json")):
+        try:
+            manifest = _read_json(manifest_path)
+            projects.append(
+                {
+                    **manifest,
+                    "directory": _relative(manifest_path.parent, outputs_root),
+                }
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            errors.append(f"{manifest_path.relative_to(outputs_root).as_posix()}: {exc}")
+    return projects, errors
+
+
 def discover_paper_bundles(outputs_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
     papers: list[dict[str, Any]] = []
     errors: list[str] = []
-    paper_root = outputs_root / "papers"
-    if not paper_root.is_dir():
-        return papers, errors
-    for manifest_path in sorted(paper_root.glob("*/MANIFEST.json"), reverse=True):
+    candidates = [
+        *(outputs_root / "projects").glob("*/papers/*/MANIFEST.json"),
+        *(outputs_root / "papers").glob("*/MANIFEST.json"),
+    ]
+    seen: set[Path] = set()
+    for manifest_path in sorted(candidates, reverse=True):
         if manifest_path.parent.is_symlink():
             continue
+        resolved_manifest = manifest_path.resolve()
+        if resolved_manifest in seen:
+            continue
+        seen.add(resolved_manifest)
         try:
             manifest = _read_json(manifest_path)
             files = manifest.get("files") or {}
@@ -119,26 +147,68 @@ def discover_paper_bundles(outputs_root: Path) -> tuple[list[dict[str, Any]], li
             papers.append(
                 {
                     **manifest,
+                    "project_id": manifest.get("project_id")
+                    or (
+                        manifest_path.parents[2].name
+                        if manifest_path.parents[1].name == "papers"
+                        and manifest_path.parents[2].parent.name == "projects"
+                        else "unassigned"
+                    ),
                     "directory": _relative(bundle_dir, outputs_root),
                     "files": resolved_files,
                 }
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{manifest_path.relative_to(outputs_root).as_posix()}: {exc}")
+    papers.sort(key=lambda item: (str(item.get("date", "")), item["directory"]), reverse=True)
     return papers, errors
 
 
 def render_index(
-    papers: list[dict[str, Any]], runs: list[dict[str, Any]], errors: list[str]
+    projects: list[dict[str, Any]],
+    papers: list[dict[str, Any]],
+    runs: list[dict[str, Any]],
+    errors: list[str],
 ) -> str:
     lines = [
         "# SciTaste 产出索引",
         "",
-        "> 优先从 `papers/` 查找可阅读论文; 历史运行目录保留用于断点续跑与证据审计。",
+        "> `projects/` 是产出的主入口。论文、实验、评审和运行记录都归属于对应项目; "
+        "`papers/` 只保留跨项目快捷链接。",
         "",
-        "## 论文入口",
+        "## 项目入口",
         "",
     ]
+    if not projects:
+        lines.append("尚无标准化项目。")
+    for project in projects:
+        project_id = str(project.get("project_id", "unknown"))
+        project_papers = [paper for paper in papers if paper.get("project_id") == project_id]
+        current = str(project.get("current_paper", ""))
+        current_paper = next(
+            (paper for paper in project_papers if paper["directory"].endswith(current)),
+            project_papers[0] if project_papers else None,
+        )
+        current_links = ""
+        if current_paper:
+            current_links = " · ".join(
+                f"[{name}]({path})"
+                for name, path in current_paper.get("files", {}).items()
+                if isinstance(path, str)
+            )
+        lines.extend(
+            [
+                f"### {project.get('title', project_id)}",
+                "",
+                f"- 项目 ID: `{project_id}`; 状态: {project.get('status', 'unknown')}",
+                f"- 研究方向: {project.get('research_direction', '未登记')}",
+                f"- 当前论文: {current_links or '尚无'}",
+                f"- 项目目录: [`{project['directory']}`]({project['directory']}/)",
+                "",
+            ]
+        )
+
+    lines.extend(["## 项目论文版本", ""])
     if not papers:
         lines.append("尚无标准化论文包。")
     for paper in papers:
@@ -158,6 +228,7 @@ def render_index(
                     f"- 模型: {paper.get('model', 'unknown')}; 条件: "
                     f"{paper.get('condition', 'unknown')}; 任务: {paper.get('task', 'unknown')}"
                 ),
+                f"- 所属项目: `{paper.get('project_id', 'unassigned')}`",
                 f"- 文件: {links or '清单中没有可用文件'}",
                 f"- 目录: [`{paper['directory']}`]({paper['directory']}/)",
                 "",
@@ -203,10 +274,14 @@ def render_index(
             "",
             "## 后续命名规则",
             "",
-            "- 原始运行: `runs/YYYY-MM-DD__study__provider-model__scope/`",
-            "- 论文包: `papers/YYYY-MM-DD__provider-model__condition__task__stage-NN/`",
+            "- 项目根目录: `projects/<project-id>/`",
+            "- 原始运行: `projects/<project-id>/runs/"
+            "YYYY-MM-DD__provider-model__condition__seed-NN/`",
+            "- 论文包: `projects/<project-id>/papers/"
+            "YYYY-MM-DD__provider-model__condition__stage-NN/`",
             "- 失败重试写入原 cell 并使用 execution record, 不再新增含糊的顶层 `v2/v3/...` 目录。",
-            "- `papers/latest` 指向最近的标准化论文包。",
+            "- `projects/<project-id>/papers/current` 指向该项目当前论文; "
+            "`papers/latest` 只是全局快捷入口。",
         ]
     )
     if errors:
@@ -217,17 +292,19 @@ def render_index(
 def refresh_catalog(outputs_root: str | Path) -> tuple[Path, Path]:
     root = Path(outputs_root).resolve()
     root.mkdir(parents=True, exist_ok=True)
+    projects, project_errors = discover_projects(root)
     papers, paper_errors = discover_paper_bundles(root)
     runs, run_errors = discover_runs(root)
     payload = {
         "schema_version": "1.0",
+        "projects": projects,
         "papers": papers,
         "runs": runs,
         "stage_reference": [
             {"stage": number, "name": name, "meaning_zh": meaning}
             for number, name, meaning in STAGE_REFERENCE
         ],
-        "errors": [*paper_errors, *run_errors],
+        "errors": [*project_errors, *paper_errors, *run_errors],
     }
     catalog_path = root / "catalog.json"
     index_path = root / "INDEX.md"
@@ -235,6 +312,12 @@ def refresh_catalog(outputs_root: str | Path) -> tuple[Path, Path]:
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     index_path.write_text(
-        render_index(papers, runs, [*paper_errors, *run_errors]), encoding="utf-8"
+        render_index(
+            projects,
+            papers,
+            runs,
+            [*project_errors, *paper_errors, *run_errors],
+        ),
+        encoding="utf-8",
     )
     return index_path, catalog_path
