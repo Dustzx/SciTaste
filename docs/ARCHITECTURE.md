@@ -420,3 +420,18 @@ Zhipu pilots use `GLM-5.3-Flash`; local and online nodes remain separate study
 conditions. This proposal does not alter the already registered Phase 9 protocol
 and becomes accepted only after its self-development pilot clears the recorded
 schema, safety, intervention, and cost gates.
+
+### ADR-023: Project directories are revisioned ownership boundaries
+
+Status: accepted. Generated research artifacts are owned by
+`outputs/projects/<project-id>/`, not by disconnected top-level command runs.
+`ProjectRuntime` validates backward-compatible project/run/paper schemas, uses
+file locks plus optimistic revisions for mutations, writes manifests atomically,
+and refuses to replace non-symlink navigation paths. Runs and papers are
+registered before explicit current selection; historical paths remain unchanged.
+
+The serialized `ProjectSnapshot` is the read boundary for catalogs and future
+generated interfaces. It exposes project-relative locators and content hashes,
+not filesystem mutation or executor authority. AutoResearchClaw continues to run
+behind the existing adapter and may be referenced through a project-owned run;
+no project-management logic is added to the pinned substrate.

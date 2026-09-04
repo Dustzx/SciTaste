@@ -56,7 +56,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   paired comparisons, exact replay support, and content-hashed reports;
 - a deterministic four-category matched-budget study planner with blinded expert
   review contracts, complete resource auditing, eligibility gates, and explicit
-  readiness blockers.
+  readiness blockers;
+- a typed, revision-guarded project runtime that owns runs, paper bundles,
+  content-hashed snapshots, and safe current-artifact aliases.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -95,6 +97,20 @@ The catalog groups paper versions beneath their project, explains every
 raw runs. See
 [`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md) for the naming convention. Old
 run directories remain in place so checkpoints and artifact hashes stay valid.
+
+Create a managed project or inspect an existing one without searching through
+top-level output directories:
+
+```bash
+.venv/bin/scitaste project init \
+  --project-id my-project --title "My project" \
+  --research-direction "A falsifiable research direction"
+.venv/bin/scitaste project status --project-id my-project
+```
+
+Run and paper registration requires the current project revision, so concurrent
+workers fail on stale state instead of overwriting one another. See
+[`docs/PROJECT_RUNTIME.md`](docs/PROJECT_RUNTIME.md).
 
 ## Work without an API key
 

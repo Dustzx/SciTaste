@@ -47,6 +47,7 @@ from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.intrinsic import (
@@ -78,6 +79,12 @@ def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
     )
+
+
+def _add_project_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    parser.add_argument("--dry-run", action="store_true")
+    _add_log_level_option(parser)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -128,6 +135,71 @@ def build_parser() -> argparse.ArgumentParser:
     full = run_commands.add_parser("full", help="Run the complete future SciTaste workflow")
     _add_common_options(full, default_output="outputs/full")
     full.set_defaults(handler=_handle_planned, milestone="Phase 4-7")
+
+    project = commands.add_parser("project", help="Project-owned run and paper management")
+    project_commands = project.add_subparsers(dest="project_command", required=True)
+    project_init = project_commands.add_parser("init", help="Create a canonical project tree")
+    project_init.add_argument("--project-id", required=True)
+    project_init.add_argument("--title", required=True)
+    project_init.add_argument("--research-direction", required=True)
+    project_init.add_argument("--target-domain", default=None)
+    project_init.add_argument("--target-venue", default=None)
+    project_init.add_argument("--status", default="active")
+    project_init.add_argument("--stage-semantics", default="autoresearchclaw-stages")
+    project_init.add_argument("--no-retrieval", action="store_true")
+    _add_project_options(project_init)
+    project_init.set_defaults(handler=_handle_project_init)
+
+    project_status = project_commands.add_parser("status", help="Read a validated project snapshot")
+    project_status.add_argument("--project-id", required=True)
+    project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_status)
+    project_status.set_defaults(handler=_handle_project_status)
+
+    project_run = project_commands.add_parser("run", help="Register and select project runs")
+    project_run_commands = project_run.add_subparsers(dest="project_run_command", required=True)
+    project_run_begin = project_run_commands.add_parser("begin", help="Create a registered run")
+    project_run_begin.add_argument("--project-id", required=True)
+    project_run_begin.add_argument("--run-id", required=True)
+    project_run_begin.add_argument("--provider", required=True)
+    project_run_begin.add_argument("--model", required=True)
+    project_run_begin.add_argument("--condition", required=True)
+    project_run_begin.add_argument("--seed", type=int, default=0)
+    project_run_begin.add_argument("--status", default="planned")
+    project_run_begin.add_argument("--evidence-scope", default="engineering-only")
+    project_run_begin.add_argument("--stage-path", default=None)
+    project_run_begin.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_run_begin)
+    project_run_begin.set_defaults(handler=_handle_project_run_begin)
+    project_run_select = project_run_commands.add_parser("select", help="Select a current run")
+    project_run_select.add_argument("--project-id", required=True)
+    project_run_select.add_argument("--run-id", required=True)
+    project_run_select.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_run_select)
+    project_run_select.set_defaults(handler=_handle_project_run_select)
+
+    project_paper = project_commands.add_parser("paper", help="Register and select paper bundles")
+    project_paper_commands = project_paper.add_subparsers(
+        dest="project_paper_command", required=True
+    )
+    project_paper_register = project_paper_commands.add_parser(
+        "register", help="Register a materialized paper manifest"
+    )
+    project_paper_register.add_argument("--project-id", required=True)
+    project_paper_register.add_argument("--directory-name", required=True)
+    project_paper_register.add_argument("--manifest", type=Path, required=True)
+    project_paper_register.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_paper_register)
+    project_paper_register.set_defaults(handler=_handle_project_paper_register)
+    project_paper_select = project_paper_commands.add_parser(
+        "select", help="Select a current project paper"
+    )
+    project_paper_select.add_argument("--project-id", required=True)
+    project_paper_select.add_argument("--directory-name", required=True)
+    project_paper_select.add_argument("--expected-revision", type=int, required=True)
+    project_paper_select.add_argument("--no-global-latest", action="store_true")
+    _add_project_options(project_paper_select)
+    project_paper_select.set_defaults(handler=_handle_project_paper_select)
 
     taste = commands.add_parser("taste", help="Scientific-taste calibration")
     taste_commands = taste.add_subparsers(dest="taste_command", required=True)
@@ -318,6 +390,177 @@ def _load_config(path: Path | None) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("configuration root must be a mapping")
     return data
+
+
+def _handle_project_init(args: argparse.Namespace) -> int:
+    manifest = ProjectManifest(
+        project_id=args.project_id,
+        title=args.title,
+        research_direction=args.research_direction,
+        target_domain=args.target_domain,
+        target_venue=args.target_venue,
+        status=args.status,
+        stage_semantics=args.stage_semantics,
+        retrieval_eligible=not args.no_retrieval,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_locator": f"projects/{manifest.project_id}",
+                    "manifest": manifest.model_dump(mode="json"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = ProjectRuntime(args.outputs_root).create(manifest)
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_status(args: argparse.Namespace) -> int:
+    snapshot = ProjectRuntime(args.outputs_root).open(args.project_id)
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_run_begin(args: argparse.Namespace) -> int:
+    run = ProjectRun(
+        run_id=args.run_id,
+        provider=args.provider,
+        model=args.model,
+        condition=args.condition,
+        seed=args.seed,
+        status=args.status,
+        evidence_scope=args.evidence_scope,
+        stage_path=args.stage_path,
+    )
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "run": run.model_dump(mode="json"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = runtime.begin_run(
+        args.project_id,
+        run,
+        expected_revision=args.expected_revision,
+    )
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_run_select(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        if args.run_id not in snapshot.run_locators:
+            raise ValueError(f"unknown project run {args.run_id!r}")
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "current_run": args.run_id,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    snapshot = runtime.select_run(
+        args.project_id,
+        args.run_id,
+        expected_revision=args.expected_revision,
+    )
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_register(args: argparse.Namespace) -> int:
+    paper = PaperManifest.model_validate_json(args.manifest.read_text(encoding="utf-8"))
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        if paper.project_id != args.project_id:
+            raise ValueError("paper project_id must match the owning project")
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "paper": paper.model_dump(mode="json"),
+                    "directory_name": args.directory_name,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = runtime.register_paper(
+        args.project_id,
+        paper,
+        directory_name=args.directory_name,
+        expected_revision=args.expected_revision,
+    )
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_select(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        known = {item.directory_name for item in snapshot.papers}
+        if args.directory_name not in known:
+            raise ValueError(f"unknown project paper {args.directory_name!r}")
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "current_paper": f"papers/{args.directory_name}",
+                    "global_latest": not args.no_global_latest,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    snapshot = runtime.select_paper(
+        args.project_id,
+        args.directory_name,
+        expected_revision=args.expected_revision,
+        global_latest=not args.no_global_latest,
+    )
+    print(snapshot.model_dump_json(indent=2))
+    return 0
 
 
 def _handle_demo(args: argparse.Namespace) -> int:

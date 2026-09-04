@@ -287,6 +287,21 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - This exploratory self-project is excluded from the active Phase 9 registered
   comparison and from headline effectiveness claims.
 
+## Project runtime progress
+
+- Typed, backward-compatible project, run, paper, and snapshot schemas now make
+  `outputs/projects/<project-id>/` an enforceable ownership boundary.
+- Project creation and manifest mutation are atomic; file locks and monotonic
+  expected revisions prevent silent concurrent-writer loss.
+- Registered runs and paper bundles receive safe current aliases without moving
+  historical evidence or modifying AutoResearchClaw.
+- Existing FLOOR and SciTaste self-development manifests load through the same
+  runtime, including alternate non-paper stage semantics and referenced runs.
+- The project CLI supports create/status, run begin/select, paper
+  register/select, and mutation-free dry-run validation.
+- Pending core integration: make `scitaste run full` create and advance one
+  managed project rather than writing independent workflow roots.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

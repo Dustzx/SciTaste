@@ -113,6 +113,9 @@ semantic versioning.
   cross-model comparison with content-hashed CLI output.
 - A provider-SDK-free Zhipu `glm-5.3-flash` example through the existing
   OpenAI-compatible backend.
+- A typed ProjectRuntime with atomic scaffolding and manifests, optimistic
+  revision locks, registered run/paper ownership, safe navigation aliases,
+  content-hashed snapshots, backward-compatible legacy loading, and project CLI.
 
 ### Changed
 

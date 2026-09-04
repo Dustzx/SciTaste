@@ -10,6 +10,18 @@ Refresh both files with:
 .venv/bin/python scripts/catalog_outputs.py outputs
 ```
 
+New projects and their current run/paper selections should be managed through
+the revision-guarded runtime rather than by editing symlinks manually:
+
+```bash
+.venv/bin/scitaste project status --project-id <project-id> --outputs-root outputs
+.venv/bin/scitaste project run begin --help
+.venv/bin/scitaste project paper register --help
+```
+
+See [`PROJECT_RUNTIME.md`](PROJECT_RUNTIME.md) for creation, registration,
+selection, dry-run, and optimistic-concurrency examples.
+
 The canonical hierarchy is:
 
 ```text
@@ -25,6 +37,10 @@ outputs/projects/<project-id>/
     ├── YYYY-MM-DD__provider-model__condition__stage-NN/
     └── current -> <selected paper version>
 ```
+
+`PROJECT.json` has a monotonic `revision`. Every managed mutation supplies the
+previous revision, preventing concurrent API workers or Codex worktrees from
+silently overwriting each other's project metadata.
 
 Each paper directory contains a `MANIFEST.json`. `outputs/papers/` is only a
 cross-project alias layer; `outputs/papers/latest` points to the most recently
