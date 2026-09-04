@@ -108,6 +108,29 @@ and does not share receipt proposals with internal state. This prevents nested
 list/dictionary mutation from bypassing validation or a stale browser tab from
 proposing against a new research state.
 
+## Auditable interaction history
+
+`SurfaceAuditLog` stores accepted UI history as self-hashed, predecessor-linked
+JSONL. A log starts with one complete `surface_opened` record and can append only
+`surface_revised` or `proposal_issued` records. Each append first validates and
+semantically replays the entire history through `SurfaceSession`; a receipt must
+be reproducible from the server-owned surface and event identity before it can be
+recorded.
+
+Writes replace the complete log atomically and are serialized with thread and
+local-process locks. A partially written final record, a changed payload, a
+missing or reordered record, a stale revision, a duplicate event, or a forged
+receipt therefore fails verification. Replaying a valid log reconstructs both
+the current surface and the accepted-event set.
+
+The log records proposals, not executions. Persisted receipts retain
+`proposal_only` authority and `execution_authority: none`; no log API invokes a
+controller, tool, model, or state mutation. The hash chain detects corruption or
+editing relative to the copy being inspected, but is not a digital signature and
+does not establish authorship. A future project-runtime adapter should anchor the
+latest record hash in its trusted project event log if protection against full
+history replacement is required.
+
 ## Trusted components
 
 The initial registry contains `ProjectSummaryCard`, `StageTimeline`,
@@ -137,9 +160,10 @@ Together, the Pydantic contracts and closed schemas reject:
 - action evidence that is outside the component to which the action is bound;
 - proposal targets with the wrong evidence kind;
 - status or paper fields without suitable content-addressed evidence;
-- executable authority or undeclared fields.
+- executable authority or undeclared fields;
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
 - surface revisions based on stale fingerprints or inconsistent snapshot hashes.
+- changed, truncated, reordered, or semantically inconsistent audit histories.
 
 A valid binding proves that its evidence manifest matches its snapshot hash; it
 does not by itself prove that a file exists. The future project-runtime adapter
@@ -181,6 +205,7 @@ on an A2UI package in this phase:
 | `SurfaceRevision` | versioned surface replacement/update |
 | `RendererDocument` | receiver-owned shell plus declarative workspace update |
 | `SurfaceEvent` | identity-only user event returned to the agent boundary |
+| `SurfaceAuditRecord` | receiver-side append-only interaction history |
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

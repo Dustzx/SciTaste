@@ -1,5 +1,13 @@
 """Safe declarative contracts for evidence-grounded generative interfaces."""
 
+from scitaste.generative_ui.audit import (
+    AuditIntegrityError,
+    ProposalIssuedAudit,
+    SurfaceAuditLog,
+    SurfaceAuditRecord,
+    SurfaceOpenedAudit,
+    SurfaceRevisedAudit,
+)
 from scitaste.generative_ui.fixtures import (
     build_blocked_run_fixture,
     build_fixture_surfaces,
@@ -70,6 +78,7 @@ __all__ = [
     "ActionProposal",
     "ApprovalSubject",
     "ArtifactViewerData",
+    "AuditIntegrityError",
     "BlockerListData",
     "BudgetMeterData",
     "ClaimMatrixData",
@@ -84,6 +93,7 @@ __all__ = [
     "InspectArtifactPayload",
     "PaperPreviewData",
     "ProjectSummaryData",
+    "ProposalIssuedAudit",
     "ProposalKind",
     "ProposalReceipt",
     "ProposeTransitionPayload",
@@ -97,9 +107,13 @@ __all__ = [
     "SnapshotBinding",
     "StageTimelineData",
     "StaleSurfaceError",
+    "SurfaceAuditLog",
+    "SurfaceAuditRecord",
     "SurfaceEvent",
     "SurfaceInteractionError",
+    "SurfaceOpenedAudit",
     "SurfacePurpose",
+    "SurfaceRevisedAudit",
     "SurfaceRevision",
     "SurfaceSession",
     "SurfaceSpec",
