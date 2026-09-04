@@ -74,6 +74,21 @@ Inspect the generated `outputs/demo/research_state.json`,
 `outputs/demo/decisions.jsonl`, and `outputs/demo/demo_summary.json` to see the
 complete decision trail.
 
+## Finding generated outputs
+
+Use `outputs/INDEX.md` as the human-readable entry point. Reader-facing papers
+are collected under `outputs/papers/`; the newest bundle is always available at
+`outputs/papers/latest/`. Refresh the run and paper catalog after an execution:
+
+```bash
+.venv/bin/python scripts/catalog_outputs.py outputs
+```
+
+The catalog explains every `stage-NN` directory and separates successful paper
+bundles from failed or resumable raw runs. See
+[`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md) for the naming convention. Old
+run directories remain in place so checkpoints and artifact hashes stay valid.
+
 ## Work without an API key
 
 API access is optional for development and CI. Run the fixed offline calibration,

@@ -267,6 +267,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   dedicated `docs/adr/` record once ADR count grows.
 - Generated research artifacts stay outside Git; manifests and hashes may be
   committed when needed for reproducibility.
+- Generated runs are indexed through `outputs/INDEX.md`; reader-facing bundles
+  use the stable `outputs/papers/YYYY-MM-DD__provider-model__condition__task__stage-NN/`
+  convention while historical run paths remain immutable for resume and audit.
 - The submodule update cadence is milestone-bound, not automatic.
 
 ## Known integration issue
