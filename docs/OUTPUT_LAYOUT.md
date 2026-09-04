@@ -42,3 +42,9 @@ the review. The paper bundle beneath its project is easier to consume: `paper.md
 `peer_review.md`, `evidence.json`, and `audit.json` explain its acceptance state.
 Stage 18 means that review feedback exists; it does not mean every concern has
 been resolved or that the paper is publication-ready.
+
+Framework self-development and other non-paper projects still receive their own
+`outputs/projects/<project-id>/` root. They may leave `completed_stages` empty and
+must declare alternate milestone semantics in `PROJECT.json` and `STAGES.md`
+rather than pretending that project-management decisions completed
+AutoResearchClaw stages.

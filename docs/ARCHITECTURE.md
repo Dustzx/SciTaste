@@ -399,3 +399,19 @@ renderer creates `manuscript/main.md`, `main.tex`, `references.bib`, copied figu
 assets, a hashed build record, and `main.pdf` when XeLaTeX is available. This
 projection performs no LLM call and leaves the pinned AutoResearchClaw submodule
 unchanged.
+
+### ADR-022: Bounded model nodes for semantic autonomy
+
+Status: proposed. SciTaste may use model nodes for semantic interpretation,
+candidate-action proposal, and ambiguous fixed-candidate ranking. Deterministic
+code continues to own feasibility filtering, typed-schema validation, evidence
+status, resource budgets, tool allowlists, execution sandboxes, and state
+transitions. A model response is advice until those gates accept it.
+
+The first proposed nodes cover review parsing, interpretation threats, and
+ambiguity-triggered action ranking. They are opt-in, fingerprinted, usage-metered,
+recorded for exact replay, and unable to silently switch provider or model. New
+Zhipu pilots use `GLM-5.3-Flash`; local and online nodes remain separate study
+conditions. This proposal does not alter the already registered Phase 9 protocol
+and becomes accepted only after its self-development pilot clears the recorded
+schema, safety, intervention, and cost gates.

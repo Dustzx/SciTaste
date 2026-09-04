@@ -315,6 +315,9 @@ SciTaste development itself is also tracked as a dogfooding case for process
 usability and auditability. It is deliberately excluded from independent
 effectiveness claims; see
 [`docs/cases/SCITASTE_SELF_ITERATION.md`](docs/cases/SCITASTE_SELF_ITERATION.md).
+Its canonical local project record is
+`outputs/projects/scitaste-self-development/`, alongside the research projects
+that SciTaste produces.
 
 ## Development
 

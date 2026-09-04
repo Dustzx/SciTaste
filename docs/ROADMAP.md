@@ -272,6 +272,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Pending before the exit gate: run all 48 commit-pinned cells without manual
   continuation, audit their artifacts, and collect external reviews.
 
+## Self-development project
+
+- `outputs/projects/scitaste-self-development/` is the canonical project-level
+  record for SciTaste's own dogfooding iterations. It references the Phase 7.5
+  adapter decision and Phase 9 defect-discovery evidence without moving raw runs.
+- A bounded model-node tool-intelligence pilot is proposed, not implemented. It
+  registers deterministic-only, local-node, and Zhipu `GLM-5.3-Flash` conditions,
+  with schema, gate-bypass, replay, manual-intervention, unsupported-claim, and
+  cost acceptance criteria.
+- This exploratory self-project is excluded from the active Phase 9 registered
+  comparison and from headline effectiveness claims.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

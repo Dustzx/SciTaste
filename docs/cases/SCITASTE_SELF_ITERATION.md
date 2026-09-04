@@ -5,6 +5,11 @@ contains a problem, competing actions, evidence, costs, a selected intervention,
 and an observable outcome. It is used for workflow usability and auditability,
 not as evidence that SciTaste improves research quality.
 
+The canonical project-level record is
+`outputs/projects/scitaste-self-development/`. It owns the self-development
+iteration index and points to immutable raw evidence without copying or renaming
+historical runs.
+
 ## Phase 7.5 case
 
 The case asks how to deepen AutoResearchClaw integration before Phase 8. It
@@ -48,6 +53,27 @@ not evidence that Full SciTaste outperforms the other conditions: the cells were
 continued after fixes, so runner duration is not a matched comparison. Promotion
 of any lesson from this episode into the Taste Library still requires a separate
 outcome review and human verification.
+
+## Tool-intelligence model-node case
+
+The next self-development decision asks how to make the deterministic SciTaste
+core responsive to open-ended context. Three alternatives are registered:
+
+1. keep every decision deterministic and manually encode new semantic cases;
+2. add bounded model nodes for interpretation, candidate proposal, and ambiguous
+   action ranking while deterministic gates retain authority;
+3. allow an unrestricted model agent to call tools, modify code, update evidence,
+   and stop runs.
+
+The provisional selection is the bounded-node option. Its first pilot covers a
+review semantic parser, an interpretation-threat critic, and an ambiguity-triggered
+action ranker. New online Zhipu calls are pinned to `GLM-5.3-Flash`; local 2B/4B
+models remain a separate condition. No node has been implemented or accepted yet.
+
+The project record freezes the alternatives, current cost baseline, hard safety
+boundaries, and falsifiable acceptance gates. It remains
+`retrieval_eligible=false`, and the registered Phase 9 protocol is not modified
+mid-study.
 
 ## Anti-self-confirmation rules
 

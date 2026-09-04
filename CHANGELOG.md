@@ -105,6 +105,10 @@ semantic versioning.
 - A same-provider Zhipu GLM-5.2 four-condition engineering preacceptance with
   real Stage 8–18 experiments and independently packaged Markdown/TeX/PDF
   manuscripts for Base, Knowledge RAG, Taste Library, and Full SciTaste.
+- A project-level SciTaste self-development record linking the Phase 7.5 and
+  Phase 9 dogfooding evidence, plus a proposed bounded model-node
+  tool-intelligence decision with explicit alternatives, costs, safety gates,
+  and acceptance criteria.
 
 ### Changed
 
