@@ -23,11 +23,16 @@ from scitaste.model_nodes import (
 from scitaste.schema.actions import MetaAction, ResearchAction
 
 
-def context(*, candidate_actions: list[ResearchAction] | None = None) -> NodeContext:
+def context(
+    *,
+    candidate_actions: list[ResearchAction] | None = None,
+    cumulative_api_cost_usd: float = 0.0,
+) -> NodeContext:
     return NodeContext(
         project_id="project-1",
         stage="COMMUNICATION",
         state_snapshot_id="snapshot-1",
+        cumulative_api_cost_usd=cumulative_api_cost_usd,
         claim_ids=["claim-1"],
         evidence_ids=["evidence-1"],
         section_ids=["method"],
@@ -128,6 +133,23 @@ def test_review_node_rejects_schema_failure_and_retains_response() -> None:
     assert result.rejection_reasons[0].startswith("output schema violation:")
 
 
+def test_provider_output_validation_does_not_coerce_json_types() -> None:
+    payload = review_payload(requires_new_evidence="false", requires_new_experiment="false")
+    payload["confidence"] = "0.91"
+    result = ReviewSemanticNode().run(
+        ReviewSemanticInput(review_text="Unstructured concern."),
+        context=context(),
+        backend=backend("review-coerced-schema", payload),
+        policy=policy("review-semantic", actions=[MetaAction.ADD_BASELINE]),
+        request_id="review-coerced-schema",
+    )
+
+    assert result.status == NodeResultStatus.REJECTED
+    assert result.proposal is None
+    assert result.untrusted_proposal is None
+    assert any("output schema violation" in reason for reason in result.rejection_reasons)
+
+
 def test_review_node_rejects_unknown_claim_and_non_allowlisted_action() -> None:
     result = ReviewSemanticNode().run(
         ReviewSemanticInput(
@@ -148,6 +170,9 @@ def test_review_node_rejects_unknown_claim_and_non_allowlisted_action() -> None:
     assert any(
         "STOP" in reason and "not allowlisted" in reason for reason in result.rejection_reasons
     )
+    assert result.proposal is None
+    assert result.untrusted_proposal is not None
+    assert result.untrusted_proposal.concerns[0].proposed_action_type == MetaAction.STOP
 
 
 def test_response_tool_call_is_only_accepted_when_allowlisted() -> None:
@@ -192,7 +217,7 @@ def test_response_tool_call_is_only_accepted_when_allowlisted() -> None:
         (
             {"usage": Usage(input_tokens=2, output_tokens=2, cost_usd=0.16)},
             {},
-            "API cost budget exceeded",
+            "cumulative project API cost budget exceeded",
         ),
         ({"latency_ms": 1_001}, {}, "latency budget exceeded"),
     ],
@@ -235,6 +260,56 @@ def test_missing_cost_telemetry_is_not_treated_as_zero() -> None:
 
     assert result.status == NodeResultStatus.REJECTED
     assert "API cost telemetry is required" in result.rejection_reasons
+
+
+def test_cumulative_api_cost_is_checked_before_and_after_the_call() -> None:
+    scripted = backend(
+        "review-spent",
+        review_payload(),
+        usage=Usage(input_tokens=2, output_tokens=2, cost_usd=0.01),
+    )
+    with pytest.raises(NodePolicyViolationError, match="already exceeds"):
+        ReviewSemanticNode().run(
+            ReviewSemanticInput(review_text="Add a baseline."),
+            context=context(cumulative_api_cost_usd=0.16),
+            backend=scripted,
+            policy=policy("review-semantic", actions=[MetaAction.ADD_BASELINE]),
+            request_id="review-spent",
+        )
+    assert scripted.calls == []
+
+    result = ReviewSemanticNode().run(
+        ReviewSemanticInput(
+            review_text="Add a baseline.",
+            permitted_evidence_types=["matched baseline"],
+        ),
+        context=context(cumulative_api_cost_usd=0.10),
+        backend=backend(
+            "review-cumulative",
+            review_payload(),
+            usage=Usage(input_tokens=2, output_tokens=2, cost_usd=0.06),
+        ),
+        policy=policy("review-semantic", actions=[MetaAction.ADD_BASELINE]),
+        request_id="review-cumulative",
+    )
+    assert result.status == NodeResultStatus.REJECTED
+    assert "cumulative project API cost budget exceeded" in result.rejection_reasons
+
+    exact_budget = ReviewSemanticNode().run(
+        ReviewSemanticInput(
+            review_text="Add a baseline.",
+            permitted_evidence_types=["matched baseline"],
+        ),
+        context=context(cumulative_api_cost_usd=0.10),
+        backend=backend(
+            "review-exact-budget",
+            review_payload(),
+            usage=Usage(input_tokens=2, output_tokens=2, cost_usd=0.05),
+        ),
+        policy=policy("review-semantic", actions=[MetaAction.ADD_BASELINE]),
+        request_id="review-exact-budget",
+    )
+    assert exact_budget.status == NodeResultStatus.ACCEPTED
 
 
 def test_backend_cannot_silently_switch_before_or_after_call() -> None:
@@ -404,6 +479,44 @@ def test_ambiguous_action_node_rejects_invented_or_disallowed_actions() -> None:
     assert any("REPRODUCE" in reason for reason in result.rejection_reasons)
 
 
+def test_ambiguous_action_requires_an_exact_complete_context_candidate_set() -> None:
+    node_input = ambiguous_input()
+    scripted = backend("ambiguous-empty-context", {})
+    with pytest.raises(NodePolicyViolationError, match="complete deterministic candidate"):
+        AmbiguousActionNode().run(
+            node_input,
+            context=context(),
+            backend=scripted,
+            policy=policy(
+                "ambiguous-action",
+                actions=[MetaAction.PROBE, MetaAction.REPRODUCE],
+            ),
+            request_id="ambiguous-empty-context",
+        )
+    assert scripted.calls == []
+
+    changed_actions = [item.model_copy(deep=True) for item in node_input.candidate_actions]
+    changed_actions[0] = ResearchAction(
+        action_id=changed_actions[0].action_id,
+        type=MetaAction.PROBE,
+        description="A different action body under the same identifier.",
+        expected_cost={"api_cost_usd": 0.1},
+    )
+    scripted = backend("ambiguous-changed-context", {})
+    with pytest.raises(NodePolicyViolationError, match="differs from context"):
+        AmbiguousActionNode().run(
+            node_input,
+            context=context(candidate_actions=changed_actions),
+            backend=scripted,
+            policy=policy(
+                "ambiguous-action",
+                actions=[MetaAction.PROBE, MetaAction.REPRODUCE],
+            ),
+            request_id="ambiguous-changed-context",
+        )
+    assert scripted.calls == []
+
+
 def test_ambiguous_action_node_is_not_called_when_deterministic_margin_is_clear() -> None:
     node_input = ambiguous_input(scores={"probe": 0.8, "reproduce": 0.2})
     scripted = backend("ambiguous-clear", {})
@@ -454,3 +567,46 @@ def test_oversized_request_never_calls_backend() -> None:
             request_id="review-large",
         )
     assert scripted.calls == []
+
+
+def test_invocation_snapshots_inputs_policy_context_request_and_response() -> None:
+    input_data = ReviewSemanticInput(
+        review_text="Add a baseline.",
+        permitted_evidence_types=["matched baseline"],
+    )
+    node_context = context()
+    node_policy = policy("review-semantic", actions=[MetaAction.ADD_BASELINE])
+
+    class MutatingBackend(ScriptedStructuredBackend):
+        returned_response: object | None = None
+
+        def complete(self, request):  # type: ignore[no-untyped-def]
+            input_data.permitted_evidence_types.clear()
+            node_context.claim_ids.clear()
+            node_policy.allowed_action_types.clear()
+            request.input_payload["input"]["review_text"] = "mutated by backend"
+            self.returned_response = super().complete(request)
+            return self.returned_response
+
+    scripted = MutatingBackend(
+        name="scripted",
+        model="scripted-v1",
+        replies={"review-boundary": ScriptedStructuredReply(output_payload=review_payload())},
+    )
+    result = ReviewSemanticNode().run(
+        input_data,
+        context=node_context,
+        backend=scripted,
+        policy=node_policy,
+        request_id="review-boundary",
+    )
+
+    assert result.status == NodeResultStatus.REJECTED
+    assert "backend mutated structured request after preflight" in result.rejection_reasons
+    assert result.request.input_payload["input"]["review_text"] == "Add a baseline."
+    assert result.request.input_payload["context"]["claim_ids"] == ["claim-1"]
+    assert result.untrusted_proposal is not None
+
+    assert scripted.returned_response is not None
+    scripted.returned_response.output_payload["summary"] = "mutated after return"
+    assert result.response.output_payload["summary"] == "One substantive evidence concern."

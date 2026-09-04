@@ -34,12 +34,21 @@ valid and policy-admissible for later deterministic consideration.
   exact raw-response SHA-256, input/output tokens, optional measured cost, latency,
   tool-call proposals, and cache state.
 - `NodeContext` is a deliberate projection of claim, evidence, section, and
-  candidate-action identifiers. It is not a mutable `ResearchState` reference.
+  candidate-action identifiers plus the cumulative project API cost immediately
+  before the call. It is not a mutable `ResearchState` reference.
 - `NodePolicy` is opt-in and pins allowed nodes, backend, model, action types,
   tool names, request bytes, tokens, API cost, latency, and ambiguity margin.
 - `NodeResult` preserves the request and response plus a typed proposal or
-  deterministic rejection reasons. Its literal authority fields cannot be set to
-  executable values.
+  deterministic rejection reasons. A rejected result never exposes a trusted
+  `proposal`; a structurally parsed value may be retained only as
+  `untrusted_proposal`. Its literal authority fields cannot be set to executable
+  values.
+
+The Pydantic models freeze their outer fields but do not claim that nested JSON
+containers are deeply immutable. Each invocation therefore revalidates deep
+copies of its input, context, policy, audited request, backend-facing request,
+and response. The backend never receives the audited request object, and a
+mutation of its private request copy is a deterministic rejection.
 
 Policy failures known before a call raise `NodePolicyViolationError` and do not
 contact the backend. A clear deterministic action margin raises
@@ -48,13 +57,22 @@ unambiguous decision. Failures observable only after a response—schema,
 identity drift, budget, tool, reference, or action violations—produce a rejected
 result that still retains response telemetry and hashes for audit.
 
+`NodeContext.cumulative_api_cost_usd` is required and all policy limits are
+finite. Before invoking a node, the caller must supply the project ledger's
+current API cost. The node rejects a response when prior cumulative cost plus
+the response's measured cost exceeds `NodePolicy.max_api_cost_usd`. Because a
+model call may incur cost even when its response is rejected, the caller remains
+responsible for recording every measured response cost—accepted or rejected—in
+the deterministic project resource ledger before making another call. Missing
+cost telemetry is never admissible.
+
 ## Initial nodes
 
 | Node | Typed input | Proposal only | Deterministic checks |
 |---|---|---|---|
 | `ReviewSemanticNode` | free-text review and permitted evidence types | concerns and candidate action types | known claim/section IDs, evidence types, action allowlist |
 | `InterpretationThreatNode` | existing result and interpretation context | validity threats, alternatives, follow-up action type | known evidence IDs, action allowlist; output has no claim-status field |
-| `AmbiguousActionNode` | feasible actions and deterministic scores | ranking over supplied IDs | low-margin trigger, exact candidate coverage, candidate action allowlist |
+| `AmbiguousActionNode` | feasible actions and deterministic scores | ranking over supplied IDs | low-margin trigger, exact full-action match with the complete context candidate set, exact candidate coverage, candidate action allowlist |
 
 The interpretation taxonomy includes confounders, alternative explanations,
 statistical uncertainty, benchmark artifacts, compute mismatch, data leakage,
@@ -82,8 +100,10 @@ result = ReviewSemanticNode().run(
 `ReplayStructuredBackend` accepts only the exact request fingerprint and one
 pinned backend/model identity per recording file. A changed prompt, schema,
 state snapshot, seed, policy, provider, or model produces a replay miss or a
-preflight identity failure; there is no fallback. Recordings may contain raw
-provider text and belong under ignored project outputs, never in Git.
+preflight identity failure; there is no fallback. A provider response with the
+wrong request ID or fingerprint is durably recorded before evaluation and exact
+replay reproduces the rejected `NodeResult`. Recordings may contain raw provider
+text and belong under ignored project outputs, never in Git.
 
 ## Live-model promotion boundary
 
@@ -110,5 +130,6 @@ git diff --check
 
 The tests cover accepted proposals, strict schema rejection, invented references
 and actions, disabled nodes, clear-margin bypass, provider/model drift, token,
-cost, and latency overruns, missing cost telemetry, unallowlisted tools, raw hash
-validation, exact recording/replay, and replay misses.
+finite cumulative cost and latency limits, missing cost telemetry, unallowlisted
+tools, raw hash validation, boundary mutation detection, exact recording/replay
+of accepted and rejected responses, and replay misses.

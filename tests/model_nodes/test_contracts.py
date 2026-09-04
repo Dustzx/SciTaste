@@ -72,6 +72,35 @@ def test_policy_fingerprint_normalizes_allowlist_order_and_covers_budget() -> No
     assert first.fingerprint != first.model_copy(update={"max_api_cost_usd": 0.01}).fingerprint
 
 
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"max_api_cost_usd": float("inf")},
+        {"max_api_cost_usd": float("nan")},
+        {"max_latency_ms": float("inf")},
+        {"ambiguity_margin_max": float("inf")},
+    ],
+)
+def test_policy_rejects_non_finite_float_limits(updates: dict[str, float]) -> None:
+    with pytest.raises(ValidationError):
+        NodePolicy(
+            policy_id="policy",
+            expected_backend="scripted",
+            expected_model="scripted-v1",
+            **updates,
+        )
+
+
+def test_cost_telemetry_cannot_be_disabled_for_a_bounded_node() -> None:
+    with pytest.raises(ValidationError):
+        NodePolicy(
+            policy_id="policy",
+            expected_backend="scripted",
+            expected_model="scripted-v1",
+            require_cost_telemetry=False,
+        )
+
+
 def test_response_rejects_a_raw_response_hash_mismatch() -> None:
     with pytest.raises(ValidationError, match="raw_response_sha256"):
         StructuredModelResponse(
@@ -93,6 +122,7 @@ def test_context_and_policy_reject_duplicate_authority_references() -> None:
             project_id="project",
             stage="EVIDENCE",
             state_snapshot_id="snapshot",
+            cumulative_api_cost_usd=0.0,
             claim_ids=["claim-1", "claim-1"],
         )
     with pytest.raises(ValidationError, match="policy allowlists"):
@@ -101,6 +131,17 @@ def test_context_and_policy_reject_duplicate_authority_references() -> None:
             expected_backend="scripted",
             expected_model="scripted-v1",
             allowed_tool_names=["search", "search"],
+        )
+
+
+@pytest.mark.parametrize("value", [float("inf"), float("nan")])
+def test_context_rejects_non_finite_cumulative_api_cost(value: float) -> None:
+    with pytest.raises(ValidationError):
+        NodeContext(
+            project_id="project",
+            stage="EVIDENCE",
+            state_snapshot_id="snapshot",
+            cumulative_api_cost_usd=value,
         )
 
 
@@ -127,4 +168,27 @@ def test_node_result_cannot_claim_execution_authority() -> None:
             response=response,
             rejection_reasons=["rejected"],
             advisory_only=False,
+        )
+
+    with pytest.raises(ValidationError, match="cannot expose a trusted proposal"):
+        NodeResult[ReviewSemanticOutput](
+            node_name="review-semantic",
+            policy_id="policy-1",
+            status=NodeResultStatus.REJECTED,
+            request=request(),
+            response=response,
+            proposal={
+                "concerns": [
+                    {
+                        "concern_id": "concern-1",
+                        "category": "clarity",
+                        "severity": "medium",
+                        "text": "Clarify the method.",
+                        "proposed_action_type": "CLARIFY_EXISTING_TEXT",
+                    }
+                ],
+                "summary": "One concern.",
+                "confidence": 0.5,
+            },
+            rejection_reasons=["rejected"],
         )

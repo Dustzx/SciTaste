@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC
+from decimal import Decimal
 from typing import Generic, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
@@ -59,61 +60,104 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         request_id: str,
         seed: int = 0,
     ) -> NodeResult[OutputT]:
-        validated_input = self.input_model.model_validate(input_data)
-        self._preflight(validated_input, context=context, backend=backend, policy=policy)
+        validated_input = _boundary_copy(self.input_model, input_data)
+        validated_context = _boundary_copy(NodeContext, context)
+        validated_policy = _boundary_copy(NodePolicy, policy, exclude={"fingerprint"})
+        self._preflight(
+            validated_input,
+            context=validated_context,
+            backend=backend,
+            policy=validated_policy,
+        )
         request = self._build_request(
             validated_input,
-            context=context,
-            policy=policy,
+            context=validated_context,
+            policy=validated_policy,
             request_id=request_id,
             seed=seed,
         )
+        audited_request = _boundary_copy(
+            StructuredModelRequest,
+            request,
+            exclude={"fingerprint"},
+        )
+        expected_request_fingerprint = audited_request.fingerprint
         request_size = len(
             json.dumps(
-                request.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+                audited_request.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
             ).encode()
         )
-        if request_size > policy.max_request_bytes:
+        if request_size > validated_policy.max_request_bytes:
             raise NodePolicyViolationError(
                 f"structured request exceeds max_request_bytes: {request_size} > "
-                f"{policy.max_request_bytes}"
+                f"{validated_policy.max_request_bytes}"
             )
 
-        response = StructuredModelResponse.model_validate(backend.complete(request))
-        reasons = self._response_rejections(request, response, policy)
-        proposal: OutputT | None = None
+        backend_request = _boundary_copy(
+            StructuredModelRequest,
+            audited_request,
+            exclude={"fingerprint"},
+        )
+        backend_response = backend.complete(backend_request)
+        response = _boundary_copy(StructuredModelResponse, backend_response)
+        reasons: list[str] = []
         try:
-            proposal = self.output_model.model_validate(response.output_payload)
+            backend_request_fingerprint = backend_request.fingerprint
+        except (TypeError, ValueError):
+            backend_request_fingerprint = None
+        if backend_request_fingerprint != expected_request_fingerprint:
+            reasons.append("backend mutated structured request after preflight")
+        reasons.extend(
+            self._response_rejections(
+                audited_request,
+                response,
+                context=validated_context,
+                policy=validated_policy,
+            )
+        )
+        parsed_proposal: OutputT | None = None
+        try:
+            payload_json = json.dumps(
+                response.output_payload,
+                ensure_ascii=False,
+                allow_nan=False,
+                separators=(",", ":"),
+            )
+            parsed_proposal = self.output_model.model_validate_json(payload_json, strict=True)
         except ValidationError as exc:
             reasons.append("output schema violation: " + _validation_summary(exc))
-        if proposal is not None:
+        except ValueError as exc:
+            reasons.append(f"output schema violation: invalid JSON value ({exc})")
+        if parsed_proposal is not None:
             reasons.extend(
                 self._proposal_rejections(
-                    proposal,
+                    parsed_proposal,
                     input_data=validated_input,
-                    context=context,
-                    policy=policy,
+                    context=validated_context,
+                    policy=validated_policy,
                 )
             )
             reasons.extend(
                 self._action_rejections(
-                    proposal,
+                    parsed_proposal,
                     input_data=validated_input,
-                    context=context,
-                    policy=policy,
+                    context=validated_context,
+                    policy=validated_policy,
                 )
             )
 
+        rejected = bool(reasons)
         result_type = NodeResult[self.output_model]
         return cast(
             NodeResult[OutputT],
             result_type(
                 node_name=self.node_name,
-                policy_id=policy.policy_id,
-                status=NodeResultStatus.REJECTED if reasons else NodeResultStatus.ACCEPTED,
-                request=request,
+                policy_id=validated_policy.policy_id,
+                status=NodeResultStatus.REJECTED if rejected else NodeResultStatus.ACCEPTED,
+                request=audited_request,
                 response=response,
-                proposal=proposal,
+                proposal=None if rejected else parsed_proposal,
+                untrusted_proposal=parsed_proposal if rejected else None,
                 rejection_reasons=reasons,
             ),
         )
@@ -154,7 +198,7 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         backend: StructuredModelBackend,
         policy: NodePolicy,
     ) -> None:
-        del input_data, context
+        del input_data
         if not policy.enabled:
             raise NodePolicyViolationError("model node policy is disabled")
         if self.node_name not in policy.allowed_node_names:
@@ -165,11 +209,18 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
                 f"{backend.name}/{backend.model} != "
                 f"{policy.expected_backend}/{policy.expected_model}"
             )
+        if context.cumulative_api_cost_usd > policy.max_api_cost_usd:
+            raise NodePolicyViolationError(
+                "cumulative project API cost already exceeds the model-node policy budget: "
+                f"{context.cumulative_api_cost_usd} > {policy.max_api_cost_usd}"
+            )
 
     def _response_rejections(
         self,
         request: StructuredModelRequest,
         response: StructuredModelResponse,
+        *,
+        context: NodeContext,
         policy: NodePolicy,
     ) -> list[str]:
         reasons: list[str] = []
@@ -189,10 +240,13 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         if usage.input_tokens + usage.output_tokens > policy.max_total_tokens:
             reasons.append("total token budget exceeded")
         if usage.cost_usd is None:
-            if policy.require_cost_telemetry:
-                reasons.append("API cost telemetry is required")
-        elif usage.cost_usd > policy.max_api_cost_usd:
-            reasons.append("API cost budget exceeded")
+            reasons.append("API cost telemetry is required")
+        elif _cumulative_cost_exceeds(
+            context.cumulative_api_cost_usd,
+            usage.cost_usd,
+            policy.max_api_cost_usd,
+        ):
+            reasons.append("cumulative project API cost budget exceeded")
         if response.latency_ms > policy.max_latency_ms:
             reasons.append("latency budget exceeded")
         allowed_tools = set(policy.allowed_tool_names)
@@ -326,9 +380,17 @@ class AmbiguousActionNode(ModelNode[AmbiguousActionInput, AmbiguousActionOutput]
                 f"deterministic score margin {input_data.score_margin:.6f} exceeds "
                 f"ambiguity threshold {policy.ambiguity_margin_max:.6f}"
             )
-        context_ids = {item.action_id for item in context.candidate_actions}
-        input_ids = {item.action_id for item in input_data.candidate_actions}
-        if context_ids and context_ids != input_ids:
+        if not context.candidate_actions:
+            raise NodePolicyViolationError(
+                "ambiguous-action requires the complete deterministic candidate context"
+            )
+        context_actions = {
+            item.action_id: _canonical_model_json(item) for item in context.candidate_actions
+        }
+        input_actions = {
+            item.action_id: _canonical_model_json(item) for item in input_data.candidate_actions
+        }
+        if context_actions != input_actions:
             raise NodePolicyViolationError(
                 "ambiguous-action input differs from context candidate actions"
             )
@@ -374,3 +436,31 @@ def _validation_summary(exc: ValidationError) -> str:
         location = ".".join(str(item) for item in error["loc"]) or "root"
         summaries.append(f"{location}: {error['type']}")
     return "; ".join(summaries)
+
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def _boundary_copy(
+    model_type: type[ModelT],
+    value: object,
+    *,
+    exclude: set[str] | None = None,
+) -> ModelT:
+    """Revalidate a deep model snapshot at an invocation boundary."""
+
+    validated = model_type.model_validate(value)
+    payload = validated.model_dump(mode="python", exclude=exclude)
+    return model_type.model_validate(payload, strict=True)
+
+
+def _canonical_model_json(value: BaseModel) -> str:
+    return json.dumps(
+        value.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _cumulative_cost_exceeds(cumulative: float, current: float, limit: float) -> bool:
+    return Decimal(str(cumulative)) + Decimal(str(current)) > Decimal(str(limit))

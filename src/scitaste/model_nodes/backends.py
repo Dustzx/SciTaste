@@ -33,7 +33,7 @@ class ScriptedStructuredReply(BaseModel):
 
     output_payload: JsonValue
     usage: Usage = Field(default_factory=lambda: Usage(cost_usd=0.0))
-    latency_ms: float = Field(default=0.0, ge=0)
+    latency_ms: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     tool_calls: list[ToolCallProposal] = Field(default_factory=list)
     response_backend: str | None = None
     response_model: str | None = None

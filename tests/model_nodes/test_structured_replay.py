@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
 
+from scitaste.backends.base import Usage
 from scitaste.model_nodes import (
     NodeContext,
     NodePolicy,
@@ -14,6 +16,7 @@ from scitaste.model_nodes import (
     ReviewSemanticNode,
     ScriptedStructuredBackend,
     ScriptedStructuredReply,
+    StructuredModelResponse,
     StructuredReplayMissError,
 )
 from scitaste.schema.actions import MetaAction
@@ -45,6 +48,7 @@ def context() -> NodeContext:
         project_id="project-1",
         stage="COMMUNICATION",
         state_snapshot_id="snapshot-1",
+        cumulative_api_cost_usd=0.0,
         claim_ids=["claim-1"],
         section_ids=["method"],
     )
@@ -125,3 +129,61 @@ def test_replay_rejects_even_a_small_request_change(tmp_path) -> None:
             request_id="review-1",
             seed=7,
         )
+
+
+@pytest.mark.parametrize("mismatch", ["request_id", "request_fingerprint"])
+def test_association_mismatch_is_recorded_and_replayed_as_a_rejection(
+    tmp_path, mismatch: str
+) -> None:
+    class AssociationMismatchBackend:
+        name = "scripted"
+        model = "scripted-v1"
+
+        def complete(self, request):  # type: ignore[no-untyped-def]
+            raw = json.dumps(payload(), sort_keys=True, separators=(",", ":"))
+            return StructuredModelResponse(
+                request_id=(
+                    "different-request" if mismatch == "request_id" else request.request_id
+                ),
+                request_fingerprint=(
+                    "0" * 64 if mismatch == "request_fingerprint" else request.fingerprint
+                ),
+                output_payload=payload(),
+                backend=self.name,
+                model=self.model,
+                raw_response=raw,
+                raw_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+                latency_ms=1,
+                usage=Usage(input_tokens=1, output_tokens=1, cost_usd=0),
+            )
+
+    recording = tmp_path / "mismatched.jsonl"
+    kwargs = {
+        "input_data": ReviewSemanticInput(review_text="Please clarify the method boundary."),
+        "context": context(),
+        "policy": policy(),
+        "request_id": "review-mismatch",
+        "seed": 7,
+    }
+    first = ReviewSemanticNode().run(
+        kwargs.pop("input_data"),
+        backend=RecordingStructuredBackend(AssociationMismatchBackend(), recording),
+        **kwargs,
+    )
+
+    assert first.status == NodeResultStatus.REJECTED
+    assert first.proposal is None
+    assert first.untrusted_proposal is not None
+    assert len(recording.read_text(encoding="utf-8").splitlines()) == 1
+
+    replayed = ReviewSemanticNode().run(
+        ReviewSemanticInput(review_text="Please clarify the method boundary."),
+        context=context(),
+        backend=ReplayStructuredBackend(recording),
+        policy=policy(),
+        request_id="review-mismatch",
+        seed=7,
+    )
+    assert replayed.status == NodeResultStatus.REJECTED
+    assert replayed.rejection_reasons == first.rejection_reasons
+    assert replayed.response.cached is True

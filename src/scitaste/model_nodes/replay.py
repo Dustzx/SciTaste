@@ -32,12 +32,9 @@ class RecordingStructuredBackend:
         self.model = delegate.model
 
     def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
-        response = self.delegate.complete(request)
-        if response.request_id != request.request_id:
-            raise ValueError("delegate returned a response for a different request id")
-        if response.request_fingerprint != request.fingerprint:
-            raise ValueError("delegate returned a response for a different request fingerprint")
-        record = StructuredReplayRecord(request=request, response=response)
+        audited_request = _copy_request(request)
+        response = _copy_response(self.delegate.complete(request))
+        record = StructuredReplayRecord(request=audited_request, response=response)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(record.model_dump_json(exclude={"request": {"fingerprint"}}) + "\n")
@@ -62,7 +59,9 @@ class ReplayStructuredBackend:
                 f"no exact structured replay for {request.request_id!r} "
                 f"({request.fingerprint[:12]})"
             ) from exc
-        return response.model_copy(update={"cached": True})
+        values = response.model_dump(mode="python")
+        values["cached"] = True
+        return StructuredModelResponse.model_validate(values, strict=True)
 
     def _load(self) -> tuple[dict[str, StructuredModelResponse], tuple[str, str]]:
         if not self.path.is_file():
@@ -73,12 +72,10 @@ class ReplayStructuredBackend:
             if not line.strip():
                 continue
             try:
-                record = StructuredReplayRecord.model_validate_json(line)
+                record = StructuredReplayRecord.model_validate_json(line, strict=True)
             except ValueError as exc:
                 raise ValueError(f"invalid structured replay line {line_number}") from exc
             fingerprint = record.request.fingerprint
-            if fingerprint != record.response.request_fingerprint:
-                raise ValueError(f"structured replay fingerprint mismatch on line {line_number}")
             existing = records.get(fingerprint)
             if existing is not None and existing != record.response:
                 raise ValueError(f"conflicting structured replay on line {line_number}")
@@ -89,3 +86,16 @@ class ReplayStructuredBackend:
         if len(identities) != 1:
             raise ValueError("structured replay file mixes backend or model identities")
         return records, next(iter(identities))
+
+
+def _copy_request(request: StructuredModelRequest) -> StructuredModelRequest:
+    values = request.model_dump(mode="python", exclude={"fingerprint"})
+    return StructuredModelRequest.model_validate(values, strict=True)
+
+
+def _copy_response(response: StructuredModelResponse) -> StructuredModelResponse:
+    validated = StructuredModelResponse.model_validate(response, strict=True)
+    return StructuredModelResponse.model_validate(
+        validated.model_dump(mode="python"),
+        strict=True,
+    )

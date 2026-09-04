@@ -38,6 +38,7 @@ class NodeContext(BaseModel):
     project_id: str = Field(min_length=1)
     stage: str = Field(min_length=1)
     state_snapshot_id: str = Field(min_length=1)
+    cumulative_api_cost_usd: float = Field(ge=0, allow_inf_nan=False)
     claim_ids: list[str] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
     section_ids: list[str] = Field(default_factory=list)
@@ -75,10 +76,10 @@ class NodePolicy(BaseModel):
     max_input_tokens: int = Field(default=20_000, ge=0)
     max_output_tokens: int = Field(default=4_000, ge=0)
     max_total_tokens: int = Field(default=24_000, ge=0)
-    max_api_cost_usd: float = Field(default=0.15, ge=0)
-    max_latency_ms: float = Field(default=180_000, ge=0)
-    require_cost_telemetry: bool = True
-    ambiguity_margin_max: float = Field(default=0.05, ge=0)
+    max_api_cost_usd: float = Field(default=0.15, ge=0, allow_inf_nan=False)
+    max_latency_ms: float = Field(default=180_000, ge=0, allow_inf_nan=False)
+    require_cost_telemetry: Literal[True] = True
+    ambiguity_margin_max: float = Field(default=0.05, ge=0, allow_inf_nan=False)
 
     @field_validator("allowed_node_names", "allowed_tool_names")
     @classmethod
@@ -143,7 +144,7 @@ class StructuredModelResponse(BaseModel):
     model: str = Field(min_length=1)
     raw_response: str | None = None
     raw_response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    latency_ms: float = Field(ge=0)
+    latency_ms: float = Field(ge=0, allow_inf_nan=False)
     usage: Usage
     tool_calls: list[ToolCallProposal] = Field(default_factory=list)
     cached: bool = False
@@ -177,6 +178,7 @@ class NodeResult(BaseModel, Generic[ProposalT]):
     request: StructuredModelRequest
     response: StructuredModelResponse
     proposal: ProposalT | None = None
+    untrusted_proposal: ProposalT | None = None
     rejection_reasons: list[str] = Field(default_factory=list)
     advisory_only: Literal[True] = True
     executable: Literal[False] = False
@@ -184,8 +186,15 @@ class NodeResult(BaseModel, Generic[ProposalT]):
     @model_validator(mode="after")
     def status_matches_payload(self) -> NodeResult[ProposalT]:
         if self.status == NodeResultStatus.ACCEPTED:
-            if self.proposal is None or self.rejection_reasons:
+            if (
+                self.proposal is None
+                or self.untrusted_proposal is not None
+                or self.rejection_reasons
+            ):
                 raise ValueError("accepted node results require one clean proposal")
-        elif not self.rejection_reasons:
-            raise ValueError("rejected node results require at least one reason")
+        else:
+            if self.proposal is not None:
+                raise ValueError("rejected node results cannot expose a trusted proposal")
+            if not self.rejection_reasons:
+                raise ValueError("rejected node results require at least one reason")
         return self
