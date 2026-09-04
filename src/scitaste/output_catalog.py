@@ -196,12 +196,18 @@ def render_index(
                 for name, path in current_paper.get("files", {}).items()
                 if isinstance(path, str)
             )
+        completed_stages = project.get("completed_stages") or []
+        stage_summary = ", ".join(f"{int(stage):02d}" for stage in completed_stages) or "未登记"
+        stage_directory = f"{project['directory']}/stages/current"
         lines.extend(
             [
                 f"### {project.get('title', project_id)}",
                 "",
                 f"- 项目 ID: `{project_id}`; 状态: {project.get('status', 'unknown')}",
                 f"- 研究方向: {project.get('research_direction', '未登记')}",
+                f"- 当前运行: `{project.get('current_run', '未登记')}`",
+                f"- 已完成 Stage: {stage_summary}",
+                f"- Stage 产物: [按阶段浏览]({stage_directory}/)",
                 f"- 当前论文: {current_links or '尚无'}",
                 f"- 项目目录: [`{project['directory']}`]({project['directory']}/)",
                 "",

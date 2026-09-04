@@ -100,7 +100,8 @@ semantic versioning.
   cross-provider preacceptance without contaminating the registered Qwen study.
 - A generated, project-centric output catalog, canonical
   `outputs/projects/<project-id>/` ownership boundary, global paper aliases,
-  bilingual 23-stage reference, and stable naming rules for future runs.
+  per-project current-run Stage browser, bilingual 23-stage reference, and
+  stable naming rules for future runs.
 
 ### Changed
 

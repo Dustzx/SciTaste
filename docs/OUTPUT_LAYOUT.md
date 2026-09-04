@@ -16,8 +16,11 @@ The canonical hierarchy is:
 outputs/projects/<project-id>/
 ├── PROJECT.json
 ├── README.md
+├── STAGES.md
 ├── runs/
 │   └── YYYY-MM-DD__provider-model__condition__seed-NN/
+├── stages/
+│   └── current -> ../runs/<current-run>/upstream_run
 └── papers/
     ├── YYYY-MM-DD__provider-model__condition__stage-NN/
     └── current -> <selected paper version>

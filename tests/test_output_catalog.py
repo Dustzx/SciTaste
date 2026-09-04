@@ -40,6 +40,8 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
                 "research_direction": "Test a clear output hierarchy.",
                 "status": "preacceptance",
                 "current_paper": f"papers/{bundle_name}",
+                "current_run": "2026-09-04__model__knowledge-rag__seed-07",
+                "completed_stages": list(range(7, 19)),
             }
         ),
         encoding="utf-8",
@@ -69,6 +71,8 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
 
     index = index_path.read_text(encoding="utf-8")
     assert "Readable research project" in index
+    assert "已完成 Stage: 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18" in index
+    assert "projects/readable-research-project/stages/current/" in index
     assert "Readable paper" in index
     assert (
         "[PDF](projects/readable-research-project/papers/"
