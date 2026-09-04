@@ -116,6 +116,13 @@ semantic versioning.
 - A typed ProjectRuntime with atomic scaffolding and manifests, optimistic
   revision locks, registered run/paper ownership, safe navigation aliases,
   content-hashed snapshots, backward-compatible legacy loading, and project CLI.
+- Opt-in bounded semantic model nodes for review parsing, interpretation-threat
+  analysis, and ambiguity-triggered action ranking, with strict typed outputs,
+  cumulative cost gates, request-mutation detection, recording, and exact replay.
+- A non-executable generative UI contract with 11 closed native-component
+  schemas, revisioned evidence bindings, proposal-only interactions, a fixed-shell
+  renderer projection, deterministic fixtures, and a trusted ProjectRuntime
+  adapter that hashes project-owned runs, stages, papers, and artifacts.
 
 ### Changed
 
@@ -134,6 +141,10 @@ semantic versioning.
   added complete-condition parsing for `condition: mean=...` metric summaries.
 
 ### Fixed
+
+- Pytest now imports test modules by package path, allowing independently
+  developed feature suites to use the same test filename without collection
+  collisions after branch integration.
 
 - Study-cell resume now rewinds to the earliest missing publication stage;
   corrective `incorrectly asserted N=1` prose no longer trips the single-seed

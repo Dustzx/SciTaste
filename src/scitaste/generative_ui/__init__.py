@@ -46,6 +46,7 @@ from scitaste.generative_ui.models import (
     component_data_json_schema,
     compute_snapshot_sha256,
 )
+from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.projection import (
     FixedApplicationShell,
     RendererAction,
@@ -83,6 +84,7 @@ __all__ = [
     "FixedApplicationShell",
     "InspectArtifactPayload",
     "PaperPreviewData",
+    "ProjectSnapshotAdapter",
     "ProjectSummaryData",
     "ProposalKind",
     "ProposalReceipt",

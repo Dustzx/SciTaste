@@ -280,10 +280,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - `outputs/projects/scitaste-self-development/` is the canonical project-level
   record for SciTaste's own dogfooding iterations. It references the Phase 7.5
   adapter decision and Phase 9 defect-discovery evidence without moving raw runs.
-- A bounded model-node tool-intelligence pilot is proposed, not implemented. It
-  registers deterministic-only, local-node, and Zhipu `GLM-5.3-Flash` conditions,
-  with schema, gate-bypass, replay, manual-intervention, unsupported-claim, and
-  cost acceptance criteria.
+- The bounded model-node infrastructure is implemented offline for review
+  parsing, interpretation threats, and ambiguity-triggered action ranking. The
+  self-development pilot is still pending and registers deterministic-only,
+  local-node, and Zhipu `GLM-5.3-Flash` conditions, with schema, gate-bypass,
+  replay, manual-intervention, unsupported-claim, and cost acceptance criteria.
 - This exploratory self-project is excluded from the active Phase 9 registered
   comparison and from headline effectiveness claims.
 
@@ -299,8 +300,24 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   runtime, including alternate non-paper stage semantics and referenced runs.
 - The project CLI supports create/status, run begin/select, paper
   register/select, and mutation-free dry-run validation.
+- The trusted generative-UI adapter now converts the authoritative runtime view
+  into project-relative, content-addressed manifest, run, stage, paper, and
+  artifact evidence. It rejects missing paths and nested symlinks.
 - Pending core integration: make `scitaste run full` create and advance one
   managed project rather than writing independent workflow roots.
+
+## Generative interface progress
+
+- Eleven trusted research components have closed data schemas and can populate
+  only the workspace region of a fixed receiver-owned shell.
+- Every surface is pinned to a ProjectRuntime revision and to hashes of the exact
+  evidence it displays. Client events carry identity only and return
+  proposal-only receipts; they cannot invoke tools or mutate research state.
+- Deterministic fixtures cover project overview, paper status, blocked-run,
+  next-step, and run-comparison surfaces.
+- Pending product integration: a browser/native renderer, an authenticated API,
+  and deterministic controller endpoints for approving proposals. These are not
+  implied by the contract layer.
 
 ## Project controls
 

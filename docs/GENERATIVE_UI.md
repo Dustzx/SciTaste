@@ -7,9 +7,10 @@ specific project snapshot, but it cannot define HTML/JavaScript renderers,
 command-bearing fields, callbacks, tool calls, or state mutations. Text is always
 untrusted display text and is never evaluated.
 
-This module is a contract and interaction-boundary layer only. It includes a
-framework-neutral renderer document, but not a web server, actual renderer,
-model call, project-runtime adapter, or task executor.
+This module is a contract and interaction-boundary layer plus a trusted
+ProjectRuntime adapter. It includes a framework-neutral renderer document, but
+not a web server, actual renderer, model call, authenticated API, or task
+executor.
 
 ## Contract hierarchy
 
@@ -20,10 +21,12 @@ locator is project-relative and cannot traverse outside the project.
 The snapshot hash has one normative representation: SHA-256 over compact,
 key-sorted UTF-8 JSON containing `schema_version: 1.0`, the canonical project ID,
 the snapshot revision, and the full evidence records sorted by `evidence_id`.
-`SnapshotBinding.from_trusted_evidence` is the adapter entry point and validation
-recomputes the same hash. Only a trusted project-runtime adapter may call it,
-after resolving every locator beneath the project root and recomputing each
-evidence hash.
+`SnapshotBinding.from_trusted_evidence` is the low-level adapter entry point and
+validation recomputes the same hash. `ProjectSnapshotAdapter.build_binding` is
+the first-party trusted entry point: it opens the authoritative project through
+`ProjectRuntime`, resolves every locator beneath that project root, recomputes
+each evidence hash, and confirms that the runtime revision did not change during
+binding.
 
 `SurfaceSpec` binds that snapshot to one or more `ComponentSpec` objects. Each
 component is selected from the closed `TrustedComponent` registry and cites the
@@ -141,11 +144,13 @@ Together, the Pydantic contracts and closed schemas reject:
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
 - surface revisions based on stale fingerprints or inconsistent snapshot hashes.
 
-A valid binding proves that its evidence manifest matches its snapshot hash; it
-does not by itself prove that a file exists. The future project-runtime adapter
-must resolve the locator inside the project root, recompute each file hash, and
-construct the binding through `from_trusted_evidence`. Renderers must never accept
-a binding authored by an untrusted client as proof of existence.
+A valid binding proves that its evidence manifest matches its snapshot hash; a
+binding created by `ProjectSnapshotAdapter` also proves that every referenced
+file or directory existed beneath the project root when it was hashed. Directory
+hashes cover the sorted relative tree and file-content hashes; nested symlinks
+are rejected. Renderers must never accept a binding authored by an untrusted
+client as proof of existence, and artifact access must verify the stored hash
+again if files can change after surface creation.
 
 Project-runtime identity is canonical lowercase kebab-case. Existing
 `ResearchState` records historically allowed arbitrary strings; an adapter must

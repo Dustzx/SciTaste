@@ -88,6 +88,13 @@ the expected revision without creating or changing files.
 
 `ProjectSnapshot` uses project-relative locators and hashes the validated project
 manifest, registered paper manifests, current selections, and warnings. It is a
-read model, not an execution capability. A future generative UI adapter may turn
-the snapshot into evidence references, but UI actions still have to return to the
-deterministic controller and revision gate before any mutation.
+read model, not an execution capability.
+
+`ProjectSnapshotAdapter.build_binding(project_id)` reopens that authoritative
+view and turns the project manifest, registered runs, current stage, paper
+manifests, and declared paper files into project-relative, content-addressed UI
+evidence. Missing entries, containment escapes, and nested symlinks fail closed.
+Its evidence-manifest hash is intentionally distinct from
+`ProjectSnapshot.snapshot_sha256`: the former includes artifact bytes displayed
+by a surface, while the latter identifies runtime registry state. UI actions
+still return to the deterministic controller and revision gate before mutation.

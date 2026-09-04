@@ -58,7 +58,12 @@ review remain pending, so no effectiveness claim is made from that pilot.
   review contracts, complete resource auditing, eligibility gates, and explicit
   readiness blockers;
 - a typed, revision-guarded project runtime that owns runs, paper bundles,
-  content-hashed snapshots, and safe current-artifact aliases.
+  content-hashed snapshots, and safe current-artifact aliases;
+- bounded, opt-in semantic model nodes whose typed advice remains behind
+  deterministic feasibility, budget, evidence, and transition gates;
+- evidence-bound generative UI contracts with a fixed trusted shell,
+  proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
+  project artifacts exposed to a surface.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked

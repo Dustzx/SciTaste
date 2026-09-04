@@ -413,13 +413,15 @@ code continues to own feasibility filtering, typed-schema validation, evidence
 status, resource budgets, tool allowlists, execution sandboxes, and state
 transitions. A model response is advice until those gates accept it.
 
-The first proposed nodes cover review parsing, interpretation threats, and
-ambiguity-triggered action ranking. They are opt-in, fingerprinted, usage-metered,
-recorded for exact replay, and unable to silently switch provider or model. New
+The node infrastructure now implements review parsing, interpretation threats,
+and ambiguity-triggered action ranking. Nodes are opt-in, fingerprinted,
+usage-metered, recorded for exact replay, and unable to silently switch provider
+or model. Rejected output remains untrusted and has no executable proposal. New
 Zhipu pilots use `GLM-5.3-Flash`; local and online nodes remain separate study
-conditions. This proposal does not alter the already registered Phase 9 protocol
-and becomes accepted only after its self-development pilot clears the recorded
-schema, safety, intervention, and cost gates.
+conditions. The ADR remains proposed because infrastructure tests are not the
+self-development pilot. It does not alter the registered Phase 9 protocol and
+becomes accepted only after that pilot clears the recorded schema, safety,
+intervention, and cost gates.
 
 ### ADR-023: Project directories are revisioned ownership boundaries
 
@@ -435,3 +437,19 @@ generated interfaces. It exposes project-relative locators and content hashes,
 not filesystem mutation or executor authority. AutoResearchClaw continues to run
 behind the existing adapter and may be referenced through a project-owned run;
 no project-management logic is added to the pinned substrate.
+
+### ADR-024: Generated interfaces are evidence-bound data, not executable code
+
+Status: accepted. A generated SciTaste surface may select only receiver-owned
+native components with closed data schemas. It cannot supply HTML, JavaScript,
+URLs, callbacks, commands, tool names, or executor authority. User interactions
+return typed proposals to the deterministic controller boundary; no surface
+event changes project or research state directly.
+
+Every surface cites a `SnapshotBinding` whose evidence manifest is hashed and
+pinned to a ProjectRuntime revision. The trusted adapter resolves locators under
+one project root and hashes the current project manifest, registered runs,
+current stage, paper manifests, and declared paper artifacts. Renderer-facing
+documents retain the binding while omitting server-owned proposal payloads. This
+decision accepts the contract and trust boundary, not a completed frontend or
+authenticated API service.
