@@ -1,4 +1,4 @@
-.PHONY: install install-substrate format lint test check demo clean
+.PHONY: install install-substrate format lint test coverage check demo clean
 
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
@@ -20,6 +20,9 @@ lint:
 
 test:
 	$(PYTHON) -m pytest
+
+coverage:
+	$(PYTHON) -m pytest --cov=scitaste --cov-report=term-missing
 
 check: lint test
 

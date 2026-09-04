@@ -186,6 +186,13 @@ class PaperManifest(BaseModel):
     def project_id_is_safe(cls, value: str) -> str:
         return validate_project_id(value)
 
+    @field_validator("source_run")
+    @classmethod
+    def source_run_is_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_entry_id(value, field_name="source_run")
+
     @field_validator("files")
     @classmethod
     def files_are_relative(cls, values: dict[str, str]) -> dict[str, str]:

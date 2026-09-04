@@ -29,6 +29,11 @@ The manifest accepts extension fields so the existing FLOOR preacceptance and
 SciTaste self-development records remain readable. Canonical fields stay strict;
 unknown historical metadata is preserved during updates.
 
+Registered run metadata may be finalized with `ProjectRuntime.update_run`. The
+operation cannot change run identity and uses the same expected-revision guard;
+the full workflow uses it to record completion/failure, the final-state locator,
+and readable per-stage records.
+
 ## CLI
 
 Create and inspect a project:
@@ -98,3 +103,6 @@ Its evidence-manifest hash is intentionally distinct from
 `ProjectSnapshot.snapshot_sha256`: the former includes artifact bytes displayed
 by a surface, while the latter identifies runtime registry state. UI actions
 still return to the deterministic controller and revision gate before mutation.
+
+The first full lifecycle consumer is documented in
+[`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).

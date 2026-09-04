@@ -117,6 +117,20 @@ Run and paper registration requires the current project revision, so concurrent
 workers fail on stale state instead of overwriting one another. See
 [`docs/PROJECT_RUNTIME.md`](docs/PROJECT_RUNTIME.md).
 
+Run the complete offline Discovery → Evidence → Communication → Figure path in
+one managed project and produce a registered Markdown/TeX/PDF paper bundle:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_v1.yaml \
+  --project-id my-full-project --run-id offline-full-seed-07 \
+  --paper-directory offline-full-seed-07-reviewed-draft \
+  --seed 7 --output outputs
+```
+
+This validates end-to-end framework behavior with the deterministic mock; it is
+not an effectiveness result. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
+
 ## Work without an API key
 
 API access is optional for development and CI. Run the fixed offline calibration,

@@ -32,7 +32,7 @@ outputs/projects/<project-id>/
 ├── runs/
 │   └── YYYY-MM-DD__provider-model__condition__seed-NN/
 ├── stages/
-│   └── current -> ../runs/<current-run>/upstream_run
+│   └── current -> ../runs/<current-run>/<registered-stage-path>
 └── papers/
     ├── YYYY-MM-DD__provider-model__condition__stage-NN/
     └── current -> <selected paper version>
@@ -64,3 +64,15 @@ Framework self-development and other non-paper projects still receive their own
 must declare alternate milestone semantics in `PROJECT.json` and `STAGES.md`
 rather than pretending that project-management decisions completed
 AutoResearchClaw stages.
+
+The offline `scitaste run full` composition uses a named, human-readable stage
+tree beneath its registered run:
+
+```text
+runs/<run-id>/stages/{discovery,evidence,communication,figure}/
+```
+
+Every directory has a `STAGE.json` explaining what it completed. Its paper is
+owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
+optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
+[`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).

@@ -453,3 +453,19 @@ current stage, paper manifests, and declared paper artifacts. Renderer-facing
 documents retain the binding while omitting server-owned proposal payloads. This
 decision accepts the contract and trust boundary, not a completed frontend or
 authenticated API service.
+
+### ADR-025: Full workflow stages extend one project-owned state
+
+Status: accepted. The offline Phase 4--7 acceptance path is composed through one
+registered `ProjectRun`. Discovery creates `ResearchState`; Evidence,
+Communication, reviewer-driven evidence resolution, and Figure generation load
+and extend that same history. Stage scenarios may provide reusable content, but
+the full-workflow config owns and revalidates the canonical project identity.
+
+Each logical phase has a named directory and `STAGE.json`; the selected paper is
+packaged and registered beneath the same project. Completion and failure both
+update registered run metadata through optimistic revisions. The final trusted
+UI binding is created only after project, run, paper, and artifact registration.
+This ADR establishes offline orchestration and artifact ownership, not a claim
+that the mock executor measures research effectiveness or that live
+AutoResearchClaw/model-node integration is complete.

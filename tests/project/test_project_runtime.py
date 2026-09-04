@@ -140,6 +140,43 @@ def test_metadata_update_preserves_extensions_and_blocks_alias_shortcuts(tmp_pat
         )
 
 
+def test_run_metadata_update_is_revision_guarded_and_preserves_identity(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(manifest())
+    snapshot = runtime.begin_run(
+        "typed-project",
+        run(),
+        expected_revision=snapshot.revision,
+    )
+
+    snapshot = runtime.update_run(
+        "typed-project",
+        run().run_id,
+        expected_revision=snapshot.revision,
+        status="complete",
+        completion_summary="all offline stages passed",
+    )
+
+    assert snapshot.manifest.runs[0].status == "complete"
+    assert snapshot.manifest.runs[0].model_extra == {
+        "completion_summary": "all offline stages passed"
+    }
+    with pytest.raises(ProjectRevisionConflictError):
+        runtime.update_run(
+            "typed-project",
+            run().run_id,
+            expected_revision=1,
+            status="failed",
+        )
+    with pytest.raises(ValueError, match="identity"):
+        runtime.update_run(
+            "typed-project",
+            run().run_id,
+            expected_revision=snapshot.revision,
+            run_id="replacement",
+        )
+
+
 def test_register_and_select_paper_updates_project_and_global_aliases(tmp_path: Path) -> None:
     runtime = ProjectRuntime(tmp_path / "outputs")
     snapshot = runtime.create(manifest())
@@ -181,6 +218,17 @@ def test_paper_registration_rejects_missing_or_escaping_artifacts(tmp_path: Path
             "typed-project",
             paper(),
             directory_name="missing-files",
+            expected_revision=snapshot.revision,
+        )
+
+    unregistered_source = PaperManifest.model_validate(
+        {**paper().model_dump(mode="json"), "source_run": "unknown-run", "files": {}}
+    )
+    with pytest.raises(ValueError, match="source_run"):
+        runtime.register_paper(
+            "typed-project",
+            unregistered_source,
+            directory_name="unknown-source-run",
             expected_revision=snapshot.revision,
         )
 

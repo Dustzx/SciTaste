@@ -47,6 +47,7 @@ from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
+from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -132,9 +133,12 @@ def build_parser() -> argparse.ArgumentParser:
     demo = run_commands.add_parser("demo", help="Run the Phase 1 nonlinear mock loop")
     _add_common_options(demo, default_output="outputs/demo")
     demo.set_defaults(handler=_handle_demo)
-    full = run_commands.add_parser("full", help="Run the complete future SciTaste workflow")
-    _add_common_options(full, default_output="outputs/full")
-    full.set_defaults(handler=_handle_planned, milestone="Phase 4-7")
+    full = run_commands.add_parser("full", help="Run the offline Phase 4-7 project workflow")
+    _add_common_options(full, default_output="outputs")
+    full.add_argument("--project-id", default=None)
+    full.add_argument("--run-id", default=None)
+    full.add_argument("--paper-directory", default=None)
+    full.set_defaults(handler=_handle_full)
 
     project = commands.add_parser("project", help="Project-owned run and paper management")
     project_commands = project.add_subparsers(dest="project_command", required=True)
@@ -777,6 +781,46 @@ def _handle_discover(args: argparse.Namespace) -> int:
         )
         return 0
     summary = DiscoveryLoop(seed=args.seed).run(scenario, output_dir=args.output)
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_full(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("the integrated offline workflow currently supports only --backend mock")
+    config_path = args.config or Path("configs/workflows/full_offline_v1.yaml")
+    config = load_full_workflow_config(config_path)
+    if args.project_id is not None or args.paper_directory is not None:
+        payload = config.model_dump(mode="python")
+        if args.project_id is not None:
+            payload["project_id"] = args.project_id
+        if args.paper_directory is not None:
+            payload["paper_directory"] = args.paper_directory
+        config = type(config).model_validate(payload)
+    run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": config.project_id,
+                    "run_id": run_id,
+                    "provider": config.provider,
+                    "model": config.model,
+                    "stages": ["discovery", "evidence", "communication", "figure"],
+                    "paper_directory": config.paper_directory,
+                    "outputs_root": str(args.output),
+                    "effectiveness_claim": False,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    summary = FullWorkflow(seed=args.seed).run(
+        config,
+        outputs_root=args.output,
+        run_id=run_id,
+    )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 

@@ -123,8 +123,18 @@ semantic versioning.
   schemas, revisioned evidence bindings, proposal-only interactions, a fixed-shell
   renderer projection, deterministic fixtures, and a trusted ProjectRuntime
   adapter that hashes project-owned runs, stages, papers, and artifacts.
+- A working `scitaste run full` offline composition that carries one
+  `ResearchState` through Discovery, Evidence, Communication, reviewer-driven
+  evidence resolution, and editable Figure generation inside one registered
+  project run; it emits readable stage records and a registered
+  Markdown/TeX/PDF paper bundle with an evidence-bound UI snapshot.
 
 ### Changed
+
+- Communication and Figure workflows can now resume a compatible prior state,
+  preserving hypotheses, experiments, claims, decisions, writing, and figures
+  across the full project lifecycle. Registered run metadata can be finalized or
+  failed under the same optimistic project revision guard.
 
 - OpenAI-compatible backends now make bounded semantic-format repair attempts and
   record attempt count, latency, and raw-response hash.
@@ -145,6 +155,7 @@ semantic versioning.
 - Pytest now imports test modules by package path, allowing independently
   developed feature suites to use the same test filename without collection
   collisions after branch integration.
+- The Makefile now exposes the same pytest-cov coverage command used by CI.
 
 - Study-cell resume now rewinds to the earliest missing publication stage;
   corrective `incorrectly asserted N=1` prose no longer trips the single-seed

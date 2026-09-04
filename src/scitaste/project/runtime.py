@@ -173,6 +173,37 @@ class ProjectRuntime:
             )
         return self._snapshot(project, manifest)
 
+    def update_run(
+        self,
+        project_id: str,
+        registered_run_id: str,
+        *,
+        expected_revision: int,
+        **changes: Any,
+    ) -> ProjectSnapshot:
+        """Update metadata for one registered run under the project revision guard."""
+
+        validate_entry_id(registered_run_id, field_name="run_id")
+        if "run_id" in changes:
+            raise ValueError("run identity cannot be changed")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            matches = [item for item in manifest.runs if item.run_id == registered_run_id]
+            if not matches:
+                raise ValueError(f"unknown project run {registered_run_id!r}")
+            payload = matches[0].model_dump(mode="json")
+            payload.update(changes)
+            updated = ProjectRun.model_validate(payload)
+            runs = [updated if item.run_id == registered_run_id else item for item in manifest.runs]
+            manifest = self._replace_manifest(
+                project,
+                expected_revision=expected_revision,
+                changes={"runs": runs},
+            )
+        return self._snapshot(project, manifest)
+
     def register_paper(
         self,
         project_id: str,
@@ -191,6 +222,10 @@ class ProjectRuntime:
         with _locked(project / ".project.lock"):
             manifest = self._load_manifest(project)
             self._require_revision(manifest, expected_revision)
+            if paper.source_run is not None and paper.source_run not in {
+                item.run_id for item in manifest.runs
+            }:
+                raise ValueError("paper source_run must reference a registered project run")
             paper_dir.mkdir(parents=True, exist_ok=True)
             manifest_path = paper_dir / "MANIFEST.json"
             if _lexists(manifest_path):

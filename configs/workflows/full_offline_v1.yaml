@@ -1,0 +1,18 @@
+schema_version: "1.0"
+project_id: scitaste-offline-full
+title: SciTaste Offline Full Workflow
+research_direction: Test conflict-aware scientific control from discovery through communication
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste
+provider: mock
+model: deterministic-controller
+evidence_scope: offline-integration-only
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+paper_id: conflict-aware-control-paper
+paper_directory: offline-full-reviewed-draft
+paper_title: Conflict-Aware Control for Evidence-Bounded Autonomous Research
+paper_date: 2026-09-04

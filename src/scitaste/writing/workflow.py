@@ -75,7 +75,13 @@ class CommunicationWorkflow:
         self.executor = executor or MockExecutor(seed=seed)
         self.seed = seed
 
-    def run(self, scenario: CommunicationScenario, *, output_dir: str | Path) -> dict[str, object]:
+    def run(
+        self,
+        scenario: CommunicationScenario,
+        *,
+        output_dir: str | Path,
+        state_path: str | Path | None = None,
+    ) -> dict[str, object]:
         root = Path(output_dir)
         logger = DecisionLogger(root / "decisions.jsonl")
         if logger.path.exists():
@@ -91,18 +97,26 @@ class CommunicationWorkflow:
             mode=TasteMode.AUGMENTED,
             retriever=retriever,
         )
-        state = ResearchState(
-            project_id=scenario.project_id,
-            research_direction=scenario.research_direction,
-            target_domain=scenario.target_domain,
-            target_venue=scenario.target_venue,
-            resource_budget=scenario.resource_budget,
-            claims=[item.model_copy(deep=True) for item in scenario.claims],
-            evidence_graph=EvidenceGraph(
-                items=[item.model_copy(deep=True) for item in scenario.evidence]
-            ),
-            current_stage="COMMUNICATION",
-        )
+        if state_path is None:
+            state = ResearchState(
+                project_id=scenario.project_id,
+                research_direction=scenario.research_direction,
+                target_domain=scenario.target_domain,
+                target_venue=scenario.target_venue,
+                resource_budget=scenario.resource_budget,
+                claims=[item.model_copy(deep=True) for item in scenario.claims],
+                evidence_graph=EvidenceGraph(
+                    items=[item.model_copy(deep=True) for item in scenario.evidence]
+                ),
+                current_stage="COMMUNICATION",
+            )
+        else:
+            state = ResearchState.model_validate_json(Path(state_path).read_text(encoding="utf-8"))
+            if state.project_id != scenario.project_id:
+                raise ValueError("communication scenario belongs to another project")
+            if state.current_stage.value != "COMMUNICATION":
+                raise ValueError("communication workflow requires a COMMUNICATION state")
+            _merge_communication_evidence(state, scenario)
         store.save(state)
 
         def act(actions: list[ResearchAction]) -> tuple[ResearchDecision, ExecutionResult]:
@@ -291,3 +305,30 @@ def _write_paper(path: Path, drafts: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     rendered = "\n\n".join(f"# {name}\n\n{text}" for name, text in drafts.items())
     path.write_text(rendered + "\n", encoding="utf-8")
+
+
+def _merge_communication_evidence(state: ResearchState, scenario: CommunicationScenario) -> None:
+    claims = {item.claim_id: index for index, item in enumerate(state.claims)}
+    for claim in scenario.claims:
+        copied = claim.model_copy(deep=True)
+        if claim.claim_id in claims:
+            existing = state.claims[claims[claim.claim_id]]
+            if existing != copied:
+                raise ValueError(
+                    f"communication claim conflicts with prior state: {claim.claim_id}"
+                )
+        else:
+            claims[claim.claim_id] = len(state.claims)
+            state.claims.append(copied)
+    evidence = {item.evidence_id: index for index, item in enumerate(state.evidence_graph.items)}
+    for item in scenario.evidence:
+        copied = item.model_copy(deep=True)
+        if item.evidence_id in evidence:
+            existing = state.evidence_graph.items[evidence[item.evidence_id]]
+            if existing != copied:
+                raise ValueError(
+                    f"communication evidence conflicts with prior state: {item.evidence_id}"
+                )
+        else:
+            evidence[item.evidence_id] = len(state.evidence_graph.items)
+            state.evidence_graph.items.append(copied)
