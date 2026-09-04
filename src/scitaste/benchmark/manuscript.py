@@ -413,7 +413,8 @@ def _copy_manuscript_assets(
             destination = figure_dir / f"{prefix}-{relative.name}"
         shutil.copy2(source, destination)
         mapping[target] = destination.relative_to(target_dir).as_posix()
-        copied.append(destination)
+        if destination not in copied:
+            copied.append(destination)
     return mapping, copied
 
 

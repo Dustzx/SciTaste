@@ -1665,7 +1665,7 @@ def _stdout_seed_ids(stdout: str) -> list[int]:
         ),
         re.compile(
             r"(?i)^\s*condition\s*=\s*[A-Za-z][A-Za-z0-9_-]*\s+"
-            r"seed\s*=\s*([0-9]+)(?![0-9.])\s+balanced_?accuracy\s*="
+            r"seed\s*=\s*([0-9]+)(?![0-9.])\s+(?:mean_)?balanced_?accuracy\s*="
         ),
     )
     return sorted(
@@ -2314,6 +2314,21 @@ _FAILURE_CLAIMS = {
 }
 
 
+def _failure_claim_violations(text: str) -> list[str]:
+    """Reject failure claims while allowing explicit corrections of stale ones."""
+
+    corrective = re.compile(
+        r"(?i)\b(?:incorrect(?:ly)?|false(?:ly)?|erroneous(?:ly)?|superseded|"
+        r"rejected|contradicted|not (?:cached|phantom|fabricated|epistemically void))\b"
+    )
+    violations: set[str] = set()
+    for line in text.splitlines():
+        matched = {name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, line)}
+        if matched and not corrective.search(line):
+            violations.update(matched)
+    return sorted(violations)
+
+
 def _synthetic_claim_violations(text: str) -> list[str]:
     patterns = {
         "claimed-model-inference": (
@@ -2531,9 +2546,7 @@ def _analysis_consistency_audit(
     if int(selected_run.get("returncode", 1)) != 0 or selected_run.get("timed_out"):
         raise ValueError("selected experiment evidence is not a completed execution")
 
-    contradictions = sorted(
-        name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, analysis)
-    )
+    contradictions = _failure_claim_violations(analysis)
     seed_ids = selected_run.get("seed_ids") or []
     contradictions.extend(_seed_claim_violations(analysis, seed_ids))
     contradictions = sorted(set(contradictions))
@@ -2666,9 +2679,7 @@ def _artifact_consistency_audit(
     )
     primary = analysis_audit["primary_metric"]
     value = analysis_audit["primary_metric_value"]
-    contradictions = sorted(
-        name for name, pattern in _FAILURE_CLAIMS.items() if re.search(pattern, paper)
-    )
+    contradictions = _failure_claim_violations(paper)
     contradictions.extend(_synthetic_claim_violations(paper))
     contradictions.extend(_seed_claim_violations(paper, analysis_audit["seed_ids"]))
     contradictions = sorted(set(contradictions))

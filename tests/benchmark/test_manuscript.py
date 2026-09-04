@@ -41,7 +41,7 @@ def test_markdown_to_latex_preserves_math_citations_and_tables() -> None:
 
 def test_materialize_manuscript_creates_self_contained_bundle(tmp_path, monkeypatch) -> None:
     source = tmp_path / "paper.md"
-    source.write_text(SAMPLE, encoding="utf-8")
+    source.write_text(SAMPLE + "\n![Repeated](charts/comparison.png)\n", encoding="utf-8")
     bibliography = tmp_path / "source.bib"
     bibliography.write_text(
         "@article{liu-etal-2024-lost, title={Lost in the Middle}, year={2024}}\n",
@@ -64,6 +64,7 @@ def test_materialize_manuscript_creates_self_contained_bundle(tmp_path, monkeypa
     assert target / "main.tex" in paths
     assert target / "references.bib" in paths
     assert target / "figures" / "comparison.png" in paths
+    assert paths.count(target / "figures" / "comparison.png") == 1
     build = json.loads((target / "build.json").read_text())
     assert build["status"] == "unavailable"
     assert build["pdf_generated"] is False

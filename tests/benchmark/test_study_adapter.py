@@ -925,6 +925,16 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
         task=task,
     )
     assert corrected_adverb["analysis_reports_primary_metric"] is True
+    corrected_failure_claim = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75 across seeds 7, 19, and 31. Earlier analyses "
+            "incorrectly characterized the reported metrics as cached or fabricated; "
+            "those characterizations are superseded and the measurements are not cached."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert corrected_failure_claim["analysis_reports_primary_metric"] is True
     instructional = _analysis_consistency_audit(
         analysis=(
             "Balanced accuracy was 0.75 across seeds 7, 19, and 31. The paper must "
@@ -1130,7 +1140,7 @@ Grid cells: 54, Examples/cell: 12, Total/seed: 648
 
 def test_stdout_seed_ids_accept_condition_rows_but_not_factor_effects() -> None:
     stdout = """Condition=majority_vote Seed=7 BalancedAccuracy=0.54
-Condition=majority_vote Seed=19 BalancedAccuracy=0.51
+condition=majority_vote seed=19 mean_balanced_accuracy=0.51
 Condition=majority_vote Seed=31 BalancedAccuracy=0.50
 Factor effects:
   seed: 0.008292
