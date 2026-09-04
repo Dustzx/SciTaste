@@ -1,6 +1,6 @@
 # API provider strategy
 
-Verified: 2026-09-02. Prices and model availability change; always re-check the
+Verified: 2026-09-04. Prices and model availability change; always re-check the
 linked official page before purchasing credits or fixing an experiment manifest.
 
 ## Recommended deployment
@@ -31,6 +31,7 @@ linked official page before purchasing credits or fixing an experiment manifest.
 | DeepSeek official direct | low-cost second model/reviewer | simple compatible endpoint and a distinct model family | capacity and model aliases can change | OpenAI-compatible |
 | OpenAI official direct | frontier reference in supported regions | Responses API, Batch, strong model tiers | mainland China is not on the official supported-country list | OpenAI-compatible Responses |
 | Gemini API direct | cross-family comparison | official OpenAI compatibility and Batch pricing | Google account/region/data terms | OpenAI-compatible |
+| Zhipu BigModel/Z.ai direct | bounded model-node pilots and independent comparison | domestic general API, GLM-5.3-Flash, compatible request shape | Coding Plan and prepaid balance use different endpoints and terms | OpenAI-compatible |
 | Anthropic direct | optional independent critic | strong long-context reviewer family | native Messages behavior differs from the current adapter | native adapter still pending |
 | OpenRouter | short-lived model scouting | one interface for many providers | intermediary routing, privacy, and reproducibility | OpenAI-compatible, provider pinned |
 | Local open-weight runtime | confidential or zero-marginal-call experiments | data stays under project control | hardware, serving, and model quality | direct text-only Transformers or any compatible server |
@@ -115,3 +116,5 @@ exact variables SciTaste needs to log and control.
 - Gemini pricing: <https://ai.google.dev/gemini-api/docs/pricing>
 - Anthropic API overview: <https://docs.anthropic.com/en/api/overview>
 - OpenRouter privacy and routing: <https://openrouter.ai/docs/guides/privacy/data-collection>
+- Zhipu/Z.ai model connection and endpoint guidance: <https://zcode.z.ai/cn/docs/configuration>
+- Zhipu OpenAI-compatible API: <https://docs.bigmodel.cn/cn/guide/develop/openai/introduction>

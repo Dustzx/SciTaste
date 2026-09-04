@@ -11,6 +11,7 @@ from scitaste.benchmark import (
     BenchmarkCondition,
     SciTasteBenchRunner,
     TransferAxis,
+    compare_model_boundaries,
     load_benchmark_suite,
     save_benchmark_report,
     scripted_selections,
@@ -67,6 +68,10 @@ def test_offline_benchmark_measures_augmented_delta_and_robustness() -> None:
     assert set(full.transfer) == set(TransferAxis)
     assert set(full.by_task) == set(TasteTask)
     assert "ranking_correlation" in report.unavailable_metrics
+    assert report.capability_boundary is not None
+    assert len(report.capability_boundary.system_recovery_case_ids) == 5
+    assert report.capability_boundary.system_regression_case_ids == []
+    assert report.capability_boundary.shared_failure_case_ids == []
 
 
 def test_report_persistence_is_content_hashed(tmp_path) -> None:
@@ -171,3 +176,24 @@ def test_non_headline_dogfood_case_is_excluded() -> None:
     assert condition.overall.count == 9
     assert condition.headline.count == 8
     assert report.excluded_headline_case_ids == ["internal-dogfood"]
+
+
+def test_cross_model_boundary_separates_model_misses_from_system_regressions() -> None:
+    suite = load_benchmark_suite(SUITE_PATH)
+    primary = SciTasteBenchRunner(
+        ScriptedPreferenceBackend(scripted_selections(suite)), seed=7
+    ).evaluate(suite)
+    comparator_selections = scripted_selections(suite)
+    for case in suite.cases:
+        comparator_selections[case.request_id(BenchmarkCondition.BASE)] = case.preferred_action_id
+    comparator = SciTasteBenchRunner(
+        ScriptedPreferenceBackend(comparator_selections), seed=7
+    ).evaluate(suite)
+    comparator = comparator.model_copy(update={"model": "comparator-model"})
+
+    attribution = compare_model_boundaries(primary, comparator)
+
+    assert len(attribution.primary_model_limit_candidate_case_ids) == 5
+    assert attribution.comparator_model_limit_candidate_case_ids == []
+    assert attribution.shared_base_failure_case_ids == []
+    assert attribution.primary_system_regression_case_ids == []

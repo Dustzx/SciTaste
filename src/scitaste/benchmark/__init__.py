@@ -1,10 +1,17 @@
 """Controlled scientific-taste evaluation without owning the main framework."""
 
+from scitaste.benchmark.attribution import (
+    compare_model_boundaries,
+    load_benchmark_report,
+    save_boundary_comparison,
+)
 from scitaste.benchmark.models import (
     BenchmarkCase,
     BenchmarkCondition,
     BenchmarkReport,
     BenchmarkSuite,
+    CapabilityBoundaryReport,
+    CrossModelCapabilityComparison,
     TransferAxis,
 )
 from scitaste.benchmark.runner import (
@@ -42,6 +49,8 @@ __all__ = [
     "BenchmarkCondition",
     "BenchmarkReport",
     "BenchmarkSuite",
+    "CapabilityBoundaryReport",
+    "CrossModelCapabilityComparison",
     "MatchedStudyEvaluator",
     "MatchedStudyPlanner",
     "MatchedStudyProtocol",
@@ -56,11 +65,14 @@ __all__ = [
     "StudyStatus",
     "SystemCondition",
     "TransferAxis",
+    "compare_model_boundaries",
+    "load_benchmark_report",
     "load_benchmark_suite",
     "load_study_launch_config",
     "load_study_protocol",
     "load_study_results",
     "save_benchmark_report",
+    "save_boundary_comparison",
     "save_study_plan",
     "save_study_report",
     "scripted_selections",

@@ -1,0 +1,14 @@
+provider: zhipu-direct
+# General prepaid-balance endpoint. Coding Plan keys require the dedicated
+# /api/coding/paas/v4 endpoint and may only be used by supported coding tools.
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+api_style: chat_completions
+timeout_seconds: 180
+max_retries: 2
+json_mode: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled

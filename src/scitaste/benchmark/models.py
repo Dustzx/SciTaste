@@ -192,6 +192,21 @@ class ConditionComparison(BaseModel):
     paired_unchanged: int
 
 
+class CapabilityBoundaryReport(BaseModel):
+    """Paired evidence separating model-only misses from augmentation effects."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    method: str = "paired-base-full-boundary-v1"
+    diagnostic_only: bool = True
+    no_observed_limit_case_ids: list[str]
+    system_recovery_case_ids: list[str]
+    system_regression_case_ids: list[str]
+    shared_failure_case_ids: list[str]
+    model_capability_conclusion: str
+    system_conclusion: str
+
+
 class BenchmarkReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -206,3 +221,28 @@ class BenchmarkReport(BaseModel):
     comparisons_to_base: dict[BenchmarkCondition, ConditionComparison]
     excluded_headline_case_ids: list[str]
     unavailable_metrics: dict[str, str]
+    capability_boundary: CapabilityBoundaryReport | None = None
+
+
+class CrossModelCapabilityComparison(BaseModel):
+    """Same-suite differential evidence for model-specific versus shared limits."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: str = "1.0"
+    method: str = "paired-cross-model-boundary-v1"
+    diagnostic_only: bool = True
+    suite_id: str
+    suite_sha256: str
+    seed: int
+    primary_backend: str
+    primary_model: str
+    comparator_backend: str
+    comparator_model: str
+    both_base_correct_case_ids: list[str]
+    primary_model_limit_candidate_case_ids: list[str]
+    comparator_model_limit_candidate_case_ids: list[str]
+    shared_base_failure_case_ids: list[str]
+    primary_system_regression_case_ids: list[str]
+    comparator_system_regression_case_ids: list[str]
+    attribution_rule: str

@@ -130,6 +130,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   self-iteration case remains dogfooding only.
 - Ranking correlation is unavailable under the pair-selection response contract,
   and Phase 9 system outcomes are explicitly deferred rather than approximated.
+- Base/Full paired outcomes now expose recoveries, regressions, and unresolved
+  shared failures; same-suite, same-seed cross-model reports identify only
+  model-limit candidates and remain diagnostic rather than causal evidence.
 - Deterministic offline acceptance spans all conditions and stores content hashes;
   scripted scores verify the evaluator, not SciTaste effectiveness.
 

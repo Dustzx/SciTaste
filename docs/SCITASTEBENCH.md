@@ -80,3 +80,25 @@ matching config, and use `--record` to preserve exact request/response pairs.
 Tests and default commands never contact a provider or load a checkpoint.
 Generated reports remain ignored; only aggregate acceptance manifests and hashes
 are committed.
+
+## Capability-boundary diagnostics
+
+Every Base/Full report partitions headline cases into paired successes, system
+recoveries, system regressions, and shared failures. This is diagnostic evidence:
+a shared Base/Full failure is not automatically a model limitation, and a Full
+recovery does not establish a hard model ceiling.
+
+To distinguish model-specific candidates from shared suite failures, run the
+identical suite and seed with a second model, then compare the two saved reports:
+
+```bash
+.venv/bin/scitaste benchmark attribute \
+  --primary-report outputs/model-a/benchmark_report.json \
+  --comparator-report outputs/model-b/benchmark_report.json \
+  --output outputs/model-a-vs-model-b
+```
+
+The command rejects different suite hashes or seeds. A Base failure is labelled a
+model-limit candidate only when the comparator succeeds on that identical case;
+shared failures remain unassigned. The output remains a controlled diagnostic,
+not a causal or effectiveness claim.

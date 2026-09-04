@@ -223,6 +223,11 @@ declared information, while Full receives all declared signals. Condition and
 content changes alter the request fingerprint, preventing cross-condition replay.
 The initial synthetic suite is an engineering acceptance fixture, not evidence of
 model quality. Matched-budget system outcomes remain a Phase 9 protocol.
+Base/Full reports additionally classify paired recoveries, regressions, and
+shared failures. Cross-model attribution is permitted only for identical suite
+hashes and seeds; it labels differential Base failures as candidates and leaves
+shared failures unassigned. These diagnostics do not establish causality or
+replace the matched-budget study.
 
 ### ADR-016: Preregistered matrix before system execution
 

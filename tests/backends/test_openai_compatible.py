@@ -289,3 +289,13 @@ def test_config_expands_base_url_but_not_api_key(tmp_path, monkeypatch) -> None:
 
     assert loaded.base_url == "https://regional.example.test/v1"
     assert loaded.api_key_env == "SCITASTE_TEST_API_KEY"
+
+
+def test_zhipu_glm53_flash_example_uses_generic_compatible_contract() -> None:
+    loaded = load_openai_compatible_config("configs/backends/zhipu_glm53_flash.example.yaml")
+
+    assert loaded.provider == "zhipu-direct"
+    assert loaded.base_url == "https://open.bigmodel.cn/api/paas/v4"
+    assert loaded.model == "glm-5.3-flash"
+    assert loaded.api_key_env == "ZAI_API_KEY"
+    assert loaded.extra_body == {"thinking": {"type": "enabled"}}

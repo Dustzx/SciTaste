@@ -109,6 +109,10 @@ semantic versioning.
   Phase 9 dogfooding evidence, plus a proposed bounded model-node
   tool-intelligence decision with explicit alternatives, costs, safety gates,
   and acceptance criteria.
+- Diagnostic Base/Full capability-boundary reports and same-suite, same-seed
+  cross-model comparison with content-hashed CLI output.
+- A provider-SDK-free Zhipu `glm-5.3-flash` example through the existing
+  OpenAI-compatible backend.
 
 ### Changed
 

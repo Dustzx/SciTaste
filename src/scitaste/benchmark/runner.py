@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 
 from scitaste.backends.base import PreferenceBackend
+from scitaste.benchmark.attribution import build_capability_boundary
 from scitaste.benchmark.models import (
     BenchmarkCase,
     BenchmarkCondition,
@@ -61,6 +62,9 @@ class SciTasteBenchRunner:
             for condition, report in condition_reports.items()
             if condition != BenchmarkCondition.BASE
         }
+        excluded_headline_case_ids = [
+            case.case_id for case in suite.cases if not case.headline_eligible
+        ]
         return BenchmarkReport(
             suite_id=suite.suite_id,
             suite_version=suite.version,
@@ -70,9 +74,7 @@ class SciTasteBenchRunner:
             seed=self.seed,
             conditions=condition_reports,
             comparisons_to_base=comparisons,
-            excluded_headline_case_ids=[
-                case.case_id for case in suite.cases if not case.headline_eligible
-            ],
+            excluded_headline_case_ids=excluded_headline_case_ids,
             unavailable_metrics={
                 "ranking_correlation": (
                     "v1 uses fixed candidate pairs; the backend contract does not return "
@@ -82,6 +84,10 @@ class SciTasteBenchRunner:
                     "research-yield and matched-budget outcome metrics belong to Phase 9"
                 ),
             },
+            capability_boundary=build_capability_boundary(
+                condition_reports,
+                excluded_case_ids=excluded_headline_case_ids,
+            ),
         )
 
     def _evaluate_condition(

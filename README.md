@@ -196,6 +196,20 @@ for a multi-case run so model weights load only once. The local backend is a
 model-decision backend, not a replacement for a complete Phase 9 system
 executor.
 
+Compare two same-suite, same-seed benchmark reports without making a causal
+capability claim:
+
+```bash
+.venv/bin/scitaste benchmark attribute \
+  --primary-report outputs/model-a/benchmark_report.json \
+  --comparator-report outputs/model-b/benchmark_report.json \
+  --output outputs/model-a-vs-model-b
+```
+
+New Zhipu pilots use `configs/backends/zhipu_glm53_flash.example.yaml`. It uses
+the existing OpenAI-compatible backend and therefore adds no provider SDK to the
+default installation.
+
 ## Offline Discovery Loop
 
 Run the weak-intuition and strong-hypothesis scenarios through the same engine:

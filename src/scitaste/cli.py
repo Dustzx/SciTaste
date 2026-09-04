@@ -27,11 +27,14 @@ from scitaste.benchmark import (
     MatchedStudyRunner,
     SciTasteBenchRunner,
     SystemCondition,
+    compare_model_boundaries,
+    load_benchmark_report,
     load_benchmark_suite,
     load_study_launch_config,
     load_study_protocol,
     load_study_results,
     save_benchmark_report,
+    save_boundary_comparison,
     save_study_plan,
     save_study_report,
     scripted_selections,
@@ -66,6 +69,10 @@ def _add_common_options(
     parser.add_argument("--config", type=Path, default=None)
     parser.add_argument("--backend", default=default_backend)
     parser.add_argument("--dry-run", action="store_true")
+    _add_log_level_option(parser)
+
+
+def _add_log_level_option(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -230,6 +237,16 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark_run.add_argument("--replay", type=Path, default=None)
     benchmark_run.add_argument("--record", type=Path, default=None)
     benchmark_run.set_defaults(handler=_handle_benchmark_run)
+    benchmark_attribute = benchmark_commands.add_parser(
+        "attribute", help="Separate model-specific misses from SciTaste regressions"
+    )
+    benchmark_attribute.add_argument("--primary-report", type=Path, required=True)
+    benchmark_attribute.add_argument("--comparator-report", type=Path, required=True)
+    benchmark_attribute.add_argument(
+        "--output", type=Path, default=Path("outputs/capability-boundary")
+    )
+    _add_log_level_option(benchmark_attribute)
+    benchmark_attribute.set_defaults(handler=_handle_benchmark_attribute)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -653,6 +670,34 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
                 },
                 "report": manifest["report"],
                 "manifest": manifest["manifest"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _handle_benchmark_attribute(args: argparse.Namespace) -> int:
+    comparison = compare_model_boundaries(
+        load_benchmark_report(args.primary_report),
+        load_benchmark_report(args.comparator_report),
+    )
+    paths = save_boundary_comparison(comparison, args.output)
+    print(
+        json.dumps(
+            {
+                "primary_model": comparison.primary_model,
+                "comparator_model": comparison.comparator_model,
+                "primary_model_limit_candidates": (
+                    comparison.primary_model_limit_candidate_case_ids
+                ),
+                "comparator_model_limit_candidates": (
+                    comparison.comparator_model_limit_candidate_case_ids
+                ),
+                "shared_failures": comparison.shared_base_failure_case_ids,
+                "primary_system_regressions": (comparison.primary_system_regression_case_ids),
+                "comparator_system_regressions": (comparison.comparator_system_regression_case_ids),
+                **paths,
             },
             indent=2,
         )
