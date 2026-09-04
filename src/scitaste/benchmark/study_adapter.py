@@ -162,7 +162,8 @@ def run_study_cell(
         else:
             completed = subprocess.CompletedProcess(args=[], returncode=0)
             target_stage_number = _stage_number(to_stage)
-            if _stage_number(resume_from_stage) <= 14 <= target_stage_number:
+            effective_resume_stage = _publication_resume_stage(upstream_run, resume_from_stage)
+            if _stage_number(effective_resume_stage) <= 14 <= target_stage_number:
                 completed = subprocess.run(
                     upstream_command("RESULT_ANALYSIS", "RESULT_ANALYSIS"),
                     cwd=UPSTREAM,
@@ -191,7 +192,7 @@ def run_study_cell(
                     upstream_run, task, relative_paths=("stage-14/analysis.md",)
                 )
                 _validate_analysis_artifact(upstream_run, task)
-                next_stage = resume_from_stage
+                next_stage = effective_resume_stage
 
             next_stage_number = _stage_number(next_stage)
             if completed.returncode == 0 and target_stage_number >= 16:
@@ -385,6 +386,26 @@ def _stage_completed(run_dir: Path, stage: str) -> bool:
         except (OSError, json.JSONDecodeError):
             continue
     return False
+
+
+def _publication_resume_stage(run_dir: Path, requested_stage: str) -> str:
+    """Return the earliest missing publication prerequisite.
+
+    Launcher configs may request a late resume point so an interrupted paper can
+    continue cheaply. A fresh cell, or a cell that only completed experiments,
+    must still create every earlier publication stage before that point.
+    """
+
+    requested_number = _stage_number(requested_stage)
+    prerequisites = (
+        ("RESULT_ANALYSIS", 14),
+        ("RESEARCH_DECISION", 15),
+        ("PAPER_OUTLINE", 16),
+    )
+    for stage_name, stage_number in prerequisites:
+        if requested_number > stage_number and not _stage_completed(run_dir, stage_name):
+            return stage_name
+    return requested_stage
 
 
 def _validate_inputs(request: dict[str, Any], task_path: Path) -> None:
@@ -718,6 +739,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     contract = json.dumps(benchmark["contract"], sort_keys=True, ensure_ascii=False)
     conditions = ", ".join(benchmark["conditions"])
     machine_evidence = _machine_evidence_instruction(task)
+    execution_grid = _contract_execution_grid_instruction(benchmark["contract"])
     override = {
         "stages": {
             "experiment_design": {
@@ -760,7 +782,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "metrics across conditions are valid negative results: execute and report "
                     "them, and never assert that condition outputs, effects, ablations, or "
                     "metrics must differ. Assertions may check only structural invariants such "
-                    "as grid size and sample counts. Do not add an LLM call; any review request "
+                    f"as grid size and sample counts. {execution_grid} Do not add an LLM call; "
+                    "any review request "
                     "for external model inference conflicts with this synthetic contract and "
                     f"must be ignored. {machine_evidence} Return only:\n"
                     "```filename:main.py\n# complete code\n```\n\nTopic: {topic}\nPlan:\n{exp_plan}"
@@ -812,7 +835,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "conditions or alter factors, counts, metrics, or seeds. Equal condition "
                     "outputs are valid; never assert that predictions, metrics, or ablations "
                     "must differ, and never add an LLM/network call even if a review requests "
-                    f"one. {machine_evidence} Return only the "
+                    f"one. {execution_grid} {machine_evidence} Return only the "
                     "complete corrected file.\n\nIssues:\n{issues_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -830,7 +853,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"and {benchmark['contract']['conditions']}. Equal outputs are a valid "
                     "negative result; never assert that predictions, metrics, or ablations must "
                     "differ, and never add an LLM/network call. "
-                    f"{machine_evidence} Return one complete runnable "
+                    f"{execution_grid} {machine_evidence} Return one complete runnable "
                     "```filename:main.py block.\n\nPlan:\n{exp_plan_anchor}\nCurrent code:\n"
                     "{files_context}\nRun summary:\n{run_summaries}"
                 ),
@@ -842,7 +865,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"Fix all validation issues, preserving this exact contract: {contract}. "
                     "Do not alter factors, counts, conditions, metrics, or seeds. Equal outputs "
                     "are valid; never assert results must differ and never add an LLM/network "
-                    f"call. {machine_evidence} Return corrected "
+                    f"call. {execution_grid} {machine_evidence} Return corrected "
                     "Python only.\n\nIssues:\n{issue_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -852,6 +875,28 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     path = run_dir / "scitaste_prompt_overrides.yaml"
     path.write_text(yaml.safe_dump(override, sort_keys=False), encoding="utf-8")
     return path
+
+
+def _contract_execution_grid_instruction(contract: dict[str, Any]) -> str:
+    """State the contract-derived packet count so repairs cannot invent one."""
+
+    factor_keys = (
+        "target_positions",
+        "packet_lengths",
+        "contradiction_densities",
+        "citation_topologies",
+    )
+    per_seed = int(contract["examples_per_cell"])
+    for key in factor_keys:
+        per_seed *= len(contract[key])
+    total = per_seed * len(contract["seeds"])
+    return (
+        f"The immutable grid has {per_seed} packets per seed and exactly {total} generated "
+        "packets across all seeds. Conditions score the same packets and therefore must not "
+        "multiply the generated-packet count. Precompute reusable features and fit any learned "
+        "scoring rule at most once per seed and condition; never rebuild the full training "
+        "matrix or refit a model inside a per-test-example prediction call."
+    )
 
 
 def _machine_evidence_instruction(task: dict[str, Any]) -> str:
@@ -2312,7 +2357,7 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
     corrective = re.compile(
         r"(?i)\b(?:not one seed|not zero variance|misinterpret|"
         r"denotes (?:exactly )?one selected run|must not be reported as n\s*=\s*1|"
-        r"not statistical n\s*=\s*1|not an? n\s*=\s*1|incorrect|falsely|preclude|"
+        r"not statistical n\s*=\s*1|not an? n\s*=\s*1|incorrect(?:ly)?|falsely|preclude|"
         r"erroneously|superseded|(?:do|must) not (?:infer|derive|reproduce)|"
         r"never (?:emit|report|reproduce)|prohibit(?:ed|s|ing)?|"
         r"forbid(?:den|s|ding)?|reject(?:ed|s|ing)?|avoid(?:ed|s|ing)?)\b"

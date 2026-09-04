@@ -23,6 +23,7 @@ from scitaste.benchmark.study_adapter import (
     _parse_seed_evidence,
     _prepare_stage_seven,
     _publication_asset_violations,
+    _publication_resume_stage,
     _remove_missing_publication_images,
     _sanitize_publication_artifacts,
     _selected_experiment,
@@ -150,6 +151,21 @@ def test_stage_completed_requires_done_health_record(tmp_path) -> None:
     assert _stage_completed(tmp_path, "CITATION_VERIFY")
 
 
+def test_publication_resume_stage_rewinds_to_earliest_missing_prerequisite(tmp_path) -> None:
+    assert _publication_resume_stage(tmp_path, "PAPER_DRAFT") == "RESULT_ANALYSIS"
+
+    for number in (14, 15):
+        stage = tmp_path / f"stage-{number:02d}"
+        stage.mkdir()
+        (stage / "stage_health.json").write_text(json.dumps({"status": "done"}), encoding="utf-8")
+    assert _publication_resume_stage(tmp_path, "PAPER_DRAFT") == "PAPER_OUTLINE"
+
+    stage = tmp_path / "stage-16"
+    stage.mkdir()
+    (stage / "stage_health.json").write_text(json.dumps({"status": "done"}), encoding="utf-8")
+    assert _publication_resume_stage(tmp_path, "PAPER_DRAFT") == "PAPER_DRAFT"
+
+
 def test_guidance_only_exposes_registered_augmentation() -> None:
     task = load_task()
     trace = {"controller_decision": None}
@@ -251,6 +267,8 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "never assert that condition outputs" in code
     assert "Do not add an LLM call" in code
     assert "SCITASTE_EVIDENCE_JSON=" in code
+    assert "exactly 1944 generated packets" in code
+    assert "never rebuild the full training matrix" in code
     paper_system = override["stages"]["paper_draft"]["system"]
     assert "three times for disjoint section batches" in paper_system
     assert "never invent numeric citations" in paper_system.casefold()
@@ -260,6 +278,7 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "do not add, remove, rename" in improve
     assert "Equal outputs are a valid" in improve
     assert "SCITASTE_EVIDENCE_JSON=" in improve
+    assert "exactly 1944 generated packets" in improve
     decision = override["stages"]["research_decision"]["user"]
     assert "write exactly PROCEED" in decision
     assert "future work" in decision
@@ -897,6 +916,15 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
         task=task,
     )
     assert corrected["analysis_reports_primary_metric"] is True
+    corrected_adverb = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.75 across seeds 7, 19, and 31. Prior critiques "
+            "incorrectly asserted N=1; the evidence contains three seeds."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert corrected_adverb["analysis_reports_primary_metric"] is True
     instructional = _analysis_consistency_audit(
         analysis=(
             "Balanced accuracy was 0.75 across seeds 7, 19, and 31. The paper must "
