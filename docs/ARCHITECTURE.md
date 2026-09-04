@@ -451,7 +451,10 @@ pinned to a ProjectRuntime revision. The trusted adapter resolves locators under
 one project root and hashes the current project manifest, registered runs,
 current stage, paper manifests, and declared paper artifacts. Renderer-facing
 documents retain the binding while omitting server-owned proposal payloads. This
-decision accepts the contract and trust boundary, not a completed frontend or
+decision also permits an atomic, hash-chained audit stream only after each
+surface revision or proposal receipt reproduces through the server-owned
+`SurfaceSession`. The stream records proposals, never execution authority. This
+accepts the contract and trust boundary, not a completed frontend or
 authenticated API service.
 
 ### ADR-025: Full workflow stages extend one project-owned state

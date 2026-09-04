@@ -122,7 +122,9 @@ semantic versioning.
 - A non-executable generative UI contract with 11 closed native-component
   schemas, revisioned evidence bindings, proposal-only interactions, a fixed-shell
   renderer projection, deterministic fixtures, and a trusted ProjectRuntime
-  adapter that hashes project-owned runs, stages, papers, and artifacts.
+  adapter that hashes project-owned runs, stages, papers, and artifacts. Accepted
+  surface revisions and proposal receipts can be persisted in an atomic,
+  hash-chained JSONL audit log and semantically replayed.
 - A working `scitaste run full` offline composition that carries one
   `ResearchState` through Discovery, Evidence, Communication, reviewer-driven
   evidence resolution, and editable Figure generation inside one registered

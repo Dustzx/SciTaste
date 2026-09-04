@@ -130,9 +130,9 @@ The log records proposals, not executions. Persisted receipts retain
 `proposal_only` authority and `execution_authority: none`; no log API invokes a
 controller, tool, model, or state mutation. The hash chain detects corruption or
 editing relative to the copy being inspected, but is not a digital signature and
-does not establish authorship. A future project-runtime adapter should anchor the
-latest record hash in its trusted project event log if protection against full
-history replacement is required.
+does not establish authorship. A future ProjectRuntime event-log integration
+should anchor the latest record hash in a separately trusted project record if
+protection against full-history replacement is required.
 
 ## Trusted components
 

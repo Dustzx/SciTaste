@@ -318,6 +318,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Every surface is pinned to a ProjectRuntime revision and to hashes of the exact
   evidence it displays. Client events carry identity only and return
   proposal-only receipts; they cannot invoke tools or mutate research state.
+- Surface openings, revisions, and accepted proposal receipts can be stored in a
+  process-locked, hash-chained log whose complete semantic replay rejects
+  tampering, reordering, truncation, stale revisions, and duplicate events.
 - Deterministic fixtures cover project overview, paper status, blocked-run,
   next-step, and run-comparison surfaces.
 - Pending product integration: a browser/native renderer, an authenticated API,
