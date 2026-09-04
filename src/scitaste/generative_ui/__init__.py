@@ -9,6 +9,17 @@ from scitaste.generative_ui.fixtures import (
     build_run_comparison_fixture,
     fixture_snapshot_binding,
 )
+from scitaste.generative_ui.interaction import (
+    DuplicateEventError,
+    ProposalReceipt,
+    RevisionConflictError,
+    StaleSurfaceError,
+    SurfaceEvent,
+    SurfaceInteractionError,
+    SurfaceSession,
+    UnknownActionError,
+    make_surface_event,
+)
 from scitaste.generative_ui.models import (
     ActionBinding,
     ActionProposal,
@@ -21,6 +32,13 @@ from scitaste.generative_ui.models import (
     SnapshotBinding,
     SurfaceRevision,
     SurfaceSpec,
+)
+from scitaste.generative_ui.projection import (
+    FixedApplicationShell,
+    RendererAction,
+    RendererComponent,
+    RendererDocument,
+    project_surface,
 )
 from scitaste.generative_ui.registry import (
     COMPONENT_REGISTRY,
@@ -38,17 +56,29 @@ __all__ = [
     "ApprovalSubject",
     "CompareRunsPayload",
     "ComponentSpec",
+    "DuplicateEventError",
     "EvidenceKind",
     "EvidenceRef",
+    "FixedApplicationShell",
     "InspectArtifactPayload",
     "ProposalKind",
+    "ProposalReceipt",
     "ProposeTransitionPayload",
+    "RendererAction",
+    "RendererComponent",
+    "RendererDocument",
     "RequestApprovalPayload",
+    "RevisionConflictError",
     "SnapshotBinding",
+    "StaleSurfaceError",
+    "SurfaceEvent",
+    "SurfaceInteractionError",
     "SurfacePurpose",
     "SurfaceRevision",
+    "SurfaceSession",
     "SurfaceSpec",
     "TrustedComponent",
+    "UnknownActionError",
     "build_blocked_run_fixture",
     "build_fixture_surfaces",
     "build_next_step_fixture",
@@ -56,4 +86,6 @@ __all__ = [
     "build_project_overview_fixture",
     "build_run_comparison_fixture",
     "fixture_snapshot_binding",
+    "make_surface_event",
+    "project_surface",
 ]

@@ -6,7 +6,8 @@ it can choose from registered native components and bind those components to a
 specific project snapshot, but it cannot emit HTML, JavaScript, commands, tool
 calls, or state mutations.
 
-This module is a contract layer only. It does not include a web server, renderer,
+This module is a contract and interaction-boundary layer only. It includes a
+framework-neutral renderer document, but not a web server, actual renderer,
 model call, project-runtime adapter, or task executor.
 
 ## Contract hierarchy
@@ -39,6 +40,36 @@ proposal is feasible and accepted.
 document. It does not patch `ResearchState` and cannot execute its declared
 proposal.
 
+## Fixed-shell projection
+
+`project_surface` converts a validated surface into `RendererDocument`. The
+document pins `scitaste-research-shell` with fixed `header`, `project_nav`,
+`workspace`, and `inspector` regions. Generated components can populate only the
+`workspace` region and must still name a trusted native renderer.
+
+The projected action metadata contains an action ID, presentation hint, proposal
+kind, and approval flag. It deliberately omits the server-owned proposal payload
+and rationale, so a browser cannot rewrite a transition target or its evidence
+references. `RendererDocument.execution_authority` is always `none`.
+
+## Interaction handshake
+
+A renderer emits a `SurfaceEvent` containing only identity fields: event/action,
+project, surface revision/fingerprint, and snapshot revision/hash. Arbitrary
+client payloads are schema-forbidden. `SurfaceSession` compares every binding to
+the current server-owned surface before resolving the registered action.
+
+Successful activation returns a `ProposalReceipt` with status
+`proposal_pending`, execution authority `none`, and next boundary
+`deterministic_controller`. It neither invokes that controller nor modifies
+research state. Accepted event IDs cannot be replayed.
+
+`SurfaceSession.replace` applies a complete `SurfaceRevision` only when the
+previous revision and fingerprint still match. It rejects project changes,
+snapshot regression, and two content hashes claiming the same snapshot revision.
+This optimistic check prevents a stale browser tab from proposing against a new
+research state.
+
 ## Trusted components
 
 The initial registry contains `ProjectSummaryCard`, `StageTimeline`,
@@ -61,6 +92,8 @@ The Pydantic contracts reject:
 - proposal targets with the wrong evidence kind;
 - status or paper fields without suitable content-addressed evidence;
 - executable authority or undeclared fields.
+- stale/cross-project events, repeated event IDs, and unknown action IDs;
+- surface revisions based on stale fingerprints or inconsistent snapshot hashes.
 
 A valid hash and locator prove that the surface is bound to an evidence identity;
 they do not by themselves prove that a file exists. The future project-runtime
@@ -92,6 +125,8 @@ on an A2UI package in this phase:
 | `ActionBinding` | user event declaration |
 | `ActionProposal` | typed event payload sent back for validation |
 | `SurfaceRevision` | versioned surface replacement/update |
+| `RendererDocument` | receiver-owned shell plus declarative workspace update |
+| `SurfaceEvent` | identity-only user event returned to the agent boundary |
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,
