@@ -11,13 +11,23 @@ Canonical paths:
 - Window 2: `/home/good/zfx/papers/SciTaste/docs/tasks/WINDOW_2.md`;
 - Window 3: `/home/good/zfx/papers/SciTaste/docs/tasks/WINDOW_3.md`.
 
-## Dispatch threshold
+## Dispatch threshold and autonomy window
 
 A task belongs in a child window only when it is an independently reviewable
-engineering slice that normally needs at least half a focused working day. It
-should own a coherent subsystem boundary, require implementation plus tests and
-documentation, and end in one or more self-contained commits with a measurable
-acceptance gate.
+engineering track that would normally occupy at least one to two focused working
+days. It should own a coherent subsystem boundary, contain multiple ordered work
+packages, require implementation plus tests and documentation, and end in
+several self-contained commits with measurable acceptance gates.
+
+One assignment token authorizes every numbered work package in that Epic. After
+an internal work package passes its focused checks, the child commits it and
+continues directly to the next package; it does not stop for a new token, main-
+window acknowledgement, or integration review. It reports one consolidated
+handoff only after the Epic exit gate is met, or earlier when a genuine scope,
+security, dependency, destructive-operation, or cross-window ownership blocker
+requires main-window authority. A fast implementation is acceptable, but
+completion is judged against all work packages and exit evidence rather than
+elapsed time.
 
 Do not dispatch one-file fixes, formatting, catalog refreshes, isolated tests,
 small documentation edits, merge-conflict cleanup, or exploratory commands.
@@ -70,8 +80,9 @@ A completed child task reports to the main window:
 - migration, dependency, security, and compatibility notes;
 - confirmation that the worktree is clean.
 
-The child does not merge, push `main`, rewrite shared history, or claim real
+For a multi-package Epic, the handoff also lists the commit corresponding to
+each work package. The child does not merge, push `main`, rewrite shared history,
+or claim real
 provider/effectiveness evidence from fixtures. The main window reviews the diff,
 runs integration checks, performs cross-cutting documentation updates, merges,
 and changes the board status.
-

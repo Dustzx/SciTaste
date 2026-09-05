@@ -1,105 +1,136 @@
-# Window 3 Dispatch: Trusted Generative-UI Application Boundary
+# Window 3 Dispatch: Evidence-Native Generative Project Workspace
 
-Assignment token: `W3-generative-ui-app-20260905-r1`
+Assignment token: `W3-evidence-workspace-20260905-r2`
 
-Status: `integrated; awaiting next Epic`
+Status: `dispatched; autonomous execution through all work packages`
 
 ## Workspace
 
 - worktree: `/home/good/zfx/papers/SciTaste-worktrees/generative-ui`
-- branch: `feat/generative-ui-app-boundary`
-- base: the main commit containing this dispatch document
+- branch: `feat/generative-ui-workspace-v2`
+- base: `main` containing this assignment token
 - do not work in `/home/good/zfx/papers/SciTaste`
+
+Create or switch to the named branch from the dispatch-bearing `main` before
+editing. The prior application-boundary Epic is integrated history, not the base
+for an unrebased continuation.
 
 ## Objective
 
-Build the first usable local application boundary for the trusted generative
-interface: a receiver-owned browser shell plus authenticated, loopback-first API
-that reads authoritative projects, builds current surfaces, and accepts only
-identity-only proposal events. It must remain impossible for generated content
-or a browser client to execute tools, inject renderer code, or mutate research
-state.
+Turn the secure local UI boundary into an evidence-native research workspace
+that demonstrates “generation as content”: the server composes the most useful
+trusted view from current project evidence, while the receiver lets a user move
+fluidly among projects, runs, stages, blockers, papers, artifacts, comparisons,
+and pending proposals. Generated content remains typed data inside fixed native
+components; neither the browser nor generated layout receives execution,
+filesystem, renderer-code, or controller authority.
 
-This is a product-boundary Epic, not a static mockup or a few generated HTML
-files.
+This is one multi-package product Epic. Continue from WP1 through WP4 without
+waiting for main-window approval between commits. Do not stop after one new page,
+component, or API route.
 
 ## Owned paths
 
-- `src/scitaste/generative_ui/` for application/session/API/rendering additions;
-- a new focused CLI module beneath `src/scitaste/` and the smallest necessary
-  registrations in `src/scitaste/cli.py`;
-- receiver-owned static assets in a package-data path, with any necessary
-  `pyproject.toml` packaging declaration;
+- `src/scitaste/generative_ui/` including fixed packaged assets;
+- one focused UI CLI module and the smallest registrations required in
+  `src/scitaste/cli.py`;
 - `tests/generative_ui/` and focused `tests/integration/` coverage;
 - `docs/GENERATIVE_UI.md`.
 
-Do not edit common roadmap, architecture, changelog, README, model-node code,
-full workflow code, AutoResearchClaw, or generated `outputs/`.
+Do not edit model nodes, `full_workflow.py`, central roadmap/architecture/
+changelog/README/task documents, AutoResearchClaw, generated `outputs/`, or
+credentials.
 
-## Required behavior
+## Work packages
 
-1. Provide a local application/service object around `ProjectRuntime`,
-   `ProjectSurfaceFactory`, `SurfaceSession`, and `SurfaceAuditLog`. Every request
-   must resolve a canonical project ID and current trusted server-owned surface;
-   client-authored surfaces, components, proposal payloads, or evidence are
-   invalid.
-2. Provide a receiver-owned HTML/CSS/JavaScript shell that renders the closed
-   component registry. Untrusted text must use text nodes/`textContent`; no
-   `innerHTML`, dynamic script, evaluated markup, remote asset, model-generated
-   renderer, or command-bearing field is allowed.
-3. Expose a small versioned JSON API for project discovery, current project
-   surface retrieval, and proposal-event submission. Event input remains the
-   existing identity-only `SurfaceEvent`; success returns only the existing
-   proposal-pending receipt with execution authority `none`.
-4. Authenticate API and non-public asset requests with a configured bearer token
-   or equivalently narrow local session credential. Compare secrets safely; do
-   not accept credentials in query strings, persist them, or include them in
-   logs/errors. Bind to loopback by default and require an explicit unsafe-mode
-   acknowledgement before a non-loopback bind.
-5. Revalidate project revision, evidence hashes, surface fingerprint, and event
-   identity at interaction time. Stale tabs, changed artifacts, duplicate event
-   IDs, cross-project identities, and forged receipts must fail closed.
-6. Persist accepted proposal receipts in a project-owned hash-chained audit log
-   without granting execution authority. Concurrent requests must not lose or
-   reorder accepted events. Define and test the behavior after a process restart.
-7. Add a CLI entry point for serving the local application with explicit outputs
-   root, host, port, and credential-source configuration. Help/dry-run/config
-   validation must not open a listening socket.
-8. Keep project/artifact locators contained. Do not add a general filesystem or
-   arbitrary artifact-download endpoint. If artifact viewing is included, it
-   must be allowlisted from current content-addressed evidence and rehashed on
-   access.
+### WP1 — Authoritative workspace/query model
 
-Prefer the existing dependency set. If a new server dependency is genuinely
-necessary, isolate it behind an optional extra, justify it in the handoff, and
-ensure importing core SciTaste still works without that extra.
+1. Add closed, versioned server-owned view/query contracts for project list,
+   overview, run/stage explorer, paper/evidence view, run comparison, blocker
+   view, and pending-proposal history. Client input may select only validated
+   project-owned IDs and predefined view purposes; it cannot submit components,
+   fields, layout, evidence, filters, or renderer definitions.
+2. Compose each view from a fresh `ProjectRuntime` snapshot and content-addressed
+   evidence. Return explicit empty/unavailable states rather than inventing
+   stages, metrics, paper content, or project health.
+3. Add deterministic presentation summaries that explain what a stage produced,
+   why a run is blocked/failed, and where the current paper/evidence lives using
+   typed source fields—not model-authored prose.
+4. Bind workspace/view identity, project revision, query selection, and every
+   displayed evidence hash into the surface fingerprint.
 
-## Tests and acceptance
+Commit WP1, run its focused tests, then continue automatically.
 
-At minimum test:
+### WP2 — Navigable generation-as-content receiver
 
-- a real `ProjectRuntime` fixture renders through the packaged fixed shell;
-- HTML/script-like evidence is displayed inertly and cannot alter the DOM model;
-- unauthenticated, malformed, cross-project, stale, duplicated, and tampered
-  requests are rejected without state mutation;
-- valid proposal submission returns `proposal_pending`/`none`, extends a
-  replayable audit chain exactly once, and never invokes a controller or tool;
-- project/artifact changes between GET and POST invalidate the old event;
-- restart recovery retains duplicate-event protection and audit integrity;
-- concurrent valid events serialize without lost records;
-- default host is loopback and non-loopback configuration is fail-closed;
-- package builds include all fixed renderer assets.
+1. Expand the fixed receiver into an accessible, responsive workspace with
+   project switcher, view navigation, stage/run selection, evidence detail,
+   blocker drill-down, comparison controls, and visible freshness/provenance.
+   Use only receiver-owned DOM construction and the closed component registry.
+2. Preserve browser navigation/back-forward state using validated identity-only
+   URLs or history state. Reload and deep-link resolution must revalidate server
+   evidence and fail closed on stale or unknown identity.
+3. Add conditional refresh with ETag or an equivalent content fingerprint so
+   unchanged views are cheap and changed project revisions invalidate stale
+   actions. Do not add a model-generated renderer or arbitrary client query.
+4. Make proposal state understandable: pending means recorded advice awaiting a
+   later deterministic controller boundary, never “approved” or “executed.”
 
-Run focused tests, Ruff for owned files, a wheel/package-data check, and the
-complete `make check`. Do not make real provider calls or execute proposals.
+Commit WP2, run application/receiver tests, then continue automatically.
 
-## Handoff
+### WP3 — Safe evidence and artifact inspection
 
-Return a clean feature branch with cohesive commits and the standard handoff
-fields from `docs/tasks/README.md`. Document the exact trust boundary that still
-separates a proposal receipt from controller approval and execution. Do not merge
-or push `main`.
+1. Add a narrow content-addressed inspection path only for artifacts already
+   present in the authoritative selected view. Rehash on access, enforce project
+   containment, regular-file/no-symlink semantics, media allowlists, and byte
+   limits; changed or missing artifacts invalidate the view.
+2. Render text, JSON, Markdown source, images, and PDF metadata/preview through
+   fixed receiver behavior. Treat HTML/script-like bytes as inert text; never
+   execute artifact scripts, serve active HTML, or expose a general download or
+   filesystem endpoint.
+3. Record proposal/inspection events in the existing project-owned hash chain,
+   preserve restart duplicate protection and concurrency ordering, and expose a
+   read-only verified pending-proposal history.
+4. Ensure project switching cannot leak an artifact, event, or audit locator
+   from another project.
 
-Handoff `03573f5` was reviewed and integrated through main commit `372a0a9`.
-Do not start another assignment from this document until its token and status
-are replaced.
+Commit WP3, run security/integration tests, then continue automatically.
+
+### WP4 — Product hardening and exit evidence
+
+1. Test realistic projects containing successful, failed, blocked, legacy,
+   no-paper, paper-bearing, multi-run, and changed-artifact states. Include
+   hostile identifiers/content, stale tabs, forged selection, oversized files,
+   MIME confusion, symlink/race attempts, corrupted audit, restart, and
+   concurrent events.
+2. Verify keyboard navigation, focus/error states, readable bilingual stage
+   labels where the repository already defines them, narrow/mobile layout, CSP,
+   no remote resources, and absence of unsafe DOM sinks.
+3. Verify unauthenticated requests reveal no project metadata; non-loopback bind
+   remains explicit; errors/logs never expose bearer tokens, unpublished content,
+   or arbitrary filesystem paths.
+4. Update `docs/GENERATIVE_UI.md`, run Ruff, all generative-UI and CLI integration
+   tests, `make check`, coverage for owned production modules, and a wheel
+   package-data inspection.
+
+## Epic exit gate
+
+The Epic is complete only when a user can securely navigate at least the seven
+registered workspace views against real `ProjectRuntime` fixtures, inspect only
+content-addressed visible artifacts, understand run/stage/paper/proposal state,
+survive restart/concurrency/tamper tests, and never cross the proposal-only trust
+boundary. Static mockups or synthetic fixture screenshots alone do not pass.
+
+No real provider call, controller approval, tool execution, or external network
+service is authorized.
+
+## Autonomous handoff
+
+Do not request a new task token after WP1, WP2, or WP3. Continue unless a genuine
+cross-owned change or security/dependency decision blocks the Epic. At the final
+handoff report each WP commit SHA, exact tests and coverage, package verification,
+remaining browser/security limits, compatibility/dependency notes, and a clean
+worktree. Do not merge or push `main`.
+
+Previous integrated Epic: `W3-generative-ui-app-20260905-r1`, branch handoff
+`03573f5`, integrated and subsequently hardened on main.

@@ -1,99 +1,132 @@
-# Window 2 Dispatch: Model-Node Pilot Orchestration
+# Window 2 Dispatch: Project-Scoped Model-Node Runtime
 
-Assignment token: `W2-model-pilot-orchestration-20260905-r1`
+Assignment token: `W2-model-node-runtime-20260905-r2`
 
-Status: `integrated; awaiting next Epic`
+Status: `dispatched; autonomous execution through all work packages`
 
 ## Workspace
 
 - worktree: `/home/good/zfx/papers/SciTaste-worktrees/model-nodes`
-- branch: `feat/model-node-pilot-orchestration`
-- base: the main commit containing this dispatch document
+- branch: `feat/model-node-runtime-v2`
+- base: `main` containing this assignment token
 - do not work in `/home/good/zfx/papers/SciTaste`
+
+Create or switch to the named branch from the dispatch-bearing `main` before
+editing. The prior pilot-orchestration Epic is integrated history, not the base
+for an unrebased continuation.
 
 ## Objective
 
-Turn the existing library-only bounded model-node pilot into a production-facing,
-fail-closed orchestration path. A user must be able to plan, execute, resume, and
-inspect an offline/replay/live-capable pilot through the SciTaste CLI while all
-reports and recordings are owned by one `ProjectRuntime` run. This is an
-engineering-pilot interface, not an effectiveness claim.
+Build the production, project-scoped runtime that turns the existing bounded
+node implementations into a reusable SciTaste subsystem outside the special
+self-development pilot. It must make provider generation capacity visibly
+different from deterministic proposal-admission budgets, persist every
+invocation and cumulative resource effect across restarts, support exact replay,
+and expose a narrow integration facade that main can later connect to the full
+workflow without giving a model controller or executor authority.
 
-This is one cohesive Epic. Do not reduce it to a thin CLI wrapper around test
-fixtures.
+This is one multi-package Epic. Continue from WP1 through WP4 without waiting for
+main-window approval between commits. Do not stop after adding only configuration
+models or a thin CLI.
 
 ## Owned paths
 
-- `src/scitaste/model_nodes/` for orchestration/config/report additions;
-- a new focused CLI module beneath `src/scitaste/` and the smallest necessary
-  registrations in `src/scitaste/cli.py`;
-- `configs/model_nodes/` for versioned non-secret examples;
+- `src/scitaste/model_nodes/`;
+- one focused model-node CLI module and the smallest registrations required in
+  `src/scitaste/cli.py`;
+- `configs/model_nodes/` for non-secret runtime/profile examples;
 - `tests/model_nodes/` and focused `tests/integration/` coverage;
 - `docs/BOUNDED_MODEL_NODES.md`.
 
-Do not edit common roadmap, architecture, changelog, README, generative-UI code,
-full workflow code, AutoResearchClaw, or generated `outputs/`.
+Do not edit generative UI, `full_workflow.py`, central roadmap/architecture/
+changelog/README/task documents, AutoResearchClaw, generated `outputs/`, or
+credentials.
 
-## Required behavior
+## Work packages
 
-1. Add strict configuration loading for the committed pilot protocol, condition
-   bindings, optional external manual-intervention measurements, optional
-   independent-review evidence, and the compatible live-backend configuration.
-   Unknown fields, unsafe paths, identity drift, and protocol-hash drift fail.
-2. Add CLI operations with an internally consistent namespace for at least:
-   plan/dry-run, execute-or-resume, and status/verify. Exact names may follow the
-   existing CLI style, but must be documented and covered by integration tests.
-3. Register a unique run through `ProjectRuntime`; keep the canonical report,
-   exact recording, verification record, configuration/protocol hashes, and
-   failed-attempt evidence below that run. Never write a cross-project path.
-4. Make execution resumable only at auditable case boundaries. Reuse a completed
-   case only after its input, protocol, backend identity, response/measurement
-   evidence, and predecessor chain validate. Archive incomplete attempts and
-   reject tampered completed evidence.
-5. Require an explicit live opt-in in both configuration and CLI. Dry-run,
-   status, tests, and default execution must not contact a provider. Never read a
-   credential until a live case actually starts.
-6. Preserve the four real condition types. Scripted/replay results cannot satisfy
-   live gates; fixtures cannot satisfy external measurements or independent
-   review. A missing live binding must produce a planned/blocker outcome, not a
-   crash or substituted result.
-7. Publish atomically and refuse overwrite. Concurrent attempts against one run
-   must conflict or serialize without losing evidence.
-8. Return machine-readable CLI summaries containing project/run identity,
-   protocol/report hashes, completed/planned/blocked counts, cost/token/latency
-   telemetry when measured, and the precise acceptance state.
+### WP1 — Budget and capability profiles
 
-## Tests and acceptance
+1. Introduce a strict, versioned runtime/profile contract that distinguishes:
+   provider generation envelope (request/output/context capability), node
+   admission budget (input/output/total tokens, latency, tools and cost), and
+   cumulative project budget. Preserve backward compatibility with existing
+   backend and pilot configuration.
+2. Allow the selected node/case to bind an explicit profile instead of relying
+   on one backend-wide `max_output_tokens`. Validate incompatible ceilings and
+   surface both effective limits in plan/status output and fingerprints.
+3. Provide content-addressed examples for short structured semantic nodes and a
+   deeper semantic-analysis profile. Do not label either as unrestricted code
+   generation, guess provider pricing, or enable live calls by default.
+4. Add tests proving that the 2,048-token self-development probe limit is local
+   to that immutable configuration and cannot become a global SciTaste limit.
 
-At minimum test:
+Commit WP1, run its focused tests, then continue automatically.
 
-- dry-run is mutation-free and network-free;
-- a complete scripted + record/replay run produces a verifiable report;
-- a live condition without explicit opt-in remains planned/blocked;
-- external measurement and review inputs are content-addressed and cannot be
-  replaced by fixture values;
-- interruption resumes a valid prefix and archives an incomplete case;
-- changed protocol/config, changed backend identity, corrupt report/recording,
-  stale project revision, and an existing destination fail closed;
-- two writers cannot silently overwrite the same run;
-- no secrets appear in reports, exceptions, CLI JSON, or test snapshots.
+### WP2 — Durable `ModelNodeRuntime`
 
-Run focused tests, Ruff for owned files, and the complete `make check`. No real
-network call is authorized by this assignment.
+1. Add a project/run-owned runtime for normal node invocations. A registered
+   invocation binds project and state revision, node/input/context, trigger
+   reason, profile, policy, provider/model, seed, request fingerprint, and
+   predecessor ledger hash before contacting a backend.
+2. Persist accepted, rejected, not-applicable, failed, and planned outcomes.
+   Accepted remains proposal-only and executable false. Known cost from every
+   non-cached response—including rejected output—must advance the cumulative
+   ledger; unknown cost blocks further acceptance under a priced policy.
+3. Make interruption/resume and concurrent writers fail closed. Reuse only a
+   verified contiguous ledger prefix. Archive incomplete paid attempts and bind
+   exact live/record/replay evidence without storing authorization headers.
+4. Support exact replay by request/profile/policy/state identity with no silent
+   live fallback, provider alias, or cache substitution.
 
-## Handoff
+Commit WP2, run its focused tests, then continue automatically.
 
-Return a clean feature branch with cohesive commits and the standard handoff
-fields from `docs/tasks/README.md`. Explicitly list any remaining step needed for
-a real `zhipu-direct/glm-5.3-flash` execution. Do not merge or push `main`.
+### WP3 — Narrow workflow facade and CLI
 
-Handoff `b3a9dd3` passed 400 branch tests and was reviewed and integrated through
-main commit `97c8d8b`. Main hardening commits `e43958b` and `d08ee9f` added
-resume-aware dry-run, current-run selection, resume-attempt accounting,
-pre-mutation prefix validation, registration/evidence metadata verification, and
-verified finalization recovery; the focused suite passes 23 tests. A real
-GLM-5.3-Flash run still requires independently captured manual
-measurements and review, confirmed account-specific pricing, an enabled live
-configuration, `ZAI_API_KEY`, and explicit `--allow-live`; none was fabricated or
-invoked during integration. Do not start another assignment from this document
-until its token and status are replaced.
+1. Expose an integration facade for the three implemented node types. It accepts
+   an explicit immutable state projection and trigger; it returns a typed
+   proposal/result plus ledger locator and never mutates `ResearchState`.
+2. Add project-scoped plan, execute/resume, status/verify, and replay CLI paths.
+   Planning/status/default execution are network-free. Live execution requires
+   profile permission, backend permission, and caller opt-in.
+3. Machine output must show the effective generation envelope separately from
+   admission/cumulative budgets, invocation counts, cache/replay state, token/
+   cost/latency telemetry, blockers, and project-owned evidence locators without
+   raw responses or secret values.
+4. Provide fixtures demonstrating review parsing, interpretation criticism, and
+   ambiguity routing across more than one process lifecycle.
+
+Commit WP3, run CLI/integration checks, then continue automatically.
+
+### WP4 — Hardening and exit evidence
+
+1. Cover corrupt ledger entries, stale project revision, changed profile/policy,
+   partial publication, replay miss, backend identity drift, unknown cost,
+   over-budget response, duplicate invocation ID, process restart, and concurrent
+   writers.
+2. Verify public-model compatibility or version/migration handling, deterministic
+   serialization, no secret reflection, no import-time provider dependency, and
+   no network access in tests.
+3. Update `docs/BOUNDED_MODEL_NODES.md`, run Ruff, the complete model-node suite,
+   integration tests, `make check`, and coverage for owned production modules.
+
+## Epic exit gate
+
+The Epic is complete only when all four work packages are committed, a normal
+project (not the special pilot runner) can plan/execute/resume/verify/replay the
+three bounded nodes through the new runtime, budget layers are unambiguous in
+both schemas and CLI output, project evidence survives restart and tamper checks,
+and every proposal remains non-executable.
+
+No real provider call is authorized. Do not fabricate pricing, external review,
+or effectiveness evidence.
+
+## Autonomous handoff
+
+Do not request a new task token after WP1, WP2, or WP3. Continue unless a genuine
+cross-owned change or security/dependency decision blocks the Epic. At the final
+handoff report each WP commit SHA, exact tests and coverage, remaining limits,
+compatibility/dependency/security notes, and a clean worktree. Do not merge or
+push `main`.
+
+Previous integrated Epic: `W2-model-pilot-orchestration-20260905-r1`, branch
+handoff `b3a9dd3`, integrated and subsequently hardened on main.

@@ -167,6 +167,15 @@ study may compare Zhipu `glm-5.3-flash`, local 2B/4B text models, and Qwen3-VL-4
 for a separate visual node. Each provider/model is a distinct registered
 condition.
 
+The probe's `max_output_tokens: 2048` is only the provider-request generation
+ceiling for that one content-addressed backend configuration. It is not a global
+SciTaste limit, a model context limit, or permission for the node result to pass.
+The pilot's independent `NodePolicy.max_output_tokens: 100` remains the stricter
+admission budget and is why a longer but valid provider response is retained and
+rejected. Normal semantic nodes must select an explicit workload profile;
+long-form code or manuscript generation belongs to a separately budgeted
+executor/writing path and must not silently reuse this engineering-probe file.
+
 ADR-022 must stay proposed until the local self-development record verifies at
 least the registered gates: schema success rate 0.98, zero deterministic-gate
 bypasses, complete record/replay coverage, at least 30% manual-intervention
