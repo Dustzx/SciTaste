@@ -162,6 +162,77 @@ reduction, no unsupported-claim increase, no unbounded tool calls, no more than
 $0.15 additional API cost per project, and independent outcome review. Passing
 the offline tests below establishes only the implementation substrate.
 
+## Versioned self-development pilot
+
+`bounded_self_development_pilot_v1.yaml` is the committed protocol fixture for
+the implementation pilot. Its protocol, cases, input envelopes, `NodeContext`,
+`NodePolicy`, budgets, expected applicability, allowed outcomes, seeds, and
+backend/model identities are all explicit and closed to unknown fields. The
+fixture is permanently marked `self_dogfooding_only: true`,
+`retrieval_eligible: false`, and `effectiveness_claim: false`; a passing report
+does not change those declarations.
+
+The runner distinguishes four conditions by concrete backend type:
+
+| Condition | Behavior | Backend boundary |
+|---|---|---|
+| `deterministic_only` | records the externally evidenced manual-intervention/handleability baseline and never invokes a model backend | no backend binding is permitted |
+| `scripted_node` | executes deterministic offline fixtures | only `ScriptedStructuredBackend`, optionally inside `RecordingStructuredBackend` |
+| `replay_node` | reproduces an exact recorded request | only `ReplayStructuredBackend`; a replay miss never falls back |
+| `live_structured_node` | remains a planned result when no backend is injected | executes only an explicitly injected `StructuredOpenAICompatibleBackend` whose own `live_enabled` gate is true |
+
+Consequently scripted or replay evidence cannot be labelled as live evidence.
+The committed fixture includes all three nodes, an applicable ambiguous-action
+case, a clear-margin not-applicable case, and a recording/replay pair with an
+identical request contract. This module is not connected to the CLI, runtime,
+controller, executor, retrieval corpus, or full workflow.
+
+Each manual-intervention measurement names its source and pins the external
+measurement artifact with `evidence_sha256`; deterministic baselines also state
+whether the case was handleable without a model.
+
+`BoundedPilotRunner` produces a result for every declared case plus separate
+total-case and actual planned-outcome counts, followed by invoked,
+not-applicable, accepted, rejected, schema-valid, gate-bypass,
+unsupported-reference/action, token, measured-cost, latency, manual-intervention,
+and bounded-tool-call counts. Only `accepted` increments `successful_count`;
+expected rejections, deterministic baselines, planned live cases, and expected
+not-applicable cases remain distinct audit outcomes. Each invocation retains the
+request, response-content, result, and case-evidence fingerprints. A
+deterministic-only result instead retains a fingerprint of its complete baseline
+record.
+
+Exact replay coverage is credited only when the same report contains both a
+successful non-cached recording and a successful cached replay with identical
+request and response-content fingerprints. Merely configuring a replay case is
+not evidence. Additional API cost is aggregated per project from non-cached
+responses; missing cost telemetry blocks that acceptance metric.
+
+The acceptance evaluator returns `pass`, `fail`, or `blocker` separately for:
+
+- schema validity at or above 0.98;
+- zero gate bypasses;
+- zero cases left at the planned-only outcome;
+- 1.0 exact recording/replay coverage;
+- at least 0.30 measured manual-intervention reduction;
+- no increase over the declared unsupported claim/reference/action baseline;
+- zero tool-call proposals beyond the per-case bound;
+- no more than USD 0.15 additional API cost per project;
+- protocol-outcome conformance; and
+- independent outcome review.
+
+Missing denominators, baselines, telemetry, replay pairs, or review evidence are
+blockers, never inferred passes. A live case without its explicitly injected
+backend remains `planned` and makes the report blocked. A report is eligible
+only when every metric passes. Eligibility still means only that the registered
+pilot gates passed; it is not an effectiveness or autonomy claim.
+
+`save_pilot_report` verifies the report's canonical SHA-256, writes a fully
+fsynced temporary file in the destination directory, and publishes it
+atomically. It refuses to overwrite an existing path unless the caller makes
+that choice explicit. Loading a report strictly revalidates its complete schema
+and canonical hash, so content tampering is rejected.
+
 ## Verification
 
 ```bash
