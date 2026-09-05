@@ -327,7 +327,7 @@ def test_concurrent_runner_for_same_output_fails_without_mutation(tmp_path) -> N
     lock_path = tmp_path / ".study.lock"
     with lock_path.open("a+b") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        with pytest.raises(RuntimeError, match="another study runner"):
+        with pytest.raises(ValueError, match="another study runner"):
             MatchedStudyRunner(protocol, launch_config(), output_dir=tmp_path).run(max_cells=1)
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 

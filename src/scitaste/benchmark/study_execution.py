@@ -524,7 +524,7 @@ class MatchedStudyRunner:
             try:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
-                raise RuntimeError("another study runner owns this output directory") from exc
+                raise ValueError("another study runner owns this output directory") from exc
             try:
                 yield
             finally:

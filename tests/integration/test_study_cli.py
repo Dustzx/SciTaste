@@ -6,6 +6,7 @@ import sys
 from scitaste.benchmark.study import load_study_protocol
 from scitaste.benchmark.study_models import StudyResults
 from scitaste.cli import main
+from scitaste.project import ProjectManifest, ProjectRuntime
 
 
 def test_study_plan_cli_writes_fixed_matrix(tmp_path) -> None:
@@ -176,3 +177,165 @@ Path(os.environ["SCITASTE_STUDY_CELL_RESULT"]).write_text(
     assert results["records"][0]["status"] == "succeeded"
     assert results["records"][0]["evidence_class"] == "synthetic"
     assert results["records"][0]["artifacts"][0]["path"].endswith("paper.md")
+
+
+def test_study_project_run_cli_dry_run_does_not_register_run(tmp_path, capsys) -> None:
+    outputs = tmp_path / "outputs"
+    runtime = ProjectRuntime(outputs)
+    runtime.create(
+        ProjectManifest(
+            project_id="cli-study-project",
+            title="CLI study",
+            research_direction="Keep Phase 9 execution project-owned.",
+            status="active",
+            stage_semantics="matched-budget-study-cells",
+        )
+    )
+
+    assert (
+        main(
+            [
+                "study",
+                "project-run",
+                "--config",
+                "configs/experiments/matched_budget_local_pilot_v1.yaml",
+                "--launch-config",
+                "configs/experiments/study_launchers.example.yaml",
+                "--project-id",
+                "cli-study-project",
+                "--run-id",
+                "cli-study-run",
+                "--outputs-root",
+                str(outputs),
+                "--provider",
+                "scripted",
+                "--model",
+                "deterministic-adapter",
+                "--condition",
+                "autoresearchclaw",
+                "--max-cells",
+                "1",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["run_status"] == "planned"
+    assert summary["study"]["selected_cells"] == 1
+    assert runtime.open("cli-study-project").manifest.runs == []
+
+
+def test_study_project_run_cli_registers_partial_and_resumes(tmp_path, capsys) -> None:
+    adapter = tmp_path / "project_adapter.py"
+    adapter.write_text(
+        """
+import json
+import os
+from pathlib import Path
+
+cell_dir = Path(os.environ["SCITASTE_STUDY_CELL_DIR"])
+(cell_dir / "paper.md").write_text("project-owned synthetic artifact", encoding="utf-8")
+result = {
+    "schema_version": "1.0",
+    "status": "succeeded",
+    "evidence_class": "synthetic",
+    "usage": {
+        "experiments": 1,
+        "api_cost_usd": 0,
+        "search_queries": 0,
+        "llm_tokens": 100,
+    },
+    "outcome": {
+        "useful_results": 1,
+        "proposed_ideas": 1,
+        "valid_ideas": 1,
+        "pilots": 1,
+        "discarded_ideas": 0,
+        "unproductive_experiments": 0,
+        "total_experiments": 1,
+        "gpu_hours_before_useful_signal": 0,
+        "pivots": 0,
+        "correct_pivots": 0,
+        "evidence_sufficiency": 0.5,
+        "reviewer_concerns_opened": 0,
+        "reviewer_concerns_closed": 0,
+        "total_claims": 1,
+        "unsupported_claims": 0,
+    },
+    "artifact_paths": ["paper.md"],
+}
+Path(os.environ["SCITASTE_STUDY_CELL_RESULT"]).write_text(
+    json.dumps(result), encoding="utf-8"
+)
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    launch_config = tmp_path / "project_launchers.yaml"
+    launch_config.write_text(
+        "\n".join(
+            [
+                'schema_version: "1.0"',
+                "launchers:",
+                "  autoresearchclaw:",
+                "    command:",
+                f"      - {sys.executable}",
+                f"      - {adapter}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    outputs = tmp_path / "outputs"
+    runtime = ProjectRuntime(outputs)
+    runtime.create(
+        ProjectManifest(
+            project_id="cli-managed-study",
+            title="Managed CLI study",
+            research_direction="Resume only content-bound Phase 9 cells.",
+            status="active",
+            stage_semantics="matched-budget-study-cells",
+        )
+    )
+    command = [
+        "study",
+        "project-run",
+        "--config",
+        "configs/experiments/matched_budget_local_pilot_v1.yaml",
+        "--launch-config",
+        str(launch_config),
+        "--project-id",
+        "cli-managed-study",
+        "--run-id",
+        "managed-study-run",
+        "--outputs-root",
+        str(outputs),
+        "--provider",
+        "scripted",
+        "--model",
+        "deterministic-adapter",
+        "--condition",
+        "autoresearchclaw",
+        "--max-cells",
+        "1",
+    ]
+
+    assert main(command) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert first["run_status"] == "partial"
+    assert first["study"]["executed_cells"] == 1
+    snapshot = runtime.open("cli-managed-study")
+    assert snapshot.manifest.current_run == "managed-study-run"
+    assert snapshot.manifest.runs[0].status == "partial"
+    study_root = outputs / "projects/cli-managed-study/runs/managed-study-run/study"
+    assert (study_root / "study_run_manifest.json").is_file()
+    assert len(list(study_root.glob("cells/*/cell_checkpoint.json"))) == 1
+
+    assert main([*command, "--resume"]) == 0
+    resumed = json.loads(capsys.readouterr().out)
+    assert resumed["run_status"] == "partial"
+    assert resumed["study"]["executed_cells"] == 0
+    assert resumed["study"]["resumed_cells"] == 1
+    assert runtime.open("cli-managed-study").manifest.runs[0].model_extra["resume_attempt"] == 1

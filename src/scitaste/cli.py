@@ -25,6 +25,8 @@ from scitaste.benchmark import (
     MatchedStudyEvaluator,
     MatchedStudyPlanner,
     MatchedStudyRunner,
+    ProjectMatchedStudyRunner,
+    ProjectStudyConfig,
     SciTasteBenchRunner,
     SystemCondition,
     compare_model_boundaries,
@@ -371,6 +373,39 @@ def build_parser() -> argparse.ArgumentParser:
     study_run.add_argument("--max-cells", type=int, default=None)
     study_run.add_argument("--no-resume", action="store_true")
     study_run.set_defaults(handler=_handle_study_run)
+    study_project_run = study_commands.add_parser(
+        "project-run",
+        help="Run integrity-checked study cells inside an existing project",
+    )
+    study_project_run.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/experiments/matched_budget_study_v1.yaml"),
+    )
+    study_project_run.add_argument("--launch-config", type=Path, required=True)
+    study_project_run.add_argument("--project-id", required=True)
+    study_project_run.add_argument("--run-id", required=True)
+    study_project_run.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    study_project_run.add_argument("--provider", required=True)
+    study_project_run.add_argument("--model", required=True)
+    study_project_run.add_argument("--run-seed", type=int, default=0)
+    study_project_run.add_argument(
+        "--evidence-scope",
+        default="phase9-engineering-evidence",
+    )
+    study_project_run.add_argument("--task", action="append", default=None)
+    study_project_run.add_argument(
+        "--condition",
+        action="append",
+        choices=[condition.value for condition in SystemCondition],
+        default=None,
+    )
+    study_project_run.add_argument("--cell-id", action="append", default=None)
+    study_project_run.add_argument("--max-cells", type=int, default=None)
+    study_project_run.add_argument("--resume", action="store_true")
+    study_project_run.add_argument("--dry-run", action="store_true")
+    _add_log_level_option(study_project_run)
+    study_project_run.set_defaults(handler=_handle_study_project_run)
     study_evaluate = study_commands.add_parser(
         "evaluate", help="Audit completed cells and blinded expert reviews"
     )
@@ -1104,6 +1139,35 @@ def _handle_study_run(args: argparse.Namespace) -> int:
     )
     print(summary.model_dump_json(indent=2))
     return 0 if summary.failed_cells == 0 else 1
+
+
+def _handle_study_project_run(args: argparse.Namespace) -> int:
+    protocol = load_study_protocol(args.config)
+    launch_config = load_study_launch_config(args.launch_config)
+    summary = ProjectMatchedStudyRunner(
+        ProjectRuntime(args.outputs_root),
+        protocol,
+        launch_config,
+    ).run(
+        ProjectStudyConfig(
+            project_id=args.project_id,
+            run_id=args.run_id,
+            provider=args.provider,
+            model=args.model,
+            seed=args.run_seed,
+            evidence_scope=args.evidence_scope,
+        ),
+        task_ids=args.task,
+        conditions=(
+            [SystemCondition(condition) for condition in args.condition] if args.condition else None
+        ),
+        cell_ids=args.cell_id,
+        max_cells=args.max_cells,
+        resume=args.resume,
+        dry_run=args.dry_run,
+    )
+    print(summary.model_dump_json(indent=2))
+    return 0 if summary.study.failed_cells == 0 else 1
 
 
 def _handle_study_evaluate(args: argparse.Namespace) -> int:
