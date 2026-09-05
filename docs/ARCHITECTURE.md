@@ -37,6 +37,9 @@ returns observations and artifacts but cannot select the next global action.
 - `benchmark`: evaluation-only fixed-pair suites, isolated augmentation
   conditions, robustness/transfer metrics, paired Base comparisons, and the
   matched-budget system-study planner/auditor.
+- `model_nodes`: opt-in typed semantic advice, pinned structured backends,
+  exact record/replay, and project-owned pilot orchestration whose resumable
+  evidence remains engineering-only until independently accepted.
 - `cli`: thin composition root; domain behavior stays in the packages above.
 
 ## Invariants
@@ -113,6 +116,9 @@ returns observations and artifacts but cannot select the next global action.
 38. Publication packaging is a deterministic post-audit projection: it may render
     Markdown into a self-contained TeX/PDF bundle but cannot add scientific prose,
     citations, measurements, or model calls.
+39. A model-node pilot may resume only a content-validated contiguous case chain;
+    the selected ProjectRuntime run and its final metadata must agree with the
+    manifest, report, recording, and verification hashes.
 
 ## Architecture decision records
 
@@ -418,13 +424,15 @@ and ambiguity-triggered action ranking. Nodes are opt-in, fingerprinted,
 usage-metered, recorded for exact replay, and unable to silently switch provider
 or model. Rejected output remains untrusted and has no executable proposal. New
 Zhipu pilots use `GLM-5.3-Flash`; local and online nodes remain separate study
-conditions. The compatible live transport and versioned self-development pilot
-runner are now implemented, but missing live execution, external manual
-measurements, or independent review produce an explicit blocker. The ADR remains
-proposed because passing synthetic transport/tests are not the self-development
-pilot. It does not alter the registered Phase 9 protocol and becomes accepted
-only after the real pilot clears the recorded schema, safety, intervention, and
-cost gates.
+conditions. The compatible live transport, versioned self-development pilot,
+and ProjectRuntime-owned plan/execute/resume/status path are now implemented.
+Case-boundary checkpoints bind their predecessor and exact recording, while
+project registration binds the final manifest/report/verification hashes.
+Missing live execution, external manual measurements, or independent review
+still produce an explicit blocker. The ADR remains proposed because passing
+synthetic transport/tests are not the self-development pilot. It does not alter
+the registered Phase 9 protocol and becomes accepted only after the real pilot
+clears the recorded schema, safety, intervention, and cost gates.
 
 ### ADR-023: Project directories are revisioned ownership boundaries
 

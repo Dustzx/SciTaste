@@ -163,6 +163,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   study as one revision-guarded project run and distinguishes partial from
   complete matrices. `study project-run` exposes the same boundary without an
   unrelated free-form output directory.
+- The bounded model-node engineering pilot now has a production-facing,
+  project-owned CLI for planning, execution, resume, and verification. Resume
+  dry-runs are mutation-free; completed prefixes and exact recordings are
+  integrity-checked; live use requires configuration plus caller opt-in; and
+  external measurements/review cannot be replaced with fixtures. This closes
+  the orchestration implementation gate but does not accept ADR-022 or provide
+  effectiveness evidence.
 - A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
   non-headline; its four launcher commands remain explicit adapter work rather
   than synthetic substitutes.

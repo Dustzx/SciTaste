@@ -1,11 +1,11 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.4`
+Board revision: `2026-09-05.5`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Integration, Phase 9/core workflow, shared docs, final acceptance | in progress | `main` | `/home/good/zfx/papers/SciTaste` | Window 2/3 handoffs |
-| 2 | Production pilot orchestration and project-owned evidence | in progress | `feat/model-node-pilot-orchestration` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | `425badc` |
+| 2 | Production pilot orchestration and project-owned evidence | integrated; awaiting next Epic | `feat/model-node-pilot-orchestration` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | `e43958b` on main |
 | 3 | Trusted local generative-UI application boundary | integrated; awaiting next Epic | `feat/generative-ui-app-boundary` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | `372a0a9` on main |
 
 ## Scheduling policy
@@ -21,9 +21,10 @@ Board revision: `2026-09-05.4`
 
 ## Current non-overlap
 
-- Window 2 owns model-node pilot configuration, orchestration, CLI, and
-  project-owned pilot evidence publication.
-- Window 3 owns the receiver-controlled local UI/API application boundary.
-- Main owns Phase 9/core workflow development, both merges, project catalog
-  refreshes, common architecture/roadmap/changelog edits, full-suite checks, and
-  GitHub synchronization.
+- Window 2's model-node pilot orchestration Epic is integrated. Its next task
+  requires a new assignment token; do not continue from the old branch.
+- Window 3's receiver-controlled local UI/API Epic is integrated. Its next task
+  requires a new assignment token; do not continue from the old branch.
+- Main owns Phase 9/core workflow development, integration repairs, project
+  catalog refreshes, common architecture/roadmap/changelog edits, full-suite
+  checks, and GitHub synchronization.

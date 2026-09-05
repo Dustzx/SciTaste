@@ -7,6 +7,11 @@ semantic versioning.
 
 ### Added
 
+- Project-owned bounded-model-node pilot orchestration with strict
+  content-addressed configuration, explicit live authorization, immutable
+  case-chain checkpoints, failed-attempt archives, resume-aware dry-run, exact
+  recording verification, machine-readable CLI status, and ProjectRuntime
+  lifecycle binding.
 - A loopback-first authenticated generative-UI application with a packaged fixed
   receiver, closed project/surface/event API, stale-event revalidation,
   project-owned replayable audits, and proposal-only receipts.
@@ -175,6 +180,10 @@ semantic versioning.
 
 ### Fixed
 
+- Model-node pilot runs now become the selected project run, validate reusable
+  evidence before a resume mutates project metadata, account for resume attempts,
+  and reject disagreement between verified evidence and registered run hashes or
+  final status.
 - Pytest now imports test modules by package path, allowing independently
   developed feature suites to use the same test filename without collection
   collisions after branch integration.

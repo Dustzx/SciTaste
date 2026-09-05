@@ -61,7 +61,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   content-hashed snapshots, and safe current-artifact aliases;
 - bounded, opt-in semantic model nodes whose typed advice remains behind
   deterministic feasibility, budget, evidence, and transition gates, plus a
-  fail-closed compatible live backend and versioned self-development pilot;
+  fail-closed compatible live backend, versioned self-development pilot, and
+  project-owned CLI orchestration for dry-run, execution, auditable resume, and
+  verification;
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
   project artifacts exposed to a surface;

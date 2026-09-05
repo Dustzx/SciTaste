@@ -296,8 +296,11 @@ scitaste model-node pilot status \
   --outputs-root outputs
 ```
 
-`execute --dry-run` is an alias for `plan`. Planning, status, tests, and default
-execution never contact a provider. A live case runs only when all three
+`execute --dry-run` is an alias for `plan`, including when paired with `--resume`.
+A resume dry-run validates the existing registration, immutable execution
+identity, owned evidence, and reusable checkpoint prefix without changing the
+project revision or run files. Planning, status, tests, and default execution
+never contact a provider. A live case runs only when all three
 conditions hold: the orchestration config has `live_enabled: true`, the caller
 adds `--allow-live`, and the content-addressed compatible backend config is also
 live-enabled with confirmed pricing. The credential environment variable is
@@ -328,6 +331,13 @@ Incomplete markers and orphan recordings are moved into a failed-attempt
 directory before retry. A changed protocol/config/backend/measurement, corrupt
 checkpoint/report/recording, stale project revision, non-contiguous prefix, or
 existing final destination fails closed.
+
+A newly registered pilot becomes the project's explicit `current_run`. A valid
+resume increments `resume_attempt`, restores the run to `running`, and reselects
+it when necessary, but only after the existing prefix has validated. `status`
+cross-checks the immutable evidence chain against the registered protocol,
+configuration, manifest, report, verification, artifact, acceptance, and final
+run-status metadata; valid files cannot mask a drifted `PROJECT.json` entry.
 
 Publication uses exclusive, fsynced atomic writes and a non-blocking per-run
 writer lock. Two writers therefore cannot silently replace case or final
