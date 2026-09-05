@@ -51,8 +51,13 @@ Generated actions are limited to typed `proposal_only` requests for run or
 paper approval and artifact inspection. The factory never activates them. An
 optional explicit `write_project_overview` call creates a new destination with
 `surface.json`, `renderer.json`, and a `SurfaceAuditLog.start` record in
-`surface-audit.jsonl`; it refuses to reuse or overwrite an existing destination.
-Building a surface alone writes nothing.
+`surface-audit.jsonl`. Publication is transactional: the helper writes all three
+files into a unique temporary directory beside the destination, reloads the
+surface and renderer through their schemas, verifies and replays the audit log,
+and only then atomically renames the complete directory into place. Failure at
+any pre-publication step removes the temporary directory and leaves no final
+destination. An existing file, directory, or symbolic link is never reused or
+overwritten. Building a surface alone writes nothing.
 
 This factory still stops at the existing trust boundary: it does not provide a
 frontend, HTTP/API handler, model-driven layout generator, authenticated event

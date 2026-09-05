@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+import scitaste.generative_ui.factory as factory_module
 from scitaste.generative_ui import (
     EvidenceKind,
+    ProjectSurfaceError,
     ProjectSurfaceEvidenceError,
     ProjectSurfaceFactory,
     ProposalKind,
@@ -406,12 +408,81 @@ def test_explicit_output_helper_initializes_audit_and_refuses_reuse(tmp_path: Pa
     records = SurfaceAuditLog(output.audit_path).records()
     assert len(records) == 1
     assert records[0].payload.surface == output.surface
+    assert output.surface_path.parent == destination
+    assert output.renderer_path.parent == destination
+    assert output.audit_path.parent == destination
+    assert not list(tmp_path.glob(".published-surface.*.tmp"))
 
     with pytest.raises(FileExistsError):
         factory.write_project_overview("surface-project", destination)
     assert original == {
         path.name: path.read_bytes() for path in destination.iterdir() if path.is_file()
     }
+
+
+def test_output_helper_refuses_existing_symlink_without_touching_it(tmp_path: Path) -> None:
+    runtime, _ = _runtime(tmp_path)
+    symlink_target = tmp_path / "existing-output"
+    symlink_target.mkdir()
+    destination = tmp_path / "published-surface"
+    destination.symlink_to(symlink_target, target_is_directory=True)
+
+    with pytest.raises(FileExistsError):
+        ProjectSurfaceFactory(runtime).write_project_overview("surface-project", destination)
+
+    assert destination.is_symlink()
+    assert destination.resolve() == symlink_target
+    assert list(symlink_target.iterdir()) == []
+    assert not list(tmp_path.glob(".published-surface.*.tmp"))
+
+
+def test_output_helper_removes_staging_directory_when_reload_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, _ = _runtime(tmp_path)
+    destination = tmp_path / "published-surface"
+    original_write = factory_module._write_new_json
+
+    def corrupt_renderer(path: Path, payload: dict[str, object]) -> None:
+        original_write(path, payload)
+        if path.name == "renderer.json":
+            path.write_text("{}\n", encoding="utf-8")
+
+    monkeypatch.setattr(factory_module, "_write_new_json", corrupt_renderer)
+
+    with pytest.raises(ProjectSurfaceError, match="reload validation"):
+        ProjectSurfaceFactory(runtime).write_project_overview("surface-project", destination)
+
+    assert not destination.exists()
+    assert not destination.is_symlink()
+    assert not list(tmp_path.glob(".published-surface.*.tmp"))
+
+
+def test_output_helper_removes_verified_staging_directory_when_rename_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, _ = _runtime(tmp_path)
+    destination = tmp_path / "published-surface"
+
+    def fail_rename(source: Path, target: Path) -> None:
+        assert Path(source).parent == destination.parent
+        assert Path(target) == destination
+        staged = Path(source)
+        SurfaceSpec.model_validate_json((staged / "surface.json").read_text())
+        RendererDocument.model_validate_json((staged / "renderer.json").read_text())
+        assert len(SurfaceAuditLog(staged / "surface-audit.jsonl").records()) == 1
+        raise OSError("injected atomic publish failure")
+
+    monkeypatch.setattr(factory_module.os, "rename", fail_rename)
+
+    with pytest.raises(OSError, match="injected atomic publish failure"):
+        ProjectSurfaceFactory(runtime).write_project_overview("surface-project", destination)
+
+    assert not destination.exists()
+    assert not destination.is_symlink()
+    assert not list(tmp_path.glob(".published-surface.*.tmp"))
 
 
 def test_local_offline_full_project_read_only_contract_smoke() -> None:

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -95,22 +97,45 @@ class ProjectSurfaceFactory:
         project_id: str,
         destination: str | Path,
     ) -> ProjectSurfaceOutput:
-        """Create a new three-file surface bundle; existing destinations are never reused."""
+        """Atomically publish a verified bundle without reusing an existing destination."""
 
+        destination = Path(destination)
+        _require_new_destination(destination)
         surface = self.build_project_overview(project_id)
         renderer = project_surface(surface)
-        destination = Path(destination)
-        if os.path.lexists(destination):
-            raise FileExistsError(f"surface output destination already exists: {destination}")
-
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.mkdir()
+        _require_new_destination(destination)
+
+        temporary = Path(
+            tempfile.mkdtemp(
+                dir=destination.parent,
+                prefix=f".{destination.name}.",
+                suffix=".tmp",
+            )
+        )
+        temporary_surface_path = temporary / "surface.json"
+        temporary_renderer_path = temporary / "renderer.json"
+        temporary_audit_path = temporary / "surface-audit.jsonl"
+        try:
+            _write_new_json(temporary_surface_path, surface.model_dump(mode="json"))
+            _write_new_json(temporary_renderer_path, renderer.model_dump(mode="json"))
+            SurfaceAuditLog(temporary_audit_path).start(surface)
+            _reload_verified_bundle(
+                surface_path=temporary_surface_path,
+                renderer_path=temporary_renderer_path,
+                audit_path=temporary_audit_path,
+                expected_surface=surface,
+                expected_renderer=renderer,
+            )
+            _require_new_destination(destination)
+            os.rename(temporary, destination)
+        except BaseException:
+            shutil.rmtree(temporary, ignore_errors=True)
+            raise
+
         surface_path = destination / "surface.json"
         renderer_path = destination / "renderer.json"
         audit_path = destination / "surface-audit.jsonl"
-        _write_new_json(surface_path, surface.model_dump(mode="json"))
-        _write_new_json(renderer_path, renderer.model_dump(mode="json"))
-        SurfaceAuditLog(audit_path).start(surface)
         return ProjectSurfaceOutput(
             surface=surface,
             renderer=renderer,
@@ -388,3 +413,33 @@ def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
         handle.write(content + "\n")
         handle.flush()
         os.fsync(handle.fileno())
+
+
+def _require_new_destination(destination: Path) -> None:
+    if os.path.lexists(destination):
+        raise FileExistsError(f"surface output destination already exists: {destination}")
+
+
+def _reload_verified_bundle(
+    *,
+    surface_path: Path,
+    renderer_path: Path,
+    audit_path: Path,
+    expected_surface: SurfaceSpec,
+    expected_renderer: RendererDocument,
+) -> None:
+    try:
+        surface = SurfaceSpec.model_validate_json(surface_path.read_text(encoding="utf-8"))
+        renderer = RendererDocument.model_validate_json(renderer_path.read_text(encoding="utf-8"))
+        records = SurfaceAuditLog(audit_path).records()
+    except Exception as exc:
+        raise ProjectSurfaceError("persisted surface bundle failed reload validation") from exc
+
+    if surface != expected_surface:
+        raise ProjectSurfaceError("reloaded surface differs from the generated surface")
+    if renderer != expected_renderer or renderer.surface_fingerprint != surface.fingerprint:
+        raise ProjectSurfaceError("reloaded renderer differs from its projected surface")
+    if len(records) != 1 or records[0].payload.kind != "surface_opened":
+        raise ProjectSurfaceError("reloaded audit log lacks its opening surface record")
+    if records[0].payload.surface != surface:
+        raise ProjectSurfaceError("reloaded audit log differs from the generated surface")
