@@ -10,6 +10,9 @@ semantic versioning.
 - Controlled `run full --resume` support with self-hashed stage checkpoints,
   contiguous-prefix reuse, preserved failed attempts, and fail-closed artifact
   integrity validation.
+- A trusted ProjectRuntime-to-surface factory and `project surface build` CLI
+  that transactionally publishes validated renderer and audit bundles without
+  granting generated actions execution authority.
 - Phase 0/1 controller skeleton and nonlinear demo.
 - AutoResearchClaw v0.5.0 as a pinned execution substrate.
 - CI, contribution workflow, roadmap, architecture record, and issue templates.

@@ -48,6 +48,7 @@ from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
 from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
+from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -164,6 +165,20 @@ def build_parser() -> argparse.ArgumentParser:
     project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_status)
     project_status.set_defaults(handler=_handle_project_status)
+
+    project_surface = project_commands.add_parser(
+        "surface", help="Build trusted project interface bundles"
+    )
+    project_surface_commands = project_surface.add_subparsers(
+        dest="project_surface_command", required=True
+    )
+    project_surface_build = project_surface_commands.add_parser(
+        "build", help="Build a content-addressed project overview"
+    )
+    project_surface_build.add_argument("--project-id", required=True)
+    project_surface_build.add_argument("--destination", type=Path, required=True)
+    _add_project_options(project_surface_build)
+    project_surface_build.set_defaults(handler=_handle_project_surface_build)
 
     project_run = project_commands.add_parser("run", help="Register and select project runs")
     project_run_commands = project_run.add_subparsers(dest="project_run_command", required=True)
@@ -433,6 +448,48 @@ def _handle_project_init(args: argparse.Namespace) -> int:
 def _handle_project_status(args: argparse.Namespace) -> int:
     snapshot = ProjectRuntime(args.outputs_root).open(args.project_id)
     print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_surface_build(args: argparse.Namespace) -> int:
+    factory = ProjectSurfaceFactory(ProjectRuntime(args.outputs_root))
+    if args.dry_run:
+        surface = factory.build_project_overview(args.project_id)
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": surface.project_id,
+                    "destination": str(args.destination),
+                    "surface_fingerprint": surface.fingerprint,
+                    "snapshot_sha256": surface.snapshot.snapshot_sha256,
+                    "components": [item.component.value for item in surface.components],
+                    "actions": [item.action_id for item in surface.actions],
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    output = factory.write_project_overview(args.project_id, args.destination)
+    print(
+        json.dumps(
+            {
+                "status": "published",
+                "project_id": output.surface.project_id,
+                "destination": str(output.surface_path.parent),
+                "surface_fingerprint": output.surface.fingerprint,
+                "snapshot_sha256": output.surface.snapshot.snapshot_sha256,
+                "files": {
+                    "surface": str(output.surface_path),
+                    "renderer": str(output.renderer_path),
+                    "audit": str(output.audit_path),
+                },
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

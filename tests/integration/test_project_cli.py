@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+
+import pytest
 
 from scitaste.cli import main
 
@@ -123,3 +126,55 @@ def test_project_cli_dry_run_validates_without_writing(tmp_path, capsys) -> None
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "planned"
     assert not outputs.exists()
+
+
+def test_project_surface_cli_dry_runs_then_publishes_verified_bundle(tmp_path, capsys) -> None:
+    outputs = tmp_path / "outputs"
+    destination = outputs / "projects/cli-surface-project/surfaces/overview-v1"
+    assert (
+        main(
+            [
+                "project",
+                "init",
+                "--project-id",
+                "cli-surface-project",
+                "--title",
+                "CLI surface project",
+                "--research-direction",
+                "Expose authoritative project state through trusted components.",
+                "--outputs-root",
+                str(outputs),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    command = [
+        "project",
+        "surface",
+        "build",
+        "--project-id",
+        "cli-surface-project",
+        "--destination",
+        str(destination),
+        "--outputs-root",
+        str(outputs),
+    ]
+    assert main([*command, "--dry-run"]) == 0
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["status"] == "planned"
+    assert planned["components"] == ["ProjectSummaryCard"]
+    assert not destination.exists()
+
+    assert main(command) == 0
+    published = json.loads(capsys.readouterr().out)
+    assert published["status"] == "published"
+    assert published["surface_fingerprint"] == planned["surface_fingerprint"]
+    assert set(published["files"]) == {"surface", "renderer", "audit"}
+    assert all(Path(locator).is_file() for locator in published["files"].values())
+
+    with pytest.raises(SystemExit) as error:
+        main(command)
+    assert error.value.code == 2
+    assert "destination already exists" in capsys.readouterr().err

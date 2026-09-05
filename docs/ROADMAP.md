@@ -326,6 +326,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   tampering, reordering, truncation, stale revisions, and duplicate events.
 - Deterministic fixtures cover project overview, paper status, blocked-run,
   next-step, and run-comparison surfaces.
+- A trusted factory now projects the current ProjectRuntime state into a real
+  project overview and the CLI transactionally publishes its surface, fixed-shell
+  renderer document, and initial audit record without overwriting a destination.
 - Pending product integration: a browser/native renderer, an authenticated API,
   and deterministic controller endpoints for approving proposals. These are not
   implied by the contract layer.

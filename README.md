@@ -117,6 +117,17 @@ Run and paper registration requires the current project revision, so concurrent
 workers fail on stale state instead of overwriting one another. See
 [`docs/PROJECT_RUNTIME.md`](docs/PROJECT_RUNTIME.md).
 
+Generate a trusted, content-addressed project overview bundle with:
+
+```bash
+.venv/bin/scitaste project surface build \
+  --project-id my-project --outputs-root outputs \
+  --destination outputs/projects/my-project/surfaces/overview-v1
+```
+
+This emits declarative surface/renderer JSON plus a verified audit root; its
+actions remain proposals and cannot execute tools or mutate project state.
+
 Run the complete offline Discovery → Evidence → Communication → Figure path in
 one managed project and produce a registered Markdown/TeX/PDF paper bundle:
 

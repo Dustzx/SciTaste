@@ -457,6 +457,12 @@ surface revision or proposal receipt reproduces through the server-owned
 accepts the contract and trust boundary, not a completed frontend or
 authenticated API service.
 
+The first-party project surface factory now accepts only a trusted
+`ProjectRuntime` plus project ID, derives the overview from that authority, and
+rechecks the binding before returning. Optional publication reloads the surface,
+renderer, and replayed audit root in a staging directory, then uses an atomic
+Linux no-replace rename; unavailable no-replace semantics fail closed.
+
 ### ADR-025: Full workflow stages extend one project-owned state
 
 Status: accepted. The offline Phase 4--7 acceptance path is composed through one

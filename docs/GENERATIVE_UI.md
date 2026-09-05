@@ -62,6 +62,19 @@ overwritten. On Linux the publication step uses `renameat2` with
 helper fails closed instead of falling back to an overwrite-capable rename.
 Building a surface alone writes nothing.
 
+The same trusted path is available without application code:
+
+```bash
+.venv/bin/scitaste project surface build \
+  --project-id my-project \
+  --outputs-root outputs \
+  --destination outputs/projects/my-project/surfaces/overview-v1
+```
+
+Add `--dry-run` to validate and fingerprint the authoritative in-memory surface
+without creating the destination. The command reports the selected trusted
+components and proposal IDs; it does not activate those proposals.
+
 This factory still stops at the existing trust boundary: it does not provide a
 frontend, HTTP/API handler, model-driven layout generator, authenticated event
 receiver, deterministic controller, approval workflow, or action executor.
