@@ -192,6 +192,16 @@ class RuntimeLedgerTotals(RuntimeModel):
     chain_head_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class RuntimeInvocationTelemetry(RuntimeModel):
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+    cost_usd: float | None = Field(default=0.0, ge=0, allow_inf_nan=False)
+    latency_ms: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    cached: bool = False
+    replayed: bool = False
+
+
 class RuntimeInvocationReceipt(RuntimeModel):
     schema_version: Literal["1.0"] = "1.0"
     project_id: str
@@ -201,6 +211,7 @@ class RuntimeInvocationReceipt(RuntimeModel):
     entry_sha256: str
     request_fingerprint: str | None = None
     result: dict[str, JsonValue] | None = None
+    telemetry: RuntimeInvocationTelemetry = Field(default_factory=RuntimeInvocationTelemetry)
     totals: RuntimeLedgerTotals
     ledger_locator: str
     recording_locator: str | None = None
@@ -211,6 +222,18 @@ class RuntimeInvocationReceipt(RuntimeModel):
     cumulative_project_budget: dict[str, JsonValue]
     advisory_only: Literal[True] = True
     executable: Literal[False] = False
+
+
+class RuntimeVerification(RuntimeModel):
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    run_id: str
+    verified: Literal[True] = True
+    totals: RuntimeLedgerTotals
+    profiles: tuple[ModelNodeProfile, ...]
+    ledger_locator: str
+    attempt_count: int = Field(ge=0)
+    pending_count: int = Field(ge=0)
 
 
 class ModelNodeRuntimeError(ValueError):
@@ -363,6 +386,27 @@ class ModelNodeRuntime:
         entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
         return self._totals(project_id, run_id, entries, stage=stage)
 
+    def verify(self, *, project_id: str, run_id: str) -> RuntimeVerification:
+        stage, _ = self._validate_project_run(
+            project_id,
+            run_id,
+            expected_revision=None,
+            create_stage=False,
+        )
+        entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
+        totals = self._totals(project_id, run_id, entries, stage=stage)
+        profiles = {entry.intent.profile.fingerprint: entry.intent.profile for entry in entries}
+        base = f"projects/{project_id}/runs/{run_id}/{MODEL_NODE_STAGE_PATH}"
+        return RuntimeVerification(
+            project_id=project_id,
+            run_id=run_id,
+            totals=totals,
+            profiles=tuple(profiles[key] for key in sorted(profiles)),
+            ledger_locator=f"{base}/ledger",
+            attempt_count=len(list((stage / "attempts").glob("*/failure.json"))),
+            pending_count=len(self._pending_directories(stage)),
+        )
+
     def _execute_locked(
         self,
         *,
@@ -472,7 +516,10 @@ class ModelNodeRuntime:
             if self.before_backend is not None:
                 self.before_backend(intent)
             node_type, input_type, _ = _NODE_TYPES[intent.node_name]
-            typed_input = input_type.model_validate(intent.node_input, strict=True)
+            typed_input = input_type.model_validate_json(
+                json.dumps(intent.node_input, ensure_ascii=False, allow_nan=False),
+                strict=True,
+            )
             result = node_type().run(
                 typed_input,
                 context=intent.context,
@@ -546,6 +593,7 @@ class ModelNodeRuntime:
                 totals=totals,
                 blockers=entry.blockers,
                 attempt_locator=archived,
+                entry=entry,
             )
 
         _write_model_exclusive(self._entry_path(stage, entry), entry)
@@ -561,6 +609,7 @@ class ModelNodeRuntime:
             request_fingerprint=entry.request_fingerprint,
             blockers=entry.blockers,
             recording_path=recording_path if recording_path.is_file() else None,
+            entry=entry,
         )
 
     def _intent(
@@ -583,10 +632,13 @@ class ModelNodeRuntime:
         input_payload = (
             node_input.model_dump(mode="json") if isinstance(node_input, BaseModel) else node_input
         )
-        typed_input = input_type.model_validate(input_payload, strict=True)
+        typed_input = input_type.model_validate_json(
+            json.dumps(input_payload, ensure_ascii=False, allow_nan=False),
+            strict=True,
+        )
         effective_context = NodeContext.model_validate(
             {
-                **context.model_dump(mode="json"),
+                **context.model_dump(mode="python"),
                 "cumulative_api_cost_usd": cumulative_cost_usd,
             },
             strict=True,
@@ -730,6 +782,7 @@ class ModelNodeRuntime:
             entry_sha256=entry.entry_sha256,
             totals=totals,
             blockers=blockers,
+            entry=entry,
         )
 
     def _load_ledger(
@@ -975,6 +1028,7 @@ class ModelNodeRuntime:
         blockers: tuple[str, ...] = (),
         recording_path: Path | None = None,
         attempt_locator: str | None = None,
+        entry: RuntimeLedgerEntry | None = None,
     ) -> RuntimeInvocationReceipt:
         base = f"projects/{intent.project_id}/runs/{intent.run_id}/{MODEL_NODE_STAGE_PATH}"
         return RuntimeInvocationReceipt(
@@ -985,6 +1039,19 @@ class ModelNodeRuntime:
             entry_sha256=entry_sha256,
             request_fingerprint=request_fingerprint,
             result=result,
+            telemetry=(
+                RuntimeInvocationTelemetry(
+                    input_tokens=entry.input_tokens,
+                    output_tokens=entry.output_tokens,
+                    total_tokens=entry.input_tokens + entry.output_tokens,
+                    cost_usd=entry.cost_effect_usd,
+                    latency_ms=entry.latency_ms,
+                    cached=entry.cached,
+                    replayed=entry.replayed,
+                )
+                if entry is not None
+                else RuntimeInvocationTelemetry()
+            ),
             totals=totals,
             ledger_locator=f"{base}/ledger",
             recording_locator=(
@@ -1148,7 +1215,9 @@ __all__ = [
     "RuntimeBackendMode",
     "RuntimeInvocationIntent",
     "RuntimeInvocationReceipt",
+    "RuntimeInvocationTelemetry",
     "RuntimeLedgerEntry",
     "RuntimeLedgerTotals",
     "RuntimeOutcome",
+    "RuntimeVerification",
 ]
