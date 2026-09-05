@@ -111,6 +111,7 @@ from scitaste.generative_ui.workspace import (
     WorkspaceSurfaceFactory,
     WorkspaceView,
     validate_workspace_query,
+    workspace_document,
 )
 
 __all__ = [
@@ -206,4 +207,5 @@ __all__ = [
     "project_surface",
     "serve_local_application",
     "validate_workspace_query",
+    "workspace_document",
 ]

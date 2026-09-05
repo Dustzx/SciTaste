@@ -25,6 +25,16 @@ from scitaste.generative_ui.interaction import (
     SurfaceInteractionError,
     UnknownActionError,
 )
+from scitaste.generative_ui.workspace import (
+    BlockerQuery,
+    PaperEvidenceQuery,
+    PendingProposalsQuery,
+    ProjectOverviewQuery,
+    RunComparisonQuery,
+    RunStageQuery,
+    UnknownWorkspaceSelectionError,
+    WorkspaceView,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _MAX_EVENT_BYTES = 64 * 1024
@@ -173,6 +183,14 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                     "surface interaction was rejected",
                 )
             )
+        except UnknownWorkspaceSelectionError:
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.NOT_FOUND,
+                    "selection_not_found",
+                    "workspace selection is not registered by the current project",
+                )
+            )
         except FileNotFoundError:
             self._send_problem(
                 _HTTPProblem(HTTPStatus.NOT_FOUND, "project_not_found", "project was not found")
@@ -201,6 +219,9 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             )
 
     def _dispatch_api(self, method: str, path: str) -> None:
+        if path.startswith("/api/v2/workspace/"):
+            self._dispatch_workspace_api(method, path)
+            return
         if path == "/api/v1/projects":
             if method != "GET":
                 raise _method_not_allowed("GET")
@@ -227,6 +248,39 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             self._send_model(HTTPStatus.ACCEPTED, receipt)
             return
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+
+    def _dispatch_workspace_api(self, method: str, path: str) -> None:
+        parts = path.strip("/").split("/")
+        prefix = ["api", "v2", "workspace", "projects"]
+        if parts == prefix:
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            document = self.server.application.project_list_workspace()
+            self._send_model(HTTPStatus.OK, document, etag=document.fingerprint)
+            return
+        if len(parts) < 6 or parts[:4] != prefix:
+            raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+
+        project_id = parts[4]
+        raw_view = parts[5]
+        tail = parts[6:]
+        submits_event = bool(tail and tail[-1] == "events")
+        if submits_event:
+            tail = tail[:-1]
+        query = _workspace_query(project_id, raw_view, tail)
+        if submits_event:
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            receipt = self.server.application.submit_workspace_event(
+                query,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.ACCEPTED, receipt)
+            return
+        if method != "GET":
+            raise _method_not_allowed("GET")
+        document = self.server.application.current_workspace(query)
+        self._send_model(HTTPStatus.OK, document, etag=document.fingerprint)
 
     def _read_json_object(self) -> dict[str, object]:
         if self.headers.get_all("Transfer-Encoding", []):
@@ -277,7 +331,16 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         content = files("scitaste.generative_ui").joinpath("static", asset_name).read_bytes()
         self._send_bytes(HTTPStatus.OK, content, content_type)
 
-    def _send_model(self, status: HTTPStatus, model: Any) -> None:
+    def _send_model(
+        self,
+        status: HTTPStatus,
+        model: Any,
+        *,
+        etag: str | None = None,
+    ) -> None:
+        if etag is not None and self._is_not_modified(etag):
+            self._send_not_modified(etag)
+            return
         payload = model.model_dump(mode="json")
         content = json.dumps(
             payload,
@@ -286,7 +349,25 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             separators=(",", ":"),
             sort_keys=True,
         ).encode("utf-8")
-        self._send_bytes(status, content, "application/json; charset=utf-8")
+        headers = {"ETag": f'"{etag}"', "Vary": "Authorization"} if etag else None
+        self._send_bytes(
+            status,
+            content,
+            "application/json; charset=utf-8",
+            extra_headers=headers,
+        )
+
+    def _is_not_modified(self, etag: str) -> bool:
+        candidates = self.headers.get_all("If-None-Match", [])
+        return len(candidates) == 1 and candidates[0].strip() == f'"{etag}"'
+
+    def _send_not_modified(self, etag: str) -> None:
+        self.send_response(int(HTTPStatus.NOT_MODIFIED))
+        self.send_header("ETag", f'"{etag}"')
+        self.send_header("Vary", "Authorization")
+        for name, value in _SECURITY_HEADERS.items():
+            self.send_header(name, value)
+        self.end_headers()
 
     def _send_problem(self, problem: _HTTPProblem) -> None:
         content = json.dumps(
@@ -404,6 +485,42 @@ def _method_not_allowed(allowed: str) -> _HTTPProblem:
         HTTPStatus.METHOD_NOT_ALLOWED,
         "method_not_allowed",
         f"method is not allowed; use {allowed}",
+    )
+
+
+def _workspace_query(project_id: str, raw_view: str, tail: list[str]):
+    try:
+        view = WorkspaceView(raw_view)
+    except ValueError as exc:
+        raise _HTTPProblem(
+            HTTPStatus.NOT_FOUND, "view_not_found", "workspace view not found"
+        ) from exc
+    if view is WorkspaceView.PROJECT_LIST:
+        raise _HTTPProblem(HTTPStatus.NOT_FOUND, "view_not_found", "workspace view not found")
+    if view is WorkspaceView.PROJECT_OVERVIEW and not tail:
+        return ProjectOverviewQuery(project_id=project_id)
+    if view is WorkspaceView.RUN_STAGE_EXPLORER and (
+        not tail or (len(tail) == 2 and tail[0] == "runs")
+    ):
+        return RunStageQuery(project_id=project_id, run_id=tail[1] if tail else None)
+    if view is WorkspaceView.PAPER_EVIDENCE and (
+        not tail or (len(tail) == 2 and tail[0] == "papers")
+    ):
+        return PaperEvidenceQuery(project_id=project_id, paper_id=tail[1] if tail else None)
+    if view is WorkspaceView.RUN_COMPARISON and len(tail) == 3 and tail[0] == "runs":
+        return RunComparisonQuery(
+            project_id=project_id,
+            baseline_run_id=tail[1],
+            candidate_run_id=tail[2],
+        )
+    if view is WorkspaceView.BLOCKERS and (not tail or (len(tail) == 2 and tail[0] == "runs")):
+        return BlockerQuery(project_id=project_id, run_id=tail[1] if tail else None)
+    if view is WorkspaceView.PENDING_PROPOSALS and not tail:
+        return PendingProposalsQuery(project_id=project_id)
+    raise _HTTPProblem(
+        HTTPStatus.NOT_FOUND,
+        "invalid_workspace_path",
+        "workspace path does not match its registered view",
     )
 
 

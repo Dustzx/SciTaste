@@ -281,15 +281,21 @@ class WorkspaceSurfaceFactory:
         self,
         query: ProjectWorkspaceQuery | dict[str, object],
     ) -> WorkspaceDocument:
-        parsed = validate_workspace_query(query)
-        if isinstance(parsed, ProjectListQuery):
-            raise TypeError("project-list query must use project_list()")
+        parsed = _project_query(query)
+        return workspace_document(parsed, self.build_surface(parsed))
+
+    def build_surface(
+        self,
+        query: ProjectWorkspaceQuery | dict[str, object],
+    ) -> SurfaceSpec:
+        """Build the server-owned surface retained for event resolution."""
+
+        parsed = _project_query(query)
         if isinstance(parsed, ProjectOverviewQuery):
             base = self._overview_factory.build_project_overview(parsed.project_id)
-            surface = SurfaceSpec.model_validate(
+            return SurfaceSpec.model_validate(
                 base.model_copy(update={"surface_id": _surface_id(parsed)}).model_dump(mode="json")
             )
-            return _workspace_document(parsed, surface)
 
         snapshot, binding = self._context(parsed.project_id)
         if isinstance(parsed, RunStageQuery):
@@ -303,7 +309,7 @@ class WorkspaceSurfaceFactory:
         else:
             surface = self._pending_surface(parsed, snapshot, binding)
         self._confirm(snapshot, binding)
-        return _workspace_document(parsed, surface)
+        return surface
 
     def _context(self, project_id: str) -> tuple[ProjectSnapshot, SnapshotBinding]:
         validate_project_id(project_id)
@@ -603,10 +609,16 @@ class WorkspaceSurfaceFactory:
         )
 
 
-def _workspace_document(query: ProjectWorkspaceQuery, surface: SurfaceSpec) -> WorkspaceDocument:
+def workspace_document(
+    query: ProjectWorkspaceQuery | dict[str, object],
+    surface: SurfaceSpec,
+) -> WorkspaceDocument:
+    """Project one trusted surface with its closed navigation query."""
+
+    parsed = _project_query(query)
     renderer = project_surface(surface)
     return WorkspaceDocument(
-        query=query,
+        query=parsed,
         renderer=renderer,
         freshness=WorkspaceFreshness(
             project_revision=surface.snapshot.snapshot_revision,
@@ -615,6 +627,15 @@ def _workspace_document(query: ProjectWorkspaceQuery, surface: SurfaceSpec) -> W
             evidence_count=len(surface.snapshot.evidence_refs),
         ),
     )
+
+
+def _project_query(
+    query: ProjectWorkspaceQuery | dict[str, object],
+) -> ProjectWorkspaceQuery:
+    parsed = validate_workspace_query(query)
+    if isinstance(parsed, ProjectListQuery):
+        raise TypeError("project-list query must use project_list()")
+    return parsed
 
 
 def _surface(

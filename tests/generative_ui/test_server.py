@@ -94,6 +94,16 @@ def _event(renderer: dict[str, object], *, event_id: str = "http-event") -> dict
     }
 
 
+def _workspace_event(
+    document: dict[str, object],
+    *,
+    event_id: str = "workspace-http-event",
+) -> dict[str, object]:
+    renderer = document["renderer"]
+    assert isinstance(renderer, dict)
+    return _event(renderer, event_id=event_id)
+
+
 def _audit(runtime: ProjectRuntime) -> Path:
     matches = list((runtime.projects_root / "http-project/.generative-ui/audits").glob("*.jsonl"))
     assert len(matches) == 1
@@ -123,6 +133,15 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "localStorage" not in script.text
     assert "sessionStorage" not in script.text
     assert all(f"{item.value}:" in script.text for item in TrustedComponent)
+    assert "/api/v2/workspace/projects" in script.text
+    assert "history.pushState" in script.text
+    assert 'window.addEventListener("popstate"' in script.text
+    assert 'headers["If-None-Match"]' in script.text
+    assert 'class="skip-link"' in index.text
+    assert 'aria-label="Research workspace navigation"' in index.text
+    assert 'aria-busy="false"' in index.text
+    assert "@media (max-width: 720px)" in stylesheet.text
+    assert ":focus-visible" in stylesheet.text
 
 
 def test_api_requires_bearer_authentication_without_creating_project_state(tmp_path: Path) -> None:
@@ -165,6 +184,92 @@ def test_api_rejects_ambiguous_authorization_headers_and_hides_runtime_banner(
     assert duplicated.json()["error"]["code"] == "unauthorized"
     assert duplicated.headers["server"] == "SciTasteLocalUI/1.0"
     assert "Python" not in duplicated.headers["server"]
+
+
+def test_workspace_api_discovers_projects_and_conditionally_refreshes_views(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        unauthenticated = httpx.get(origin + "/api/v2/workspace/projects")
+        projects = httpx.get(origin + "/api/v2/workspace/projects", headers=_headers())
+        surface = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview",
+            headers=_headers(),
+        )
+        unchanged = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview",
+            headers={**_headers(), "If-None-Match": surface.headers["etag"]},
+        )
+
+    assert unauthenticated.status_code == 401
+    assert projects.status_code == 200
+    assert projects.json()["query"]["view"] == "project-list"
+    assert projects.json()["projects"][0]["project_id"] == "http-project"
+    assert projects.headers["etag"].startswith('"')
+    assert surface.status_code == 200
+    assert surface.json()["query"] == {
+        "project_id": "http-project",
+        "schema_version": "1.0",
+        "view": "project-overview",
+    }
+    assert surface.json()["renderer"]["execution_authority"] == "none"
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
+    assert unchanged.headers["etag"] == surface.headers["etag"]
+
+
+def test_workspace_deep_links_reject_unknown_and_cross_project_selection(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        unknown_run = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/run-stage-explorer/runs/unknown-run",
+            headers=_headers(),
+        )
+        malformed_view = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/arbitrary-renderer",
+            headers=_headers(),
+        )
+        injected_query = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview?component=Injected",
+            headers=_headers(),
+        )
+
+    assert unknown_run.status_code == 404
+    assert unknown_run.json()["error"]["code"] == "selection_not_found"
+    assert "unknown-run" not in unknown_run.text
+    assert malformed_view.status_code == 404
+    assert injected_query.status_code == 400
+
+
+def test_workspace_event_is_resolved_against_its_deep_linked_surface(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-project/run-stage-explorer/runs/http-run"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _workspace_event(workspace.json())
+        accepted = httpx.post(
+            origin + view_path + "/events",
+            headers=_headers(),
+            json=event,
+        )
+        duplicate = httpx.post(
+            origin + view_path + "/events",
+            headers=_headers(),
+            json=event,
+        )
+        wrong_view = httpx.post(
+            origin + "/api/v2/workspace/projects/http-project/project-overview/events",
+            headers=_headers(),
+            json={**event, "event_id": "wrong-view-event"},
+        )
+
+    assert workspace.status_code == 200
+    assert accepted.status_code == 202
+    assert accepted.json()["status"] == "proposal_pending"
+    assert accepted.json()["execution_authority"] == "none"
+    assert duplicate.status_code == 409
+    assert wrong_view.status_code == 409
 
 
 def test_surface_api_returns_only_fixed_renderer_and_preserves_inert_angle_text(

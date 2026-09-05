@@ -3,15 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SciTaste trusted research interface</title>
+    <title>SciTaste evidence workspace</title>
     <link rel="stylesheet" href="/assets/app.css">
     <script type="module" src="/assets/app.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#workspace">Skip to research workspace</a>
     <header class="app-header">
-      <div>
-        <p class="eyebrow">SciTaste</p>
-        <h1>Trusted research interface</h1>
+      <div class="brand-block">
+        <p class="eyebrow">SciTaste · Evidence native</p>
+        <h1>Trusted research workspace</h1>
+        <p class="header-summary">Generated views are typed evidence, never executable code.</p>
       </div>
       <div class="credential-panel">
         <label for="bearer-token">Local bearer credential</label>
@@ -19,20 +21,56 @@
         <button id="connect" type="button">Connect</button>
       </div>
     </header>
+    <div class="freshness-bar" id="freshness" role="status">
+      No authoritative project view loaded.
+    </div>
     <div class="application-grid">
-      <nav class="project-nav" aria-label="Project navigation">
-        <label for="project-select">Authoritative project</label>
-        <select id="project-select" disabled></select>
-        <button id="load-project" type="button" disabled>Load current surface</button>
-        <p id="connection-status" role="status">Enter the configured local credential.</p>
+      <nav class="project-nav" aria-label="Research workspace navigation">
+        <div class="nav-section">
+          <label for="project-select">Authoritative project</label>
+          <select id="project-select" disabled></select>
+          <button id="load-project" type="button" disabled>Open project</button>
+          <p id="connection-status" role="status">Enter the configured local credential.</p>
+        </div>
+        <div class="nav-section" aria-labelledby="view-heading">
+          <h2 id="view-heading">Workspace views</h2>
+          <div class="view-navigation">
+            <button class="view-button" data-view="project-overview" type="button" disabled>Overview</button>
+            <button class="view-button" data-view="run-stage-explorer" type="button" disabled>Runs &amp; stages</button>
+            <button class="view-button" data-view="paper-evidence" type="button" disabled>Papers &amp; evidence</button>
+            <button class="view-button" data-view="run-comparison" type="button" disabled>Compare runs</button>
+            <button class="view-button" data-view="blockers" type="button" disabled>Blockers</button>
+            <button class="view-button" data-view="pending-proposals" type="button" disabled>Pending proposals</button>
+          </div>
+        </div>
+        <div class="nav-section selection-controls" aria-labelledby="selection-heading">
+          <h2 id="selection-heading">Evidence selection</h2>
+          <label for="run-select">Run</label>
+          <select id="run-select" disabled></select>
+          <button id="open-run" type="button" disabled>Open run stages</button>
+          <label for="paper-select">Paper</label>
+          <select id="paper-select" disabled></select>
+          <button id="open-paper" type="button" disabled>Open paper evidence</button>
+          <fieldset id="comparison-controls" disabled>
+            <legend>Registered run comparison</legend>
+            <label for="baseline-run">Baseline</label>
+            <select id="baseline-run"></select>
+            <label for="candidate-run">Candidate</label>
+            <select id="candidate-run"></select>
+            <button id="compare-runs" type="button">Compare selected runs</button>
+          </fieldset>
+        </div>
       </nav>
-      <main id="workspace" class="workspace" aria-live="polite">
-        <p class="empty-state">No trusted project surface is loaded.</p>
+      <main id="workspace" class="workspace" aria-live="polite" aria-busy="false" tabindex="-1">
+        <p class="empty-state">No trusted project workspace is loaded.</p>
       </main>
       <aside class="inspector" aria-label="Proposal inspector">
-        <h2>Proposal boundary</h2>
-        <p>Actions create pending proposals only. This receiver cannot execute tools.</p>
-        <div id="proposal-result" role="status"></div>
+        <p class="eyebrow dark">Proposal boundary</p>
+        <h2>Recorded advice only</h2>
+        <p>A pending proposal awaits a later deterministic controller. It is not approved or executed.</p>
+        <div id="proposal-result" role="status">
+          <p class="muted">No proposal has been submitted from this view.</p>
+        </div>
       </aside>
     </div>
   </body>

@@ -25,6 +25,13 @@ from scitaste.generative_ui.interaction import (
 from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier
+from scitaste.generative_ui.workspace import (
+    ProjectWorkspaceQuery,
+    WorkspaceDocument,
+    WorkspaceSurfaceFactory,
+    validate_workspace_query,
+    workspace_document,
+)
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import validate_project_id
 
@@ -62,6 +69,7 @@ class GenerativeUIApplication:
             raise TypeError("GenerativeUIApplication requires a trusted ProjectRuntime")
         self._runtime = runtime
         self._factory = ProjectSurfaceFactory(runtime)
+        self._workspace_factory = WorkspaceSurfaceFactory(runtime)
         self._request_lock = RLock()
 
     @property
@@ -107,6 +115,25 @@ class GenerativeUIApplication:
 
         return project_surface(self.current_surface(project_id))
 
+    def project_list_workspace(self):
+        """Return the authenticated project-list view without opening audit state."""
+
+        return self._workspace_factory.project_list()
+
+    def current_workspace(
+        self,
+        query: ProjectWorkspaceQuery | dict[str, object],
+    ) -> WorkspaceDocument:
+        """Build one current server-owned workspace and initialize its audit epoch."""
+
+        parsed = validate_workspace_query(query)
+        if not hasattr(parsed, "project_id"):
+            raise TypeError("project-list query must use project_list_workspace()")
+        with self._request_lock:
+            surface = self._workspace_factory.build_surface(parsed)
+            self._open_audit(surface)
+            return workspace_document(parsed, surface)
+
     def submit_event(
         self,
         project_id: str,
@@ -126,6 +153,38 @@ class GenerativeUIApplication:
             audit = self._open_audit(surface)
             try:
                 record = audit.append_interaction(parsed, provisional)
+            except AuditIntegrityError as exc:
+                if isinstance(exc.__cause__, DuplicateEventError):
+                    raise exc.__cause__ from exc
+                raise
+            if not isinstance(record.payload, ProposalIssuedAudit):
+                raise AuditIntegrityError("accepted event did not produce a proposal audit record")
+            return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
+
+    def submit_workspace_event(
+        self,
+        query: ProjectWorkspaceQuery | dict[str, object],
+        event: SurfaceEvent | dict[str, object],
+    ) -> ProposalReceipt:
+        """Resolve one event only against the authoritative surface named by its URL query."""
+
+        parsed_query = validate_workspace_query(query)
+        if not hasattr(parsed_query, "project_id"):
+            raise TypeError("project-list view cannot receive proposal events")
+        project_id = parsed_query.project_id
+        parsed_event = (
+            event if isinstance(event, SurfaceEvent) else SurfaceEvent.model_validate(event)
+        )
+        parsed_event = SurfaceEvent.model_validate(parsed_event.model_dump(mode="json"))
+        if parsed_event.project_id != project_id:
+            raise StaleSurfaceError("surface event project_id does not match its workspace query")
+
+        with self._request_lock:
+            surface = self._workspace_factory.build_surface(parsed_query)
+            provisional = SurfaceSession(surface).activate(parsed_event)
+            audit = self._open_audit(surface)
+            try:
+                record = audit.append_interaction(parsed_event, provisional)
             except AuditIntegrityError as exc:
                 if isinstance(exc.__cause__, DuplicateEventError):
                     raise exc.__cause__ from exc
