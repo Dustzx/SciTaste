@@ -183,7 +183,9 @@ semantic versioning.
 - Model-node pilot runs now become the selected project run, validate reusable
   evidence before a resume mutates project metadata, account for resume attempts,
   and reject disagreement between verified evidence and registered run hashes or
-  final status.
+  final status. Resume can finish a registration interrupted after both final
+  evidence files were verified, without rerunning cases; half-published final
+  evidence remains rejected.
 - Pytest now imports test modules by package path, allowing independently
   developed feature suites to use the same test filename without collection
   collisions after branch integration.

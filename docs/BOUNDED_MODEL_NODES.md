@@ -338,6 +338,10 @@ it when necessary, but only after the existing prefix has validated. `status`
 cross-checks the immutable evidence chain against the registered protocol,
 configuration, manifest, report, verification, artifact, acceptance, and final
 run-status metadata; valid files cannot mask a drifted `PROJECT.json` entry.
+If both final files were fully published and validate but the process stopped
+before registering their hashes, an explicit resume performs metadata-only
+finalization and does not rerun cases. A lone report or verification file is a
+half-published state and remains a manual, fail-closed boundary.
 
 Publication uses exclusive, fsynced atomic writes and a non-blocking per-run
 writer lock. Two writers therefore cannot silently replace case or final

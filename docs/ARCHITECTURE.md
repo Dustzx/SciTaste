@@ -428,6 +428,9 @@ conditions. The compatible live transport, versioned self-development pilot,
 and ProjectRuntime-owned plan/execute/resume/status path are now implemented.
 Case-boundary checkpoints bind their predecessor and exact recording, while
 project registration binds the final manifest/report/verification hashes.
+When both final evidence files exist but their optimistic metadata update was
+interrupted, resume may revalidate and register those exact files without a model
+call; a half-published pair cannot be recovered automatically.
 Missing live execution, external manual measurements, or independent review
 still produce an explicit blocker. The ADR remains proposed because passing
 synthetic transport/tests are not the self-development pilot. It does not alter

@@ -88,10 +88,11 @@ fields from `docs/tasks/README.md`. Explicitly list any remaining step needed fo
 a real `zhipu-direct/glm-5.3-flash` execution. Do not merge or push `main`.
 
 Handoff `b3a9dd3` passed 400 branch tests and was reviewed and integrated through
-main commit `97c8d8b`. Main hardening commit `e43958b` added resume-aware dry-run,
-current-run selection, resume-attempt accounting, pre-mutation prefix validation,
-and registration/evidence metadata verification; its focused suite passes 21
-tests. A real GLM-5.3-Flash run still requires independently captured manual
+main commit `97c8d8b`. Main hardening commits `e43958b` and `d08ee9f` added
+resume-aware dry-run, current-run selection, resume-attempt accounting,
+pre-mutation prefix validation, registration/evidence metadata verification, and
+verified finalization recovery; the focused suite passes 23 tests. A real
+GLM-5.3-Flash run still requires independently captured manual
 measurements and review, confirmed account-specific pricing, an enabled live
 configuration, `ZAI_API_KEY`, and explicit `--allow-live`; none was fabricated or
 invoked during integration. Do not start another assignment from this document
