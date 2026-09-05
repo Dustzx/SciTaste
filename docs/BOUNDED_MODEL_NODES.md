@@ -105,6 +105,110 @@ wrong request ID or fingerprint is durably recorded before evaluation and exact
 replay reproduces the rejected `NodeResult`. Recordings may contain raw provider
 text and belong under ignored project outputs, never in Git.
 
+## Workload profiles and normal project runtime
+
+Normal project invocations select one strict `ModelNodeProfile`. A profile makes
+three different limits visible and fingerprinted instead of collapsing them into
+one misleading token number:
+
+| Layer | Meaning | Authority |
+|---|---|---|
+| `generation` | provider request bytes, requested output, context capacity, JSON and seed capabilities | limits what the adapter may request; it does not admit a proposal |
+| `admission` | per-response input/output/total tokens, latency, measured cost and tool proposals | deterministic code accepts or rejects one proposal |
+| `cumulative_project` | invocation, non-cached token and measured USD totals across restarts | the durable ledger blocks later calls or acceptance |
+
+`runtime_profiles.example.yaml` content-addresses the committed short structured
+and deeper semantic profiles. Both are offline scripted examples. They do not
+claim provider pricing, enable live access, or authorize unrestricted code or
+manuscript generation. In particular, the old 2,048-token engineering probe is
+still local to its pilot adapter configuration; the normal short profile exposes
+a 1,024-token provider envelope and an independent 512-token admission limit.
+
+`ModelNodeRuntime` runs beneath an already registered normal `ProjectRuntime`
+run. Before a backend can be contacted, its immutable intent binds the project
+revision, state revision and projection, node input, trigger, profile, policy,
+provider/model, seed, request ID, and predecessor ledger hash. The project
+manifest and `ResearchState` are not mutated. `ModelNodeFacade` is the narrow
+workflow boundary: it accepts `ImmutableStateProjection` and returns a typed
+`NodeResult` plus a durable receipt. Every result remains
+`advisory_only=true` and `executable=false`.
+
+The ledger persists accepted, rejected, not-applicable, failed, and planned
+outcomes. Known usage from every non-cached response advances totals even when
+schema or deterministic gates reject the proposal. Unknown paid cost is explicit
+and blocks later priced work. Exact replay is cached and therefore preserves its
+telemetry without incrementing cumulative token or USD effects. A changed state,
+request, profile, policy, prompt, seed, provider, or model misses; replay never
+falls through to a live or scripted backend.
+
+Runtime evidence is project-owned:
+
+```text
+outputs/projects/<project-id>/runs/<run-id>/model_nodes/
+  .runtime.lock
+  ledger/00000000__<invocation-id>.json
+  recordings/<invocation-id>.jsonl
+  pending/<attempt-id>/
+  attempts/<attempt-id>/failure.json
+  attempts/<attempt-id>/recording.jsonl  # when a failed attempt returned a response
+```
+
+Ledger entries are an indexed, contiguous SHA-256 predecessor chain. Each entry
+also binds its typed result and recording hashes. `status`/`verify` revalidates
+the complete chain, typed schemas, standard recordings, archived-attempt hashes,
+and cumulative totals after process restart. Writers use a non-blocking run lock
+and exclusive fsynced publication. Resume accepts only the identical invocation
+intent, archives incomplete attempts, treats an interrupted live call without
+complete priced evidence as unknown cost, and recovers the narrow case where a
+complete ledger entry was published just before its pending marker could be
+removed. It never repeats that completed call.
+
+The runtime CLI uses a strict JSON invocation configuration. It can contain an
+offline scripted reply or an OpenAI-compatible configuration that names only an
+API-key environment variable; embedded credential fields are rejected. The
+selected profile remains a separate content-addressed profile-set binding:
+
+```bash
+scitaste model-node runtime plan \
+  --project-id <project> --run-id <registered-run> \
+  --invocation-id <new-id> --expected-revision <revision> \
+  --config <invocation.json> \
+  --profile-set configs/model_nodes/runtime_profiles.example.yaml \
+  --profile-id short-structured-semantic --outputs-root outputs
+
+scitaste model-node runtime execute [--resume] [--dry-run] \
+  --project-id <project> --run-id <registered-run> \
+  --invocation-id <new-id> --expected-revision <revision> \
+  --config <invocation.json> --profile-set <profile-set.yaml> \
+  --profile-id <profile-id> --outputs-root outputs
+
+scitaste model-node runtime replay \
+  --source-invocation <recorded-id> \
+  --project-id <project> --run-id <registered-run> \
+  --invocation-id <new-replay-id> --expected-revision <revision> \
+  --config <the-identical-invocation.json> --profile-set <profile-set.yaml> \
+  --profile-id <profile-id> --outputs-root outputs
+
+scitaste model-node runtime status \
+  --project-id <project> --run-id <registered-run> --outputs-root outputs
+
+scitaste model-node runtime verify \
+  --project-id <project> --run-id <registered-run> --outputs-root outputs
+```
+
+Plan, status, verify, replay, scripted execution, and `execute --dry-run` are
+network-free. A live call requires all three independent permissions: the
+profile permits live execution, the compatible backend configuration is itself
+live-enabled with the required pricing declaration, and the caller passes
+`--allow-live`. Omitting any switch persists a planned outcome with blockers and
+does not access the credential environment variable or transport.
+
+Machine JSON separates `generation_envelope`, `admission_budget`, and
+`cumulative_project_budget`; reports per-invocation and cumulative token/cost/
+latency telemetry, cache/replay state, blockers, hashes, and relative evidence
+locators. It reports only proposal availability and authority flags—not proposal
+content, raw provider responses, authorization headers, or secret values.
+
 ## Live-model promotion boundary
 
 `StructuredOpenAICompatibleBackend` provides a provider-SDK-free Chat

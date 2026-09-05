@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from scitaste.cli import main
 from scitaste.model_nodes import load_model_node_profile_set
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
@@ -115,7 +116,10 @@ def _run(*args: str) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
-def test_three_nodes_execute_verify_and_replay_across_processes(tmp_path: Path) -> None:
+def test_three_nodes_execute_verify_and_replay_across_processes(
+    tmp_path: Path,
+    capsys,
+) -> None:
     outputs = tmp_path / "outputs"
     project = ProjectRuntime(outputs)
     project.create(
@@ -300,3 +304,22 @@ def test_three_nodes_execute_verify_and_replay_across_processes(tmp_path: Path) 
     assert verified["profiles"][0]["generation_envelope"]["max_output_tokens"] == 1024
     assert verified["profiles"][0]["admission_budget"]["max_output_tokens"] == 512
     assert manifest.read_bytes() == before
+
+    assert (
+        main(
+            [
+                "model-node",
+                "runtime",
+                "status",
+                "--project-id",
+                PROJECT_ID,
+                "--run-id",
+                RUN_ID,
+                "--outputs-root",
+                str(outputs),
+            ]
+        )
+        == 0
+    )
+    in_process_status = json.loads(capsys.readouterr().out)
+    assert in_process_status["status"] == "verified"

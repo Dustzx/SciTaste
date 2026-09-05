@@ -96,6 +96,7 @@ class RuntimeInvocationIntent(RuntimeModel):
         pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
     )
     seed: int = Field(ge=0)
+    expected_request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     predecessor_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -342,6 +343,8 @@ class ModelNodeRuntime:
             blockers = (*blockers, "cumulative project budget differs from the ledger")
         if invocation_id in {entry.intent.invocation_id for entry in entries}:
             blockers = (*blockers, "invocation ID already exists")
+        if self._pending_directories(stage):
+            blockers = (*blockers, "incomplete model-node attempts require resume")
         return self._receipt(
             intent,
             outcome=RuntimeOutcome.PLANNED,
@@ -426,9 +429,40 @@ class ModelNodeRuntime:
             create_stage=True,
         )
         entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
-        completed_ids = {entry.intent.invocation_id for entry in entries}
+        completed = {entry.intent.invocation_id: entry for entry in entries}
+        completed_ids = set(completed)
         invocation_id = values["invocation_id"]
         if invocation_id in completed_ids:
+            pending = self._pending_directories(stage)
+            if pending:
+                if not resume:
+                    raise ModelNodeRuntimeError("incomplete model-node attempts require --resume")
+                attempt_locator = self._archive_completed_pending(
+                    stage,
+                    pending,
+                    completed=completed,
+                    invocation_id=invocation_id,
+                )
+                entry = completed[invocation_id]
+                totals = self._totals(project_id, run_id, entries, stage=stage)
+                recording_id = (
+                    entry.intent.replay_source_invocation_id
+                    if entry.replayed
+                    else entry.intent.invocation_id
+                )
+                recording_path = stage / "recordings" / f"{recording_id}.jsonl"
+                return self._receipt(
+                    entry.intent,
+                    outcome=entry.outcome,
+                    entry_sha256=entry.entry_sha256,
+                    totals=totals,
+                    result=entry.result,
+                    request_fingerprint=entry.request_fingerprint,
+                    blockers=entry.blockers,
+                    recording_path=recording_path if recording_path.is_file() else None,
+                    attempt_locator=attempt_locator,
+                    entry=entry,
+                )
             raise FileExistsError(f"model-node invocation already exists: {invocation_id}")
         totals = self._totals(project_id, run_id, entries, stage=stage)
         replay_source = next(
@@ -548,7 +582,11 @@ class ModelNodeRuntime:
                 entry_sha256=_ZERO_HASH,
             )
         except Exception:
-            recorded_response = _last_recorded_response(recording_path)
+            recorded_response = (
+                None
+                if intent.backend_mode is RuntimeBackendMode.REPLAY
+                else _last_recorded_response(recording_path)
+            )
             unknown_cost = (
                 recorded_response is not None and recorded_response.usage.cost_usd is None
             ) or (recorded_response is None and intent.backend_mode is RuntimeBackendMode.LIVE)
@@ -643,6 +681,15 @@ class ModelNodeRuntime:
             },
             strict=True,
         )
+        node_type = _NODE_TYPES[node_name][0]
+        expected_request = node_type()._build_request(
+            typed_input,
+            context=effective_context,
+            policy=policy,
+            request_id=request_id or invocation_id,
+            seed=values["seed"],
+            profile=profile,
+        )
         return RuntimeInvocationIntent(
             invocation_id=invocation_id,
             request_id=request_id or invocation_id,
@@ -651,6 +698,7 @@ class ModelNodeRuntime:
             context=effective_context,
             profile=profile,
             policy=policy,
+            expected_request_fingerprint=expected_request.fingerprint,
             **values,
         )
 
@@ -722,6 +770,8 @@ class ModelNodeRuntime:
         replayed: bool,
     ) -> RuntimeLedgerEntry:
         result_payload = result.model_dump(mode="json", exclude_computed_fields=True)
+        if result.request.fingerprint != intent.expected_request_fingerprint:
+            raise ModelNodeRuntimeError("model-node request identity drift")
         response = result.response
         cached = response.cached
         outcome = (
@@ -844,6 +894,8 @@ class ModelNodeRuntime:
             raise ModelNodeRuntimeError("ledger result profile identity drift")
         if result.request.fingerprint != entry.request_fingerprint:
             raise ModelNodeRuntimeError("ledger result request fingerprint drift")
+        if result.request.fingerprint != entry.intent.expected_request_fingerprint:
+            raise ModelNodeRuntimeError("ledger intent request fingerprint drift")
 
     def _totals(
         self,
@@ -928,12 +980,43 @@ class ModelNodeRuntime:
             unknown = unknown or unknown_cost
         return unknown
 
+    def _archive_completed_pending(
+        self,
+        stage: Path,
+        pending: list[Path],
+        *,
+        completed: dict[str, RuntimeLedgerEntry],
+        invocation_id: str,
+    ) -> str:
+        locator: str | None = None
+        for directory in pending:
+            intent = _load_model(directory / "intent.json", RuntimeInvocationIntent)
+            entry = completed.get(intent.invocation_id)
+            if entry is None:
+                raise ModelNodeRuntimeError(
+                    "an unrelated incomplete attempt must be resumed before this invocation"
+                )
+            if intent.fingerprint != entry.intent.fingerprint:
+                raise ModelNodeRuntimeError("published invocation identity drift")
+            archived = self._archive_one_pending(
+                stage,
+                directory,
+                unknown_cost=False,
+                preserve_recording=True,
+            )
+            if intent.invocation_id == invocation_id:
+                locator = archived
+        if locator is None:
+            raise ModelNodeRuntimeError("completed invocation has no matching pending attempt")
+        return locator
+
     def _archive_one_pending(
         self,
         stage: Path,
         directory: Path,
         *,
         unknown_cost: bool,
+        preserve_recording: bool = False,
     ) -> str:
         attempt_id = directory.name
         target = stage / "attempts" / attempt_id
@@ -941,7 +1024,7 @@ class ModelNodeRuntime:
         os.replace(directory, target)
         intent = _load_model(target / "intent.json", RuntimeInvocationIntent)
         recording_sha256 = None
-        if intent.backend_mode is not RuntimeBackendMode.REPLAY:
+        if intent.backend_mode is not RuntimeBackendMode.REPLAY and not preserve_recording:
             recording = stage / "recordings" / f"{intent.invocation_id}.jsonl"
             if recording.is_file():
                 recording_sha256 = _sha256_file(recording)

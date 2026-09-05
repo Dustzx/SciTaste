@@ -23,6 +23,7 @@ from scitaste.model_nodes.runtime import (
     ModelNodeRuntimeConflictError,
     ModelNodeRuntimeError,
     ModelNodeTrigger,
+    ReviewSemanticNode,
     RuntimeBackendMode,
     RuntimeOutcome,
 )
@@ -210,6 +211,12 @@ def test_accepted_and_rejected_results_advance_durable_cost_ledger(tmp_path: Pat
     )
     assert restarted == rejected.totals
     assert len(list((_stage(project) / "ledger").glob("*.json"))) == 2
+    first_entry = json.loads(
+        sorted((_stage(project) / "ledger").glob("*.json"))[0].read_text(encoding="utf-8")
+    )
+    assert (
+        first_entry["intent"]["expected_request_fingerprint"] == first_entry["request_fingerprint"]
+    )
 
 
 def test_unknown_cost_is_persisted_and_blocks_later_backend_access(tmp_path: Path) -> None:
@@ -358,3 +365,178 @@ def test_corrupt_ledger_and_secret_backend_failure_are_sanitized(tmp_path: Path)
     with pytest.raises(ModelNodeRuntimeError) as error:
         runtime.status(project_id=PROJECT_ID, run_id=RUN_ID)
     assert "must-not-reflect" not in str(error.value)
+
+
+def test_failed_schema_response_still_advances_known_usage_and_archive_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, revision = _project(tmp_path)
+    backend = ScriptedStructuredBackend(
+        name="scripted",
+        model="scripted-v1",
+        replies={
+            "invalid-schema": ScriptedStructuredReply(
+                output_payload=_payload(),
+                usage=Usage(input_tokens=17, output_tokens=9, cost_usd=0.02),
+                latency_ms=4,
+            )
+        },
+    )
+    original_run = ReviewSemanticNode.run
+
+    def fail_after_recording(self, *args, **kwargs):
+        original_run(self, *args, **kwargs)
+        raise RuntimeError("simulated deterministic post-response failure")
+
+    monkeypatch.setattr(ReviewSemanticNode, "run", fail_after_recording)
+    failed = ModelNodeRuntime(project).execute(
+        backend=backend,
+        **_values(invocation_id="invalid-schema", revision=revision),
+    )
+
+    assert failed.outcome is RuntimeOutcome.FAILED
+    assert failed.telemetry.total_tokens == 26
+    assert failed.telemetry.cost_usd == pytest.approx(0.02)
+    assert failed.totals.total_tokens == 26
+    assert failed.totals.cost_usd == pytest.approx(0.02)
+    assert failed.attempt_locator is not None
+    archived_recording = next((_stage(project) / "attempts").glob("*/recording.jsonl"))
+    archived_recording.write_text("tampered\n", encoding="utf-8")
+    with pytest.raises(ModelNodeRuntimeError, match="archived recording evidence drift"):
+        ModelNodeRuntime(project).status(project_id=PROJECT_ID, run_id=RUN_ID)
+
+
+def test_exact_replay_miss_is_failed_without_fallback_or_resource_effect(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    runtime = ModelNodeRuntime(project)
+    source = runtime.execute(
+        backend=_backend("source-request"),
+        **_values(invocation_id="source", request_id="source-request", revision=revision),
+    )
+    values = _values(
+        invocation_id="replay-miss",
+        request_id="different-request",
+        revision=revision,
+    )
+    values.update(
+        backend_mode=RuntimeBackendMode.REPLAY,
+        replay_source_invocation_id="source",
+    )
+    missed = runtime.execute(backend=None, **values)
+
+    assert missed.outcome is RuntimeOutcome.FAILED
+    assert missed.telemetry.replayed is True
+    assert missed.telemetry.total_tokens == 0
+    assert missed.telemetry.cost_usd == 0
+    assert missed.totals.total_tokens == source.totals.total_tokens
+    assert missed.totals.cost_usd == source.totals.cost_usd
+    assert missed.recording_locator is None
+
+
+def test_partial_publication_resume_returns_existing_entry_and_preserves_recording(
+    tmp_path: Path,
+) -> None:
+    project, revision = _project(tmp_path)
+    runtime = ModelNodeRuntime(project)
+    values = _values(invocation_id="partial-publish", revision=revision)
+    completed = runtime.execute(backend=_backend("partial-publish"), **values)
+    ledger = next((_stage(project) / "ledger").glob("*.json"))
+    intent = json.loads(ledger.read_text(encoding="utf-8"))["intent"]
+    pending = _stage(project) / "pending" / "partial-publish--simulated-crash--1"
+    pending.mkdir(parents=True)
+    (pending / "intent.json").write_text(json.dumps(intent), encoding="utf-8")
+    (pending / "backend-started").write_text("started\n", encoding="utf-8")
+
+    with pytest.raises(ModelNodeRuntimeError, match="require --resume"):
+        runtime.execute(backend=_backend("partial-publish"), **values)
+    resumed = ModelNodeRuntime(ProjectRuntime(project.outputs_root)).execute(
+        backend=_backend("partial-publish"),
+        resume=True,
+        **values,
+    )
+
+    assert resumed.entry_sha256 == completed.entry_sha256
+    assert resumed.outcome is RuntimeOutcome.ACCEPTED
+    assert resumed.totals.entry_count == 1
+    assert resumed.attempt_locator is not None
+    assert (_stage(project) / "recordings" / "partial-publish.jsonl").is_file()
+    assert runtime.verify(project_id=PROJECT_ID, run_id=RUN_ID).verified is True
+
+
+def test_resume_rejects_changed_policy_identity(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+
+    def interrupt(_intent) -> None:
+        raise SystemExit
+
+    values = _values(invocation_id="policy-drift", revision=revision)
+    with pytest.raises(SystemExit):
+        ModelNodeRuntime(project, before_backend=interrupt).execute(
+            backend=_backend("policy-drift"),
+            **values,
+        )
+    values["policy"] = values["policy"].model_copy(update={"policy_id": "changed-policy"})
+    with pytest.raises(ModelNodeRuntimeError, match="resume invocation identity drift"):
+        ModelNodeRuntime(project).execute(
+            backend=_backend("policy-drift"),
+            resume=True,
+            **values,
+        )
+
+
+def test_backend_identity_drift_never_calls_provider_and_is_persisted(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    backend = ScriptedStructuredBackend(
+        name="silent-provider-alias",
+        model="scripted-v1",
+        replies={"identity-drift": ScriptedStructuredReply(output_payload=_payload())},
+    )
+    failed = ModelNodeRuntime(project).execute(
+        backend=backend,
+        **_values(invocation_id="identity-drift", revision=revision),
+    )
+
+    assert failed.outcome is RuntimeOutcome.FAILED
+    assert backend.calls == []
+    assert failed.totals.failed_count == 1
+
+
+def test_cumulative_token_overrun_rejects_second_response_and_charges_it(
+    tmp_path: Path,
+) -> None:
+    project, revision = _project(tmp_path)
+    profile = _profile()
+    profile = profile.model_copy(
+        update={
+            "cumulative_project": profile.cumulative_project.model_copy(
+                update={"max_total_tokens": profile.admission.max_total_tokens}
+            )
+        }
+    )
+    policy = _policy(profile)
+    runtime = ModelNodeRuntime(project)
+    common = _values(invocation_id="first-budget", revision=revision)
+    common.update(profile=profile, policy=policy)
+    first = runtime.execute(
+        backend=_backend(
+            "first-budget",
+            usage=Usage(input_tokens=1000, output_tokens=300, cost_usd=0.01),
+        ),
+        **common,
+    )
+    second_values = _values(invocation_id="second-budget", revision=revision)
+    second_values.update(profile=profile, policy=policy)
+    second = runtime.execute(
+        backend=_backend(
+            "second-budget",
+            usage=Usage(input_tokens=1000, output_tokens=300, cost_usd=0.01),
+        ),
+        **second_values,
+    )
+
+    assert first.outcome is RuntimeOutcome.ACCEPTED
+    assert second.outcome is RuntimeOutcome.REJECTED
+    assert "cumulative project token budget exceeded" in second.blockers
+    assert second.totals.total_tokens == 2600
+    assert second.totals.cost_usd == pytest.approx(0.02)

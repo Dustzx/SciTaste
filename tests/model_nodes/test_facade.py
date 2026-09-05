@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import socket
 from pathlib import Path
+
+import pytest
 
 from scitaste.backends.base import Usage
 from scitaste.model_nodes import (
@@ -45,7 +48,10 @@ def _policy(profile: ModelNodeProfile) -> NodePolicy:
     )
 
 
-def test_facade_returns_typed_advice_without_mutating_state_projection(tmp_path: Path) -> None:
+def test_facade_returns_typed_advice_without_mutating_state_projection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     project = ProjectRuntime(tmp_path / "outputs")
     project.create(
         ProjectManifest(
@@ -121,6 +127,11 @@ def test_facade_returns_typed_advice_without_mutating_state_projection(tmp_path:
             )
         },
     )
+
+    def forbid_network(*_args, **_kwargs):
+        raise AssertionError("scripted model-node execution attempted network access")
+
+    monkeypatch.setattr(socket.socket, "connect", forbid_network)
 
     result = ModelNodeFacade(ModelNodeRuntime(project)).execute(request, backend=backend)
 
