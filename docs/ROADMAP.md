@@ -156,6 +156,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A shell-free, resumable `study run` harness now isolates cells, terminates
   timed-out process groups, measures allocated GPU/wall time, validates adapter
   counters and outcomes, and independently hashes in-cell artifacts.
+- Study resume is now integrity-checked rather than status-only: self-hashed run
+  and cell checkpoints bind protocol, plan, launcher, request, command, record,
+  and evidence bytes; retries preserve failed attempts and concurrent writers
+  cannot share an output root. A ProjectRuntime orchestration layer owns the
+  study as one revision-guarded project run and distinguishes partial from
+  complete matrices. Unified CLI integration remains pending.
 - A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
   non-headline; its four launcher commands remain explicit adapter work rather
   than synthetic substitutes.

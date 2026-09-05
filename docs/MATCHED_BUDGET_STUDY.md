@@ -108,10 +108,31 @@ Run selected execution-ready cells through explicit command adapters:
 `study run` creates an isolated directory per cell, writes a complete request,
 starts the adapter without a shell, bounds the process by wall/GPU allocation,
 captures logs, validates its standard result, re-hashes declared artifacts, and
-atomically checkpoints aggregate results after every cell. Successful cells are
-resumed by default. A timed-out process group, missing executable, non-zero exit,
-missing telemetry, path-escaping artifact, or invalid result becomes a failed
-record; none is replaced with synthetic success.
+atomically checkpoints aggregate results after every cell. The output root has a
+self-hashed run manifest binding the protocol, deterministic plan, and exact
+launcher configuration. Every completed attempt has a self-hashed cell
+checkpoint binding its request, command, execution record, and evidence files.
+Successful cells are resumed only after those identities and every artifact hash
+revalidate. A changed launcher, tampered record/artifact, orphaned aggregate
+entry, or legacy output without an integrity manifest fails closed.
+
+Failed attempts are moved beneath the owning cell's `failed_attempts/` directory
+before a retry, retaining logs, raw launcher result, record, and checkpoint.
+Runner-owned time remains cumulative. One non-blocking process lock protects the
+complete output directory, so concurrent runners cannot overwrite each other's
+checkpoints or aggregate results. A timed-out process group, missing executable,
+non-zero exit, missing telemetry, path-escaping artifact, or invalid result
+becomes a failed record; none is replaced with synthetic success.
+
+`ProjectMatchedStudyRunner` is the project-owned application boundary for this
+runner. It requires an existing `ProjectRuntime` project, registers and selects
+one run whose `stage_path` is `study`, stores the integrity-checked study below
+that run, and finalizes the run as `partial`, `complete`, or `failed` under the
+same optimistic project revision held before the long execution. A concurrent
+project mutation therefore conflicts instead of being silently adopted.
+Mutation-free dry-run and strict resume identity checks are available through
+the Python API; unified CLI registration is deferred to the current command
+integration pass.
 
 Protocols declare either `formal` or `pilot` scope. A pilot remains
 `acceptance_only` even if every execution and external review is otherwise

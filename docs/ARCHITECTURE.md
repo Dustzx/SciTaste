@@ -486,3 +486,26 @@ overwrite recovery remains an explicit manual boundary.
 This ADR establishes offline orchestration and artifact ownership, not a claim
 that the mock executor measures research effectiveness or that live
 AutoResearchClaw/model-node integration is complete.
+
+### ADR-026: Matched-study resume requires content-bound project ownership
+
+Status: accepted. A successful status field is insufficient authority to skip an
+expensive Phase 9 cell. One self-hashed run manifest binds the protocol, planned
+matrix, and launcher configuration. Each current cell attempt has a self-hashed
+checkpoint over its exact request, rendered command, execution record, and every
+evidence file used by that record. Resume revalidates the complete identity and
+artifact bytes; coordinated edits to the aggregate and cell record remain
+detectable through the separately retained checkpoint.
+
+The aggregate result is a deterministic projection of integrity-checked cell
+records, not an alternative authority. Orphaned aggregate records, changed
+launchers, legacy unmanifested roots, missing checkpoints, and hash drift fail
+closed. Failed attempts move to a numbered project-owned archive before retry,
+and a process lock prevents two runners from interleaving the same output root.
+
+`ProjectMatchedStudyRunner` registers this evidence tree as one `ProjectRun` and
+holds the optimistic project revision across the long execution. A partial
+selection cannot claim matrix completion, and a concurrent project writer causes
+finalization conflict rather than a latest-revision retry. This decision improves
+execution provenance only; synthetic cells, incomplete matrices, and missing
+external blinded reviews remain ineligible for effectiveness claims.

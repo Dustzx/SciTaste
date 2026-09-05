@@ -34,6 +34,15 @@ operation cannot change run identity and uses the same expected-revision guard;
 the full workflow uses it to record completion/failure, the final-state locator,
 and readable per-stage records.
 
+The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
+the study as one project run, exposes the run's `study/` directory through the
+normal current-stage alias, and binds its protocol, plan, launcher configuration,
+aggregate results, and cell checkpoints by hash. A subset execution remains
+`partial`; only all planned successful cells produce `complete`. Failed and
+partial runs may resume under their registered identity, while complete, running,
+changed, or tampered runs fail closed. A project revision changed during a long
+cell execution is not reacquired at finalization.
+
 ## CLI
 
 Create and inspect a project:
@@ -106,3 +115,5 @@ still return to the deterministic controller and revision gate before mutation.
 
 The first full lifecycle consumer is documented in
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
+The project-owned matched-study consumer is documented in
+[`MATCHED_BUDGET_STUDY.md`](MATCHED_BUDGET_STUDY.md).
