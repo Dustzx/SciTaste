@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SciTaste trusted research interface</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">SciTaste</p>
+        <h1>Trusted research interface</h1>
+      </div>
+      <div class="credential-panel">
+        <label for="bearer-token">Local bearer credential</label>
+        <input id="bearer-token" type="password" autocomplete="off" spellcheck="false">
+        <button id="connect" type="button">Connect</button>
+      </div>
+    </header>
+    <div class="application-grid">
+      <nav class="project-nav" aria-label="Project navigation">
+        <label for="project-select">Authoritative project</label>
+        <select id="project-select" disabled></select>
+        <button id="load-project" type="button" disabled>Load current surface</button>
+        <p id="connection-status" role="status">Enter the configured local credential.</p>
+      </nav>
+      <main id="workspace" class="workspace" aria-live="polite">
+        <p class="empty-state">No trusted project surface is loaded.</p>
+      </main>
+      <aside class="inspector" aria-label="Proposal inspector">
+        <h2>Proposal boundary</h2>
+        <p>Actions create pending proposals only. This receiver cannot execute tools.</p>
+        <div id="proposal-result" role="status"></div>
+      </aside>
+    </div>
+  </body>
+</html>

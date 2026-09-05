@@ -83,6 +83,13 @@ from scitaste.generative_ui.registry import (
     SurfacePurpose,
     TrustedComponent,
 )
+from scitaste.generative_ui.server import (
+    BearerCredential,
+    GenerativeUIHTTPServer,
+    LocalServerConfig,
+    create_http_server,
+    serve_local_application,
+)
 
 __all__ = [
     "APPROVAL_EVIDENCE_KINDS",
@@ -92,6 +99,7 @@ __all__ = [
     "ApprovalSubject",
     "ArtifactViewerData",
     "AuditIntegrityError",
+    "BearerCredential",
     "BlockerListData",
     "BudgetMeterData",
     "ClaimMatrixData",
@@ -104,7 +112,9 @@ __all__ = [
     "EvidenceRef",
     "FixedApplicationShell",
     "GenerativeUIApplication",
+    "GenerativeUIHTTPServer",
     "InspectArtifactPayload",
+    "LocalServerConfig",
     "PaperPreviewData",
     "ProjectDiscoveryDocument",
     "ProjectDiscoveryItem",
@@ -149,7 +159,9 @@ __all__ = [
     "build_run_comparison_fixture",
     "component_data_json_schema",
     "compute_snapshot_sha256",
+    "create_http_server",
     "fixture_snapshot_binding",
     "make_surface_event",
     "project_surface",
+    "serve_local_application",
 ]
