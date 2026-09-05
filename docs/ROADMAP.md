@@ -280,11 +280,16 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - `outputs/projects/scitaste-self-development/` is the canonical project-level
   record for SciTaste's own dogfooding iterations. It references the Phase 7.5
   adapter decision and Phase 9 defect-discovery evidence without moving raw runs.
-- The bounded model-node infrastructure is implemented offline for review
-  parsing, interpretation threats, and ambiguity-triggered action ranking. The
-  self-development pilot is still pending and registers deterministic-only,
-  local-node, and Zhipu `GLM-5.3-Flash` conditions, with schema, gate-bypass,
-  replay, manual-intervention, unsupported-claim, and cost acceptance criteria.
+- The bounded model-node infrastructure is implemented for review parsing,
+  interpretation threats, and ambiguity-triggered action ranking. A fail-closed
+  compatible live backend now pins provider/model and requires measured token,
+  cost, latency, and pricing provenance before use.
+- The versioned self-development pilot protocol and runner isolate
+  deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
+  conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
+  replay, external manual-intervention, unsupported-reference, tool, cost, and
+  independent-review gates. Missing live calls or external evidence block rather
+  than being replaced with fixture results; the real pilot remains pending.
 - This exploratory self-project is excluded from the active Phase 9 registered
   comparison and from headline effectiveness claims.
 

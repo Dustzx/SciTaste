@@ -15,6 +15,12 @@ semantic versioning.
   granting generated actions execution authority.
 - Project output catalogs now list versioned trusted surface bundles beside each
   owning project and expose their content fingerprint and component files.
+- A fail-closed OpenAI-compatible structured backend for bounded model nodes,
+  including pinned provider/model identity, exact raw-response hashes, mandatory
+  token/cost provenance, bounded retries, and an inert GLM-5.3-Flash example.
+- A versioned SciTaste self-development model-node pilot runner with isolated
+  deterministic/scripted/replay/live conditions, canonical reports, explicit
+  external measurements, and blockers for every missing acceptance input.
 - Phase 0/1 controller skeleton and nonlinear demo.
 - AutoResearchClaw v0.5.0 as a pinned execution substrate.
 - CI, contribution workflow, roadmap, architecture record, and issue templates.

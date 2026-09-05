@@ -418,10 +418,13 @@ and ambiguity-triggered action ranking. Nodes are opt-in, fingerprinted,
 usage-metered, recorded for exact replay, and unable to silently switch provider
 or model. Rejected output remains untrusted and has no executable proposal. New
 Zhipu pilots use `GLM-5.3-Flash`; local and online nodes remain separate study
-conditions. The ADR remains proposed because infrastructure tests are not the
-self-development pilot. It does not alter the registered Phase 9 protocol and
-becomes accepted only after that pilot clears the recorded schema, safety,
-intervention, and cost gates.
+conditions. The compatible live transport and versioned self-development pilot
+runner are now implemented, but missing live execution, external manual
+measurements, or independent review produce an explicit blocker. The ADR remains
+proposed because passing synthetic transport/tests are not the self-development
+pilot. It does not alter the registered Phase 9 protocol and becomes accepted
+only after the real pilot clears the recorded schema, safety, intervention, and
+cost gates.
 
 ### ADR-023: Project directories are revisioned ownership boundaries
 
