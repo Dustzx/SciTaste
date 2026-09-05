@@ -127,10 +127,17 @@ def test_malformed_cross_project_stale_and_unknown_events_do_not_extend_audit(
     audit = _audit_path(runtime)
     before = audit.read_bytes()
 
-    malformed = event.model_dump(mode="json")
-    malformed["proposal"] = {"command": "run"}
-    with pytest.raises(ValidationError):
-        app.submit_event("app-project", malformed)
+    for client_authored_field in (
+        "surface",
+        "components",
+        "proposal",
+        "evidence_refs",
+        "receipt",
+    ):
+        malformed = event.model_dump(mode="json")
+        malformed[client_authored_field] = {"command": "run"}
+        with pytest.raises(ValidationError):
+            app.submit_event("app-project", malformed)
     with pytest.raises(StaleSurfaceError, match="project_id"):
         app.submit_event("another-project", event)
     with pytest.raises(StaleSurfaceError, match="stale bindings"):

@@ -8,9 +8,9 @@ command-bearing fields, callbacks, tool calls, or state mutations. Text is alway
 untrusted display text and is never evaluated.
 
 This module is a contract and interaction-boundary layer plus a trusted
-ProjectRuntime adapter. It includes a framework-neutral renderer document, but
-not a web server, actual renderer, model call, authenticated API, or task
-executor.
+ProjectRuntime adapter. It includes a framework-neutral renderer document and a
+local receiver-owned browser/API application. It does not include a model call,
+controller approval, or task executor.
 
 ## Trusted project surface factory
 
@@ -75,12 +75,74 @@ Add `--dry-run` to validate and fingerprint the authoritative in-memory surface
 without creating the destination. The command reports the selected trusted
 components and proposal IDs; it does not activate those proposals.
 
-This factory still stops at the existing trust boundary: it does not provide a
-frontend, HTTP/API handler, model-driven layout generator, authenticated event
-receiver, deterministic controller, approval workflow, or action executor.
-Consumers must revalidate artifact hashes at access time if project files can
-change after the point-in-time surface build, and must send any interaction
-through `SurfaceSession` and the later controller boundary.
+The factory itself still stops at the declarative boundary: it does not provide
+a model-driven layout generator, deterministic controller, approval workflow,
+or action executor. The local application described below revalidates every
+interaction through `SurfaceSession`, but its successful receipt still stops
+before the later controller boundary.
+
+## Local receiver application
+
+`GenerativeUIApplication` owns one `ProjectRuntime`,
+`ProjectSurfaceFactory`, and the project-local audit boundary. It discovers only
+canonical, non-symlink project directories that open as valid runtime
+snapshots. Surface requests rebuild current authoritative state and return a
+`RendererDocument`; the browser never receives the server-owned `SurfaceSpec`
+action payloads.
+
+The versioned same-origin JSON API is deliberately small:
+
+- `GET /api/v1/projects` returns canonical project IDs and revisions;
+- `GET /api/v1/projects/<project-id>/surface` returns the current fixed-shell
+  renderer document;
+- `POST /api/v1/projects/<project-id>/events` accepts exactly `SurfaceEvent`
+  and returns exactly `ProposalReceipt` with HTTP 202.
+
+There is no general filesystem, artifact download, callback, controller, tool,
+or model endpoint. Query strings are rejected, so credentials cannot be passed
+in a query. API requests require an exact bearer authorization header, compared
+in constant time. The fixed HTML, CSS, and JavaScript shell is public because it
+contains no project state or credential; all project data remains behind the
+authenticated API. The browser retains the credential only in its password
+input and does not use local or session storage.
+
+The packaged JavaScript contains a closed receiver function for every
+`TrustedComponent`. It creates elements and text nodes with `createTextNode` or
+`textContent`; it never assigns generated text to HTML, script, URL, or event
+handler slots. The Content Security Policy permits only same-origin script,
+style, image, and API connections and forbids objects, base changes, framing,
+and form actions. `ArtifactViewer` shows allowlisted metadata only; it is not a
+file link.
+
+At event submission the application rebuilds the current surface from
+`ProjectRuntime` before resolving the identity-only event. A changed project
+revision, evidence hash, artifact, surface fingerprint, cross-project ID,
+unknown action, or stale tab is rejected before an audit append. Accepted
+events are recomputed from the server-owned surface, then appended under
+`outputs/projects/<project-id>/.generative-ui/audits/`. Audit epochs are keyed by
+snapshot and surface fingerprints, allowing direct artifact changes at an
+unchanged project revision to invalidate the old surface without conflating two
+bindings. Each epoch remains hash-chained and replayable; replay on process
+restart restores duplicate-event protection. File locking serializes concurrent
+accepted events.
+
+Serve the application with a credential sourced from an environment variable:
+
+```bash
+export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
+.venv/bin/scitaste ui serve --outputs-root outputs
+```
+
+The default bind is `127.0.0.1:8765`. `--token-env NAME` selects another
+environment variable; `--token-file PATH` reads a regular non-symlink file.
+There is intentionally no plaintext token argument. A non-loopback `--host`
+fails validation unless `--i-understand-non-loopback-exposure` is also present.
+`--dry-run` validates the complete configuration and credential source without
+opening a listening socket or creating the outputs root.
+
+This receiver does not approve or execute the returned proposal. The only next
+boundary named by a valid receipt is `deterministic_controller`, which is not
+called by the HTTP service or browser.
 
 ## Contract hierarchy
 
@@ -154,6 +216,10 @@ proposal.
 document pins `scitaste-research-shell` with fixed `header`, `project_nav`,
 `workspace`, and `inspector` regions. Generated components can populate only the
 `workspace` region and must still name a trusted native renderer.
+
+The packaged local receiver implements those four regions directly. Its assets
+are build-time package data rather than generated project output and reference
+no remote script, stylesheet, font, or renderer.
 
 The projected action metadata contains an action ID, presentation hint, proposal
 kind, and approval flag. It deliberately omits the server-owned proposal payload

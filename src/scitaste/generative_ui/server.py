@@ -184,6 +184,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             self._send_problem(
                 _HTTPProblem(HTTPStatus.BAD_REQUEST, "invalid_request", "request is invalid")
             )
+        except Exception:
+            _LOGGER.exception("unexpected trusted generative UI request failure")
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    "internal_error",
+                    "request failed closed",
+                )
+            )
 
     def _dispatch_api(self, method: str, path: str) -> None:
         if path == "/api/v1/projects":

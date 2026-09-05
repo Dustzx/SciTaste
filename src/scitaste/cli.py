@@ -49,6 +49,7 @@ from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
 from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.generative_ui import ProjectSurfaceFactory
+from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -93,6 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="scitaste", description="Scientific taste controller")
     parser.add_argument("--version", action="version", version="SciTaste 0.1.0")
     commands = parser.add_subparsers(dest="command", required=True)
+    add_ui_commands(commands)
 
     baseline = commands.add_parser("baseline", help="Execution-substrate baseline commands")
     baseline_commands = baseline.add_subparsers(dest="baseline_command", required=True)
