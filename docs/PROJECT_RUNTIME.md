@@ -98,6 +98,22 @@ Paper generation materializes files beneath
 All mutating commands support `--dry-run`. Dry-run validates IDs, schemas, and
 the expected revision without creating or changing files.
 
+Run selected matched-study cells inside an existing project with:
+
+```bash
+.venv/bin/scitaste study project-run \
+  --config configs/experiments/matched_budget_local_pilot_v1.yaml \
+  --launch-config path/to/reviewed-launchers.yaml \
+  --project-id my-research-project --run-id phase9-local-pilot \
+  --provider local --model Qwen3-VL-4B-Instruct \
+  --condition autoresearchclaw --max-cells 1 --dry-run
+```
+
+The command derives its output directory from the project and run IDs rather
+than accepting an unrelated `--output`. Resume is explicit with `--resume` and
+requires an integrity-checked registered run whose status is `partial` or
+`failed`.
+
 ## Snapshot boundary
 
 `ProjectSnapshot` uses project-relative locators and hashes the validated project

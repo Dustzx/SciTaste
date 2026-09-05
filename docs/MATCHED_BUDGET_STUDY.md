@@ -131,8 +131,21 @@ that run, and finalizes the run as `partial`, `complete`, or `failed` under the
 same optimistic project revision held before the long execution. A concurrent
 project mutation therefore conflicts instead of being silently adopted.
 Mutation-free dry-run and strict resume identity checks are available through
-the Python API; unified CLI registration is deferred to the current command
-integration pass.
+both the Python API and the project-owned command:
+
+```bash
+.venv/bin/scitaste study project-run \
+  --config configs/experiments/matched_budget_local_pilot_v1.yaml \
+  --launch-config path/to/reviewed-launchers.yaml \
+  --project-id my-study --run-id local-pilot-v1 \
+  --provider local --model Qwen3-VL-4B-Instruct \
+  --condition autoresearchclaw --max-cells 1 --dry-run
+```
+
+The project must already exist. Remove `--dry-run` only after reviewing the
+launcher and resource implications. A later invocation must add `--resume` to
+reuse the same registered partial or failed run; a new invocation never silently
+adopts an existing run directory.
 
 Protocols declare either `formal` or `pilot` scope. A pilot remains
 `acceptance_only` even if every execution and external review is otherwise

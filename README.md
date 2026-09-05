@@ -165,6 +165,12 @@ run's `failed_attempts/` tree.
 This validates end-to-end framework behavior with the deterministic mock; it is
 not an effectiveness result. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 
+For Phase 9 executions, `scitaste study project-run` registers the matrix or
+selected cells beneath an existing project instead of producing another
+top-level output directory. Its resume path revalidates the protocol, launcher,
+request, command, execution record, and artifact hashes before skipping a cell.
+See [`docs/MATCHED_BUDGET_STUDY.md`](docs/MATCHED_BUDGET_STUDY.md).
+
 ## Work without an API key
 
 API access is optional for development and CI. Run the fixed offline calibration,

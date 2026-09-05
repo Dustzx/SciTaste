@@ -12,7 +12,8 @@ semantic versioning.
   project-owned replayable audits, and proposal-only receipts.
 - Integrity-checked matched-study resume with self-hashed run/cell checkpoints,
   exact artifact revalidation, preserved failed attempts, output-root locking,
-  and a ProjectRuntime-owned partial/complete execution boundary.
+  and a ProjectRuntime-owned partial/complete execution boundary exposed by
+  `study project-run`.
 - Controlled `run full --resume` support with self-hashed stage checkpoints,
   contiguous-prefix reuse, preserved failed attempts, and fail-closed artifact
   integrity validation.

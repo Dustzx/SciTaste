@@ -161,7 +161,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and evidence bytes; retries preserve failed attempts and concurrent writers
   cannot share an output root. A ProjectRuntime orchestration layer owns the
   study as one revision-guarded project run and distinguishes partial from
-  complete matrices. Unified CLI integration remains pending.
+  complete matrices. `study project-run` exposes the same boundary without an
+  unrelated free-form output directory.
 - A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
   non-headline; its four launcher commands remain explicit adapter work rather
   than synthetic substitutes.
