@@ -100,6 +100,24 @@ def test_model_node_pilot_plan_and_execute_dry_run_are_machine_readable(
     assert dry_run["acceptance_status"] == "not_evaluated"
     assert [name for name, _ in _FakeOrchestrator.calls] == ["plan", "plan"]
     assert _FakeOrchestrator.calls[-1][1]["allow_live"] is True
+    assert _FakeOrchestrator.calls[-1][1]["resume"] is False
+
+    assert (
+        main(
+            [
+                "model-node",
+                "pilot",
+                "execute",
+                *_identity(tmp_path),
+                "--resume",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert _FakeOrchestrator.calls[-1][0] == "plan"
+    assert _FakeOrchestrator.calls[-1][1]["resume"] is True
 
 
 def test_model_node_pilot_execute_resume_and_status_are_registered(

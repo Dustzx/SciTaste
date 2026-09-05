@@ -405,6 +405,9 @@ def test_scripted_record_replay_run_is_project_owned_and_verifiable(tmp_path: Pa
     assert (stage / "verification.json").is_file()
     assert (stage / "recordings/ambiguous-pair-v1.jsonl").is_file()
     assert len(list((stage / "cases").glob("*.json"))) == 7
+    snapshot = runtime.open(PROJECT_ID)
+    assert snapshot.manifest.current_run == RUN_ID
+    assert snapshot.manifest.runs[0].model_extra["resume_attempt"] == 0
     report = load_pilot_report(stage / "report.json")
     assert report.statistics.exact_replay_coverage == 1.0
     assert report.statistics.missing_manual_measurement_case_ids
@@ -553,6 +556,51 @@ def test_interruption_archives_attempt_and_resume_reuses_valid_prefix(tmp_path: 
     )
     assert resumed.completed_count == 7
     assert {path.name: path.read_bytes() for path in prefix} == original_prefix
+    snapshot = runtime.open(PROJECT_ID)
+    assert snapshot.manifest.current_run == RUN_ID
+    assert snapshot.manifest.runs[0].model_extra["resume_attempt"] == 1
+
+
+def test_resume_plan_is_mutation_free_and_validates_reusable_prefix(tmp_path: Path) -> None:
+    config = _build_config(tmp_path)
+    runtime = _runtime(tmp_path)
+
+    def interrupt(case) -> None:
+        if case.case_id == "interpretation-scripted":
+            raise RuntimeError("stop")
+
+    with pytest.raises(PilotOrchestrationError):
+        ProjectPilotOrchestrator(runtime, before_case=interrupt).execute(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            expected_revision=0,
+            config_path=config,
+        )
+    before = {
+        path.relative_to(runtime.outputs_root): path.read_bytes()
+        for path in runtime.outputs_root.rglob("*")
+        if path.is_file()
+    }
+    revision = runtime.open(PROJECT_ID).revision
+
+    planned = ProjectPilotOrchestrator(runtime).plan(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        expected_revision=revision,
+        config_path=config,
+        resume=True,
+    )
+
+    after = {
+        path.relative_to(runtime.outputs_root): path.read_bytes()
+        for path in runtime.outputs_root.rglob("*")
+        if path.is_file()
+    }
+    assert planned.status == "planned"
+    assert planned.completed_count == 2
+    assert planned.planned_count == 5
+    assert before == after
+    assert runtime.open(PROJECT_ID).revision == revision
 
 
 def test_resume_rejects_changed_config_and_stale_revision(tmp_path: Path) -> None:
@@ -720,11 +768,12 @@ def test_existing_report_and_concurrent_writer_fail_closed(tmp_path: Path) -> No
             config_path=config,
         )
         assert entered.wait(timeout=5)
+        active_revision = runtime.open(PROJECT_ID).revision
         with pytest.raises(PilotRunConflictError, match="another writer"):
             ProjectPilotOrchestrator(runtime).execute(
                 project_id=PROJECT_ID,
                 run_id=RUN_ID,
-                expected_revision=1,
+                expected_revision=active_revision,
                 config_path=config,
                 resume=True,
             )
@@ -732,7 +781,7 @@ def test_existing_report_and_concurrent_writer_fail_closed(tmp_path: Path) -> No
         future.result(timeout=10)
 
     revision = runtime.open(PROJECT_ID).revision
-    with pytest.raises(FileExistsError, match="report destination"):
+    with pytest.raises(PilotOrchestrationError, match="cannot be resumed"):
         ProjectPilotOrchestrator(runtime).execute(
             project_id=PROJECT_ID,
             run_id=RUN_ID,
@@ -740,6 +789,27 @@ def test_existing_report_and_concurrent_writer_fail_closed(tmp_path: Path) -> No
             config_path=config,
             resume=True,
         )
+
+
+def test_status_rejects_project_registration_metadata_drift(tmp_path: Path) -> None:
+    config = _build_config(tmp_path)
+    runtime = _runtime(tmp_path)
+    ProjectPilotOrchestrator(runtime).execute(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        expected_revision=0,
+        config_path=config,
+    )
+    snapshot = runtime.open(PROJECT_ID)
+    runtime.update_run(
+        PROJECT_ID,
+        RUN_ID,
+        expected_revision=snapshot.revision,
+        report_sha256="0" * 64,
+    )
+
+    with pytest.raises(PilotOrchestrationError, match="registered run metadata drift"):
+        ProjectPilotOrchestrator(runtime).status(project_id=PROJECT_ID, run_id=RUN_ID)
 
 
 def test_config_loader_rejects_hash_identity_unknown_and_unsafe_paths(tmp_path: Path) -> None:

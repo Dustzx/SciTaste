@@ -584,6 +584,7 @@ class ProjectPilotOrchestrator:
         expected_revision: int,
         config_path: str | Path,
         allow_live: bool = False,
+        resume: bool = False,
     ) -> PilotRunSummary:
         loaded = load_pilot_orchestration_config(config_path)
         snapshot = self._validate_project(
@@ -591,8 +592,30 @@ class ProjectPilotOrchestrator:
             project_id=project_id,
             run_id=run_id,
             expected_revision=expected_revision,
-            require_new=True,
+            require_new=not resume,
         )
+        completed_count = 0
+        if resume:
+            run = self._registered_run(snapshot.manifest.runs, run_id)
+            self._require_resumable_run(run)
+            stage = self._run_stage(project_id, run_id)
+            manifest, protocol, config = self._validate_resume_evidence(
+                loaded,
+                project_id=project_id,
+                run_id=run_id,
+                stage=stage,
+                allow_live=allow_live,
+            )
+            measurements = self._load_owned_measurements(stage, manifest, protocol)
+            completed_count = len(
+                self._load_checkpoint_prefix(
+                    stage,
+                    manifest=manifest,
+                    protocol=protocol,
+                    config=config,
+                    measurements=measurements,
+                )
+            )
         measurement_ids = (
             {item.case_id for item in loaded.manual_bundle.measurements}
             if loaded.manual_bundle is not None
@@ -623,8 +646,8 @@ class ProjectPilotOrchestrator:
             protocol_sha256=loaded.protocol.fingerprint,
             config_sha256=loaded.config.fingerprint,
             case_count=len(loaded.protocol.cases),
-            completed_count=0,
-            planned_count=len(loaded.protocol.cases),
+            completed_count=completed_count,
+            planned_count=len(loaded.protocol.cases) - completed_count,
             blocked_count=blocked,
             acceptance_status="not_evaluated",
             run_locator=self._run_locator(project_id, run_id),
@@ -654,9 +677,8 @@ class ProjectPilotOrchestrator:
         )
         live_authorized = self._live_authorized(loaded, allow_live=allow_live)
         if resume:
-            registered_revision = snapshot.revision
             run = self._registered_run(snapshot.manifest.runs, run_id)
-            self._require_pilot_run(run)
+            self._require_resumable_run(run)
         else:
             snapshot = self.runtime.begin_run(
                 project_id,
@@ -669,13 +691,39 @@ class ProjectPilotOrchestrator:
                     status="running",
                     evidence_scope="engineering-only",
                     stage_path=PILOT_STAGE_PATH,
+                    protocol_sha256=loaded.protocol.fingerprint,
+                    config_sha256=loaded.config.fingerprint,
+                    resume_attempt=0,
                 ),
                 expected_revision=expected_revision,
             )
-            registered_revision = snapshot.revision
+            snapshot = self.runtime.select_run(
+                project_id,
+                run_id,
+                expected_revision=snapshot.revision,
+            )
 
         stage = self._run_stage(project_id, run_id)
         with _exclusive_lock(stage / ".pilot.lock"):
+            if resume:
+                # Validate the complete reusable prefix before changing project metadata.
+                manifest, protocol, config = self._validate_resume_evidence(
+                    loaded,
+                    project_id=project_id,
+                    run_id=run_id,
+                    stage=stage,
+                    allow_live=allow_live,
+                )
+                measurements = self._load_owned_measurements(stage, manifest, protocol)
+                self._load_checkpoint_prefix(
+                    stage,
+                    manifest=manifest,
+                    protocol=protocol,
+                    config=config,
+                    measurements=measurements,
+                )
+                snapshot = self._register_resume(snapshot, run)
+            registered_revision = snapshot.revision
             return self._execute_locked(
                 loaded,
                 project_id=project_id,
@@ -713,6 +761,7 @@ class ProjectPilotOrchestrator:
         )
         report_path = stage / "report.json"
         if not report_path.exists():
+            self._verify_registered_metadata(registered_run, manifest=manifest)
             return PilotRunSummary(
                 status=registered_run.status,
                 project_id=project_id,
@@ -754,6 +803,12 @@ class ProjectPilotOrchestrator:
             or verification.recording_sha256_by_pair != self._recording_hashes(stage, protocol)
         ):
             raise PilotOrchestrationError("verification record does not match project evidence")
+        self._verify_registered_metadata(
+            registered_run,
+            manifest=manifest,
+            report=report,
+            verification=verification,
+        )
         return self._summary(
             project_id=project_id,
             run_id=run_id,
@@ -783,27 +838,13 @@ class ProjectPilotOrchestrator:
             canonical_sha256(loaded.review_bundle) if loaded.review_bundle is not None else None
         )
         if resume:
-            manifest = _load_model(stage / "manifest.json", PilotRunManifest)
-            expected = {
-                "project_id": project_id,
-                "run_id": run_id,
-                "protocol_source_sha256": loaded.protocol_source_sha256,
-                "protocol_sha256": loaded.protocol.fingerprint,
-                "config_source_sha256": loaded.source_sha256,
-                "config_sha256": loaded.config.fingerprint,
-                "manual_bundle_sha256": manual_hash,
-                "review_bundle_sha256": review_hash,
-                "config_live_enabled": loaded.config.live_enabled,
-                "cli_live_opt_in": allow_live,
-                "live_execution_authorized": live_authorized,
-            }
-            drift = [name for name, value in expected.items() if getattr(manifest, name) != value]
-            if drift:
-                raise PilotOrchestrationError("resume input drift: " + ", ".join(sorted(drift)))
-            protocol = _load_model(stage / "protocol.json", PilotProtocol)
-            config = _load_model(stage / "orchestration.json", PilotOrchestrationConfig)
-            self._verify_snapshots(manifest, protocol, config)
-            self._verify_owned_external(stage, loaded, manifest)
+            manifest, _, _ = self._validate_resume_evidence(
+                loaded,
+                project_id=project_id,
+                run_id=run_id,
+                stage=stage,
+                allow_live=allow_live,
+            )
         else:
             manifest = PilotRunManifest.create(
                 schema_version="1.0",
@@ -970,6 +1011,8 @@ class ProjectPilotOrchestrator:
             protocol_sha256=manifest.protocol_sha256,
             config_sha256=manifest.config_sha256,
             report_sha256=report.report_sha256,
+            manifest_sha256=manifest.manifest_sha256,
+            verification_sha256=verification.verification_sha256,
             acceptance_status=report.acceptance.overall_status.value,
         )
         return self._summary(
@@ -1024,8 +1067,140 @@ class ProjectPilotOrchestrator:
 
     @staticmethod
     def _require_pilot_run(run: ProjectRun) -> None:
-        if run.condition != "bounded-model-node-pilot" or run.stage_path != PILOT_STAGE_PATH:
+        observed = (
+            run.provider,
+            run.model,
+            run.condition,
+            run.seed,
+            run.evidence_scope,
+            run.stage_path,
+        )
+        expected = (
+            "bounded-model-node-pilot",
+            "mixed-pinned-identities",
+            "bounded-model-node-pilot",
+            0,
+            "engineering-only",
+            PILOT_STAGE_PATH,
+        )
+        if observed != expected:
             raise PilotOrchestrationError("registered run is not a bounded model-node pilot")
+
+    def _require_resumable_run(self, run: ProjectRun) -> None:
+        self._require_pilot_run(run)
+        if run.status not in {"failed", "running"}:
+            raise PilotOrchestrationError(f"pilot run with status {run.status!r} cannot be resumed")
+        extra = run.model_extra or {}
+        resume_attempt = extra.get("resume_attempt", 0)
+        if (
+            not isinstance(resume_attempt, int)
+            or isinstance(resume_attempt, bool)
+            or resume_attempt < 0
+        ):
+            raise PilotOrchestrationError("registered pilot run has an invalid resume_attempt")
+
+    def _register_resume(self, snapshot: Any, run: ProjectRun) -> Any:
+        extra = run.model_extra or {}
+        snapshot = self.runtime.update_run(
+            snapshot.manifest.project_id,
+            run.run_id,
+            expected_revision=snapshot.revision,
+            status="running",
+            resume_attempt=extra.get("resume_attempt", 0) + 1,
+        )
+        if snapshot.manifest.current_run != run.run_id:
+            snapshot = self.runtime.select_run(
+                snapshot.manifest.project_id,
+                run.run_id,
+                expected_revision=snapshot.revision,
+            )
+        return snapshot
+
+    def _validate_resume_evidence(
+        self,
+        loaded: LoadedPilotConfiguration,
+        *,
+        project_id: str,
+        run_id: str,
+        stage: Path,
+        allow_live: bool,
+    ) -> tuple[PilotRunManifest, PilotProtocol, PilotOrchestrationConfig]:
+        manifest = _load_model(stage / "manifest.json", PilotRunManifest)
+        expected = {
+            "project_id": project_id,
+            "run_id": run_id,
+            "protocol_source_sha256": loaded.protocol_source_sha256,
+            "protocol_sha256": loaded.protocol.fingerprint,
+            "config_source_sha256": loaded.source_sha256,
+            "config_sha256": loaded.config.fingerprint,
+            "manual_bundle_sha256": (
+                canonical_sha256(loaded.manual_bundle) if loaded.manual_bundle is not None else None
+            ),
+            "review_bundle_sha256": (
+                canonical_sha256(loaded.review_bundle) if loaded.review_bundle is not None else None
+            ),
+            "config_live_enabled": loaded.config.live_enabled,
+            "cli_live_opt_in": allow_live,
+            "live_execution_authorized": self._live_authorized(
+                loaded,
+                allow_live=allow_live,
+            ),
+        }
+        drift = [name for name, value in expected.items() if getattr(manifest, name) != value]
+        if drift:
+            raise PilotOrchestrationError("resume input drift: " + ", ".join(sorted(drift)))
+        protocol = _load_model(stage / "protocol.json", PilotProtocol)
+        config = _load_model(stage / "orchestration.json", PilotOrchestrationConfig)
+        self._verify_run_identity(
+            manifest,
+            protocol,
+            project_id=project_id,
+            run_id=run_id,
+        )
+        self._verify_snapshots(manifest, protocol, config)
+        self._verify_owned_external(stage, loaded, manifest)
+        return manifest, protocol, config
+
+    @staticmethod
+    def _verify_registered_metadata(
+        run: ProjectRun,
+        *,
+        manifest: PilotRunManifest,
+        report: PilotReport | None = None,
+        verification: PilotVerificationRecord | None = None,
+    ) -> None:
+        extra = run.model_extra or {}
+        expected: dict[str, object] = {
+            "protocol_sha256": manifest.protocol_sha256,
+            "config_sha256": manifest.config_sha256,
+        }
+        if report is not None:
+            if verification is None:
+                raise PilotOrchestrationError("verification record is required for final metadata")
+            expected.update(
+                {
+                    "status": (
+                        "complete"
+                        if report.acceptance.overall_status is AcceptanceStatus.PASS
+                        else "blocked"
+                    ),
+                    "artifact": (f"runs/{run.run_id}/{PILOT_STAGE_PATH}/report.json"),
+                    "report_sha256": report.report_sha256,
+                    "manifest_sha256": manifest.manifest_sha256,
+                    "verification_sha256": verification.verification_sha256,
+                    "acceptance_status": report.acceptance.overall_status.value,
+                }
+            )
+        observed = {
+            "status": run.status,
+            "artifact": run.artifact,
+            **extra,
+        }
+        drift = [name for name, value in expected.items() if observed.get(name) != value]
+        if drift:
+            raise PilotOrchestrationError(
+                "registered run metadata drift: " + ", ".join(sorted(drift))
+            )
 
     @staticmethod
     def _verify_run_identity(

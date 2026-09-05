@@ -86,6 +86,7 @@ def _handle_execute(args: argparse.Namespace) -> int:
             expected_revision=args.expected_revision,
             config_path=args.config,
             allow_live=args.allow_live,
+            resume=args.resume,
         )
     else:
         summary = orchestrator.execute(
