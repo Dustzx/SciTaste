@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "backend_id": "scripted",
+  "model_id": "scripted-v1",
+  "fixture_only": true,
+  "effectiveness_claim": false,
+  "replies": {
+    "review-scripted": {
+      "output_payload": {
+        "concerns": [
+          {
+            "concern_id": "fixture-concern-1",
+            "category": "missing_baseline",
+            "severity": "high",
+            "target_claim_ids": ["claim-1"],
+            "target_section": "method",
+            "text": "The claim needs a matched baseline.",
+            "requires_new_evidence": true,
+            "requires_new_experiment": true,
+            "required_evidence_types": ["matched baseline"],
+            "proposed_action_type": "ADD_BASELINE"
+          }
+        ],
+        "summary": "The fixture identifies one missing-baseline concern.",
+        "confidence": 0.9
+      },
+      "usage": {"input_tokens": 5, "output_tokens": 4, "cost_usd": 0.0},
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    },
+    "interpretation-scripted": {
+      "output_payload": {
+        "threats": [
+          {
+            "threat_id": "fixture-threat-1",
+            "kind": "benchmark_artifact",
+            "statement": "The observed gain may be specific to the held-out benchmark.",
+            "evidence_ids": ["evidence-1"],
+            "confidence": 0.7
+          }
+        ],
+        "alternative_explanations": ["Template overlap may explain the gain."],
+        "recommended_action_type": "REPRODUCE",
+        "rationale": "A reproduction can distinguish a stable result from a benchmark artifact.",
+        "confidence": 0.8
+      },
+      "usage": {"input_tokens": 6, "output_tokens": 5, "cost_usd": 0.0},
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    },
+    "ambiguous-paired-request": {
+      "output_payload": {
+        "ranked_action_ids": ["reproduce", "probe"],
+        "preferred_action_id": "reproduce",
+        "rationale": "Reproduction addresses the larger uncertainty before a new probe.",
+        "confidence": 0.6
+      },
+      "usage": {"input_tokens": 4, "output_tokens": 3, "cost_usd": 0.0},
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

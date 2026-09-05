@@ -103,6 +103,7 @@ class StructuredOpenAICompatibleConfig(BaseModel):
     max_output_tokens: int = Field(default=4_000, ge=1)
     pricing_confirmed: bool = False
     pricing: ModelCostProvenance | None = None
+    unpriced_engineering_probe: bool = False
     extra_headers: dict[str, str] = Field(default_factory=dict)
     extra_body: dict[str, JsonValue] = Field(default_factory=dict)
 
@@ -154,8 +155,17 @@ class StructuredOpenAICompatibleConfig(BaseModel):
     def live_pricing_is_explicit(self) -> StructuredOpenAICompatibleConfig:
         if self.pricing_confirmed and self.pricing is None:
             raise ValueError("pricing_confirmed requires explicit pricing provenance")
-        if self.live_enabled and not self.pricing_confirmed:
-            raise ValueError("live_enabled requires pricing_confirmed=true")
+        if self.unpriced_engineering_probe:
+            if not self.live_enabled:
+                raise ValueError("unpriced_engineering_probe requires live_enabled=true")
+            if self.pricing_confirmed or self.pricing is not None:
+                raise ValueError("unpriced engineering probes cannot claim pricing provenance")
+            if self.max_retries != 0:
+                raise ValueError("unpriced engineering probes prohibit retries")
+        elif self.live_enabled and not self.pricing_confirmed:
+            raise ValueError(
+                "live_enabled requires confirmed pricing or an explicit unpriced engineering probe"
+            )
         return self
 
 
@@ -205,7 +215,7 @@ class StructuredOpenAICompatibleBackend:
         output_payload = _parse_json_object(content)
         tool_calls = _tool_call_proposals(message.get("tool_calls"))
         input_tokens, output_tokens = _token_usage(http_response.data)
-        cost_usd = _cost_usd(input_tokens, output_tokens, pricing)
+        cost_usd = _cost_usd(input_tokens, output_tokens, pricing) if pricing is not None else None
         provider_model = _provider_model(http_response.data, fallback=config.model)
 
         raw_response = http_response.raw_body
@@ -235,9 +245,11 @@ class StructuredOpenAICompatibleBackend:
     def _live_pricing(
         self,
         config: StructuredOpenAICompatibleConfig,
-    ) -> ModelCostProvenance:
+    ) -> ModelCostProvenance | None:
         if not config.live_enabled:
             raise StructuredBackendDisabledError("live structured model backend is disabled")
+        if config.unpriced_engineering_probe:
+            return None
         if not config.pricing_confirmed or config.pricing is None:
             raise StructuredBackendDisabledError(
                 "live structured model backend requires confirmed pricing"

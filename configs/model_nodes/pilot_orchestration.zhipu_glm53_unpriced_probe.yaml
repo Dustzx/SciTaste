@@ -1,0 +1,59 @@
+# Executable self-dogfooding engineering probe. Scripted cases are fixtures;
+# only interpretation-live is a real provider call. Missing manual measurements,
+# independent review, and provider pricing intentionally keep acceptance blocked.
+schema_version: "1.0"
+config_id: bounded-model-node-zhipu-glm53-unpriced-probe
+config_version: 1.0.0
+self_dogfooding_only: true
+effectiveness_claim: false
+live_enabled: true
+
+protocol:
+  path: bounded_self_development_pilot_v1.yaml
+  sha256: 4d4aa3fbe73534858e300adbe309d390e0940361fb622acaa2cbcb86205a1e15
+  protocol_sha256: 64ed26df3f05949711430759b4b391125b50201c304b2875485b3ce9e8b7a5d8
+
+bindings:
+  - backend_key: review-scripted
+    kind: scripted
+    backend_id: scripted
+    model_id: scripted-v1
+    replies: &scripted_replies
+      path: self_development_scripted_fixtures_v1.json
+      sha256: 4ed95ad71c5803c6e45f21278abdbf5bc605636364c50e6f69186275ef20aa50
+    live_config: null
+  - backend_key: interpretation-scripted
+    kind: scripted
+    backend_id: scripted
+    model_id: scripted-v1
+    replies: *scripted_replies
+    live_config: null
+  - backend_key: ambiguous-recording
+    kind: recording_scripted
+    backend_id: scripted
+    model_id: scripted-v1
+    replies: *scripted_replies
+    live_config: null
+  - backend_key: ambiguous-replay
+    kind: replay
+    backend_id: scripted
+    model_id: scripted-v1
+    replies: null
+    live_config: null
+  - backend_key: ambiguous-clear-margin
+    kind: scripted
+    backend_id: scripted
+    model_id: scripted-v1
+    replies: *scripted_replies
+    live_config: null
+  - backend_key: interpretation-live
+    kind: live
+    backend_id: zhipu-direct
+    model_id: glm-5.3-flash
+    replies: null
+    live_config:
+      path: zhipu_glm53_flash.unpriced_probe.yaml
+      sha256: 6c6a56fbd1da6d62406877df21b0187150cf24f708db1ae8e2f1aae0c7dea2b3
+
+manual_interventions: null
+independent_review: null

@@ -217,3 +217,57 @@ def test_model_node_pilot_real_plan_validates_committed_template_without_mutatio
     assert planned["acceptance_status"] == "not_evaluated"
     assert project_manifest.read_bytes() == before
     assert not (outputs / "projects" / project_id / "runs" / "pilot-cli-real-plan").exists()
+
+
+def test_committed_zhipu_probe_dry_run_is_complete_network_free_and_mutation_free(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project_id = "scitaste-self-development"
+    runtime = ProjectRuntime(outputs)
+    runtime.create(
+        ProjectManifest(
+            project_id=project_id,
+            title="Zhipu model-node probe",
+            research_direction="Validate the real-provider pilot boundary.",
+            status="active",
+        )
+    )
+    monkeypatch.delenv("ZAI_API_KEY", raising=False)
+    project_manifest = outputs / "projects" / project_id / "PROJECT.json"
+    before = project_manifest.read_bytes()
+    config = (
+        Path(__file__).parents[2]
+        / "configs/model_nodes/pilot_orchestration.zhipu_glm53_unpriced_probe.yaml"
+    )
+
+    assert (
+        main(
+            [
+                "model-node",
+                "pilot",
+                "execute",
+                "--project-id",
+                project_id,
+                "--run-id",
+                "zhipu-glm53-probe-plan",
+                "--expected-revision",
+                "0",
+                "--config",
+                str(config),
+                "--outputs-root",
+                str(outputs),
+                "--allow-live",
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["case_count"] == planned["planned_count"] == 7
+    assert planned["blocked_count"] == 3
+    assert planned["acceptance_status"] == "not_evaluated"
+    assert project_manifest.read_bytes() == before
+    assert not (outputs / "projects" / project_id / "runs/zhipu-glm53-probe-plan").exists()

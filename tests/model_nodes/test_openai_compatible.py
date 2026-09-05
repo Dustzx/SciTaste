@@ -451,7 +451,7 @@ def test_pricing_requires_finite_rates_and_timezone_provenance(updates: dict[str
 
 
 def test_live_configuration_requires_confirmed_pricing() -> None:
-    with pytest.raises(ValidationError, match="pricing_confirmed"):
+    with pytest.raises(ValidationError, match="confirmed pricing"):
         config(pricing_confirmed=False, pricing=None)
     with pytest.raises(ValidationError, match="explicit pricing provenance"):
         config(pricing_confirmed=True, pricing=None)
@@ -461,6 +461,84 @@ def test_live_configuration_requires_confirmed_pricing() -> None:
         config(extra_body={"model": "silent-fallback"})
     with pytest.raises(ValidationError, match="reserved request fields"):
         config(extra_body={"tools": [{"type": "web_search"}]})
+
+
+def test_unpriced_engineering_probe_is_explicit_non_retrying_and_cost_rejected(
+    monkeypatch,
+) -> None:
+    with pytest.raises(ValidationError, match="requires live_enabled"):
+        config(
+            live_enabled=False,
+            pricing_confirmed=False,
+            pricing=None,
+            unpriced_engineering_probe=True,
+        )
+    with pytest.raises(ValidationError, match="cannot claim pricing"):
+        config(unpriced_engineering_probe=True)
+    with pytest.raises(ValidationError, match="prohibit retries"):
+        config(
+            pricing_confirmed=False,
+            pricing=None,
+            unpriced_engineering_probe=True,
+            max_retries=1,
+        )
+
+    monkeypatch.setenv("SCITASTE_STRUCTURED_TEST_KEY", "secret-for-test")
+    payload = {
+        "concerns": [
+            {
+                "concern_id": "concern-1",
+                "category": "clarity",
+                "severity": "medium",
+                "target_claim_ids": ["claim-1"],
+                "target_section": "method",
+                "text": "Clarify the intervention boundary.",
+                "requires_new_evidence": False,
+                "requires_new_experiment": False,
+                "required_evidence_types": [],
+                "proposed_action_type": "CLARIFY_EXISTING_TEXT",
+            }
+        ],
+        "summary": "One clarity concern.",
+        "confidence": 0.85,
+    }
+    transport = StubTransport(http_response(provider_data(json.dumps(payload))))
+    backend = StructuredOpenAICompatibleBackend(
+        config(
+            pricing_confirmed=False,
+            pricing=None,
+            unpriced_engineering_probe=True,
+        ),
+        transport=transport,
+    )
+    result = ReviewSemanticNode().run(
+        ReviewSemanticInput(review_text="Please clarify the method boundary."),
+        context=NodeContext(
+            project_id="project-1",
+            stage="REVIEW",
+            state_snapshot_id="snapshot-1",
+            cumulative_api_cost_usd=0,
+            claim_ids=["claim-1"],
+            section_ids=["method"],
+        ),
+        backend=backend,
+        policy=NodePolicy(
+            policy_id="policy-live",
+            enabled=True,
+            allowed_node_names=["review-semantic"],
+            expected_backend="test-provider",
+            expected_model="test-model-v1",
+            allowed_action_types=[MetaAction.CLARIFY_EXISTING_TEXT],
+        ),
+        request_id="unpriced-live-probe",
+        seed=7,
+    )
+
+    assert result.status is NodeResultStatus.REJECTED
+    assert result.response.usage.cost_usd is None
+    assert result.response.cost_provenance is None
+    assert "API cost telemetry is required" in result.rejection_reasons
+    assert len(transport.calls) == 1
 
 
 def test_mutated_nested_config_is_revalidated_before_transport(monkeypatch) -> None:
@@ -486,6 +564,7 @@ def test_zhipu_example_is_inert_and_contains_no_guessed_price() -> None:
     assert loaded.max_retries == 0
     assert loaded.pricing_confirmed is False
     assert loaded.pricing is None
+    assert loaded.unpriced_engineering_probe is False
 
 
 def test_live_backend_records_and_replays_without_network(monkeypatch, tmp_path) -> None:

@@ -1,0 +1,20 @@
+# Real provider configuration for a bounded engineering probe only. This mode
+# records token/latency/raw-response evidence but deliberately leaves cost
+# unavailable, so deterministic node policy rejects the live proposal and the
+# pilot cannot pass its effectiveness gate.
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: true
+timeout_seconds: 180
+max_retries: 0
+max_output_tokens: 512
+pricing_confirmed: false
+pricing: null
+unpriced_engineering_probe: true
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: low
