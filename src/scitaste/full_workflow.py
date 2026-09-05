@@ -22,6 +22,12 @@ from scitaste.evidence.workflow import (
     load_evidence_scenario,
 )
 from scitaste.generative_ui import ProjectSnapshotAdapter
+from scitaste.model_nodes.workflow_bridge import (
+    LoadedFullWorkflowModelAdvisory,
+    execute_full_workflow_model_advisory,
+    load_full_workflow_model_advisory,
+    verify_full_workflow_model_advisory,
+)
 from scitaste.project import (
     PaperManifest,
     ProjectManifest,
@@ -58,6 +64,7 @@ class FullWorkflowConfig(BaseModel):
     evidence_scenario: Path
     communication_scenario: Path
     figure_scenario: Path
+    model_node_advisory: Path | None = None
     paper_id: str
     paper_directory: str
     paper_title: str = Field(min_length=1)
@@ -143,7 +150,12 @@ class FullWorkflow:
     ) -> dict[str, object]:
         validate_entry_id(run_id, field_name="run_id")
         runtime = ProjectRuntime(outputs_root)
-        workflow_config_sha256 = _workflow_config_sha256(config)
+        model_advisory = (
+            load_full_workflow_model_advisory(config.model_node_advisory)
+            if config.model_node_advisory is not None
+            else None
+        )
+        workflow_config_sha256 = _workflow_config_sha256(config, model_advisory)
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
             snapshot, resume_attempt = self._resume_run(
@@ -182,8 +194,17 @@ class FullWorkflow:
                 config,
                 run_root,
                 resume=resume,
+                project_runtime=runtime,
+                run_id=run_id,
+                project_revision=snapshot.revision,
+                model_advisory=model_advisory,
             )
-            if _workflow_config_sha256(config) != workflow_config_sha256:
+            reloaded_advisory = (
+                load_full_workflow_model_advisory(config.model_node_advisory)
+                if config.model_node_advisory is not None
+                else None
+            )
+            if _workflow_config_sha256(config, reloaded_advisory) != workflow_config_sha256:
                 raise ValueError("workflow configuration changed during execution")
             if resume and reused_stages == list(_STAGE_ORDER):
                 raise ValueError(
@@ -375,6 +396,10 @@ class FullWorkflow:
         run_root: Path,
         *,
         resume: bool,
+        project_runtime: ProjectRuntime,
+        run_id: str,
+        project_revision: int,
+        model_advisory: LoadedFullWorkflowModelAdvisory | None,
     ) -> tuple[dict[str, object], Path, list[str], list[str]]:
         stages = run_root / "stages"
         summaries: dict[str, object] = {}
@@ -427,6 +452,7 @@ class FullWorkflow:
                 run_root=run_root,
                 project_id=config.project_id,
                 expected_input_sha256=_file_sha256(previous_state),
+                extra_artifacts=("model_advisory.json",) if model_advisory else (),
             )
             if reuse_allowed
             else None
@@ -434,6 +460,15 @@ class FullWorkflow:
         if evidence_record is not None:
             evidence = dict(evidence_record.summary)
             evidence_state = run_root / evidence_record.output_state_locator
+            if model_advisory is not None:
+                verify_full_workflow_model_advisory(
+                    model_advisory,
+                    project_runtime=project_runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    state_path=evidence_state,
+                    record_path=evidence_root / "model_advisory.json",
+                )
             reused_stages.append("evidence")
         else:
             if resume and evidence_root.exists():
@@ -446,12 +481,37 @@ class FullWorkflow:
             )
             evidence_state = Path(str(evidence_raw["latest_state"]))
             evidence = _portable_summary_dict(evidence_raw, run_root)
+            if model_advisory is not None:
+                advisory_record = execute_full_workflow_model_advisory(
+                    model_advisory,
+                    project_runtime=project_runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    expected_project_revision=project_revision,
+                    evidence_scenario=_evidence_for_project(config),
+                    state_path=evidence_state,
+                    record_path=evidence_root / "model_advisory.json",
+                    seed=self.seed,
+                )
+                evidence["model_advisory"] = {
+                    "hook_id": advisory_record.hook_id,
+                    "node_name": advisory_record.node_name,
+                    "outcome": advisory_record.receipt.outcome.value,
+                    "proposal_available": advisory_record.proposal is not None,
+                    "advisory_only": True,
+                    "executable": False,
+                    "record": _owned_locator(
+                        run_root,
+                        evidence_root / "model_advisory.json",
+                    ),
+                }
             _stage_record(
                 evidence_root,
                 "evidence",
                 evidence,
                 run_root=run_root,
                 input_state=previous_state,
+                extra_artifacts=("model_advisory.json",) if model_advisory else (),
             )
         summaries["evidence"] = evidence
         previous_state = evidence_state
@@ -593,7 +653,10 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "evidence_scenario",
         "communication_scenario",
         "figure_scenario",
+        "model_node_advisory",
     ):
+        if payload.get(field) is None:
+            continue
         scenario = Path(payload[field])
         if not scenario.is_absolute():
             payload[field] = (config_path.parent / scenario).resolve()
@@ -650,10 +713,11 @@ def _stage_record(
     *,
     run_root: Path,
     input_state: Path | None,
+    extra_artifacts: tuple[str, ...] = (),
 ) -> FullStageRecord:
     output_state = root / "research_state.json"
     decision_log = root / "decisions.jsonl"
-    artifact_paths = _required_stage_artifacts(root, name)
+    artifact_paths = _required_stage_artifacts(root, name, extra_artifacts=extra_artifacts)
     payload = {
         "schema_version": "1.1",
         "stage": name,
@@ -684,6 +748,7 @@ def _load_stage_record(
     run_root: Path,
     project_id: str,
     expected_input_sha256: str | None,
+    extra_artifacts: tuple[str, ...] = (),
 ) -> FullStageRecord | None:
     record_path = root / "STAGE.json"
     if not root.exists() or not record_path.exists():
@@ -705,7 +770,8 @@ def _load_stage_record(
     state_path = _verified_file(run_root, record.output_state_locator, record.output_state_sha256)
     _verified_file(run_root, record.decision_log_locator, record.decision_log_sha256)
     expected_artifacts = {
-        _owned_locator(run_root, path) for path in _required_stage_artifacts(root, name)
+        _owned_locator(run_root, path)
+        for path in _required_stage_artifacts(root, name, extra_artifacts=extra_artifacts)
     }
     if set(record.artifact_sha256) != expected_artifacts:
         raise ValueError(f"stage artifact manifest is incomplete or unexpected: {name}")
@@ -722,7 +788,12 @@ def _load_stage_record(
     return record
 
 
-def _required_stage_artifacts(root: Path, name: StageName) -> list[Path]:
+def _required_stage_artifacts(
+    root: Path,
+    name: StageName,
+    *,
+    extra_artifacts: tuple[str, ...] = (),
+) -> list[Path]:
     names: dict[StageName, tuple[str, ...]] = {
         "discovery": ("discovery_summary.json",),
         "evidence": ("evidence_summary.json",),
@@ -735,7 +806,11 @@ def _required_stage_artifacts(root: Path, name: StageName) -> list[Path]:
             "figure.drawio",
         ),
     }
-    paths = [root / item for item in names[name]]
+    if len(extra_artifacts) != len(set(extra_artifacts)):
+        raise ValueError("stage extra artifact names must be unique")
+    if any(Path(item).name != item or item in {"", ".", ".."} for item in extra_artifacts):
+        raise ValueError("stage extra artifacts must be simple file names")
+    paths = [root / item for item in (*names[name], *extra_artifacts)]
     missing = [path.name for path in paths if not path.is_file()]
     if missing:
         raise FileNotFoundError(f"stage {name} is missing required artifacts: {missing}")
@@ -819,7 +894,10 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _workflow_config_sha256(config: FullWorkflowConfig) -> str:
+def _workflow_config_sha256(
+    config: FullWorkflowConfig,
+    model_advisory: LoadedFullWorkflowModelAdvisory | None = None,
+) -> str:
     payload = config.model_dump(mode="json")
     for field in (
         "discovery_scenario",
@@ -828,6 +906,12 @@ def _workflow_config_sha256(config: FullWorkflowConfig) -> str:
         "figure_scenario",
     ):
         payload[field] = {"content_sha256": _file_sha256(Path(payload[field]))}
+    if config.model_node_advisory is None:
+        # Preserve hashes registered by pre-advisory v1.0 offline runs.
+        payload.pop("model_node_advisory", None)
+    else:
+        binding = model_advisory or load_full_workflow_model_advisory(config.model_node_advisory)
+        payload["model_node_advisory"] = {"binding_sha256": binding.fingerprint}
     return content_sha256(payload)
 
 

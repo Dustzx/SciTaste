@@ -448,6 +448,16 @@ staleness prevents provider access, while mid-call staleness retains known usage
 but rejects the resulting proposal. Completed publication survives interrupted
 pending cleanup without repeating the model call.
 
+The first normal-workflow consumer is now implemented as an opt-in offline hook
+after deterministic evidence interpretation. It projects the actual immutable
+state into `interpretation-threat`, records the typed proposal through the
+project ledger, and adds a self-hashed bridge to the evidence `STAGE.json`.
+Input and output state hashes must match, and resume verifies the complete ledger
+head before reuse. This closes the runtime-to-workflow integration path for
+scripted evidence; it does not authorize the advice or establish model benefit.
+Live/paid use remains outside `run full` until interruption accounting prevents
+ambiguous duplicate provider charges.
+
 The 2026-09-05 project-owned GLM-5.3-Flash probe completed seven cases and
 demonstrated schema parsing, exact recording, recovery, and enforcement on a
 real provider response. The live proposal still violated token, latency, cost,
@@ -536,8 +546,9 @@ contiguous prefix. An incomplete attempt is preserved under the owning run befor
 rerun, while an invalid claimed completion fails closed. Paper/finalization
 overwrite recovery remains an explicit manual boundary.
 This ADR establishes offline orchestration and artifact ownership, not a claim
-that the mock executor measures research effectiveness or that live
-AutoResearchClaw/model-node integration is complete.
+that the mock executor or scripted semantic hook measures research effectiveness.
+The offline proposal-only model-node bridge is implemented; live model advice
+and complete AutoResearchClaw orchestration remain later gates.
 
 ### ADR-026: Matched-study resume requires content-bound project ownership
 

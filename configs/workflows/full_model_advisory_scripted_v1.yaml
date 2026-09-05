@@ -1,0 +1,52 @@
+# Offline evidence-stage semantic hook. This fixture exercises the production
+# runtime and audit ledger without contacting a provider or mutating state.
+schema_version: "1.0"
+hook_id: evidence-interpretation-threat
+node_name: interpretation-threat
+trigger_reason: Inspect the completed evidence interpretation for bounded validity threats.
+profile_set: ../model_nodes/runtime_profiles.example.yaml
+profile_id: short-structured-semantic
+policy:
+  policy_id: full-workflow-interpretation-threat-v1
+  enabled: true
+  allowed_node_names: [interpretation-threat]
+  expected_backend: scripted
+  expected_model: scripted-v1
+  allowed_tool_names: []
+  allowed_action_types: [REPRODUCE]
+  max_request_bytes: 100000
+  max_input_tokens: 2000
+  max_output_tokens: 512
+  max_total_tokens: 2512
+  max_api_cost_usd: 1.0
+  max_latency_ms: 30000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.05
+backend:
+  kind: scripted
+  provider: scripted
+  model: scripted-v1
+  reply:
+    output_payload:
+      threats:
+        - threat_id: matched-evaluation-generalization
+          kind: benchmark_artifact
+          statement: The measured gain may be specific to the configured matched evaluation.
+          evidence_ids: []
+          confidence: 0.68
+      alternative_explanations:
+        - The controller may improve only the represented conflict boundary rather than general research pivots.
+      recommended_action_type: REPRODUCE
+      rationale: A separately seeded reproduction can test whether the bounded gain is stable.
+      confidence: 0.76
+    usage:
+      input_tokens: 96
+      output_tokens: 78
+      cost_usd: 0.0
+    latency_ms: 1.0
+    tool_calls: []
+    response_backend: null
+    response_model: null
+advisory_only: true
+executable: false
+effectiveness_claim: false

@@ -63,6 +63,13 @@ ledger hash. Revision drift before a provider call prevents access; drift during
 a call retains known usage but rejects the stale proposal. Runtime records remain
 proposal-only and cannot mutate `ResearchState` or invoke tools.
 
+The optional offline `run full` model advisory now consumes that same runtime
+after evidence interpretation. Its stage bridge is content-bound to the
+advisory config/profile, state snapshot, receipt, proposal, recording, and
+ledger head. Resume reuses it only after runtime verification and performs no
+second backend call. Live/paid full-workflow advice remains disabled until its
+interruption accounting and paid-result finalization contract is implemented.
+
 The authenticated generative workspace reads fresh `ProjectSnapshot` evidence
 for its seven predefined views. Its inspection route can open only a regular,
 content-addressed artifact already exposed by the active view. Proposal and

@@ -459,17 +459,40 @@ class ModelNodeRuntime:
         completed_ids = set(completed)
         invocation_id = values["invocation_id"]
         if invocation_id in completed_ids:
+            entry = completed[invocation_id]
             pending = self._pending_directories(stage)
-            if pending:
-                if not resume:
+            if not resume:
+                if pending:
                     raise ModelNodeRuntimeError("incomplete model-node attempts require --resume")
+                raise FileExistsError(f"model-node invocation already exists: {invocation_id}")
+            resumed_intent = self._intent(
+                project_id=project_id,
+                run_id=run_id,
+                invocation_id=invocation_id,
+                project_revision=expected_revision,
+                state_revision=values["state_revision"],
+                node_name=values["node_name"],
+                node_input=values["node_input"],
+                context=values["context"],
+                trigger=values["trigger"],
+                profile=values["profile"],
+                policy=values["policy"],
+                backend_mode=values["backend_mode"],
+                replay_source_invocation_id=values.get("replay_source_invocation_id"),
+                request_id=values.get("request_id"),
+                seed=values.get("seed", 0),
+                predecessor_sha256=entry.intent.predecessor_sha256,
+                cumulative_cost_usd=entry.intent.context.cumulative_api_cost_usd,
+            )
+            if resumed_intent.fingerprint != entry.intent.fingerprint:
+                raise ModelNodeRuntimeError("resume invocation identity drift")
+            if pending:
                 attempt_locator = self._archive_completed_pending(
                     stage,
                     pending,
                     completed=completed,
                     invocation_id=invocation_id,
                 )
-                entry = completed[invocation_id]
                 totals = self._totals(project_id, run_id, entries, stage=stage)
                 recording_id = (
                     entry.intent.replay_source_invocation_id
@@ -498,32 +521,29 @@ class ModelNodeRuntime:
                     attempt_locator=attempt_locator,
                     entry=entry,
                 )
-            if resume:
-                entry = completed[invocation_id]
-                totals = self._totals(project_id, run_id, entries, stage=stage)
-                recording_id = (
-                    entry.intent.replay_source_invocation_id
-                    if entry.replayed
-                    else entry.intent.invocation_id
-                )
-                recording_path = _runtime_directory(stage, "recordings")
-                recording = (
-                    recording_path / f"{recording_id}.jsonl" if recording_path is not None else None
-                )
-                return self._receipt(
-                    entry.intent,
-                    outcome=entry.outcome,
-                    entry_sha256=entry.entry_sha256,
-                    totals=totals,
-                    result=entry.result,
-                    request_fingerprint=entry.request_fingerprint,
-                    blockers=entry.blockers,
-                    recording_path=(
-                        recording if recording is not None and recording.is_file() else None
-                    ),
-                    entry=entry,
-                )
-            raise FileExistsError(f"model-node invocation already exists: {invocation_id}")
+            totals = self._totals(project_id, run_id, entries, stage=stage)
+            recording_id = (
+                entry.intent.replay_source_invocation_id
+                if entry.replayed
+                else entry.intent.invocation_id
+            )
+            recording_path = _runtime_directory(stage, "recordings")
+            recording = (
+                recording_path / f"{recording_id}.jsonl" if recording_path is not None else None
+            )
+            return self._receipt(
+                entry.intent,
+                outcome=entry.outcome,
+                entry_sha256=entry.entry_sha256,
+                totals=totals,
+                result=entry.result,
+                request_fingerprint=entry.request_fingerprint,
+                blockers=entry.blockers,
+                recording_path=(
+                    recording if recording is not None and recording.is_file() else None
+                ),
+                entry=entry,
+            )
         totals = self._totals(project_id, run_id, entries, stage=stage)
         replay_source = next(
             (

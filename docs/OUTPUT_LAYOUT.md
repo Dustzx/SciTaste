@@ -129,6 +129,13 @@ runs/<run-id>/model_nodes/
 └── attempts/     # preserved incomplete or failed attempts
 ```
 
+An opted-in full workflow links that project-level ledger into its logical
+evidence checkpoint at
+`runs/<run-id>/stages/evidence/model_advisory.json`. `STAGE.json` hashes this
+bridge record; the record in turn binds the immutable state snapshot, accepted
+proposal (if any), exact runtime receipt, and complete ledger head. The paper
+remains under the same project's `papers/<paper-directory>/` tree.
+
 The generative workspace keeps project-wide UI evidence outside any one research
 run because it may compare several runs and papers:
 

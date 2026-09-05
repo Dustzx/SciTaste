@@ -322,6 +322,35 @@ def test_resume_rejects_changed_profile_and_duplicate_invocation(tmp_path: Path)
         ModelNodeRuntime(clean_project).execute(backend=_backend("duplicate"), **values)
 
 
+def test_completed_resume_rejects_changed_invocation_identity(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    values = _values(invocation_id="completed-drift", revision=revision)
+    ModelNodeRuntime(project).execute(backend=_backend("completed-drift"), **values)
+    changed = dict(values)
+    changed["node_input"] = values["node_input"].model_copy(
+        update={"review_text": "This is a different semantic request."}
+    )
+    backend = _backend("completed-drift")
+
+    with pytest.raises(ModelNodeRuntimeError, match="resume invocation identity drift"):
+        ModelNodeRuntime(ProjectRuntime(project.outputs_root)).execute(
+            backend=backend,
+            resume=True,
+            **changed,
+        )
+
+    assert backend.calls == []
+    assert (
+        ModelNodeRuntime(project)
+        .status(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+        )
+        .entry_count
+        == 1
+    )
+
+
 def test_concurrent_writer_and_stale_project_revision_fail_closed(tmp_path: Path) -> None:
     project, revision = _project(tmp_path)
     entered = threading.Event()

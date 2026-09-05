@@ -310,6 +310,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   retains every outcome and exact replay evidence. Nested symlinks, stale project
   revisions before/during a call, corrupted chains, and interrupted publication
   fail closed, while accepted advice remains non-executable.
+- The first normal full-workflow consumer is complete: an opt-in offline
+  evidence hook sends the actual immutable post-interpretation state to
+  `interpretation-threat`, then binds its proposal and runtime ledger into the
+  evidence checkpoint. Resume verifies and reuses that record without another
+  backend call; live/paid full-workflow invocation remains a later recovery gate.
 - The versioned self-development pilot protocol and runner isolate
   deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
@@ -343,13 +348,17 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
   and required artifacts still validate; incomplete downstream work is archived
   before rerun and tampered completion records fail closed.
+- An opt-in scripted semantic advisory now participates after evidence
+  interpretation through the normal model-node runtime. Its state, profile,
+  policy, proposal, recording, ledger head, and stage artifact are hash-bound;
+  it has no state-transition or execution authority.
 - The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result
   recovery; Stage 3 binds that receipt rather than an arbitrary historical path.
-  Full Stage 1–18 ownership and normal-workflow model-node integration remain
-  pending, and neither may convert engineering evidence into an effectiveness
-  claim.
+  Full Stage 1–18 ownership and live/paid normal-workflow model-node integration
+  remain pending, and neither may convert engineering evidence into an
+  effectiveness claim.
 
 ## Generative interface progress
 

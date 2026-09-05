@@ -7,6 +7,11 @@ semantic versioning.
 
 ### Added
 
+- An opt-in offline evidence-stage model advisory for `run full`, with immutable
+  real-state projection, content-bound config/profile identity, proposal-only
+  output, exact runtime ledger/recording evidence, stage-checkpoint binding, and
+  verified no-call resume.
+
 - A durable project-scoped model-node runtime with layered generation/admission/
   cumulative budgets, project-revision call gates, restart-safe hash-chained
   outcomes, exact replay, hardened no-symlink evidence storage, and a narrow

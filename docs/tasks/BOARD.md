@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.7`
+Board revision: `2026-09-05.8`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Phase 9/core workflow and child-Epic integration | in progress | `main` | `/home/good/zfx/papers/SciTaste` | W2/W3 final handoffs only |
-| 2 | Project-scoped model-node runtime and policy profiles | dispatched; autonomous multi-package Epic | `feat/model-node-runtime-v2` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | dispatch token r2 |
-| 3 | Evidence-native generative project workspace | dispatched; autonomous multi-package Epic | `feat/generative-ui-workspace-v2` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | dispatch token r2 |
+| Main | Phase 9/core workflow and normal-workflow model integration | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
+| 2 | Project-scoped model-node runtime and policy profiles | integrated; idle | `feat/model-node-runtime-v2` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | new assignment required |
+| 3 | Evidence-native generative project workspace | integrated; idle | `feat/generative-ui-workspace-v2` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
 
@@ -24,14 +24,16 @@ Board revision: `2026-09-05.7`
 
 ## Current non-overlap
 
-- Window 2 owns the new runtime/profile track in `WINDOW_2.md`; it must not edit
-  generative UI, full-workflow, or central coordination files.
-- Window 3 owns the evidence-native workspace track in `WINDOW_3.md`; it must not
-  edit model nodes, full-workflow, or central coordination files.
+- Window 2 and Window 3 have no active owned paths. Their r2 Epics and hardening
+  fixes are integrated; neither should continue until its assignment document
+  receives a new token and scope.
 - Main owns Phase 9/core workflow development, integration repairs, project
   catalog refreshes, common architecture/roadmap/changelog edits, full-suite
   checks, and GitHub synchronization.
-- Main's completed core slice produced a real seven-case GLM-5.3-Flash
-  engineering probe with exact live-response retention. The run is intentionally
-  blocked rather than promoted; priced external measurement and independent
-  review remain the next model-node acceptance gate.
+- Main has connected the integrated model-node runtime to an opt-in offline
+  evidence-stage `run full` hook. The actual immutable state, proposal, exact
+  recording, ledger head, and stage checkpoint are bound, while state mutation
+  and execution authority remain absent.
+- The real seven-case GLM-5.3-Flash engineering probe remains intentionally
+  blocked rather than promoted. Priced external measurement, independent review,
+  and paid full-workflow interruption recovery are later model-node gates.

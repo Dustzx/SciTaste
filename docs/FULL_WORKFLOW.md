@@ -35,6 +35,25 @@ Its output is integration evidence, not evidence that SciTaste improves research
 effectiveness. `--dry-run` validates the configuration and prints the planned
 project/run/paper identity without writing files.
 
+An opt-in offline acceptance config also exercises a bounded semantic node in
+the real evidence-stage path:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_model_advisory_v1.yaml \
+  --project-id my-advisory-project \
+  --run-id offline-advisory-seed-07 \
+  --seed 7 --output outputs
+```
+
+After deterministic evidence interpretation, the hook projects an immutable
+slice of the actual `ResearchState` and invokes `interpretation-threat` through
+the normal project-owned model-node runtime. The committed backend is scripted,
+costs zero, has no network or tool path, and exists to validate integration—not
+model quality. Its accepted output remains a proposal: it cannot update claims,
+select an action, execute a tool, or mutate state. The record proves this by
+binding identical input/output state hashes.
+
 ## Project layout
 
 One execution owns this tree:
@@ -45,9 +64,10 @@ outputs/projects/<project-id>/
 ├── runs/<run-id>/
 │   ├── full_run_summary.json
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
+│   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
 │   └── stages/
 │       ├── discovery/
-│       ├── evidence/
+│       ├── evidence/model_advisory.json  # when opted in
 │       ├── communication/
 │       └── figure/
 ├── stages/current -> ../runs/<run-id>/stages
@@ -88,7 +108,8 @@ marked `failed` with the exception type and bounded message for diagnosis.
 
 `--resume` accepts only a previously registered failed run with the same
 provider, model, condition, seed, evidence scope, stage path, and content-hashed
-workflow configuration (including all four scenario files). It reuses only
+workflow configuration (including all four scenario files and the optional
+advisory/profile binding). It reuses only
 the contiguous completed prefix whose record, state continuity, project
 identity, lifecycle position, and every declared file hash still validate. A
 missing completion record means that stage is incomplete: its existing directory
@@ -96,6 +117,14 @@ is atomically moved to `failed_attempts/stages/<stage>/attempt-NNN/`, and that
 stage plus every downstream stage is rerun. A malformed completion record or a
 hash mismatch is treated as possible tampering and fails closed; it is not
 silently archived or regenerated.
+
+When model advice is enabled, evidence-stage reuse additionally revalidates the
+self-hashed advisory record, immutable state snapshot, complete model-node
+ledger totals/head, and exact response recording. A verified prefix therefore
+does not call the backend again. If interruption occurs before the evidence
+stage publishes `STAGE.json`, the offline advisory may be executed under a new
+project-revision-bound invocation while the old ledger entry remains auditable.
+Paid/live recovery is intentionally not exposed through `run full` yet.
 
 This recovery path deliberately covers workflow-stage interruption. If all four
 stage records already validate, or a paper directory already exists, automated
@@ -115,6 +144,12 @@ phase-specific claims, evidence, narrative contracts, review feedback, and
 figure contracts; their standalone demo project IDs are replaced and revalidated
 against the full-workflow project. This permits reusable phase fixtures without
 splitting the resulting project state.
+
+`configs/workflows/full_offline_model_advisory_v1.yaml` adds the content-bound
+`full_model_advisory_scripted_v1.yaml`. Loading rejects embedded credentials,
+live profiles, unrestricted code generation, tools, non-zero scripted cost, and
+policy/profile/backend identity drift. `--dry-run` reports the hook and confirms
+`network_access: false` without creating a project.
 
 AutoResearchClaw is not modified or invoked by this offline acceptance case. A
 later live/full executor mode must preserve the same ProjectRuntime ownership,

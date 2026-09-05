@@ -142,6 +142,14 @@ from scitaste.model_nodes.schemas import (
     ValidityThreatKind,
     ValidityThreatProposal,
 )
+from scitaste.model_nodes.workflow_bridge import (
+    FullWorkflowModelAdvisoryConfig,
+    FullWorkflowModelAdvisoryRecord,
+    LoadedFullWorkflowModelAdvisory,
+    execute_full_workflow_model_advisory,
+    load_full_workflow_model_advisory,
+    verify_full_workflow_model_advisory,
+)
 
 __all__ = [
     "MODEL_NODE_STAGE_PATH",
@@ -154,6 +162,8 @@ __all__ = [
     "ContentAddressedFile",
     "CumulativeProjectBudget",
     "ExpectedApplicability",
+    "FullWorkflowModelAdvisoryConfig",
+    "FullWorkflowModelAdvisoryRecord",
     "HttpxStructuredTransport",
     "ImmutableStateProjection",
     "IndependentOutcomeReview",
@@ -162,6 +172,7 @@ __all__ = [
     "InterpretationThreatNode",
     "InterpretationThreatOutput",
     "LiveRuntimeBackend",
+    "LoadedFullWorkflowModelAdvisory",
     "LoadedModelNodeProfiles",
     "LoadedModelNodeRuntimeConfig",
     "ManualInterventionBundle",
@@ -250,6 +261,8 @@ __all__ = [
     "VersionedNodePolicy",
     "canonical_sha256",
     "evaluate_acceptance",
+    "execute_full_workflow_model_advisory",
+    "load_full_workflow_model_advisory",
     "load_model_node_profile",
     "load_model_node_profile_set",
     "load_model_node_runtime_config",
@@ -260,4 +273,5 @@ __all__ = [
     "save_pilot_report",
     "validate_manual_interventions",
     "validate_profile_binding",
+    "verify_full_workflow_model_advisory",
 ]

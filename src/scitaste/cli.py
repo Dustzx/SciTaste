@@ -54,6 +54,7 @@ from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
+from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.project_substrate_cli import register_project_substrate_cli
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -915,6 +916,11 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
+        model_advisory = (
+            load_full_workflow_model_advisory(config.model_node_advisory)
+            if config.model_node_advisory is not None
+            else None
+        )
         print(
             json.dumps(
                 {
@@ -925,6 +931,18 @@ def _handle_full(args: argparse.Namespace) -> int:
                     "model": config.model,
                     "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],
+                    "model_advisory": (
+                        None
+                        if model_advisory is None
+                        else {
+                            "hook_id": model_advisory.config.hook_id,
+                            "node_name": model_advisory.config.node_name,
+                            "backend_mode": "scripted",
+                            "network_access": False,
+                            "advisory_only": True,
+                            "executable": False,
+                        }
+                    ),
                     "paper_directory": config.paper_directory,
                     "outputs_root": str(args.output),
                     "effectiveness_claim": False,

@@ -1,0 +1,19 @@
+schema_version: "1.0"
+project_id: scitaste-offline-advisory-full
+title: SciTaste Offline Full Workflow with Model Advice
+research_direction: Test conflict-aware scientific control with bounded semantic advice
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste_model_advisory
+provider: mock
+model: deterministic-controller
+evidence_scope: offline-integration-with-scripted-semantic-advice
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+model_node_advisory: full_model_advisory_scripted_v1.yaml
+paper_id: conflict-aware-control-advisory-paper
+paper_directory: offline-advisory-reviewed-draft
+paper_title: Conflict-Aware Control with Evidence-Bounded Semantic Advice
+paper_date: 2026-09-05

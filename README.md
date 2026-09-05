@@ -64,6 +64,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   fail-closed compatible live backend, versioned self-development pilot, and
   durable project-owned runtime/CLI for layered profiles, execution, exact
   replay, restart-safe accounting, auditable resume, and verification;
+- an opt-in offline `run full` evidence hook that projects the real immutable
+  research state into `interpretation-threat`, binds its proposal/recording/
+  ledger to the stage checkpoint, and grants it no mutation or execution power;
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
   project artifacts exposed to a surface;
@@ -167,6 +170,12 @@ run's `failed_attempts/` tree.
 
 This validates end-to-end framework behavior with the deterministic mock; it is
 not an effectiveness result. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
+
+To exercise the same full path with a network-free, project-ledger-backed
+semantic advisory, use
+`configs/workflows/full_offline_model_advisory_v1.yaml`. The generated
+`stages/evidence/model_advisory.json` is proposal-only and proves that the
+evidence `ResearchState` was unchanged.
 
 For Phase 9 executions, `scitaste study project-run` registers the matrix or
 selected cells beneath an existing project instead of producing another
