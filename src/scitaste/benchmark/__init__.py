@@ -43,6 +43,11 @@ from scitaste.benchmark.study_models import (
     StudyStatus,
     SystemCondition,
 )
+from scitaste.benchmark.study_project import (
+    ProjectMatchedStudyRunner,
+    ProjectStudyConfig,
+    ProjectStudySummary,
+)
 
 __all__ = [
     "BenchmarkCase",
@@ -56,6 +61,9 @@ __all__ = [
     "MatchedStudyProtocol",
     "MatchedStudyReport",
     "MatchedStudyRunner",
+    "ProjectMatchedStudyRunner",
+    "ProjectStudyConfig",
+    "ProjectStudySummary",
     "SciTasteBenchRunner",
     "StudyLaunchConfig",
     "StudyPlan",
