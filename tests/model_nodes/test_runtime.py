@@ -4,6 +4,7 @@ import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -292,6 +293,135 @@ def test_scripted_process_interruption_resumes_verified_intent(tmp_path: Path) -
     assert resumed.outcome is RuntimeOutcome.ACCEPTED
     assert list((_stage(project) / "attempts").glob("*/failure.json"))
     assert not list((_stage(project) / "pending").iterdir())
+
+
+def test_live_response_interruption_recovers_without_provider_or_double_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, revision = _project(tmp_path)
+    profile = _profile().model_copy(update={"live_execution_permitted": True})
+    values = _values(invocation_id="paid-recovery", revision=revision)
+    values.update(
+        profile=profile,
+        policy=_policy(profile),
+        backend_mode=RuntimeBackendMode.LIVE,
+    )
+    delegate = _backend("paid-recovery")
+
+    class LiveBackend:
+        name = delegate.name
+        model = delegate.model
+        config = SimpleNamespace(live_enabled=True, max_output_tokens=1024)
+
+        def __init__(self, *, fail_if_called: bool = False) -> None:
+            self.fail_if_called = fail_if_called
+            self.calls = 0
+
+        def complete(self, request):
+            self.calls += 1
+            if self.fail_if_called:
+                raise AssertionError("provider was called during paid-result recovery")
+            return delegate.complete(request)
+
+    original_run = ReviewSemanticNode.run
+
+    def interrupt_after_durable_response(self, *args, **kwargs):
+        original_run(self, *args, **kwargs)
+        raise SystemExit("controlled post-response interruption")
+
+    first_backend = LiveBackend()
+    with monkeypatch.context() as patch:
+        patch.setattr(ReviewSemanticNode, "run", interrupt_after_durable_response)
+        with pytest.raises(SystemExit, match="post-response interruption"):
+            ModelNodeRuntime(project).execute(
+                backend=first_backend,
+                allow_live=True,
+                **values,
+            )
+
+    assert first_backend.calls == 1
+    assert list((_stage(project) / "pending").iterdir())
+    recovery_backend = LiveBackend(fail_if_called=True)
+    recovered = ModelNodeRuntime(ProjectRuntime(project.outputs_root)).execute(
+        backend=recovery_backend,
+        resume=True,
+        allow_live=True,
+        **values,
+    )
+
+    assert recovery_backend.calls == 0
+    assert recovered.recovered_without_provider is True
+    assert recovered.outcome is RuntimeOutcome.ACCEPTED
+    assert recovered.telemetry.total_tokens == 15
+    assert recovered.telemetry.cost_usd == pytest.approx(0.01)
+    assert recovered.telemetry.cached is False
+    assert recovered.telemetry.replayed is False
+    assert recovered.totals.entry_count == 1
+    assert recovered.totals.total_tokens == 15
+    assert recovered.totals.cost_usd == pytest.approx(0.01)
+    assert not list((_stage(project) / "pending").iterdir())
+
+
+def test_completed_live_invocation_resumes_after_project_revision_without_provider(
+    tmp_path: Path,
+) -> None:
+    project, revision = _project(tmp_path)
+    profile = _profile().model_copy(update={"live_execution_permitted": True})
+    values = _values(invocation_id="completed-live-resume", revision=revision)
+    values.update(
+        profile=profile,
+        policy=_policy(profile),
+        backend_mode=RuntimeBackendMode.LIVE,
+    )
+    delegate = _backend("completed-live-resume")
+
+    class LiveBackend:
+        name = delegate.name
+        model = delegate.model
+        config = SimpleNamespace(live_enabled=True, max_output_tokens=1024)
+
+        def __init__(self, *, fail_if_called: bool = False) -> None:
+            self.fail_if_called = fail_if_called
+            self.calls = 0
+
+        def complete(self, request):
+            self.calls += 1
+            if self.fail_if_called:
+                raise AssertionError("provider was called for a completed invocation")
+            return delegate.complete(request)
+
+    first_backend = LiveBackend()
+    first = ModelNodeRuntime(project).execute(
+        backend=first_backend,
+        allow_live=True,
+        **values,
+    )
+    assert first.outcome is RuntimeOutcome.ACCEPTED
+    assert first_backend.calls == 1
+
+    snapshot = project.update_run(
+        PROJECT_ID,
+        RUN_ID,
+        expected_revision=revision,
+        status="running",
+        recovery_checkpoint="after-ledger",
+    )
+    resumed_values = dict(values)
+    resumed_values["expected_project_revision"] = snapshot.revision
+    recovery_backend = LiveBackend(fail_if_called=True)
+    recovered = ModelNodeRuntime(project).execute(
+        backend=recovery_backend,
+        resume=True,
+        allow_live=True,
+        **resumed_values,
+    )
+
+    assert recovery_backend.calls == 0
+    assert recovered.recovered_without_provider is True
+    assert recovered.outcome is RuntimeOutcome.ACCEPTED
+    assert recovered.entry_sha256 == first.entry_sha256
+    assert recovered.totals == first.totals
 
 
 def test_resume_rejects_changed_profile_and_duplicate_invocation(tmp_path: Path) -> None:

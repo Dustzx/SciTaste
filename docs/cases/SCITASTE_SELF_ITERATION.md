@@ -87,6 +87,17 @@ boundaries, and falsifiable acceptance gates. It remains
 mid-study. The detailed run ledger is
 `docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
 
+The same design has now entered the actual `run full` evidence path. A
+content-addressed GLM-5.3-Flash condition and a separate caller switch must both
+authorize the call. The workflow publishes its immutable inputs before provider
+access; if a paid response was recorded before interruption, resume parses and
+accounts that exact response without calling the provider again. If completion
+is ambiguous, it records unknown cost and refuses a repeat. This is a concrete
+dogfooding result for the earlier “tool intelligence” idea, but remains
+engineering/recovery evidence rather than evidence of better scientific taste.
+The corresponding real Full Workflow run is indexed in
+`docs/experiments/zhipu_glm53_full_workflow_advisory_2026-09-05.md`.
+
 ## Project-owned substrate-action case
 
 The self-development project also owns the first live test of the new

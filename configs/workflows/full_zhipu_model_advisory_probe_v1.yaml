@@ -1,0 +1,19 @@
+schema_version: "1.0"
+project_id: scitaste-glm53-full-advisory-probe
+title: SciTaste Full Workflow GLM-5.3-Flash Advisory Probe
+research_direction: Test recoverable bounded semantic advice inside the SciTaste workflow
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste_glm53_unpriced_advisory
+provider: mock
+model: deterministic-controller
+evidence_scope: engineering-only-unpriced-live-semantic-advice
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+model_node_advisory: full_model_advisory_zhipu_glm53_unpriced_v1.yaml
+paper_id: glm53-recoverable-advisory-probe-paper
+paper_directory: glm53-recoverable-advisory-probe-draft
+paper_title: Recoverable Evidence-Bounded Semantic Advice in SciTaste
+paper_date: 2026-09-05

@@ -149,7 +149,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo = run_commands.add_parser("demo", help="Run the Phase 1 nonlinear mock loop")
     _add_common_options(demo, default_output="outputs/demo")
     demo.set_defaults(handler=_handle_demo)
-    full = run_commands.add_parser("full", help="Run the offline Phase 4-7 project workflow")
+    full = run_commands.add_parser("full", help="Run the Phase 4-7 project workflow")
     _add_common_options(full, default_output="outputs")
     full.add_argument("--project-id", default=None)
     full.add_argument("--run-id", default=None)
@@ -158,6 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--resume",
         action="store_true",
         help="Resume one failed run from its validated contiguous stage prefix",
+    )
+    full.add_argument(
+        "--allow-live-model-nodes",
+        action="store_true",
+        help="Explicitly authorize configured provider-backed advisory nodes",
     )
     full.set_defaults(handler=_handle_full)
 
@@ -904,7 +909,9 @@ def _handle_discover(args: argparse.Namespace) -> int:
 
 def _handle_full(args: argparse.Namespace) -> int:
     if args.backend != "mock":
-        raise ValueError("the integrated offline workflow currently supports only --backend mock")
+        raise ValueError(
+            "the integrated workflow controller currently supports only --backend mock"
+        )
     config_path = args.config or Path("configs/workflows/full_offline_v1.yaml")
     config = load_full_workflow_config(config_path)
     if args.project_id is not None or args.paper_directory is not None:
@@ -937,8 +944,13 @@ def _handle_full(args: argparse.Namespace) -> int:
                         else {
                             "hook_id": model_advisory.config.hook_id,
                             "node_name": model_advisory.config.node_name,
-                            "backend_mode": "scripted",
-                            "network_access": False,
+                            "backend_mode": model_advisory.config.backend.mode.value,
+                            "live_configured": model_advisory.config.live_enabled,
+                            "caller_authorized": args.allow_live_model_nodes,
+                            "would_contact_provider": (
+                                model_advisory.config.live_enabled and args.allow_live_model_nodes
+                            ),
+                            "network_access": model_advisory.config.live_enabled,
                             "advisory_only": True,
                             "executable": False,
                         }
@@ -956,6 +968,7 @@ def _handle_full(args: argparse.Namespace) -> int:
         outputs_root=args.output,
         run_id=run_id,
         resume=args.resume,
+        allow_live_model_nodes=args.allow_live_model_nodes,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0

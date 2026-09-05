@@ -310,11 +310,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   retains every outcome and exact replay evidence. Nested symlinks, stale project
   revisions before/during a call, corrupted chains, and interrupted publication
   fail closed, while accepted advice remains non-executable.
-- The first normal full-workflow consumer is complete: an opt-in offline
-  evidence hook sends the actual immutable post-interpretation state to
-  `interpretation-threat`, then binds its proposal and runtime ledger into the
-  evidence checkpoint. Resume verifies and reuses that record without another
-  backend call; live/paid full-workflow invocation remains a later recovery gate.
+- The first normal full-workflow consumer is complete: an opt-in evidence hook
+  sends the actual immutable post-interpretation state to
+  `interpretation-threat`, then binds its input, proposal, recording and runtime
+  ledger into the evidence checkpoint. Scripted mode stays offline; a
+  content-addressed GLM-5.3-Flash engineering condition requires a second caller
+  authorization. Resume reuses completed entries or a complete recorded paid
+  response without another provider call or double-counting; an ambiguous
+  possibly-started call is never retried.
+- A real `run full` GLM-5.3-Flash engineering condition completed all four
+  stages, compiled its PDF and passed ledger verification. Its single advisory
+  used 1,936 tokens and was rejected for unavailable cost plus an out-of-policy
+  action, so it remains non-promotable evidence.
 - The versioned self-development pilot protocol and runner isolate
   deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
@@ -348,17 +355,19 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
   and required artifacts still validate; incomplete downstream work is archived
   before rerun and tampered completion records fail closed.
-- An opt-in scripted semantic advisory now participates after evidence
-  interpretation through the normal model-node runtime. Its state, profile,
-  policy, proposal, recording, ledger head, and stage artifact are hash-bound;
-  it has no state-transition or execution authority.
+- An opt-in scripted or double-gated live semantic advisory now participates
+  after evidence interpretation through the normal model-node runtime. Its
+  predecessor/input state, profile, policy, proposal, recording, ledger head,
+  and stage artifacts are hash-bound; it has no state-transition or execution
+  authority. Live interruption recovery consumes an already recorded response
+  without a second provider call and refuses ambiguous repeats.
 - The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result
   recovery; Stage 3 binds that receipt rather than an arbitrary historical path.
-  Full Stage 1–18 ownership and live/paid normal-workflow model-node integration
-  remain pending, and neither may convert engineering evidence into an
-  effectiveness claim.
+  Full Stage 1–18 ownership and a priced, independently reviewed model-node
+  effectiveness comparison remain pending; engineering evidence cannot be
+  converted into an effectiveness claim.
 
 ## Generative interface progress
 

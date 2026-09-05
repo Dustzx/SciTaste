@@ -95,7 +95,7 @@ class ModelNodeProfileSet(ProfileModel):
     profile_set_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     profile_set_version: str = Field(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$")
     profiles: tuple[ModelNodeProfileReference, ...] = Field(min_length=1)
-    live_enabled: Literal[False] = False
+    live_enabled: bool = False
 
     @model_validator(mode="after")
     def references_are_unique(self) -> ModelNodeProfileSet:

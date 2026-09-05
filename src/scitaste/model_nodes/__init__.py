@@ -103,6 +103,7 @@ from scitaste.model_nodes.profiles import (
     validate_profile_binding,
 )
 from scitaste.model_nodes.replay import (
+    RecordedResponseRecoveryBackend,
     RecordingStructuredBackend,
     ReplayStructuredBackend,
     StructuredReplayMissError,
@@ -144,11 +145,14 @@ from scitaste.model_nodes.schemas import (
 )
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryConfig,
+    FullWorkflowModelAdvisoryInputRecord,
     FullWorkflowModelAdvisoryRecord,
     LoadedFullWorkflowModelAdvisory,
     execute_full_workflow_model_advisory,
     load_full_workflow_model_advisory,
+    publish_full_workflow_model_advisory_input,
     verify_full_workflow_model_advisory,
+    verify_full_workflow_model_advisory_input,
 )
 
 __all__ = [
@@ -163,6 +167,7 @@ __all__ = [
     "CumulativeProjectBudget",
     "ExpectedApplicability",
     "FullWorkflowModelAdvisoryConfig",
+    "FullWorkflowModelAdvisoryInputRecord",
     "FullWorkflowModelAdvisoryRecord",
     "HttpxStructuredTransport",
     "ImmutableStateProjection",
@@ -221,6 +226,7 @@ __all__ = [
     "ProjectPilotOrchestrator",
     "ProtocolFile",
     "ProviderGenerationEnvelope",
+    "RecordedResponseRecoveryBackend",
     "RecordingStructuredBackend",
     "ReplayEvidenceRole",
     "ReplayStructuredBackend",
@@ -270,8 +276,10 @@ __all__ = [
     "load_pilot_protocol",
     "load_pilot_report",
     "load_structured_openai_compatible_config",
+    "publish_full_workflow_model_advisory_input",
     "save_pilot_report",
     "validate_manual_interventions",
     "validate_profile_binding",
     "verify_full_workflow_model_advisory",
+    "verify_full_workflow_model_advisory_input",
 ]

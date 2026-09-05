@@ -72,6 +72,13 @@ requires thinking to remain enabled. The committed compatible payload uses
 mode can verify transport/schema behavior but always fails the cost gate; do not
 reuse it for an acceptance or matched-cost claim.
 
+The same provider can be exercised inside the normal project workflow with
+`configs/workflows/full_zhipu_model_advisory_probe_v1.yaml`. A real execution
+also requires `scitaste run full --allow-live-model-nodes`; dry-run reports both
+gates without reading the key or contacting the endpoint. The 2,048-token value
+in this engineering backend is a ceiling for that bounded semantic request, not
+a global limit on SciTaste coding, experiment or manuscript workloads.
+
 An existing local Qwen checkpoint can instead run without a server or API key:
 
 ```bash

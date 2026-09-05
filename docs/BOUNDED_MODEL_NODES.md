@@ -161,10 +161,13 @@ and exclusive fsynced publication. Runtime roots, nested attempt/pending entries
 recordings, ledger files, and the lock reject symbolic links and non-regular
 evidence; security-sensitive reads use no-follow file opens so a nested path
 cannot redirect verification or cleanup outside the owning run. Resume accepts
-only the identical invocation intent, archives incomplete attempts, treats an
-interrupted live call without complete priced evidence as unknown cost, and
-recovers the narrow case where a complete ledger entry was published just before
-its pending marker could be removed. Completed pending state is first atomically
+only the identical invocation intent and archives incomplete attempts. When a
+live response was durably recorded before interruption, the runtime reconstructs
+the exact request and consumes that response without provider access, retaining
+its original non-cached token/cost effect exactly once. A complete ledger entry
+is also returned idempotently if publication stopped before the caller wrote its
+own result record. A possibly started live call with no complete response remains
+unknown-cost and is never repeated. Completed pending state is first atomically
 renamed to a disposable `.published--*` directory, so a crash during marker
 deletion cannot make the ledger incomplete or cause the model call to repeat.
 
@@ -220,6 +223,26 @@ Machine JSON separates `generation_envelope`, `admission_budget`, and
 latency telemetry, cache/replay state, blockers, hashes, and relative evidence
 locators. It reports only proposal availability and authority flags—not proposal
 content, raw provider responses, authorization headers, or secret values.
+
+## Full Workflow integration
+
+`run full` can bind `interpretation-threat` after deterministic evidence
+interpretation. Scripted mode uses the offline profile set. The committed
+GLM-5.3-Flash engineering condition uses
+`runtime_profiles.live.example.yaml` and additionally requires
+`--allow-live-model-nodes`; neither switch substitutes for the other.
+
+Before the model runtime is entered,
+`stages/evidence/model_advisory_input.json` binds the predecessor/evidence state,
+decision log, evidence summary, original project revision, invocation ID,
+profile, policy and advisory configuration. `model_advisory.json` then binds the
+runtime receipt and ledger head, and `STAGE.json` hashes both. This extra
+checkpoint lets a failed Full Workflow recover an already recorded provider
+response without rerunning the Evidence workflow or contacting the provider.
+Recovery after project-revision advancement keeps usage accounting but rejects
+the pre-ledger proposal as stale. The live example is unpriced, so even an
+ordinary successful response is rejected for missing cost telemetry and remains
+engineering-only evidence.
 
 ## Live-model promotion boundary
 

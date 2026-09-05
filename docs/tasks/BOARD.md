@@ -1,6 +1,6 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.8`
+Board revision: `2026-09-05.9`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
@@ -34,6 +34,10 @@ Board revision: `2026-09-05.8`
   evidence-stage `run full` hook. The actual immutable state, proposal, exact
   recording, ledger head, and stage checkpoint are bound, while state mutation
   and execution authority remain absent.
+- Main has extended that hook to a double-gated GLM-5.3-Flash live condition.
+  A pre-call evidence checkpoint and exact recorded-response recovery prevent a
+  known paid response from being called or counted twice; ambiguous calls remain
+  blocked rather than retried.
 - The real seven-case GLM-5.3-Flash engineering probe remains intentionally
   blocked rather than promoted. Priced external measurement, independent review,
-  and paid full-workflow interruption recovery are later model-node gates.
+  and a registered effectiveness comparison remain later model-node gates.

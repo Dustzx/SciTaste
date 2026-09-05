@@ -448,15 +448,23 @@ staleness prevents provider access, while mid-call staleness retains known usage
 but rejects the resulting proposal. Completed publication survives interrupted
 pending cleanup without repeating the model call.
 
-The first normal-workflow consumer is now implemented as an opt-in offline hook
-after deterministic evidence interpretation. It projects the actual immutable
-state into `interpretation-threat`, records the typed proposal through the
-project ledger, and adds a self-hashed bridge to the evidence `STAGE.json`.
-Input and output state hashes must match, and resume verifies the complete ledger
-head before reuse. This closes the runtime-to-workflow integration path for
-scripted evidence; it does not authorize the advice or establish model benefit.
-Live/paid use remains outside `run full` until interruption accounting prevents
-ambiguous duplicate provider charges.
+The first normal-workflow consumer is implemented after deterministic evidence
+interpretation. It projects the actual immutable state into
+`interpretation-threat`, records the typed proposal through the project ledger,
+and adds self-hashed input/result bridges to the evidence `STAGE.json`. Input and
+output state hashes must match, and resume verifies the complete ledger head
+before reuse. Scripted mode stays offline. Live mode additionally requires a
+content-bound configuration gate and explicit caller authorization.
+
+Before provider access, the workflow publishes the exact predecessor state,
+evidence state, decision log, evidence summary, invocation identity, policy and
+profile. A complete recorded live response can therefore be recovered and
+accounted exactly once without another provider call. An already-published
+ledger entry is returned idempotently; a possibly started call with no complete
+response remains unknown-cost and is not repeated. A recovered pre-ledger
+proposal is rejected after project-revision drift. This closes the paid-response
+interruption gate, but does not authorize state mutation or establish model
+benefit.
 
 The 2026-09-05 project-owned GLM-5.3-Flash probe completed seven cases and
 demonstrated schema parsing, exact recording, recovery, and enforcement on a

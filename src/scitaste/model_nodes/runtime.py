@@ -11,6 +11,7 @@ import tempfile
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -35,6 +36,7 @@ from scitaste.model_nodes.nodes import (
 )
 from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
 from scitaste.model_nodes.replay import (
+    RecordedResponseRecoveryBackend,
     RecordingStructuredBackend,
     ReplayStructuredBackend,
     StructuredReplayRecord,
@@ -222,6 +224,7 @@ class RuntimeInvocationReceipt(RuntimeModel):
     recording_locator: str | None = None
     attempt_locator: str | None = None
     blockers: tuple[str, ...] = ()
+    recovered_without_provider: bool = False
     generation_envelope: dict[str, JsonValue]
     admission_budget: dict[str, JsonValue]
     cumulative_project_budget: dict[str, JsonValue]
@@ -250,6 +253,14 @@ class ModelNodeRuntimeConflictError(ModelNodeRuntimeError):
 
 
 BeforeBackendHook = Callable[[RuntimeInvocationIntent], None]
+
+
+@dataclass(frozen=True)
+class _PendingResume:
+    intent: RuntimeInvocationIntent
+    directory: Path
+    recording_path: Path
+    backend: RecordedResponseRecoveryBackend | None
 
 
 _NODE_TYPES = {
@@ -469,7 +480,7 @@ class ModelNodeRuntime:
                 project_id=project_id,
                 run_id=run_id,
                 invocation_id=invocation_id,
-                project_revision=expected_revision,
+                project_revision=entry.intent.project_revision,
                 state_revision=values["state_revision"],
                 node_name=values["node_name"],
                 node_input=values["node_input"],
@@ -519,6 +530,9 @@ class ModelNodeRuntime:
                         else None
                     ),
                     attempt_locator=attempt_locator,
+                    recovered_without_provider=(
+                        entry.intent.backend_mode is RuntimeBackendMode.LIVE
+                    ),
                     entry=entry,
                 )
             totals = self._totals(project_id, run_id, entries, stage=stage)
@@ -542,6 +556,7 @@ class ModelNodeRuntime:
                 recording_path=(
                     recording if recording is not None and recording.is_file() else None
                 ),
+                recovered_without_provider=(entry.intent.backend_mode is RuntimeBackendMode.LIVE),
                 entry=entry,
             )
         totals = self._totals(project_id, run_id, entries, stage=stage)
@@ -577,17 +592,36 @@ class ModelNodeRuntime:
             ),
         )
         pending = self._pending_directories(stage)
+        pending_resume = (
+            self._resume_pending(
+                stage,
+                pending,
+                totals=totals,
+                **values,
+            )
+            if pending and resume
+            else None
+        )
+        if pending_resume is not None:
+            intent = pending_resume.intent
+        admission_totals = totals
+        if pending_resume is not None and pending_resume.backend is not None:
+            admission_totals = totals.model_copy(
+                update={"unknown_cost_count": max(0, totals.unknown_cost_count - 1)}
+            )
         if pending and not resume:
             raise ModelNodeRuntimeError("incomplete model-node attempts require --resume")
-        resumed_unknown = self._archive_pending(
-            stage,
-            pending,
-            expected_intent=intent,
-        )
+        resumed_unknown = False
+        if pending_resume is None or pending_resume.backend is None:
+            resumed_unknown = self._archive_pending(
+                stage,
+                pending,
+                expected_intent=intent,
+            )
         blockers = list(
             self._preflight_blockers(
                 intent,
-                totals,
+                admission_totals,
                 stage=stage,
                 allow_live=allow_live,
                 backend=backend,
@@ -607,6 +641,10 @@ class ModelNodeRuntime:
         if blockers or (backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY):
             if backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY:
                 blockers.append("no backend is bound")
+            if pending_resume is not None and pending_resume.backend is not None:
+                raise ModelNodeRuntimeError(
+                    "recoverable live response requires its original execution authorization"
+                )
             return self._publish_without_result(
                 stage,
                 entries,
@@ -616,7 +654,10 @@ class ModelNodeRuntime:
             )
 
         recording_path: Path
-        if intent.backend_mode is RuntimeBackendMode.REPLAY:
+        if pending_resume is not None and pending_resume.backend is not None:
+            recording_path = pending_resume.recording_path
+            backend = pending_resume.backend
+        elif intent.backend_mode is RuntimeBackendMode.REPLAY:
             source_id = intent.replay_source_invocation_id
             assert source_id is not None
             recordings = _runtime_directory(stage, "recordings", create=True)
@@ -632,13 +673,18 @@ class ModelNodeRuntime:
                 raise FileExistsError(recording_path)
             backend = RecordingStructuredBackend(backend, recording_path)
 
-        pending_root = _runtime_directory(stage, "pending", create=True)
-        assert pending_root is not None
-        pending_dir = pending_root / f"{invocation_id}--{time.time_ns()}--{os.getpid()}"
-        pending_dir.mkdir(parents=True, exist_ok=False)
-        _write_model_exclusive(pending_dir / "intent.json", intent, owned_root=stage)
+        if pending_resume is not None and pending_resume.backend is not None:
+            pending_dir = pending_resume.directory
+        else:
+            pending_root = _runtime_directory(stage, "pending", create=True)
+            assert pending_root is not None
+            pending_dir = pending_root / f"{invocation_id}--{time.time_ns()}--{os.getpid()}"
+            pending_dir.mkdir(parents=True, exist_ok=False)
+            _write_model_exclusive(pending_dir / "intent.json", intent, owned_root=stage)
         try:
-            if self.before_backend is not None:
+            if self.before_backend is not None and not (
+                pending_resume is not None and pending_resume.backend is not None
+            ):
                 self.before_backend(intent)
 
             def before_call() -> None:
@@ -654,7 +700,11 @@ class ModelNodeRuntime:
                     owned_root=stage,
                 )
 
-            guarded_backend = _PreCallValidatedBackend(backend, before_call)
+            guarded_backend = (
+                backend
+                if pending_resume is not None and pending_resume.backend is not None
+                else _PreCallValidatedBackend(backend, before_call)
+            )
             node_type, input_type, _ = _NODE_TYPES[intent.node_name]
             typed_input = input_type.model_validate_json(
                 json.dumps(intent.node_input, ensure_ascii=False, allow_nan=False),
@@ -669,12 +719,12 @@ class ModelNodeRuntime:
                 seed=intent.seed,
                 profile=intent.profile,
             )
-            result = self._apply_cumulative_gates(result, totals, intent.profile)
+            result = self._apply_cumulative_gates(result, admission_totals, intent.profile)
             result = self._apply_project_revision_gate(
                 result,
                 project_id=project_id,
                 run_id=run_id,
-                expected_revision=expected_revision,
+                expected_revision=intent.project_revision,
             )
             entry = self._entry_from_result(
                 index=len(entries),
@@ -772,7 +822,76 @@ class ModelNodeRuntime:
             request_fingerprint=entry.request_fingerprint,
             blockers=entry.blockers,
             recording_path=recording_path if recording_path.is_file() else None,
+            recovered_without_provider=(
+                pending_resume is not None and pending_resume.backend is not None
+            ),
             entry=entry,
+        )
+
+    def _resume_pending(
+        self,
+        stage: Path,
+        pending: list[Path],
+        *,
+        totals: RuntimeLedgerTotals,
+        **values: Any,
+    ) -> _PendingResume | None:
+        invocation_id = values["invocation_id"]
+        matches: list[tuple[Path, RuntimeInvocationIntent]] = []
+        for directory in pending:
+            pending_intent = _load_model(directory / "intent.json", RuntimeInvocationIntent)
+            if pending_intent.invocation_id == invocation_id:
+                matches.append((directory, pending_intent))
+        if not matches:
+            return None
+        if len(matches) != 1:
+            raise ModelNodeRuntimeError("multiple incomplete attempts share one invocation ID")
+        directory, historical = matches[0]
+        candidate = self._intent(
+            project_id=values["project_id"],
+            run_id=values["run_id"],
+            invocation_id=invocation_id,
+            project_revision=historical.project_revision,
+            state_revision=values["state_revision"],
+            node_name=values["node_name"],
+            node_input=values["node_input"],
+            context=values["context"],
+            trigger=values["trigger"],
+            profile=values["profile"],
+            policy=values["policy"],
+            backend_mode=values["backend_mode"],
+            replay_source_invocation_id=values.get("replay_source_invocation_id"),
+            request_id=values.get("request_id"),
+            seed=values.get("seed", 0),
+            predecessor_sha256=historical.predecessor_sha256,
+            cumulative_cost_usd=historical.context.cumulative_api_cost_usd,
+        )
+        if candidate.fingerprint != historical.fingerprint:
+            raise ModelNodeRuntimeError("resume invocation identity drift")
+        if historical.predecessor_sha256 != totals.chain_head_sha256:
+            raise ModelNodeRuntimeError("resumed invocation predecessor drift")
+        if historical.context.cumulative_api_cost_usd != totals.cost_usd:
+            raise ModelNodeRuntimeError("resumed invocation cost context drift")
+        recordings = _runtime_directory(stage, "recordings")
+        recording = recordings / f"{invocation_id}.jsonl" if recordings is not None else None
+        recovery_backend = None
+        if (
+            historical.backend_mode is RuntimeBackendMode.LIVE
+            and len(pending) == 1
+            and (directory / "backend-started").is_file()
+            and recording is not None
+            and recording.is_file()
+            and not recording.is_symlink()
+        ):
+            try:
+                recovery_backend = RecordedResponseRecoveryBackend(recording)
+            except (OSError, ValueError):
+                recovery_backend = None
+        return _PendingResume(
+            intent=historical,
+            directory=directory,
+            recording_path=recording or stage / "recordings" / f"{invocation_id}.jsonl",
+            backend=recovery_backend,
         )
 
     def _intent(
@@ -1314,6 +1433,7 @@ class ModelNodeRuntime:
         recording_path: Path | None = None,
         attempt_locator: str | None = None,
         entry: RuntimeLedgerEntry | None = None,
+        recovered_without_provider: bool = False,
     ) -> RuntimeInvocationReceipt:
         base = f"projects/{intent.project_id}/runs/{intent.run_id}/{MODEL_NODE_STAGE_PATH}"
         return RuntimeInvocationReceipt(
@@ -1344,6 +1464,7 @@ class ModelNodeRuntime:
             ),
             attempt_locator=attempt_locator,
             blockers=blockers,
+            recovered_without_provider=recovered_without_provider,
             generation_envelope=intent.profile.generation.model_dump(mode="json"),
             admission_budget=intent.profile.admission.model_dump(mode="json"),
             cumulative_project_budget=intent.profile.cumulative_project.model_dump(mode="json"),

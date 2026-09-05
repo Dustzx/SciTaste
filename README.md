@@ -64,9 +64,11 @@ review remain pending, so no effectiveness claim is made from that pilot.
   fail-closed compatible live backend, versioned self-development pilot, and
   durable project-owned runtime/CLI for layered profiles, execution, exact
   replay, restart-safe accounting, auditable resume, and verification;
-- an opt-in offline `run full` evidence hook that projects the real immutable
-  research state into `interpretation-threat`, binds its proposal/recording/
-  ledger to the stage checkpoint, and grants it no mutation or execution power;
+- an opt-in `run full` evidence hook that projects the real immutable research
+  state into `interpretation-threat`, binds its input/proposal/recording/ledger
+  to the stage checkpoint, grants it no mutation or execution power, and exposes
+  live GLM-5.3-Flash only behind configuration plus caller authorization with
+  no-repeat paid-response recovery;
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
   project artifacts exposed to a surface;

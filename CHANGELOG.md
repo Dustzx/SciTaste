@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Double-gated live GLM-5.3-Flash advice in `run full`, with a content-addressed
+  profile/config, pre-provider evidence checkpoint, exact already-paid response
+  recovery, single-count usage accounting, stale-revision rejection, and
+  fail-closed no-repeat handling when provider completion is ambiguous.
+- A real GLM-5.3-Flash Full Workflow engineering run that completed all four
+  stages and a PDF while correctly rejecting its advisory for missing price
+  telemetry and an out-of-policy action.
 - An opt-in offline evidence-stage model advisory for `run full`, with immutable
   real-state projection, content-bound config/profile identity, proposal-only
   output, exact runtime ledger/recording evidence, stage-checkpoint binding, and

@@ -1,0 +1,48 @@
+# Live GLM-5.3-Flash evidence-stage advisory. This is deliberately registered
+# as an unpriced engineering condition: it can validate provider integration,
+# accounting and recovery, but cannot support an effectiveness claim.
+schema_version: "1.0"
+hook_id: evidence-interpretation-threat-glm53
+node_name: interpretation-threat
+trigger_reason: Inspect the completed evidence interpretation for bounded validity threats.
+profile_set: ../model_nodes/runtime_profiles.live.example.yaml
+profile_id: zhipu-glm53-full-advisory
+policy:
+  policy_id: full-workflow-interpretation-threat-glm53-v1
+  enabled: true
+  allowed_node_names: [interpretation-threat]
+  expected_backend: zhipu-direct
+  expected_model: glm-5.3-flash
+  allowed_tool_names: []
+  allowed_action_types: [ANALYZE, PIVOT, REPRODUCE]
+  max_request_bytes: 100000
+  max_input_tokens: 4000
+  max_output_tokens: 1024
+  max_total_tokens: 5024
+  max_api_cost_usd: 1.0
+  max_latency_ms: 180000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.05
+backend:
+  kind: openai-compatible
+  config:
+    provider: zhipu-direct
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-5.3-flash
+    api_key_env: ZAI_API_KEY
+    live_enabled: true
+    timeout_seconds: 180
+    max_retries: 0
+    max_output_tokens: 2048
+    pricing_confirmed: false
+    pricing: null
+    unpriced_engineering_probe: true
+    extra_headers: {}
+    extra_body:
+      thinking:
+        type: enabled
+      reasoning_effort: low
+live_enabled: true
+advisory_only: true
+executable: false
+effectiveness_claim: false

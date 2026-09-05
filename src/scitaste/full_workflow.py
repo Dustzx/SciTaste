@@ -23,10 +23,13 @@ from scitaste.evidence.workflow import (
 )
 from scitaste.generative_ui import ProjectSnapshotAdapter
 from scitaste.model_nodes.workflow_bridge import (
+    FullWorkflowModelAdvisoryRecord,
     LoadedFullWorkflowModelAdvisory,
     execute_full_workflow_model_advisory,
     load_full_workflow_model_advisory,
+    publish_full_workflow_model_advisory_input,
     verify_full_workflow_model_advisory,
+    verify_full_workflow_model_advisory_input,
 )
 from scitaste.project import (
     PaperManifest,
@@ -147,6 +150,7 @@ class FullWorkflow:
         outputs_root: str | Path,
         run_id: str,
         resume: bool = False,
+        allow_live_model_nodes: bool = False,
     ) -> dict[str, object]:
         validate_entry_id(run_id, field_name="run_id")
         runtime = ProjectRuntime(outputs_root)
@@ -155,6 +159,12 @@ class FullWorkflow:
             if config.model_node_advisory is not None
             else None
         )
+        if (
+            model_advisory is not None
+            and model_advisory.config.live_enabled
+            and not allow_live_model_nodes
+        ):
+            raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
         workflow_config_sha256 = _workflow_config_sha256(config, model_advisory)
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
@@ -198,6 +208,7 @@ class FullWorkflow:
                 run_id=run_id,
                 project_revision=snapshot.revision,
                 model_advisory=model_advisory,
+                allow_live_model_nodes=allow_live_model_nodes,
             )
             reloaded_advisory = (
                 load_full_workflow_model_advisory(config.model_node_advisory)
@@ -400,6 +411,7 @@ class FullWorkflow:
         run_id: str,
         project_revision: int,
         model_advisory: LoadedFullWorkflowModelAdvisory | None,
+        allow_live_model_nodes: bool,
     ) -> tuple[dict[str, object], Path, list[str], list[str]]:
         stages = run_root / "stages"
         summaries: dict[str, object] = {}
@@ -445,6 +457,11 @@ class FullWorkflow:
         previous_state = discovery_state
 
         evidence_root = stages / "evidence"
+        advisory_artifacts = (
+            ("model_advisory_input.json", "model_advisory.json")
+            if model_advisory is not None
+            else ()
+        )
         evidence_record = (
             _load_stage_record(
                 evidence_root,
@@ -452,7 +469,7 @@ class FullWorkflow:
                 run_root=run_root,
                 project_id=config.project_id,
                 expected_input_sha256=_file_sha256(previous_state),
-                extra_artifacts=("model_advisory.json",) if model_advisory else (),
+                extra_artifacts=advisory_artifacts,
             )
             if reuse_allowed
             else None
@@ -461,6 +478,14 @@ class FullWorkflow:
             evidence = dict(evidence_record.summary)
             evidence_state = run_root / evidence_record.output_state_locator
             if model_advisory is not None:
+                verify_full_workflow_model_advisory_input(
+                    model_advisory,
+                    run_root=run_root,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    predecessor_state_path=previous_state,
+                    record_path=evidence_root / "model_advisory_input.json",
+                )
                 verify_full_workflow_model_advisory(
                     model_advisory,
                     project_runtime=project_runtime,
@@ -471,48 +496,121 @@ class FullWorkflow:
                 )
             reused_stages.append("evidence")
         else:
-            if resume and evidence_root.exists():
-                archived_attempts.append(_archive_stage(evidence_root, run_root, "evidence"))
-            reuse_allowed = False
-            evidence_raw = EvidenceWorkflow(seed=self.seed).run(
-                _evidence_for_project(config),
-                output_dir=evidence_root,
-                state_path=previous_state,
+            input_record_path = evidence_root / "model_advisory_input.json"
+            can_recover_advisory = (
+                resume
+                and reuse_allowed
+                and model_advisory is not None
+                and evidence_root.exists()
+                and input_record_path.exists()
             )
-            evidence_state = Path(str(evidence_raw["latest_state"]))
-            evidence = _portable_summary_dict(evidence_raw, run_root)
-            if model_advisory is not None:
-                advisory_record = execute_full_workflow_model_advisory(
+            if can_recover_advisory:
+                assert model_advisory is not None
+                input_record = verify_full_workflow_model_advisory_input(
                     model_advisory,
-                    project_runtime=project_runtime,
+                    run_root=run_root,
                     project_id=config.project_id,
                     run_id=run_id,
-                    expected_project_revision=project_revision,
-                    evidence_scenario=_evidence_for_project(config),
-                    state_path=evidence_state,
-                    record_path=evidence_root / "model_advisory.json",
-                    seed=self.seed,
+                    predecessor_state_path=previous_state,
+                    record_path=input_record_path,
                 )
-                evidence["model_advisory"] = {
-                    "hook_id": advisory_record.hook_id,
-                    "node_name": advisory_record.node_name,
-                    "outcome": advisory_record.receipt.outcome.value,
-                    "proposal_available": advisory_record.proposal is not None,
-                    "advisory_only": True,
-                    "executable": False,
-                    "record": _owned_locator(
-                        run_root,
-                        evidence_root / "model_advisory.json",
-                    ),
-                }
-            _stage_record(
-                evidence_root,
-                "evidence",
-                evidence,
-                run_root=run_root,
-                input_state=previous_state,
-                extra_artifacts=("model_advisory.json",) if model_advisory else (),
-            )
+                evidence_state = run_root / input_record.state_locator
+                evidence = _portable_summary_dict(
+                    _load_json_mapping(run_root / input_record.evidence_summary_locator),
+                    run_root,
+                )
+                advisory_record_path = evidence_root / "model_advisory.json"
+                if advisory_record_path.exists():
+                    advisory_record = verify_full_workflow_model_advisory(
+                        model_advisory,
+                        project_runtime=project_runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        state_path=evidence_state,
+                        record_path=advisory_record_path,
+                    )
+                else:
+                    advisory_record = execute_full_workflow_model_advisory(
+                        model_advisory,
+                        project_runtime=project_runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        expected_project_revision=project_revision,
+                        evidence_scenario=_evidence_for_project(config),
+                        state_path=evidence_state,
+                        record_path=advisory_record_path,
+                        seed=self.seed,
+                        resume=True,
+                        allow_live=allow_live_model_nodes,
+                        invocation_id=input_record.invocation_id,
+                        invocation_project_revision=input_record.project_revision,
+                    )
+                evidence["model_advisory"] = _model_advisory_summary(
+                    advisory_record,
+                    run_root=run_root,
+                    record_path=advisory_record_path,
+                )
+                _stage_record(
+                    evidence_root,
+                    "evidence",
+                    evidence,
+                    run_root=run_root,
+                    input_state=previous_state,
+                    extra_artifacts=advisory_artifacts,
+                )
+                reuse_allowed = False
+            else:
+                if resume and evidence_root.exists():
+                    archived_attempts.append(_archive_stage(evidence_root, run_root, "evidence"))
+                reuse_allowed = False
+                evidence_raw = EvidenceWorkflow(seed=self.seed).run(
+                    _evidence_for_project(config),
+                    output_dir=evidence_root,
+                    state_path=previous_state,
+                )
+                evidence_state = Path(str(evidence_raw["latest_state"]))
+                evidence = _portable_summary_dict(evidence_raw, run_root)
+                if model_advisory is not None:
+                    input_record = publish_full_workflow_model_advisory_input(
+                        model_advisory,
+                        run_root=run_root,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        project_revision=project_revision,
+                        predecessor_state_path=previous_state,
+                        state_path=evidence_state,
+                        decision_log_path=evidence_root / "decisions.jsonl",
+                        evidence_summary_path=evidence_root / "evidence_summary.json",
+                        record_path=input_record_path,
+                    )
+                    advisory_record_path = evidence_root / "model_advisory.json"
+                    advisory_record = execute_full_workflow_model_advisory(
+                        model_advisory,
+                        project_runtime=project_runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        expected_project_revision=project_revision,
+                        evidence_scenario=_evidence_for_project(config),
+                        state_path=evidence_state,
+                        record_path=advisory_record_path,
+                        seed=self.seed,
+                        allow_live=allow_live_model_nodes,
+                        invocation_id=input_record.invocation_id,
+                        invocation_project_revision=input_record.project_revision,
+                    )
+                    evidence["model_advisory"] = _model_advisory_summary(
+                        advisory_record,
+                        run_root=run_root,
+                        record_path=advisory_record_path,
+                    )
+                _stage_record(
+                    evidence_root,
+                    "evidence",
+                    evidence,
+                    run_root=run_root,
+                    input_state=previous_state,
+                    extra_artifacts=advisory_artifacts,
+                )
         summaries["evidence"] = evidence
         previous_state = evidence_state
 
@@ -882,6 +980,34 @@ def _portable_summary_dict(value: object, run_root: Path) -> dict[str, object]:
     return portable
 
 
+def _load_json_mapping(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid workflow summary: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"workflow summary must be a mapping: {path}")
+    return payload
+
+
+def _model_advisory_summary(
+    record: FullWorkflowModelAdvisoryRecord,
+    *,
+    run_root: Path,
+    record_path: Path,
+) -> dict[str, object]:
+    return {
+        "hook_id": record.hook_id,
+        "node_name": record.node_name,
+        "outcome": record.receipt.outcome.value,
+        "proposal_available": record.proposal is not None,
+        "recovered_without_provider": record.receipt.recovered_without_provider,
+        "advisory_only": True,
+        "executable": False,
+        "record": _owned_locator(run_root, record_path),
+    }
+
+
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
@@ -911,7 +1037,10 @@ def _workflow_config_sha256(
         payload.pop("model_node_advisory", None)
     else:
         binding = model_advisory or load_full_workflow_model_advisory(config.model_node_advisory)
-        payload["model_node_advisory"] = {"binding_sha256": binding.fingerprint}
+        payload["model_node_advisory"] = {
+            "binding_sha256": binding.fingerprint,
+            "stage_recovery_contract": "2.0",
+        }
     return content_sha256(payload)
 
 

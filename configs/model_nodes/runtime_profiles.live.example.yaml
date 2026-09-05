@@ -1,0 +1,10 @@
+# Content-addressed live profile set for the bounded Full Workflow advisory.
+# The referenced provider configuration remains a separate, explicit gate.
+schema_version: "1.0"
+profile_set_id: bounded-model-node-runtime-live-examples
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_full_advisory_v1.yaml
+    sha256: 71ef8d68ac38d2f58ba1780c05b4c6c4996014286691f459451f27d0a71ae3b0
+    profile_sha256: 008221c2b7d1c2f8b9577509d608d8f5368644870d907d1efe949fd53ca89677

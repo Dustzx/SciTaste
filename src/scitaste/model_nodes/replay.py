@@ -52,16 +52,19 @@ class ReplayStructuredBackend:
         self.name, self.model = identity
 
     def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
+        response = self._exact_response(request)
+        values = response.model_dump(mode="python")
+        values["cached"] = True
+        return StructuredModelResponse.model_validate(values, strict=True)
+
+    def _exact_response(self, request: StructuredModelRequest) -> StructuredModelResponse:
         try:
-            response = self._records[request.fingerprint]
+            return self._records[request.fingerprint]
         except KeyError as exc:
             raise StructuredReplayMissError(
                 f"no exact structured replay for {request.request_id!r} "
                 f"({request.fingerprint[:12]})"
             ) from exc
-        values = response.model_dump(mode="python")
-        values["cached"] = True
-        return StructuredModelResponse.model_validate(values, strict=True)
 
     def _load(self) -> tuple[dict[str, StructuredModelResponse], tuple[str, str]]:
         if not self.path.is_file():
@@ -86,6 +89,21 @@ class ReplayStructuredBackend:
         if len(identities) != 1:
             raise ValueError("structured replay file mixes backend or model identities")
         return records, next(iter(identities))
+
+
+class RecordedResponseRecoveryBackend(ReplayStructuredBackend):
+    """Recover one already-paid response without changing its accounting flags."""
+
+    def __init__(self, path: str | Path) -> None:
+        super().__init__(path)
+        if len(self._records) != 1:
+            raise ValueError("live recovery evidence must contain exactly one response")
+
+    def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
+        response = self._exact_response(request)
+        if response.cached:
+            raise ValueError("live recovery evidence cannot be a cached response")
+        return _copy_response(response)
 
 
 def _copy_request(request: StructuredModelRequest) -> StructuredModelRequest:

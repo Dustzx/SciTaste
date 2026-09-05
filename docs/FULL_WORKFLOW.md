@@ -1,8 +1,9 @@
 # Project-owned full workflow
 
-`scitaste run full` is the first-party offline composition of SciTaste's Phase
-4--7 workflows. It is a real deterministic execution path, not a reserved CLI
-or four disconnected demos. Discovery creates the initial `ResearchState`;
+`scitaste run full` is the first-party composition of SciTaste's Phase 4--7
+workflows. Its core path is deterministic and offline; an explicitly configured
+evidence advisory may additionally use a bounded live model node. It is not a
+reserved CLI or four disconnected demos. Discovery creates the initial `ResearchState`;
 Evidence, Communication, reviewer-driven evidence collection, and Figure
 generation each load and extend that same state history.
 
@@ -54,6 +55,22 @@ model quality. Its accepted output remains a proposal: it cannot update claims,
 select an action, execute a tool, or mutate state. The record proves this by
 binding identical input/output state hashes.
 
+The live engineering condition is separately configured and double-gated:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_zhipu_model_advisory_probe_v1.yaml \
+  --run-id glm53-advisory-probe-seed-07 \
+  --seed 7 --output outputs --allow-live-model-nodes
+```
+
+Both the content-bound advisory/profile/backend configuration and the caller
+must enable live execution. Omitting `--allow-live-model-nodes` fails before a
+project is created. The committed GLM-5.3-Flash condition has no verified price,
+so it is an engineering probe: usage and the raw response are retained, cost is
+unknown, and the proposal is deterministically rejected. It cannot support an
+effectiveness claim.
+
 ## Project layout
 
 One execution owns this tree:
@@ -67,7 +84,8 @@ outputs/projects/<project-id>/
 │   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
 │   └── stages/
 │       ├── discovery/
-│       ├── evidence/model_advisory.json  # when opted in
+│       ├── evidence/model_advisory_input.json # pre-call, when opted in
+│       ├── evidence/model_advisory.json  # result bridge, when opted in
 │       ├── communication/
 │       └── figure/
 ├── stages/current -> ../runs/<run-id>/stages
@@ -119,12 +137,21 @@ hash mismatch is treated as possible tampering and fails closed; it is not
 silently archived or regenerated.
 
 When model advice is enabled, evidence-stage reuse additionally revalidates the
-self-hashed advisory record, immutable state snapshot, complete model-node
-ledger totals/head, and exact response recording. A verified prefix therefore
-does not call the backend again. If interruption occurs before the evidence
-stage publishes `STAGE.json`, the offline advisory may be executed under a new
-project-revision-bound invocation while the old ledger entry remains auditable.
-Paid/live recovery is intentionally not exposed through `run full` yet.
+self-hashed pre-call input record and advisory result, immutable predecessor and
+evidence states, decision log, evidence summary, complete model-node ledger
+totals/head, and exact response recording. A verified prefix therefore does not
+call the backend again.
+
+The input record is published before provider access and cannot be overwritten.
+If a live response was durably recorded but the process stopped before ledger
+publication, `--resume --allow-live-model-nodes` reconstructs the exact original
+request, consumes that recorded response without provider access, and records
+its original token/cost telemetry once. Because the project revision advanced
+while failure/recovery metadata was written, the recovered proposal is
+conservatively rejected as stale. If the ledger was already published, resume
+returns that exact entry without another call. If a live call may have started
+but no complete response exists, its cost remains unknown and resume refuses to
+repeat it. An invalid input checkpoint fails closed instead of being archived.
 
 This recovery path deliberately covers workflow-stage interruption. If all four
 stage records already validate, or a paper directory already exists, automated
@@ -146,10 +173,13 @@ against the full-workflow project. This permits reusable phase fixtures without
 splitting the resulting project state.
 
 `configs/workflows/full_offline_model_advisory_v1.yaml` adds the content-bound
-`full_model_advisory_scripted_v1.yaml`. Loading rejects embedded credentials,
-live profiles, unrestricted code generation, tools, non-zero scripted cost, and
-policy/profile/backend identity drift. `--dry-run` reports the hook and confirms
-`network_access: false` without creating a project.
+`full_model_advisory_scripted_v1.yaml`. The live probe instead uses
+`full_model_advisory_zhipu_glm53_unpriced_v1.yaml` and its content-addressed live
+profile set. Loading rejects embedded credentials, unrestricted code generation,
+tools, non-zero scripted cost, inconsistent live gates, and policy/profile/
+backend identity drift. `--dry-run` reports the backend mode, both authorization
+gates, and whether a real execution would contact a provider without creating a
+project or accessing the network.
 
 AutoResearchClaw is not modified or invoked by this offline acceptance case. A
 later live/full executor mode must preserve the same ProjectRuntime ownership,
