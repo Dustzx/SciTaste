@@ -118,7 +118,7 @@ class _GenerativeUIIPv6HTTPServer(GenerativeUIHTTPServer):
 
 
 class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
-    """Serve fixed assets and the closed v1 JSON API."""
+    """Serve fixed assets and the closed versioned JSON APIs."""
 
     server: GenerativeUIHTTPServer
     server_version = "SciTasteLocalUI/1.0"

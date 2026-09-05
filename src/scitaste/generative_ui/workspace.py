@@ -54,7 +54,6 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_AUDIT_HISTORY_LIMIT = 8 * 1024 * 1024
 
 
 class WorkspaceView(StrEnum):
@@ -670,15 +669,9 @@ def _verified_pending_proposals(
         if path.is_symlink() or not path.is_file():
             raise AuditIntegrityError("project UI audit record is not a regular file")
         try:
-            if path.stat().st_size > _AUDIT_HISTORY_LIMIT:
-                raise AuditIntegrityError("project UI audit record exceeds the history limit")
-            before = path.read_bytes()
-            records = SurfaceAuditLog(path).records()
-            after = path.read_bytes()
+            records, digest = SurfaceAuditLog(path).records_with_digest()
         except OSError as exc:
             raise AuditIntegrityError("project UI audit history is unavailable") from exc
-        if before != after:
-            raise ProjectSurfaceChangedError("project audit changed while composing its workspace")
         issued = [item.payload for item in records if isinstance(item.payload, ProposalIssuedAudit)]
         if not issued:
             continue
@@ -688,7 +681,7 @@ def _verified_pending_proposals(
             project_id=project_id,
             kind=EvidenceKind.AUDIT_RECORD,
             locator=locator,
-            sha256=hashlib.sha256(before).hexdigest(),
+            sha256=digest,
             label="Verified proposal audit",
         )
         refs.append(audit_ref)

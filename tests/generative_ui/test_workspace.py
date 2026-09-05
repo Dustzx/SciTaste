@@ -306,3 +306,51 @@ def test_query_selection_and_artifact_content_change_surface_fingerprint(tmp_pat
     after = factory.build(paper_query)
     assert before.renderer.snapshot.snapshot_sha256 != after.renderer.snapshot.snapshot_sha256
     assert before.renderer.surface_fingerprint != after.renderer.surface_fingerprint
+
+
+def test_legacy_run_artifact_is_navigable_without_inventing_stage_state(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="legacy-project",
+            title="Legacy project",
+            research_direction="Retain a registered legacy run locator.",
+            status="active",
+        )
+    )
+    snapshot = runtime.begin_run(
+        "legacy-project",
+        ProjectRun(
+            run_id="legacy-run",
+            provider="scripted",
+            model="legacy-model",
+            condition="legacy-import",
+            seed=0,
+            status="complete",
+            evidence_scope="legacy-evidence",
+        ),
+        expected_revision=snapshot.revision,
+    )
+    project_root = runtime.projects_root / "legacy-project"
+    legacy_path = project_root / "legacy/old-run"
+    legacy_path.parent.mkdir()
+    (project_root / "runs/legacy-run").rename(legacy_path)
+    (legacy_path / "result.json").write_text("{}\n", encoding="utf-8")
+    runtime.update_run(
+        "legacy-project",
+        "legacy-run",
+        expected_revision=snapshot.revision,
+        artifact="legacy/old-run",
+    )
+
+    document = WorkspaceSurfaceFactory(runtime).build(
+        RunStageQuery(project_id="legacy-project", run_id="legacy-run")
+    )
+    explorer = _component(document, TrustedComponent.RUN_STAGE_EXPLORER)
+    evidence = {item.evidence_id: item for item in document.renderer.snapshot.evidence_refs}
+    run_ref = evidence[explorer.data["runs"][0]["run_ref_id"]]
+
+    assert run_ref.locator == "legacy/old-run"
+    assert explorer.data["runs"][0]["outcome"] == "succeeded"
+    assert explorer.data["stage_state"] == "unavailable"
+    assert explorer.data["stages"] == []

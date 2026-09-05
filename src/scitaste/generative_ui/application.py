@@ -32,6 +32,8 @@ from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier
 from scitaste.generative_ui.workspace import (
+    ProjectListDocument,
+    ProjectListQuery,
     ProjectWorkspaceQuery,
     WorkspaceDocument,
     WorkspaceSurfaceFactory,
@@ -122,7 +124,7 @@ class GenerativeUIApplication:
 
         return project_surface(self.current_surface(project_id))
 
-    def project_list_workspace(self):
+    def project_list_workspace(self) -> ProjectListDocument:
         """Return the authenticated project-list view without opening audit state."""
 
         return self._workspace_factory.project_list()
@@ -134,7 +136,7 @@ class GenerativeUIApplication:
         """Build one current server-owned workspace and initialize its audit epoch."""
 
         parsed = validate_workspace_query(query)
-        if not hasattr(parsed, "project_id"):
+        if isinstance(parsed, ProjectListQuery):
             raise TypeError("project-list query must use project_list_workspace()")
         with self._request_lock:
             surface = self._workspace_factory.build_surface(parsed)
@@ -176,7 +178,7 @@ class GenerativeUIApplication:
         """Resolve one event only against the authoritative surface named by its URL query."""
 
         parsed_query = validate_workspace_query(query)
-        if not hasattr(parsed_query, "project_id"):
+        if isinstance(parsed_query, ProjectListQuery):
             raise TypeError("project-list view cannot receive proposal events")
         project_id = parsed_query.project_id
         parsed_event = (
@@ -208,7 +210,7 @@ class GenerativeUIApplication:
         """Inspect one visible artifact and append its identity receipt to the audit chain."""
 
         parsed_query = validate_workspace_query(query)
-        if not hasattr(parsed_query, "project_id"):
+        if isinstance(parsed_query, ProjectListQuery):
             raise TypeError("project-list view cannot inspect artifacts")
         parsed_event = (
             event

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -259,3 +260,34 @@ def test_json_preview_is_deterministic(tmp_path: Path) -> None:
     assert document.text_content == json.dumps(
         {"a": 1, "z": 2}, indent=2, ensure_ascii=False, sort_keys=True
     )
+
+
+def test_file_identity_swap_during_read_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = _paper_runtime(tmp_path, {"paper.md": b"# Stable bytes\n"})
+    surface, components = _surface_and_components(runtime)
+    event = make_artifact_inspection_event(
+        surface,
+        event_id="racing-artifact",
+        artifact_ref_id=components[0].data["artifact_ref_id"],
+    )
+    artifact = runtime.projects_root / "inspection-project/papers/paper-one/paper.md"
+    replacement = artifact.with_name("replacement.md")
+    original_read = os.read
+    swapped = False
+
+    def racing_read(descriptor: int, count: int) -> bytes:
+        nonlocal swapped
+        content = original_read(descriptor, count)
+        if not swapped:
+            swapped = True
+            replacement.write_bytes(b"# Stable bytes\n")
+            os.replace(replacement, artifact)
+        return content
+
+    monkeypatch.setattr("scitaste.generative_ui.inspection.os.read", racing_read)
+
+    with pytest.raises(ArtifactUnavailableError, match="identity changed"):
+        ArtifactInspector(runtime.projects_root).inspect(surface, event)

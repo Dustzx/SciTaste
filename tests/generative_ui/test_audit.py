@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -225,6 +226,48 @@ def test_persisted_proposals_retain_no_execution_authority(tmp_path) -> None:
     assert persisted_receipt["execution_authority"] == "none"
     assert persisted_receipt["proposal"]["authority"] == "proposal_only"
     assert "command" not in log.path.read_text(encoding="utf-8")
+
+
+def test_audit_reader_rejects_symlink_and_oversized_history(tmp_path) -> None:
+    surface = build_paper_status_fixture()
+    target = tmp_path / "target.jsonl"
+    SurfaceAuditLog(target).start(surface)
+    link = tmp_path / "linked.jsonl"
+    link.symlink_to(target)
+
+    with pytest.raises(AuditIntegrityError, match="symbolic link"):
+        SurfaceAuditLog(link).records()
+
+    oversized = tmp_path / "oversized.jsonl"
+    oversized.write_bytes(b"x" * (8 * 1024 * 1024 + 1))
+    with pytest.raises(AuditIntegrityError, match="byte limit"):
+        SurfaceAuditLog(oversized).records()
+
+
+def test_audit_reader_rejects_atomic_identity_swap(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = build_paper_status_fixture()
+    path = tmp_path / "surface-audit.jsonl"
+    SurfaceAuditLog(path).start(surface)
+    replacement = tmp_path / "replacement.jsonl"
+    original_read = os.read
+    swapped = False
+
+    def racing_read(descriptor: int, count: int) -> bytes:
+        nonlocal swapped
+        content = original_read(descriptor, count)
+        if not swapped:
+            swapped = True
+            replacement.write_bytes(path.read_bytes())
+            os.replace(replacement, path)
+        return content
+
+    monkeypatch.setattr("scitaste.generative_ui.audit.os.read", racing_read)
+
+    with pytest.raises(AuditIntegrityError, match="identity changed"):
+        SurfaceAuditLog(path).records()
 
 
 def _revision(previous: SurfaceSpec, replacement: SurfaceSpec) -> SurfaceRevision:

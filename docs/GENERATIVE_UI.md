@@ -9,8 +9,30 @@ untrusted display text and is never evaluated.
 
 This module is a contract and interaction-boundary layer plus a trusted
 ProjectRuntime adapter. It includes a framework-neutral renderer document and a
-local receiver-owned browser/API application. It does not include a model call,
-controller approval, or task executor.
+runnable, local receiver-owned browser/API application. It does not include a
+model call, controller approval, or task executor.
+
+## Evidence-native project workspace
+
+`WorkspaceSurfaceFactory` is the server-owned composer for seven closed views:
+project list, project overview, run/stage explorer, paper/evidence, run
+comparison, blockers, and pending proposals. A browser may select only the
+view and canonical project-owned run or paper identities defined by the
+corresponding discriminated query model. It cannot submit components, fields,
+layout, evidence, filters, prose, or renderer code.
+
+Every project view is rebuilt from a fresh `ProjectRuntime` snapshot. The query
+identity, project revision, snapshot hash, surface contents, and every displayed
+evidence hash feed the returned fingerprints. Unknown or stale deep links fail
+closed. Empty projects, absent papers, unavailable stages, and missing
+comparable metrics use explicit typed availability states; the composer does not
+invent research progress or substitute model-authored explanations.
+
+The fixed receiver provides a project switcher, the six project-scoped view
+controls, run and paper selection, comparison controls, freshness/provenance,
+and browser back/forward deep links. Conditional GET uses the workspace
+fingerprint as an ETag. The responsive shell and all navigation remain receiver
+code shipped in the package; only validated component data changes.
 
 ## Trusted project surface factory
 
@@ -97,6 +119,14 @@ The versioned same-origin JSON API is deliberately small:
   renderer document;
 - `POST /api/v1/projects/<project-id>/events` accepts exactly `SurfaceEvent`
   and returns exactly `ProposalReceipt` with HTTP 202.
+- `GET /api/v2/workspace/projects` returns the authenticated project-list view;
+- `GET /api/v2/workspace/projects/<project-id>/<view>` returns one current
+  workspace, with typed `/runs/...` or `/papers/...` suffixes only where the
+  closed query permits them;
+- `POST` to the same workspace path plus `/events` records a proposal-only
+  interaction;
+- `POST` to a workspace path containing a visible artifact plus `/inspections` accepts exactly
+  `ArtifactInspectionEvent` and returns a bounded `ArtifactInspectionDocument`.
 
 There is no general filesystem, artifact download, callback, controller, tool,
 or model endpoint. Query strings are rejected, so credentials cannot be passed
@@ -109,10 +139,10 @@ input and does not use local or session storage.
 The packaged JavaScript contains a closed receiver function for every
 `TrustedComponent`. It creates elements and text nodes with `createTextNode` or
 `textContent`; it never assigns generated text to HTML, script, URL, or event
-handler slots. The Content Security Policy permits only same-origin script,
-style, image, and API connections and forbids objects, base changes, framing,
-and form actions. `ArtifactViewer` shows allowlisted metadata only; it is not a
-file link.
+handler slots. The Content Security Policy permits same-origin script, style,
+image, and API connections plus receiver-created in-memory image Blob URLs; it
+forbids objects, base changes, framing, and form actions. There are no remote
+assets. `ArtifactViewer` is not a file link and never receives an arbitrary URL.
 
 At event submission the application rebuilds the current surface from
 `ProjectRuntime` before resolving the identity-only event. A changed project
@@ -143,6 +173,36 @@ opening a listening socket or creating the outputs root.
 This receiver does not approve or execute the returned proposal. The only next
 boundary named by a valid receipt is `deterministic_controller`, which is not
 called by the HTTP service or browser.
+
+## Safe artifact inspection
+
+Artifact inspection is a separate read-only operation, not approval of the
+`inspect_artifact` proposal. The browser sends only event, project, surface,
+snapshot, and visible artifact-reference identities. The server rebuilds the
+workspace and requires exactly one `ArtifactViewer` in that current view to
+name the reference. Callers cannot supply a locator, MIME type, preview kind,
+URL, command, or renderer.
+
+The inspector accepts only project-relative evidence already hashed in the
+surface. It opens the project and every nested directory through no-follow file
+descriptors, opens only a regular final file, checks descriptor/path identity
+after the read, enforces a fixed media/extension pair, applies byte limits, and
+recomputes SHA-256. Missing, changed, swapped, symlinked, oversized, or
+MIME-confused files invalidate the operation.
+
+The preview catalog is closed:
+
+| Media | Maximum | Receiver behavior |
+|---|---:|---|
+| UTF-8 plain text, Markdown source, TeX source, JSON | 512 KiB | inert `<pre>` text; JSON keys must be unique |
+| PNG, JPEG, WebP | 5 MiB | verified bytes copied into a receiver-created Blob URL |
+| PDF | 20 MiB | verified byte length, hash, media type, and PDF version only |
+
+Markdown is not converted to HTML, HTML/script-like source is not interpreted,
+and PDFs are not embedded into an active object. There is no download, path, or
+general filesystem endpoint. Successful inspection records metadata and the
+artifact hash in the project audit chain; preview bytes themselves are not
+persisted by the UI service.
 
 ## Contract hierarchy
 
@@ -186,6 +246,12 @@ of their content-addressed artifact evidence.
 | `ReviewerQueue` | `ReviewerQueueData` |
 | `ArtifactViewer` | `ArtifactViewerData` |
 | `PaperPreview` | `PaperPreviewData` |
+| `AvailabilityNotice` | `AvailabilityNoticeData` |
+| `RunStageExplorer` | `RunStageExplorerData` |
+| `EvidenceInventory` | `EvidenceInventoryData` |
+| `RunComparisonPanel` | `RunComparisonPanelData` |
+| `RunBlockerPanel` | `RunBlockerPanelData` |
+| `PendingProposalList` | `PendingProposalListData` |
 
 Adapters and receivers can obtain the exact JSON Schema for any registry member
 with `component_data_json_schema`; every object in those schemas forbids extra
@@ -251,10 +317,10 @@ proposing against a new research state.
 
 `SurfaceAuditLog` stores accepted UI history as self-hashed, predecessor-linked
 JSONL. A log starts with one complete `surface_opened` record and can append only
-`surface_revised` or `proposal_issued` records. Each append first validates and
-semantically replays the entire history through `SurfaceSession`; a receipt must
-be reproducible from the server-owned surface and event identity before it can be
-recorded.
+`surface_revised`, `proposal_issued`, or `artifact_inspected` records. Each
+append first validates and semantically replays the entire history; a proposal
+receipt must be reproducible from the server-owned action, and an inspection
+receipt must match a visible artifact binding, before it can be recorded.
 
 Writes replace the complete log atomically and are serialized with thread and
 local-process locks. A partially written final record, a changed payload, a
@@ -262,19 +328,29 @@ missing or reordered record, a stale revision, a duplicate event, or a forged
 receipt therefore fails verification. Replaying a valid log reconstructs both
 the current surface and the accepted-event set.
 
-The log records proposals, not executions. Persisted receipts retain
-`proposal_only` authority and `execution_authority: none`; no log API invokes a
-controller, tool, model, or state mutation. The hash chain detects corruption or
-editing relative to the copy being inspected, but is not a digital signature and
-does not establish authorship. A future ProjectRuntime event-log integration
-should anchor the latest record hash in a separately trusted project record if
-protection against full-history replacement is required.
+The pending-proposals workspace reads only fully verified project-local chains,
+content-addresses each contributing audit file as `audit_record` evidence, and
+shows the recorded pending receipts. A corrupt, changing, oversized, symlinked,
+or cross-project history is rejected instead of partially displayed. Pending
+still means advice awaiting the later deterministic controller; this view has
+no approval or mutation operation.
+
+Each audit epoch is capped at 8 MiB and fails closed when the limit is reached.
+The log records proposals and read-only inspections, not executions. Persisted
+receipts retain `proposal_only` authority and `execution_authority: none`; no log
+API invokes a controller, tool, model, or state mutation. The hash chain detects
+corruption or editing relative to the copy being inspected, but is not a digital
+signature and does not establish authorship. A future ProjectRuntime event-log
+integration should anchor the latest record hash in a separately trusted project
+record if protection against full-history replacement is required.
 
 ## Trusted components
 
-The initial registry contains `ProjectSummaryCard`, `StageTimeline`,
+The registry contains `ProjectSummaryCard`, `StageTimeline`,
 `BlockerList`, `RunHealth`, `BudgetMeter`, `DecisionComparison`, `EvidenceGraph`,
-`ClaimMatrix`, `ReviewerQueue`, `ArtifactViewer`, and `PaperPreview`. A renderer
+`ClaimMatrix`, `ReviewerQueue`, `ArtifactViewer`, `PaperPreview`,
+`AvailabilityNotice`, `RunStageExplorer`, `EvidenceInventory`,
+`RunComparisonPanel`, `RunBlockerPanel`, and `PendingProposalList`. A renderer
 must map these identifiers to code shipped with and trusted by the application.
 An unknown component is invalid rather than a request to generate new UI code.
 
@@ -301,8 +377,10 @@ Together, the Pydantic contracts and closed schemas reject:
 - status or paper fields without suitable content-addressed evidence;
 - executable authority or undeclared fields;
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
-- surface revisions based on stale fingerprints or inconsistent snapshot hashes.
-- changed, truncated, reordered, or semantically inconsistent audit histories.
+- surface revisions based on stale fingerprints or inconsistent snapshot hashes;
+- changed, truncated, reordered, or semantically inconsistent audit histories;
+- non-visible, changed, oversized, symlinked, swapped, MIME-confused, or
+  cross-project artifact inspections.
 
 A valid binding proves that its evidence manifest matches its snapshot hash; a
 binding created by `ProjectSnapshotAdapter` also proves that every referenced
@@ -324,7 +402,9 @@ two project identities.
 overview, paper status, blocked-run diagnosis, next-step proposal, and run
 comparison. They use clearly named fixture evidence and are intended only for
 contract, renderer, and integration tests. Across those surfaces every one of the
-11 registered component data schemas is instantiated. They are not research
+11 original contract component data schemas is instantiated. Workspace tests
+exercise the six additional navigation components against real
+`ProjectRuntime` fixtures. None of these deterministic fixtures is research
 evidence.
 
 All surface fields have stable canonical JSON and a SHA-256 content fingerprint.
@@ -346,6 +426,8 @@ on an A2UI package in this phase:
 | `SurfaceRevision` | versioned surface replacement/update |
 | `RendererDocument` | receiver-owned shell plus declarative workspace update |
 | `SurfaceEvent` | identity-only user event returned to the agent boundary |
+| `WorkspaceQuery` | closed client-selectable view identity |
+| `ArtifactInspectionEvent` | identity-only request for a visible evidence preview |
 | `SurfaceAuditRecord` | receiver-side append-only interaction history |
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the

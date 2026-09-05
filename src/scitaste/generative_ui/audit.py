@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -37,6 +38,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_MAX_AUDIT_BYTES = 8 * 1024 * 1024
 
 
 class AuditIntegrityError(ValueError):
@@ -249,6 +251,13 @@ class SurfaceAuditLog:
         with self._locked(exclusive=False):
             return self._load_verified()
 
+    def records_with_digest(self) -> tuple[list[SurfaceAuditRecord], str]:
+        """Return records and the digest of the exact bounded bytes that were replayed."""
+
+        with self._locked(exclusive=False):
+            content = _read_audit_bytes(self.path)
+            return self._parse_verified(content), hashlib.sha256(content).hexdigest()
+
     def replay_session(self) -> SurfaceSession:
         """Reconstruct the current surface and accepted-event set from verified records."""
 
@@ -268,9 +277,14 @@ class SurfaceAuditLog:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
     def _load_verified(self) -> list[SurfaceAuditRecord]:
-        if not self.path.is_file():
-            raise FileNotFoundError(f"surface audit log does not exist: {self.path}")
-        text = self.path.read_text(encoding="utf-8")
+        return self._parse_verified(_read_audit_bytes(self.path))
+
+    @staticmethod
+    def _parse_verified(content: bytes) -> list[SurfaceAuditRecord]:
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise AuditIntegrityError("surface audit log is not valid UTF-8") from exc
         if not text or not text.endswith("\n"):
             raise AuditIntegrityError("surface audit log is empty or truncated")
         lines = text.splitlines()
@@ -295,6 +309,8 @@ class SurfaceAuditLog:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_name(f".{self.path.name}.{uuid4().hex}.tmp")
         content = "".join(record.model_dump_json() + "\n" for record in records)
+        if len(content.encode("utf-8")) > _MAX_AUDIT_BYTES:
+            raise AuditIntegrityError("surface audit log exceeds its fixed byte limit")
         try:
             with temporary.open("x", encoding="utf-8") as handle:
                 handle.write(content)
@@ -303,6 +319,52 @@ class SurfaceAuditLog:
             os.replace(temporary, self.path)
         finally:
             temporary.unlink(missing_ok=True)
+
+
+def _read_audit_bytes(path: Path) -> bytes:
+    if not os.path.lexists(path):
+        raise FileNotFoundError("surface audit log does not exist")
+    if path.is_symlink():
+        raise AuditIntegrityError("surface audit log must not be a symbolic link")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise AuditIntegrityError("surface audit log is unavailable") from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise AuditIntegrityError("surface audit log must be a regular file")
+        if before.st_size > _MAX_AUDIT_BYTES:
+            raise AuditIntegrityError("surface audit log exceeds its fixed byte limit")
+        chunks: list[bytes] = []
+        remaining = _MAX_AUDIT_BYTES + 1
+        while remaining > 0:
+            chunk = os.read(descriptor, min(64 * 1024, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        content = b"".join(chunks)
+        after = os.fstat(descriptor)
+        path_metadata = os.stat(path, follow_symlinks=False)
+        identity = (before.st_dev, before.st_ino)
+        if identity != (after.st_dev, after.st_ino) or identity != (
+            path_metadata.st_dev,
+            path_metadata.st_ino,
+        ):
+            raise AuditIntegrityError("surface audit log identity changed while reading")
+        if (
+            len(content) > _MAX_AUDIT_BYTES
+            or before.st_size != after.st_size
+            or len(content) != after.st_size
+        ):
+            raise AuditIntegrityError("surface audit log size changed or exceeds its limit")
+        return content
+    except OSError as exc:
+        raise AuditIntegrityError("surface audit log changed while reading") from exc
+    finally:
+        os.close(descriptor)
 
 
 def _new_record(
