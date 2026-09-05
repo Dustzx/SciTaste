@@ -17,6 +17,18 @@ Run the committed acceptance case with:
   --seed 7 --output outputs
 ```
 
+If the run stops during one of the four workflow stages, resume the same
+registered run and publication identity with:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_v1.yaml \
+  --project-id my-full-project \
+  --run-id offline-full-seed-07 \
+  --paper-directory offline-full-seed-07-reviewed-draft \
+  --seed 7 --output outputs --resume
+```
+
 The default backend is `mock`. It executes the full controller, state,
 criticism, revision, packaging, and project-management code without a model API.
 Its output is integration evidence, not evidence that SciTaste improves research
@@ -32,6 +44,7 @@ outputs/projects/<project-id>/
 ├── PROJECT.json
 ├── runs/<run-id>/
 │   ├── full_run_summary.json
+│   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
 │   └── stages/
 │       ├── discovery/
 │       ├── evidence/
@@ -49,9 +62,10 @@ outputs/projects/<project-id>/
 └── surfaces/<run-id>-snapshot-binding.json
 ```
 
-Each stage contains `STAGE.json`, which states its purpose and points to its
-local summary, decision log, and latest state. Paths recorded by the full-run
-summary are run-relative rather than machine-specific absolute paths.
+Each stage contains a self-hashed `STAGE.json`. It states the stage purpose and
+records run-relative locators plus SHA-256 hashes for the input state, output
+state, decision log, and required stage artifacts. Paths recorded by the
+full-run summary are run-relative rather than machine-specific absolute paths.
 
 The paper is a registered, reviewed draft with `publication_ready: false`.
 Markdown-to-TeX packaging is deterministic and performs no extra model call. If
@@ -71,6 +85,22 @@ project commands. A successful run is selected, marked complete, linked to its
 final state and stage records, and owns the selected paper. If a later phase
 fails, completed stage artifacts remain in place and the registered run is
 marked `failed` with the exception type and bounded message for diagnosis.
+
+`--resume` accepts only a previously registered failed run with the same
+provider, model, condition, seed, evidence scope, stage path, and content-hashed
+workflow configuration (including all four scenario files). It reuses only
+the contiguous completed prefix whose record, state continuity, project
+identity, lifecycle position, and every declared file hash still validate. A
+missing completion record means that stage is incomplete: its existing directory
+is atomically moved to `failed_attempts/stages/<stage>/attempt-NNN/`, and that
+stage plus every downstream stage is rerun. A malformed completion record or a
+hash mismatch is treated as possible tampering and fails closed; it is not
+silently archived or regenerated.
+
+This recovery path deliberately covers workflow-stage interruption. If all four
+stage records already validate, or a paper directory already exists, automated
+finalization recovery refuses to overwrite it and requires manual inspection.
+Completed runs cannot be resumed.
 
 After completion, `ProjectSnapshotAdapter` hashes the authoritative manifest,
 run tree, current stage, paper manifest, and every declared paper artifact into

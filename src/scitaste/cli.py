@@ -138,6 +138,11 @@ def build_parser() -> argparse.ArgumentParser:
     full.add_argument("--project-id", default=None)
     full.add_argument("--run-id", default=None)
     full.add_argument("--paper-directory", default=None)
+    full.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume one failed run from its validated contiguous stage prefix",
+    )
     full.set_defaults(handler=_handle_full)
 
     project = commands.add_parser("project", help="Project-owned run and paper management")
@@ -807,6 +812,7 @@ def _handle_full(args: argparse.Namespace) -> int:
                     "run_id": run_id,
                     "provider": config.provider,
                     "model": config.model,
+                    "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],
                     "paper_directory": config.paper_directory,
                     "outputs_root": str(args.output),
@@ -820,6 +826,7 @@ def _handle_full(args: argparse.Namespace) -> int:
         config,
         outputs_root=args.output,
         run_id=run_id,
+        resume=args.resume,
     )
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0

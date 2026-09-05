@@ -469,6 +469,11 @@ Each logical phase has a named directory and `STAGE.json`; the selected paper is
 packaged and registered beneath the same project. Completion and failure both
 update registered run metadata through optimistic revisions. The final trusted
 UI binding is created only after project, run, paper, and artifact registration.
+Stage completion records are self-hashed and bind the predecessor state, output
+state, decision log, and required artifacts. Resume may reuse only the validated
+contiguous prefix. An incomplete attempt is preserved under the owning run before
+rerun, while an invalid claimed completion fails closed. Paper/finalization
+overwrite recovery remains an explicit manual boundary.
 This ADR establishes offline orchestration and artifact ownership, not a claim
 that the mock executor measures research effectiveness or that live
 AutoResearchClaw/model-node integration is complete.

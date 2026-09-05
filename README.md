@@ -128,6 +128,11 @@ one managed project and produce a registered Markdown/TeX/PDF paper bundle:
   --seed 7 --output outputs
 ```
 
+A failed workflow-stage attempt can resume the same run with `--resume`.
+Completed stage checkpoints are reused only after their state chain and declared
+artifact hashes validate; partial stage directories are retained under that
+run's `failed_attempts/` tree.
+
 This validates end-to-end framework behavior with the deterministic mock; it is
 not an effectiveness result. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 

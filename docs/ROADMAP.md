@@ -306,7 +306,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - `scitaste run full` now advances one state through the Phase 4--7 offline
   workflows inside one managed project run, retains readable per-stage records,
   registers a deterministic Markdown/TeX/PDF reviewed-draft bundle, and records
-  an evidence-bound UI snapshot. Failed partial runs remain auditable.
+  an evidence-bound UI snapshot. Failed stage attempts remain auditable, while
+  `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
+  and required artifacts still validate; incomplete downstream work is archived
+  before rerun and tampered completion records fail closed.
 - Pending live integration: drive the same ownership/state contract through the
   AutoResearchClaw executor and opt-in model nodes without weakening deterministic
   gates or treating offline integration evidence as effectiveness evidence.

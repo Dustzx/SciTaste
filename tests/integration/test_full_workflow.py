@@ -8,7 +8,7 @@ import pytest
 import scitaste.benchmark.manuscript as manuscript
 import scitaste.full_workflow as full_workflow
 from scitaste.cli import main
-from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
+from scitaste.full_workflow import FullStageRecord, FullWorkflow, load_full_workflow_config
 from scitaste.project import ProjectRuntime
 from scitaste.state.persistence import StateStore
 
@@ -49,7 +49,13 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert final_state.writing_state is not None
     assert final_state.figure_state is not None
     assert len(final_state.decision_history) >= 15
-    assert all((run / "stages" / stage / "STAGE.json").is_file() for stage in payload["stages"])
+    assert payload["resumed"] is False
+    assert payload["reused_stages"] == []
+    for stage in payload["stages"]:
+        record_path = run / "stages" / stage / "STAGE.json"
+        assert record_path.is_file()
+        record = FullStageRecord.model_validate_json(record_path.read_text(encoding="utf-8"))
+        assert record.stage == stage
 
     paper = project / "papers/offline-full-reviewed-draft"
     assert (paper / "main.md").is_file()
@@ -75,6 +81,7 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
             "dry-full-project",
             "--output",
             str(outputs),
+            "--resume",
             "--dry-run",
         ]
     )
@@ -82,6 +89,7 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     assert payload["status"] == "planned"
+    assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert not outputs.exists()
 
@@ -103,8 +111,130 @@ def test_full_workflow_retains_a_failed_run_for_audit(tmp_path: Path, monkeypatc
     snapshot = ProjectRuntime(outputs).open("failed-full-project")
     run = snapshot.manifest.runs[0]
     assert run.status == "failed"
-    assert run.model_extra == {
-        "failure_type": "RuntimeError",
-        "failure_message": "controlled figure failure",
-    }
+    assert run.model_extra is not None
+    assert run.model_extra["failure_type"] == "RuntimeError"
+    assert run.model_extra["failure_message"] == "controlled figure failure"
+    assert len(run.model_extra["workflow_config_sha256"]) == 64
     assert (outputs / "projects/failed-full-project/runs/failed-seed-07/stages").is_dir()
+
+
+def test_full_workflow_resumes_a_valid_prefix_and_archives_partial_stage(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    payload = config.model_dump(mode="python")
+    payload.update(
+        {
+            "project_id": "resumed-full-project",
+            "paper_directory": "resumed-reviewed-draft",
+        }
+    )
+    config = type(config).model_validate(payload)
+    original_run = full_workflow.FigureWorkflow.run
+    attempt = 0
+
+    def fail_once(
+        workflow: object,
+        scenario: object,
+        *,
+        output_dir: str | Path,
+        state_path: str | Path | None = None,
+    ) -> dict[str, object]:
+        nonlocal attempt
+        attempt += 1
+        if attempt == 1:
+            partial = Path(output_dir)
+            partial.mkdir(parents=True, exist_ok=True)
+            (partial / "partial.txt").write_text("interrupted", encoding="utf-8")
+            raise RuntimeError("controlled one-shot failure")
+        return original_run(
+            workflow,
+            scenario,
+            output_dir=output_dir,
+            state_path=state_path,
+        )
+
+    monkeypatch.setattr(full_workflow.FigureWorkflow, "run", fail_once)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(RuntimeError, match="controlled one-shot failure"):
+        workflow.run(config, outputs_root=outputs, run_id="resumable-seed-07")
+
+    run_root = outputs / "projects/resumed-full-project/runs/resumable-seed-07"
+    prefix = ("discovery", "evidence", "communication")
+    original_records = {
+        stage: (run_root / "stages" / stage / "STAGE.json").read_bytes() for stage in prefix
+    }
+
+    result = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="resumable-seed-07",
+        resume=True,
+    )
+
+    assert result["status"] == "complete"
+    assert result["resume_attempt"] == 1
+    assert result["reused_stages"] == list(prefix)
+    assert result["archived_attempts"] == ["failed_attempts/stages/figure/attempt-001"]
+    assert (run_root / "failed_attempts/stages/figure/attempt-001/partial.txt").is_file()
+    assert all(
+        (run_root / "stages" / stage / "STAGE.json").read_bytes() == original_records[stage]
+        for stage in prefix
+    )
+    snapshot = ProjectRuntime(outputs).open("resumed-full-project")
+    registered_run = snapshot.manifest.runs[0]
+    assert registered_run.status == "complete"
+    assert registered_run.model_extra is not None
+    assert registered_run.model_extra["resume_attempt"] == 1
+
+
+def test_full_workflow_rejects_tampered_completed_stage_on_resume(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    payload = config.model_dump(mode="python")
+    payload.update(
+        {
+            "project_id": "tampered-full-project",
+            "paper_directory": "tampered-reviewed-draft",
+        }
+    )
+    config = type(config).model_validate(payload)
+
+    def fail_figure(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise RuntimeError("stop before final stage")
+
+    monkeypatch.setattr(full_workflow.FigureWorkflow, "run", fail_figure)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(RuntimeError, match="stop before final stage"):
+        workflow.run(config, outputs_root=outputs, run_id="tampered-seed-07")
+
+    run_root = outputs / "projects/tampered-full-project/runs/tampered-seed-07"
+    changed_payload = config.model_dump(mode="python")
+    changed_payload["paper_title"] = "A changed resume target"
+    changed_config = type(config).model_validate(changed_payload)
+    with pytest.raises(ValueError, match="workflow configuration does not match"):
+        workflow.run(
+            changed_config,
+            outputs_root=outputs,
+            run_id="tampered-seed-07",
+            resume=True,
+        )
+
+    paper = run_root / "stages/communication/paper.md"
+    paper.write_text(paper.read_text(encoding="utf-8") + "\nchanged\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="stage artifact hash mismatch"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="tampered-seed-07",
+            resume=True,
+        )
+
+    snapshot = ProjectRuntime(outputs).open("tampered-full-project")
+    assert snapshot.manifest.runs[0].status == "failed"
+    assert not (run_root / "failed_attempts").exists()

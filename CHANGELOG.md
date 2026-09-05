@@ -7,6 +7,9 @@ semantic versioning.
 
 ### Added
 
+- Controlled `run full --resume` support with self-hashed stage checkpoints,
+  contiguous-prefix reuse, preserved failed attempts, and fail-closed artifact
+  integrity validation.
 - Phase 0/1 controller skeleton and nonlinear demo.
 - AutoResearchClaw v0.5.0 as a pinned execution substrate.
 - CI, contribution workflow, roadmap, architecture record, and issue templates.
