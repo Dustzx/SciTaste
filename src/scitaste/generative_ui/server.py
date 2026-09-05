@@ -107,6 +107,11 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
     """Serve fixed assets and the closed v1 JSON API."""
 
     server: GenerativeUIHTTPServer
+    server_version = "SciTasteLocalUI/1.0"
+    sys_version = ""
+
+    def version_string(self) -> str:
+        return self.server_version
 
     def do_GET(self) -> None:
         self._dispatch("GET")
@@ -134,7 +139,8 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 return
             if not path.startswith("/api/"):
                 raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
-            if not self.server.credential.accepts(self.headers.get("Authorization")):
+            authorization = self.headers.get_all("Authorization", [])
+            if len(authorization) != 1 or not self.server.credential.accepts(authorization[0]):
                 raise _HTTPProblem(
                     HTTPStatus.UNAUTHORIZED,
                     "unauthorized",
@@ -223,27 +229,35 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
 
     def _read_json_object(self) -> dict[str, object]:
-        if self.headers.get("Transfer-Encoding") is not None:
+        if self.headers.get_all("Transfer-Encoding", []):
             raise _HTTPProblem(
                 HTTPStatus.BAD_REQUEST,
                 "invalid_request",
                 "transfer encoding is not supported",
             )
-        media_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        content_types = self.headers.get_all("Content-Type", [])
+        if len(content_types) > 1:
+            raise _HTTPProblem(
+                HTTPStatus.BAD_REQUEST,
+                "invalid_request",
+                "content type must occur exactly once",
+            )
+        media_type = (content_types[0] if content_types else "").split(";", 1)[0]
+        media_type = media_type.strip().lower()
         if media_type != "application/json":
             raise _HTTPProblem(
                 HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
                 "unsupported_media_type",
                 "event requests require application/json",
             )
-        raw_length = self.headers.get("Content-Length")
-        if raw_length is None or not raw_length.isdecimal():
+        content_lengths = self.headers.get_all("Content-Length", [])
+        if len(content_lengths) != 1 or not content_lengths[0].isdecimal():
             raise _HTTPProblem(
                 HTTPStatus.BAD_REQUEST,
                 "invalid_request",
                 "a valid content length is required",
             )
-        length = int(raw_length)
+        length = int(content_lengths[0])
         if length > _MAX_EVENT_BYTES:
             raise _HTTPProblem(
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
@@ -355,6 +369,12 @@ def serve_local_application(
 
 def _request_path(target: str) -> str:
     parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc:
+        raise _HTTPProblem(
+            HTTPStatus.BAD_REQUEST,
+            "invalid_request",
+            "absolute and authority-form request targets are not accepted",
+        )
     if parsed.query or parsed.fragment:
         raise _HTTPProblem(
             HTTPStatus.BAD_REQUEST,

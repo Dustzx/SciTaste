@@ -165,3 +165,26 @@ def test_ui_serve_rejects_missing_short_or_symlinked_credentials(
     with pytest.raises(SystemExit):
         main([*base, "--token-file", str(symlink)])
     assert "non-symlink" in capsys.readouterr().err
+
+
+def test_ui_serve_rejects_non_regular_oversized_and_non_utf8_credential_files(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    base = ["ui", "serve", "--outputs-root", str(tmp_path / "outputs"), "--dry-run"]
+
+    with pytest.raises(SystemExit):
+        main([*base, "--token-file", str(tmp_path)])
+    assert "regular non-symlink" in capsys.readouterr().err
+
+    oversized = tmp_path / "oversized.token"
+    oversized.write_bytes(b"x" * 4097)
+    with pytest.raises(SystemExit):
+        main([*base, "--token-file", str(oversized)])
+    assert "too large" in capsys.readouterr().err
+
+    non_utf8 = tmp_path / "non-utf8.token"
+    non_utf8.write_bytes(b"x" * 16 + b"\xff")
+    with pytest.raises(SystemExit):
+        main([*base, "--token-file", str(non_utf8)])
+    assert "UTF-8" in capsys.readouterr().err

@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import stat
 from pathlib import Path
 
 from scitaste.generative_ui.application import GenerativeUIApplication
@@ -99,11 +100,7 @@ def _load_credential(
     if token_env is not None and token_file is not None:
         raise ValueError("choose exactly one bearer credential source")
     if token_file is not None:
-        if token_file.is_symlink() or not token_file.is_file():
-            raise ValueError("bearer credential file must be a regular non-symlink file")
-        if token_file.stat().st_size > _MAX_CREDENTIAL_FILE_BYTES:
-            raise ValueError("bearer credential file is too large")
-        token = token_file.read_text(encoding="utf-8").rstrip("\r\n")
+        token = _read_credential_file(token_file).rstrip("\r\n")
         return BearerCredential(token), "file"
 
     name = token_env or _DEFAULT_TOKEN_ENV
@@ -113,3 +110,30 @@ def _load_credential(
     if token is None:
         raise ValueError("bearer credential environment variable is not set")
     return BearerCredential(token), "environment"
+
+
+def _read_credential_file(path: Path) -> str:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    if not hasattr(os, "O_NOFOLLOW") and path.is_symlink():
+        raise ValueError("bearer credential file must be a regular non-symlink file")
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(
+            "bearer credential file must be a readable regular non-symlink file"
+        ) from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ValueError("bearer credential file must be a regular non-symlink file")
+        if metadata.st_size > _MAX_CREDENTIAL_FILE_BYTES:
+            raise ValueError("bearer credential file is too large")
+        content = os.read(descriptor, _MAX_CREDENTIAL_FILE_BYTES + 1)
+        if len(content) > _MAX_CREDENTIAL_FILE_BYTES:
+            raise ValueError("bearer credential file is too large")
+        try:
+            return content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("bearer credential file must contain UTF-8 text") from exc
+    finally:
+        os.close(descriptor)

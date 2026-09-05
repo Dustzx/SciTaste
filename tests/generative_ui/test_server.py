@@ -148,6 +148,25 @@ def test_api_requires_bearer_authentication_without_creating_project_state(tmp_p
     assert not ui_root.exists()
 
 
+def test_api_rejects_ambiguous_authorization_headers_and_hides_runtime_banner(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        duplicated = httpx.get(
+            origin + "/api/v1/projects",
+            headers=[
+                ("Authorization", f"Bearer {_TOKEN}"),
+                ("Authorization", f"Bearer {_TOKEN}"),
+            ],
+        )
+
+    assert duplicated.status_code == 401
+    assert duplicated.json()["error"]["code"] == "unauthorized"
+    assert duplicated.headers["server"] == "SciTasteLocalUI/1.0"
+    assert "Python" not in duplicated.headers["server"]
+
+
 def test_surface_api_returns_only_fixed_renderer_and_preserves_inert_angle_text(
     tmp_path: Path,
 ) -> None:
