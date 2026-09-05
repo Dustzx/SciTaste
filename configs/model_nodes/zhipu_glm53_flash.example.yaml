@@ -1,0 +1,26 @@
+# This file is inert until both live_enabled and pricing_confirmed are explicitly
+# changed to true and pricing is replaced with verified USD rates/provenance.
+provider: zhipu-direct
+# General prepaid-balance OpenAI-compatible endpoint. Do not substitute a Coding
+# Plan endpoint or key without registering a separate provider condition.
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: false
+timeout_seconds: 180
+# Keep retries off until the pilot has a provider-specific accounting rule for
+# ambiguous timeout/5xx attempts that may already have incurred cost.
+max_retries: 0
+max_output_tokens: 4000
+pricing_confirmed: false
+# Required before live enablement. Do not guess rates. Replace null with:
+# currency: USD
+# input_usd_per_million_tokens: <verified finite non-negative rate>
+# output_usd_per_million_tokens: <verified finite non-negative rate>
+# captured_at: <timezone-aware ISO-8601 timestamp>
+# source: <provider billing page or signed institutional rate reference>
+pricing: null
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled

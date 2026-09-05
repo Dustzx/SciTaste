@@ -107,11 +107,53 @@ text and belong under ignored project outputs, never in Git.
 
 ## Live-model promotion boundary
 
-This iteration deliberately has no live structured-generation adapter and makes
-no model-quality or autonomy claim. A later pilot may bind the generic protocol
-to Zhipu `glm-5.3-flash`, local 2B/4B text models, and Qwen3-VL-4B for a separate
-visual node. Each provider/model is a distinct registered condition and must
-report real tokens, latency, and cost; missing cost is not treated as zero.
+`StructuredOpenAICompatibleBackend` provides a provider-SDK-free Chat
+Completions adapter for a later live pilot. It sends the node's exact system
+instruction separately from a canonical user payload containing the complete
+bounded input, output JSON Schema, request fingerprint, state and policy
+identities, prompt version, and seed. The configured model and seed are also
+top-level request fields. The adapter requests `json_object` output; strict
+schema validation remains in the deterministic node boundary.
+
+Live use has three independent fail-closed switches:
+
+1. `live_enabled` must be true;
+2. finite non-negative USD input/output token rates with a timezone-aware
+   capture timestamp and source must be present and explicitly confirmed;
+3. the configured API-key environment variable must contain a value.
+
+The key value is read only immediately before a call and is never stored in the
+configuration, prompt, response, or logs. Provider usage must contain explicit
+input/output token counts; supported aliases are `prompt_tokens` /
+`completion_tokens` and `input_tokens` / `output_tokens`. Missing or conflicting
+usage fails instead of becoming zero. The calculated USD cost and its full
+pricing provenance are retained in `StructuredModelResponse` and record/replay.
+
+The exact decoded provider response body and its SHA-256 are retained together.
+The provider's returned model identity is retained verbatim when present, so a
+silent alias or fallback becomes a policy rejection. The adapter never executes
+provider tool calls: supported function-call structures become
+`ToolCallProposal` values for later deterministic review, while unknown tool
+types and malformed arguments fail closed. Transport retries are bounded to the
+configured count and apply only to transport failures, HTTP 429, and HTTP 5xx;
+HTTP 4xx and malformed semantic responses are not retried.
+
+The committed
+`configs/model_nodes/zhipu_glm53_flash.example.yaml` pins the general prepaid
+OpenAI-compatible endpoint, `glm-5.3-flash`, and `ZAI_API_KEY`, but is intentionally
+disabled and contains no guessed price. Before any live call, replace the null
+pricing placeholder with rates verified for the account and billing route, add
+their provenance, set `pricing_confirmed: true`, and only then set
+`live_enabled: true`. Coding Plan credentials or endpoints are a separate
+condition and must not be substituted silently. The example also keeps retries
+at zero because a timeout or 5xx may be ambiguous about whether inference and
+billing already occurred; enable retries only with a provider-specific accounting
+rule for those attempts.
+
+No real Zhipu call, model-quality assessment, or autonomy claim is made by this
+implementation. The later pilot may compare Zhipu `glm-5.3-flash`, local 2B/4B
+text models, and Qwen3-VL-4B for a separate visual node. Each provider/model is a
+distinct registered condition.
 
 ADR-022 must stay proposed until the local self-development record verifies at
 least the registered gates: schema success rate 0.98, zero deterministic-gate
@@ -119,6 +161,88 @@ bypasses, complete record/replay coverage, at least 30% manual-intervention
 reduction, no unsupported-claim increase, no unbounded tool calls, no more than
 $0.15 additional API cost per project, and independent outcome review. Passing
 the offline tests below establishes only the implementation substrate.
+
+## Versioned self-development pilot
+
+`bounded_self_development_pilot_v1.yaml` is the committed protocol fixture for
+the implementation pilot. Its protocol, cases, input envelopes, `NodeContext`,
+`NodePolicy`, budgets, expected applicability, allowed outcomes, seeds, and
+backend/model identities are all explicit and closed to unknown fields. The
+fixture is permanently marked `self_dogfooding_only: true`,
+`retrieval_eligible: false`, and `effectiveness_claim: false`; a passing report
+does not change those declarations. Its live condition is pinned to
+`zhipu-direct / glm-5.3-flash`.
+
+The runner distinguishes four conditions by concrete backend type:
+
+| Condition | Behavior | Backend boundary |
+|---|---|---|
+| `deterministic_only` | pre-registers a required manual baseline and handleability judgment and never invokes a model backend | no backend binding is permitted |
+| `scripted_node` | executes deterministic offline fixtures | only `ScriptedStructuredBackend`, optionally inside `RecordingStructuredBackend` |
+| `replay_node` | reproduces an exact recorded request | only `ReplayStructuredBackend`; a replay miss never falls back |
+| `live_structured_node` | remains a planned result when no backend is injected | executes only an explicitly injected `StructuredOpenAICompatibleBackend` whose own `live_enabled` gate is true |
+
+Consequently scripted or replay evidence cannot be labelled as live evidence.
+The committed fixture includes all three nodes, an applicable ambiguous-action
+case, a clear-margin not-applicable case, and a recording/replay pair with an
+identical request contract. This module is not connected to the CLI, runtime,
+controller, executor, retrieval corpus, or full workflow.
+
+The committed protocol contains only `ManualInterventionRequirement` values: it
+declares which case needs the baseline, which needs the observed count, and that
+the deterministic baseline must assess whether the case is handleable without a
+model. It contains no measured count, source, or evidence hash. Actual
+`ManualInterventionMeasurement` values enter only as an external mapping keyed
+by `case_id` when `BoundedPilotRunner.run` is called. Every supplied measurement
+must repeat the matching case and role, name its real source, and pin its
+measurement artifact with `evidence_sha256`; a baseline also records
+`handleable_without_model`.
+
+`BoundedPilotRunner` produces a result for every declared case plus separate
+total-case and actual planned-outcome counts, followed by invoked,
+not-applicable, accepted, rejected, schema-valid, gate-bypass,
+unsupported-reference/action, token, measured-cost, latency, manual-intervention,
+and bounded-tool-call counts. Only `accepted` increments `successful_count`;
+expected rejections, deterministic baselines, planned live cases, and expected
+not-applicable cases remain distinct audit outcomes. Each invocation retains the
+request, response-content, result, and case-evidence fingerprints. A
+deterministic-only result instead retains a fingerprint of its complete baseline
+record, including whether external measurement evidence was present.
+
+Exact replay coverage is credited only when the same report contains both a
+successful non-cached recording and a successful cached replay with identical
+request and response-content fingerprints. Merely configuring a replay case is
+not evidence. Additional API cost is aggregated per project from non-cached
+responses; missing cost telemetry blocks that acceptance metric.
+
+The acceptance evaluator returns `pass`, `fail`, or `blocker` separately for:
+
+- schema validity at or above 0.98;
+- zero gate bypasses;
+- zero cases left at the planned-only outcome;
+- 1.0 exact recording/replay coverage;
+- at least 0.30 measured manual-intervention reduction;
+- no increase over the declared unsupported claim/reference/action baseline;
+- zero tool-call proposals beyond the per-case bound;
+- no more than USD 0.15 additional API cost per project;
+- protocol-outcome conformance; and
+- independent outcome review.
+
+Missing denominators, required external manual measurements, telemetry, replay
+pairs, or review evidence are blockers, never inferred passes. Missing manual
+measurements do not abort the run and are listed by case ID in the report. A live
+case without its explicitly injected backend remains `planned` and makes the
+report blocked. Loading the committed protocol without live evidence, external
+manual measurements, or independent review therefore produces an honest blocked
+report. A report is eligible only when every metric passes. Eligibility still
+means only that the registered pilot gates passed; it is not an effectiveness or
+autonomy claim.
+
+`save_pilot_report` verifies the report's canonical SHA-256, writes a fully
+fsynced temporary file in the destination directory, and publishes it
+atomically. It refuses to overwrite an existing path unless the caller makes
+that choice explicit. Loading a report strictly revalidates its complete schema
+and canonical hash, so content tampering is rejected.
 
 ## Verification
 
@@ -128,8 +252,14 @@ make check
 git diff --check
 ```
 
-The tests cover accepted proposals, strict schema rejection, invented references
+Pilot tests label their manual measurements as synthetic fixtures and exercise
+the live condition with the real compatible-backend class plus a fake transport;
+neither is evidence for the committed self-development pilot. The tests cover
+accepted proposals, strict schema rejection, invented references
 and actions, disabled nodes, clear-margin bypass, provider/model drift, token,
 finite cumulative cost and latency limits, missing cost telemetry, unallowlisted
 tools, raw hash validation, boundary mutation detection, exact recording/replay
-of accepted and rejected responses, and replay misses.
+of accepted and rejected responses, replay misses, missing-key and disabled-live
+preflight, request identity, provider model drift, token aliases, explicit price
+calculation, malformed live responses, bounded HTTP retry behavior, and live
+adapter record/replay through fake transports. Tests never access the network.
