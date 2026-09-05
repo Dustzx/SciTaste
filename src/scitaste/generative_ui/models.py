@@ -376,7 +376,7 @@ class PaperPreviewData(BaseModel):
     paper_title: SafeText
     paper_status: SafeIdentifier
     publication_ready: bool
-    excerpt: SafeText
+    excerpt: SafeText | None = None
 
 
 _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
