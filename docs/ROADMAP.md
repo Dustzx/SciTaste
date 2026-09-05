@@ -337,9 +337,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
   and required artifacts still validate; incomplete downstream work is archived
   before rerun and tampered completion records fail closed.
-- Pending live integration: drive the same ownership/state contract through the
-  AutoResearchClaw executor and opt-in model nodes without weakening deterministic
-  gates or treating offline integration evidence as effectiveness evidence.
+- The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
+  the same project ownership/state contract. The bootstrap publishes a pre-call
+  manifest, verified immutable source receipt, and interruption-safe paid-result
+  recovery; Stage 3 binds that receipt rather than an arbitrary historical path.
+  Full Stage 1–18 ownership and normal-workflow model-node integration remain
+  pending, and neither may convert engineering evidence into an effectiveness
+  claim.
 
 ## Generative interface progress
 
@@ -385,14 +389,15 @@ key. Broader stages still require user-managed configuration and may incur
 network/API/compute cost. CI therefore uses contract fixtures and dry-run rather
 than contacting the provider.
 
-One selected upstream stage now has a first-party project-owned
-plan/execute/resume/status lifecycle with immutable imported inputs, strict fresh
-completion evidence, incremental cost accounting, configurable per-request and
-per-process token ceilings, and explicit live authorization. A live
-GLM-5.3-Flash Stage 3 run passed the integration gate and independent status
-rehash, while its unavailable API cost and ceiling-bound response keep it out of
-formal comparison. Full Stage 1–18 ownership and the 48-cell Phase 9 study remain
-later gates.
+Stage 1–2 bootstrap and one selected upstream stage now have a first-party
+project-owned plan/execute/resume/status lifecycle with an immutable source
+receipt, strict fresh completion evidence, incremental cost accounting,
+configurable per-request and per-process token ceilings, and explicit live
+authorization. A live GLM-5.3-Flash Stage 3 run passed the integration gate and
+independent status rehash, while its unavailable API cost and ceiling-bound
+  response keep it out of formal comparison. The new owned bootstrap-to-action
+  handoff has also passed live execution and independent rehash; full Stage 1–18
+  ownership and the 48-cell Phase 9 study are later gates.
 
 Live taste calibration is also opt-in. Until credentials are provided, scripted
 and replay backends support all implementation, regression, and integration work;

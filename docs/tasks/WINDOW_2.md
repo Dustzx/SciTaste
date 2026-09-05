@@ -2,7 +2,15 @@
 
 Assignment token: `W2-model-node-runtime-20260905-r2`
 
-Status: `dispatched; autonomous execution through all work packages`
+Status: `integration review found blocking defects; hardening in progress`
+
+Integration review on 2026-09-05 accepted the Epic's scope and 124 passing
+focused tests but reproduced three blockers before merge: nested runtime
+directories could follow symbolic links outside the project, project revision
+could change across a model call without rejecting the proposal, and interrupted
+pending-marker cleanup could make a complete ledger permanently unverifiable.
+Window 2 has authority to close these defects on the same feature branch and
+must return a clean `fix(model-nodes)` commit plus focused and full-suite results.
 
 ## Workspace
 

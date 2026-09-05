@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+import scitaste.executor.project_workflow as project_workflow_module
 from scitaste.cli import main
+from scitaste.executor.project_bootstrap import ProjectSubstrateBootstrapWorkflow
 from scitaste.executor.project_workflow import (
     ProjectSubstrateActionWorkflow,
     ProjectSubstrateWorkflowConfig,
@@ -80,6 +82,36 @@ def _successful_runner(command: list[str], **_kwargs: object) -> subprocess.Comp
     return subprocess.CompletedProcess(command, 0, stdout="stage complete", stderr="")
 
 
+def _bootstrap_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+    work = Path(command[command.index("--output") + 1])
+    stage_one = work / "stage-01"
+    stage_two = work / "stage-02"
+    stage_one.mkdir(parents=True)
+    stage_two.mkdir(parents=True)
+    (stage_one / "goal.md").write_text("# Goal\n", encoding="utf-8")
+    (stage_one / "hardware_profile.json").write_text("{}\n", encoding="utf-8")
+    (stage_two / "problem_tree.md").write_text("# Problems\n", encoding="utf-8")
+    (work / "checkpoint.json").write_text(
+        json.dumps(
+            {
+                "last_completed_stage": 2,
+                "last_completed_name": "PROBLEM_DECOMPOSE",
+                "run_id": "project-bootstrap",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (work / "pipeline_summary.json").write_text(
+        json.dumps({"final_status": "done", "final_stage": 2}),
+        encoding="utf-8",
+    )
+    (work / "cost_log.jsonl").write_text(
+        json.dumps({"cost_usd": 0.03}) + "\n",
+        encoding="utf-8",
+    )
+    return subprocess.CompletedProcess(command, 0, stdout="prefix complete", stderr="")
+
+
 def test_project_owned_substrate_action_is_verified_and_charges_only_delta(
     tmp_path: Path,
 ) -> None:
@@ -124,6 +156,42 @@ def test_project_owned_substrate_action_is_verified_and_charges_only_delta(
             project_id=config.project_id,
             run_id="selected-search-01",
         )
+
+
+def test_project_substrate_action_consumes_a_verified_project_bootstrap(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    bootstrap = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=_bootstrap_runner)
+    bootstrap.run(
+        config,
+        outputs_root=outputs,
+        run_id="owned-bootstrap-01",
+        allow_live=True,
+    )
+
+    result = ProjectSubstrateActionWorkflow(seed=7, command_runner=_successful_runner).run(
+        config,
+        outputs_root=outputs,
+        run_id="selected-search-owned-source-01",
+        source_project_run_id="owned-bootstrap-01",
+        allow_live=True,
+    )
+
+    assert result["status"] == "complete"
+    assert result["source_project_run_id"] == "owned-bootstrap-01"
+    assert isinstance(result["source_receipt_sha256"], str)
+    run = outputs / "projects/project-substrate-test/runs/selected-search-owned-source-01"
+    assert (run / "inputs/autoresearchclaw/stage-01/goal.md").is_file()
+    assert (run / "work/autoresearchclaw/stage-03/search_plan.yaml").is_file()
+    status = ProjectSubstrateActionWorkflow().status(
+        outputs_root=outputs,
+        project_id=config.project_id,
+        run_id="selected-search-owned-source-01",
+    )
+    assert status["source_project_run_id"] == "owned-bootstrap-01"
+    assert status["source_receipt_sha256"] == result["source_receipt_sha256"]
 
 
 def test_project_substrate_failure_resumes_from_immutable_input(tmp_path: Path) -> None:
@@ -331,3 +399,36 @@ def test_project_substrate_cli_plan_is_read_only(tmp_path: Path, capsys) -> None
     assert payload["seed"] == 11
     assert payload["would_contact_provider"] is False
     assert not outputs.exists()
+
+
+def test_project_substrate_rejects_owned_config_drift_before_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    provider_calls = 0
+    original_copy = project_workflow_module._copy_file_exclusive
+
+    def tampering_copy(source_path: Path, destination: Path) -> None:
+        original_copy(source_path, destination)
+        destination.write_text("changed: true\n", encoding="utf-8")
+
+    def counted_runner(*_args: object, **_kwargs: object):
+        nonlocal provider_calls
+        provider_calls += 1
+        raise AssertionError("provider must not be contacted")
+
+    monkeypatch.setattr(project_workflow_module, "_copy_file_exclusive", tampering_copy)
+
+    with pytest.raises(ValueError, match="changed before substrate execution"):
+        ProjectSubstrateActionWorkflow(command_runner=counted_runner).run(
+            config,
+            outputs_root=outputs,
+            run_id="config-drift-selected-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+
+    assert provider_calls == 0

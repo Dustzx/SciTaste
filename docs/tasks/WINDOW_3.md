@@ -2,7 +2,15 @@
 
 Assignment token: `W3-evidence-workspace-20260905-r2`
 
-Status: `dispatched; autonomous execution through all work packages`
+Status: `integration review found blocking defects; hardening in progress`
+
+Integration review on 2026-09-05 accepted the four-work-package implementation
+and its 480-test branch result but reproduced two blockers before merge: a valid
+audit chain copied from project B could appear in project A, and the audit writer
+did not bind the checked parent directory through lock/temp/replace operations.
+Stale browser catalogs on project switch are also part of the required fix.
+Window 3 has authority to close these defects on the same feature branch and
+must return a clean `fix(ui)` commit plus security, full-suite, and wheel checks.
 
 ## Workspace
 

@@ -83,6 +83,8 @@ class ProjectSubstrateRunManifest(BaseModel):
     source_snapshot_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_file_count: int = Field(ge=1)
     source_bytes: int = Field(ge=1)
+    source_project_run_id: str | None = None
+    source_receipt_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     expected_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     actual_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -97,16 +99,32 @@ class ProjectSubstrateRunManifest(BaseModel):
     def run_id_is_safe(cls, value: str) -> str:
         return validate_entry_id(value, field_name="run_id")
 
+    @field_validator("source_project_run_id")
+    @classmethod
+    def source_run_id_is_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_entry_id(value, field_name="source_project_run_id")
+
     @classmethod
     def create(cls, **payload: Any) -> ProjectSubstrateRunManifest:
-        digest = content_sha256(payload)
-        return cls.model_validate({**payload, "manifest_sha256": digest})
+        canonical = {key: value for key, value in payload.items() if value is not None}
+        digest = content_sha256(canonical)
+        return cls.model_validate({**canonical, "manifest_sha256": digest})
 
     @model_validator(mode="after")
     def manifest_hash_matches(self) -> ProjectSubstrateRunManifest:
-        expected = content_sha256(self.model_dump(mode="json", exclude={"manifest_sha256"}))
+        expected = content_sha256(
+            self.model_dump(
+                mode="json",
+                exclude={"manifest_sha256"},
+                exclude_none=True,
+            )
+        )
         if self.manifest_sha256 != expected:
             raise ValueError("project substrate manifest hash mismatch")
+        if (self.source_project_run_id is None) != (self.source_receipt_sha256 is None):
+            raise ValueError("project substrate source provenance fields disagree")
         return self
 
 
@@ -188,7 +206,8 @@ class ProjectSubstrateActionWorkflow:
         *,
         outputs_root: str | Path,
         run_id: str,
-        source_run_dir: str | Path | None,
+        source_run_dir: str | Path | None = None,
+        source_project_run_id: str | None = None,
         resume: bool = False,
         allow_live: bool = False,
     ) -> dict[str, object]:
@@ -201,6 +220,7 @@ class ProjectSubstrateActionWorkflow:
         executor_config_sha256 = _file_sha256(config.autoresearchclaw_config)
         workflow_config_sha256 = _workflow_config_sha256(config)
         source_summary: _TreeSummary | None = None
+        source_receipt_sha256: str | None = None
         if resume:
             snapshot = runtime.open(config.project_id)
             registered = _registered_run(snapshot, run_id)
@@ -213,6 +233,14 @@ class ProjectSubstrateActionWorkflow:
                 workflow_config_sha256=workflow_config_sha256,
                 executor_config_sha256=executor_config_sha256,
             )
+            if (
+                _file_sha256(
+                    _run_root(runtime, config.project_id, run_id)
+                    / "inputs/autoresearchclaw-config.yaml"
+                )
+                != executor_config_sha256
+            ):
+                raise ValueError("owned AutoResearchClaw configuration hash drift")
             source_summary = _tree_summary(
                 _run_root(runtime, config.project_id, run_id) / "inputs/autoresearchclaw",
                 max_bytes=config.max_snapshot_bytes,
@@ -220,9 +248,26 @@ class ProjectSubstrateActionWorkflow:
             if source_summary.fingerprint != manifest.source_snapshot_sha256:
                 raise ValueError("owned AutoResearchClaw input snapshot hash drift")
             revision = snapshot.revision
+            source_project_run_id = manifest.source_project_run_id
+            source_receipt_sha256 = manifest.source_receipt_sha256
         else:
-            if source_run_dir is None:
-                raise ValueError("a source AutoResearchClaw run is required for a new run")
+            if (source_run_dir is None) == (source_project_run_id is None):
+                raise ValueError(
+                    "choose exactly one source AutoResearchClaw directory or project run"
+                )
+            if source_project_run_id is not None:
+                validate_entry_id(source_project_run_id, field_name="source_project_run_id")
+                from scitaste.executor.project_bootstrap import (
+                    ProjectSubstrateBootstrapWorkflow,
+                )
+
+                source_run_dir, receipt = ProjectSubstrateBootstrapWorkflow().source_path(
+                    outputs_root=outputs_root,
+                    project_id=config.project_id,
+                    run_id=source_project_run_id,
+                )
+                source_receipt_sha256 = receipt.receipt_sha256
+            assert source_run_dir is not None
             source_summary = _tree_summary(
                 Path(source_run_dir),
                 max_bytes=config.max_snapshot_bytes,
@@ -252,6 +297,8 @@ class ProjectSubstrateActionWorkflow:
             "source_snapshot_sha256": source_summary.fingerprint,
             "source_file_count": source_summary.file_count,
             "source_bytes": source_summary.total_bytes,
+            "source_project_run_id": source_project_run_id,
+            "source_receipt_sha256": source_receipt_sha256,
             "expected_substrate_commit": PINNED_COMMIT,
             "actual_substrate_commit": str(substrate["actual_commit"]),
             "run_locator": f"projects/{config.project_id}/runs/{run_id}",
@@ -264,6 +311,7 @@ class ProjectSubstrateActionWorkflow:
         outputs_root: str | Path,
         run_id: str,
         source_run_dir: str | Path | None = None,
+        source_project_run_id: str | None = None,
         resume: bool = False,
         allow_live: bool = False,
     ) -> dict[str, object]:
@@ -272,6 +320,7 @@ class ProjectSubstrateActionWorkflow:
             outputs_root=outputs_root,
             run_id=run_id,
             source_run_dir=source_run_dir,
+            source_project_run_id=source_project_run_id,
             resume=resume,
             allow_live=allow_live,
         )
@@ -298,6 +347,8 @@ class ProjectSubstrateActionWorkflow:
                     workflow_config_sha256=plan["workflow_config_sha256"],
                     source_snapshot_sha256=plan["source_snapshot_sha256"],
                     action_type=config.action_type.value,
+                    source_project_run_id=plan["source_project_run_id"],
+                    source_receipt_sha256=plan["source_receipt_sha256"],
                     resume_attempt=0,
                 ),
                 expected_revision=snapshot.revision,
@@ -313,12 +364,32 @@ class ProjectSubstrateActionWorkflow:
             if resume:
                 archived_attempt = _archive_attempt(run_root)
             else:
+                if source_project_run_id is not None:
+                    from scitaste.executor.project_bootstrap import (
+                        ProjectSubstrateBootstrapWorkflow,
+                    )
+
+                    source_run_dir, receipt = ProjectSubstrateBootstrapWorkflow().source_path(
+                        outputs_root=outputs_root,
+                        project_id=config.project_id,
+                        run_id=source_project_run_id,
+                    )
+                    if receipt.receipt_sha256 != plan["source_receipt_sha256"]:
+                        raise ValueError("project bootstrap receipt changed before source import")
                 assert source_run_dir is not None
-                _copy_tree_exclusive(Path(source_run_dir), run_root / "inputs/autoresearchclaw")
+                _copy_tree_exclusive(
+                    Path(source_run_dir),
+                    run_root / "inputs/autoresearchclaw",
+                )
                 _copy_file_exclusive(
                     config.autoresearchclaw_config,
                     run_root / "inputs/autoresearchclaw-config.yaml",
                 )
+                if (
+                    _file_sha256(run_root / "inputs/autoresearchclaw-config.yaml")
+                    != plan["executor_config_sha256"]
+                ):
+                    raise ValueError("executor configuration changed before substrate execution")
                 archived_attempt = None
             source_summary = _tree_summary(
                 run_root / "inputs/autoresearchclaw",
@@ -329,7 +400,11 @@ class ProjectSubstrateActionWorkflow:
             manifest = self._publish_or_validate_manifest(run_root, config, plan, source_summary)
             work_root = run_root / "work/autoresearchclaw"
             _copy_tree_exclusive(run_root / "inputs/autoresearchclaw", work_root)
-            executor = self._executor(config, dry_run=False)
+            executor = self._executor(
+                config,
+                dry_run=False,
+                config_path=run_root / "inputs/autoresearchclaw-config.yaml",
+            )
             action_summary = SubstrateActionWorkflow(executor=executor, seed=self.seed).run(
                 action_type=config.action_type,
                 run_dir=work_root,
@@ -394,6 +469,21 @@ class ProjectSubstrateActionWorkflow:
         run = _registered_run(snapshot, run_id)
         run_root = _run_root(runtime, project_id, run_id)
         manifest = _load_manifest(run_root)
+        if manifest.source_project_run_id is not None:
+            from scitaste.executor.project_bootstrap import (
+                ProjectSubstrateBootstrapWorkflow,
+            )
+
+            _source, source_receipt = ProjectSubstrateBootstrapWorkflow().source_path(
+                outputs_root=outputs_root,
+                project_id=project_id,
+                run_id=manifest.source_project_run_id,
+            )
+            if (
+                source_receipt.receipt_sha256 != manifest.source_receipt_sha256
+                or source_receipt.source_snapshot_sha256 != manifest.source_snapshot_sha256
+            ):
+                raise ValueError("selected action source receipt provenance drift")
         verification = ProjectSubstrateVerification.model_validate_json(
             (run_root / "substrate_action/verification.json").read_text(encoding="utf-8")
         )
@@ -403,6 +493,8 @@ class ProjectSubstrateActionWorkflow:
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
             "execution_status": verification.execution_status.value,
+            "source_project_run_id": manifest.source_project_run_id,
+            "source_receipt_sha256": manifest.source_receipt_sha256,
         }
         if any(extra.get(key) != value for key, value in expected.items()):
             raise ValueError("registered substrate run metadata drift")
@@ -421,6 +513,8 @@ class ProjectSubstrateActionWorkflow:
             "action_type": manifest.action_type.value,
             "upstream_stage": manifest.upstream_stage,
             "execution_status": verification.execution_status.value,
+            "source_project_run_id": manifest.source_project_run_id,
+            "source_receipt_sha256": manifest.source_receipt_sha256,
             "transition_applied": verification.transition_applied,
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
@@ -432,9 +526,10 @@ class ProjectSubstrateActionWorkflow:
         config: ProjectSubstrateWorkflowConfig,
         *,
         dry_run: bool,
+        config_path: Path | None = None,
     ) -> AutoResearchClawExecutor:
         return AutoResearchClawExecutor(
-            config_path=config.autoresearchclaw_config,
+            config_path=config_path or config.autoresearchclaw_config,
             dry_run=dry_run,
             timeout_seconds=config.timeout_seconds,
             max_output_tokens=config.max_output_tokens,
@@ -558,6 +653,15 @@ class ProjectSubstrateActionWorkflow:
             raise ValueError("workflow configuration does not match owned substrate manifest")
         if manifest.executor_config_sha256 != executor_config_sha256:
             raise ValueError("executor configuration does not match owned substrate manifest")
+        source_identity = (
+            extra.get("source_project_run_id"),
+            extra.get("source_receipt_sha256"),
+        )
+        if source_identity != (
+            manifest.source_project_run_id,
+            manifest.source_receipt_sha256,
+        ):
+            raise ValueError("registered substrate source provenance drift")
 
     @staticmethod
     def _publish_or_validate_manifest(
@@ -580,6 +684,8 @@ class ProjectSubstrateActionWorkflow:
                 source.fingerprint,
                 source.file_count,
                 source.total_bytes,
+                plan["source_project_run_id"],
+                plan["source_receipt_sha256"],
                 PINNED_COMMIT,
                 plan["actual_substrate_commit"],
             )
@@ -594,6 +700,8 @@ class ProjectSubstrateActionWorkflow:
                 manifest.source_snapshot_sha256,
                 manifest.source_file_count,
                 manifest.source_bytes,
+                manifest.source_project_run_id,
+                manifest.source_receipt_sha256,
                 manifest.expected_substrate_commit,
                 manifest.actual_substrate_commit,
             )
@@ -612,6 +720,8 @@ class ProjectSubstrateActionWorkflow:
             source_snapshot_sha256=source.fingerprint,
             source_file_count=source.file_count,
             source_bytes=source.total_bytes,
+            source_project_run_id=plan["source_project_run_id"],
+            source_receipt_sha256=plan["source_receipt_sha256"],
             expected_substrate_commit=PINNED_COMMIT,
             actual_substrate_commit=plan["actual_substrate_commit"],
         )

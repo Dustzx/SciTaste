@@ -408,10 +408,12 @@ SciTaste never sends a baseline request unless the command is explicitly invoked
 by the user without `--dry-run`. A bounded real-substrate smoke and the
 `substrate execute` command are documented in
 [`docs/AUTORESEARCHCLAW_INTEGRATION.md`](docs/AUTORESEARCHCLAW_INTEGRATION.md).
-Provider-backed selected stages should use the project-owned
-`substrate project plan|execute|status` lifecycle; it separates immutable inputs
-from mutable work, verifies exact completion evidence, and supports audited
-failed-run resume without modifying AutoResearchClaw.
+Provider-backed selected stages should first create their Stage 1–2 source with
+`substrate project bootstrap plan|execute|status`, then use
+`substrate project plan|execute|status` with `--source-project-run`. This keeps
+the prerequisite, immutable input, mutable work, and exact completion evidence
+under one project and supports audited recovery without modifying
+AutoResearchClaw.
 
 SciTaste development itself is also tracked as a dogfooding case for process
 usability and auditability. It is deliberately excluded from independent

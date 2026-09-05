@@ -69,32 +69,59 @@ scitaste substrate execute \
 development limit. `max_total_tokens` bounds all LLM responses in that one
 upstream process and the process-local telemetry file retains per-call usage.
 
-## Project-owned action lifecycle
+## Project-owned source and action lifecycle
 
 The raw command above remains useful for adapter diagnostics. New live work
-should use `substrate project`, which imports an existing upstream run as an
-immutable project input and creates a separate working copy. Its self-hashed
-manifest binds the project/run/action/seed, both configuration hashes, the exact
-source tree, and the pinned upstream commit. Completion is registered only after
-the action evidence and final working tree have been hashed. Failed work is kept
-under a numbered attempt archive and may be resumed only with the same identity.
+should use `substrate project`. A first-party bootstrap creates the Stage 1–2
+prerequisite tree directly beneath the owning project, after which the selected
+Stage 3 action consumes that verified project run. Importing an external upstream
+run remains available for migration and diagnostics.
+
+The bootstrap publishes its self-hashed request manifest before contacting the
+provider, retains the exact executor result, validates the Stage 1 and exact
+Stage 2 contract, and copies successful work to an immutable reusable `source/`
+snapshot. The selected-action manifest then binds the source receipt as well as
+the project/run/action/seed, both configuration hashes, exact source tree, and
+pinned upstream commit. Completion is registered only after the action evidence
+and final working tree have been hashed. Failed work is kept under numbered
+attempt archives. A successful paid bootstrap result persisted before an
+interruption is recovered without issuing the provider call again.
 
 The committed GLM-5.3-Flash template is inert (`live_enabled: false`). Copy it to
 a private run configuration, explicitly change that field to `true`, and supply
 the key through `ZAI_API_KEY`. Planning does not create a project or call a
-provider:
+provider. Build and verify the owned prerequisite first:
+
+```bash
+.venv/bin/scitaste substrate project bootstrap plan \
+  --config path/to/project-substrate-live.yaml \
+  --run-id 2026-09-05__glm-5.3-flash__bootstrap-stage02__seed-07 \
+  --outputs-root outputs --seed 7
+
+.venv/bin/scitaste substrate project bootstrap execute \
+  --config path/to/project-substrate-live.yaml \
+  --run-id 2026-09-05__glm-5.3-flash__bootstrap-stage02__seed-07 \
+  --outputs-root outputs --seed 7 --allow-live
+
+.venv/bin/scitaste substrate project bootstrap status \
+  --project-id scitaste-self-development \
+  --run-id 2026-09-05__glm-5.3-flash__bootstrap-stage02__seed-07 \
+  --outputs-root outputs
+```
+
+Then run the selected action from the verified receipt:
 
 ```bash
 .venv/bin/scitaste substrate project plan \
   --config path/to/project-substrate-live.yaml \
   --run-id 2026-09-05__glm-5.3-flash__selected-search__seed-07 \
-  --source-run outputs/<source-autoresearchclaw-run> \
+  --source-project-run 2026-09-05__glm-5.3-flash__bootstrap-stage02__seed-07 \
   --outputs-root outputs --seed 7
 
 .venv/bin/scitaste substrate project execute \
   --config path/to/project-substrate-live.yaml \
   --run-id 2026-09-05__glm-5.3-flash__selected-search__seed-07 \
-  --source-run outputs/<source-autoresearchclaw-run> \
+  --source-project-run 2026-09-05__glm-5.3-flash__bootstrap-stage02__seed-07 \
   --outputs-root outputs --seed 7 --allow-live
 
 .venv/bin/scitaste substrate project status \
@@ -113,13 +140,12 @@ Generated upstream artifacts and exact execution logs stay under ignored
 
 ## Current limit
 
-The historical accepted vertical slice covers initialization, problem
-decomposition, and a SciTaste-selected search-strategy stage. The project-owned
-lifecycle has also passed one live GLM-5.3-Flash Stage 3 preacceptance with exact
-status revalidation. It reached the 4,096-token per-request ceiling and emitted
-no API-cost log, so it is accepted for integration engineering only. Neither
-result validates literature collection, experiment execution, paper generation,
-or effectiveness. Source entries emitted while web search is disabled are
-planning artifacts, not independently verified knowledge and are not
-automatically ingested into the Knowledge Library. See
-`docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md`.
+The first-party project lifecycle has completed and independently revalidated a
+live GLM-5.3-Flash Stage 1–2 bootstrap and receipt-bound Stage 3 handoff. Stage 3
+reached the 4,096-token per-request ceiling and neither run emitted an API-cost
+log, so the result remains integration engineering evidence only. It does not
+validate literature collection, experiment execution, paper generation, or
+effectiveness. Source entries emitted while web search is disabled are planning
+artifacts, not independently verified knowledge and are not automatically
+ingested into the Knowledge Library. See
+`docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.

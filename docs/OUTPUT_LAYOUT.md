@@ -85,7 +85,24 @@ owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
 
-A project-owned AutoResearchClaw action uses a different, explicit boundary:
+A project-owned AutoResearchClaw source bootstrap has its own explicit boundary:
+
+```text
+runs/<bootstrap-run-id>/
+├── bootstrap_manifest.json
+├── inputs/autoresearchclaw-config.yaml
+├── work/autoresearchclaw/             # exact Stage 1-2 executor output
+├── source/autoresearchclaw/           # immutable verified reusable copy
+├── substrate_bootstrap/{executor_result.json,source_receipt.json}
+└── failed_attempts/attempt-NNN/       # only after a resumable failed attempt
+```
+
+`source_receipt.json` binds both trees, the required Stage 1–2 artifacts, token
+telemetry, truthful API-cost availability, and the pre-call manifest. A selected
+action refers to this receipt by `source_project_run_id` instead of relying on an
+unregistered historical path.
+
+The selected AutoResearchClaw action then uses a separate boundary:
 
 ```text
 runs/<run-id>/
@@ -98,5 +115,6 @@ runs/<run-id>/
 ```
 
 `inputs/` is immutable evidence; provider-backed mutation occurs only in
-`work/`. `substrate project status` rehashes both trees and the action evidence
-before reporting the run as verified.
+`work/`. `substrate project bootstrap status` rehashes the bootstrap work and
+source, while `substrate project status` rehashes the selected-action input,
+working tree, and evidence before reporting either run as verified.

@@ -550,6 +550,15 @@ self-hashed manifest over those inputs and the pinned upstream commit, and runs
 only in a separate working tree. The unmodified upstream repository remains
 code, never the writable owner of SciTaste evidence.
 
+For new SEARCH runs, the preferred source is itself a registered project run.
+The bootstrap path publishes its request identity before the call, executes only
+through exact Stage 2, validates every Stage 1–2 prerequisite, and issues a
+self-hashed source receipt over both work and an immutable reusable copy. The
+selected Stage 3 action binds that receipt and revalidates it before importing
+the source. External source paths remain a compatibility boundary, not the
+default ownership model. A successful executor result persisted before a local
+finalization interruption may be recovered without another provider request.
+
 A successful process exit is insufficient. The adapter requires fresh terminal
 checkpoint and summary evidence for the exact selected stage, rejects escaping
 or symbolic-link artifacts, validates cost records, and charges only the staged
@@ -561,5 +570,6 @@ Live calls require both a versioned `live_enabled` setting and explicit caller
 authorization. Resume is limited to failed runs with identical project, action,
 seed, provider/model, workflow configuration, executor configuration, immutable
 input hash, and substrate pin; prior mutable attempts are archived. This accepts
-an online engineering lifecycle for one selected action. It is not yet a full
-Stage 1–18 orchestration path or evidence of research-effectiveness gain.
+an online engineering lifecycle for the Stage 1–2 prerequisite and one selected
+Stage 3 action. It is not yet a full Stage 1–18 orchestration path or evidence of
+research-effectiveness gain.

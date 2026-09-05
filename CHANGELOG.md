@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- A project-owned AutoResearchClaw Stage 1–2 bootstrap with pre-call identity,
+  exact prerequisite validation, immutable reusable source receipts, telemetry
+  accounting, resumable attempt archives, paid-result recovery, and a verified
+  receipt-bound handoff to the selected Stage 3 action.
+- A live GLM-5.3-Flash acceptance of that owned Stage 1–3 handoff, including
+  independent status rehash, exact receipt/manifest bindings, and explicit
+  token-ceiling, missing-cost, web-search, and effectiveness limitations.
 - A project-owned AutoResearchClaw action lifecycle with immutable imported
   inputs, self-hashed run/verification manifests, exact status verification,
   failed-attempt archives, resume identity checks, CLI planning/execution, and

@@ -103,6 +103,16 @@ are retained rather than converted into a taste-quality success. The detailed
 ledger is
 `docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md`.
 
+A follow-up closes the remaining source-ownership gap. The same project created
+Stages 1–2 through a registered bootstrap run, issued an immutable source
+receipt, and then bound a new selected Stage 3 run to that receipt. Both runs
+passed independent rehash. The bootstrap used 3,484 tokens and the Stage 3
+increment used 4,571; cost was again unavailable and the selected response again
+reached its completion ceiling. This is a stronger lifecycle result, but it
+retains the same engineering-only classification. The receipt and manifest
+ledger is
+`docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.
