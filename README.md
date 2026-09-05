@@ -99,7 +99,8 @@ an execution:
 
 The catalog groups paper versions beneath their project, explains every
 `stage-NN` directory, and separates successful bundles from failed or resumable
-raw runs. See
+raw runs. It also links each versioned trusted project-interface bundle under
+the same project entry. See
 [`docs/OUTPUT_LAYOUT.md`](docs/OUTPUT_LAYOUT.md) for the naming convention. Old
 run directories remain in place so checkpoints and artifact hashes stay valid.
 

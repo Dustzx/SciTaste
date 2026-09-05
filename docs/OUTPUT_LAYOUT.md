@@ -33,9 +33,11 @@ outputs/projects/<project-id>/
 │   └── YYYY-MM-DD__provider-model__condition__seed-NN/
 ├── stages/
 │   └── current -> ../runs/<current-run>/<registered-stage-path>
-└── papers/
+├── papers/
     ├── YYYY-MM-DD__provider-model__condition__stage-NN/
     └── current -> <selected paper version>
+└── surfaces/
+    └── <surface-version>/{surface.json,renderer.json,surface-audit.jsonl}
 ```
 
 `PROJECT.json` has a monotonic `revision`. Every managed mutation supplies the
@@ -45,6 +47,12 @@ silently overwriting each other's project metadata.
 Each paper directory contains a `MANIFEST.json`. `outputs/papers/` is only a
 cross-project alias layer; `outputs/papers/latest` points to the most recently
 selected paper but does not own it.
+
+Trusted project interface bundles live under the same owner in `surfaces/`.
+`outputs/INDEX.md` lists these bundles beside the project, and
+`outputs/catalog.json` records their files and surface fingerprint. A surface is
+a content-addressed view and proposal channel, not an executor or project-state
+mutation endpoint.
 
 Historical test and preacceptance directories are not renamed automatically. Cell requests,
 execution records, resumable checkpoints, reports, and artifact manifests can

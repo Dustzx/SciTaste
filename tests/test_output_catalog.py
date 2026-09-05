@@ -66,6 +66,19 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
     aliases = outputs / "papers"
     aliases.mkdir()
     (aliases / "latest").symlink_to(bundle, target_is_directory=True)
+    surface = project / "surfaces" / "overview-v1"
+    surface.mkdir(parents=True)
+    (surface / "surface.json").write_text(
+        json.dumps(
+            {
+                "surface_id": "project-overview",
+                "fingerprint": "a" * 64,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (surface / "renderer.json").write_text("{}\n", encoding="utf-8")
+    (surface / "surface-audit.jsonl").write_text("{}\n", encoding="utf-8")
 
     index_path, catalog_path = refresh_catalog(outputs)
 
@@ -74,6 +87,7 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
     assert "已完成 Stage: 07, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18" in index
     assert "projects/readable-research-project/stages/current/" in index
     assert "Readable paper" in index
+    assert "[project-overview](projects/readable-research-project/surfaces/overview-v1/)" in index
     assert (
         "[PDF](projects/readable-research-project/papers/"
         "2026-09-04__model__knowledge-rag__stage-18/paper.pdf)" in index
@@ -83,6 +97,16 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     assert len(catalog["projects"]) == 1
     assert catalog["projects"][0]["project_id"] == "readable-research-project"
+    assert catalog["projects"][0]["surfaces"] == [
+        {
+            "surface_id": "project-overview",
+            "fingerprint": "a" * 64,
+            "directory": "projects/readable-research-project/surfaces/overview-v1",
+            "surface": "projects/readable-research-project/surfaces/overview-v1/surface.json",
+            "renderer": "projects/readable-research-project/surfaces/overview-v1/renderer.json",
+            "audit": "projects/readable-research-project/surfaces/overview-v1/surface-audit.jsonl",
+        }
+    ]
     assert len(catalog["papers"]) == 1
     assert catalog["papers"][0]["paper_id"] == "paper-test"
     assert catalog["runs"][0]["status"] == "succeeded"

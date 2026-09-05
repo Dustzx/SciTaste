@@ -107,15 +107,53 @@ def discover_projects(outputs_root: Path) -> tuple[list[dict[str, Any]], list[st
     for manifest_path in sorted(project_root.glob("*/PROJECT.json")):
         try:
             manifest = _read_json(manifest_path)
+            surfaces, surface_errors = _discover_project_surfaces(
+                manifest_path.parent,
+                outputs_root,
+            )
+            errors.extend(surface_errors)
             projects.append(
                 {
                     **manifest,
                     "directory": _relative(manifest_path.parent, outputs_root),
+                    "surfaces": surfaces,
                 }
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{manifest_path.relative_to(outputs_root).as_posix()}: {exc}")
     return projects, errors
+
+
+def _discover_project_surfaces(
+    project_root: Path,
+    outputs_root: Path,
+) -> tuple[list[dict[str, str]], list[str]]:
+    surfaces: list[dict[str, str]] = []
+    errors: list[str] = []
+    for surface_path in sorted((project_root / "surfaces").glob("*/surface.json")):
+        try:
+            surface = _read_json(surface_path)
+            bundle = surface_path.parent
+            files = {
+                label: _relative(path, outputs_root)
+                for label, path in (
+                    ("surface", surface_path),
+                    ("renderer", bundle / "renderer.json"),
+                    ("audit", bundle / "surface-audit.jsonl"),
+                )
+                if path.is_file()
+            }
+            surfaces.append(
+                {
+                    "surface_id": str(surface.get("surface_id", bundle.name)),
+                    "fingerprint": str(surface.get("fingerprint", "unknown")),
+                    "directory": _relative(bundle, outputs_root),
+                    **files,
+                }
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            errors.append(f"{surface_path.relative_to(outputs_root).as_posix()}: {exc}")
+    return surfaces, errors
 
 
 def discover_paper_bundles(outputs_root: Path) -> tuple[list[dict[str, Any]], list[str]]:
@@ -199,6 +237,11 @@ def render_index(
         completed_stages = project.get("completed_stages") or []
         stage_summary = ", ".join(f"{int(stage):02d}" for stage in completed_stages) or "未登记"
         stage_directory = f"{project['directory']}/stages/current"
+        surface_links = " · ".join(
+            f"[{surface.get('surface_id', 'surface')}]({surface['directory']}/)"
+            for surface in project.get("surfaces", [])
+            if isinstance(surface, dict) and isinstance(surface.get("directory"), str)
+        )
         lines.extend(
             [
                 f"### {project.get('title', project_id)}",
@@ -209,6 +252,7 @@ def render_index(
                 f"- 已完成 Stage: {stage_summary}",
                 f"- Stage 产物: [按阶段浏览]({stage_directory}/)",
                 f"- 当前论文: {current_links or '尚无'}",
+                f"- 项目界面包: {surface_links or '尚无'}",
                 f"- 项目目录: [`{project['directory']}`]({project['directory']}/)",
                 "",
             ]
@@ -286,6 +330,7 @@ def render_index(
             "- 论文包: `projects/<project-id>/papers/"
             "YYYY-MM-DD__provider-model__condition__stage-NN/`",
             "- 失败重试写入原 cell 并使用 execution record, 不再新增含糊的顶层 `v2/v3/...` 目录。",
+            "- 项目界面包: `projects/<project-id>/surfaces/<surface-version>/`",
             "- `projects/<project-id>/papers/current` 指向该项目当前论文; "
             "`papers/latest` 只是全局快捷入口。",
         ]

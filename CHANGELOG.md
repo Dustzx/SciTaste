@@ -13,6 +13,8 @@ semantic versioning.
 - A trusted ProjectRuntime-to-surface factory and `project surface build` CLI
   that transactionally publishes validated renderer and audit bundles without
   granting generated actions execution authority.
+- Project output catalogs now list versioned trusted surface bundles beside each
+  owning project and expose their content fingerprint and component files.
 - Phase 0/1 controller skeleton and nonlinear demo.
 - AutoResearchClaw v0.5.0 as a pinned execution substrate.
 - CI, contribution workflow, roadmap, architecture record, and issue templates.
