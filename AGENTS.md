@@ -28,3 +28,14 @@ make demo
   responses.
 - Update the roadmap, changelog, and relevant architecture record with material
   behavior changes.
+
+## Parallel window coordination
+
+- Multi-window work uses the canonical dispatch documents in `docs/tasks/`.
+  The main window owns the board and task documents; child windows read their
+  assigned absolute-path document before every task.
+- Only cohesive, independently testable Epics expected to require at least half
+  a focused day are dispatched. Small fixes remain on main because their
+  coordination cost exceeds their parallelism benefit.
+- Child windows use separate worktrees, stay inside assigned path ownership, and
+  return clean feature-branch commits to main for review and integration.
