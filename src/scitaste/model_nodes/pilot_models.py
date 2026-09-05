@@ -134,13 +134,41 @@ class PilotBudget(PilotModel):
         return self
 
 
-class ManualInterventionMeasurement(PilotModel):
+class ManualInterventionRequirement(PilotModel):
+    """Pre-register which external manual measurement a case requires."""
+
     schema_version: Literal["1.0"] = PILOT_SCHEMA_VERSION
+    role: ManualMeasurementRole
+    requires_handleable_without_model: bool = False
+
+    @model_validator(mode="after")
+    def role_matches_requirement(self) -> ManualInterventionRequirement:
+        if self.role is ManualMeasurementRole.OBSERVED and self.requires_handleable_without_model:
+            raise ValueError("only a deterministic baseline can require handleable_without_model")
+        return self
+
+
+class ManualInterventionMeasurement(PilotModel):
+    """Externally supplied measurement evidence; never embedded in a protocol."""
+
+    schema_version: Literal["1.0"] = PILOT_SCHEMA_VERSION
+    case_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     role: ManualMeasurementRole
     count: int = Field(ge=0)
     source: str = Field(min_length=1)
     evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     handleable_without_model: bool | None = None
+
+    @model_validator(mode="after")
+    def complete_external_measurement(self) -> ManualInterventionMeasurement:
+        if self.role is ManualMeasurementRole.BASELINE and self.handleable_without_model is None:
+            raise ValueError("baseline measurement requires handleable_without_model")
+        if (
+            self.role is ManualMeasurementRole.OBSERVED
+            and self.handleable_without_model is not None
+        ):
+            raise ValueError("observed measurement cannot set handleable_without_model")
+        return self
 
 
 _INPUT_MODELS = {
@@ -170,7 +198,7 @@ class PilotCase(PilotModel):
     gate_probe: bool = False
     replay_pair_id: str | None = None
     replay_role: ReplayEvidenceRole | None = None
-    manual_intervention: ManualInterventionMeasurement | None = None
+    manual_intervention_requirement: ManualInterventionRequirement | None = None
 
     @model_validator(mode="after")
     def validate_case_contract(self) -> PilotCase:
@@ -204,13 +232,13 @@ class PilotCase(PilotModel):
                 raise ValueError("deterministic_only cases require a disabled NodePolicy")
             if self.allowed_outcomes != (PilotOutcome.BASELINE,):
                 raise ValueError("deterministic_only cases allow only the baseline outcome")
-            if self.manual_intervention is None:
-                raise ValueError("deterministic_only cases require a manual baseline")
-            if self.manual_intervention.role is not ManualMeasurementRole.BASELINE:
-                raise ValueError("deterministic_only measurements must be baselines")
-            if self.manual_intervention.handleable_without_model is None:
+            if self.manual_intervention_requirement is None:
+                raise ValueError("deterministic_only cases require a manual baseline declaration")
+            if self.manual_intervention_requirement.role is not ManualMeasurementRole.BASELINE:
+                raise ValueError("deterministic_only cases must declare a baseline measurement")
+            if not self.manual_intervention_requirement.requires_handleable_without_model:
                 raise ValueError(
-                    "deterministic_only baselines must record handleable_without_model"
+                    "deterministic_only baselines must pre-register handleable_without_model"
                 )
         else:
             if not self.backend_key:
@@ -221,6 +249,11 @@ class PilotCase(PilotModel):
                 raise ValueError("NodePolicy does not allow the case node_type")
             if PilotOutcome.BASELINE in self.allowed_outcomes:
                 raise ValueError("model-node cases cannot allow a baseline outcome")
+            if (
+                self.manual_intervention_requirement is not None
+                and self.manual_intervention_requirement.role is not ManualMeasurementRole.OBSERVED
+            ):
+                raise ValueError("model-node cases can declare only observed measurements")
 
         if self.condition is PilotCondition.LIVE_STRUCTURED_NODE:
             if PilotOutcome.PLANNED not in self.allowed_outcomes:
@@ -350,6 +383,14 @@ class PilotProtocol(PilotModel):
         if ambiguous_expectations != set(ExpectedApplicability):
             raise ValueError("ambiguous-action requires applicable and clear-margin cases")
 
+        manual_roles = {
+            case.manual_intervention_requirement.role
+            for case in self.cases
+            if case.manual_intervention_requirement is not None
+        }
+        if manual_roles != set(ManualMeasurementRole):
+            raise ValueError("pilot protocol must pre-register baseline and observed measurements")
+
         pairs: dict[str, set[ReplayEvidenceRole]] = {}
         for case in self.cases:
             if case.replay_pair_id and case.replay_role:
@@ -436,6 +477,7 @@ class PilotCaseResult(PilotModel):
     tool_call_proposal_count: int = Field(default=0, ge=0)
     unbounded_tool_call_count: int = Field(default=0, ge=0)
     unsupported_claim_reference_action_count: int = Field(default=0, ge=0)
+    manual_intervention_requirement: ManualInterventionRequirement | None = None
     manual_intervention: ManualInterventionMeasurement | None = None
 
     @model_validator(mode="after")
@@ -479,6 +521,7 @@ class PilotStatistics(PilotModel):
     manual_intervention_baseline: int | None = Field(default=None, ge=0)
     manual_intervention_observed: int | None = Field(default=None, ge=0)
     manual_intervention_reduction: float | None = None
+    missing_manual_measurement_case_ids: tuple[str, ...] = ()
     exact_replay_pair_count: int = Field(ge=0)
     exact_replay_covered_count: int = Field(ge=0)
     exact_replay_coverage: float | None = Field(default=None, ge=0.0, le=1.0)

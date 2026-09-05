@@ -31,6 +31,7 @@ from scitaste.model_nodes.pilot_models import (
     AcceptanceStatus,
     ExpectedApplicability,
     IndependentOutcomeReview,
+    ManualInterventionMeasurement,
     ManualMeasurementRole,
     PilotAcceptance,
     PilotCase,
@@ -84,13 +85,17 @@ class BoundedPilotRunner:
         *,
         report_id: str,
         generated_at: datetime,
+        manual_interventions: Mapping[str, ManualInterventionMeasurement] | None = None,
         independent_outcome_review: IndependentOutcomeReview | None = None,
     ) -> PilotReport:
         """Execute cases in declared order and return a hash-verified report."""
 
         protocol = _strict_copy(PilotProtocol, protocol)
+        measurements = _manual_measurements(protocol, manual_interventions)
         self._resolved = {}
-        case_results = tuple(self._run_case(case) for case in protocol.cases)
+        case_results = tuple(
+            self._run_case(case, measurements.get(case.case_id)) for case in protocol.cases
+        )
         statistics = _statistics(protocol, case_results)
         acceptance = evaluate_acceptance(
             protocol,
@@ -114,7 +119,11 @@ class BoundedPilotRunner:
             acceptance=acceptance,
         )
 
-    def _run_case(self, case: PilotCase) -> PilotCaseResult:
+    def _run_case(
+        self,
+        case: PilotCase,
+        manual_intervention: ManualInterventionMeasurement | None,
+    ) -> PilotCaseResult:
         if case.condition is PilotCondition.DETERMINISTIC_ONLY:
             baseline = {
                 "case_id": case.case_id,
@@ -123,10 +132,18 @@ class BoundedPilotRunner:
                 "input": case.node_input.model_dump(mode="json"),
                 "context": case.context.model_dump(mode="json"),
                 "policy": case.policy.model_dump(mode="json"),
-                "manual_intervention": case.manual_intervention.model_dump(mode="json"),
+                "manual_intervention_requirement": (
+                    case.manual_intervention_requirement.model_dump(mode="json")
+                ),
+                "manual_intervention": (
+                    manual_intervention.model_dump(mode="json")
+                    if manual_intervention is not None
+                    else None
+                ),
             }
             return _case_result(
                 case,
+                manual_intervention=manual_intervention,
                 outcome=PilotOutcome.BASELINE,
                 invoked=False,
                 schema_valid=None,
@@ -138,6 +155,7 @@ class BoundedPilotRunner:
         ):
             return _case_result(
                 case,
+                manual_intervention=manual_intervention,
                 outcome=PilotOutcome.PLANNED,
                 invoked=False,
                 schema_valid=None,
@@ -157,6 +175,7 @@ class BoundedPilotRunner:
         except NodeNotApplicableError as exc:
             return _case_result(
                 case,
+                manual_intervention=manual_intervention,
                 outcome=PilotOutcome.NOT_APPLICABLE,
                 invoked=False,
                 schema_valid=None,
@@ -167,6 +186,7 @@ class BoundedPilotRunner:
         except NodePolicyViolationError as exc:
             return _case_result(
                 case,
+                manual_intervention=manual_intervention,
                 outcome=PilotOutcome.REJECTED,
                 invoked=False,
                 schema_valid=None,
@@ -174,7 +194,12 @@ class BoundedPilotRunner:
                 model_id=backend.model,
                 rejection_reasons=(str(exc),),
             )
-        return _node_case_result(case, result, backend=backend)
+        return _node_case_result(
+            case,
+            result,
+            backend=backend,
+            manual_intervention=manual_intervention,
+        )
 
     def _backend_for(self, case: PilotCase) -> StructuredModelBackend:
         assert case.backend_key is not None
@@ -223,6 +248,7 @@ def _node_case_result(
     result: NodeResult[Any],
     *,
     backend: StructuredModelBackend,
+    manual_intervention: ManualInterventionMeasurement | None,
 ) -> PilotCaseResult:
     response = result.response
     reasons = tuple(result.rejection_reasons)
@@ -237,6 +263,7 @@ def _node_case_result(
     tool_count = len(response.tool_calls)
     return _case_result(
         case,
+        manual_intervention=manual_intervention,
         outcome=outcome,
         invoked=True,
         schema_valid=schema_valid,
@@ -265,7 +292,12 @@ def _node_case_result(
     )
 
 
-def _case_result(case: PilotCase, **values: Any) -> PilotCaseResult:
+def _case_result(
+    case: PilotCase,
+    *,
+    manual_intervention: ManualInterventionMeasurement | None,
+    **values: Any,
+) -> PilotCaseResult:
     payload = {
         "schema_version": "1.0",
         "case_id": case.case_id,
@@ -274,7 +306,8 @@ def _case_result(case: PilotCase, **values: Any) -> PilotCaseResult:
         "expected_outcome": values["outcome"] in case.allowed_outcomes,
         "replay_pair_id": case.replay_pair_id,
         "replay_role": case.replay_role,
-        "manual_intervention": case.manual_intervention,
+        "manual_intervention_requirement": case.manual_intervention_requirement,
+        "manual_intervention": manual_intervention,
         **values,
     }
     evidence_payload = {
@@ -300,6 +333,46 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
+def _manual_measurements(
+    protocol: PilotProtocol,
+    supplied: Mapping[str, ManualInterventionMeasurement] | None,
+) -> dict[str, ManualInterventionMeasurement]:
+    requirements = {
+        case.case_id: case.manual_intervention_requirement
+        for case in protocol.cases
+        if case.manual_intervention_requirement is not None
+    }
+    measurements: dict[str, ManualInterventionMeasurement] = {}
+    for case_id, value in dict(supplied or {}).items():
+        if case_id not in requirements:
+            raise PilotConfigurationError(
+                f"manual measurement supplied for unregistered case {case_id!r}"
+            )
+        if not isinstance(value, ManualInterventionMeasurement):
+            raise PilotConfigurationError(
+                f"manual measurement for {case_id!r} must use the strict evidence model"
+            )
+        measurement = _strict_copy(ManualInterventionMeasurement, value)
+        if measurement.case_id != case_id:
+            raise PilotConfigurationError(
+                f"manual measurement key {case_id!r} does not match its case_id"
+            )
+        requirement = requirements[case_id]
+        if measurement.role is not requirement.role:
+            raise PilotConfigurationError(
+                f"manual measurement role for {case_id!r} does not match the protocol"
+            )
+        if (
+            requirement.requires_handleable_without_model
+            and measurement.handleable_without_model is None
+        ):
+            raise PilotConfigurationError(
+                f"manual measurement for {case_id!r} lacks handleability evidence"
+            )
+        measurements[case_id] = measurement
+    return measurements
+
+
 def _statistics(
     protocol: PilotProtocol,
     results: tuple[PilotCaseResult, ...],
@@ -322,6 +395,11 @@ def _statistics(
         (manual_baseline - manual_observed) / manual_baseline
         if manual_baseline is not None and manual_baseline > 0 and manual_observed is not None
         else None
+    )
+    missing_manual_measurements = tuple(
+        case.case_id
+        for case, result in zip(protocol.cases, results, strict=True)
+        if case.manual_intervention_requirement is not None and result.manual_intervention is None
     )
 
     pair_ids = sorted({case.replay_pair_id for case in protocol.cases if case.replay_pair_id})
@@ -405,6 +483,7 @@ def _statistics(
         manual_intervention_baseline=manual_baseline,
         manual_intervention_observed=manual_observed,
         manual_intervention_reduction=manual_reduction,
+        missing_manual_measurement_case_ids=missing_manual_measurements,
         exact_replay_pair_count=len(pair_ids),
         exact_replay_covered_count=covered_pairs,
         exact_replay_coverage=replay_coverage,
@@ -452,14 +531,28 @@ def evaluate_acceptance(
             "No complete recording/replay pair evidence is available.",
         )
     )
-    metrics.append(
-        _minimum_metric(
-            "manual_intervention_reduction",
-            statistics.manual_intervention_reduction,
-            thresholds.minimum_manual_intervention_reduction,
-            "A positive manual baseline and observed intervention count are required.",
+    if statistics.missing_manual_measurement_case_ids:
+        metrics.append(
+            AcceptanceMetric(
+                metric_id="manual_intervention_reduction",
+                status=AcceptanceStatus.BLOCKED,
+                observed=None,
+                threshold=thresholds.minimum_manual_intervention_reduction,
+                detail=(
+                    "Required external measurements are missing for: "
+                    + ", ".join(statistics.missing_manual_measurement_case_ids)
+                ),
+            )
         )
-    )
+    else:
+        metrics.append(
+            _minimum_metric(
+                "manual_intervention_reduction",
+                statistics.manual_intervention_reduction,
+                thresholds.minimum_manual_intervention_reduction,
+                "A positive manual baseline and observed intervention count are required.",
+            )
+        )
 
     unsupported_baseline = thresholds.unsupported_claim_reference_action_baseline
     if unsupported_baseline is None:

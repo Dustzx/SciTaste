@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,7 @@ from scitaste.model_nodes.pilot_models import (
     ExpectedApplicability,
     IndependentOutcomeReview,
     ManualInterventionMeasurement,
+    ManualInterventionRequirement,
     ManualMeasurementRole,
     PilotAcceptanceThresholds,
     PilotBudget,
@@ -71,7 +73,7 @@ def _actions() -> list[ResearchAction]:
 
 def _context(*, actions: list[ResearchAction] | None = None) -> NodeContext:
     return NodeContext(
-        project_id="dogfood-project",
+        project_id="scitaste-self-development",
         stage="COMMUNICATION",
         state_snapshot_id="snapshot-1",
         cumulative_api_cost_usd=0.0,
@@ -176,7 +178,7 @@ def _case(
     request_id: str | None = None,
     replay_pair_id: str | None = None,
     replay_role: ReplayEvidenceRole | None = None,
-    manual: ManualInterventionMeasurement | None = None,
+    manual_requirement: ManualInterventionRequirement | None = None,
 ) -> PilotCase:
     if policy is None:
         policy = _policy(node_type, enabled=condition is not PilotCondition.DETERMINISTIC_ONLY)
@@ -198,7 +200,7 @@ def _case(
         allowed_outcomes=allowed_outcomes,
         replay_pair_id=replay_pair_id,
         replay_role=replay_role,
-        manual_intervention=manual,
+        manual_intervention_requirement=manual_requirement,
     )
 
 
@@ -214,12 +216,9 @@ def _protocol() -> PilotProtocol:
             allowed_outcomes=(PilotOutcome.BASELINE,),
             backend_key=None,
             policy=_policy(PilotNodeType.REVIEW_SEMANTIC, enabled=False),
-            manual=ManualInterventionMeasurement(
+            manual_requirement=ManualInterventionRequirement(
                 role=ManualMeasurementRole.BASELINE,
-                count=10,
-                source="manual audit v1",
-                evidence_sha256="a" * 64,
-                handleable_without_model=True,
+                requires_handleable_without_model=True,
             ),
         ),
         _case(
@@ -230,11 +229,8 @@ def _protocol() -> PilotProtocol:
             context=_context(),
             allowed_outcomes=(PilotOutcome.ACCEPTED,),
             backend_key="review",
-            manual=ManualInterventionMeasurement(
+            manual_requirement=ManualInterventionRequirement(
                 role=ManualMeasurementRole.OBSERVED,
-                count=6,
-                source="pilot audit v1",
-                evidence_sha256="b" * 64,
             ),
         ),
         _case(
@@ -294,8 +290,8 @@ def _protocol() -> PilotProtocol:
             backend_key="live",
             policy=_policy(
                 PilotNodeType.INTERPRETATION_THREAT,
-                backend="planned-live",
-                model="pinned-live-v1",
+                backend="zhipu-direct",
+                model="glm-5.3-flash",
             ),
         ),
     )
@@ -405,7 +401,7 @@ class _LiveFakeTransport:
                 }
             ],
             "usage": {"prompt_tokens": 5, "completion_tokens": 4},
-            "model": "pinned-live-v1",
+            "model": "glm-5.3-flash",
         }
         raw = json.dumps(response, sort_keys=True, separators=(",", ":"))
         return StructuredHTTPResponse(data=response, raw_body=raw)
@@ -414,9 +410,9 @@ class _LiveFakeTransport:
 def _live_backend() -> StructuredOpenAICompatibleBackend:
     return StructuredOpenAICompatibleBackend(
         StructuredOpenAICompatibleConfig(
-            provider="planned-live",
+            provider="zhipu-direct",
             base_url="http://localhost:9999/v1",
-            model="pinned-live-v1",
+            model="glm-5.3-flash",
             api_key_env="SCITASTE_PILOT_TEST_KEY",
             live_enabled=True,
             max_retries=0,
@@ -467,15 +463,48 @@ def _bindings(
     return bindings
 
 
+def _committed_protocol_bindings(replay_path: Path) -> dict[str, object]:
+    bindings = _bindings(replay_path)
+    return {
+        "review-scripted": bindings["review"],
+        "interpretation-scripted": bindings["interpretation"],
+        "ambiguous-recording": bindings["recording"],
+        "ambiguous-replay": bindings["replay"],
+        "ambiguous-clear-margin": bindings["clear"],
+    }
+
+
 def _review() -> IndependentOutcomeReview:
     return IndependentOutcomeReview(
-        review_id="independent-review-1",
-        reviewer_id="reviewer-outside-pilot-team",
+        review_id="synthetic-pytest-review",
+        reviewer_id="synthetic-independent-test-reviewer",
         reviewed_at=NOW,
         independent=True,
         decision=ReviewDecision.APPROVED,
-        evidence_sha256="a" * 64,
+        evidence_sha256=hashlib.sha256(b"synthetic pytest outcome review").hexdigest(),
     )
+
+
+def _synthetic_measurements() -> dict[str, ManualInterventionMeasurement]:
+    """Test-only measurements; these are not evidence for the committed pilot."""
+
+    return {
+        "manual-review-baseline": ManualInterventionMeasurement(
+            case_id="manual-review-baseline",
+            role=ManualMeasurementRole.BASELINE,
+            count=10,
+            source="synthetic pytest baseline fixture",
+            evidence_sha256=hashlib.sha256(b"synthetic pytest baseline").hexdigest(),
+            handleable_without_model=True,
+        ),
+        "review-scripted": ManualInterventionMeasurement(
+            case_id="review-scripted",
+            role=ManualMeasurementRole.OBSERVED,
+            count=6,
+            source="synthetic pytest observed fixture",
+            evidence_sha256=hashlib.sha256(b"synthetic pytest observed").hexdigest(),
+        ),
+    }
 
 
 def _run(tmp_path: Path, **updates: object):
@@ -483,6 +512,7 @@ def _run(tmp_path: Path, **updates: object):
         _protocol(),
         report_id="pilot-report-1",
         generated_at=NOW,
+        manual_interventions=_synthetic_measurements(),
         independent_outcome_review=_review(),
     )
 
@@ -506,7 +536,7 @@ def test_full_offline_pilot_with_fake_live_transport_passes(
     assert report.statistics.total_tokens == 48
     assert report.statistics.cost_usd == pytest.approx(0.0309)
     assert report.statistics.additional_api_cost_by_project_usd == {
-        "dogfood-project": pytest.approx(0.0309)
+        "scitaste-self-development": pytest.approx(0.0309)
     }
     assert report.statistics.latency_ms >= 16
     assert all(result.evidence_fingerprint for result in report.case_results)
@@ -534,6 +564,7 @@ def test_clear_margin_is_not_applicable_and_does_not_call_backend(tmp_path: Path
         _protocol(),
         report_id="clear-margin-report",
         generated_at=NOW,
+        manual_interventions=_synthetic_measurements(),
         independent_outcome_review=_review(),
     )
     clear_result = next(
@@ -600,6 +631,7 @@ def test_gate_probe_acceptance_is_counted_as_bypass(
         protocol,
         report_id="bypass-report",
         generated_at=NOW,
+        manual_interventions=_synthetic_measurements(),
         independent_outcome_review=_review(),
     )
 
@@ -665,6 +697,7 @@ def test_budget_and_tool_telemetry_feed_acceptance(
         _protocol(),
         report_id="budget-report",
         generated_at=NOW,
+        manual_interventions=_synthetic_measurements(),
         independent_outcome_review=_review(),
     )
 
@@ -674,7 +707,7 @@ def test_budget_and_tool_telemetry_feed_acceptance(
     assert review.total_tokens == 108
     assert review.unbounded_tool_call_count == 1
     assert report.statistics.unbounded_tool_call_count == 1
-    assert report.statistics.additional_api_cost_by_project_usd["dogfood-project"] > 0.15
+    assert report.statistics.additional_api_cost_by_project_usd["scitaste-self-development"] > 0.15
     assert report.acceptance.overall_status is AcceptanceStatus.FAIL
 
 
@@ -683,6 +716,7 @@ def test_missing_independent_review_is_a_blocker(tmp_path: Path) -> None:
         _protocol(),
         report_id="no-review-report",
         generated_at=NOW,
+        manual_interventions=_synthetic_measurements(),
     )
     metric = next(
         item for item in report.acceptance.metrics if item.metric_id == "independent_outcome_review"
@@ -690,6 +724,37 @@ def test_missing_independent_review_is_a_blocker(tmp_path: Path) -> None:
     assert metric.status is AcceptanceStatus.BLOCKED
     assert report.acceptance.overall_status is AcceptanceStatus.BLOCKED
     assert report.acceptance.eligible is False
+
+
+def test_missing_external_manual_measurements_block_without_aborting(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SCITASTE_PILOT_TEST_KEY", "offline-placeholder")
+    measurements = _synthetic_measurements()
+    measurements.pop("review-scripted")
+    report = BoundedPilotRunner(
+        backends=_bindings(tmp_path / "exact-replay.jsonl", include_live=True)
+    ).run(
+        _protocol(),
+        report_id="missing-manual-evidence",
+        generated_at=NOW,
+        manual_interventions=measurements,
+        independent_outcome_review=_review(),
+    )
+
+    assert report.verify_sha256()
+    assert report.statistics.missing_manual_measurement_case_ids == ("review-scripted",)
+    assert report.statistics.manual_intervention_baseline == 10
+    assert report.statistics.manual_intervention_observed is None
+    assert report.statistics.manual_intervention_reduction is None
+    manual_metric = next(
+        metric
+        for metric in report.acceptance.metrics
+        if metric.metric_id == "manual_intervention_reduction"
+    )
+    assert manual_metric.status is AcceptanceStatus.BLOCKED
+    assert report.acceptance.overall_status is AcceptanceStatus.BLOCKED
 
 
 def test_report_hash_is_stable_and_tampering_is_rejected(tmp_path: Path) -> None:
@@ -715,7 +780,9 @@ def test_report_write_refuses_overwrite_by_default(tmp_path: Path) -> None:
     assert target.read_bytes() == original
 
 
-def test_committed_protocol_is_strict_and_self_dogfooding_only() -> None:
+def test_committed_protocol_without_external_evidence_is_honestly_blocked(
+    tmp_path: Path,
+) -> None:
     root = Path(__file__).resolve().parents[2]
     protocol = load_pilot_protocol(
         root / "configs/model_nodes/bounded_self_development_pilot_v1.yaml"
@@ -725,6 +792,32 @@ def test_committed_protocol_is_strict_and_self_dogfooding_only() -> None:
     assert protocol.effectiveness_claim is False
     assert {case.node_type for case in protocol.cases} == set(PilotNodeType)
     assert {case.condition for case in protocol.cases} == set(PilotCondition)
+    live = next(
+        case for case in protocol.cases if case.condition is PilotCondition.LIVE_STRUCTURED_NODE
+    )
+    assert (live.expected_backend_id, live.expected_model_id) == (
+        "zhipu-direct",
+        "glm-5.3-flash",
+    )
+    assert {case.context.value.project_id for case in protocol.cases} == {
+        "scitaste-self-development"
+    }
+
+    report = BoundedPilotRunner(
+        backends=_committed_protocol_bindings(tmp_path / "committed-replay.jsonl")
+    ).run(
+        protocol,
+        report_id="committed-protocol-without-external-evidence",
+        generated_at=NOW,
+    )
+    assert report.statistics.planned_count == 1
+    assert report.statistics.missing_manual_measurement_case_ids == (
+        "manual-review-baseline",
+        "review-scripted",
+    )
+    assert report.independent_outcome_review is None
+    assert report.acceptance.overall_status is AcceptanceStatus.BLOCKED
+    assert report.acceptance.eligible is False
 
 
 def test_protocol_rejects_unknown_fields_and_input_type_coercion() -> None:

@@ -46,7 +46,7 @@ cases:
     context:
       schema_version: "1.0"
       value: &common_context
-        project_id: dogfood-project
+        project_id: scitaste-self-development
         stage: COMMUNICATION
         state_snapshot_id: snapshot-1
         cumulative_api_cost_usd: 0.0
@@ -78,13 +78,10 @@ cases:
     gate_probe: false
     replay_pair_id: null
     replay_role: null
-    manual_intervention:
+    manual_intervention_requirement:
       schema_version: "1.0"
       role: baseline
-      count: 10
-      source: manual dogfood audit v1
-      evidence_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-      handleable_without_model: true
+      requires_handleable_without_model: true
 
   - schema_version: "1.0"
     case_id: review-scripted
@@ -124,13 +121,10 @@ cases:
     gate_probe: false
     replay_pair_id: null
     replay_role: null
-    manual_intervention:
+    manual_intervention_requirement:
       schema_version: "1.0"
       role: observed
-      count: 6
-      source: scripted dogfood audit v1
-      evidence_sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-      handleable_without_model: null
+      requires_handleable_without_model: false
 
   - schema_version: "1.0"
     case_id: interpretation-scripted
@@ -185,7 +179,7 @@ cases:
     gate_probe: false
     replay_pair_id: null
     replay_role: null
-    manual_intervention: null
+    manual_intervention_requirement: null
 
   - schema_version: "1.0"
     case_id: ambiguous-recording
@@ -223,7 +217,7 @@ cases:
     context:
       schema_version: "1.0"
       value: &ambiguous_context
-        project_id: dogfood-project
+        project_id: scitaste-self-development
         stage: COMMUNICATION
         state_snapshot_id: snapshot-1
         cumulative_api_cost_usd: 0.0
@@ -255,7 +249,7 @@ cases:
     gate_probe: false
     replay_pair_id: ambiguous-pair-v1
     replay_role: recording
-    manual_intervention: null
+    manual_intervention_requirement: null
 
   - schema_version: "1.0"
     case_id: ambiguous-replay
@@ -280,7 +274,7 @@ cases:
     gate_probe: false
     replay_pair_id: ambiguous-pair-v1
     replay_role: replay
-    manual_intervention: null
+    manual_intervention_requirement: null
 
   - schema_version: "1.0"
     case_id: ambiguous-clear-margin
@@ -310,7 +304,7 @@ cases:
     gate_probe: false
     replay_pair_id: null
     replay_role: null
-    manual_intervention: null
+    manual_intervention_requirement: null
 
   - schema_version: "1.0"
     case_id: interpretation-live-plan
@@ -320,8 +314,8 @@ cases:
     seed: 7
     request_id: interpretation-live-plan
     backend_key: interpretation-live
-    expected_backend_id: planned-live
-    expected_model_id: pinned-live-v1
+    expected_backend_id: zhipu-direct
+    expected_model_id: glm-5.3-flash
     budget: *budget
     node_input: *interpretation_input
     context:
@@ -333,8 +327,8 @@ cases:
         policy_id: pilot-interpretation-live
         enabled: true
         allowed_node_names: [interpretation-threat]
-        expected_backend: planned-live
-        expected_model: pinned-live-v1
+        expected_backend: zhipu-direct
+        expected_model: glm-5.3-flash
         allowed_tool_names: []
         allowed_action_types: [REPRODUCE]
         max_request_bytes: 100000
@@ -350,4 +344,4 @@ cases:
     gate_probe: false
     replay_pair_id: null
     replay_role: null
-    manual_intervention: null
+    manual_intervention_requirement: null

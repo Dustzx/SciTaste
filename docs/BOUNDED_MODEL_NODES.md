@@ -170,13 +170,14 @@ the implementation pilot. Its protocol, cases, input envelopes, `NodeContext`,
 backend/model identities are all explicit and closed to unknown fields. The
 fixture is permanently marked `self_dogfooding_only: true`,
 `retrieval_eligible: false`, and `effectiveness_claim: false`; a passing report
-does not change those declarations.
+does not change those declarations. Its live condition is pinned to
+`zhipu-direct / glm-5.3-flash`.
 
 The runner distinguishes four conditions by concrete backend type:
 
 | Condition | Behavior | Backend boundary |
 |---|---|---|
-| `deterministic_only` | records the externally evidenced manual-intervention/handleability baseline and never invokes a model backend | no backend binding is permitted |
+| `deterministic_only` | pre-registers a required manual baseline and handleability judgment and never invokes a model backend | no backend binding is permitted |
 | `scripted_node` | executes deterministic offline fixtures | only `ScriptedStructuredBackend`, optionally inside `RecordingStructuredBackend` |
 | `replay_node` | reproduces an exact recorded request | only `ReplayStructuredBackend`; a replay miss never falls back |
 | `live_structured_node` | remains a planned result when no backend is injected | executes only an explicitly injected `StructuredOpenAICompatibleBackend` whose own `live_enabled` gate is true |
@@ -187,9 +188,15 @@ case, a clear-margin not-applicable case, and a recording/replay pair with an
 identical request contract. This module is not connected to the CLI, runtime,
 controller, executor, retrieval corpus, or full workflow.
 
-Each manual-intervention measurement names its source and pins the external
-measurement artifact with `evidence_sha256`; deterministic baselines also state
-whether the case was handleable without a model.
+The committed protocol contains only `ManualInterventionRequirement` values: it
+declares which case needs the baseline, which needs the observed count, and that
+the deterministic baseline must assess whether the case is handleable without a
+model. It contains no measured count, source, or evidence hash. Actual
+`ManualInterventionMeasurement` values enter only as an external mapping keyed
+by `case_id` when `BoundedPilotRunner.run` is called. Every supplied measurement
+must repeat the matching case and role, name its real source, and pin its
+measurement artifact with `evidence_sha256`; a baseline also records
+`handleable_without_model`.
 
 `BoundedPilotRunner` produces a result for every declared case plus separate
 total-case and actual planned-outcome counts, followed by invoked,
@@ -200,7 +207,7 @@ expected rejections, deterministic baselines, planned live cases, and expected
 not-applicable cases remain distinct audit outcomes. Each invocation retains the
 request, response-content, result, and case-evidence fingerprints. A
 deterministic-only result instead retains a fingerprint of its complete baseline
-record.
+record, including whether external measurement evidence was present.
 
 Exact replay coverage is credited only when the same report contains both a
 successful non-cached recording and a successful cached replay with identical
@@ -221,11 +228,15 @@ The acceptance evaluator returns `pass`, `fail`, or `blocker` separately for:
 - protocol-outcome conformance; and
 - independent outcome review.
 
-Missing denominators, baselines, telemetry, replay pairs, or review evidence are
-blockers, never inferred passes. A live case without its explicitly injected
-backend remains `planned` and makes the report blocked. A report is eligible
-only when every metric passes. Eligibility still means only that the registered
-pilot gates passed; it is not an effectiveness or autonomy claim.
+Missing denominators, required external manual measurements, telemetry, replay
+pairs, or review evidence are blockers, never inferred passes. Missing manual
+measurements do not abort the run and are listed by case ID in the report. A live
+case without its explicitly injected backend remains `planned` and makes the
+report blocked. Loading the committed protocol without live evidence, external
+manual measurements, or independent review therefore produces an honest blocked
+report. A report is eligible only when every metric passes. Eligibility still
+means only that the registered pilot gates passed; it is not an effectiveness or
+autonomy claim.
 
 `save_pilot_report` verifies the report's canonical SHA-256, writes a fully
 fsynced temporary file in the destination directory, and publishes it
@@ -241,7 +252,10 @@ make check
 git diff --check
 ```
 
-The tests cover accepted proposals, strict schema rejection, invented references
+Pilot tests label their manual measurements as synthetic fixtures and exercise
+the live condition with the real compatible-backend class plus a fake transport;
+neither is evidence for the committed self-development pilot. The tests cover
+accepted proposals, strict schema rejection, invented references
 and actions, disabled nodes, clear-margin bypass, provider/model drift, token,
 finite cumulative cost and latency limits, missing cost telemetry, unallowlisted
 tools, raw hash validation, boundary mutation detection, exact recording/replay
