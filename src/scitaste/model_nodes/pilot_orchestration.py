@@ -31,6 +31,8 @@ from scitaste.model_nodes.backends import (
     ScriptedStructuredReply,
 )
 from scitaste.model_nodes.openai_compatible import (
+    HttpxStructuredTransport,
+    StructuredHTTPResponse,
     StructuredHTTPTransport,
     StructuredOpenAICompatibleBackend,
     StructuredOpenAICompatibleConfig,
@@ -517,6 +519,43 @@ class PilotVerificationRecord(OrchestrationModel):
         return self
 
 
+class PilotLiveHTTPRecording(OrchestrationModel):
+    """Exact provider exchange captured before semantic response parsing."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    captured_at: datetime
+    project_id: str
+    run_id: str
+    case_id: str
+    request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    endpoint: str
+    request_payload: dict[str, Any]
+    request_payload_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    response_data: dict[str, Any]
+    raw_response: str
+    raw_response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    recording_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @classmethod
+    def create(cls, **payload: Any) -> PilotLiveHTTPRecording:
+        unsigned = cls.model_construct(recording_sha256="0" * 64, **payload)
+        digest = canonical_sha256(unsigned.model_dump(mode="json", exclude={"recording_sha256"}))
+        return cls.model_validate({**payload, "recording_sha256": digest})
+
+    @model_validator(mode="after")
+    def verify_recording(self) -> PilotLiveHTTPRecording:
+        if self.captured_at.tzinfo is None or self.captured_at.utcoffset() is None:
+            raise ValueError("captured_at must be timezone-aware")
+        if self.request_payload_sha256 != canonical_sha256(self.request_payload):
+            raise ValueError("request payload hash mismatch")
+        if self.raw_response_sha256 != hashlib.sha256(self.raw_response.encode()).hexdigest():
+            raise ValueError("raw response hash mismatch")
+        expected = canonical_sha256(self.model_dump(mode="json", exclude={"recording_sha256"}))
+        if self.recording_sha256 != expected:
+            raise ValueError("live recording hash mismatch")
+        return self
+
+
 class PilotRunSummary(OrchestrationModel):
     schema_version: Literal["1.0"] = "1.0"
     status: str
@@ -560,6 +599,56 @@ class _FailureRecord(OrchestrationModel):
 
 
 CaseHook = Callable[[PilotCase], None]
+
+
+class _ProjectRecordingTransport:
+    """Persist a successful HTTP exchange before higher-level parsing can fail."""
+
+    def __init__(
+        self,
+        delegate: StructuredHTTPTransport,
+        *,
+        destination: Path,
+        project_id: str,
+        run_id: str,
+        case: PilotCase,
+    ) -> None:
+        self.delegate = delegate
+        self.destination = destination
+        self.project_id = project_id
+        self.run_id = run_id
+        self.case = case
+
+    def post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        payload: dict[str, Any],
+        timeout: float,
+    ) -> StructuredHTTPResponse:
+        response = self.delegate.post(
+            url,
+            headers=headers,
+            payload=payload,
+            timeout=timeout,
+        )
+        recording = PilotLiveHTTPRecording.create(
+            schema_version="1.0",
+            captured_at=datetime.now(UTC),
+            project_id=self.project_id,
+            run_id=self.run_id,
+            case_id=self.case.case_id,
+            request_fingerprint=expected_request_fingerprint(self.case),
+            endpoint=url,
+            request_payload=payload,
+            request_payload_sha256=canonical_sha256(payload),
+            response_data=response.data,
+            raw_response=response.raw_body,
+            raw_response_sha256=hashlib.sha256(response.raw_body.encode()).hexdigest(),
+        )
+        _write_model_exclusive(self.destination, recording)
+        return response
 
 
 class ProjectPilotOrchestrator:
@@ -986,7 +1075,11 @@ class ProjectPilotOrchestrator:
                     case,
                     manual_intervention=measurements.get(case.case_id),
                 )
-                recording_sha = self._case_recording_sha(stage, case)
+                recording_sha = (
+                    self._case_recording_sha(stage, case)
+                    if result.invoked or case.replay_pair_id is not None
+                    else None
+                )
                 checkpoint = PilotCaseCheckpoint.create(
                     schema_version="1.0",
                     case_index=case_index,
@@ -1359,9 +1452,16 @@ class ProjectPilotOrchestrator:
                     path
                 )
             elif live_authorized:
+                live_transport = _ProjectRecordingTransport(
+                    self.live_transport or HttpxStructuredTransport(),
+                    destination=self._live_recording_path(stage, case),
+                    project_id=loaded.protocol.cases[0].context.value.project_id,
+                    run_id=stage.parent.name,
+                    case=case,
+                )
                 backends[binding.backend_key] = StructuredOpenAICompatibleBackend(
                     loaded.live_configs[binding.backend_key],
-                    transport=self.live_transport,
+                    transport=live_transport,
                 )
         return backends
 
@@ -1498,7 +1598,12 @@ class ProjectPilotOrchestrator:
         predecessor: str,
         stage: Path,
     ) -> None:
-        expected_recording = self._case_recording_sha(stage, case)
+        if case.condition is PilotCondition.LIVE_STRUCTURED_NODE and not checkpoint.result.invoked:
+            if self._live_recording_path(stage, case).exists():
+                raise PilotOrchestrationError("uninvoked live case has recording evidence")
+            expected_recording = None
+        else:
+            expected_recording = self._case_recording_sha(stage, case)
         expected_measurement = canonical_sha256(measurement) if measurement is not None else None
         expected = {
             "case_index": case_index,
@@ -1624,6 +1729,27 @@ class ProjectPilotOrchestrator:
     ) -> None:
         completed_ids = {checkpoint.case_id for checkpoint in checkpoints}
         for case in protocol.cases:
+            if case.condition is PilotCondition.LIVE_STRUCTURED_NODE:
+                path = self._live_recording_path(stage, case)
+                if path.exists() and case.case_id not in completed_ids:
+                    attempt_id = f"orphan-live-recording-{time.time_ns()}-{os.getpid()}"
+                    attempt = stage / "attempts" / attempt_id
+                    attempt.mkdir(parents=True, exist_ok=False)
+                    os.replace(path, attempt / "orphan-live-http.json")
+                    _write_model_exclusive(
+                        attempt / "failure.json",
+                        _FailureRecord(
+                            attempt_id=attempt_id,
+                            failed_at=datetime.now(UTC),
+                            case_index=protocol.cases.index(case),
+                            case_id=case.case_id,
+                            error_code="orphan_live_recording",
+                            detail=(
+                                "case execution failed; inspect configuration and provider logs"
+                            ),
+                        ),
+                    )
+                continue
             if case.replay_role is not ReplayEvidenceRole.RECORDING:
                 continue
             path = self._recording_path(stage, case)
@@ -1660,6 +1786,10 @@ class ProjectPilotOrchestrator:
             recording = self._recording_path(stage, case)
             if recording.exists():
                 os.replace(recording, attempt / "incomplete-recording.jsonl")
+        if case.condition is PilotCondition.LIVE_STRUCTURED_NODE:
+            recording = self._live_recording_path(stage, case)
+            if recording.exists():
+                os.replace(recording, attempt / "incomplete-live-http.json")
         _write_model_exclusive(
             attempt / "failure.json",
             _FailureRecord(
@@ -1685,6 +1815,17 @@ class ProjectPilotOrchestrator:
         return stage / "recordings" / f"{case.replay_pair_id}.jsonl"
 
     def _case_recording_sha(self, stage: Path, case: PilotCase) -> str | None:
+        if case.condition is PilotCondition.LIVE_STRUCTURED_NODE:
+            path = self._live_recording_path(stage, case)
+            recording = _load_model(path, PilotLiveHTTPRecording)
+            if (
+                recording.project_id != case.context.value.project_id
+                or recording.run_id != stage.parent.name
+                or recording.case_id != case.case_id
+                or recording.request_fingerprint != expected_request_fingerprint(case)
+            ):
+                raise PilotOrchestrationError("live recording identity drift")
+            return hashlib.sha256(path.read_bytes()).hexdigest()
         if case.replay_pair_id is None:
             return None
         path = self._recording_path(stage, case)
@@ -1701,6 +1842,13 @@ class ProjectPilotOrchestrator:
     ) -> dict[str, str]:
         hashes: dict[str, str] = {}
         for case in protocol.cases:
+            if case.condition is PilotCondition.LIVE_STRUCTURED_NODE:
+                path = self._live_recording_path(stage, case)
+                if path.exists():
+                    recording_sha = self._case_recording_sha(stage, case)
+                    assert recording_sha is not None
+                    hashes[f"live:{case.case_id}"] = recording_sha
+                continue
             if case.replay_pair_id is None or case.replay_pair_id in hashes:
                 continue
             path = self._recording_path(stage, case)
@@ -1708,6 +1856,11 @@ class ProjectPilotOrchestrator:
                 raise PilotOrchestrationError(f"missing recording for pair {case.replay_pair_id!r}")
             hashes[case.replay_pair_id] = hashlib.sha256(path.read_bytes()).hexdigest()
         return hashes
+
+    @staticmethod
+    def _live_recording_path(stage: Path, case: PilotCase) -> Path:
+        validate_entry_id(case.case_id, field_name="case_id")
+        return stage / "recordings/live" / f"{case.case_id}.json"
 
     @staticmethod
     def _summary(

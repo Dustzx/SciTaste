@@ -351,6 +351,27 @@ class _FakeLiveTransport:
         return StructuredHTTPResponse(data=body, raw_body=raw)
 
 
+class _MalformedLiveTransport:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def post(self, url, *, headers, payload, timeout) -> StructuredHTTPResponse:
+        del url, headers, payload, timeout
+        self.calls += 1
+        body = {
+            "choices": [
+                {
+                    "message": {"content": "not-json"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 4},
+            "model": "glm-5.3-flash",
+        }
+        raw = json.dumps(body, sort_keys=True, separators=(",", ":"))
+        return StructuredHTTPResponse(data=body, raw_body=raw)
+
+
 def _stage(runtime: ProjectRuntime) -> Path:
     return runtime.outputs_root / "projects" / PROJECT_ID / "runs" / RUN_ID / PILOT_STAGE_PATH
 
@@ -493,6 +514,59 @@ def test_explicit_live_uses_fake_transport_and_external_evidence(
     assert report.independent_outcome_review is not None
     assert (_stage(runtime) / "external/manual_interventions.json").is_file()
     assert (_stage(runtime) / "external/independent_review.json").is_file()
+    live_recording = _stage(runtime) / "recordings/live/interpretation-live-plan.json"
+    assert live_recording.is_file()
+    recording = json.loads(live_recording.read_text(encoding="utf-8"))
+    assert recording["project_id"] == PROJECT_ID
+    assert recording["run_id"] == RUN_ID
+    assert recording["case_id"] == "interpretation-live-plan"
+    assert recording["response_data"]["model"] == "glm-5.3-flash"
+    verification = json.loads((_stage(runtime) / "verification.json").read_text())
+    assert verification["recording_sha256_by_pair"]["live:interpretation-live-plan"] == (
+        _sha(live_recording)
+    )
+
+
+def test_failed_live_response_is_archived_exactly_and_resume_retries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    secret = "live-secret-not-in-evidence"
+    monkeypatch.setenv("SCITASTE_ORCHESTRATION_TEST_KEY", secret)
+    config = _build_config(tmp_path, external_evidence=True, config_live_enabled=True)
+    runtime = _runtime(tmp_path)
+    malformed = _MalformedLiveTransport()
+
+    with pytest.raises(PilotOrchestrationError, match="archived failed-attempt"):
+        ProjectPilotOrchestrator(runtime, live_transport=malformed).execute(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            expected_revision=0,
+            config_path=config,
+            allow_live=True,
+        )
+
+    assert malformed.calls == 1
+    stage = _stage(runtime)
+    archived = list((stage / "attempts").glob("*/incomplete-live-http.json"))
+    assert len(archived) == 1
+    recording = json.loads(archived[0].read_text(encoding="utf-8"))
+    assert recording["response_data"]["choices"][0]["message"]["content"] == "not-json"
+    assert secret not in archived[0].read_text(encoding="utf-8")
+    assert not (stage / "recordings/live/interpretation-live-plan.json").exists()
+
+    good = _FakeLiveTransport()
+    resumed = ProjectPilotOrchestrator(runtime, live_transport=good).execute(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        expected_revision=runtime.open(PROJECT_ID).revision,
+        config_path=config,
+        resume=True,
+        allow_live=True,
+    )
+    assert resumed.completed_count == 7
+    assert good.calls == 1
+    assert (stage / "recordings/live/interpretation-live-plan.json").is_file()
 
 
 def test_missing_external_evidence_is_not_filled_from_scripted_fixture(tmp_path: Path) -> None:
