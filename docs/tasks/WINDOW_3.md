@@ -2,7 +2,7 @@
 
 Assignment token: `W3-generative-ui-app-20260905-r1`
 
-Status: `assigned`
+Status: `in progress`
 
 ## Workspace
 
@@ -99,4 +99,3 @@ Return a clean feature branch with cohesive commits and the standard handoff
 fields from `docs/tasks/README.md`. Document the exact trust boundary that still
 separates a proposal receipt from controller approval and execution. Do not merge
 or push `main`.
-

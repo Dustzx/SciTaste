@@ -2,7 +2,7 @@
 
 Assignment token: `W2-model-pilot-orchestration-20260905-r1`
 
-Status: `assigned`
+Status: `in progress`
 
 ## Workspace
 
@@ -86,4 +86,3 @@ network call is authorized by this assignment.
 Return a clean feature branch with cohesive commits and the standard handoff
 fields from `docs/tasks/README.md`. Explicitly list any remaining step needed for
 a real `zhipu-direct/glm-5.3-flash` execution. Do not merge or push `main`.
-

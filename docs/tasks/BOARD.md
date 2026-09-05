@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.1`
+Board revision: `2026-09-05.2`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Integration, Phase 9/core workflow, shared docs, final acceptance | in progress | `main` | `/home/good/zfx/papers/SciTaste` | Window 2/3 handoffs |
-| 2 | Production pilot orchestration and project-owned evidence | assigned | `feat/model-node-pilot-orchestration` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | dispatch base |
-| 3 | Trusted local generative-UI application boundary | assigned | `feat/generative-ui-app-boundary` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | dispatch base |
+| 2 | Production pilot orchestration and project-owned evidence | in progress | `feat/model-node-pilot-orchestration` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | `425badc` |
+| 3 | Trusted local generative-UI application boundary | in progress | `feat/generative-ui-app-boundary` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | `425badc` |
 
 ## Scheduling policy
 
@@ -27,4 +27,3 @@ Board revision: `2026-09-05.1`
 - Main owns Phase 9/core workflow development, both merges, project catalog
   refreshes, common architecture/roadmap/changelog edits, full-suite checks, and
   GitHub synchronization.
-
