@@ -157,11 +157,23 @@ Ledger entries are an indexed, contiguous SHA-256 predecessor chain. Each entry
 also binds its typed result and recording hashes. `status`/`verify` revalidates
 the complete chain, typed schemas, standard recordings, archived-attempt hashes,
 and cumulative totals after process restart. Writers use a non-blocking run lock
-and exclusive fsynced publication. Resume accepts only the identical invocation
-intent, archives incomplete attempts, treats an interrupted live call without
-complete priced evidence as unknown cost, and recovers the narrow case where a
-complete ledger entry was published just before its pending marker could be
-removed. It never repeats that completed call.
+and exclusive fsynced publication. Runtime roots, nested attempt/pending entries,
+recordings, ledger files, and the lock reject symbolic links and non-regular
+evidence; security-sensitive reads use no-follow file opens so a nested path
+cannot redirect verification or cleanup outside the owning run. Resume accepts
+only the identical invocation intent, archives incomplete attempts, treats an
+interrupted live call without complete priced evidence as unknown cost, and
+recovers the narrow case where a complete ledger entry was published just before
+its pending marker could be removed. Completed pending state is first atomically
+renamed to a disposable `.published--*` directory, so a crash during marker
+deletion cannot make the ledger incomplete or cause the model call to repeat.
+
+The project revision is checked once while registering the intent, again
+immediately before the backend may run, and again after it returns. A revision
+change before the call prevents backend access. A change during the call cannot
+undo an already incurred provider charge, so the exact response recording and
+known token/cost/latency telemetry are published, but the proposal is
+deterministically rejected as stale.
 
 The runtime CLI uses a strict JSON invocation configuration. It can contain an
 offline scripted reply or an OpenAI-compatible configuration that names only an

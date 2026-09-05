@@ -540,3 +540,204 @@ def test_cumulative_token_overrun_rejects_second_response_and_charges_it(
     assert "cumulative project token budget exceeded" in second.blockers
     assert second.totals.total_tokens == 2600
     assert second.totals.cost_usd == pytest.approx(0.02)
+
+
+@pytest.mark.parametrize("runtime_directory", ["attempts", "ledger", "pending", "recordings"])
+def test_runtime_rejects_nested_directory_symlink_without_touching_target(
+    tmp_path: Path,
+    runtime_directory: str,
+) -> None:
+    project, _ = _project(tmp_path)
+    stage = _stage(project)
+    stage.mkdir()
+    nested_root = stage / runtime_directory
+    nested_root.mkdir()
+    external = tmp_path / "external"
+    external.mkdir()
+    marker = external / "marker.txt"
+    marker.write_text("outside", encoding="utf-8")
+    (nested_root / "escape").symlink_to(external, target_is_directory=True)
+
+    with pytest.raises(ModelNodeRuntimeError, match="symbolic link"):
+        ModelNodeRuntime(project).status(project_id=PROJECT_ID, run_id=RUN_ID)
+
+    assert marker.read_text(encoding="utf-8") == "outside"
+
+
+@pytest.mark.parametrize("runtime_directory", ["attempts", "pending"])
+def test_runtime_rejects_symlink_nested_inside_attempt_directory(
+    tmp_path: Path,
+    runtime_directory: str,
+) -> None:
+    project, _ = _project(tmp_path)
+    stage = _stage(project)
+    stage.mkdir()
+    nested = stage / runtime_directory / "attempt-1"
+    nested.mkdir(parents=True)
+    external = tmp_path / "external-evidence.json"
+    external.write_text('{"outside":true}', encoding="utf-8")
+    (nested / "intent.json").symlink_to(external)
+
+    with pytest.raises(ModelNodeRuntimeError, match="nested evidence"):
+        ModelNodeRuntime(project).verify(project_id=PROJECT_ID, run_id=RUN_ID)
+
+    assert external.read_text(encoding="utf-8") == '{"outside":true}'
+
+
+def test_project_revision_is_rechecked_immediately_before_backend(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    backend = _backend("revision-before")
+
+    def change_revision(_intent) -> None:
+        project.update(
+            PROJECT_ID,
+            expected_revision=revision,
+            title="Concurrent project edit before backend",
+        )
+
+    failed = ModelNodeRuntime(project, before_backend=change_revision).execute(
+        backend=backend,
+        **_values(invocation_id="revision-before", revision=revision),
+    )
+
+    assert failed.outcome is RuntimeOutcome.FAILED
+    assert backend.calls == []
+    assert failed.telemetry.total_tokens == 0
+    assert failed.telemetry.cost_usd == 0
+    assert failed.recording_locator is None
+    attempt = next((_stage(project) / "attempts").iterdir())
+    assert not (attempt / "backend-started").exists()
+    assert project.open(PROJECT_ID).revision == revision + 1
+
+
+def test_project_revision_change_after_backend_charges_but_rejects_proposal(
+    tmp_path: Path,
+) -> None:
+    project, revision = _project(tmp_path)
+    delegate = _backend("revision-after")
+
+    class RevisionChangingBackend:
+        name = delegate.name
+        model = delegate.model
+
+        def complete(self, request):
+            response = delegate.complete(request)
+            project.update(
+                PROJECT_ID,
+                expected_revision=revision,
+                title="Concurrent project edit after backend",
+            )
+            return response
+
+    rejected = ModelNodeRuntime(project).execute(
+        backend=RevisionChangingBackend(),
+        **_values(invocation_id="revision-after", revision=revision),
+    )
+
+    assert rejected.outcome is RuntimeOutcome.REJECTED
+    assert rejected.result is not None
+    assert rejected.result["proposal"] is None
+    assert rejected.result["untrusted_proposal"] is not None
+    assert "project revision changed while the model-node backend was running" in rejected.blockers
+    assert rejected.telemetry.total_tokens == 15
+    assert rejected.telemetry.cost_usd == pytest.approx(0.01)
+    assert rejected.totals.total_tokens == 15
+    assert rejected.totals.cost_usd == pytest.approx(0.01)
+    assert rejected.recording_locator is not None
+    assert project.open(PROJECT_ID).revision == revision + 1
+    assert ModelNodeRuntime(project).verify(project_id=PROJECT_ID, run_id=RUN_ID).verified
+
+
+def test_atomic_pending_retirement_recovers_after_cleanup_crash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import scitaste.model_nodes.runtime as runtime_module
+
+    project, revision = _project(tmp_path)
+    values = _values(invocation_id="cleanup-crash", revision=revision)
+
+    def crash_cleanup(_path: Path) -> None:
+        raise SystemExit("simulated crash after atomic pending retirement")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(runtime_module, "_purge_retired_pending", crash_cleanup)
+        with pytest.raises(SystemExit, match="atomic pending retirement"):
+            ModelNodeRuntime(project).execute(
+                backend=_backend("cleanup-crash"),
+                **values,
+            )
+
+    retired = list((_stage(project) / "pending").glob(".published--*"))
+    assert len(retired) == 1
+    assert ModelNodeRuntime(project).status(project_id=PROJECT_ID, run_id=RUN_ID).entry_count == 1
+
+    # A second crash may have removed either marker before rmdir. Recovery must
+    # depend on the atomic directory rename, not on either disposable file.
+    for marker in retired[0].iterdir():
+        marker.unlink()
+    replay_forbidden = _backend("cleanup-crash")
+    resumed = ModelNodeRuntime(ProjectRuntime(project.outputs_root)).execute(
+        backend=replay_forbidden,
+        resume=True,
+        **values,
+    )
+
+    assert resumed.outcome is RuntimeOutcome.ACCEPTED
+    assert resumed.totals.entry_count == 1
+    assert replay_forbidden.calls == []
+    assert not list((_stage(project) / "pending").iterdir())
+
+
+def test_exact_replay_runs_with_no_remaining_invocation_token_or_cost_budget(
+    tmp_path: Path,
+) -> None:
+    project, revision = _project(tmp_path)
+    profile_payload = _profile().model_dump(mode="python", exclude_computed_fields=True)
+    profile_payload["admission"].update(
+        max_input_tokens=10,
+        max_output_tokens=5,
+        max_total_tokens=15,
+        max_response_cost_usd=0.01,
+    )
+    profile_payload["cumulative_project"].update(
+        max_invocations=1,
+        max_total_tokens=15,
+        max_api_cost_usd=0.01,
+    )
+    profile = ModelNodeProfile.model_validate(profile_payload, strict=True)
+    policy = _policy(profile)
+    runtime = ModelNodeRuntime(project)
+    source_values = _values(
+        invocation_id="zero-remaining-source",
+        request_id="zero-remaining-request",
+        revision=revision,
+    )
+    source_values.update(profile=profile, policy=policy)
+    source = runtime.execute(
+        backend=_backend("zero-remaining-request"),
+        **source_values,
+    )
+    replay_values = _values(
+        invocation_id="zero-remaining-replay",
+        request_id="zero-remaining-request",
+        revision=revision,
+    )
+    replay_values.update(
+        profile=profile,
+        policy=policy,
+        backend_mode=RuntimeBackendMode.REPLAY,
+        replay_source_invocation_id="zero-remaining-source",
+    )
+    replay = runtime.execute(backend=None, **replay_values)
+
+    assert source.outcome is RuntimeOutcome.ACCEPTED
+    assert source.totals.entry_count == 1
+    assert source.totals.total_tokens == 15
+    assert source.totals.cost_usd == pytest.approx(0.01)
+    assert replay.outcome is RuntimeOutcome.ACCEPTED
+    assert replay.blockers == ()
+    assert replay.telemetry.cached is True
+    assert replay.totals.entry_count == 2
+    assert replay.totals.total_tokens == 15
+    assert replay.totals.cost_usd == pytest.approx(0.01)

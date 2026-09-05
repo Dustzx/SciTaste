@@ -112,6 +112,7 @@ def _handle_plan(args: argparse.Namespace) -> int:
     request, loaded_config, loaded_profiles = _load_request(args)
     result = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root))).plan(
         request,
+        backend=loaded_config.config.build_backend(args.invocation_id),
         allow_live=args.allow_live,
     )
     print(
@@ -127,12 +128,13 @@ def _handle_plan(args: argparse.Namespace) -> int:
 def _handle_execute(args: argparse.Namespace) -> int:
     request, loaded_config, loaded_profiles = _load_request(args)
     facade = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root)))
+    backend = loaded_config.config.build_backend(args.invocation_id)
     if args.dry_run:
-        result = facade.plan(request, allow_live=args.allow_live)
+        result = facade.plan(request, backend=backend, allow_live=args.allow_live)
     else:
         result = facade.execute(
             request,
-            backend=loaded_config.config.build_backend(args.invocation_id),
+            backend=backend,
             resume=args.resume,
             allow_live=args.allow_live,
         )

@@ -147,8 +147,18 @@ class ModelNodeFacade:
     def __init__(self, runtime: ModelNodeRuntime) -> None:
         self.runtime = runtime
 
-    def plan(self, request: ModelNodeFacadeRequest, *, allow_live: bool = False) -> Any:
-        receipt = self.runtime.plan(allow_live=allow_live, **self._runtime_values(request))
+    def plan(
+        self,
+        request: ModelNodeFacadeRequest,
+        *,
+        backend: StructuredModelBackend | None = None,
+        allow_live: bool = False,
+    ) -> Any:
+        receipt = self.runtime.plan(
+            backend=backend,
+            allow_live=allow_live,
+            **self._runtime_values(request),
+        )
         return self._result(request.node_name, receipt)
 
     def execute(

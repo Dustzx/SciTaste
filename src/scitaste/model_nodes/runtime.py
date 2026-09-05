@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 import tempfile
 import time
 from collections.abc import Callable, Iterator
@@ -23,6 +24,7 @@ from scitaste.model_nodes.models import (
     NodePolicy,
     NodeResult,
     NodeResultStatus,
+    StructuredModelRequest,
     StructuredModelResponse,
 )
 from scitaste.model_nodes.nodes import (
@@ -51,6 +53,8 @@ from scitaste.project.runtime import ProjectRevisionConflictError
 
 MODEL_NODE_STAGE_PATH = "model_nodes"
 _ZERO_HASH = "0" * 64
+_RUNTIME_DIRECTORIES = frozenset({"attempts", "ledger", "pending", "recordings"})
+_RETIRED_PENDING_PREFIX = ".published--"
 
 
 class RuntimeModel(BaseModel):
@@ -259,6 +263,24 @@ _NODE_TYPES = {
 }
 
 
+class _PreCallValidatedBackend:
+    """Run the revision/attempt guard at the actual backend-call boundary."""
+
+    def __init__(
+        self,
+        delegate: StructuredModelBackend,
+        before_call: Callable[[], None],
+    ) -> None:
+        self.delegate = delegate
+        self.before_call = before_call
+        self.name = delegate.name
+        self.model = delegate.model
+
+    def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
+        self.before_call()
+        return self.delegate.complete(request)
+
+
 class ModelNodeRuntime:
     """Execute proposal-only nodes beneath one existing project run."""
 
@@ -274,6 +296,7 @@ class ModelNodeRuntime:
     def plan(
         self,
         *,
+        backend: StructuredModelBackend | None = None,
         project_id: str,
         run_id: str,
         invocation_id: str,
@@ -335,6 +358,7 @@ class ModelNodeRuntime:
             totals,
             stage=stage,
             allow_live=allow_live,
+            backend=backend,
         )
         if any(
             entry.intent.profile.cumulative_project != profile.cumulative_project
@@ -370,6 +394,7 @@ class ModelNodeRuntime:
             expected_revision=expected_revision,
             create_stage=True,
         )
+        _validate_runtime_layout(stage)
         with _exclusive_lock(stage / ".runtime.lock"):
             return self._execute_locked(
                 stage=stage,
@@ -406,7 +431,7 @@ class ModelNodeRuntime:
             totals=totals,
             profiles=tuple(profiles[key] for key in sorted(profiles)),
             ledger_locator=f"{base}/ledger",
-            attempt_count=len(list((stage / "attempts").glob("*/failure.json"))),
+            attempt_count=len(_archived_attempt_paths(stage)),
             pending_count=len(self._pending_directories(stage)),
         )
 
@@ -429,6 +454,7 @@ class ModelNodeRuntime:
             create_stage=True,
         )
         entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
+        _cleanup_retired_pending(stage)
         completed = {entry.intent.invocation_id: entry for entry in entries}
         completed_ids = set(completed)
         invocation_id = values["invocation_id"]
@@ -450,7 +476,10 @@ class ModelNodeRuntime:
                     if entry.replayed
                     else entry.intent.invocation_id
                 )
-                recording_path = stage / "recordings" / f"{recording_id}.jsonl"
+                recordings = _runtime_directory(stage, "recordings")
+                recording_path = (
+                    recordings / f"{recording_id}.jsonl" if recordings is not None else None
+                )
                 return self._receipt(
                     entry.intent,
                     outcome=entry.outcome,
@@ -459,8 +488,39 @@ class ModelNodeRuntime:
                     result=entry.result,
                     request_fingerprint=entry.request_fingerprint,
                     blockers=entry.blockers,
-                    recording_path=recording_path if recording_path.is_file() else None,
+                    recording_path=(
+                        recording_path
+                        if recording_path is not None
+                        and recording_path.is_file()
+                        and not recording_path.is_symlink()
+                        else None
+                    ),
                     attempt_locator=attempt_locator,
+                    entry=entry,
+                )
+            if resume:
+                entry = completed[invocation_id]
+                totals = self._totals(project_id, run_id, entries, stage=stage)
+                recording_id = (
+                    entry.intent.replay_source_invocation_id
+                    if entry.replayed
+                    else entry.intent.invocation_id
+                )
+                recording_path = _runtime_directory(stage, "recordings")
+                recording = (
+                    recording_path / f"{recording_id}.jsonl" if recording_path is not None else None
+                )
+                return self._receipt(
+                    entry.intent,
+                    outcome=entry.outcome,
+                    entry_sha256=entry.entry_sha256,
+                    totals=totals,
+                    result=entry.result,
+                    request_fingerprint=entry.request_fingerprint,
+                    blockers=entry.blockers,
+                    recording_path=(
+                        recording if recording is not None and recording.is_file() else None
+                    ),
                     entry=entry,
                 )
             raise FileExistsError(f"model-node invocation already exists: {invocation_id}")
@@ -505,7 +565,13 @@ class ModelNodeRuntime:
             expected_intent=intent,
         )
         blockers = list(
-            self._preflight_blockers(intent, totals, stage=stage, allow_live=allow_live)
+            self._preflight_blockers(
+                intent,
+                totals,
+                stage=stage,
+                allow_live=allow_live,
+                backend=backend,
+            )
         )
         if resumed_unknown:
             blockers.append("an interrupted live attempt has unknown cost")
@@ -533,22 +599,42 @@ class ModelNodeRuntime:
         if intent.backend_mode is RuntimeBackendMode.REPLAY:
             source_id = intent.replay_source_invocation_id
             assert source_id is not None
-            recording_path = stage / "recordings" / f"{source_id}.jsonl"
+            recordings = _runtime_directory(stage, "recordings", create=True)
+            assert recordings is not None
+            recording_path = recordings / f"{source_id}.jsonl"
             backend = ReplayStructuredBackend(recording_path)
         else:
             assert backend is not None
-            recording_path = stage / "recordings" / f"{invocation_id}.jsonl"
-            if recording_path.exists():
+            recordings = _runtime_directory(stage, "recordings", create=True)
+            assert recordings is not None
+            recording_path = recordings / f"{invocation_id}.jsonl"
+            if os.path.lexists(recording_path):
                 raise FileExistsError(recording_path)
             backend = RecordingStructuredBackend(backend, recording_path)
 
-        pending_dir = stage / "pending" / f"{invocation_id}--{time.time_ns()}--{os.getpid()}"
+        pending_root = _runtime_directory(stage, "pending", create=True)
+        assert pending_root is not None
+        pending_dir = pending_root / f"{invocation_id}--{time.time_ns()}--{os.getpid()}"
         pending_dir.mkdir(parents=True, exist_ok=False)
-        _write_model_exclusive(pending_dir / "intent.json", intent)
-        _write_bytes_exclusive(pending_dir / "backend-started", b"started\n")
+        _write_model_exclusive(pending_dir / "intent.json", intent, owned_root=stage)
         try:
             if self.before_backend is not None:
                 self.before_backend(intent)
+
+            def before_call() -> None:
+                self._validate_project_run(
+                    project_id,
+                    run_id,
+                    expected_revision=expected_revision,
+                    create_stage=True,
+                )
+                _write_bytes_exclusive(
+                    pending_dir / "backend-started",
+                    b"started\n",
+                    owned_root=stage,
+                )
+
+            guarded_backend = _PreCallValidatedBackend(backend, before_call)
             node_type, input_type, _ = _NODE_TYPES[intent.node_name]
             typed_input = input_type.model_validate_json(
                 json.dumps(intent.node_input, ensure_ascii=False, allow_nan=False),
@@ -557,13 +643,19 @@ class ModelNodeRuntime:
             result = node_type().run(
                 typed_input,
                 context=intent.context,
-                backend=backend,
+                backend=guarded_backend,
                 policy=intent.policy,
                 request_id=intent.request_id,
                 seed=intent.seed,
                 profile=intent.profile,
             )
             result = self._apply_cumulative_gates(result, totals, intent.profile)
+            result = self._apply_project_revision_gate(
+                result,
+                project_id=project_id,
+                run_id=run_id,
+                expected_revision=expected_revision,
+            )
             entry = self._entry_from_result(
                 index=len(entries),
                 intent=intent,
@@ -587,9 +679,14 @@ class ModelNodeRuntime:
                 if intent.backend_mode is RuntimeBackendMode.REPLAY
                 else _last_recorded_response(recording_path)
             )
+            backend_may_have_started = (pending_dir / "backend-started").is_file()
             unknown_cost = (
                 recorded_response is not None and recorded_response.usage.cost_usd is None
-            ) or (recorded_response is None and intent.backend_mode is RuntimeBackendMode.LIVE)
+            ) or (
+                recorded_response is None
+                and intent.backend_mode is RuntimeBackendMode.LIVE
+                and backend_may_have_started
+            )
             archived = self._archive_one_pending(stage, pending_dir, unknown_cost=unknown_cost)
             entry = RuntimeLedgerEntry.create(
                 index=len(entries),
@@ -622,7 +719,11 @@ class ModelNodeRuntime:
                 blockers=("model-node invocation failed; inspect archived attempt evidence",),
                 entry_sha256=_ZERO_HASH,
             )
-            _write_model_exclusive(self._entry_path(stage, entry), entry)
+            _write_model_exclusive(
+                self._entry_path(stage, entry),
+                entry,
+                owned_root=stage,
+            )
             totals = self._totals(project_id, run_id, [*entries, entry], stage=stage)
             return self._receipt(
                 intent,
@@ -634,9 +735,13 @@ class ModelNodeRuntime:
                 entry=entry,
             )
 
-        _write_model_exclusive(self._entry_path(stage, entry), entry)
+        _write_model_exclusive(
+            self._entry_path(stage, entry),
+            entry,
+            owned_root=stage,
+        )
         if pending_dir.exists():
-            _remove_empty_pending(pending_dir)
+            _retire_published_pending(pending_dir)
         totals = self._totals(project_id, run_id, [*entries, entry], stage=stage)
         return self._receipt(
             intent,
@@ -709,28 +814,65 @@ class ModelNodeRuntime:
         *,
         stage: Path,
         allow_live: bool,
+        backend: StructuredModelBackend | None,
     ) -> tuple[str, ...]:
         budget = intent.profile.cumulative_project
         blockers: list[str] = []
-        if totals.unknown_cost_count:
-            blockers.append("cumulative ledger contains unknown cost")
-        if totals.entry_count >= budget.max_invocations:
-            blockers.append("cumulative invocation budget exhausted")
-        if totals.total_tokens >= budget.max_total_tokens:
-            blockers.append("cumulative token budget exhausted")
-        if totals.cost_usd >= budget.max_api_cost_usd:
-            blockers.append("cumulative API cost budget exhausted")
+        if intent.backend_mode is not RuntimeBackendMode.REPLAY:
+            if totals.unknown_cost_count:
+                blockers.append("cumulative ledger contains unknown cost")
+            if totals.entry_count >= budget.max_invocations:
+                blockers.append("cumulative invocation budget exhausted")
+            if totals.total_tokens >= budget.max_total_tokens:
+                blockers.append("cumulative token budget exhausted")
+            if totals.cost_usd >= budget.max_api_cost_usd:
+                blockers.append("cumulative API cost budget exhausted")
         if intent.backend_mode is RuntimeBackendMode.LIVE:
             if not intent.profile.live_execution_permitted:
                 blockers.append("profile does not permit live execution")
             if not allow_live:
                 blockers.append("caller did not opt in to live execution")
+        backend_config = getattr(backend, "config", None) if backend is not None else None
+        backend_output_limit = (
+            getattr(backend_config, "max_output_tokens", None)
+            if backend_config is not None
+            else None
+        )
+        if (
+            backend_output_limit is not None
+            and intent.profile.generation.max_output_tokens > backend_output_limit
+        ):
+            blockers.append("profile output envelope exceeds the backend configuration ceiling")
         if intent.backend_mode is RuntimeBackendMode.REPLAY:
             source = intent.replay_source_invocation_id
             assert source is not None
-            if not (stage / "recordings" / f"{source}.jsonl").is_file():
+            recordings = _runtime_directory(stage, "recordings")
+            recording = recordings / f"{source}.jsonl" if recordings is not None else None
+            if recording is None or not recording.is_file() or recording.is_symlink():
                 blockers.append("exact replay source recording is missing")
         return tuple(blockers)
+
+    def _apply_project_revision_gate(
+        self,
+        result: NodeResult[Any],
+        *,
+        project_id: str,
+        run_id: str,
+        expected_revision: int,
+    ) -> NodeResult[Any]:
+        try:
+            self._validate_project_run(
+                project_id,
+                run_id,
+                expected_revision=expected_revision,
+                create_stage=False,
+            )
+        except ProjectRevisionConflictError:
+            return self._reject_result(
+                result,
+                ["project revision changed while the model-node backend was running"],
+            )
+        return result
 
     def _apply_cumulative_gates(
         self,
@@ -751,6 +893,10 @@ class ModelNodeRuntime:
             reasons.append("cumulative project API cost budget exceeded")
         if not reasons:
             return result
+        return self._reject_result(result, reasons)
+
+    @staticmethod
+    def _reject_result(result: NodeResult[Any], reasons: list[str]) -> NodeResult[Any]:
         payload = result.model_dump(mode="python", exclude_computed_fields=True)
         proposal = payload.pop("proposal")
         payload["status"] = NodeResultStatus.REJECTED
@@ -819,7 +965,11 @@ class ModelNodeRuntime:
             blockers=blockers,
             entry_sha256=_ZERO_HASH,
         )
-        _write_model_exclusive(self._entry_path(stage, entry), entry)
+        _write_model_exclusive(
+            self._entry_path(stage, entry),
+            entry,
+            owned_root=stage,
+        )
         totals = self._totals(
             intent.project_id,
             intent.run_id,
@@ -842,8 +992,8 @@ class ModelNodeRuntime:
         project_id: str,
         run_id: str,
     ) -> list[RuntimeLedgerEntry]:
-        root = stage / "ledger"
-        paths = sorted(root.glob("*.json")) if root.exists() else []
+        root = _runtime_directory(stage, "ledger")
+        paths = sorted(root.glob("*.json")) if root is not None else []
         entries: list[RuntimeLedgerEntry] = []
         predecessor = self._root_hash(project_id, run_id)
         for index, path in enumerate(paths):
@@ -866,8 +1016,14 @@ class ModelNodeRuntime:
                     else entry.intent.invocation_id
                 )
                 assert source_id is not None
-                recording = stage / "recordings" / f"{source_id}.jsonl"
-                if not recording.is_file() or _sha256_file(recording) != entry.recording_sha256:
+                recordings = _runtime_directory(stage, "recordings")
+                recording = recordings / f"{source_id}.jsonl" if recordings else None
+                if (
+                    recording is None
+                    or not recording.is_file()
+                    or recording.is_symlink()
+                    or _sha256_file(recording) != entry.recording_sha256
+                ):
                     raise ModelNodeRuntimeError("runtime recording evidence drift")
             try:
                 self._validate_typed_result(entry)
@@ -907,10 +1063,7 @@ class ModelNodeRuntime:
     ) -> RuntimeLedgerTotals:
         outcomes = [entry.outcome for entry in entries]
         completed_ids = {entry.intent.invocation_id for entry in entries}
-        archives = [
-            self._load_archived_attempt(path)
-            for path in sorted((stage / "attempts").glob("*/failure.json"))
-        ]
+        archives = [self._load_archived_attempt(path) for path in _archived_attempt_paths(stage)]
         unknown_archives = sum(
             archive.unknown_cost and archive.invocation_id not in completed_ids
             for archive in archives
@@ -1018,15 +1171,28 @@ class ModelNodeRuntime:
         unknown_cost: bool,
         preserve_recording: bool = False,
     ) -> str:
+        pending_root = _runtime_directory(stage, "pending")
+        if pending_root is None:
+            raise ModelNodeRuntimeError("runtime pending directory is missing")
+        _require_contained_directory(pending_root, directory)
         attempt_id = directory.name
-        target = stage / "attempts" / attempt_id
-        target.parent.mkdir(parents=True, exist_ok=True)
+        attempts = _runtime_directory(stage, "attempts", create=True)
+        assert attempts is not None
+        target = attempts / attempt_id
+        if os.path.lexists(target):
+            raise ModelNodeRuntimeError("refusing to replace existing runtime attempt evidence")
         os.replace(directory, target)
+        _fsync_directory(attempts)
+        _fsync_directory(pending_root)
+        _require_contained_directory(attempts, target)
         intent = _load_model(target / "intent.json", RuntimeInvocationIntent)
         recording_sha256 = None
         if intent.backend_mode is not RuntimeBackendMode.REPLAY and not preserve_recording:
-            recording = stage / "recordings" / f"{intent.invocation_id}.jsonl"
-            if recording.is_file():
+            recordings = _runtime_directory(stage, "recordings")
+            recording = (
+                recordings / f"{intent.invocation_id}.jsonl" if recordings is not None else None
+            )
+            if recording is not None and recording.is_file() and not recording.is_symlink():
                 recording_sha256 = _sha256_file(recording)
                 os.replace(recording, target / "recording.jsonl")
         failure = _ArchivedAttempt.create(
@@ -1039,7 +1205,7 @@ class ModelNodeRuntime:
             recording_sha256=recording_sha256,
             failure_sha256=_ZERO_HASH,
         )
-        _write_model_exclusive(target / "failure.json", failure)
+        _write_model_exclusive(target / "failure.json", failure, owned_root=stage)
         return (
             f"projects/{intent.project_id}/runs/{intent.run_id}/"
             f"{MODEL_NODE_STAGE_PATH}/attempts/{attempt_id}"
@@ -1047,8 +1213,20 @@ class ModelNodeRuntime:
 
     @staticmethod
     def _pending_directories(stage: Path) -> list[Path]:
-        root = stage / "pending"
-        return sorted(path for path in root.iterdir() if path.is_dir()) if root.exists() else []
+        root = _runtime_directory(stage, "pending")
+        if root is None:
+            return []
+        pending: list[Path] = []
+        for path in sorted(root.iterdir()):
+            if path.name.startswith(_RETIRED_PENDING_PREFIX):
+                if path.is_symlink() or not path.is_dir():
+                    raise ModelNodeRuntimeError("unsafe retired runtime pending entry")
+                continue
+            if path.is_symlink() or not path.is_dir():
+                raise ModelNodeRuntimeError("runtime pending entry is not a safe directory")
+            _require_contained_directory(root, path)
+            pending.append(path)
+        return pending
 
     def _validate_project_run(
         self,
@@ -1082,6 +1260,8 @@ class ModelNodeRuntime:
                 raise ModelNodeRuntimeError("model-node stage escapes its project-owned path")
         elif create_stage:
             stage.mkdir(parents=False)
+        if stage.exists():
+            _validate_runtime_layout(stage)
         return stage, run
 
     @staticmethod
@@ -1097,7 +1277,9 @@ class ModelNodeRuntime:
 
     @staticmethod
     def _entry_path(stage: Path, entry: RuntimeLedgerEntry) -> Path:
-        return stage / "ledger" / f"{entry.index:08d}__{entry.intent.invocation_id}.json"
+        ledger = _runtime_directory(stage, "ledger", create=True)
+        assert ledger is not None
+        return ledger / f"{entry.index:08d}__{entry.intent.invocation_id}.json"
 
     def _receipt(
         self,
@@ -1195,16 +1377,21 @@ def _canonical_sha256(value: Any) -> str:
 
 
 def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    descriptor = _open_regular_file_nofollow(path)
+    digest = hashlib.sha256()
+    with os.fdopen(descriptor, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _last_recorded_response(path: Path) -> StructuredModelResponse | None:
     """Read trusted response telemetry without reflecting provider payloads in errors."""
 
-    if not path.is_file() or path.is_symlink():
-        return None
     try:
-        lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        descriptor = _open_regular_file_nofollow(path)
+        with os.fdopen(descriptor, "rb") as handle:
+            lines = [line for line in handle.read().splitlines() if line.strip()]
         if not lines:
             return None
         return StructuredReplayRecord.model_validate_json(lines[-1], strict=True).response
@@ -1213,15 +1400,37 @@ def _last_recorded_response(path: Path) -> StructuredModelResponse | None:
 
 
 def _load_model(path: Path, model_type: type[BaseModel]) -> Any:
-    if not path.is_file() or path.is_symlink():
-        raise ModelNodeRuntimeError(f"missing or unsafe runtime evidence: {path.name}")
     try:
-        return model_type.model_validate_json(path.read_text(encoding="utf-8"), strict=True)
-    except ValueError as exc:
+        descriptor = _open_regular_file_nofollow(path)
+        with os.fdopen(descriptor, "rb") as handle:
+            payload = handle.read()
+        return model_type.model_validate_json(payload, strict=True)
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         raise ModelNodeRuntimeError(f"invalid runtime evidence: {path.name}") from exc
 
 
-def _write_model_exclusive(path: Path, value: BaseModel) -> None:
+def _open_regular_file_nofollow(path: Path) -> int:
+    if path.is_symlink():
+        raise ModelNodeRuntimeError(f"missing or unsafe runtime evidence: {path.name}")
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ModelNodeRuntimeError(f"missing or unsafe runtime evidence: {path.name}") from exc
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise ModelNodeRuntimeError(f"runtime evidence is not a regular file: {path.name}")
+    return descriptor
+
+
+def _write_model_exclusive(
+    path: Path,
+    value: BaseModel,
+    *,
+    owned_root: Path | None = None,
+) -> None:
     payload = (
         json.dumps(
             value.model_dump(mode="json", exclude_computed_fields=True),
@@ -1232,11 +1441,19 @@ def _write_model_exclusive(path: Path, value: BaseModel) -> None:
         ).encode()
         + b"\n"
     )
-    _write_bytes_exclusive(path, payload)
+    _write_bytes_exclusive(path, payload, owned_root=owned_root)
 
 
-def _write_bytes_exclusive(path: Path, payload: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+def _write_bytes_exclusive(
+    path: Path,
+    payload: bytes,
+    *,
+    owned_root: Path | None = None,
+) -> None:
+    if owned_root is not None:
+        _require_owned_parent(owned_root, path.parent)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.",
         suffix=".tmp",
@@ -1258,17 +1475,61 @@ def _write_bytes_exclusive(path: Path, payload: bytes) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def _remove_empty_pending(path: Path) -> None:
+def _retire_published_pending(path: Path) -> None:
+    parent = path.parent
+    _require_contained_directory(parent, path)
+    retired = parent / f"{_RETIRED_PENDING_PREFIX}{path.name}"
+    if os.path.lexists(retired):
+        raise ModelNodeRuntimeError("retired runtime pending path already exists")
+    os.replace(path, retired)
+    _fsync_directory(parent)
+    _require_contained_directory(parent, retired)
+    _purge_retired_pending(retired)
+
+
+def _purge_retired_pending(path: Path) -> None:
+    _require_contained_directory(path.parent, path)
     for item in path.iterdir():
+        if item.is_dir() and not item.is_symlink():
+            raise ModelNodeRuntimeError("retired runtime pending contains a nested directory")
         item.unlink()
     path.rmdir()
     _fsync_directory(path.parent)
 
 
+def _retired_pending_directories(stage: Path) -> list[Path]:
+    pending = _runtime_directory(stage, "pending")
+    if pending is None:
+        return []
+    retired: list[Path] = []
+    for path in sorted(pending.iterdir()):
+        if not path.name.startswith(_RETIRED_PENDING_PREFIX):
+            continue
+        _require_contained_directory(pending, path)
+        retired.append(path)
+    return retired
+
+
+def _cleanup_retired_pending(stage: Path) -> None:
+    for path in _retired_pending_directories(stage):
+        _purge_retired_pending(path)
+
+
 @contextmanager
 def _exclusive_lock(path: Path) -> Iterator[None]:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a+", encoding="utf-8") as handle:
+    if os.path.lexists(path) and (path.is_symlink() or not path.is_file()):
+        raise ModelNodeRuntimeError("runtime lock is not a safe regular file")
+    flags = os.O_RDWR | os.O_CREAT
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as exc:
+        raise ModelNodeRuntimeError("cannot open the runtime lock safely") from exc
+    with os.fdopen(descriptor, "a+", encoding="utf-8") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ModelNodeRuntimeError("runtime lock is not a safe regular file")
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -1279,6 +1540,99 @@ def _exclusive_lock(path: Path) -> Iterator[None]:
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _validate_runtime_layout(stage: Path) -> None:
+    if stage.is_symlink() or not stage.is_dir() or stage.resolve(strict=True) != stage:
+        raise ModelNodeRuntimeError("model-node stage escapes its project-owned path")
+    for child in stage.iterdir():
+        if child.is_symlink():
+            raise ModelNodeRuntimeError("runtime stage contains a symbolic link")
+        if child.name == ".runtime.lock" and not child.is_file():
+            raise ModelNodeRuntimeError("runtime lock is not a safe regular file")
+    for name in _RUNTIME_DIRECTORIES:
+        root = _runtime_directory(stage, name)
+        if root is not None:
+            _validate_runtime_directory_entries(root, directories=name in {"attempts", "pending"})
+
+
+def _runtime_directory(stage: Path, name: str, *, create: bool = False) -> Path | None:
+    if name not in _RUNTIME_DIRECTORIES:
+        raise ValueError(f"unsupported runtime directory {name!r}")
+    if not os.path.lexists(stage) and not create:
+        return None
+    if stage.is_symlink() or not stage.is_dir() or stage.resolve(strict=True) != stage:
+        raise ModelNodeRuntimeError("model-node stage escapes its project-owned path")
+    candidate = stage / name
+    if not os.path.lexists(candidate):
+        if not create:
+            return None
+        try:
+            candidate.mkdir()
+        except FileExistsError:
+            pass
+    if candidate.is_symlink() or not candidate.is_dir():
+        raise ModelNodeRuntimeError(f"runtime {name} path is not a safe directory")
+    _require_contained_directory(stage, candidate)
+    return candidate
+
+
+def _require_contained_directory(root: Path | None, path: Path) -> None:
+    if root is None or root.is_symlink() or not root.is_dir():
+        raise ModelNodeRuntimeError("runtime evidence root is not a safe directory")
+    if path.is_symlink() or not path.is_dir():
+        raise ModelNodeRuntimeError("runtime evidence path is not a safe directory")
+    try:
+        path.resolve(strict=True).relative_to(root.resolve(strict=True))
+    except (FileNotFoundError, ValueError) as exc:
+        raise ModelNodeRuntimeError("runtime evidence path escapes its owned directory") from exc
+
+
+def _require_owned_parent(root: Path, parent: Path) -> None:
+    if root.is_symlink() or not root.is_dir():
+        raise ModelNodeRuntimeError("runtime evidence root is not a safe directory")
+    try:
+        relative = parent.relative_to(root)
+    except ValueError as exc:
+        raise ModelNodeRuntimeError("runtime evidence parent escapes its owned directory") from exc
+    current = root
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink() or not current.is_dir():
+            raise ModelNodeRuntimeError("runtime evidence parent is not a safe directory")
+    try:
+        parent.resolve(strict=True).relative_to(root.resolve(strict=True))
+    except (FileNotFoundError, ValueError) as exc:
+        raise ModelNodeRuntimeError("runtime evidence parent escapes its owned directory") from exc
+
+
+def _validate_runtime_directory_entries(root: Path, *, directories: bool) -> None:
+    for entry in root.iterdir():
+        if entry.is_symlink():
+            raise ModelNodeRuntimeError("runtime directory contains a symbolic link")
+        if directories:
+            _require_contained_directory(root, entry)
+            for evidence in entry.iterdir():
+                if evidence.is_symlink() or not evidence.is_file():
+                    raise ModelNodeRuntimeError(
+                        "runtime nested evidence is not a safe regular file"
+                    )
+        elif not entry.is_file():
+            raise ModelNodeRuntimeError("runtime evidence is not a safe regular file")
+
+
+def _archived_attempt_paths(stage: Path) -> list[Path]:
+    attempts = _runtime_directory(stage, "attempts")
+    if attempts is None:
+        return []
+    paths: list[Path] = []
+    for directory in sorted(attempts.iterdir()):
+        _require_contained_directory(attempts, directory)
+        failure = directory / "failure.json"
+        if not failure.is_file() or failure.is_symlink():
+            raise ModelNodeRuntimeError("runtime attempt is missing safe failure evidence")
+        paths.append(failure)
+    return paths
 
 
 def _fsync_directory(path: Path) -> None:
