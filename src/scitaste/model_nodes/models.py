@@ -22,6 +22,66 @@ from scitaste.backends.base import Usage
 from scitaste.schema.actions import MetaAction, ResearchAction
 
 
+class ProviderGenerationEnvelope(BaseModel):
+    """Provider request capability, separate from proposal-admission authority."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    max_request_bytes: int = Field(ge=1)
+    max_output_tokens: int = Field(ge=1)
+    context_window_tokens: int = Field(ge=1)
+    structured_json: Literal[True] = True
+    deterministic_seed_supported: bool = False
+
+    @model_validator(mode="after")
+    def output_fits_context(self) -> ProviderGenerationEnvelope:
+        if self.max_output_tokens > self.context_window_tokens:
+            raise ValueError("generation output ceiling cannot exceed the context window")
+        return self
+
+
+class NodeAdmissionBudget(BaseModel):
+    """Per-invocation limits used to admit or reject one model proposal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    max_request_bytes: int = Field(ge=1)
+    max_input_tokens: int = Field(ge=0)
+    max_output_tokens: int = Field(ge=0)
+    max_total_tokens: int = Field(ge=0)
+    max_latency_ms: float = Field(ge=0, allow_inf_nan=False)
+    max_response_cost_usd: float = Field(ge=0, allow_inf_nan=False)
+    allowed_tool_names: list[str] = Field(default_factory=list)
+    max_tool_call_proposals: int = Field(default=0, ge=0)
+
+    @field_validator("allowed_tool_names")
+    @classmethod
+    def tool_names_are_unique(cls, values: list[str]) -> list[str]:
+        if len(values) != len(set(values)):
+            raise ValueError("profile tool allowlist must not contain duplicates")
+        return sorted(values)
+
+    @model_validator(mode="after")
+    def totals_are_coherent(self) -> NodeAdmissionBudget:
+        if self.max_total_tokens > self.max_input_tokens + self.max_output_tokens:
+            raise ValueError("admission total cannot exceed its input and output ceilings")
+        return self
+
+
+class CumulativeProjectBudget(BaseModel):
+    """Durable project-wide limits enforced across model-node invocations."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    max_invocations: int = Field(ge=1)
+    max_total_tokens: int = Field(ge=0)
+    max_api_cost_usd: float = Field(ge=0, allow_inf_nan=False)
+    unknown_cost_blocks_acceptance: Literal[True] = True
+
+
 class ToolCallProposal(BaseModel):
     """A non-executable request for a deterministic caller to evaluate."""
 
@@ -142,11 +202,35 @@ class StructuredModelRequest(BaseModel):
     output_schema: dict[str, JsonValue]
     seed: int = 0
     prompt_version: str = Field(min_length=1)
+    profile_id: str | None = None
+    profile_fingerprint: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    generation_envelope: ProviderGenerationEnvelope | None = None
+    admission_budget: NodeAdmissionBudget | None = None
+    cumulative_project_budget: CumulativeProjectBudget | None = None
+
+    @model_validator(mode="after")
+    def profile_fields_are_atomic(self) -> StructuredModelRequest:
+        values = (
+            self.profile_id,
+            self.profile_fingerprint,
+            self.generation_envelope,
+            self.admission_budget,
+            self.cumulative_project_budget,
+        )
+        if any(value is not None for value in values) and not all(
+            value is not None for value in values
+        ):
+            raise ValueError("structured request profile fields must be supplied together")
+        return self
 
     @computed_field
     @property
     def fingerprint(self) -> str:
-        payload = self.model_dump(mode="json", exclude={"fingerprint"})
+        payload = self.model_dump(
+            mode="json",
+            exclude={"fingerprint"},
+            exclude_none=True,
+        )
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 

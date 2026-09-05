@@ -276,6 +276,14 @@ class StructuredOpenAICompatibleBackend:
             "prompt_version": request.prompt_version,
             "seed": request.seed,
         }
+        if request.profile_id is not None:
+            identity["profile_id"] = request.profile_id
+            identity["profile_fingerprint"] = request.profile_fingerprint
+            identity["generation_envelope"] = request.generation_envelope.model_dump(mode="json")
+            identity["admission_budget"] = request.admission_budget.model_dump(mode="json")
+            identity["cumulative_project_budget"] = request.cumulative_project_budget.model_dump(
+                mode="json"
+            )
         user_content = json.dumps(
             {
                 "response_contract": (
@@ -289,6 +297,15 @@ class StructuredOpenAICompatibleBackend:
             sort_keys=True,
             separators=(",", ":"),
         )
+        requested_output_tokens = (
+            request.generation_envelope.max_output_tokens
+            if request.generation_envelope is not None
+            else config.max_output_tokens
+        )
+        if requested_output_tokens > config.max_output_tokens:
+            raise StructuredBackendDisabledError(
+                "profile output envelope exceeds the backend configuration ceiling"
+            )
         payload: dict[str, JsonValue] = {
             "model": config.model,
             "messages": [
@@ -298,7 +315,7 @@ class StructuredOpenAICompatibleBackend:
             "response_format": {"type": "json_object"},
             "seed": request.seed,
             "stream": False,
-            "max_tokens": config.max_output_tokens,
+            "max_tokens": requested_output_tokens,
         }
         payload.update(config.extra_body)
         return payload
