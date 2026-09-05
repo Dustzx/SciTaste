@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.3`
+Board revision: `2026-09-05.4`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Integration, Phase 9/core workflow, shared docs, final acceptance | in progress | `main` | `/home/good/zfx/papers/SciTaste` | Window 2/3 handoffs |
 | 2 | Production pilot orchestration and project-owned evidence | in progress | `feat/model-node-pilot-orchestration` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | `425badc` |
-| 3 | Trusted local generative-UI application boundary | ready for main review | `feat/generative-ui-app-boundary` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | `03573f5` |
+| 3 | Trusted local generative-UI application boundary | integrated; awaiting next Epic | `feat/generative-ui-app-boundary` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | `372a0a9` on main |
 
 ## Scheduling policy
 

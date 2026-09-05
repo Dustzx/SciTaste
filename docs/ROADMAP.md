@@ -340,9 +340,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A trusted factory now projects the current ProjectRuntime state into a real
   project overview and the CLI transactionally publishes its surface, fixed-shell
   renderer document, and initial audit record without overwriting a destination.
-- Pending product integration: a browser/native renderer, an authenticated API,
-  and deterministic controller endpoints for approving proposals. These are not
-  implied by the contract layer.
+- A packaged browser receiver and authenticated loopback-first API now discover
+  authoritative projects, render every trusted component, reject stale or
+  client-authored proposal payloads, and retain proposal receipts in project-local
+  replayable audit epochs across restarts.
+- Pending product integration: deterministic controller endpoints and explicit
+  approval policy for turning a pending proposal into an authorized action. The
+  local UI deliberately cannot execute proposals.
 
 ## Project controls
 

@@ -64,7 +64,10 @@ review remain pending, so no effectiveness claim is made from that pilot.
   fail-closed compatible live backend and versioned self-development pilot;
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
-  project artifacts exposed to a surface.
+  project artifacts exposed to a surface;
+- a loopback-first authenticated local UI/API that renders the closed component
+  registry, revalidates identity-only events, and persists proposal-only audit
+  receipts without invoking a controller or tool.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -129,6 +132,19 @@ Generate a trusted, content-addressed project overview bundle with:
 
 This emits declarative surface/renderer JSON plus a verified audit root; its
 actions remain proposals and cannot execute tools or mutate project state.
+
+Serve the current authoritative projects through the receiver-owned local UI:
+
+```bash
+export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
+.venv/bin/scitaste ui serve --outputs-root outputs
+```
+
+The default bind is `127.0.0.1:8765`. Project APIs require the bearer credential;
+the fixed public shell contains no project state. Browser actions produce only
+audited `proposal_pending` receipts with execution authority `none`. There is no
+controller, tool, arbitrary file, or model endpoint. See
+[`docs/GENERATIVE_UI.md`](docs/GENERATIVE_UI.md).
 
 Run the complete offline Discovery → Evidence → Communication → Figure path in
 one managed project and produce a registered Markdown/TeX/PDF paper bundle:

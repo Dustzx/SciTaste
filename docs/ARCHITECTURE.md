@@ -457,14 +457,24 @@ documents retain the binding while omitting server-owned proposal payloads. This
 decision also permits an atomic, hash-chained audit stream only after each
 surface revision or proposal receipt reproduces through the server-owned
 `SurfaceSession`. The stream records proposals, never execution authority. This
-accepts the contract and trust boundary, not a completed frontend or
-authenticated API service.
+accepts the contract and trust boundary; it does not authorize a controller or
+executor.
 
 The first-party project surface factory now accepts only a trusted
 `ProjectRuntime` plus project ID, derives the overview from that authority, and
 rechecks the binding before returning. Optional publication reloads the surface,
 renderer, and replayed audit root in a staging directory, then uses an atomic
 Linux no-replace rename; unavailable no-replace semantics fail closed.
+
+The first receiver-owned application implements the closed component registry in
+packaged HTML/CSS/JavaScript and exposes a small authenticated `/api/v1` over a
+loopback-first standard-library HTTP server. Generated text reaches only text
+nodes, while CSP forbids remote or dynamic renderer resources. The browser
+receives fixed-shell projection data rather than server-owned proposal payloads.
+Identity-only events are checked against a freshly built authoritative surface
+and appended to a project-local replayable audit epoch; their receipt still has
+execution authority `none`. Non-loopback plaintext exposure requires explicit
+acknowledgement and does not claim TLS protection.
 
 ### ADR-025: Full workflow stages extend one project-owned state
 

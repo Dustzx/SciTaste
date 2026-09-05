@@ -7,6 +7,9 @@ semantic versioning.
 
 ### Added
 
+- A loopback-first authenticated generative-UI application with a packaged fixed
+  receiver, closed project/surface/event API, stale-event revalidation,
+  project-owned replayable audits, and proposal-only receipts.
 - Integrity-checked matched-study resume with self-hashed run/cell checkpoints,
   exact artifact revalidation, preserved failed attempts, output-root locking,
   and a ProjectRuntime-owned partial/complete execution boundary.

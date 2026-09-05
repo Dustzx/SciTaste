@@ -2,7 +2,7 @@
 
 Assignment token: `W3-generative-ui-app-20260905-r1`
 
-Status: `ready for main review`
+Status: `integrated; awaiting next Epic`
 
 ## Workspace
 
@@ -100,6 +100,6 @@ fields from `docs/tasks/README.md`. Document the exact trust boundary that still
 separates a proposal receipt from controller approval and execution. Do not merge
 or push `main`.
 
-Handoff received at `03573f5`. Main review and integration remain pending; do
-not start another assignment from this document until its token and status are
-replaced.
+Handoff `03573f5` was reviewed and integrated through main commit `372a0a9`.
+Do not start another assignment from this document until its token and status
+are replaced.
