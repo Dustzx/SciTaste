@@ -53,7 +53,7 @@ bindings:
     replies: null
     live_config:
       path: zhipu_glm53_flash.unpriced_probe.yaml
-      sha256: 6c6a56fbd1da6d62406877df21b0187150cf24f708db1ae8e2f1aae0c7dea2b3
+      sha256: b0901e865e23eda42b63a6807c03e23c9d5b9f2315232d8d91eb8f084f749c1d
 
 manual_interventions: null
 independent_review: null

@@ -9,7 +9,7 @@ api_key_env: ZAI_API_KEY
 live_enabled: true
 timeout_seconds: 180
 max_retries: 0
-max_output_tokens: 512
+max_output_tokens: 2048
 pricing_confirmed: false
 pricing: null
 unpriced_engineering_probe: true
