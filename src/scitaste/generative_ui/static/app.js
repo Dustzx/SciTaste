@@ -6,6 +6,7 @@ const connectionStatus = document.getElementById("connection-status");
 const freshness = document.getElementById("freshness");
 const workspace = document.getElementById("workspace");
 const proposalResult = document.getElementById("proposal-result");
+const artifactResult = document.getElementById("artifact-result");
 const viewButtons = Array.from(document.querySelectorAll(".view-button"));
 const runSelect = document.getElementById("run-select");
 const openRunButton = document.getElementById("open-run");
@@ -29,6 +30,7 @@ let currentDocument = null;
 let runCatalog = [];
 let paperCatalog = [];
 let eventCounter = 0;
+let artifactObjectUrl = null;
 
 function appendText(parent, value) {
   parent.appendChild(document.createTextNode(formatValue(value)));
@@ -167,6 +169,20 @@ function renderComparison(data) {
   return container;
 }
 
+function renderArtifactViewer(data) {
+  const container = document.createElement("div");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "inspect-button";
+  appendText(button, "Inspect verified preview");
+  button.addEventListener("click", () => inspectArtifact(data.artifact_ref_id));
+  container.append(
+    fixedFields(data, ["artifact_path", "media_type", "artifact_ref_id"]),
+    button,
+  );
+  return container;
+}
+
 const componentRenderers = Object.freeze({
   ProjectSummaryCard: (data) => fixedFields(
     data,
@@ -194,10 +210,7 @@ const componentRenderers = Object.freeze({
     ["statement", "status", "claim_ref_id", "evidence_ref_ids"],
   ),
   ReviewerQueue: (data) => fixedRows(data.reviews, ["status", "summary", "review_ref_id"]),
-  ArtifactViewer: (data) => fixedFields(
-    data,
-    ["artifact_path", "media_type", "artifact_ref_id"],
-  ),
+  ArtifactViewer: renderArtifactViewer,
   PaperPreview: (data) => fixedFields(
     data,
     ["paper_title", "paper_status", "publication_ready", "excerpt", "paper_ref_id"],
@@ -223,6 +236,7 @@ function renderWorkspace(documentValue) {
   const renderer = documentValue.renderer;
   workspace.replaceChildren();
   proposalResult.replaceChildren();
+  clearArtifactPreview();
   const title = document.createElement("h2");
   title.className = "workspace-title";
   appendText(title, renderer.title);
@@ -366,6 +380,81 @@ async function submitAction(action) {
   } catch (error) {
     showError(proposalResult, error);
   }
+}
+
+async function inspectArtifact(artifactRefId) {
+  if (!currentDocument) {
+    return;
+  }
+  const renderer = currentDocument.renderer;
+  const event = {
+    schema_version: "1.0",
+    event_id: `inspection-${Date.now()}-${eventCounter++}`,
+    event_type: "artifact_inspection_requested",
+    project_id: renderer.project_id,
+    surface_id: renderer.surface_id,
+    surface_revision: renderer.surface_revision,
+    surface_fingerprint: renderer.surface_fingerprint,
+    snapshot_revision: renderer.snapshot.snapshot_revision,
+    snapshot_sha256: renderer.snapshot.snapshot_sha256,
+    artifact_ref_id: artifactRefId,
+  };
+  artifactResult.setAttribute("aria-busy", "true");
+  try {
+    const preview = await api(`${workspacePath(currentDocument.query)}/inspections`, {
+      method: "POST",
+      body: JSON.stringify(event),
+    });
+    renderArtifactPreview(preview);
+  } catch (error) {
+    clearArtifactPreview();
+    showError(artifactResult, error);
+  } finally {
+    artifactResult.setAttribute("aria-busy", "false");
+  }
+}
+
+function clearArtifactPreview() {
+  if (artifactObjectUrl !== null) {
+    URL.revokeObjectURL(artifactObjectUrl);
+    artifactObjectUrl = null;
+  }
+  artifactResult.replaceChildren();
+}
+
+function renderArtifactPreview(preview) {
+  clearArtifactPreview();
+  const metadata = fixedFields(preview.receipt, [
+    "media_type",
+    "byte_length",
+    "artifact_sha256",
+    "execution_authority",
+  ]);
+  artifactResult.appendChild(metadata);
+  if (preview.preview_kind === "image") {
+    const binary = atob(preview.image_base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    artifactObjectUrl = URL.createObjectURL(new Blob([bytes], {
+      type: preview.receipt.media_type,
+    }));
+    const image = document.createElement("img");
+    image.className = "artifact-image";
+    image.alt = "Verified project artifact preview";
+    image.src = artifactObjectUrl;
+    artifactResult.appendChild(image);
+    return;
+  }
+  if (preview.preview_kind === "pdf_metadata") {
+    artifactResult.appendChild(fixedFields(preview, ["preview_kind", "pdf_version"]));
+    return;
+  }
+  const source = document.createElement("pre");
+  source.className = "artifact-source";
+  source.textContent = preview.text_content;
+  artifactResult.appendChild(source);
 }
 
 async function loadProjects() {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -8,15 +9,23 @@ import pytest
 from pydantic import ValidationError
 
 from scitaste.generative_ui import (
+    ArtifactInspectedAudit,
     AuditIntegrityError,
     DuplicateEventError,
     GenerativeUIApplication,
+    PaperEvidenceQuery,
+    PendingProposalsQuery,
+    RunStageQuery,
     StaleSurfaceError,
     SurfaceAuditLog,
+    SurfaceEvent,
+    TrustedComponent,
     UnknownActionError,
+    WorkspaceSurfaceFactory,
+    make_artifact_inspection_event,
     make_surface_event,
 )
-from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 
 
 def _runtime_with_action(tmp_path: Path, *, project_id: str = "app-project") -> ProjectRuntime:
@@ -52,6 +61,42 @@ def _audit_path(runtime: ProjectRuntime, project_id: str = "app-project") -> Pat
     matches = list((runtime.projects_root / project_id / ".generative-ui/audits").glob("*.jsonl"))
     assert len(matches) == 1
     return matches[0]
+
+
+def _runtime_with_paper(tmp_path: Path) -> ProjectRuntime:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="paper-app",
+            title="Paper inspection application",
+            research_direction="Persist read-only inspections.",
+            status="active",
+        )
+    )
+    paper_dir = runtime.projects_root / "paper-app/papers/paper-one"
+    paper_dir.mkdir(parents=True)
+    (paper_dir / "main.md").write_text("# Evidence\n", encoding="utf-8")
+    runtime.register_paper(
+        "paper-app",
+        PaperManifest(
+            paper_id="paper-one",
+            project_id="paper-app",
+            title="Inspected paper",
+            date="2026-09-05",
+            provider="scripted",
+            model="deterministic",
+            condition="inspection",
+            task="audit-inspection",
+            seed=0,
+            stage=18,
+            status="draft",
+            evidence_scope="engineering-only",
+            files={"Manuscript": "main.md"},
+        ),
+        directory_name="paper-one",
+        expected_revision=snapshot.revision,
+    )
+    return runtime
 
 
 def test_application_discovers_real_projects_and_projects_fixed_renderer(tmp_path: Path) -> None:
@@ -231,3 +276,146 @@ def test_tampered_project_owned_audit_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(AuditIntegrityError):
         GenerativeUIApplication(runtime).current_surface("app-project")
+
+
+def test_application_audits_inspection_and_restart_duplicate_protection(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_paper(tmp_path)
+    query = PaperEvidenceQuery(project_id="paper-app", paper_id="paper-one")
+    app = GenerativeUIApplication(runtime)
+    surface = WorkspaceSurfaceFactory(runtime).build_surface(query)
+    app.current_workspace(query)
+    artifact = next(
+        item for item in surface.components if item.component is TrustedComponent.ARTIFACT_VIEWER
+    )
+    event = make_artifact_inspection_event(
+        surface,
+        event_id="application-inspection",
+        artifact_ref_id=artifact.data["artifact_ref_id"],
+    )
+
+    document = app.inspect_workspace_artifact(query, event)
+
+    audit_path = next((runtime.projects_root / "paper-app/.generative-ui/audits").glob("*.jsonl"))
+    records = SurfaceAuditLog(audit_path).records()
+    assert isinstance(records[-1].payload, ArtifactInspectedAudit)
+    assert records[-1].payload.receipt == document.receipt
+    restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
+    with pytest.raises(DuplicateEventError):
+        restarted.inspect_workspace_artifact(query, event)
+
+
+def test_pending_workspace_exposes_verified_proposals_without_controller_authority(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    query = RunStageQuery(project_id="app-project", run_id="trusted-run")
+    document = app.current_workspace(query)
+    renderer = document.renderer
+    event = SurfaceEvent(
+        event_id="workspace-pending-history",
+        project_id=renderer.project_id,
+        surface_id=renderer.surface_id,
+        surface_revision=renderer.surface_revision,
+        surface_fingerprint=renderer.surface_fingerprint,
+        snapshot_revision=renderer.snapshot.snapshot_revision,
+        snapshot_sha256=renderer.snapshot.snapshot_sha256,
+        action_id=renderer.actions[0].action_id,
+    )
+    app.submit_workspace_event(query, event)
+
+    pending = app.current_workspace(PendingProposalsQuery(project_id="app-project"))
+    component = next(
+        item
+        for item in pending.renderer.components
+        if item.renderer is TrustedComponent.PENDING_PROPOSAL_LIST
+    )
+
+    assert component.data["proposals"] == [
+        {
+            "action_id": event.action_id,
+            "audit_ref_id": component.evidence_ref_ids[0],
+            "event_id": event.event_id,
+            "execution_authority": "none",
+            "next_boundary": "deterministic_controller",
+            "snapshot_revision": event.snapshot_revision,
+            "status": "proposal_pending",
+            "surface_id": event.surface_id,
+            "surface_revision": event.surface_revision,
+        }
+    ]
+    audit_ref = next(
+        item
+        for item in pending.renderer.snapshot.evidence_refs
+        if item.evidence_id == component.evidence_ref_ids[0]
+    )
+    audit_bytes = (runtime.projects_root / "app-project" / audit_ref.locator).read_bytes()
+    assert audit_ref.sha256 == hashlib.sha256(audit_bytes).hexdigest()
+
+
+def test_concurrent_inspections_share_one_ordered_hash_chain(tmp_path: Path) -> None:
+    runtime = _runtime_with_paper(tmp_path)
+    query = PaperEvidenceQuery(project_id="paper-app", paper_id="paper-one")
+    app = GenerativeUIApplication(runtime)
+    surface = WorkspaceSurfaceFactory(runtime).build_surface(query)
+    app.current_workspace(query)
+    artifact = next(
+        item for item in surface.components if item.component is TrustedComponent.ARTIFACT_VIEWER
+    )
+
+    def inspect(index: int) -> str:
+        event = make_artifact_inspection_event(
+            surface,
+            event_id=f"concurrent-inspection-{index}",
+            artifact_ref_id=artifact.data["artifact_ref_id"],
+        )
+        return app.inspect_workspace_artifact(query, event).receipt.event_id
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        accepted = list(executor.map(inspect, range(8)))
+
+    assert accepted == [f"concurrent-inspection-{index}" for index in range(8)]
+    audit_path = next((runtime.projects_root / "paper-app/.generative-ui/audits").glob("*.jsonl"))
+    records = SurfaceAuditLog(audit_path).records()
+    assert [item.sequence for item in records] == list(range(9))
+    assert all(isinstance(item.payload, ArtifactInspectedAudit) for item in records[1:])
+
+
+def test_pending_history_fails_closed_on_corrupt_audit_and_stays_project_local(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    _runtime_with_action(tmp_path, project_id="other-project")
+    app = GenerativeUIApplication(runtime)
+    query = RunStageQuery(project_id="app-project", run_id="trusted-run")
+    document = app.current_workspace(query)
+    renderer = document.renderer
+    event = SurfaceEvent(
+        event_id="corrupt-history-event",
+        project_id=renderer.project_id,
+        surface_id=renderer.surface_id,
+        surface_revision=renderer.surface_revision,
+        surface_fingerprint=renderer.surface_fingerprint,
+        snapshot_revision=renderer.snapshot.snapshot_revision,
+        snapshot_sha256=renderer.snapshot.snapshot_sha256,
+        action_id=renderer.actions[0].action_id,
+    )
+    app.submit_workspace_event(query, event)
+
+    other = app.current_workspace(PendingProposalsQuery(project_id="other-project"))
+    assert all(
+        item.renderer is not TrustedComponent.PENDING_PROPOSAL_LIST
+        for item in other.renderer.components
+    )
+
+    audit_path = next((runtime.projects_root / "app-project/.generative-ui/audits").glob("*.jsonl"))
+    lines = audit_path.read_text(encoding="utf-8").splitlines()
+    payload = json.loads(lines[-1])
+    payload["record_sha256"] = "0" * 64
+    lines[-1] = json.dumps(payload)
+    audit_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    with pytest.raises(AuditIntegrityError):
+        app.current_workspace(PendingProposalsQuery(project_id="app-project"))

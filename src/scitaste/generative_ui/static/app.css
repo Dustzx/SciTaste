@@ -327,6 +327,35 @@ code {
   margin-top: 1rem;
 }
 
+.inspect-button {
+  margin-top: 0.8rem;
+}
+
+.artifact-source {
+  background: #eef0e9;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.7rem;
+  white-space: pre-wrap;
+}
+
+.artifact-image {
+  display: block;
+  height: auto;
+  margin-top: 0.75rem;
+  max-height: 28rem;
+  max-width: 100%;
+}
+
+.inspector hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
 .proposal-explanation {
   background: #e9f4ed;
   border-left: 0.25rem solid var(--forest);

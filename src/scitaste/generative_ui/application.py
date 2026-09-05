@@ -10,11 +10,17 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from scitaste.generative_ui.audit import (
+    ArtifactInspectedAudit,
     AuditIntegrityError,
     ProposalIssuedAudit,
     SurfaceAuditLog,
 )
 from scitaste.generative_ui.factory import ProjectSurfaceFactory
+from scitaste.generative_ui.inspection import (
+    ArtifactInspectionDocument,
+    ArtifactInspectionEvent,
+    ArtifactInspector,
+)
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
     ProposalReceipt,
@@ -70,6 +76,7 @@ class GenerativeUIApplication:
         self._runtime = runtime
         self._factory = ProjectSurfaceFactory(runtime)
         self._workspace_factory = WorkspaceSurfaceFactory(runtime)
+        self._artifact_inspector = ArtifactInspector(runtime.projects_root)
         self._request_lock = RLock()
 
     @property
@@ -192,6 +199,39 @@ class GenerativeUIApplication:
             if not isinstance(record.payload, ProposalIssuedAudit):
                 raise AuditIntegrityError("accepted event did not produce a proposal audit record")
             return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
+
+    def inspect_workspace_artifact(
+        self,
+        query: ProjectWorkspaceQuery | dict[str, object],
+        event: ArtifactInspectionEvent | dict[str, object],
+    ) -> ArtifactInspectionDocument:
+        """Inspect one visible artifact and append its identity receipt to the audit chain."""
+
+        parsed_query = validate_workspace_query(query)
+        if not hasattr(parsed_query, "project_id"):
+            raise TypeError("project-list view cannot inspect artifacts")
+        parsed_event = (
+            event
+            if isinstance(event, ArtifactInspectionEvent)
+            else ArtifactInspectionEvent.model_validate(event)
+        )
+        parsed_event = ArtifactInspectionEvent.model_validate(parsed_event.model_dump(mode="json"))
+        if parsed_event.project_id != parsed_query.project_id:
+            raise StaleSurfaceError("inspection project_id does not match its workspace query")
+
+        with self._request_lock:
+            surface = self._workspace_factory.build_surface(parsed_query)
+            document = self._artifact_inspector.inspect(surface, parsed_event)
+            audit = self._open_audit(surface)
+            try:
+                record = audit.append_inspection(parsed_event, document.receipt)
+            except AuditIntegrityError as exc:
+                if isinstance(exc.__cause__, DuplicateEventError):
+                    raise exc.__cause__ from exc
+                raise
+            if not isinstance(record.payload, ArtifactInspectedAudit):
+                raise AuditIntegrityError("inspection did not produce an artifact audit record")
+            return ArtifactInspectionDocument.model_validate(document.model_dump(mode="json"))
 
     def _open_audit(self, surface: SurfaceSpec) -> SurfaceAuditLog:
         audit = SurfaceAuditLog(self._audit_path(surface))

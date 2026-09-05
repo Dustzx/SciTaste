@@ -19,6 +19,10 @@ from pydantic import ValidationError
 from scitaste.generative_ui.application import GenerativeUIApplication
 from scitaste.generative_ui.audit import AuditIntegrityError
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError, ProjectSurfaceError
+from scitaste.generative_ui.inspection import (
+    ArtifactTooLargeError,
+    ArtifactUnavailableError,
+)
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
     StaleSurfaceError,
@@ -42,7 +46,7 @@ _SECURITY_HEADERS = {
     "Cache-Control": "no-store",
     "Content-Security-Policy": (
         "default-src 'self'; script-src 'self'; style-src 'self'; "
-        "connect-src 'self'; img-src 'self'; object-src 'none'; "
+        "connect-src 'self'; img-src 'self' blob:; object-src 'none'; "
         "base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
     ),
     "Cross-Origin-Resource-Policy": "same-origin",
@@ -183,6 +187,22 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                     "surface interaction was rejected",
                 )
             )
+        except ArtifactTooLargeError:
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                    "artifact_too_large",
+                    "artifact exceeds its fixed preview limit",
+                )
+            )
+        except ArtifactUnavailableError:
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.CONFLICT,
+                    "artifact_unavailable",
+                    "artifact is not visible or no longer matches the current view",
+                )
+            )
         except UnknownWorkspaceSelectionError:
             self._send_problem(
                 _HTTPProblem(
@@ -195,8 +215,11 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             self._send_problem(
                 _HTTPProblem(HTTPStatus.NOT_FOUND, "project_not_found", "project was not found")
             )
-        except (AuditIntegrityError, ProjectSurfaceError, OSError):
-            _LOGGER.exception("trusted generative UI request failed closed")
+        except (AuditIntegrityError, ProjectSurfaceError, OSError) as exc:
+            _LOGGER.error(
+                "trusted generative UI request failed closed (%s)",
+                type(exc).__name__,
+            )
             self._send_problem(
                 _HTTPProblem(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -208,8 +231,11 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             self._send_problem(
                 _HTTPProblem(HTTPStatus.BAD_REQUEST, "invalid_request", "request is invalid")
             )
-        except Exception:
-            _LOGGER.exception("unexpected trusted generative UI request failure")
+        except Exception as exc:
+            _LOGGER.error(
+                "unexpected trusted generative UI request failure (%s)",
+                type(exc).__name__,
+            )
             self._send_problem(
                 _HTTPProblem(
                     HTTPStatus.INTERNAL_SERVER_ERROR,
@@ -264,11 +290,11 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         project_id = parts[4]
         raw_view = parts[5]
         tail = parts[6:]
-        submits_event = bool(tail and tail[-1] == "events")
-        if submits_event:
+        operation = tail[-1] if tail and tail[-1] in {"events", "inspections"} else None
+        if operation is not None:
             tail = tail[:-1]
         query = _workspace_query(project_id, raw_view, tail)
-        if submits_event:
+        if operation == "events":
             if method != "POST":
                 raise _method_not_allowed("POST")
             receipt = self.server.application.submit_workspace_event(
@@ -276,6 +302,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 self._read_json_object(),
             )
             self._send_model(HTTPStatus.ACCEPTED, receipt)
+            return
+        if operation == "inspections":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            document = self.server.application.inspect_workspace_artifact(
+                query,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.OK, document)
             return
         if method != "GET":
             raise _method_not_allowed("GET")

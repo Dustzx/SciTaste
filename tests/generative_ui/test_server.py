@@ -16,7 +16,7 @@ from scitaste.generative_ui import (
     TrustedComponent,
     create_http_server,
 )
-from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 
 _TOKEN = "local-test-token-20260905"
 
@@ -48,6 +48,42 @@ def _runtime(tmp_path: Path, *, title: str = "Evidence reports 2 < 3 and 5 > 4")
         "{}\n", encoding="utf-8"
     )
     runtime.select_run("http-project", "http-run", expected_revision=snapshot.revision)
+    return runtime
+
+
+def _paper_runtime(tmp_path: Path) -> ProjectRuntime:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="http-paper",
+            title="HTTP paper inspection",
+            research_direction="Expose no general artifact route.",
+            status="active",
+        )
+    )
+    paper_dir = runtime.projects_root / "http-paper/papers/paper-one"
+    paper_dir.mkdir(parents=True)
+    (paper_dir / "main.md").write_text("# HTTP evidence\n", encoding="utf-8")
+    runtime.register_paper(
+        "http-paper",
+        PaperManifest(
+            paper_id="paper-one",
+            project_id="http-paper",
+            title="HTTP inspected paper",
+            date="2026-09-05",
+            provider="scripted",
+            model="deterministic",
+            condition="inspection",
+            task="http-boundary",
+            seed=0,
+            stage=18,
+            status="draft",
+            evidence_scope="engineering-only",
+            files={"Manuscript": "main.md"},
+        ),
+        directory_name="paper-one",
+        expected_revision=snapshot.revision,
+    )
     return runtime
 
 
@@ -104,6 +140,32 @@ def _workspace_event(
     return _event(renderer, event_id=event_id)
 
 
+def _inspection_event(
+    document: dict[str, object],
+    *,
+    event_id: str = "workspace-inspection",
+) -> dict[str, object]:
+    renderer = document["renderer"]
+    assert isinstance(renderer, dict)
+    snapshot = renderer["snapshot"]
+    components = renderer["components"]
+    assert isinstance(snapshot, dict)
+    assert isinstance(components, list)
+    artifact = next(item for item in components if item["renderer"] == "ArtifactViewer")
+    return {
+        "schema_version": "1.0",
+        "event_id": event_id,
+        "event_type": "artifact_inspection_requested",
+        "project_id": renderer["project_id"],
+        "surface_id": renderer["surface_id"],
+        "surface_revision": renderer["surface_revision"],
+        "surface_fingerprint": renderer["surface_fingerprint"],
+        "snapshot_revision": snapshot["snapshot_revision"],
+        "snapshot_sha256": snapshot["snapshot_sha256"],
+        "artifact_ref_id": artifact["data"]["artifact_ref_id"],
+    }
+
+
 def _audit(runtime: ProjectRuntime) -> Path:
     matches = list((runtime.projects_root / "http-project/.generative-ui/audits").glob("*.jsonl"))
     assert len(matches) == 1
@@ -123,6 +185,7 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert script.status_code == 200
     assert stylesheet.status_code == 200
     assert "default-src 'self'" in index.headers["content-security-policy"]
+    assert "img-src 'self' blob:" in index.headers["content-security-policy"]
     assert "https://" not in index.text
     assert "http://" not in index.text
     assert "document.createTextNode" in script.text
@@ -142,6 +205,8 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'aria-busy="false"' in index.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
+    assert 'event_type: "artifact_inspection_requested"' in script.text
+    assert "new Blob" in script.text
 
 
 def test_api_requires_bearer_authentication_without_creating_project_state(tmp_path: Path) -> None:
@@ -329,6 +394,71 @@ def test_event_api_rejects_malformed_stale_cross_project_and_duplicate_requests(
     assert duplicate.status_code == 409
     assert duplicate.json()["error"]["code"] == "duplicate_event"
     assert len(SurfaceAuditLog(_audit(runtime)).records()) == 2
+
+
+def test_inspection_api_rehashes_visible_artifact_without_general_file_access(
+    tmp_path: Path,
+) -> None:
+    runtime = _paper_runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-paper/paper-evidence/papers/paper-one"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _inspection_event(workspace.json())
+        unauthenticated = httpx.post(origin + view_path + "/inspections", json=event)
+        forged = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json={**event, "locator": "papers/paper-one/main.md"},
+        )
+        accepted = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+        duplicate = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+        file_route = httpx.get(
+            origin + "/api/v2/workspace/projects/http-paper/artifacts/main.md",
+            headers=_headers(),
+        )
+
+    assert workspace.status_code == 200
+    assert unauthenticated.status_code == 401
+    assert forged.status_code == 400
+    assert accepted.status_code == 200
+    assert accepted.json()["preview_kind"] == "markdown"
+    assert accepted.json()["text_content"] == "# HTTP evidence\n"
+    assert accepted.json()["receipt"]["execution_authority"] == "none"
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "duplicate_event"
+    assert file_route.status_code == 404
+
+
+def test_changed_artifact_response_and_logs_do_not_expose_its_locator(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    runtime = _paper_runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-paper/paper-evidence/papers/paper-one"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _inspection_event(workspace.json(), event_id="changed-http-artifact")
+        artifact = runtime.projects_root / "http-paper/papers/paper-one/main.md"
+        artifact.write_text("# Changed evidence\n", encoding="utf-8")
+        rejected = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+
+    assert rejected.status_code == 409
+    assert rejected.json()["error"]["code"] == "artifact_unavailable"
+    assert "main.md" not in rejected.text
+    assert str(runtime.outputs_root) not in rejected.text
+    assert str(runtime.outputs_root) not in caplog.text
 
 
 def test_api_rejects_wrong_methods_media_types_duplicate_json_keys_and_file_routes(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from enum import StrEnum
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -17,6 +17,7 @@ from pydantic import (
     model_validator,
 )
 
+from scitaste.generative_ui.audit import AuditIntegrityError, ProposalIssuedAudit, SurfaceAuditLog
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError, ProjectSurfaceFactory
 from scitaste.generative_ui.models import (
     ActionBinding,
@@ -53,6 +54,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_AUDIT_HISTORY_LIMIT = 8 * 1024 * 1024
 
 
 class WorkspaceView(StrEnum):
@@ -594,6 +596,37 @@ class WorkspaceSurfaceFactory:
         binding: SnapshotBinding,
     ) -> SurfaceSpec:
         project_ref = _manifest_ref(binding)
+        audit_refs, proposals = _verified_pending_proposals(
+            self._runtime.projects_root,
+            snapshot.project_id,
+        )
+        confirmed_history = _verified_pending_proposals(
+            self._runtime.projects_root,
+            snapshot.project_id,
+        )
+        if confirmed_history != (audit_refs, proposals):
+            raise ProjectSurfaceChangedError("project audit changed while composing its workspace")
+        if audit_refs:
+            binding = SnapshotBinding.from_trusted_evidence(
+                project_id=binding.project_id,
+                snapshot_revision=binding.snapshot_revision,
+                evidence_refs=[*binding.evidence_refs, *audit_refs],
+            )
+        if proposals:
+            return _surface(
+                query,
+                snapshot,
+                binding,
+                components=[
+                    ComponentSpec(
+                        component_id="pending-proposal-list",
+                        component=TrustedComponent.PENDING_PROPOSAL_LIST,
+                        title="Verified pending proposals",
+                        evidence_ref_ids=[item.evidence_id for item in audit_refs],
+                        data={"proposals": proposals},
+                    )
+                ],
+            )
         return _surface(
             query,
             snapshot,
@@ -607,6 +640,77 @@ class WorkspaceSurfaceFactory:
                 )
             ],
         )
+
+
+def _verified_pending_proposals(
+    projects_root: Path,
+    project_id: str,
+) -> tuple[list[EvidenceRef], list[dict[str, object]]]:
+    """Read verified proposal receipts without trusting caller-authored audit locators."""
+
+    project_path = projects_root / project_id
+    if project_path.is_symlink():
+        raise AuditIntegrityError("project UI audit root must not be a symbolic link")
+    project_root = project_path.resolve(strict=True)
+    ui_root = project_root / ".generative-ui"
+    audit_root = ui_root / "audits"
+    if not audit_root.exists():
+        return [], []
+    if ui_root.is_symlink() or audit_root.is_symlink() or not audit_root.is_dir():
+        raise AuditIntegrityError("project UI audit root is not a trusted directory")
+    try:
+        audit_root.resolve(strict=True).relative_to(project_root)
+    except ValueError as exc:
+        raise AuditIntegrityError("project UI audit root escapes its project") from exc
+
+    refs: list[EvidenceRef] = []
+    proposals: list[dict[str, object]] = []
+    event_ids: set[str] = set()
+    for path in sorted(audit_root.glob("*.jsonl"), key=lambda item: item.name):
+        if path.is_symlink() or not path.is_file():
+            raise AuditIntegrityError("project UI audit record is not a regular file")
+        try:
+            if path.stat().st_size > _AUDIT_HISTORY_LIMIT:
+                raise AuditIntegrityError("project UI audit record exceeds the history limit")
+            before = path.read_bytes()
+            records = SurfaceAuditLog(path).records()
+            after = path.read_bytes()
+        except OSError as exc:
+            raise AuditIntegrityError("project UI audit history is unavailable") from exc
+        if before != after:
+            raise ProjectSurfaceChangedError("project audit changed while composing its workspace")
+        issued = [item.payload for item in records if isinstance(item.payload, ProposalIssuedAudit)]
+        if not issued:
+            continue
+        locator = f".generative-ui/audits/{path.name}"
+        audit_ref = EvidenceRef(
+            evidence_id=f"audit-{_identity_suffix(locator)}",
+            project_id=project_id,
+            kind=EvidenceKind.AUDIT_RECORD,
+            locator=locator,
+            sha256=hashlib.sha256(before).hexdigest(),
+            label="Verified proposal audit",
+        )
+        refs.append(audit_ref)
+        for payload in issued:
+            receipt = payload.receipt
+            if receipt.event_id in event_ids:
+                raise AuditIntegrityError("pending proposal history contains a duplicate event_id")
+            event_ids.add(receipt.event_id)
+            proposals.append(
+                {
+                    "audit_ref_id": audit_ref.evidence_id,
+                    "event_id": receipt.event_id,
+                    "action_id": receipt.action_id,
+                    "surface_id": receipt.surface_id,
+                    "surface_revision": receipt.surface_revision,
+                    "snapshot_revision": receipt.snapshot_revision,
+                    "status": receipt.status,
+                    "next_boundary": receipt.next_boundary,
+                    "execution_authority": receipt.execution_authority,
+                }
+            )
+    return refs, proposals
 
 
 def workspace_document(

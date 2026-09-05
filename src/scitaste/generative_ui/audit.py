@@ -15,7 +15,14 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from scitaste.generative_ui.inspection import (
+    ArtifactInspectionEvent,
+    ArtifactInspectionReceipt,
+    ArtifactUnavailableError,
+    validate_inspection_binding,
+)
 from scitaste.generative_ui.interaction import (
+    DuplicateEventError,
     ProposalReceipt,
     SurfaceEvent,
     SurfaceInteractionError,
@@ -77,8 +84,36 @@ class ProposalIssuedAudit(BaseModel):
         return self
 
 
+class ArtifactInspectedAudit(BaseModel):
+    """One completed read-only inspection bound to the opened surface."""
+
+    model_config = _MODEL_CONFIG
+
+    kind: Literal["artifact_inspected"] = "artifact_inspected"
+    event: ArtifactInspectionEvent
+    receipt: ArtifactInspectionReceipt
+
+    @model_validator(mode="after")
+    def event_matches_receipt(self) -> ArtifactInspectedAudit:
+        expected = {
+            "event_id": self.event.event_id,
+            "event_fingerprint": self.event.fingerprint,
+            "project_id": self.event.project_id,
+            "surface_id": self.event.surface_id,
+            "surface_revision": self.event.surface_revision,
+            "surface_fingerprint": self.event.surface_fingerprint,
+            "snapshot_revision": self.event.snapshot_revision,
+            "snapshot_sha256": self.event.snapshot_sha256,
+            "artifact_ref_id": self.event.artifact_ref_id,
+        }
+        actual = {key: getattr(self.receipt, key) for key in expected}
+        if expected != actual:
+            raise ValueError("artifact inspection receipt does not match its event")
+        return self
+
+
 AuditPayload = Annotated[
-    SurfaceOpenedAudit | SurfaceRevisedAudit | ProposalIssuedAudit,
+    SurfaceOpenedAudit | SurfaceRevisedAudit | ProposalIssuedAudit | ArtifactInspectedAudit,
     Field(discriminator="kind"),
 ]
 
@@ -160,6 +195,10 @@ class SurfaceAuditLog:
         with self._locked(exclusive=True):
             records = self._load_verified()
             session = _replay(records)
+            if event.event_id in _recorded_event_ids(records):
+                raise AuditIntegrityError(
+                    "surface event cannot be replayed: duplicate event_id"
+                ) from DuplicateEventError("event_id was already accepted")
             try:
                 replayed = session.activate(event)
             except SurfaceInteractionError as exc:
@@ -168,6 +207,36 @@ class SurfaceAuditLog:
                 raise AuditIntegrityError(
                     "proposal receipt differs from the server-owned surface action"
                 )
+            record = _new_record(
+                sequence=len(records),
+                previous_record_sha256=records[-1].record_sha256,
+                payload=payload,
+            )
+            self._atomic_write([*records, record])
+            return record
+
+    def append_inspection(
+        self,
+        event: ArtifactInspectionEvent,
+        receipt: ArtifactInspectionReceipt,
+    ) -> SurfaceAuditRecord:
+        """Append a reproduced read-only inspection to the shared event chain."""
+
+        try:
+            payload = ArtifactInspectedAudit(event=event, receipt=receipt)
+        except ValidationError as exc:
+            raise AuditIntegrityError("inspection receipt and event identities differ") from exc
+        with self._locked(exclusive=True):
+            records = self._load_verified()
+            session = _replay(records)
+            if event.event_id in _recorded_event_ids(records):
+                raise AuditIntegrityError(
+                    "surface event cannot be replayed: duplicate event_id"
+                ) from DuplicateEventError("event_id was already accepted")
+            try:
+                validate_inspection_binding(session.surface, event, receipt)
+            except ArtifactUnavailableError as exc:
+                raise AuditIntegrityError(f"artifact inspection cannot be replayed: {exc}") from exc
             record = _new_record(
                 sequence=len(records),
                 previous_record_sha256=records[-1].record_sha256,
@@ -278,6 +347,7 @@ def _record_digest(
 def _replay(records: list[SurfaceAuditRecord]) -> SurfaceSession:
     if not records or not isinstance(records[0].payload, SurfaceOpenedAudit):
         raise AuditIntegrityError("surface audit must begin with surface_opened")
+    _recorded_event_ids(records)
     session = SurfaceSession(records[0].payload.surface)
     for record in records[1:]:
         payload = record.payload
@@ -290,12 +360,25 @@ def _replay(records: list[SurfaceAuditRecord]) -> SurfaceSession:
                     raise AuditIntegrityError(
                         f"proposal receipt mismatch at record {record.sequence}"
                     )
+            elif isinstance(payload, ArtifactInspectedAudit):
+                validate_inspection_binding(session.surface, payload.event, payload.receipt)
             else:
                 raise AuditIntegrityError(
                     f"surface_opened may appear only at record zero, got {record.sequence}"
                 )
-        except SurfaceInteractionError as exc:
+        except (SurfaceInteractionError, ArtifactUnavailableError) as exc:
             raise AuditIntegrityError(
                 f"surface audit semantic replay failed at record {record.sequence}: {exc}"
             ) from exc
     return session
+
+
+def _recorded_event_ids(records: list[SurfaceAuditRecord]) -> set[str]:
+    ids: set[str] = set()
+    for record in records:
+        payload = record.payload
+        if isinstance(payload, (ProposalIssuedAudit, ArtifactInspectedAudit)):
+            if payload.event.event_id in ids:
+                raise AuditIntegrityError("surface audit contains a duplicate event_id")
+            ids.add(payload.event.event_id)
+    return ids

@@ -64,12 +64,19 @@
       <main id="workspace" class="workspace" aria-live="polite" aria-busy="false" tabindex="-1">
         <p class="empty-state">No trusted project workspace is loaded.</p>
       </main>
-      <aside class="inspector" aria-label="Proposal inspector">
+      <aside class="inspector" aria-label="Proposal and evidence inspector">
         <p class="eyebrow dark">Proposal boundary</p>
         <h2>Recorded advice only</h2>
         <p>A pending proposal awaits a later deterministic controller. It is not approved or executed.</p>
         <div id="proposal-result" role="status">
           <p class="muted">No proposal has been submitted from this view.</p>
+        </div>
+        <hr>
+        <p class="eyebrow dark">Evidence preview</p>
+        <h2>Verified artifact only</h2>
+        <p>Preview is read-only, bounded, and rehashed. Markdown and HTML-like bytes remain inert source.</p>
+        <div id="artifact-result" role="status">
+          <p class="muted">Select Inspect preview on a visible paper artifact.</p>
         </div>
       </aside>
     </div>

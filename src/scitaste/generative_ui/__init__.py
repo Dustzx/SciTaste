@@ -6,6 +6,7 @@ from scitaste.generative_ui.application import (
     ProjectDiscoveryItem,
 )
 from scitaste.generative_ui.audit import (
+    ArtifactInspectedAudit,
     AuditIntegrityError,
     ProposalIssuedAudit,
     SurfaceAuditLog,
@@ -28,6 +29,17 @@ from scitaste.generative_ui.fixtures import (
     build_project_overview_fixture,
     build_run_comparison_fixture,
     fixture_snapshot_binding,
+)
+from scitaste.generative_ui.inspection import (
+    ArtifactInspectionDocument,
+    ArtifactInspectionError,
+    ArtifactInspectionEvent,
+    ArtifactInspectionReceipt,
+    ArtifactInspector,
+    ArtifactTooLargeError,
+    ArtifactUnavailableError,
+    make_artifact_inspection_event,
+    validate_inspection_binding,
 )
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
@@ -120,6 +132,14 @@ __all__ = [
     "ActionBinding",
     "ActionProposal",
     "ApprovalSubject",
+    "ArtifactInspectedAudit",
+    "ArtifactInspectionDocument",
+    "ArtifactInspectionError",
+    "ArtifactInspectionEvent",
+    "ArtifactInspectionReceipt",
+    "ArtifactInspector",
+    "ArtifactTooLargeError",
+    "ArtifactUnavailableError",
     "ArtifactViewerData",
     "AuditIntegrityError",
     "AvailabilityNoticeData",
@@ -203,9 +223,11 @@ __all__ = [
     "compute_snapshot_sha256",
     "create_http_server",
     "fixture_snapshot_binding",
+    "make_artifact_inspection_event",
     "make_surface_event",
     "project_surface",
     "serve_local_application",
+    "validate_inspection_binding",
     "validate_workspace_query",
     "workspace_document",
 ]
