@@ -170,6 +170,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   external measurements/review cannot be replaced with fixtures. This closes
   the orchestration implementation gate but does not accept ADR-022 or provide
   effectiveness evidence.
+- A real project-owned GLM-5.3-Flash engineering probe completed all seven
+  registered cases. The online response was schema-valid and exactly recorded,
+  but deterministic token, latency, missing-cost, and action-allowlist gates
+  rejected it. The report remains blocked on external intervention measurement,
+  verified pricing/cost, an unsupported-action increase, and independent review;
+  this validates enforcement, not effectiveness.
 - A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
   non-headline; its four launcher commands remain explicit adapter work rather
   than synthetic substitutes.
@@ -303,7 +309,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
   replay, external manual-intervention, unsupported-reference, tool, cost, and
   independent-review gates. Missing live calls or external evidence block rather
-  than being replaced with fixture results; the real pilot remains pending.
+  than being replaced with fixture results. The real engineering probe is now
+  complete and blocked as designed; a priced, externally measured acceptance
+  pilot remains pending.
 - This exploratory self-project is excluded from the active Phase 9 registered
   comparison and from headline effectiveness claims.
 

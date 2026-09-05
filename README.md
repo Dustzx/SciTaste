@@ -287,6 +287,13 @@ New Zhipu pilots use `configs/backends/zhipu_glm53_flash.example.yaml`. It uses
 the existing OpenAI-compatible backend and therefore adds no provider SDK to the
 default installation.
 
+The bounded-model-node path also has a real-provider engineering configuration
+at `configs/model_nodes/pilot_orchestration.zhipu_glm53_unpriced_probe.yaml`.
+It is explicitly non-promotable: it records a live GLM-5.3-Flash exchange and
+then fails closed when verified cost telemetry is unavailable. The first
+project-owned run exercised exact response retention and deterministic rejection;
+see `docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
+
 ## Offline Discovery Loop
 
 Run the weak-intuition and strong-hypothesis scenarios through the same engine:

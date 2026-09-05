@@ -431,11 +431,19 @@ project registration binds the final manifest/report/verification hashes.
 When both final evidence files exist but their optimistic metadata update was
 interrupted, resume may revalidate and register those exact files without a model
 call; a half-published pair cannot be recovered automatically.
-Missing live execution, external manual measurements, or independent review
-still produce an explicit blocker. The ADR remains proposed because passing
-synthetic transport/tests are not the self-development pilot. It does not alter
-the registered Phase 9 protocol and becomes accepted only after the real pilot
-clears the recorded schema, safety, intervention, and cost gates.
+An explicit unpriced engineering mode can contact a real endpoint while forcing
+the resulting proposal to be rejected for missing cost telemetry. Its exact
+request and decoded response body are stored before semantic parsing, without
+authorization headers, then hash-bound to the checkpoint or archived with the
+failed attempt.
+
+The 2026-09-05 project-owned GLM-5.3-Flash probe completed seven cases and
+demonstrated schema parsing, exact recording, recovery, and enforcement on a
+real provider response. The live proposal still violated token, latency, cost,
+and action policy, while manual-intervention measurements and independent review
+were absent. ADR-022 therefore remains proposed. It does not alter the
+registered Phase 9 protocol and becomes accepted only after a fresh pilot clears
+the recorded schema, safety, intervention, cost, and review gates.
 
 ### ADR-023: Project directories are revisioned ownership boundaries
 

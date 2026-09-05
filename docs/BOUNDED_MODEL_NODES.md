@@ -115,7 +115,7 @@ identities, prompt version, and seed. The configured model and seed are also
 top-level request fields. The adapter requests `json_object` output; strict
 schema validation remains in the deterministic node boundary.
 
-Live use has three independent fail-closed switches:
+Acceptance-eligible live use has three independent fail-closed switches:
 
 1. `live_enabled` must be true;
 2. finite non-negative USD input/output token rates with a timezone-aware
@@ -128,6 +128,14 @@ input/output token counts; supported aliases are `prompt_tokens` /
 `completion_tokens` and `input_tokens` / `output_tokens`. Missing or conflicting
 usage fails instead of becoming zero. The calculated USD cost and its full
 pricing provenance are retained in `StructuredModelResponse` and record/replay.
+
+An explicitly separate `unpriced_engineering_probe` mode exists only to test a
+real endpoint when the provider exposes token usage but no rate that can be
+verified for the account's billing route. It requires live mode, forbids price
+configuration and retries, retains token/latency/raw-response evidence, sets
+cost to unknown, and therefore deterministically rejects the proposal. Such a
+call can establish adapter and schema behavior, but can never pass the cost gate
+or support an effectiveness claim.
 
 The exact decoded provider response body and its SHA-256 are retained together.
 The provider's returned model identity is retained verbatim when present, so a
@@ -150,10 +158,14 @@ at zero because a timeout or 5xx may be ambiguous about whether inference and
 billing already occurred; enable retries only with a provider-specific accounting
 rule for those attempts.
 
-No real Zhipu call, model-quality assessment, or autonomy claim is made by this
-implementation. The later pilot may compare Zhipu `glm-5.3-flash`, local 2B/4B
-text models, and Qwen3-VL-4B for a separate visual node. Each provider/model is a
-distinct registered condition.
+The committed `zhipu_glm53_flash.unpriced_probe.yaml` is the narrower executable
+engineering configuration. GLM-5.3-Flash requires thinking to remain enabled;
+the compatible payload therefore pins `thinking.type=enabled` and
+`reasoning_effort=low`. The 2026-09-05 self-development run described below is a
+real adapter probe, not a model-quality assessment or autonomy claim. A later
+study may compare Zhipu `glm-5.3-flash`, local 2B/4B text models, and Qwen3-VL-4B
+for a separate visual node. Each provider/model is a distinct registered
+condition.
 
 ADR-022 must stay proposed until the local self-development record verifies at
 least the registered gates: schema success rate 0.98, zero deterministic-gate
@@ -300,10 +312,11 @@ scitaste model-node pilot status \
 A resume dry-run validates the existing registration, immutable execution
 identity, owned evidence, and reusable checkpoint prefix without changing the
 project revision or run files. Planning, status, tests, and default execution
-never contact a provider. A live case runs only when all three
-conditions hold: the orchestration config has `live_enabled: true`, the caller
-adds `--allow-live`, and the content-addressed compatible backend config is also
-live-enabled with confirmed pricing. The credential environment variable is
+never contact a provider. A live case runs only when the orchestration config
+has `live_enabled: true`, the caller adds `--allow-live`, and the content-addressed
+compatible backend config is also live-enabled. That backend must either have
+confirmed pricing or explicitly declare the non-promotable unpriced engineering
+mode. The credential environment variable is
 not read while loading, planning, verifying, or executing earlier cases; the
 compatible backend reads it only when the live case actually starts. Omitting
 any live authorization leaves that case `planned` and the report blocked.
@@ -318,6 +331,7 @@ outputs/projects/<project-id>/runs/<run-id>/model_node_pilot/
   external/                    # present only for supplied external evidence
   cases/0000__<case-id>.json   # immutable case-boundary checkpoints
   recordings/<pair-id>.jsonl  # exact recording used by replay
+  recordings/live/<case-id>.json # exact request/body before semantic parsing
   attempts/<attempt-id>/       # archived incomplete and failed attempts
   report.json
   verification.json
@@ -349,6 +363,33 @@ evidence. CLI summaries are JSON and include project/run identity, project
 revision, protocol/config/report/verification hashes, case completion/planned/
 blocker counts, exact acceptance state, and measured token/cost/latency totals.
 They never include API-key values or raw provider responses.
+
+The live transport persists the exact request payload and decoded response body
+under the owning project before higher-level schema parsing. It deliberately
+omits authorization headers. The file hash is bound into the case checkpoint
+and final verification record; if parsing later fails, the exchange moves with
+the incomplete marker into the immutable failed-attempt directory. This keeps a
+paid-but-malformed response auditable and prevents resume from silently treating
+it as completed evidence.
+
+## 2026-09-05 real engineering probe
+
+`2026-09-05__zhipu-glm-5.3-flash__model-node-probe-02` completed all seven
+registered cases inside `scitaste-self-development`. The real live case returned
+the pinned model identity and schema-valid JSON with 1,001 input and 587 output
+tokens; the complete pilot used 1,622 tokens and 16,033 ms. The live proposal
+was correctly rejected for token, latency, missing-cost, unsupported-action, and
+related policy violations. The report therefore has `effectiveness_claim=false`,
+`acceptance_status=blocker`, and three unresolved blockers: external manual-
+intervention measurements, complete price/cost telemetry, and independent
+outcome review. It also records one actual safety-metric failure caused by the
+unallowlisted `ADD_ANALYSIS` proposal.
+
+An earlier 512-output-token attempt ended with provider `finish_reason=length`.
+That exact exchange was archived, and a new content-addressed run—not an in-place
+rewrite—raised the transport ceiling to 2,048 tokens. See
+`docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md` for the evidence
+hashes and interpretation boundary.
 
 ## Verification
 

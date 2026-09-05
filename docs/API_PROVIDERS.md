@@ -1,6 +1,6 @@
 # API provider strategy
 
-Verified: 2026-09-04. Prices and model availability change; always re-check the
+Verified: 2026-09-05. Prices and model availability change; always re-check the
 linked official page before purchasing credits or fixing an experiment manifest.
 
 ## Recommended deployment
@@ -66,6 +66,12 @@ scitaste taste calibrate \
   --output outputs/bailian
 ```
 
+For the bounded-node GLM-5.3-Flash engineering probe, the provider currently
+requires thinking to remain enabled. The committed compatible payload uses
+`thinking.type=enabled` plus `reasoning_effort=low`. Its deliberately unpriced
+mode can verify transport/schema behavior but always fails the cost gate; do not
+reuse it for an acceptance or matched-cost claim.
+
 An existing local Qwen checkpoint can instead run without a server or API key:
 
 ```bash
@@ -118,3 +124,4 @@ exact variables SciTaste needs to log and control.
 - OpenRouter privacy and routing: <https://openrouter.ai/docs/guides/privacy/data-collection>
 - Zhipu/Z.ai model connection and endpoint guidance: <https://zcode.z.ai/cn/docs/configuration>
 - Zhipu OpenAI-compatible API: <https://docs.bigmodel.cn/cn/guide/develop/openai/introduction>
+- Zhipu thinking configuration: <https://docs.bigmodel.cn/cn/guide/capabilities/thinking>

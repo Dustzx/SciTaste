@@ -68,12 +68,24 @@ core responsive to open-ended context. Three alternatives are registered:
 The provisional selection is the bounded-node option. Its first pilot covers a
 review semantic parser, an interpretation-threat critic, and an ambiguity-triggered
 action ranker. New online Zhipu calls are pinned to `GLM-5.3-Flash`; local 2B/4B
-models remain a separate condition. No node has been implemented or accepted yet.
+models remain a separate condition.
+
+The nodes and their project-owned orchestration are now implemented. On
+2026-09-05 a seven-case engineering run invoked the real GLM-5.3-Flash endpoint,
+retained its exact request/response without credentials, and completed the
+registered offline recording/replay cases. The live JSON was schema-valid but
+the proposal was rejected by token, latency, unavailable-cost, and action
+allowlist gates. An earlier truncated response was retained as a failed attempt
+before the corrected content-addressed run. This establishes endpoint,
+provenance, recovery, and enforcement behavior only; missing external manual
+measurements, verified pricing, an unsupported-action safety failure, and
+independent review keep the pilot blocked and ADR-022 proposed.
 
 The project record freezes the alternatives, current cost baseline, hard safety
 boundaries, and falsifiable acceptance gates. It remains
 `retrieval_eligible=false`, and the registered Phase 9 protocol is not modified
-mid-study.
+mid-study. The detailed run ledger is
+`docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
 
 ## Anti-self-confirmation rules
 

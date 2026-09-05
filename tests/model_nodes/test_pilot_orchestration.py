@@ -525,6 +525,18 @@ def test_explicit_live_uses_fake_transport_and_external_evidence(
     assert verification["recording_sha256_by_pair"]["live:interpretation-live-plan"] == (
         _sha(live_recording)
     )
+    verified = ProjectPilotOrchestrator(runtime).status(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+    )
+    assert verified.status == "verified"
+
+    live_recording.write_bytes(live_recording.read_bytes() + b"tamper")
+    with pytest.raises((PilotOrchestrationError, ValueError)):
+        ProjectPilotOrchestrator(runtime).status(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+        )
 
 
 def test_failed_live_response_is_archived_exactly_and_resume_retries(

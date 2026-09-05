@@ -7,6 +7,12 @@ semantic versioning.
 
 ### Added
 
+- An explicit non-promotable unpriced engineering mode for real bounded model
+  nodes, plus a project-owned GLM-5.3-Flash seven-case probe with exact live HTTP
+  evidence, checkpoint binding, and honest cost/review blockers.
+- Pre-semantic live-response retention for model-node pilots, including exact
+  request/body hashes, credential-free project evidence, failed-attempt archive,
+  resume validation, and final verification binding.
 - Project-owned bounded-model-node pilot orchestration with strict
   content-addressed configuration, explicit live authorization, immutable
   case-chain checkpoints, failed-attempt archives, resume-aware dry-run, exact
