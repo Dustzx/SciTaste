@@ -475,13 +475,41 @@ def test_output_helper_removes_verified_staging_directory_when_rename_fails(
         assert len(SurfaceAuditLog(staged / "surface-audit.jsonl").records()) == 1
         raise OSError("injected atomic publish failure")
 
-    monkeypatch.setattr(factory_module.os, "rename", fail_rename)
+    monkeypatch.setattr(factory_module, "_publish_directory_no_replace", fail_rename)
 
     with pytest.raises(OSError, match="injected atomic publish failure"):
         ProjectSurfaceFactory(runtime).write_project_overview("surface-project", destination)
 
     assert not destination.exists()
     assert not destination.is_symlink()
+    assert not list(tmp_path.glob(".published-surface.*.tmp"))
+
+
+def test_output_helper_never_replaces_destination_created_during_publish(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, _ = _runtime(tmp_path)
+    destination = tmp_path / "published-surface"
+    original_publish = factory_module._publish_directory_no_replace
+    competing_inode: list[int] = []
+
+    def inject_competing_destination(source: Path, target: Path) -> None:
+        target.mkdir()
+        competing_inode.append(target.stat().st_ino)
+        original_publish(source, target)
+
+    monkeypatch.setattr(
+        factory_module,
+        "_publish_directory_no_replace",
+        inject_competing_destination,
+    )
+
+    with pytest.raises(FileExistsError):
+        ProjectSurfaceFactory(runtime).write_project_overview("surface-project", destination)
+
+    assert destination.stat().st_ino == competing_inode[0]
+    assert list(destination.iterdir()) == []
     assert not list(tmp_path.glob(".published-surface.*.tmp"))
 
 

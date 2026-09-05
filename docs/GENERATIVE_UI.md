@@ -57,7 +57,10 @@ surface and renderer through their schemas, verifies and replays the audit log,
 and only then atomically renames the complete directory into place. Failure at
 any pre-publication step removes the temporary directory and leaves no final
 destination. An existing file, directory, or symbolic link is never reused or
-overwritten. Building a surface alone writes nothing.
+overwritten. On Linux the publication step uses `renameat2` with
+`RENAME_NOREPLACE`; if that atomic no-replace operation is unavailable, the
+helper fails closed instead of falling back to an overwrite-capable rename.
+Building a surface alone writes nothing.
 
 This factory still stops at the existing trust boundary: it does not provide a
 frontend, HTTP/API handler, model-driven layout generator, authenticated event

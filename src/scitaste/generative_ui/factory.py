@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ctypes
+import errno
 import json
 import os
 import shutil
@@ -128,7 +130,7 @@ class ProjectSurfaceFactory:
                 expected_renderer=renderer,
             )
             _require_new_destination(destination)
-            os.rename(temporary, destination)
+            _publish_directory_no_replace(temporary, destination)
         except BaseException:
             shutil.rmtree(temporary, ignore_errors=True)
             raise
@@ -418,6 +420,36 @@ def _write_new_json(path: Path, payload: dict[str, Any]) -> None:
 def _require_new_destination(destination: Path) -> None:
     if os.path.lexists(destination):
         raise FileExistsError(f"surface output destination already exists: {destination}")
+
+
+def _publish_directory_no_replace(source: Path, destination: Path) -> None:
+    try:
+        renameat2 = ctypes.CDLL(None, use_errno=True).renameat2
+    except AttributeError as exc:
+        raise OSError(
+            errno.ENOSYS,
+            "atomic no-replace directory publication is unavailable",
+        ) from exc
+
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    ctypes.set_errno(0)
+    result = renameat2(
+        -100,  # AT_FDCWD
+        os.fsencode(source),
+        -100,  # AT_FDCWD
+        os.fsencode(destination),
+        1,  # RENAME_NOREPLACE
+    )
+    if result != 0:
+        error = ctypes.get_errno() or errno.EIO
+        raise OSError(error, os.strerror(error), destination)
 
 
 def _reload_verified_bundle(
