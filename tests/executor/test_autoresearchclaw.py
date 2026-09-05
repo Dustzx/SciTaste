@@ -42,7 +42,13 @@ def test_stage_execution_imports_validated_artifacts_and_cost(tmp_path) -> None:
         (stage / "sources.json").write_text("[]\n", encoding="utf-8")
         (stage / "queries.json").write_text("[]\n", encoding="utf-8")
         (run_dir / "checkpoint.json").write_text(
-            json.dumps({"last_completed_name": "SEARCH_STRATEGY", "run_id": "upstream-after"}),
+            json.dumps(
+                {
+                    "last_completed_stage": 3,
+                    "last_completed_name": "SEARCH_STRATEGY",
+                    "run_id": "upstream-after",
+                }
+            ),
             encoding="utf-8",
         )
         (run_dir / "pipeline_summary.json").write_text(
@@ -103,6 +109,14 @@ def test_stage_cost_is_incremental_when_upstream_log_is_cumulative(tmp_path) -> 
         (stage / "queries.json").write_text("[]\n", encoding="utf-8")
         with (run_dir / "cost_log.jsonl").open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"cost_usd": 0.02}) + "\n")
+        (run_dir / "checkpoint.json").write_text(
+            json.dumps({"last_completed_stage": 3, "last_completed_name": "SEARCH_STRATEGY"}),
+            encoding="utf-8",
+        )
+        (run_dir / "pipeline_summary.json").write_text(
+            json.dumps({"final_status": "done", "final_stage": 3}),
+            encoding="utf-8",
+        )
         return subprocess.CompletedProcess(command, 0, stdout="stage complete", stderr="")
 
     state = ResearchState(
@@ -126,10 +140,151 @@ def test_stage_cost_is_incremental_when_upstream_log_is_cumulative(tmp_path) -> 
     assert result.data["cost_accounting"] == {
         "wall_time_measured": True,
         "api_cost_measured": True,
+        "cost_log_present": True,
+        "cost_error": None,
         "api_cost_semantics": "incremental-stage-delta-v1",
         "prior_api_cost_usd": 0.5,
         "cumulative_api_cost_usd": 0.52,
     }
+
+
+def test_success_exit_rejects_stale_stage_evidence(tmp_path) -> None:
+    run_dir = tmp_path / "arc-run"
+    prior = run_dir / "stage-02"
+    target = run_dir / "stage-03"
+    prior.mkdir(parents=True)
+    target.mkdir()
+    (prior / "problem_tree.md").write_text("# Problems\n", encoding="utf-8")
+    for name, content in {
+        "search_plan.yaml": "queries: []\n",
+        "sources.json": "[]\n",
+        "queries.json": "[]\n",
+    }.items():
+        (target / name).write_text(content, encoding="utf-8")
+    checkpoint = {
+        "last_completed_stage": 3,
+        "last_completed_name": "SEARCH_STRATEGY",
+        "run_id": "stale-run",
+    }
+    (run_dir / "checkpoint.json").write_text(json.dumps(checkpoint), encoding="utf-8")
+    (run_dir / "pipeline_summary.json").write_text(
+        json.dumps({"final_status": "done", "final_stage": 3}), encoding="utf-8"
+    )
+    config = tmp_path / "config.yaml"
+    config.write_text("test: true\n", encoding="utf-8")
+
+    result = AutoResearchClawExecutor(
+        config_path=config,
+        command_runner=lambda command, **kwargs: subprocess.CompletedProcess(
+            command, 0, stdout="claimed success", stderr=""
+        ),
+    ).execute(
+        ResearchState(
+            project_id="arc-test",
+            research_direction="Scientific agent evaluation",
+            target_domain="autonomous-research",
+            executor_context={"autoresearchclaw_run_dir": str(run_dir)},
+        ),
+        ResearchAction(
+            action_id="search",
+            type=MetaAction.SEARCH,
+            description="Execute search strategy",
+        ),
+    )
+
+    assert result.status == ExecutionStatus.FAILED
+    assert "fresh checkpoint" in str(result.error)
+
+
+def test_stage_rejects_symlink_artifact_and_invalid_cost(tmp_path) -> None:
+    run_dir = tmp_path / "arc-run"
+    prior = run_dir / "stage-02"
+    prior.mkdir(parents=True)
+    (prior / "problem_tree.md").write_text("# Problems\n", encoding="utf-8")
+    config = tmp_path / "config.yaml"
+    config.write_text("test: true\n", encoding="utf-8")
+
+    def unsafe_runner(command, **kwargs):
+        stage = run_dir / "stage-03"
+        stage.mkdir()
+        outside = tmp_path / "outside.yaml"
+        outside.write_text("queries: []\n", encoding="utf-8")
+        (stage / "search_plan.yaml").symlink_to(outside)
+        (stage / "sources.json").write_text("[]\n", encoding="utf-8")
+        (stage / "queries.json").write_text("[]\n", encoding="utf-8")
+        (run_dir / "checkpoint.json").write_text(
+            json.dumps({"last_completed_stage": 3, "last_completed_name": "SEARCH_STRATEGY"}),
+            encoding="utf-8",
+        )
+        (run_dir / "pipeline_summary.json").write_text(
+            json.dumps({"final_status": "done", "final_stage": 3}), encoding="utf-8"
+        )
+        (run_dir / "cost_log.jsonl").write_text("not-json\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="stage complete", stderr="")
+
+    result = AutoResearchClawExecutor(
+        config_path=config,
+        command_runner=unsafe_runner,
+    ).execute(
+        ResearchState(
+            project_id="arc-test",
+            research_direction="Scientific agent evaluation",
+            target_domain="autonomous-research",
+            executor_context={"autoresearchclaw_run_dir": str(run_dir)},
+        ),
+        ResearchAction(
+            action_id="search",
+            type=MetaAction.SEARCH,
+            description="Execute search strategy",
+        ),
+    )
+
+    assert result.status == ExecutionStatus.FAILED
+    assert "symbolic link" in str(result.error)
+    assert "invalid AutoResearchClaw cost record" in str(result.error)
+    assert result.data["cost_accounting"]["api_cost_measured"] is False
+
+
+def test_timeout_retains_partial_cost_and_token_budget_environment(tmp_path) -> None:
+    run_dir = tmp_path / "arc-run"
+    prior = run_dir / "stage-02"
+    prior.mkdir(parents=True)
+    (prior / "problem_tree.md").write_text("# Problems\n", encoding="utf-8")
+    config = tmp_path / "config.yaml"
+    config.write_text("test: true\n", encoding="utf-8")
+
+    def timing_out_runner(command, **kwargs):
+        environment = kwargs["env"]
+        assert environment["SCITASTE_ARC_MAX_TOTAL_TOKENS"] == "12000"
+        assert environment["SCITASTE_ARC_MAX_OUTPUT_TOKENS"] == "2048"
+        assert environment["SCITASTE_ARC_TELEMETRY_PATH"].endswith("scitaste_llm_telemetry.jsonl")
+        (run_dir / "cost_log.jsonl").write_text(
+            json.dumps({"cost_usd": 0.03}) + "\n", encoding="utf-8"
+        )
+        raise subprocess.TimeoutExpired(command, 1, output="partial", stderr="timeout")
+
+    result = AutoResearchClawExecutor(
+        config_path=config,
+        max_output_tokens=2048,
+        max_total_tokens=12000,
+        command_runner=timing_out_runner,
+    ).execute(
+        ResearchState(
+            project_id="arc-test",
+            research_direction="Scientific agent evaluation",
+            target_domain="autonomous-research",
+            executor_context={"autoresearchclaw_run_dir": str(run_dir)},
+        ),
+        ResearchAction(
+            action_id="search",
+            type=MetaAction.SEARCH,
+            description="Execute search strategy",
+        ),
+    )
+
+    assert result.status == ExecutionStatus.FAILED
+    assert result.cost["api_cost_usd"] == 0.03
+    assert result.data["partial_after_timeout"] is True
 
 
 def test_stage_execution_rejects_missing_prerequisites(tmp_path) -> None:

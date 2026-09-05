@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
@@ -61,6 +63,11 @@ class SubstrateActionWorkflow:
         )
         decision = self.controller.decide(state=state, candidate_actions=[action])
         result = self.executor.execute(state, decision.selected_action)
+        # Persist the paid/external result before any later state or decision-log
+        # mutation can fail. A retry can then distinguish a recorded response
+        # from a call whose outcome is genuinely unknown.
+        result_path = root / "executor_result.json"
+        _write_once(result_path, result.model_dump_json(indent=2) + "\n")
         decision.executor_result_id = result.result_id
         decision.actual_outcome = result.model_dump(mode="json")
         logger.append(decision)
@@ -75,8 +82,6 @@ class SubstrateActionWorkflow:
                 "current_upstream_run_id"
             )
         store.save(state)
-        result_path = root / "executor_result.json"
-        result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
         summary: dict[str, object] = {
             "project_id": state.project_id,
             "action": action_type.value,
@@ -90,11 +95,27 @@ class SubstrateActionWorkflow:
             "decision_log": str(logger.path),
             "latest_state": str(store.latest_path),
         }
-        (root / "substrate_summary.json").write_text(
+        _write_once(
+            root / "substrate_summary.json",
             json.dumps(summary, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
         )
         return summary
+
+
+def _write_once(path: Path, contents: str) -> None:
+    """Atomically publish a new evidence file without replacing an earlier one."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def build_autoresearchclaw_workflow(
@@ -103,12 +124,14 @@ def build_autoresearchclaw_workflow(
     seed: int,
     timeout_seconds: float,
     max_output_tokens: int | None,
+    max_total_tokens: int | None = None,
 ) -> SubstrateActionWorkflow:
     return SubstrateActionWorkflow(
         executor=AutoResearchClawExecutor(
             config_path=config_path,
             timeout_seconds=timeout_seconds,
             max_output_tokens=max_output_tokens,
+            max_total_tokens=max_total_tokens,
         ),
         seed=seed,
     )

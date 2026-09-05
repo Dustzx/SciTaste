@@ -1,0 +1,70 @@
+project:
+  name: scitaste-project-substrate
+  mode: full-auto
+
+research:
+  topic: Taste-guided control for autonomous scientific research
+  domains: [machine-learning]
+  daily_paper_count: 5
+  quality_threshold: 4.0
+  graceful_degradation: false
+
+runtime:
+  timezone: Asia/Shanghai
+  max_parallel_tasks: 1
+  approval_timeout_hours: 1
+  retry_limit: 1
+
+notifications:
+  channel: console
+  target: ""
+  on_stage_start: false
+  on_stage_fail: true
+  on_gate_required: true
+
+knowledge_base:
+  backend: markdown
+  root: ../../outputs/autoresearchclaw-kb
+
+openclaw_bridge:
+  use_cron: false
+  use_message: false
+  use_memory: false
+  use_sessions_spawn: false
+  use_web_fetch: false
+  use_browser: false
+
+llm:
+  provider: openai-compatible
+  base_url: https://open.bigmodel.cn/api/paas/v4
+  wire_api: chat_completions
+  api_key_env: ZAI_API_KEY
+  api_key: ""
+  primary_model: glm-5.3-flash
+  fallback_models: []
+  timeout_sec: 180
+
+security:
+  hitl_required_stages: []
+  allow_publish_without_approval: false
+  redact_sensitive_logs: true
+
+experiment:
+  mode: simulated
+  time_budget_sec: 60
+  max_iterations: 1
+  metric_key: primary_metric
+  metric_direction: maximize
+  opencode:
+    enabled: false
+  figure_agent:
+    enabled: false
+
+prompts:
+  custom_file: ../../configs/executors/autoresearchclaw_smoke_prompts.yaml
+
+web_search:
+  enabled: false
+  enable_scholar: false
+  enable_crawling: false
+  enable_pdf_extraction: false

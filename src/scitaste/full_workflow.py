@@ -191,17 +191,6 @@ class FullWorkflow:
                     "requires manual inspection"
                 )
             paper_files = self._materialize_paper(config, runtime, run_root)
-            snapshot = runtime.update_run(
-                config.project_id,
-                run_id,
-                expected_revision=snapshot.revision,
-                status="complete",
-                artifact=f"runs/{run_id}/full_run_summary.json",
-                final_state=f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
-                stage_records={
-                    name: f"runs/{run_id}/stages/{name}/STAGE.json" for name in summaries
-                },
-            )
             paper = PaperManifest(
                 paper_id=config.paper_id,
                 project_id=config.project_id,
@@ -236,30 +225,43 @@ class FullWorkflow:
                 expected_revision=snapshot.revision,
                 status="reviewed-draft",
             )
+
+            # The summary must exist before the registered run can claim it as its
+            # completion artifact. The final metadata update advances one revision.
+            summary: dict[str, object] = {
+                "schema_version": "1.0",
+                "project_id": config.project_id,
+                "run_id": run_id,
+                "status": "complete",
+                "resumed": resume,
+                "resume_attempt": resume_attempt,
+                "workflow_config_sha256": workflow_config_sha256,
+                "reused_stages": reused_stages,
+                "archived_attempts": archived_attempts,
+                "scope": config.evidence_scope,
+                "effectiveness_claim": False,
+                "project_revision": snapshot.revision + 1,
+                "current_paper": snapshot.current_paper_locator,
+                "stages": summaries,
+                "final_state": f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
+                "paper_files": paper_files,
+            }
+            summary_path = run_root / "full_run_summary.json"
+            _write_json(summary_path, summary)
+            snapshot = runtime.update_run(
+                config.project_id,
+                run_id,
+                expected_revision=snapshot.revision,
+                status="complete",
+                artifact=f"runs/{run_id}/full_run_summary.json",
+                final_state=f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
+                stage_records={
+                    name: f"runs/{run_id}/stages/{name}/STAGE.json" for name in summaries
+                },
+            )
         except BaseException as exc:
             self._mark_failed(runtime, config.project_id, run_id, exc)
             raise
-
-        summary: dict[str, object] = {
-            "schema_version": "1.0",
-            "project_id": config.project_id,
-            "run_id": run_id,
-            "status": "complete",
-            "resumed": resume,
-            "resume_attempt": resume_attempt,
-            "workflow_config_sha256": workflow_config_sha256,
-            "reused_stages": reused_stages,
-            "archived_attempts": archived_attempts,
-            "scope": config.evidence_scope,
-            "effectiveness_claim": False,
-            "project_revision": snapshot.revision,
-            "current_paper": snapshot.current_paper_locator,
-            "stages": summaries,
-            "final_state": f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
-            "paper_files": paper_files,
-        }
-        summary_path = run_root / "full_run_summary.json"
-        _write_json(summary_path, summary)
         binding = ProjectSnapshotAdapter(runtime).build_binding(config.project_id)
         binding_path = (
             runtime.outputs_root

@@ -84,3 +84,19 @@ Every directory has a `STAGE.json` explaining what it completed. Its paper is
 owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
+
+A project-owned AutoResearchClaw action uses a different, explicit boundary:
+
+```text
+runs/<run-id>/
+├── substrate_manifest.json
+├── inputs/{autoresearchclaw/,autoresearchclaw-config.yaml}
+├── work/autoresearchclaw/
+├── substrate_action/{decisions.jsonl,executor_result.json,research_state.json,
+│                    substrate_summary.json,verification.json}
+└── failed_attempts/attempt-NNN/  # only after a resumable failed attempt
+```
+
+`inputs/` is immutable evidence; provider-backed mutation occurs only in
+`work/`. `substrate project status` rehashes both trees and the action evidence
+before reporting the run as verified.

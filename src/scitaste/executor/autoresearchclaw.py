@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -80,6 +81,7 @@ class AutoResearchClawExecutor:
         dry_run: bool = False,
         timeout_seconds: float = 1800.0,
         max_output_tokens: int | None = None,
+        max_total_tokens: int | None = None,
         command_runner: CommandRunner | None = None,
     ) -> None:
         default_repo = Path(__file__).resolve().parents[3] / "third_party" / "autoresearchclaw"
@@ -91,7 +93,10 @@ class AutoResearchClawExecutor:
         self.timeout_seconds = timeout_seconds
         if max_output_tokens is not None and max_output_tokens <= 0:
             raise ValueError("max_output_tokens must be positive")
+        if max_total_tokens is not None and max_total_tokens <= 0:
+            raise ValueError("max_total_tokens must be positive")
         self.max_output_tokens = max_output_tokens
+        self.max_total_tokens = max_total_tokens
         self.command_runner = command_runner or subprocess.run
 
     def verify_substrate(self) -> dict[str, str | bool]:
@@ -191,7 +196,11 @@ class AutoResearchClawExecutor:
         return self.execute(state, action)
 
     def _base_command(self, *, topic: str, output_dir: str | Path) -> list[str]:
-        module = "scitaste.executor.arc_bootstrap" if self.max_output_tokens else "researchclaw"
+        module = (
+            "scitaste.executor.arc_bootstrap"
+            if self.max_output_tokens or self.max_total_tokens
+            else "researchclaw"
+        )
         command = [
             sys.executable,
             "-m",
@@ -255,8 +264,14 @@ class AutoResearchClawExecutor:
         )
         if self.max_output_tokens is not None:
             environment["SCITASTE_ARC_MAX_OUTPUT_TOKENS"] = str(self.max_output_tokens)
+        if self.max_total_tokens is not None:
+            environment["SCITASTE_ARC_MAX_TOTAL_TOKENS"] = str(self.max_total_tokens)
         output_value = _command_value(command, "--output")
         output_dir = Path(output_value) if output_value else None
+        if output_dir is not None and (self.max_output_tokens or self.max_total_tokens):
+            environment["SCITASTE_ARC_TELEMETRY_PATH"] = str(
+                output_dir / "scitaste_llm_telemetry.jsonl"
+            )
         prior_checkpoint = _load_json(output_dir / "checkpoint.json") if output_dir else {}
         prior_api_cost_usd = _read_cost_total(output_dir) if output_dir else None
         started_at = datetime.now(UTC)
@@ -271,15 +286,40 @@ class AutoResearchClawExecutor:
                 text=True,
                 timeout=self.timeout_seconds,
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
+            normalized = (
+                self._normalize_run(
+                    output_dir,
+                    stage,
+                    prior_checkpoint=prior_checkpoint,
+                    prior_api_cost_usd=prior_api_cost_usd,
+                )
+                if output_dir
+                else {}
+            )
+            elapsed_hours = (time.perf_counter() - started_clock) / 3600
+            normalized_cost = {
+                **normalized.get("cost", {}),
+                "wall_time_hours": round(elapsed_hours, 8),
+            }
             return ExecutionResult(
                 action_id=action.action_id,
                 status=ExecutionStatus.FAILED,
                 executor="autoresearchclaw",
                 started_at=started_at,
                 finished_at=datetime.now(UTC),
+                observations=[str(exc.stdout)[-4000:]] if exc.stdout else [],
+                artifacts=[item["path"] for item in normalized.get("artifact_manifest", [])],
+                cost=normalized_cost,
                 error=f"AutoResearchClaw command timed out after {self.timeout_seconds:g}s",
-                data={"command": command, "substrate": verification, "stage": stage},
+                data={
+                    "command": command,
+                    "substrate": verification,
+                    "stage": stage,
+                    "partial_after_timeout": True,
+                    "stderr": str(exc.stderr)[-4000:] if exc.stderr else "",
+                    **normalized,
+                },
             )
         normalized = (
             self._normalize_run(
@@ -337,6 +377,7 @@ class AutoResearchClawExecutor:
         checkpoint = _load_json(run_dir / "checkpoint.json")
         manifest: list[dict[str, Any]] = []
         missing: list[str] = []
+        artifact_errors: list[str] = []
         if stage and stage in STAGE_CONTRACTS:
             stage_number, _, outputs = STAGE_CONTRACTS[stage]
             stage_dir = run_dir / f"stage-{stage_number:02d}"
@@ -345,18 +386,46 @@ class AutoResearchClawExecutor:
                 if not candidate.exists():
                     missing.append(name)
                     continue
-                manifest.append(_artifact_record(candidate, run_dir))
+                try:
+                    manifest.append(_artifact_record(candidate, run_dir))
+                except ValueError as exc:
+                    artifact_errors.append(f"{name}: {exc}")
         validation_error = None
-        if missing:
+        if artifact_errors:
+            validation_error = "invalid AutoResearchClaw stage artifacts: " + "; ".join(
+                artifact_errors
+            )
+        elif missing:
             validation_error = (
                 f"AutoResearchClaw reported success but {stage} omitted contract artifacts: "
                 + ", ".join(missing)
             )
-        elif summary and summary.get("final_status") not in {None, "done"}:
+        elif stage and stage in STAGE_CONTRACTS and checkpoint == prior_checkpoint:
+            validation_error = "AutoResearchClaw stage did not publish a fresh checkpoint"
+        elif (
+            stage
+            and stage in STAGE_CONTRACTS
+            and (
+                checkpoint.get("last_completed_stage") != STAGE_CONTRACTS[stage][0]
+                or checkpoint.get("last_completed_name") != stage
+            )
+        ):
+            validation_error = (
+                f"AutoResearchClaw checkpoint does not confirm completed stage {stage}"
+            )
+        elif stage and stage in STAGE_CONTRACTS and not summary:
+            validation_error = "AutoResearchClaw stage omitted its pipeline summary"
+        elif summary and summary.get("final_status") != "done":
             validation_error = (
                 "AutoResearchClaw pipeline summary ended with status "
                 f"{summary.get('final_status')!r}"
             )
+        elif (
+            stage
+            and stage in STAGE_CONTRACTS
+            and summary.get("final_stage") != (STAGE_CONTRACTS[stage][0])
+        ):
+            validation_error = f"AutoResearchClaw pipeline summary does not end at stage {stage}"
         previous_run_id = prior_checkpoint.get("run_id")
         current_run_id = checkpoint.get("run_id")
         session = {
@@ -369,8 +438,16 @@ class AutoResearchClawExecutor:
                 previous_run_id and current_run_id and previous_run_id != current_run_id
             ),
         }
-        cumulative_api_cost_usd = _read_cost_total(run_dir)
-        cost_log_present = cumulative_api_cost_usd is not None
+        cost_log_present = (run_dir / "cost_log.jsonl").is_file()
+        cost_error: str | None = None
+        try:
+            cumulative_api_cost_usd = _read_cost_total(run_dir)
+        except ValueError as exc:
+            cumulative_api_cost_usd = None
+            cost_error = str(exc)
+            validation_error = (
+                f"{validation_error}; {cost_error}" if validation_error else cost_error
+            )
         incremental_api_cost_usd: float | None = None
         if cumulative_api_cost_usd is not None:
             prior = prior_api_cost_usd or 0.0
@@ -392,7 +469,9 @@ class AutoResearchClawExecutor:
             ),
             "cost_accounting": {
                 "wall_time_measured": True,
-                "api_cost_measured": cost_log_present,
+                "api_cost_measured": cumulative_api_cost_usd is not None,
+                "cost_log_present": cost_log_present,
+                "cost_error": cost_error,
                 "api_cost_semantics": "incremental-stage-delta-v1",
                 "prior_api_cost_usd": prior_api_cost_usd,
                 "cumulative_api_cost_usd": cumulative_api_cost_usd,
@@ -428,8 +507,21 @@ def _find_artifact(run_dir: Path, name: str) -> Path | None:
 
 
 def _artifact_record(path: Path, run_dir: Path) -> dict[str, Any]:
+    if path.is_symlink():
+        raise ValueError("AutoResearchClaw artifact cannot be a symbolic link")
+    resolved_run = run_dir.resolve(strict=True)
+    resolved_path = path.resolve(strict=True)
+    try:
+        resolved_path.relative_to(resolved_run)
+    except ValueError as exc:
+        raise ValueError("AutoResearchClaw artifact escapes its run directory") from exc
     if path.is_dir():
-        files = sorted(item for item in path.rglob("*") if item.is_file())
+        entries = sorted(path.rglob("*"))
+        if any(item.is_symlink() for item in entries):
+            raise ValueError("AutoResearchClaw artifact tree cannot contain symbolic links")
+        if any(not item.is_dir() and not item.is_file() for item in entries):
+            raise ValueError("AutoResearchClaw artifact tree contains a non-regular entry")
+        files = [item for item in entries if item.is_file()]
         digest = hashlib.sha256()
         size = 0
         for item in files:
@@ -461,11 +553,26 @@ def _read_cost_total(run_dir: Path) -> float | None:
     if not path.is_file():
         return None
     total = 0.0
-    for line in path.read_text(encoding="utf-8").splitlines():
+    records = 0
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
         try:
             record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(record, dict):
-            total += float(record.get("cost_usd", 0.0) or 0.0)
-    return round(total, 8)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid AutoResearchClaw cost record at line {line_number}") from exc
+        if not isinstance(record, dict) or "cost_usd" not in record:
+            raise ValueError(f"AutoResearchClaw cost record {line_number} has no cost_usd")
+        try:
+            value = float(record["cost_usd"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"AutoResearchClaw cost record {line_number} has a non-numeric cost_usd"
+            ) from exc
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(
+                f"AutoResearchClaw cost record {line_number} is not finite non-negative"
+            )
+        total += value
+        records += 1
+    return round(total, 8) if records else None

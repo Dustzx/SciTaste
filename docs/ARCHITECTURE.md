@@ -505,8 +505,10 @@ the full-workflow config owns and revalidates the canonical project identity.
 
 Each logical phase has a named directory and `STAGE.json`; the selected paper is
 packaged and registered beneath the same project. Completion and failure both
-update registered run metadata through optimistic revisions. The final trusted
-UI binding is created only after project, run, paper, and artifact registration.
+update registered run metadata through optimistic revisions. The completion
+summary is durably written before the run may register it as its completion
+artifact. The final trusted UI binding is created only after project, run, paper,
+and artifact registration.
 Stage completion records are self-hashed and bind the predecessor state, output
 state, decision log, and required artifacts. Resume may reuse only the validated
 contiguous prefix. An incomplete attempt is preserved under the owning run before
@@ -538,3 +540,26 @@ selection cannot claim matrix completion, and a concurrent project writer causes
 finalization conflict rather than a latest-revision retry. This decision improves
 execution provenance only; synthetic cells, incomplete matrices, and missing
 external blinded reviews remain ineligible for effectiveness claims.
+
+### ADR-027: Selected substrate actions execute from immutable project inputs
+
+Status: accepted. A raw path passed to the AutoResearchClaw adapter is not a
+project lifecycle. A project-owned substrate action therefore imports the exact
+source run and executor configuration before contacting a provider, publishes a
+self-hashed manifest over those inputs and the pinned upstream commit, and runs
+only in a separate working tree. The unmodified upstream repository remains
+code, never the writable owner of SciTaste evidence.
+
+A successful process exit is insufficient. The adapter requires fresh terminal
+checkpoint and summary evidence for the exact selected stage, rejects escaping
+or symbolic-link artifacts, validates cost records, and charges only the staged
+increment over the imported cumulative cost. Timeout evidence remains available
+for audit. Completion or failure is then bound to a self-hashed verification
+record and registered through `ProjectRuntime`.
+
+Live calls require both a versioned `live_enabled` setting and explicit caller
+authorization. Resume is limited to failed runs with identical project, action,
+seed, provider/model, workflow configuration, executor configuration, immutable
+input hash, and substrate pin; prior mutable attempts are archived. This accepts
+an online engineering lifecycle for one selected action. It is not yet a full
+Stage 1–18 orchestration path or evidence of research-effectiveness gain.

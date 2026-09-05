@@ -118,6 +118,46 @@ def test_full_workflow_retains_a_failed_run_for_audit(tmp_path: Path, monkeypatc
     assert (outputs / "projects/failed-full-project/runs/failed-seed-07/stages").is_dir()
 
 
+def test_full_workflow_does_not_register_completion_before_summary_exists(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    payload = config.model_dump(mode="python")
+    payload.update(
+        {
+            "project_id": "summary-failure-project",
+            "paper_directory": "summary-failure-reviewed-draft",
+        }
+    )
+    config = type(config).model_validate(payload)
+    original_write_json = full_workflow._write_json
+
+    def fail_summary(path: Path, value: object) -> None:
+        if path.name == "full_run_summary.json":
+            raise OSError("controlled summary failure")
+        original_write_json(path, value)
+
+    monkeypatch.setattr(full_workflow, "_write_json", fail_summary)
+    outputs = tmp_path / "outputs"
+
+    with pytest.raises(OSError, match="controlled summary failure"):
+        FullWorkflow(seed=7).run(
+            config,
+            outputs_root=outputs,
+            run_id="summary-failure-seed-07",
+        )
+
+    snapshot = ProjectRuntime(outputs).open("summary-failure-project")
+    registered_run = snapshot.manifest.runs[0]
+    assert registered_run.status == "failed"
+    assert (registered_run.model_extra or {}).get("artifact") is None
+    assert not (
+        outputs / "projects/summary-failure-project/runs/summary-failure-seed-07/"
+        "full_run_summary.json"
+    ).exists()
+
+
 def test_full_workflow_resumes_a_valid_prefix_and_archives_partial_stage(
     tmp_path: Path, monkeypatch
 ) -> None:

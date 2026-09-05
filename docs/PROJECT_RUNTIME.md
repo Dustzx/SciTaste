@@ -24,6 +24,10 @@ future generated interfaces.
   paper bundle. Symlink escapes and path traversal are rejected.
 - AutoResearchClaw remains unmodified. A registered run may designate an
   `upstream_run` stage path, while a self-development run may expose its own root.
+- A selected AutoResearchClaw action can instead use the first-party project
+  substrate lifecycle. It imports an immutable source snapshot, runs against a
+  separate working tree, binds both configuration contents and the upstream pin,
+  and registers only hashed verification evidence.
 
 The manifest accepts extension fields so the existing FLOOR preacceptance and
 SciTaste self-development records remain readable. Canonical fields stay strict;
@@ -42,6 +46,11 @@ aggregate results, and cell checkpoints by hash. A subset execution remains
 partial runs may resume under their registered identity, while complete, running,
 changed, or tampered runs fail closed. A project revision changed during a long
 cell execution is not reacquired at finalization.
+
+`substrate project plan|execute|status` provides the equivalent project-owned
+lifecycle for one AutoResearchClaw stage. Live execution is double-gated by its
+versioned workflow configuration and explicit `--allow-live`; failed attempts
+may resume only after their immutable inputs and registered identity revalidate.
 
 ## CLI
 

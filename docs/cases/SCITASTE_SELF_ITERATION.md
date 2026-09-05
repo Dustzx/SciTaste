@@ -87,6 +87,22 @@ boundaries, and falsifiable acceptance gates. It remains
 mid-study. The detailed run ledger is
 `docs/experiments/zhipu_glm53_model_node_probe_2026-09-05.md`.
 
+## Project-owned substrate-action case
+
+The self-development project also owns the first live test of the new
+AutoResearchClaw action lifecycle. A Zhipu GLM-5.3-Flash call reran only the
+selected search-strategy stage from an imported immutable source snapshot. The
+three expected artifacts, fresh checkpoint, exact terminal summary, working-tree
+hash, action state, and ProjectRuntime metadata passed independent revalidation.
+
+The run is intentionally classified as online engineering evidence. Its single
+request used 4,509 tokens and hit the 4,096 completion ceiling; upstream emitted
+no API-cost log, and web search was disabled. The generated search terms are
+broad fragments rather than an accepted literature strategy. These negatives
+are retained rather than converted into a taste-quality success. The detailed
+ledger is
+`docs/experiments/zhipu_glm53_project_substrate_search_2026-09-05.md`.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

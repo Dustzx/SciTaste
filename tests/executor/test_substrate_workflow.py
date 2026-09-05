@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scitaste.cli import main
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
 from scitaste.executor.mock import MockExecutor
@@ -51,6 +53,26 @@ def test_failed_substrate_action_does_not_advance_state(tmp_path) -> None:
     assert summary["transition_applied"] is False
     assert state.revision == 0
     assert result["error"] == "controlled failure"
+
+
+def test_external_result_is_durable_before_decision_log_mutation(tmp_path, monkeypatch) -> None:
+    output = tmp_path / "interrupted"
+
+    def fail_append(*_args: object, **_kwargs: object) -> None:
+        raise OSError("controlled decision-log failure")
+
+    monkeypatch.setattr(DecisionLogger, "append", fail_append)
+
+    with pytest.raises(OSError, match="controlled decision-log failure"):
+        SubstrateActionWorkflow(executor=MockExecutor(seed=7), seed=7).run(
+            action_type=MetaAction.SEARCH,
+            run_dir=tmp_path / "arc-run",
+            output_dir=output,
+        )
+
+    result = json.loads((output / "executor_result.json").read_text(encoding="utf-8"))
+    assert result["status"] == "SUCCEEDED"
+    assert not (output / "substrate_summary.json").exists()
 
 
 def test_substrate_cli_dry_run_validates_pin_without_writing(tmp_path) -> None:

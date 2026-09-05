@@ -1,0 +1,24 @@
+schema_version: "1.0"
+config_id: project-substrate-search-zhipu-glm53-flash-v1
+project_id: scitaste-self-development
+title: SciTaste self-development
+research_direction: >-
+  Use SciTaste's own design, implementation, and validation decisions as an
+  auditable self-iteration project without treating self-evidence as an
+  effectiveness result.
+target_domain: null
+execution_target_domain: autonomous-research
+target_venue: null
+action_type: SEARCH
+provider: autoresearchclaw
+model: glm-5.3-flash
+condition: project_substrate_action
+evidence_scope: online-engineering-only
+live_enabled: false
+autoresearchclaw_config: ../executors/autoresearchclaw.zhipu-glm53-flash.example.yaml
+timeout_seconds: 1800
+# Per request; this is configurable and is not a fixed development-wide limit.
+max_output_tokens: 4096
+# Across all provider calls in this one upstream stage attempt.
+max_total_tokens: 100000
+max_snapshot_bytes: 2147483648

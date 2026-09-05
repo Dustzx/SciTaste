@@ -54,6 +54,7 @@ from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project_substrate_cli import register_project_substrate_cli
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.intrinsic import (
@@ -132,7 +133,14 @@ def build_parser() -> argparse.ArgumentParser:
     substrate_execute.add_argument("--target-domain", default="autonomous-research")
     substrate_execute.add_argument("--timeout-seconds", type=float, default=1800.0)
     substrate_execute.add_argument("--max-output-tokens", type=int, default=1024)
+    substrate_execute.add_argument("--max-total-tokens", type=int, default=100_000)
+    substrate_execute.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="Explicitly authorize the provider call when not using --dry-run",
+    )
     substrate_execute.set_defaults(handler=_handle_substrate_execute)
+    register_project_substrate_cli(substrate_commands)
 
     run = commands.add_parser("run", help="End-to-end workflows")
     run_commands = run.add_subparsers(dest="run_command", required=True)
@@ -704,6 +712,8 @@ def _handle_substrate_execute(args: argparse.Namespace) -> int:
         raise ValueError("substrate execute supports only --backend autoresearchclaw")
     if args.config is None:
         raise ValueError("substrate execute requires an AutoResearchClaw --config PATH")
+    if not args.dry_run and not args.allow_live:
+        raise ValueError("substrate execute requires --allow-live for provider-backed execution")
     action_type = MetaAction(args.action)
     if args.dry_run:
         result = AutoResearchClawExecutor(
@@ -711,6 +721,7 @@ def _handle_substrate_execute(args: argparse.Namespace) -> int:
             dry_run=True,
             timeout_seconds=args.timeout_seconds,
             max_output_tokens=args.max_output_tokens,
+            max_total_tokens=args.max_total_tokens,
         ).execute(
             ResearchState(
                 project_id=args.project_id,
@@ -731,6 +742,7 @@ def _handle_substrate_execute(args: argparse.Namespace) -> int:
         seed=args.seed,
         timeout_seconds=args.timeout_seconds,
         max_output_tokens=args.max_output_tokens,
+        max_total_tokens=args.max_total_tokens,
     ).run(
         action_type=action_type,
         run_dir=args.run_dir,

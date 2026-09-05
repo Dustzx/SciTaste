@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- A project-owned AutoResearchClaw action lifecycle with immutable imported
+  inputs, self-hashed run/verification manifests, exact status verification,
+  failed-attempt archives, resume identity checks, CLI planning/execution, and
+  inert Zhipu GLM-5.3-Flash templates.
+- A live project-owned GLM-5.3-Flash Stage 3 preacceptance under the SciTaste
+  self-development project, with exact hashes, token telemetry, and explicit
+  cost/search-quality limitations.
 - An explicit non-promotable unpriced engineering mode for real bounded model
   nodes, plus a project-owned GLM-5.3-Flash seven-case probe with exact live HTTP
   evidence, checkpoint binding, and honest cost/review blockers.
@@ -186,6 +193,12 @@ semantic versioning.
 
 ### Fixed
 
+- AutoResearchClaw staged actions now require fresh exact-stage completion
+  evidence, reject unsafe artifacts and invalid cost logs, preserve partial
+  timeout telemetry, apply configurable cumulative-token limits, and charge only
+  the incremental API cost over an imported source run.
+- Full-workflow completion can no longer point at a summary before that summary
+  has been durably written.
 - Model-node pilot runs now become the selected project run, validate reusable
   evidence before a resume mutates project metadata, account for resume attempts,
   and reject disagreement between verified evidence and registered run hashes or

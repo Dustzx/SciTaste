@@ -385,6 +385,15 @@ key. Broader stages still require user-managed configuration and may incur
 network/API/compute cost. CI therefore uses contract fixtures and dry-run rather
 than contacting the provider.
 
+One selected upstream stage now has a first-party project-owned
+plan/execute/resume/status lifecycle with immutable imported inputs, strict fresh
+completion evidence, incremental cost accounting, configurable per-request and
+per-process token ceilings, and explicit live authorization. A live
+GLM-5.3-Flash Stage 3 run passed the integration gate and independent status
+rehash, while its unavailable API cost and ceiling-bound response keep it out of
+formal comparison. Full Stage 1–18 ownership and the 48-cell Phase 9 study remain
+later gates.
+
 Live taste calibration is also opt-in. Until credentials are provided, scripted
 and replay backends support all implementation, regression, and integration work;
 they must not be described as a real-model taste profile.
