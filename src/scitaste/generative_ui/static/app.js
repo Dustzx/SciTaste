@@ -106,6 +106,41 @@ const componentRenderers = Object.freeze({
     data,
     ["paper_title", "paper_status", "publication_ready", "excerpt", "paper_ref_id"],
   ),
+  AvailabilityNotice: (data) => fixedFields(
+    data,
+    ["subject", "state", "reason_code", "project_ref_id"],
+  ),
+  RunStageExplorer: (data) => {
+    const container = document.createElement("div");
+    container.appendChild(fixedRows(
+      data.runs,
+      ["run_id", "status", "outcome", "provider", "model_name", "condition", "seed", "selected"],
+    ));
+    container.appendChild(fixedRows(
+      data.stages,
+      ["stage", "label_en", "label_zh", "status", "artifact_count", "output_locator"],
+    ));
+    return container;
+  },
+  EvidenceInventory: (data) => fixedRows(
+    data.items,
+    ["kind", "label", "locator", "sha256", "evidence_ref_id"],
+  ),
+  RunComparisonPanel: (data) => {
+    const container = document.createElement("div");
+    container.appendChild(fixedFields(data.baseline, ["run_id", "status", "provider", "model_name", "condition", "seed"]));
+    container.appendChild(fixedFields(data.candidate, ["run_id", "status", "provider", "model_name", "condition", "seed"]));
+    container.appendChild(fixedFields(data, ["metrics_state", "metrics_reason_code"]));
+    return container;
+  },
+  RunBlockerPanel: (data) => fixedRows(
+    data.blockers,
+    ["run_id", "run_status", "classification", "reason_code", "source_locator"],
+  ),
+  PendingProposalList: (data) => fixedRows(
+    data.proposals,
+    ["event_id", "action_id", "status", "next_boundary", "execution_authority"],
+  ),
 });
 
 function renderSurface(renderer) {

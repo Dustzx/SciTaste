@@ -379,6 +379,196 @@ class PaperPreviewData(BaseModel):
     excerpt: SafeText | None = None
 
 
+class AvailabilityNoticeData(BaseModel):
+    """Explicit absence state backed by the project manifest."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    project_ref_id: SafeIdentifier
+    subject: Literal["runs", "stages", "papers", "evidence", "comparison", "blockers", "proposals"]
+    state: Literal["empty", "unavailable"]
+    reason_code: SafeIdentifier
+
+
+class WorkspaceRunItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    provider: SafeText
+    model_name: SafeText
+    condition: SafeText
+    seed: int = Field(ge=0)
+    status: SafeText
+    evidence_scope: SafeText
+    selected: bool
+    outcome: Literal["succeeded", "failed", "blocked", "active", "registered", "unknown"]
+    summary_code: SafeIdentifier
+
+
+class WorkspaceStageItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    stage_ref_id: SafeIdentifier
+    stage: int = Field(ge=1, le=23)
+    name: SafeIdentifier
+    label_en: SafeText
+    label_zh: SafeText
+    status: Literal["completed"]
+    artifact_count: int = Field(ge=0)
+    output_locator: SafeLocator
+    summary_code: SafeIdentifier
+
+
+class RunStageExplorerData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    project_ref_id: SafeIdentifier
+    selected_run_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    stage_state: Literal["available", "empty", "unavailable"]
+    runs: tuple[WorkspaceRunItem, ...] = Field(min_length=1)
+    stages: tuple[WorkspaceStageItem, ...] = ()
+
+    @model_validator(mode="after")
+    def explorer_rows_are_consistent(self) -> RunStageExplorerData:
+        run_ids = [item.run_id for item in self.runs]
+        if len(run_ids) != len(set(run_ids)):
+            raise ValueError("workspace run IDs must be unique")
+        selected = [item.run_id for item in self.runs if item.selected]
+        if selected != ([self.selected_run_id] if self.selected_run_id is not None else []):
+            raise ValueError("workspace selected run must match exactly one run row")
+        stages = [item.stage for item in self.stages]
+        if stages != sorted(set(stages)):
+            raise ValueError("workspace stages must be sorted and unique")
+        if self.stage_state == "available" and not self.stages:
+            raise ValueError("available stage state requires stage rows")
+        if self.stage_state != "available" and self.stages:
+            raise ValueError("empty or unavailable stage state cannot contain stage rows")
+        return self
+
+
+class EvidenceInventoryItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    evidence_ref_id: SafeIdentifier
+    kind: EvidenceKind
+    locator: SafeLocator
+    sha256: Sha256
+    label: SafeText
+
+
+class EvidenceInventoryData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    project_ref_id: SafeIdentifier
+    scope: Literal["project", "paper"]
+    selected_paper_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    items: tuple[EvidenceInventoryItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def evidence_rows_are_unique(self) -> EvidenceInventoryData:
+        refs = [item.evidence_ref_id for item in self.items]
+        if len(refs) != len(set(refs)):
+            raise ValueError("evidence inventory references must be unique")
+        if self.scope == "paper" and self.selected_paper_id is None:
+            raise ValueError("paper evidence scope requires a selected paper")
+        if self.scope == "project" and self.selected_paper_id is not None:
+            raise ValueError("project evidence scope cannot select a paper")
+        return self
+
+
+class ComparedRunItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    status: SafeText
+    provider: SafeText
+    model_name: SafeText
+    condition: SafeText
+    seed: int = Field(ge=0)
+    evidence_scope: SafeText
+
+
+class RunComparisonPanelData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    baseline: ComparedRunItem
+    candidate: ComparedRunItem
+    metrics_state: Literal["available", "unavailable"]
+    metrics_reason_code: SafeIdentifier
+    metrics: dict[SafeIdentifier, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def comparison_is_consistent(self) -> RunComparisonPanelData:
+        if self.baseline.run_id == self.candidate.run_id:
+            raise ValueError("workspace run comparison requires distinct runs")
+        if self.metrics_state == "unavailable" and self.metrics:
+            raise ValueError("unavailable comparison metrics must remain empty")
+        if self.metrics_state == "available" and not self.metrics:
+            raise ValueError("available comparison metrics require values")
+        return self
+
+
+class RunBlockerItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(min_length=1, max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    run_status: SafeText
+    classification: Literal["blocked", "failed"]
+    reason_code: SafeIdentifier
+    source_locator: SafeLocator
+
+
+class RunBlockerPanelData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    blockers: tuple[RunBlockerItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def blocker_runs_are_unique(self) -> RunBlockerPanelData:
+        run_ids = [item.run_id for item in self.blockers]
+        if len(run_ids) != len(set(run_ids)):
+            raise ValueError("workspace blocker run IDs must be unique")
+        return self
+
+
+class PendingProposalItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    audit_ref_id: SafeIdentifier
+    event_id: SafeIdentifier
+    action_id: SafeIdentifier
+    surface_id: SafeIdentifier
+    surface_revision: int = Field(ge=0)
+    snapshot_revision: int = Field(ge=0)
+    status: Literal["proposal_pending"]
+    next_boundary: Literal["deterministic_controller"]
+    execution_authority: Literal["none"]
+
+
+class PendingProposalListData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    proposals: tuple[PendingProposalItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def proposal_events_are_unique(self) -> PendingProposalListData:
+        event_ids = [item.event_id for item in self.proposals]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("pending proposal event IDs must be unique")
+        return self
+
+
 _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
     TrustedComponent.PROJECT_SUMMARY_CARD: TypeAdapter(ProjectSummaryData),
     TrustedComponent.STAGE_TIMELINE: TypeAdapter(StageTimelineData),
@@ -391,6 +581,12 @@ _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
     TrustedComponent.REVIEWER_QUEUE: TypeAdapter(ReviewerQueueData),
     TrustedComponent.ARTIFACT_VIEWER: TypeAdapter(ArtifactViewerData),
     TrustedComponent.PAPER_PREVIEW: TypeAdapter(PaperPreviewData),
+    TrustedComponent.AVAILABILITY_NOTICE: TypeAdapter(AvailabilityNoticeData),
+    TrustedComponent.RUN_STAGE_EXPLORER: TypeAdapter(RunStageExplorerData),
+    TrustedComponent.EVIDENCE_INVENTORY: TypeAdapter(EvidenceInventoryData),
+    TrustedComponent.RUN_COMPARISON_PANEL: TypeAdapter(RunComparisonPanelData),
+    TrustedComponent.RUN_BLOCKER_PANEL: TypeAdapter(RunBlockerPanelData),
+    TrustedComponent.PENDING_PROPOSAL_LIST: TypeAdapter(PendingProposalListData),
 }
 
 
@@ -712,6 +908,16 @@ def _validate_component_evidence(
             ref_id = str(node["evidence_ref_id"])
             if node["kind"] != evidence[ref_id].kind.value:
                 raise ValueError("evidence graph node kind must match its evidence reference")
+    if component.component == TrustedComponent.EVIDENCE_INVENTORY:
+        for item in component.data["items"]:
+            if not isinstance(item, dict):  # schema validation guarantees this
+                raise TypeError("evidence inventory item must be an object")
+            ref_id = str(item["evidence_ref_id"])
+            referenced = evidence[ref_id]
+            if item["kind"] != referenced.kind.value:
+                raise ValueError("evidence inventory kind must match its evidence reference")
+            if item["locator"] != referenced.locator or item["sha256"] != referenced.sha256:
+                raise ValueError("evidence inventory identity must match its evidence reference")
 
 
 def _validate_proposal_evidence(
@@ -757,6 +963,7 @@ _DATA_REF_EVIDENCE_KINDS: dict[str, frozenset[EvidenceKind]] = {
     "review_ref_id": frozenset({EvidenceKind.REVIEW}),
     "artifact_ref_id": frozenset({EvidenceKind.ARTIFACT}),
     "paper_ref_id": frozenset({EvidenceKind.PAPER}),
+    "audit_ref_id": frozenset({EvidenceKind.AUDIT_RECORD}),
     "evidence_ref_ids": frozenset({EvidenceKind.EVIDENCE_RECORD}),
 }
 
