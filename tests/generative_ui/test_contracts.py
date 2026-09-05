@@ -33,7 +33,42 @@ from scitaste.schema.actions import MetaAction
 
 def test_registry_is_closed_and_contains_all_initial_trusted_components() -> None:
     assert set(COMPONENT_REGISTRY) == set(TrustedComponent)
-    assert {item.value for item in TrustedComponent} == {
+    assert {
+        "ProjectSummaryCard",
+        "StageTimeline",
+        "BlockerList",
+        "RunHealth",
+        "BudgetMeter",
+        "DecisionComparison",
+        "EvidenceGraph",
+        "ClaimMatrix",
+        "ReviewerQueue",
+        "ArtifactViewer",
+        "PaperPreview",
+    } <= {item.value for item in TrustedComponent}
+    assert set(APPROVAL_EVIDENCE_KINDS) == set(ApprovalSubject)
+
+
+def test_five_deterministic_fixture_surfaces_are_evidence_grounded() -> None:
+    surfaces = build_fixture_surfaces()
+
+    assert set(surfaces) == {
+        SurfacePurpose.PROJECT_OVERVIEW,
+        SurfacePurpose.PAPER_STATUS,
+        SurfacePurpose.BLOCKED_RUN,
+        SurfacePurpose.NEXT_STEP,
+        SurfacePurpose.RUN_COMPARISON,
+    }
+    for purpose, surface in surfaces.items():
+        assert surface.purpose == purpose
+        assert surface.project_id == surface.snapshot.project_id
+        assert surface.snapshot.evidence_refs
+        assert all(component.evidence_ref_ids for component in surface.components)
+        assert len(surface.fingerprint) == 64
+    covered = {
+        component.component for surface in surfaces.values() for component in surface.components
+    }
+    assert {item.value for item in covered} == {
         "ProjectSummaryCard",
         "StageTimeline",
         "BlockerList",
@@ -46,23 +81,6 @@ def test_registry_is_closed_and_contains_all_initial_trusted_components() -> Non
         "ArtifactViewer",
         "PaperPreview",
     }
-    assert set(APPROVAL_EVIDENCE_KINDS) == set(ApprovalSubject)
-
-
-def test_five_deterministic_fixture_surfaces_are_evidence_grounded() -> None:
-    surfaces = build_fixture_surfaces()
-
-    assert set(surfaces) == set(SurfacePurpose)
-    for purpose, surface in surfaces.items():
-        assert surface.purpose == purpose
-        assert surface.project_id == surface.snapshot.project_id
-        assert surface.snapshot.evidence_refs
-        assert all(component.evidence_ref_ids for component in surface.components)
-        assert len(surface.fingerprint) == 64
-    covered = {
-        component.component for surface in surfaces.values() for component in surface.components
-    }
-    assert covered == set(COMPONENT_REGISTRY)
 
 
 def test_surface_json_round_trip_and_fingerprint_are_stable() -> None:

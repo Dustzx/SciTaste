@@ -20,6 +20,7 @@ class EvidenceKind(StrEnum):
     REVIEW = "review"
     ARTIFACT = "artifact"
     PAPER = "paper"
+    AUDIT_RECORD = "audit_record"
 
 
 class TrustedComponent(StrEnum):
@@ -36,6 +37,12 @@ class TrustedComponent(StrEnum):
     REVIEWER_QUEUE = "ReviewerQueue"
     ARTIFACT_VIEWER = "ArtifactViewer"
     PAPER_PREVIEW = "PaperPreview"
+    AVAILABILITY_NOTICE = "AvailabilityNotice"
+    RUN_STAGE_EXPLORER = "RunStageExplorer"
+    EVIDENCE_INVENTORY = "EvidenceInventory"
+    RUN_COMPARISON_PANEL = "RunComparisonPanel"
+    RUN_BLOCKER_PANEL = "RunBlockerPanel"
+    PENDING_PROPOSAL_LIST = "PendingProposalList"
 
 
 class SurfacePurpose(StrEnum):
@@ -44,6 +51,11 @@ class SurfacePurpose(StrEnum):
     BLOCKED_RUN = "blocked_run"
     NEXT_STEP = "next_step"
     RUN_COMPARISON = "run_comparison"
+    RUN_STAGE_EXPLORER = "run_stage_explorer"
+    PAPER_EVIDENCE = "paper_evidence"
+    WORKSPACE_RUN_COMPARISON = "workspace_run_comparison"
+    BLOCKER_VIEW = "blocker_view"
+    PENDING_PROPOSALS = "pending_proposals"
 
 
 class ProposalKind(StrEnum):
@@ -95,4 +107,16 @@ COMPONENT_REGISTRY: dict[TrustedComponent, ComponentPolicy] = {
     TrustedComponent.REVIEWER_QUEUE: ComponentPolicy(frozenset({EvidenceKind.REVIEW})),
     TrustedComponent.ARTIFACT_VIEWER: ComponentPolicy(frozenset({EvidenceKind.ARTIFACT})),
     TrustedComponent.PAPER_PREVIEW: ComponentPolicy(frozenset({EvidenceKind.PAPER})),
+    TrustedComponent.AVAILABILITY_NOTICE: ComponentPolicy(
+        frozenset({EvidenceKind.PROJECT_MANIFEST})
+    ),
+    TrustedComponent.RUN_STAGE_EXPLORER: ComponentPolicy(
+        frozenset({EvidenceKind.PROJECT_MANIFEST, EvidenceKind.RUN_RECORD})
+    ),
+    TrustedComponent.EVIDENCE_INVENTORY: ComponentPolicy(
+        frozenset({EvidenceKind.PROJECT_MANIFEST})
+    ),
+    TrustedComponent.RUN_COMPARISON_PANEL: ComponentPolicy(frozenset({EvidenceKind.RUN_RECORD})),
+    TrustedComponent.RUN_BLOCKER_PANEL: ComponentPolicy(frozenset({EvidenceKind.RUN_RECORD})),
+    TrustedComponent.PENDING_PROPOSAL_LIST: ComponentPolicy(frozenset({EvidenceKind.AUDIT_RECORD})),
 }

@@ -16,7 +16,7 @@ from scitaste.generative_ui import (
     TrustedComponent,
     create_http_server,
 )
-from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 
 _TOKEN = "local-test-token-20260905"
 
@@ -48,6 +48,42 @@ def _runtime(tmp_path: Path, *, title: str = "Evidence reports 2 < 3 and 5 > 4")
         "{}\n", encoding="utf-8"
     )
     runtime.select_run("http-project", "http-run", expected_revision=snapshot.revision)
+    return runtime
+
+
+def _paper_runtime(tmp_path: Path) -> ProjectRuntime:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="http-paper",
+            title="HTTP paper inspection",
+            research_direction="Expose no general artifact route.",
+            status="active",
+        )
+    )
+    paper_dir = runtime.projects_root / "http-paper/papers/paper-one"
+    paper_dir.mkdir(parents=True)
+    (paper_dir / "main.md").write_text("# HTTP evidence\n", encoding="utf-8")
+    runtime.register_paper(
+        "http-paper",
+        PaperManifest(
+            paper_id="paper-one",
+            project_id="http-paper",
+            title="HTTP inspected paper",
+            date="2026-09-05",
+            provider="scripted",
+            model="deterministic",
+            condition="inspection",
+            task="http-boundary",
+            seed=0,
+            stage=18,
+            status="draft",
+            evidence_scope="engineering-only",
+            files={"Manuscript": "main.md"},
+        ),
+        directory_name="paper-one",
+        expected_revision=snapshot.revision,
+    )
     return runtime
 
 
@@ -94,6 +130,42 @@ def _event(renderer: dict[str, object], *, event_id: str = "http-event") -> dict
     }
 
 
+def _workspace_event(
+    document: dict[str, object],
+    *,
+    event_id: str = "workspace-http-event",
+) -> dict[str, object]:
+    renderer = document["renderer"]
+    assert isinstance(renderer, dict)
+    return _event(renderer, event_id=event_id)
+
+
+def _inspection_event(
+    document: dict[str, object],
+    *,
+    event_id: str = "workspace-inspection",
+) -> dict[str, object]:
+    renderer = document["renderer"]
+    assert isinstance(renderer, dict)
+    snapshot = renderer["snapshot"]
+    components = renderer["components"]
+    assert isinstance(snapshot, dict)
+    assert isinstance(components, list)
+    artifact = next(item for item in components if item["renderer"] == "ArtifactViewer")
+    return {
+        "schema_version": "1.0",
+        "event_id": event_id,
+        "event_type": "artifact_inspection_requested",
+        "project_id": renderer["project_id"],
+        "surface_id": renderer["surface_id"],
+        "surface_revision": renderer["surface_revision"],
+        "surface_fingerprint": renderer["surface_fingerprint"],
+        "snapshot_revision": snapshot["snapshot_revision"],
+        "snapshot_sha256": snapshot["snapshot_sha256"],
+        "artifact_ref_id": artifact["data"]["artifact_ref_id"],
+    }
+
+
 def _audit(runtime: ProjectRuntime) -> Path:
     matches = list((runtime.projects_root / "http-project/.generative-ui/audits").glob("*.jsonl"))
     assert len(matches) == 1
@@ -113,6 +185,7 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert script.status_code == 200
     assert stylesheet.status_code == 200
     assert "default-src 'self'" in index.headers["content-security-policy"]
+    assert "img-src 'self' blob:" in index.headers["content-security-policy"]
     assert "https://" not in index.text
     assert "http://" not in index.text
     assert "document.createTextNode" in script.text
@@ -123,6 +196,25 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "localStorage" not in script.text
     assert "sessionStorage" not in script.text
     assert all(f"{item.value}:" in script.text for item in TrustedComponent)
+    assert "/api/v2/workspace/projects" in script.text
+    assert "history.pushState" in script.text
+    assert 'window.addEventListener("popstate"' in script.text
+    assert 'headers["If-None-Match"]' in script.text
+    assert 'class="skip-link"' in index.text
+    assert 'aria-label="Research workspace navigation"' in index.text
+    assert 'aria-busy="false"' in index.text
+    assert "@media (max-width: 720px)" in stylesheet.text
+    assert ":focus-visible" in stylesheet.text
+    assert 'event_type: "artifact_inspection_requested"' in script.text
+    assert "new Blob" in script.text
+    catalog_update = script.text[script.text.index("function updateCatalogs") :]
+    assert catalog_update.index("resetCatalogs();") < catalog_update.index("const runComponent")
+    for selector in ("runSelect", "baselineRun", "candidateRun", "paperSelect"):
+        assert f"{selector}.replaceChildren();" in script.text
+    project_change = script.text[script.text.index('projectSelect.addEventListener("change"') :]
+    assert project_change.index("resetCatalogs();") < project_change.index("});")
+    workspace_load = script.text[script.text.index("async function loadWorkspace") :]
+    assert workspace_load.index("resetCatalogs();") < workspace_load.index("setBusy(true);")
 
 
 def test_api_requires_bearer_authentication_without_creating_project_state(tmp_path: Path) -> None:
@@ -165,6 +257,92 @@ def test_api_rejects_ambiguous_authorization_headers_and_hides_runtime_banner(
     assert duplicated.json()["error"]["code"] == "unauthorized"
     assert duplicated.headers["server"] == "SciTasteLocalUI/1.0"
     assert "Python" not in duplicated.headers["server"]
+
+
+def test_workspace_api_discovers_projects_and_conditionally_refreshes_views(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        unauthenticated = httpx.get(origin + "/api/v2/workspace/projects")
+        projects = httpx.get(origin + "/api/v2/workspace/projects", headers=_headers())
+        surface = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview",
+            headers=_headers(),
+        )
+        unchanged = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview",
+            headers={**_headers(), "If-None-Match": surface.headers["etag"]},
+        )
+
+    assert unauthenticated.status_code == 401
+    assert projects.status_code == 200
+    assert projects.json()["query"]["view"] == "project-list"
+    assert projects.json()["projects"][0]["project_id"] == "http-project"
+    assert projects.headers["etag"].startswith('"')
+    assert surface.status_code == 200
+    assert surface.json()["query"] == {
+        "project_id": "http-project",
+        "schema_version": "1.0",
+        "view": "project-overview",
+    }
+    assert surface.json()["renderer"]["execution_authority"] == "none"
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
+    assert unchanged.headers["etag"] == surface.headers["etag"]
+
+
+def test_workspace_deep_links_reject_unknown_and_cross_project_selection(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        unknown_run = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/run-stage-explorer/runs/unknown-run",
+            headers=_headers(),
+        )
+        malformed_view = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/arbitrary-renderer",
+            headers=_headers(),
+        )
+        injected_query = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-overview?component=Injected",
+            headers=_headers(),
+        )
+
+    assert unknown_run.status_code == 404
+    assert unknown_run.json()["error"]["code"] == "selection_not_found"
+    assert "unknown-run" not in unknown_run.text
+    assert malformed_view.status_code == 404
+    assert injected_query.status_code == 400
+
+
+def test_workspace_event_is_resolved_against_its_deep_linked_surface(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-project/run-stage-explorer/runs/http-run"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _workspace_event(workspace.json())
+        accepted = httpx.post(
+            origin + view_path + "/events",
+            headers=_headers(),
+            json=event,
+        )
+        duplicate = httpx.post(
+            origin + view_path + "/events",
+            headers=_headers(),
+            json=event,
+        )
+        wrong_view = httpx.post(
+            origin + "/api/v2/workspace/projects/http-project/project-overview/events",
+            headers=_headers(),
+            json={**event, "event_id": "wrong-view-event"},
+        )
+
+    assert workspace.status_code == 200
+    assert accepted.status_code == 202
+    assert accepted.json()["status"] == "proposal_pending"
+    assert accepted.json()["execution_authority"] == "none"
+    assert duplicate.status_code == 409
+    assert wrong_view.status_code == 409
 
 
 def test_surface_api_returns_only_fixed_renderer_and_preserves_inert_angle_text(
@@ -216,6 +394,8 @@ def test_event_api_rejects_malformed_stale_cross_project_and_duplicate_requests(
     assert malformed_response.status_code == 400
     assert stale_response.status_code == 409
     assert cross_response.status_code == 409
+    assert "another-project" not in cross_response.text
+    assert "app-project" not in cross_response.text
     assert accepted.status_code == 202
     receipt = accepted.json()
     assert receipt["status"] == "proposal_pending"
@@ -224,6 +404,80 @@ def test_event_api_rejects_malformed_stale_cross_project_and_duplicate_requests(
     assert duplicate.status_code == 409
     assert duplicate.json()["error"]["code"] == "duplicate_event"
     assert len(SurfaceAuditLog(_audit(runtime)).records()) == 2
+
+
+def test_inspection_api_rehashes_visible_artifact_without_general_file_access(
+    tmp_path: Path,
+) -> None:
+    runtime = _paper_runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-paper/paper-evidence/papers/paper-one"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _inspection_event(workspace.json())
+        unauthenticated = httpx.post(origin + view_path + "/inspections", json=event)
+        forged = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json={**event, "locator": "papers/paper-one/main.md"},
+        )
+        cross_project = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json={**event, "project_id": "foreign-project"},
+        )
+        accepted = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+        duplicate = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+        file_route = httpx.get(
+            origin + "/api/v2/workspace/projects/http-paper/artifacts/main.md",
+            headers=_headers(),
+        )
+
+    assert workspace.status_code == 200
+    assert unauthenticated.status_code == 401
+    assert forged.status_code == 400
+    assert cross_project.status_code == 409
+    assert event["artifact_ref_id"] not in cross_project.text
+    assert "foreign-project" not in cross_project.text
+    assert "main.md" not in cross_project.text
+    assert accepted.status_code == 200
+    assert accepted.json()["preview_kind"] == "markdown"
+    assert accepted.json()["text_content"] == "# HTTP evidence\n"
+    assert accepted.json()["receipt"]["execution_authority"] == "none"
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"]["code"] == "duplicate_event"
+    assert file_route.status_code == 404
+
+
+def test_changed_artifact_response_and_logs_do_not_expose_its_locator(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    runtime = _paper_runtime(tmp_path)
+    view_path = "/api/v2/workspace/projects/http-paper/paper-evidence/papers/paper-one"
+    with _running_server(runtime) as origin:
+        workspace = httpx.get(origin + view_path, headers=_headers())
+        event = _inspection_event(workspace.json(), event_id="changed-http-artifact")
+        artifact = runtime.projects_root / "http-paper/papers/paper-one/main.md"
+        artifact.write_text("# Changed evidence\n", encoding="utf-8")
+        rejected = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json=event,
+        )
+
+    assert rejected.status_code == 409
+    assert rejected.json()["error"]["code"] == "artifact_unavailable"
+    assert "main.md" not in rejected.text
+    assert str(runtime.outputs_root) not in rejected.text
+    assert str(runtime.outputs_root) not in caplog.text
 
 
 def test_api_rejects_wrong_methods_media_types_duplicate_json_keys_and_file_routes(
