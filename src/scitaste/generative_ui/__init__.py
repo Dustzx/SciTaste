@@ -1,5 +1,10 @@
 """Safe declarative contracts for evidence-grounded generative interfaces."""
 
+from scitaste.generative_ui.application import (
+    GenerativeUIApplication,
+    ProjectDiscoveryDocument,
+    ProjectDiscoveryItem,
+)
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
     ProposalIssuedAudit,
@@ -98,8 +103,11 @@ __all__ = [
     "EvidenceKind",
     "EvidenceRef",
     "FixedApplicationShell",
+    "GenerativeUIApplication",
     "InspectArtifactPayload",
     "PaperPreviewData",
+    "ProjectDiscoveryDocument",
+    "ProjectDiscoveryItem",
     "ProjectSnapshotAdapter",
     "ProjectSummaryData",
     "ProjectSurfaceChangedError",
