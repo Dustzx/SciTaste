@@ -8,6 +8,13 @@ from scitaste.generative_ui.audit import (
     SurfaceOpenedAudit,
     SurfaceRevisedAudit,
 )
+from scitaste.generative_ui.factory import (
+    ProjectSurfaceChangedError,
+    ProjectSurfaceError,
+    ProjectSurfaceEvidenceError,
+    ProjectSurfaceFactory,
+    ProjectSurfaceOutput,
+)
 from scitaste.generative_ui.fixtures import (
     build_blocked_run_fixture,
     build_fixture_surfaces,
@@ -95,6 +102,11 @@ __all__ = [
     "PaperPreviewData",
     "ProjectSnapshotAdapter",
     "ProjectSummaryData",
+    "ProjectSurfaceChangedError",
+    "ProjectSurfaceError",
+    "ProjectSurfaceEvidenceError",
+    "ProjectSurfaceFactory",
+    "ProjectSurfaceOutput",
     "ProposalIssuedAudit",
     "ProposalKind",
     "ProposalReceipt",

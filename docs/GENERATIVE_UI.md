@@ -12,6 +12,63 @@ ProjectRuntime adapter. It includes a framework-neutral renderer document, but
 not a web server, actual renderer, model call, authenticated API, or task
 executor.
 
+## Trusted project surface factory
+
+`ProjectSurfaceFactory` is the first-party entry point for a real project
+overview. Its constructor accepts a `ProjectRuntime`, and its build methods
+accept only a canonical project ID. It does not accept a caller-authored
+`ProjectSnapshot`, `SnapshotBinding`, evidence list, component, or action. The
+factory delegates evidence discovery and hashing to `ProjectSnapshotAdapter`,
+projects the resulting surface through the fixed shell, and checks the runtime
+snapshot and evidence binding again before returning.
+
+The overview always contains `ProjectSummaryCard`, grounded by `PROJECT.json`.
+It adds components only when their exact authoritative inputs exist:
+
+- `RunHealth` for the selected registered run;
+- `StageTimeline` when the project explicitly uses
+  `autoresearchclaw-stages`, has completed stages, and has a current stage
+  record;
+- `PaperPreview` for a valid selected paper manifest;
+- `ArtifactViewer` for the first declared supported paper artifact, selected
+  deterministically in PDF, Markdown, TeX, then plain-text order.
+
+Missing optional state omits its component. Missing or corrupt evidence for
+state that the project claims is selected fails closed. Values are copied from
+the relevant manifest without status rewriting or guessed summaries. In
+particular, `PaperPreview.excerpt` is null because the paper manifest does not
+define an authoritative excerpt. Run and stage components cite both their
+record and `PROJECT.json`, because their visible status and completed-stage
+facts come from the project manifest.
+
+Evidence IDs are the adapter's deterministic locator-derived IDs. For an
+unchanged project and artifacts, canonical surface JSON and its fingerprint are
+stable. A project revision, manifest value, or referenced artifact-content
+change changes the snapshot binding and therefore the surface fingerprint,
+even if a directly edited artifact did not increment the project revision.
+
+Generated actions are limited to typed `proposal_only` requests for run or
+paper approval and artifact inspection. The factory never activates them. An
+optional explicit `write_project_overview` call creates a new destination with
+`surface.json`, `renderer.json`, and a `SurfaceAuditLog.start` record in
+`surface-audit.jsonl`. Publication is transactional: the helper writes all three
+files into a unique temporary directory beside the destination, reloads the
+surface and renderer through their schemas, verifies and replays the audit log,
+and only then atomically renames the complete directory into place. Failure at
+any pre-publication step removes the temporary directory and leaves no final
+destination. An existing file, directory, or symbolic link is never reused or
+overwritten. On Linux the publication step uses `renameat2` with
+`RENAME_NOREPLACE`; if that atomic no-replace operation is unavailable, the
+helper fails closed instead of falling back to an overwrite-capable rename.
+Building a surface alone writes nothing.
+
+This factory still stops at the existing trust boundary: it does not provide a
+frontend, HTTP/API handler, model-driven layout generator, authenticated event
+receiver, deterministic controller, approval workflow, or action executor.
+Consumers must revalidate artifact hashes at access time if project files can
+change after the point-in-time surface build, and must send any interaction
+through `SurfaceSession` and the later controller boundary.
+
 ## Contract hierarchy
 
 `SnapshotBinding` identifies the exact `project_id`, snapshot revision, snapshot
