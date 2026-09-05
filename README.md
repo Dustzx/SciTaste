@@ -62,14 +62,15 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - bounded, opt-in semantic model nodes whose typed advice remains behind
   deterministic feasibility, budget, evidence, and transition gates, plus a
   fail-closed compatible live backend, versioned self-development pilot, and
-  project-owned CLI orchestration for dry-run, execution, auditable resume, and
-  verification;
+  durable project-owned runtime/CLI for layered profiles, execution, exact
+  replay, restart-safe accounting, auditable resume, and verification;
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
   project artifacts exposed to a surface;
 - a loopback-first authenticated local UI/API that renders the closed component
-  registry, revalidates identity-only events, and persists proposal-only audit
-  receipts without invoking a controller or tool.
+  registry as a navigable evidence workspace, restricts inspection to visible
+  hashed artifacts, revalidates identity-only events, and persists project-bound
+  proposal/inspection audits without invoking a controller or tool.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked

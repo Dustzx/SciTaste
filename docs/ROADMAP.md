@@ -304,6 +304,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   interpretation threats, and ambiguity-triggered action ranking. A fail-closed
   compatible live backend now pins provider/model and requires measured token,
   cost, latency, and pricing provenance before use.
+- Normal project runs can now invoke those nodes through a durable runtime and
+  narrow CLI/facade. Per-generation capability, per-node admission, and
+  cumulative project budgets remain distinct; a restart-safe predecessor ledger
+  retains every outcome and exact replay evidence. Nested symlinks, stale project
+  revisions before/during a call, corrupted chains, and interrupted publication
+  fail closed, while accepted advice remains non-executable.
 - The versioned self-development pilot protocol and runner isolate
   deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
@@ -364,6 +370,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   authoritative projects, render every trusted component, reject stale or
   client-authored proposal payloads, and retain proposal receipts in project-local
   replayable audit epochs across restarts.
+- The receiver now exposes seven server-owned evidence views for project, run,
+  stage, paper, comparison, blocker, and pending-proposal navigation. Artifact
+  inspection is limited to content-addressed evidence already visible in the
+  current view; project switching clears stale catalogs, and audit storage binds
+  every record plus lock/temp/replace operations to one project-owned directory.
 - Pending product integration: deterministic controller endpoints and explicit
   approval policy for turning a pending proposal into an authorized action. The
   local UI deliberately cannot execute proposals.

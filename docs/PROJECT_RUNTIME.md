@@ -56,6 +56,19 @@ explicit `--allow-live`. Failed attempts may resume only after immutable inputs
 and registered identity revalidate; an already persisted successful bootstrap
 executor result is finalized without paying for the same call again.
 
+`model-node runtime plan|execute|replay|status|verify` provides the normal-project
+boundary for bounded semantic advice. Each invocation binds the project revision,
+typed input/context, trigger, profile, policy, backend/model, seed, and predecessor
+ledger hash. Revision drift before a provider call prevents access; drift during
+a call retains known usage but rejects the stale proposal. Runtime records remain
+proposal-only and cannot mutate `ResearchState` or invoke tools.
+
+The authenticated generative workspace reads fresh `ProjectSnapshot` evidence
+for its seven predefined views. Its inspection route can open only a regular,
+content-addressed artifact already exposed by the active view. Proposal and
+inspection records are hash-chained beneath the owning project and validated
+against that project on every replay.
+
 ## CLI
 
 Create and inspect a project:

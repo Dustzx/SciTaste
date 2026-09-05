@@ -437,6 +437,17 @@ request and decoded response body are stored before semantic parsing, without
 authorization headers, then hash-bound to the checkpoint or archived with the
 failed attempt.
 
+The reusable `ModelNodeRuntime` extends that boundary beyond the dedicated
+pilot. It separates provider generation capability, per-node admission policy,
+and cumulative project budget; publishes a project/run/revision-bound intent;
+and advances a contiguous predecessor ledger for accepted, rejected,
+not-applicable, failed, planned, cached, and replayed outcomes. Runtime
+directories and evidence are regular-file/no-symlink boundaries. The project
+revision is rechecked at the backend-call boundary and after return: pre-call
+staleness prevents provider access, while mid-call staleness retains known usage
+but rejects the resulting proposal. Completed publication survives interrupted
+pending cleanup without repeating the model call.
+
 The 2026-09-05 project-owned GLM-5.3-Flash probe completed seven cases and
 demonstrated schema parsing, exact recording, recovery, and enforcement on a
 real provider response. The live proposal still violated token, latency, cost,
@@ -494,6 +505,16 @@ Identity-only events are checked against a freshly built authoritative surface
 and appended to a project-local replayable audit epoch; their receipt still has
 execution authority `none`. Non-loopback plaintext exposure requires explicit
 acknowledgement and does not claim TLS protection.
+
+The evidence workspace composes project overview, run/stage, paper/evidence,
+comparison, blocker, and pending-proposal views from fresh runtime snapshots.
+Inspection may read only a content-addressed artifact already exposed by the
+authoritative view and renders active formats inertly. Audit replay validates
+that every surface, proposal, and inspection belongs to the expected project;
+directory-descriptor-bound lock, temporary-write, and atomic replacement
+operations prevent a checked audit path from being redirected during mutation.
+Browser project/view changes clear stale selection catalogs before fetching the
+new authoritative view.
 
 ### ADR-025: Full workflow stages extend one project-owned state
 

@@ -2,15 +2,17 @@
 
 Assignment token: `W3-evidence-workspace-20260905-r2`
 
-Status: `integration review found blocking defects; hardening in progress`
+Status: `integrated into main; Epic and hardening complete`
 
 Integration review on 2026-09-05 accepted the four-work-package implementation
 and its 480-test branch result but reproduced two blockers before merge: a valid
 audit chain copied from project B could appear in project A, and the audit writer
 did not bind the checked parent directory through lock/temp/replace operations.
 Stale browser catalogs on project switch are also part of the required fix.
-Window 3 has authority to close these defects on the same feature branch and
-must return a clean `fix(ui)` commit plus security, full-suite, and wheel checks.
+Window 3 closed these issues in `c319e3e`; main independently reran 163 focused
+tests plus the JavaScript syntax check and integrated the complete branch as
+merge commit `50062ae`. The merged repository then passed 544 tests. Further
+work requires a new assignment token.
 
 ## Workspace
 

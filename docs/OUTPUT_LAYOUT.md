@@ -118,3 +118,23 @@ runs/<run-id>/
 `work/`. `substrate project bootstrap status` rehashes the bootstrap work and
 source, while `substrate project status` rehashes the selected-action input,
 working tree, and evidence before reporting either run as verified.
+
+Normal bounded model-node calls belong to the selected project run:
+
+```text
+runs/<run-id>/model_nodes/
+├── ledger/       # contiguous predecessor-bound outcome entries
+├── recordings/   # exact record/replay evidence without authorization headers
+├── pending/      # interruption markers
+└── attempts/     # preserved incomplete or failed attempts
+```
+
+The generative workspace keeps project-wide UI evidence outside any one research
+run because it may compare several runs and papers:
+
+```text
+outputs/projects/<project-id>/.generative-ui/audits/*.jsonl
+```
+
+Each audit chain is bound to that project and contains proposal-only or read-only
+inspection receipts. It never owns controller approvals or executions.

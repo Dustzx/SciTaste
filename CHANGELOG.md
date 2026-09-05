@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- A durable project-scoped model-node runtime with layered generation/admission/
+  cumulative budgets, project-revision call gates, restart-safe hash-chained
+  outcomes, exact replay, hardened no-symlink evidence storage, and a narrow
+  proposal-only facade and CLI.
+- An evidence-native seven-view project workspace with trusted run/stage/paper/
+  blocker/comparison/proposal navigation, visible-artifact-only inspection,
+  project-bound audit replay, directory-descriptor-safe audit publication, and
+  stale browser-catalog clearing on project changes.
 - A project-owned AutoResearchClaw Stage 1–2 bootstrap with pre-call identity,
   exact prerequisite validation, immutable reusable source receipts, telemetry
   accounting, resumable attempt archives, paid-result recovery, and a verified
