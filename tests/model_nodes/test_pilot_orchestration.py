@@ -812,6 +812,100 @@ def test_status_rejects_project_registration_metadata_drift(tmp_path: Path) -> N
         ProjectPilotOrchestrator(runtime).status(project_id=PROJECT_ID, run_id=RUN_ID)
 
 
+def test_resume_recovers_verified_final_evidence_after_registration_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _build_config(tmp_path)
+    runtime = _runtime(tmp_path)
+    update_run = runtime.update_run
+
+    def fail_final_registration(project_id, run_id, *, expected_revision, **changes):
+        if changes.get("status") == "blocked":
+            raise ProjectRevisionConflictError("simulated final registration interruption")
+        return update_run(
+            project_id,
+            run_id,
+            expected_revision=expected_revision,
+            **changes,
+        )
+
+    monkeypatch.setattr(runtime, "update_run", fail_final_registration)
+    with pytest.raises(ProjectRevisionConflictError, match="simulated final"):
+        ProjectPilotOrchestrator(runtime).execute(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            expected_revision=0,
+            config_path=config,
+        )
+    monkeypatch.setattr(runtime, "update_run", update_run)
+
+    interrupted = runtime.open(PROJECT_ID)
+    assert interrupted.manifest.runs[0].status == "running"
+    stage = _stage(runtime)
+    assert (stage / "report.json").is_file()
+    assert (stage / "verification.json").is_file()
+    case_bytes = {path.name: path.read_bytes() for path in (stage / "cases").glob("*.json")}
+
+    planned = ProjectPilotOrchestrator(runtime).plan(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        expected_revision=interrupted.revision,
+        config_path=config,
+        resume=True,
+    )
+    assert planned.completed_count == planned.case_count == 7
+    assert runtime.open(PROJECT_ID).revision == interrupted.revision
+
+    recovered = ProjectPilotOrchestrator(runtime).execute(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        expected_revision=interrupted.revision,
+        config_path=config,
+        resume=True,
+    )
+    assert recovered.status == "blocked"
+    assert recovered.report_sha256 == planned.report_sha256
+    assert {path.name: path.read_bytes() for path in (stage / "cases").glob("*.json")} == (
+        case_bytes
+    )
+    final = runtime.open(PROJECT_ID)
+    assert final.manifest.runs[0].status == "blocked"
+    assert final.manifest.runs[0].model_extra["resume_attempt"] == 1
+
+
+def test_resume_rejects_half_published_final_evidence_without_project_mutation(
+    tmp_path: Path,
+) -> None:
+    config = _build_config(tmp_path)
+    runtime = _runtime(tmp_path)
+
+    def interrupt(case) -> None:
+        if case.case_id == "review-scripted":
+            raise RuntimeError("stop")
+
+    with pytest.raises(PilotOrchestrationError):
+        ProjectPilotOrchestrator(runtime, before_case=interrupt).execute(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            expected_revision=0,
+            config_path=config,
+        )
+    (_stage(runtime) / "report.json").write_text("{}", encoding="utf-8")
+    revision = runtime.open(PROJECT_ID).revision
+
+    with pytest.raises(PilotOrchestrationError, match="final publication is incomplete"):
+        ProjectPilotOrchestrator(runtime).execute(
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            expected_revision=revision,
+            config_path=config,
+            resume=True,
+        )
+
+    assert runtime.open(PROJECT_ID).revision == revision
+
+
 def test_config_loader_rejects_hash_identity_unknown_and_unsafe_paths(tmp_path: Path) -> None:
     config = _build_config(tmp_path)
     payload = json.loads(config.read_text(encoding="utf-8"))

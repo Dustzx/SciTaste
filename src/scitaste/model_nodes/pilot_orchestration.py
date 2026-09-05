@@ -595,6 +595,7 @@ class ProjectPilotOrchestrator:
             require_new=not resume,
         )
         completed_count = 0
+        final_evidence: tuple[PilotReport, PilotVerificationRecord] | None = None
         if resume:
             run = self._registered_run(snapshot.manifest.runs, run_id)
             self._require_resumable_run(run)
@@ -607,14 +608,23 @@ class ProjectPilotOrchestrator:
                 allow_live=allow_live,
             )
             measurements = self._load_owned_measurements(stage, manifest, protocol)
-            completed_count = len(
-                self._load_checkpoint_prefix(
-                    stage,
-                    manifest=manifest,
-                    protocol=protocol,
-                    config=config,
-                    measurements=measurements,
-                )
+            checkpoints = self._load_checkpoint_prefix(
+                stage,
+                manifest=manifest,
+                protocol=protocol,
+                config=config,
+                measurements=measurements,
+            )
+            completed_count = len(checkpoints)
+            review = self._load_owned_review(stage, manifest, protocol)
+            final_evidence = self._existing_final_evidence(
+                stage,
+                project_id=project_id,
+                run_id=run_id,
+                manifest=manifest,
+                protocol=protocol,
+                checkpoints=checkpoints,
+                review=review,
             )
         measurement_ids = (
             {item.case_id for item in loaded.manual_bundle.measurements}
@@ -645,6 +655,10 @@ class ProjectPilotOrchestrator:
             project_revision=snapshot.revision,
             protocol_sha256=loaded.protocol.fingerprint,
             config_sha256=loaded.config.fingerprint,
+            report_sha256=(final_evidence[0].report_sha256 if final_evidence is not None else None),
+            verification_sha256=(
+                final_evidence[1].verification_sha256 if final_evidence is not None else None
+            ),
             case_count=len(loaded.protocol.cases),
             completed_count=completed_count,
             planned_count=len(loaded.protocol.cases) - completed_count,
@@ -715,12 +729,22 @@ class ProjectPilotOrchestrator:
                     allow_live=allow_live,
                 )
                 measurements = self._load_owned_measurements(stage, manifest, protocol)
-                self._load_checkpoint_prefix(
+                checkpoints = self._load_checkpoint_prefix(
                     stage,
                     manifest=manifest,
                     protocol=protocol,
                     config=config,
                     measurements=measurements,
+                )
+                review = self._load_owned_review(stage, manifest, protocol)
+                self._existing_final_evidence(
+                    stage,
+                    project_id=project_id,
+                    run_id=run_id,
+                    manifest=manifest,
+                    protocol=protocol,
+                    checkpoints=checkpoints,
+                    review=review,
                 )
                 snapshot = self._register_resume(snapshot, run)
             registered_revision = snapshot.revision
@@ -759,8 +783,16 @@ class ProjectPilotOrchestrator:
             config=config,
             measurements=measurements,
         )
-        report_path = stage / "report.json"
-        if not report_path.exists():
+        final_evidence = self._existing_final_evidence(
+            stage,
+            project_id=project_id,
+            run_id=run_id,
+            manifest=manifest,
+            protocol=protocol,
+            checkpoints=checkpoints,
+            review=review,
+        )
+        if final_evidence is None:
             self._verify_registered_metadata(registered_run, manifest=manifest)
             return PilotRunSummary(
                 status=registered_run.status,
@@ -776,6 +808,40 @@ class ProjectPilotOrchestrator:
                 acceptance_status="not_evaluated",
                 run_locator=self._run_locator(project_id, run_id),
             )
+        report, verification = final_evidence
+        self._verify_registered_metadata(
+            registered_run,
+            manifest=manifest,
+            report=report,
+            verification=verification,
+        )
+        return self._summary(
+            project_id=project_id,
+            run_id=run_id,
+            revision=snapshot.revision,
+            manifest=manifest,
+            report=report,
+            verification=verification,
+            run_status="verified",
+        )
+
+    def _existing_final_evidence(
+        self,
+        stage: Path,
+        *,
+        project_id: str,
+        run_id: str,
+        manifest: PilotRunManifest,
+        protocol: PilotProtocol,
+        checkpoints: list[PilotCaseCheckpoint],
+        review: IndependentOutcomeReview | None,
+    ) -> tuple[PilotReport, PilotVerificationRecord] | None:
+        report_path = stage / "report.json"
+        verification_path = stage / "verification.json"
+        if report_path.exists() != verification_path.exists():
+            raise PilotOrchestrationError("pilot final publication is incomplete")
+        if not report_path.exists():
+            return None
         report = _load_model(report_path, PilotReport)
         if tuple(item.result for item in checkpoints) != report.case_results:
             raise PilotOrchestrationError("report results do not match the checkpoint chain")
@@ -783,10 +849,7 @@ class ProjectPilotOrchestrator:
             raise PilotOrchestrationError("report protocol hash drift")
         if report.independent_outcome_review != review:
             raise PilotOrchestrationError("report independent-review evidence drift")
-        verification = _load_model(
-            stage / "verification.json",
-            PilotVerificationRecord,
-        )
+        verification = _load_model(verification_path, PilotVerificationRecord)
         expected_head = (
             checkpoints[-1].checkpoint_sha256 if checkpoints else manifest.manifest_sha256
         )
@@ -803,21 +866,7 @@ class ProjectPilotOrchestrator:
             or verification.recording_sha256_by_pair != self._recording_hashes(stage, protocol)
         ):
             raise PilotOrchestrationError("verification record does not match project evidence")
-        self._verify_registered_metadata(
-            registered_run,
-            manifest=manifest,
-            report=report,
-            verification=verification,
-        )
-        return self._summary(
-            project_id=project_id,
-            run_id=run_id,
-            revision=snapshot.revision,
-            manifest=manifest,
-            report=report,
-            verification=verification,
-            run_status="verified",
-        )
+        return report, verification
 
     def _execute_locked(
         self,
@@ -878,12 +927,8 @@ class ProjectPilotOrchestrator:
                     loaded.review_bundle,
                 )
 
-        if (stage / "report.json").exists() or (stage / "verification.json").exists():
-            raise FileExistsError("pilot report destination already exists")
-
         measurements = self._load_owned_measurements(stage, manifest, loaded.protocol)
         review = self._load_owned_review(stage, manifest, loaded.protocol)
-        self._archive_incomplete_markers(stage)
         checkpoints = self._load_checkpoint_prefix(
             stage,
             manifest=manifest,
@@ -891,6 +936,28 @@ class ProjectPilotOrchestrator:
             config=loaded.config,
             measurements=measurements,
         )
+        final_evidence = self._existing_final_evidence(
+            stage,
+            project_id=project_id,
+            run_id=run_id,
+            manifest=manifest,
+            protocol=loaded.protocol,
+            checkpoints=checkpoints,
+            review=review,
+        )
+        if final_evidence is not None:
+            if not resume:
+                raise FileExistsError("pilot report destination already exists")
+            report, verification = final_evidence
+            return self._finalize_registered_run(
+                project_id=project_id,
+                run_id=run_id,
+                registered_revision=registered_revision,
+                manifest=manifest,
+                report=report,
+                verification=verification,
+            )
+        self._archive_incomplete_markers(stage)
         self._archive_orphan_recordings(stage, loaded.protocol, checkpoints)
         backends = self._build_backends(
             loaded,
@@ -998,15 +1065,33 @@ class ProjectPilotOrchestrator:
             acceptance_status=report.acceptance.overall_status,
         )
         _write_model_exclusive(stage / "verification.json", verification)
+        return self._finalize_registered_run(
+            project_id=project_id,
+            run_id=run_id,
+            registered_revision=registered_revision,
+            manifest=manifest,
+            report=report,
+            verification=verification,
+        )
+
+    def _finalize_registered_run(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        registered_revision: int,
+        manifest: PilotRunManifest,
+        report: PilotReport,
+        verification: PilotVerificationRecord,
+    ) -> PilotRunSummary:
+        run_status = (
+            "complete" if report.acceptance.overall_status is AcceptanceStatus.PASS else "blocked"
+        )
         completed = self.runtime.update_run(
             project_id,
             run_id,
             expected_revision=registered_revision,
-            status=(
-                "complete"
-                if report.acceptance.overall_status is AcceptanceStatus.PASS
-                else "blocked"
-            ),
+            status=run_status,
             artifact=f"runs/{run_id}/{PILOT_STAGE_PATH}/report.json",
             protocol_sha256=manifest.protocol_sha256,
             config_sha256=manifest.config_sha256,
@@ -1022,11 +1107,7 @@ class ProjectPilotOrchestrator:
             manifest=manifest,
             report=report,
             verification=verification,
-            run_status=(
-                "complete"
-                if report.acceptance.overall_status is AcceptanceStatus.PASS
-                else "blocked"
-            ),
+            run_status=run_status,
         )
 
     def _validate_project(
