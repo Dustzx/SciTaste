@@ -1,0 +1,13 @@
+# Content-addressed offline examples. Neither profile enables live execution or
+# claims provider pricing; both remain bounded semantic-advice workloads.
+schema_version: "1.0"
+profile_set_id: bounded-model-node-runtime-examples
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: profile_short_structured_v1.yaml
+    sha256: 93303cd9aeed4ebbff0c9f0674ee05c56865cb806d773ec82e9da50a5281ef37
+    profile_sha256: ba28a93bc8d53d1661bd8242c7a8869ad7aae008554d6b6698f43c0313289801
+  - path: profile_deep_semantic_v1.yaml
+    sha256: 0d66ebd32ca44e1d96d57affdffa1b2e5e0b76f27ed453d454d8e5a9152f2a67
+    profile_sha256: bbdc259b0f94a20642d7a5e51eeb8f5de9e8de5a4a3fc03707ed697556ced33a

@@ -18,6 +18,11 @@ from scitaste.model_nodes.models import (
     StructuredModelRequest,
     StructuredModelResponse,
 )
+from scitaste.model_nodes.profiles import (
+    ModelNodeProfile,
+    ProfileConfigurationError,
+    validate_profile_binding,
+)
 from scitaste.model_nodes.schemas import (
     AmbiguousActionInput,
     AmbiguousActionOutput,
@@ -59,10 +64,25 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         policy: NodePolicy,
         request_id: str,
         seed: int = 0,
+        profile: ModelNodeProfile | None = None,
     ) -> NodeResult[OutputT]:
         validated_input = _boundary_copy(self.input_model, input_data)
         validated_context = _boundary_copy(NodeContext, context)
         validated_policy = _boundary_copy(NodePolicy, policy, exclude={"fingerprint"})
+        validated_profile = (
+            _boundary_copy(ModelNodeProfile, profile, exclude={"fingerprint"})
+            if profile is not None
+            else None
+        )
+        if validated_profile is not None:
+            try:
+                validate_profile_binding(
+                    validated_profile,
+                    validated_policy,
+                    node_name=self.node_name,
+                )
+            except ProfileConfigurationError as exc:
+                raise NodePolicyViolationError(str(exc)) from exc
         self._preflight(
             validated_input,
             context=validated_context,
@@ -75,6 +95,7 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
             policy=validated_policy,
             request_id=request_id,
             seed=seed,
+            profile=validated_profile,
         )
         audited_request = _boundary_copy(
             StructuredModelRequest,
@@ -91,6 +112,14 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
             raise NodePolicyViolationError(
                 f"structured request exceeds max_request_bytes: {request_size} > "
                 f"{validated_policy.max_request_bytes}"
+            )
+        if (
+            validated_profile is not None
+            and request_size > validated_profile.generation.max_request_bytes
+        ):
+            raise NodePolicyViolationError(
+                "structured request exceeds the provider generation envelope: "
+                f"{request_size} > {validated_profile.generation.max_request_bytes}"
             )
 
         backend_request = _boundary_copy(
@@ -113,6 +142,7 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
                 response,
                 context=validated_context,
                 policy=validated_policy,
+                profile=validated_profile,
             )
         )
         parsed_proposal: OutputT | None = None
@@ -170,7 +200,19 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         policy: NodePolicy,
         request_id: str,
         seed: int,
+        profile: ModelNodeProfile | None = None,
     ) -> StructuredModelRequest:
+        profile_fields = (
+            {
+                "profile_id": profile.profile_id,
+                "profile_fingerprint": profile.fingerprint,
+                "generation_envelope": profile.generation,
+                "admission_budget": profile.admission,
+                "cumulative_project_budget": profile.cumulative_project,
+            }
+            if profile is not None
+            else {}
+        )
         return StructuredModelRequest(
             request_id=request_id,
             node_name=self.node_name,
@@ -188,6 +230,7 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
             output_schema=self.output_model.model_json_schema(mode="validation"),
             seed=seed,
             prompt_version=self.prompt_version,
+            **profile_fields,
         )
 
     def _preflight(
@@ -222,6 +265,7 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         *,
         context: NodeContext,
         policy: NodePolicy,
+        profile: ModelNodeProfile | None = None,
     ) -> list[str]:
         reasons: list[str] = []
         if response.request_id != request.request_id:
@@ -253,6 +297,14 @@ class ModelNode(ABC, Generic[InputT, OutputT]):
         for tool_call in response.tool_calls:
             if tool_call.name not in allowed_tools:
                 reasons.append(f"tool {tool_call.name!r} is not allowlisted")
+        if profile is not None:
+            if (
+                usage.cost_usd is not None
+                and usage.cost_usd > profile.admission.max_response_cost_usd
+            ):
+                reasons.append("single-response cost budget exceeded")
+            if len(response.tool_calls) > profile.admission.max_tool_call_proposals:
+                reasons.append("tool-call proposal count exceeded")
         return reasons
 
     def _proposal_rejections(
