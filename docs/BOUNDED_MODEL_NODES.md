@@ -185,8 +185,9 @@ The runner distinguishes four conditions by concrete backend type:
 Consequently scripted or replay evidence cannot be labelled as live evidence.
 The committed fixture includes all three nodes, an applicable ambiguous-action
 case, a clear-margin not-applicable case, and a recording/replay pair with an
-identical request contract. This module is not connected to the CLI, runtime,
-controller, executor, retrieval corpus, or full workflow.
+identical request contract. The runner remains separate from the controller,
+executor, retrieval corpus, and full workflow. The project-owned orchestration
+layer described below is the only CLI/runtime integration for this pilot.
 
 The committed protocol contains only `ManualInterventionRequirement` values: it
 declares which case needs the baseline, which needs the observed count, and that
@@ -243,6 +244,97 @@ fsynced temporary file in the destination directory, and publishes it
 atomically. It refuses to overwrite an existing path unless the caller makes
 that choice explicit. Loading a report strictly revalidates its complete schema
 and canonical hash, so content tampering is rejected.
+
+## Project-owned orchestration and CLI
+
+The production-facing orchestration layer registers each pilot as one unique
+`ProjectRuntime` run. It accepts a strict, versioned orchestration configuration
+whose relative input paths are confined to the configuration directory. Every
+referenced protocol, scripted-reply bundle, live-backend configuration, manual
+measurement bundle, and independent-review bundle carries an expected raw-file
+SHA-256. The protocol also carries its canonical model SHA-256. Duplicate YAML
+keys, unknown fields, absolute/traversing paths, symlink escape, content drift,
+protocol drift, and backend/model identity drift fail before a run is created.
+
+`configs/model_nodes/pilot_orchestration.example.yaml` is deliberately a
+planning-only template. It contains the pinned `zhipu-direct / glm-5.3-flash`
+binding but no scripted replies, manual measurements, review evidence,
+credentials, prices, or effectiveness evidence. A plan made from that template
+therefore reports its missing bindings and evidence rather than inventing them.
+Scripted reply bundles must identify themselves as `fixture_only: true` and
+`effectiveness_claim: false`; they can execute only scripted/recording
+conditions. Manual measurements and review remain separate external evidence
+types and are never derived from those fixtures.
+
+The command namespace is:
+
+```bash
+scitaste model-node pilot plan \
+  --project-id scitaste-self-development \
+  --run-id <safe-unique-run-id> \
+  --expected-revision <project-revision> \
+  --config <orchestration.yaml> \
+  --outputs-root outputs
+
+scitaste model-node pilot execute \
+  --project-id scitaste-self-development \
+  --run-id <safe-unique-run-id> \
+  --expected-revision <project-revision> \
+  --config <orchestration.yaml> \
+  --outputs-root outputs
+
+scitaste model-node pilot execute --resume \
+  --project-id scitaste-self-development \
+  --run-id <existing-run-id> \
+  --expected-revision <current-project-revision> \
+  --config <the-identical-orchestration.yaml> \
+  --outputs-root outputs
+
+scitaste model-node pilot status \
+  --project-id scitaste-self-development \
+  --run-id <existing-run-id> \
+  --outputs-root outputs
+```
+
+`execute --dry-run` is an alias for `plan`. Planning, status, tests, and default
+execution never contact a provider. A live case runs only when all three
+conditions hold: the orchestration config has `live_enabled: true`, the caller
+adds `--allow-live`, and the content-addressed compatible backend config is also
+live-enabled with confirmed pricing. The credential environment variable is
+not read while loading, planning, verifying, or executing earlier cases; the
+compatible backend reads it only when the live case actually starts. Omitting
+any live authorization leaves that case `planned` and the report blocked.
+
+The canonical run evidence is contained below:
+
+```text
+outputs/projects/<project-id>/runs/<run-id>/model_node_pilot/
+  manifest.json
+  protocol.json
+  orchestration.json
+  external/                    # present only for supplied external evidence
+  cases/0000__<case-id>.json   # immutable case-boundary checkpoints
+  recordings/<pair-id>.jsonl  # exact recording used by replay
+  attempts/<attempt-id>/       # archived incomplete and failed attempts
+  report.json
+  verification.json
+```
+
+Each checkpoint binds the protocol and config hashes, complete case hash,
+effective binding and identity, optional external-measurement hash, exact
+recording hash, typed result evidence, and predecessor checkpoint hash. Resume
+reuses only a contiguous prefix that passes every binding and chain check.
+Incomplete markers and orphan recordings are moved into a failed-attempt
+directory before retry. A changed protocol/config/backend/measurement, corrupt
+checkpoint/report/recording, stale project revision, non-contiguous prefix, or
+existing final destination fails closed.
+
+Publication uses exclusive, fsynced atomic writes and a non-blocking per-run
+writer lock. Two writers therefore cannot silently replace case or final
+evidence. CLI summaries are JSON and include project/run identity, project
+revision, protocol/config/report/verification hashes, case completion/planned/
+blocker counts, exact acceptance state, and measured token/cost/latency totals.
+They never include API-key values or raw provider responses.
 
 ## Verification
 

@@ -91,11 +91,61 @@ class BoundedPilotRunner:
         """Execute cases in declared order and return a hash-verified report."""
 
         protocol = _strict_copy(PilotProtocol, protocol)
-        measurements = _manual_measurements(protocol, manual_interventions)
-        self._resolved = {}
+        measurements = validate_manual_interventions(protocol, manual_interventions)
+        self.reset()
         case_results = tuple(
-            self._run_case(case, measurements.get(case.case_id)) for case in protocol.cases
+            self.execute_case(case, manual_intervention=measurements.get(case.case_id))
+            for case in protocol.cases
         )
+        return self.build_report(
+            protocol,
+            case_results,
+            report_id=report_id,
+            generated_at=generated_at,
+            independent_outcome_review=independent_outcome_review,
+        )
+
+    def reset(self) -> None:
+        """Reset lazy backend resolutions before one ordered pilot attempt."""
+
+        self._resolved = {}
+
+    def execute_case(
+        self,
+        case: PilotCase,
+        *,
+        manual_intervention: ManualInterventionMeasurement | None = None,
+    ) -> PilotCaseResult:
+        """Execute exactly one validated case without granting workflow authority."""
+
+        case = _strict_copy(PilotCase, case)
+        measurement = _measurement_for_case(case, manual_intervention)
+        return self._run_case(case, measurement)
+
+    def build_report(
+        self,
+        protocol: PilotProtocol,
+        case_results: tuple[PilotCaseResult, ...],
+        *,
+        report_id: str,
+        generated_at: datetime,
+        independent_outcome_review: IndependentOutcomeReview | None = None,
+    ) -> PilotReport:
+        """Evaluate an ordered, complete case sequence and hash the report."""
+
+        protocol = _strict_copy(PilotProtocol, protocol)
+        case_results = tuple(_strict_copy(PilotCaseResult, item) for item in case_results)
+        expected_ids = tuple(case.case_id for case in protocol.cases)
+        observed_ids = tuple(item.case_id for item in case_results)
+        if observed_ids != expected_ids:
+            raise PilotConfigurationError(
+                "case results must cover the protocol exactly in declared order"
+            )
+        if independent_outcome_review is not None:
+            independent_outcome_review = _strict_copy(
+                IndependentOutcomeReview,
+                independent_outcome_review,
+            )
         statistics = _statistics(protocol, case_results)
         acceptance = evaluate_acceptance(
             protocol,
@@ -243,6 +293,23 @@ class BoundedPilotRunner:
         return backend
 
 
+def expected_request_fingerprint(case: PilotCase) -> str | None:
+    """Rebuild a case request identity without invoking its backend."""
+
+    case = _strict_copy(PilotCase, case)
+    if case.condition is PilotCondition.DETERMINISTIC_ONLY:
+        return None
+    node = _NODES[case.node_type]()
+    request = node._build_request(
+        case.validated_node_input(),
+        context=case.context.value,
+        policy=case.policy.value,
+        request_id=case.request_id,
+        seed=case.seed,
+    )
+    return request.fingerprint
+
+
 def _node_case_result(
     case: PilotCase,
     result: NodeResult[Any],
@@ -333,7 +400,7 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
-def _manual_measurements(
+def validate_manual_interventions(
     protocol: PilotProtocol,
     supplied: Mapping[str, ManualInterventionMeasurement] | None,
 ) -> dict[str, ManualInterventionMeasurement]:
@@ -371,6 +438,30 @@ def _manual_measurements(
             )
         measurements[case_id] = measurement
     return measurements
+
+
+def _measurement_for_case(
+    case: PilotCase,
+    supplied: ManualInterventionMeasurement | None,
+) -> ManualInterventionMeasurement | None:
+    requirement = case.manual_intervention_requirement
+    if supplied is None:
+        return None
+    if requirement is None:
+        raise PilotConfigurationError(
+            f"manual measurement supplied for unregistered case {case.case_id!r}"
+        )
+    measurement = _strict_copy(ManualInterventionMeasurement, supplied)
+    if measurement.case_id != case.case_id:
+        raise PilotConfigurationError("manual measurement case_id does not match the case")
+    if measurement.role is not requirement.role:
+        raise PilotConfigurationError("manual measurement role does not match the case")
+    if (
+        requirement.requires_handleable_without_model
+        and measurement.handleable_without_model is None
+    ):
+        raise PilotConfigurationError("manual measurement lacks handleability evidence")
+    return measurement
 
 
 def _statistics(

@@ -52,6 +52,7 @@ from scitaste.executor.workflow import build_autoresearchclaw_workflow
 from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
+from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -228,6 +229,8 @@ def build_parser() -> argparse.ArgumentParser:
     project_paper_select.add_argument("--no-global-latest", action="store_true")
     _add_project_options(project_paper_select)
     project_paper_select.set_defaults(handler=_handle_project_paper_select)
+
+    register_model_node_pilot_cli(commands)
 
     taste = commands.add_parser("taste", help="Scientific-taste calibration")
     taste_commands = taste.add_subparsers(dest="taste_command", required=True)

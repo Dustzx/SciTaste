@@ -1,0 +1,29 @@
+# Planning-only production template. It contains no credentials, scripted
+# replies, manual measurements, independent review, or effectiveness evidence.
+schema_version: "1.0"
+config_id: bounded-model-node-pilot-orchestration
+config_version: 1.0.0
+self_dogfooding_only: true
+effectiveness_claim: false
+live_enabled: false
+
+protocol:
+  path: bounded_self_development_pilot_v1.yaml
+  sha256: 4d4aa3fbe73534858e300adbe309d390e0940361fb622acaa2cbcb86205a1e15
+  protocol_sha256: 64ed26df3f05949711430759b4b391125b50201c304b2875485b3ce9e8b7a5d8
+
+# Add content-addressed scripted/replay bindings before execution. Their
+# ScriptedReplyBundle files must declare fixture_only=true and cannot substitute
+# for manual measurements, independent review, or the live condition.
+bindings:
+  - backend_key: interpretation-live
+    kind: live
+    backend_id: zhipu-direct
+    model_id: glm-5.3-flash
+    replies: null
+    live_config:
+      path: zhipu_glm53_flash.example.yaml
+      sha256: ef4dde57d40d3bd7b69c6fb81d7f44a27f9165f4ac1deef4708c58ba79eac7aa
+
+manual_interventions: null
+independent_review: null
