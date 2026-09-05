@@ -4,6 +4,7 @@ import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from shutil import copyfile
 
 import pytest
 from pydantic import ValidationError
@@ -278,6 +279,19 @@ def test_tampered_project_owned_audit_fails_closed(tmp_path: Path) -> None:
         GenerativeUIApplication(runtime).current_surface("app-project")
 
 
+def test_application_rejects_symlinked_projects_root_before_audit_write(tmp_path: Path) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    projects_root = runtime.projects_root
+    detached = runtime.outputs_root / "detached-projects"
+    projects_root.rename(detached)
+    projects_root.symlink_to(detached, target_is_directory=True)
+
+    with pytest.raises(AuditIntegrityError, match="projects root"):
+        GenerativeUIApplication(runtime).current_surface("app-project")
+
+    assert not (detached / "app-project/.generative-ui").exists()
+
+
 def test_application_audits_inspection_and_restart_duplicate_protection(
     tmp_path: Path,
 ) -> None:
@@ -353,6 +367,35 @@ def test_pending_workspace_exposes_verified_proposals_without_controller_authori
     )
     audit_bytes = (runtime.projects_root / "app-project" / audit_ref.locator).read_bytes()
     assert audit_ref.sha256 == hashlib.sha256(audit_bytes).hexdigest()
+
+
+def test_pending_workspace_rejects_valid_audit_copied_from_another_project(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path, project_id="project-a")
+    _runtime_with_action(tmp_path, project_id="project-b")
+    app = GenerativeUIApplication(runtime)
+    query_a = RunStageQuery(project_id="project-a", run_id="trusted-run")
+    query_b = RunStageQuery(project_id="project-b", run_id="trusted-run")
+    app.current_workspace(query_a)
+    foreign = app.current_workspace(query_b).renderer
+    event = SurfaceEvent(
+        event_id="foreign-private-event",
+        project_id=foreign.project_id,
+        surface_id=foreign.surface_id,
+        surface_revision=foreign.surface_revision,
+        surface_fingerprint=foreign.surface_fingerprint,
+        snapshot_revision=foreign.snapshot.snapshot_revision,
+        snapshot_sha256=foreign.snapshot.snapshot_sha256,
+        action_id=foreign.actions[0].action_id,
+    )
+    app.submit_workspace_event(query_b, event)
+    foreign_audit = _audit_path(runtime, "project-b")
+    local_audit_root = runtime.projects_root / "project-a/.generative-ui/audits"
+    copyfile(foreign_audit, local_audit_root / "copied-foreign.jsonl")
+
+    with pytest.raises(AuditIntegrityError, match="another project"):
+        app.current_workspace(PendingProposalsQuery(project_id="project-a"))
 
 
 def test_concurrent_inspections_share_one_ordered_hash_chain(tmp_path: Path) -> None:

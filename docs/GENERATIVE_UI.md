@@ -32,7 +32,10 @@ The fixed receiver provides a project switcher, the six project-scoped view
 controls, run and paper selection, comparison controls, freshness/provenance,
 and browser back/forward deep links. Conditional GET uses the workspace
 fingerprint as an ETag. The responsive shell and all navigation remain receiver
-code shipped in the package; only validated component data changes.
+code shipped in the package; only validated component data changes. Every
+workspace render and project-selector change clears the prior run and paper
+catalogs before admitting identities from the newly validated view, so browser
+history cannot retain another project's selection controls.
 
 ## Trusted project surface factory
 
@@ -323,17 +326,29 @@ receipt must be reproducible from the server-owned action, and an inspection
 receipt must match a visible artifact binding, before it can be recorded.
 
 Writes replace the complete log atomically and are serialized with thread and
-local-process locks. A partially written final record, a changed payload, a
-missing or reordered record, a stale revision, a duplicate event, or a forged
-receipt therefore fails verification. Replaying a valid log reconstructs both
-the current surface and the accepted-event set.
+local-process locks. Audit storage walks every parent component with no-follow
+directory descriptors, opens the lock relative to the retained directory,
+writes and replaces a temporary file through that same descriptor, and verifies
+the directory and lock identities before release. Replacing an audit parent or
+lock with a symbolic link therefore fails closed and cannot redirect a write
+outside the original directory. New logs use atomic no-replace publication;
+updates use atomic exchange, verify that the displaced inode is exactly the
+record that was read, and roll the exchange back if a target, lock, directory,
+or temporary-file identity changed. A partially written final record, a changed
+payload, a missing or reordered record, a stale revision, a duplicate event, or
+a forged receipt therefore fails verification. Replaying a valid log
+reconstructs both the current surface and the accepted-event set. These audit
+publication guarantees require Linux `renameat2`; an unavailable syscall fails
+closed rather than falling back to an overwrite-capable rename.
 
 The pending-proposals workspace reads only fully verified project-local chains,
 content-addresses each contributing audit file as `audit_record` evidence, and
-shows the recorded pending receipts. A corrupt, changing, oversized, symlinked,
-or cross-project history is rejected instead of partially displayed. Pending
-still means advice awaiting the later deterministic controller; this view has
-no approval or mutation operation.
+checks every opened/revised surface and every proposal/inspection event and
+receipt against the owning project directory, and then shows the recorded
+pending receipts. A corrupt, changing, oversized, symlinked, renamed
+cross-project, or otherwise foreign history is rejected instead of partially
+displayed. Pending still means advice awaiting the later deterministic
+controller; this view has no approval or mutation operation.
 
 Each audit epoch is capped at 8 MiB and fails closed when the limit is reached.
 The log records proposals and read-only inspections, not executions. Persisted

@@ -17,7 +17,11 @@ from pydantic import (
     model_validator,
 )
 
-from scitaste.generative_ui.audit import AuditIntegrityError, ProposalIssuedAudit, SurfaceAuditLog
+from scitaste.generative_ui.audit import (
+    AuditIntegrityError,
+    ProposalIssuedAudit,
+    SurfaceAuditLog,
+)
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError, ProjectSurfaceFactory
 from scitaste.generative_ui.models import (
     ActionBinding,
@@ -647,6 +651,8 @@ def _verified_pending_proposals(
 ) -> tuple[list[EvidenceRef], list[dict[str, object]]]:
     """Read verified proposal receipts without trusting caller-authored audit locators."""
 
+    if projects_root.is_symlink():
+        raise AuditIntegrityError("projects root must not be a symbolic link")
     project_path = projects_root / project_id
     if project_path.is_symlink():
         raise AuditIntegrityError("project UI audit root must not be a symbolic link")
@@ -669,7 +675,10 @@ def _verified_pending_proposals(
         if path.is_symlink() or not path.is_file():
             raise AuditIntegrityError("project UI audit record is not a regular file")
         try:
-            records, digest = SurfaceAuditLog(path).records_with_digest()
+            records, digest = SurfaceAuditLog(
+                path,
+                expected_project_id=project_id,
+            ).records_with_digest()
         except OSError as exc:
             raise AuditIntegrityError("project UI audit history is unavailable") from exc
         issued = [item.payload for item in records if isinstance(item.payload, ProposalIssuedAudit)]

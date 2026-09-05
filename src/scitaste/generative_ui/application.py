@@ -236,7 +236,10 @@ class GenerativeUIApplication:
             return ArtifactInspectionDocument.model_validate(document.model_dump(mode="json"))
 
     def _open_audit(self, surface: SurfaceSpec) -> SurfaceAuditLog:
-        audit = SurfaceAuditLog(self._audit_path(surface))
+        audit = SurfaceAuditLog(
+            self._audit_path(surface),
+            expected_project_id=surface.project_id,
+        )
         lock_path = audit.path.with_name(f".{audit.path.name}.lock")
         if audit.path.is_symlink() or lock_path.is_symlink():
             raise AuditIntegrityError("project UI audit paths must not be symbolic links")
@@ -252,18 +255,20 @@ class GenerativeUIApplication:
 
     def _audit_path(self, surface: SurfaceSpec) -> Path:
         project_root = self._runtime.projects_root / surface.project_id
+        if self._runtime.projects_root.is_symlink():
+            raise AuditIntegrityError("projects root must not be a symbolic link")
+        projects_root = self._runtime.projects_root.resolve(strict=True)
         resolved_project = project_root.resolve(strict=True)
         if project_root.is_symlink():
             raise AuditIntegrityError("project UI audit root must not be a symbolic link")
+        try:
+            resolved_project.relative_to(projects_root)
+        except ValueError as exc:
+            raise AuditIntegrityError("project UI audit root escapes its projects root") from exc
         ui_root = resolved_project / ".generative-ui"
         audit_root = ui_root / "audits"
         if ui_root.is_symlink() or audit_root.is_symlink():
             raise AuditIntegrityError("project UI audit root must not be a symbolic link")
-        audit_root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        try:
-            audit_root.resolve(strict=True).relative_to(resolved_project)
-        except ValueError as exc:
-            raise AuditIntegrityError("project UI audit root escapes its project") from exc
         identity = (
             f"r{surface.snapshot.snapshot_revision}-"
             f"{surface.snapshot.snapshot_sha256}-{surface.fingerprint}.jsonl"

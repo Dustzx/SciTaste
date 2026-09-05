@@ -300,6 +300,7 @@ function updateActiveView(view) {
 }
 
 function updateCatalogs(documentValue) {
+  resetCatalogs();
   const runComponent = documentValue.renderer.components.find(
     (item) => item.renderer === "RunStageExplorer",
   );
@@ -319,6 +320,16 @@ function updateCatalogs(documentValue) {
       .filter((item) => validEntryId(item))));
     populateSelect(paperSelect, paperCatalog, inventory.data.selected_paper_id);
   }
+  updateSelectionControls();
+}
+
+function resetCatalogs() {
+  runCatalog = [];
+  paperCatalog = [];
+  runSelect.replaceChildren();
+  baselineRun.replaceChildren();
+  candidateRun.replaceChildren();
+  paperSelect.replaceChildren();
   updateSelectionControls();
 }
 
@@ -502,6 +513,7 @@ async function loadProjects() {
 
 async function loadWorkspace(query, historyMode = "push") {
   const canonical = validateIdentityQuery(query);
+  resetCatalogs();
   setBusy(true);
   try {
     const documentValue = await api(workspacePath(canonical));
@@ -693,9 +705,7 @@ tokenInput.addEventListener("keydown", (event) => {
 });
 loadButton.addEventListener("click", () => loadWorkspace(defaultQuery(projectSelect.value)));
 projectSelect.addEventListener("change", () => {
-  runCatalog = [];
-  paperCatalog = [];
-  updateSelectionControls();
+  resetCatalogs();
 });
 for (const button of viewButtons) {
   button.addEventListener("click", () => activateView(button.dataset.view));

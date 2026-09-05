@@ -121,7 +121,10 @@ class ProjectSurfaceFactory:
         try:
             _write_new_json(temporary_surface_path, surface.model_dump(mode="json"))
             _write_new_json(temporary_renderer_path, renderer.model_dump(mode="json"))
-            SurfaceAuditLog(temporary_audit_path).start(surface)
+            SurfaceAuditLog(
+                temporary_audit_path,
+                expected_project_id=surface.project_id,
+            ).start(surface)
             _reload_verified_bundle(
                 surface_path=temporary_surface_path,
                 renderer_path=temporary_renderer_path,
@@ -463,7 +466,10 @@ def _reload_verified_bundle(
     try:
         surface = SurfaceSpec.model_validate_json(surface_path.read_text(encoding="utf-8"))
         renderer = RendererDocument.model_validate_json(renderer_path.read_text(encoding="utf-8"))
-        records = SurfaceAuditLog(audit_path).records()
+        records = SurfaceAuditLog(
+            audit_path,
+            expected_project_id=expected_surface.project_id,
+        ).records()
     except Exception as exc:
         raise ProjectSurfaceError("persisted surface bundle failed reload validation") from exc
 

@@ -207,6 +207,14 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert ":focus-visible" in stylesheet.text
     assert 'event_type: "artifact_inspection_requested"' in script.text
     assert "new Blob" in script.text
+    catalog_update = script.text[script.text.index("function updateCatalogs") :]
+    assert catalog_update.index("resetCatalogs();") < catalog_update.index("const runComponent")
+    for selector in ("runSelect", "baselineRun", "candidateRun", "paperSelect"):
+        assert f"{selector}.replaceChildren();" in script.text
+    project_change = script.text[script.text.index('projectSelect.addEventListener("change"') :]
+    assert project_change.index("resetCatalogs();") < project_change.index("});")
+    workspace_load = script.text[script.text.index("async function loadWorkspace") :]
+    assert workspace_load.index("resetCatalogs();") < workspace_load.index("setBusy(true);")
 
 
 def test_api_requires_bearer_authentication_without_creating_project_state(tmp_path: Path) -> None:
@@ -386,6 +394,8 @@ def test_event_api_rejects_malformed_stale_cross_project_and_duplicate_requests(
     assert malformed_response.status_code == 400
     assert stale_response.status_code == 409
     assert cross_response.status_code == 409
+    assert "another-project" not in cross_response.text
+    assert "app-project" not in cross_response.text
     assert accepted.status_code == 202
     receipt = accepted.json()
     assert receipt["status"] == "proposal_pending"
@@ -410,6 +420,11 @@ def test_inspection_api_rehashes_visible_artifact_without_general_file_access(
             headers=_headers(),
             json={**event, "locator": "papers/paper-one/main.md"},
         )
+        cross_project = httpx.post(
+            origin + view_path + "/inspections",
+            headers=_headers(),
+            json={**event, "project_id": "foreign-project"},
+        )
         accepted = httpx.post(
             origin + view_path + "/inspections",
             headers=_headers(),
@@ -428,6 +443,10 @@ def test_inspection_api_rehashes_visible_artifact_without_general_file_access(
     assert workspace.status_code == 200
     assert unauthenticated.status_code == 401
     assert forged.status_code == 400
+    assert cross_project.status_code == 409
+    assert event["artifact_ref_id"] not in cross_project.text
+    assert "foreign-project" not in cross_project.text
+    assert "main.md" not in cross_project.text
     assert accepted.status_code == 200
     assert accepted.json()["preview_kind"] == "markdown"
     assert accepted.json()["text_content"] == "# HTTP evidence\n"

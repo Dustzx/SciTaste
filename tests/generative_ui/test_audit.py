@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+import scitaste.generative_ui.audit as audit_module
 from scitaste.generative_ui import (
     AuditIntegrityError,
     DuplicateEventError,
@@ -268,6 +269,201 @@ def test_audit_reader_rejects_atomic_identity_swap(
 
     with pytest.raises(AuditIntegrityError, match="identity changed"):
         SurfaceAuditLog(path).records()
+
+
+def test_audit_reader_binds_every_record_to_expected_project(tmp_path) -> None:
+    foreign_surface = build_paper_status_fixture()
+    path = tmp_path / "foreign-audit.jsonl"
+    SurfaceAuditLog(path).start(foreign_surface)
+
+    with pytest.raises(AuditIntegrityError, match="another project"):
+        SurfaceAuditLog(path, expected_project_id="different-project").records()
+
+    new_path = tmp_path / "new-audit.jsonl"
+    with pytest.raises(AuditIntegrityError, match="another project"):
+        SurfaceAuditLog(
+            new_path,
+            expected_project_id="different-project",
+        ).start(foreign_surface)
+    assert not new_path.exists()
+
+
+def test_audit_writer_rejects_symlinked_lock_without_touching_target(tmp_path) -> None:
+    surface = build_paper_status_fixture()
+    audit_root = tmp_path / "audits"
+    audit_root.mkdir()
+    path = audit_root / "surface-audit.jsonl"
+    outside_lock = tmp_path / "outside-lock"
+    outside_lock.write_text("outside sentinel\n", encoding="utf-8")
+    (audit_root / ".surface-audit.jsonl.lock").symlink_to(outside_lock)
+
+    with pytest.raises(AuditIntegrityError, match="storage is unavailable"):
+        SurfaceAuditLog(path).start(surface)
+
+    assert outside_lock.read_text(encoding="utf-8") == "outside sentinel\n"
+    assert not path.exists()
+
+
+def test_audit_writer_rejects_symlinked_directory_without_touching_target(tmp_path) -> None:
+    surface = build_paper_status_fixture()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    audit_root = tmp_path / "audits"
+    audit_root.symlink_to(outside, target_is_directory=True)
+    path = audit_root / "surface-audit.jsonl"
+
+    with pytest.raises(AuditIntegrityError, match="symbolic link"):
+        SurfaceAuditLog(path).start(surface)
+
+    assert list(outside.iterdir()) == []
+
+
+def test_audit_writer_cannot_escape_directory_replaced_during_write(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = build_paper_status_fixture()
+    trusted_parent = tmp_path / "trusted"
+    audit_root = trusted_parent / "audits"
+    detached_root = trusted_parent / "detached-audits"
+    outside_root = tmp_path / "outside"
+    audit_root.mkdir(parents=True)
+    outside_root.mkdir()
+    path = audit_root / "surface-audit.jsonl"
+    outside_target = outside_root / path.name
+    outside_target.write_text("outside sentinel\n", encoding="utf-8")
+    original_write = os.write
+    swapped = False
+
+    def racing_write(descriptor: int, content: bytes) -> int:
+        nonlocal swapped
+        if not swapped:
+            swapped = True
+            audit_root.rename(detached_root)
+            audit_root.symlink_to(outside_root, target_is_directory=True)
+        return original_write(descriptor, content)
+
+    monkeypatch.setattr("scitaste.generative_ui.audit.os.write", racing_write)
+
+    with pytest.raises(AuditIntegrityError, match="directory"):
+        SurfaceAuditLog(path).start(surface)
+
+    assert outside_target.read_text(encoding="utf-8") == "outside sentinel\n"
+    assert not (detached_root / path.name).exists()
+    assert not list(detached_root.glob("*.tmp"))
+
+
+def test_audit_writer_rejects_lock_replaced_after_flock(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = build_paper_status_fixture()
+    audit_root = tmp_path / "audits"
+    audit_root.mkdir()
+    path = audit_root / "surface-audit.jsonl"
+    outside = tmp_path / "outside-lock"
+    outside.write_text("outside sentinel\n", encoding="utf-8")
+    original_write = os.write
+    swapped = False
+
+    def racing_write(descriptor: int, content: bytes) -> int:
+        nonlocal swapped
+        if not swapped:
+            swapped = True
+            lock_path = audit_root / f".{path.name}.lock"
+            lock_path.unlink()
+            lock_path.symlink_to(outside)
+        return original_write(descriptor, content)
+
+    monkeypatch.setattr("scitaste.generative_ui.audit.os.write", racing_write)
+
+    with pytest.raises(AuditIntegrityError, match="lock"):
+        SurfaceAuditLog(path).start(surface)
+
+    assert outside.read_text(encoding="utf-8") == "outside sentinel\n"
+    assert not path.exists()
+
+
+def test_audit_writer_rejects_temporary_entry_replaced_before_publish(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = build_paper_status_fixture()
+    audit_root = tmp_path / "audits"
+    audit_root.mkdir()
+    path = audit_root / "surface-audit.jsonl"
+    outside = tmp_path / "outside-temporary"
+    outside.write_text("outside sentinel\n", encoding="utf-8")
+    original_fsync = os.fsync
+    swapped = False
+
+    def racing_fsync(descriptor: int) -> None:
+        nonlocal swapped
+        original_fsync(descriptor)
+        temporary = list(audit_root.glob(f".{path.name}.*.tmp"))
+        if not swapped and temporary:
+            swapped = True
+            temporary[0].unlink()
+            temporary[0].symlink_to(outside)
+
+    monkeypatch.setattr("scitaste.generative_ui.audit.os.fsync", racing_fsync)
+
+    with pytest.raises(AuditIntegrityError, match="temporary file"):
+        SurfaceAuditLog(path).start(surface)
+
+    assert outside.read_text(encoding="utf-8") == "outside sentinel\n"
+    assert not path.exists()
+    assert not list(audit_root.glob("*.tmp"))
+
+
+def test_audit_writer_rolls_back_target_replaced_at_exchange(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    surface = build_paper_status_fixture()
+    path = tmp_path / "surface-audit.jsonl"
+    log = SurfaceAuditLog(path)
+    log.start(surface)
+    original = path.read_bytes()
+    displaced = tmp_path / "displaced-original.jsonl"
+    attacker = b"attacker sentinel\n"
+    event = make_surface_event(
+        surface,
+        event_id="target-race-event",
+        action_id="inspect-paper",
+    )
+    receipt = SurfaceSession(surface).activate(event)
+    original_renameat2 = audit_module._renameat2
+    swapped = False
+
+    def racing_renameat2(
+        source_directory_fd: int,
+        source: str,
+        destination_directory_fd: int,
+        destination: str,
+        flags: int,
+    ) -> None:
+        nonlocal swapped
+        if flags == audit_module._RENAME_EXCHANGE and not swapped:
+            swapped = True
+            path.rename(displaced)
+            path.write_bytes(attacker)
+        original_renameat2(
+            source_directory_fd,
+            source,
+            destination_directory_fd,
+            destination,
+            flags,
+        )
+
+    monkeypatch.setattr(audit_module, "_renameat2", racing_renameat2)
+
+    with pytest.raises(AuditIntegrityError, match="replaced audit"):
+        log.append_interaction(event, receipt)
+
+    assert path.read_bytes() == attacker
+    assert displaced.read_bytes() == original
+    assert not list(tmp_path.glob("*.tmp"))
 
 
 def _revision(previous: SurfaceSpec, replacement: SurfaceSpec) -> SurfaceRevision:
