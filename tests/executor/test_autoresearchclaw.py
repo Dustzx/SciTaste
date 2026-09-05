@@ -83,6 +83,55 @@ def test_stage_execution_imports_validated_artifacts_and_cost(tmp_path) -> None:
     assert all(item["sha256"] for item in result.data["artifact_manifest"])
 
 
+def test_stage_cost_is_incremental_when_upstream_log_is_cumulative(tmp_path) -> None:
+    run_dir = tmp_path / "arc-run"
+    prior = run_dir / "stage-02"
+    prior.mkdir(parents=True)
+    (prior / "problem_tree.md").write_text("# Problems\n", encoding="utf-8")
+    (run_dir / "cost_log.jsonl").write_text(
+        json.dumps({"cost_usd": 0.5}) + "\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "config.yaml"
+    config.write_text("test: true\n", encoding="utf-8")
+
+    def successful_runner(command, **kwargs):
+        stage = run_dir / "stage-03"
+        stage.mkdir(exist_ok=True)
+        (stage / "search_plan.yaml").write_text("queries: []\n", encoding="utf-8")
+        (stage / "sources.json").write_text("[]\n", encoding="utf-8")
+        (stage / "queries.json").write_text("[]\n", encoding="utf-8")
+        with (run_dir / "cost_log.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps({"cost_usd": 0.02}) + "\n")
+        return subprocess.CompletedProcess(command, 0, stdout="stage complete", stderr="")
+
+    state = ResearchState(
+        project_id="arc-test",
+        research_direction="Scientific agent evaluation",
+        target_domain="autonomous-research",
+        executor_context={"autoresearchclaw_run_dir": str(run_dir)},
+    )
+    action = ResearchAction(
+        action_id="search",
+        type=MetaAction.SEARCH,
+        description="Execute search strategy",
+    )
+    result = AutoResearchClawExecutor(
+        config_path=config,
+        command_runner=successful_runner,
+    ).execute(state, action)
+
+    assert result.status == ExecutionStatus.SUCCEEDED
+    assert result.cost["api_cost_usd"] == 0.02
+    assert result.data["cost_accounting"] == {
+        "wall_time_measured": True,
+        "api_cost_measured": True,
+        "api_cost_semantics": "incremental-stage-delta-v1",
+        "prior_api_cost_usd": 0.5,
+        "cumulative_api_cost_usd": 0.52,
+    }
+
+
 def test_stage_execution_rejects_missing_prerequisites(tmp_path) -> None:
     called = False
 

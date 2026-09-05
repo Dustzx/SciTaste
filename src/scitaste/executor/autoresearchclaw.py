@@ -258,6 +258,7 @@ class AutoResearchClawExecutor:
         output_value = _command_value(command, "--output")
         output_dir = Path(output_value) if output_value else None
         prior_checkpoint = _load_json(output_dir / "checkpoint.json") if output_dir else {}
+        prior_api_cost_usd = _read_cost_total(output_dir) if output_dir else None
         started_at = datetime.now(UTC)
         started_clock = time.perf_counter()
         try:
@@ -281,7 +282,12 @@ class AutoResearchClawExecutor:
                 data={"command": command, "substrate": verification, "stage": stage},
             )
         normalized = (
-            self._normalize_run(output_dir, stage, prior_checkpoint=prior_checkpoint)
+            self._normalize_run(
+                output_dir,
+                stage,
+                prior_checkpoint=prior_checkpoint,
+                prior_api_cost_usd=prior_api_cost_usd,
+            )
             if output_dir
             else {}
         )
@@ -325,6 +331,7 @@ class AutoResearchClawExecutor:
         stage: str | None,
         *,
         prior_checkpoint: dict[str, Any],
+        prior_api_cost_usd: float | None,
     ) -> dict[str, Any]:
         summary = _load_json(run_dir / "pipeline_summary.json")
         checkpoint = _load_json(run_dir / "checkpoint.json")
@@ -362,6 +369,15 @@ class AutoResearchClawExecutor:
                 previous_run_id and current_run_id and previous_run_id != current_run_id
             ),
         }
+        cumulative_api_cost_usd = _read_cost_total(run_dir)
+        cost_log_present = cumulative_api_cost_usd is not None
+        incremental_api_cost_usd: float | None = None
+        if cumulative_api_cost_usd is not None:
+            prior = prior_api_cost_usd or 0.0
+            if cumulative_api_cost_usd + 1e-12 < prior:
+                validation_error = "AutoResearchClaw cumulative API cost decreased during stage"
+            else:
+                incremental_api_cost_usd = round(cumulative_api_cost_usd - prior, 8)
         return {
             "run_dir": str(run_dir),
             "stage": stage,
@@ -369,10 +385,17 @@ class AutoResearchClawExecutor:
             "pipeline_summary": summary,
             "session": session,
             "artifact_manifest": manifest,
-            "cost": _read_cost(run_dir),
+            "cost": (
+                {"api_cost_usd": incremental_api_cost_usd}
+                if incremental_api_cost_usd is not None
+                else {}
+            ),
             "cost_accounting": {
                 "wall_time_measured": True,
-                "api_cost_measured": (run_dir / "cost_log.jsonl").is_file(),
+                "api_cost_measured": cost_log_present,
+                "api_cost_semantics": "incremental-stage-delta-v1",
+                "prior_api_cost_usd": prior_api_cost_usd,
+                "cumulative_api_cost_usd": cumulative_api_cost_usd,
             },
             "validation_error": validation_error,
         }
@@ -433,10 +456,10 @@ def _artifact_record(path: Path, run_dir: Path) -> dict[str, Any]:
     }
 
 
-def _read_cost(run_dir: Path) -> dict[str, float]:
+def _read_cost_total(run_dir: Path) -> float | None:
     path = run_dir / "cost_log.jsonl"
     if not path.is_file():
-        return {}
+        return None
     total = 0.0
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
@@ -445,4 +468,4 @@ def _read_cost(run_dir: Path) -> dict[str, float]:
             continue
         if isinstance(record, dict):
             total += float(record.get("cost_usd", 0.0) or 0.0)
-    return {"api_cost_usd": round(total, 8)} if total else {}
+    return round(total, 8)
