@@ -4,7 +4,7 @@ scope: pilot
 description: Non-headline single-GPU preacceptance with every Stage 14 debate role bound to the authoritative diagnostic projection.
 base_model: Qwen/Qwen3-VL-4B-Instruct
 base_model_revision: ebb281ec70b05090aa6165b016eac8ec08e71b17
-codebase_commit: 0e124153831614939acc938aa4fc86eaee57501a
+codebase_commit: eac1178a1045b7b1c440faad9ddd22c83c277207
 search_access:
   policy_id: frozen-empty-search-local-preacceptance-v9
   provider: disabled-local-search
@@ -53,13 +53,13 @@ conditions:
     implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
   - condition: knowledge_rag
     enabled: true
-    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:knowledge-rag
+    implementation_ref: scitaste@eac1178a1045b7b1c440faad9ddd22c83c277207:knowledge-rag
   - condition: taste_library
     enabled: true
-    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:taste-library
+    implementation_ref: scitaste@eac1178a1045b7b1c440faad9ddd22c83c277207:taste-library
   - condition: full_scitaste
     enabled: true
-    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:full
+    implementation_ref: scitaste@eac1178a1045b7b1c440faad9ddd22c83c277207:full
   - condition: sibyl
     enabled: false
     unavailable_reason: External Sibyl adapter has not passed isolation, version, license, artifact, and telemetry gates.
