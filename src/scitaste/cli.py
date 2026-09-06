@@ -938,6 +938,15 @@ def _handle_full(args: argparse.Namespace) -> int:
                     "provider": config.provider,
                     "model": config.model,
                     "execution_backend": config.execution_backend,
+                    "native_execution": {
+                        "project_owned_records": config.execution_backend == "scitaste-native",
+                        "knowledge_configured": config.native_knowledge_config is not None,
+                        "knowledge_config": (
+                            str(config.native_knowledge_config)
+                            if config.native_knowledge_config is not None
+                            else None
+                        ),
+                    },
                     "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],
                     "model_advisory": (

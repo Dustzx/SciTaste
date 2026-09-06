@@ -15,6 +15,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from scitaste.benchmark.manuscript import materialize_manuscript
+from scitaste.data.store import KnowledgeLibrary, build_libraries
 from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_discovery_scenario
 from scitaste.evidence.workflow import (
     EvidenceWorkflow,
@@ -22,7 +23,8 @@ from scitaste.evidence.workflow import (
     load_evidence_scenario,
 )
 from scitaste.executor.base import ResearchExecutor
-from scitaste.executor.native import build_builtin_executor
+from scitaste.executor.native import SciTasteNativeExecutor, build_builtin_executor
+from scitaste.executor.native_store import NativeExecutionRecord
 from scitaste.generative_ui import ProjectSnapshotAdapter
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryRecord,
@@ -70,6 +72,7 @@ class FullWorkflowConfig(BaseModel):
     evidence_scenario: Path
     communication_scenario: Path
     figure_scenario: Path
+    native_knowledge_config: Path | None = None
     model_node_advisory: Path | None = None
     paper_id: str
     paper_directory: str
@@ -175,10 +178,6 @@ class FullWorkflow:
         ):
             raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
         workflow_config_sha256 = _workflow_config_sha256(config, model_advisory)
-        executor = self.executor or build_builtin_executor(
-            config.execution_backend,
-            seed=self.seed,
-        )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
             snapshot, resume_attempt = self._resume_run(
@@ -214,6 +213,11 @@ class FullWorkflow:
         run_root = runtime.outputs_root / "projects" / config.project_id / "runs" / run_id
 
         try:
+            executor = self.executor or _build_full_workflow_executor(
+                config,
+                run_root=run_root,
+                seed=self.seed,
+            )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
                 run_root,
@@ -287,6 +291,7 @@ class FullWorkflow:
                 "archived_attempts": archived_attempts,
                 "scope": config.evidence_scope,
                 "execution_backend": config.execution_backend,
+                "native_execution": _native_execution_summary(executor),
                 "effectiveness_claim": False,
                 "project_revision": snapshot.revision + 1,
                 "current_paper": snapshot.current_paper_locator,
@@ -760,6 +765,102 @@ class FullWorkflow:
             return
 
 
+def _build_full_workflow_executor(
+    config: FullWorkflowConfig,
+    *,
+    run_root: Path,
+    seed: int,
+) -> ResearchExecutor:
+    if config.execution_backend != SciTasteNativeExecutor.name:
+        return build_builtin_executor(config.execution_backend, seed=seed)
+    knowledge = _prepare_native_knowledge(config, run_root=run_root)
+    return build_builtin_executor(
+        config.execution_backend,
+        seed=seed,
+        workspace=run_root / "native_execution",
+        artifact_root=run_root,
+        knowledge_library=knowledge,
+    )
+
+
+def _prepare_native_knowledge(
+    config: FullWorkflowConfig,
+    *,
+    run_root: Path,
+) -> KnowledgeLibrary | None:
+    source = config.native_knowledge_config
+    if source is None:
+        return None
+    source_sha256 = _file_sha256(source)
+    context_root = run_root / "native_execution" / "context"
+    receipt_path = context_root / "CONTEXT.json"
+    if receipt_path.exists():
+        receipt = _load_json_mapping(
+            _owned_regular_file(run_root, _owned_locator(run_root, receipt_path))
+        )
+        record_sha256 = receipt.pop("record_sha256", None)
+        if not isinstance(record_sha256, str) or record_sha256 != content_sha256(receipt):
+            raise ValueError("native knowledge context record hash mismatch")
+        if receipt.get("source_config_sha256") != source_sha256:
+            raise ValueError("native knowledge source changed since the run was created")
+        knowledge_locator = receipt.get("knowledge_records_locator")
+        knowledge_sha256 = receipt.get("knowledge_records_sha256")
+        taste_locator = receipt.get("taste_records_locator")
+        taste_sha256 = receipt.get("taste_records_sha256")
+        manifest_locator = receipt.get("library_manifest_locator")
+        manifest_sha256 = receipt.get("library_manifest_sha256")
+        values = (
+            knowledge_locator,
+            knowledge_sha256,
+            taste_locator,
+            taste_sha256,
+            manifest_locator,
+            manifest_sha256,
+        )
+        if any(not isinstance(item, str) for item in values):
+            raise ValueError("native knowledge context record is incomplete")
+        knowledge_path = _verified_file(run_root, knowledge_locator, knowledge_sha256)
+        _verified_file(run_root, taste_locator, taste_sha256)
+        _verified_file(run_root, manifest_locator, manifest_sha256)
+        return KnowledgeLibrary(knowledge_path)
+    if context_root.exists():
+        raise ValueError("incomplete native knowledge context requires manual inspection")
+    libraries_root = context_root / "libraries"
+    manifest = build_libraries(source, libraries_root)
+    knowledge_path = libraries_root / "knowledge" / "records.jsonl"
+    taste_path = libraries_root / "taste" / "records.jsonl"
+    manifest_path = libraries_root / "library_manifest.json"
+    _write_json(
+        manifest_path,
+        {
+            "schema_version": "1.0",
+            "knowledge_count": manifest["knowledge_count"],
+            "taste_count": manifest["taste_count"],
+            "knowledge_path": "knowledge/records.jsonl",
+            "taste_path": "taste/records.jsonl",
+        },
+    )
+    payload = {
+        "schema_version": "1.0",
+        "source_config_sha256": source_sha256,
+        "knowledge_records_locator": _owned_locator(run_root, knowledge_path),
+        "knowledge_records_sha256": _file_sha256(knowledge_path),
+        "taste_records_locator": _owned_locator(run_root, taste_path),
+        "taste_records_sha256": _file_sha256(taste_path),
+        "library_manifest_locator": _owned_locator(run_root, manifest_path),
+        "library_manifest_sha256": _file_sha256(manifest_path),
+    }
+    _write_json(receipt_path, {**payload, "record_sha256": content_sha256(payload)})
+    return KnowledgeLibrary(knowledge_path)
+
+
+def _native_execution_summary(executor: ResearchExecutor) -> dict[str, object] | None:
+    if not isinstance(executor, SciTasteNativeExecutor) or executor.store is None:
+        return None
+    verification = executor.store.verify()
+    return verification.model_dump(mode="json")
+
+
 def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
     config_path = Path(path).resolve()
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
@@ -768,6 +869,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "evidence_scenario",
         "communication_scenario",
         "figure_scenario",
+        "native_knowledge_config",
         "model_node_advisory",
     ):
         if payload.get(field) is None:
@@ -883,7 +985,10 @@ def _load_stage_record(
     if record.output_state_locator != expected_state or record.decision_log_locator != expected_log:
         raise ValueError(f"stage record locators are not canonical: {name}")
     state_path = _verified_file(run_root, record.output_state_locator, record.output_state_sha256)
-    _verified_file(run_root, record.decision_log_locator, record.decision_log_sha256)
+    decision_log_path = _verified_file(
+        run_root, record.decision_log_locator, record.decision_log_sha256
+    )
+    _verify_native_execution_bindings(decision_log_path, run_root=run_root)
     expected_artifacts = {
         _owned_locator(run_root, path)
         for path in _required_stage_artifacts(root, name, extra_artifacts=extra_artifacts)
@@ -944,6 +1049,71 @@ def _verified_file(run_root: Path, locator: str, expected_sha256: str) -> Path:
         raise ValueError(f"stage locator escapes its run: {locator}") from exc
     if _file_sha256(resolved) != expected_sha256:
         raise ValueError(f"stage artifact hash mismatch: {locator}")
+    return resolved
+
+
+def _verify_native_execution_bindings(decision_log: Path, *, run_root: Path) -> None:
+    seen_records: set[str] = set()
+    for line_number, line in enumerate(decision_log.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            decision = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid decision log line {line_number}") from exc
+        if not isinstance(decision, dict):
+            raise ValueError(f"invalid decision log line {line_number}")
+        outcome = decision.get("actual_outcome")
+        if not isinstance(outcome, dict) or outcome.get("executor") != SciTasteNativeExecutor.name:
+            continue
+        data = outcome.get("data")
+        if not isinstance(data, dict):
+            raise ValueError("native execution outcome is missing its evidence binding")
+        locator = data.get("execution_record")
+        digest = data.get("execution_record_sha256")
+        if not isinstance(locator, str) or not isinstance(digest, str):
+            raise ValueError("native execution outcome is missing its evidence binding")
+        if locator in seen_records:
+            raise ValueError("native execution record is bound by more than one decision")
+        record_path = _owned_regular_file(run_root, locator)
+        try:
+            native_record = NativeExecutionRecord.model_validate_json(
+                record_path.read_text(encoding="utf-8")
+            )
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            raise ValueError("invalid decision-bound native execution record") from exc
+        if native_record.record_sha256 != digest:
+            raise ValueError("native execution record hash does not match its decision")
+        selected_action = decision.get("selected_action")
+        if not isinstance(selected_action, dict):
+            raise ValueError("native execution decision is missing its selected action")
+        if native_record.action.model_dump(mode="json") != selected_action:
+            raise ValueError("native execution record action does not match its decision")
+        expected_result = native_record.result.model_copy(
+            update={
+                "data": {
+                    **native_record.result.data,
+                    "execution_record": locator,
+                    "execution_record_sha256": digest,
+                    "execution_sequence": native_record.sequence,
+                }
+            }
+        ).model_dump(mode="json")
+        if outcome != expected_result:
+            raise ValueError("native execution record result does not match its decision")
+        seen_records.add(locator)
+
+
+def _owned_regular_file(run_root: Path, locator: str) -> Path:
+    root = run_root.resolve(strict=True)
+    path = run_root / locator
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"stage locator is not a regular file: {locator}")
+    resolved = path.resolve(strict=True)
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"stage locator escapes its run: {locator}") from exc
     return resolved
 
 
@@ -1049,6 +1219,12 @@ def _workflow_config_sha256(
         "figure_scenario",
     ):
         payload[field] = {"content_sha256": _file_sha256(Path(payload[field]))}
+    if config.native_knowledge_config is None:
+        payload.pop("native_knowledge_config", None)
+    else:
+        payload["native_knowledge_config"] = {
+            "content_sha256": _file_sha256(config.native_knowledge_config)
+        }
     if config.model_node_advisory is None:
         # Preserve hashes registered by pre-advisory v1.0 offline runs.
         payload.pop("model_node_advisory", None)

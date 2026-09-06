@@ -85,6 +85,18 @@ owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
 
+The default native executor keeps cross-stage action evidence beside that stage
+tree:
+
+```text
+runs/<run-id>/native_execution/{context,artifacts,records}/
+```
+
+`context/` contains the content-bound local Knowledge copy, `artifacts/`
+contains exact handler outputs such as ranked retrieval results, and `records/`
+is the contiguous predecessor-hashed action chain. Stage decision logs bind the
+record identities. See [`NATIVE_EXECUTION.md`](NATIVE_EXECUTION.md).
+
 A project-owned AutoResearchClaw source bootstrap has its own explicit boundary:
 
 ```text

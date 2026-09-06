@@ -7,6 +7,12 @@ semantic versioning.
 
 ### Added
 
+- Project-owned native execution records with contiguous predecessor hashes,
+  state/action/input/artifact binding, exclusive publication, resume-time
+  decision reconciliation, and tamper rejection.
+- Real local Knowledge Library retrieval in the default Full Workflow, including
+  a content-bound run-local context, ranked-result artifact, measured wall time,
+  and machine-portable library locators.
 - A dependency-free `SciTasteNativeExecutor` is now the committed Full Workflow
   default, with typed capability receipts, explicit mock compatibility mode,
   shared execution across all four stages, and fail-closed state advancement.

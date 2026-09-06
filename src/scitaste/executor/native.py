@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
 
+from scitaste.data.retrieval import KnowledgeRetriever
+from scitaste.data.store import KnowledgeLibrary
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.native_store import NativeExecutionStore
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 
@@ -65,20 +72,26 @@ class SciTasteNativeExecutor:
         self,
         *,
         handlers: dict[MetaAction, NativeHandler] | None = None,
+        workspace: str | Path | None = None,
+        artifact_root: str | Path | None = None,
+        knowledge_library: KnowledgeLibrary | None = None,
     ) -> None:
         self.handlers = handlers or {}
+        if workspace is None and artifact_root is not None:
+            raise ValueError("native artifact_root requires a workspace")
+        if workspace is not None and artifact_root is None:
+            raise ValueError("native workspace requires an artifact_root")
+        self.store = (
+            NativeExecutionStore(workspace, artifact_root=artifact_root)
+            if workspace is not None and artifact_root is not None
+            else None
+        )
+        self.knowledge_library = knowledge_library
         self.calls: list[str] = []
 
     def execute(self, state: ResearchState, action: ResearchAction) -> ExecutionResult:
         self.calls.append(action.action_id)
-        if handler := self.handlers.get(action.type):
-            result = handler(state, action)
-            if result.action_id != action.action_id:
-                raise ValueError(
-                    "native handler result action_id does not match the selected action"
-                )
-            return result
-        return self._complete(state, action, capability=_capability_for(action.type))
+        return self._dispatch(state, action, capability=_capability_for(action.type))
 
     def search(self, state: ResearchState, action: ResearchAction) -> ExecutionResult:
         return self._direct(state, action, NativeCapability.RETRIEVAL)
@@ -108,14 +121,146 @@ class SciTasteNativeExecutor:
         capability: NativeCapability,
     ) -> ExecutionResult:
         self.calls.append(action.action_id)
+        return self._dispatch(state, action, capability=capability)
+
+    def _dispatch(
+        self,
+        state: ResearchState,
+        action: ResearchAction,
+        *,
+        capability: NativeCapability,
+    ) -> ExecutionResult:
+        input_paths: tuple[Path, ...] = ()
         if handler := self.handlers.get(action.type):
             result = handler(state, action)
             if result.action_id != action.action_id:
                 raise ValueError(
                     "native handler result action_id does not match the selected action"
                 )
+        elif (
+            capability == NativeCapability.RETRIEVAL
+            and self.store is not None
+            and self.knowledge_library is not None
+        ):
+            result = self._retrieve_knowledge(state, action)
+            input_paths = (
+                (self.knowledge_library.path,) if self.knowledge_library.path.is_file() else ()
+            )
+        else:
+            result = self._complete(state, action, capability=capability)
+        if self.store is None:
             return result
-        return self._complete(state, action, capability=capability)
+        record, locator = self.store.publish(
+            state=state,
+            action=action,
+            capability=capability.value,
+            result=result,
+            input_paths=input_paths,
+        )
+        return result.model_copy(
+            update={
+                "data": {
+                    **result.data,
+                    "execution_record": locator,
+                    "execution_record_sha256": record.record_sha256,
+                    "execution_sequence": record.sequence,
+                }
+            }
+        )
+
+    def _retrieve_knowledge(
+        self,
+        state: ResearchState,
+        action: ResearchAction,
+    ) -> ExecutionResult:
+        assert self.store is not None
+        assert self.knowledge_library is not None
+        query = action.parameters.get("query", action.description)
+        domain_tags = action.parameters.get("domain_tags", [state.target_domain])
+        limit = action.parameters.get("limit", 5)
+        if not isinstance(query, str) or not query.strip():
+            return self._failed(action, NativeCapability.RETRIEVAL, "query must be non-empty")
+        if (
+            not isinstance(domain_tags, list)
+            or any(not isinstance(item, str) or not item.strip() for item in domain_tags)
+            or len(domain_tags) > 20
+        ):
+            return self._failed(
+                action,
+                NativeCapability.RETRIEVAL,
+                "domain_tags must contain at most 20 non-empty strings",
+            )
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 20:
+            return self._failed(
+                action,
+                NativeCapability.RETRIEVAL,
+                "limit must be an integer from 1 to 20",
+            )
+        started_at = datetime.now(UTC)
+        started = perf_counter()
+        retrieved = KnowledgeRetriever(self.knowledge_library).retrieve(
+            query.strip(),
+            domain_tags=domain_tags,
+            limit=limit,
+        )
+        finished_at = datetime.now(UTC)
+        wall_time_hours = max(0.0, perf_counter() - started) / 3600.0
+        result_id = f"res-{uuid4().hex}"
+        artifact = self.store.write_artifact_json(
+            result_id,
+            "retrieval.json",
+            {
+                "schema_version": "1.0",
+                "project_id": state.project_id,
+                "action_id": action.action_id,
+                "query": query.strip(),
+                "domain_tags": domain_tags,
+                "limit": limit,
+                "results": [item.model_dump(mode="json") for item in retrieved],
+            },
+        )
+        return ExecutionResult(
+            result_id=result_id,
+            action_id=action.action_id,
+            status=ExecutionStatus.SUCCEEDED,
+            executor=self.name,
+            started_at=started_at,
+            finished_at=finished_at,
+            observations=[
+                f"{item.document.document_id}: {item.document.title}" for item in retrieved
+            ],
+            artifacts=[self.store.locator(artifact)],
+            cost={"wall_time_hours": wall_time_hours},
+            data={
+                "action_type": action.type.value,
+                "capability": NativeCapability.RETRIEVAL.value,
+                "execution_mode": "first-party-in-process",
+                "result_basis": "knowledge-library-retrieval",
+                "cost_basis": "measured-wall-time",
+                "state_revision_before": state.revision,
+                "retrieved_document_ids": [item.document.document_id for item in retrieved],
+                "retrieval_scores": {item.document.document_id: item.score for item in retrieved},
+            },
+        )
+
+    @classmethod
+    def _failed(
+        cls,
+        action: ResearchAction,
+        capability: NativeCapability,
+        error: str,
+    ) -> ExecutionResult:
+        return ExecutionResult(
+            action_id=action.action_id,
+            status=ExecutionStatus.FAILED,
+            executor=cls.name,
+            error=error,
+            data={
+                "action_type": action.type.value,
+                "capability": capability.value,
+                "execution_mode": "first-party-in-process",
+            },
+        )
 
     @staticmethod
     def _complete(
@@ -162,11 +307,22 @@ class SciTasteNativeExecutor:
         )
 
 
-def build_builtin_executor(name: str, *, seed: int = 0):
+def build_builtin_executor(
+    name: str,
+    *,
+    seed: int = 0,
+    workspace: str | Path | None = None,
+    artifact_root: str | Path | None = None,
+    knowledge_library: KnowledgeLibrary | None = None,
+):
     """Build a dependency-free executor used by the integrated workflow."""
 
     if name == SciTasteNativeExecutor.name:
-        return SciTasteNativeExecutor()
+        return SciTasteNativeExecutor(
+            workspace=workspace,
+            artifact_root=artifact_root,
+            knowledge_library=knowledge_library,
+        )
     if name == "mock":
         from scitaste.executor.mock import MockExecutor
 

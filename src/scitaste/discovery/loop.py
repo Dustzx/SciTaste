@@ -114,6 +114,11 @@ class DiscoveryLoop:
                     action_id="discovery-search",
                     type=MetaAction.SEARCH,
                     description="Build a source-linked structured literature landscape",
+                    parameters={
+                        "query": scenario.research_direction,
+                        "domain_tags": [scenario.target_domain],
+                        "limit": 5,
+                    },
                     expected_cost={"wall_time_hours": 0.05},
                     expected_value={"information_gain": 0.8, "problem_validity": 0.5},
                 )

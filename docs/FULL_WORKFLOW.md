@@ -33,9 +33,11 @@ registered run and publication identity with:
 The committed default is `scitaste-native`. One first-party executor instance is
 shared across Discovery, Evidence, Communication, nested reviewer evidence, and
 Figure actions. It emits typed action receipts without inventing mock
-observations; the existing deterministic workflow components perform the bounded
-scenario operation and remain dependency-free. `--backend mock` is an explicit
-compatibility/test mode. Neither mode proves open-ended retrieval, code-sandbox,
+observations; its Discovery `SEARCH` action now performs real local retrieval
+against a content-bound project copy of the configured Knowledge Library. The
+existing deterministic workflow components perform the other bounded scenario
+operations and remain dependency-free. `--backend mock` is an explicit
+compatibility/test mode. Neither mode proves open-ended experiment, code-sandbox,
 or model-generation quality, and neither supports an effectiveness claim.
 `--dry-run` validates the configuration and prints the planned executor and
 project/run/paper identity without writing files.
@@ -86,6 +88,7 @@ outputs/projects/<project-id>/
 │   ├── full_run_summary.json
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
 │   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
+│   ├── native_execution/{context,artifacts,records}/ # native action evidence
 │   └── stages/
 │       ├── discovery/
 │       ├── evidence/model_advisory_input.json # pre-call, when opted in
@@ -162,6 +165,12 @@ stage records already validate, or a paper directory already exists, automated
 finalization recovery refuses to overwrite it and requires manual inspection.
 Completed runs cannot be resumed.
 
+Native execution resume first validates its contiguous predecessor chain, every
+bound Knowledge input and action artifact, and the record hash/action/result
+identity embedded in each reusable stage decision. Tampering with the local
+Knowledge copy or retrieval output therefore blocks reuse before a stage can
+advance. See `docs/NATIVE_EXECUTION.md` for the record contract.
+
 After completion, `ProjectSnapshotAdapter` hashes the authoritative manifest,
 run tree, current stage, paper manifest, and every declared paper artifact into
 `surfaces/<run-id>-snapshot-binding.json`. That record can ground a trusted
@@ -170,7 +179,8 @@ Generative UI surface but has no execution authority.
 ## Configuration boundary
 
 `configs/workflows/full_offline_v1.yaml` chooses the four typed scenario files
-and owns the canonical project/publication identity. Scenario files contribute
+and a versioned native Knowledge seed, and owns the canonical
+project/publication identity. Scenario files contribute
 phase-specific claims, evidence, narrative contracts, review feedback, and
 figure contracts; their standalone demo project IDs are replaced and revalidated
 against the full-workflow project. This permits reusable phase fixtures without

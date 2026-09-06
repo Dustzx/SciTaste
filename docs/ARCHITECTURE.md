@@ -124,6 +124,9 @@ returns observations and artifacts but cannot select the next global action.
     `ResearchState`.
 41. Installing, importing, and running SciTaste's default integrated workflow
     cannot require an external research-framework package or submodule.
+42. A native action record binds its predecessor, pre-execution state, selected
+    action, declared inputs, produced artifacts, and result; reusable stage
+    decisions must resolve to the same record identity.
 
 ## Architecture decision records
 
@@ -640,6 +643,14 @@ scenario observations, emits no synthetic mock observation, records its
 capability and result basis, and prevents failed/planned/skipped execution from
 advancing state. This is an architectural independence gate, not an assertion of
 open-ended autonomy or superiority.
+
+The first non-receipt capability is now implemented for local Knowledge
+retrieval. Full Workflow materializes a content-bound library inside its owning
+run, executes the selected search, records ranked documents and measured wall
+time, and binds every native action through a self-hashed predecessor chain.
+Reusable stage decisions revalidate the corresponding action and result record.
+This closes local retrieval provenance, not open-web search or experimental
+execution.
 
 Native capability parity will replace scenario-bound operations incrementally:
 rights-aware retrieval, code generation, isolated execution, metric extraction,

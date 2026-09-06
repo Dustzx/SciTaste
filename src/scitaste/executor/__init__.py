@@ -12,6 +12,11 @@ from scitaste.executor.native import (
     SciTasteNativeExecutor,
     build_builtin_executor,
 )
+from scitaste.executor.native_store import (
+    NativeExecutionRecord,
+    NativeExecutionStore,
+    NativeExecutionVerification,
+)
 from scitaste.executor.project_bootstrap import (
     ProjectSubstrateBootstrapManifest,
     ProjectSubstrateBootstrapWorkflow,
@@ -30,6 +35,9 @@ __all__ = [
     "ExecutionStatus",
     "MockExecutor",
     "NativeCapability",
+    "NativeExecutionRecord",
+    "NativeExecutionStore",
+    "NativeExecutionVerification",
     "ProjectSubstrateActionWorkflow",
     "ProjectSubstrateBootstrapManifest",
     "ProjectSubstrateBootstrapWorkflow",

@@ -149,6 +149,14 @@ sandbox execution, metric extraction, analysis, and generative writing remain
 registered work, and no superiority claim follows from this self-development
 case.
 
+The next implementation increment closes the first part of that registered
+work. Native `SEARCH` now executes against a project-owned, content-bound
+Knowledge Library and stores the exact ranked result. Every selected native
+action receives a chained record binding its pre-state, action, inputs, outputs,
+and result; resume verifies those records against the stage decision log. This is
+evidence that the architectural choice can support a real capability without
+AutoResearchClaw, but it is still not open-web retrieval or outcome superiority.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

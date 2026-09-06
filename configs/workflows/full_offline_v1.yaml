@@ -13,6 +13,7 @@ discovery_scenario: ../experiments/discovery_strong.yaml
 evidence_scenario: ../evidence/support_demo.yaml
 communication_scenario: ../writing/reviewer_experiment_demo.yaml
 figure_scenario: ../visual/mechanism_demo.yaml
+native_knowledge_config: ../taste/library_seed_v1.yaml
 paper_id: conflict-aware-control-paper
 paper_directory: offline-full-reviewed-draft
 paper_title: Conflict-Aware Control for Evidence-Bounded Autonomous Research

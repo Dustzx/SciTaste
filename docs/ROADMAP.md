@@ -142,10 +142,14 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   product default, while AutoResearchClaw is an optional baseline/compatibility
   adapter. The dependency-free native Phase 4--7 path is wired through one
   shared executor and failed execution cannot advance state.
-- Native open-ended capability parity remains pending for retrieval, code
-  generation, isolated experiments, metric extraction, analysis, writing, and
-  figures. Existing scenario-bound native receipts are integration evidence,
-  not a claim that these open-ended handlers are complete.
+- Project-owned native action evidence now chains every selected action to its
+  pre-state, inputs, artifacts, result and predecessor. Full Workflow performs
+  real local Knowledge Library retrieval and revalidates action/result bindings
+  on resume.
+- Native open-ended capability parity remains pending for open-web retrieval,
+  code generation, isolated experiments, metric extraction, generative analysis,
+  writing, and figures. Existing scenario-bound receipts are integration
+  evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution
   base from independent-system comparison of SciTaste Native against pinned
   external systems. Neither the current AutoResearchClaw-based cells nor native

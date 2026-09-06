@@ -58,6 +58,23 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
         for decision in final_state.decision_history
         if decision.actual_outcome is not None
     } == {"scitaste-native"}
+    assert payload["native_execution"]["record_count"] == len(final_state.decision_history)
+    assert payload["native_execution"]["head_record_sha256"]
+    search_decision = next(
+        decision
+        for decision in final_state.decision_history
+        if decision.selected_action.type == MetaAction.SEARCH
+    )
+    assert search_decision.actual_outcome is not None
+    assert search_decision.actual_outcome["data"]["result_basis"] == ("knowledge-library-retrieval")
+    assert search_decision.actual_outcome["data"]["retrieved_document_ids"]
+    retrieval_locator = search_decision.actual_outcome["artifacts"][0]
+    assert (run / retrieval_locator).is_file()
+    context = json.loads((run / "native_execution/context/CONTEXT.json").read_text())
+    library_manifest = run / context["library_manifest_locator"]
+    manifest = json.loads(library_manifest.read_text(encoding="utf-8"))
+    assert manifest["knowledge_path"] == "knowledge/records.jsonl"
+    assert not Path(manifest["knowledge_path"]).is_absolute()
     assert payload["resumed"] is False
     assert payload["reused_stages"] == []
     for stage in payload["stages"]:
@@ -75,6 +92,17 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert (paper / "MANIFEST.json").is_file()
     assert (project / "papers/current").resolve() == paper.resolve()
     assert Path(payload["snapshot_binding"]).is_file()
+
+    decision_log = run / "stages/discovery/decisions.jsonl"
+    decisions = [json.loads(line) for line in decision_log.read_text().splitlines()]
+    decisions[0]["actual_outcome"]["observations"].append("tampered observation")
+    tampered_log = run / "tampered-decisions.jsonl"
+    tampered_log.write_text(
+        "\n".join(json.dumps(item) for item in decisions) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="result does not match its decision"):
+        full_workflow._verify_native_execution_bindings(tampered_log, run_root=run)
 
 
 def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
@@ -99,6 +127,8 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     assert payload["status"] == "planned"
     assert payload["execution_backend"] == "scitaste-native"
+    assert payload["native_execution"]["project_owned_records"] is True
+    assert payload["native_execution"]["knowledge_configured"] is True
     assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert not outputs.exists()
@@ -273,6 +303,7 @@ def test_full_workflow_resumes_a_valid_prefix_and_archives_partial_stage(
     original_records = {
         stage: (run_root / "stages" / stage / "STAGE.json").read_bytes() for stage in prefix
     }
+    original_native_record_count = len(list((run_root / "native_execution/records").glob("*.json")))
 
     result = workflow.run(
         config,
@@ -285,6 +316,7 @@ def test_full_workflow_resumes_a_valid_prefix_and_archives_partial_stage(
     assert result["resume_attempt"] == 1
     assert result["reused_stages"] == list(prefix)
     assert result["archived_attempts"] == ["failed_attempts/stages/figure/attempt-001"]
+    assert result["native_execution"]["record_count"] == original_native_record_count + 1
     assert (run_root / "failed_attempts/stages/figure/attempt-001/partial.txt").is_file()
     assert all(
         (run_root / "stages" / stage / "STAGE.json").read_bytes() == original_records[stage]
@@ -345,3 +377,41 @@ def test_full_workflow_rejects_tampered_completed_stage_on_resume(
     snapshot = ProjectRuntime(outputs).open("tampered-full-project")
     assert snapshot.manifest.runs[0].status == "failed"
     assert not (run_root / "failed_attempts").exists()
+
+
+def test_full_workflow_rejects_native_knowledge_drift_on_resume(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "project_id": "native-context-drift-project",
+            "paper_directory": "native-context-drift-draft",
+        }
+    )
+
+    def fail_figure(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise RuntimeError("stop after native retrieval")
+
+    monkeypatch.setattr(full_workflow.FigureWorkflow, "run", fail_figure)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(RuntimeError, match="stop after native retrieval"):
+        workflow.run(config, outputs_root=outputs, run_id="native-context-drift-seed-07")
+
+    knowledge = (
+        outputs / "projects/native-context-drift-project/runs/native-context-drift-seed-07/"
+        "native_execution/context/libraries/knowledge/records.jsonl"
+    )
+    knowledge.write_text(knowledge.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="artifact hash mismatch"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="native-context-drift-seed-07",
+            resume=True,
+        )
+    snapshot = ProjectRuntime(outputs).open("native-context-drift-project")
+    assert snapshot.manifest.runs[0].status == "failed"
