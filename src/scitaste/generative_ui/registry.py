@@ -43,6 +43,7 @@ class TrustedComponent(StrEnum):
     RUN_COMPARISON_PANEL = "RunComparisonPanel"
     RUN_BLOCKER_PANEL = "RunBlockerPanel"
     PENDING_PROPOSAL_LIST = "PendingProposalList"
+    PROJECT_PROGRESS_BOARD = "ProjectProgressBoard"
 
 
 class SurfacePurpose(StrEnum):
@@ -56,6 +57,8 @@ class SurfacePurpose(StrEnum):
     WORKSPACE_RUN_COMPARISON = "workspace_run_comparison"
     BLOCKER_VIEW = "blocker_view"
     PENDING_PROPOSALS = "pending_proposals"
+    PROJECT_PROGRESS = "project_progress"
+    GENERATED_WORKSPACE = "generated_workspace"
 
 
 class ProposalKind(StrEnum):
@@ -119,4 +122,7 @@ COMPONENT_REGISTRY: dict[TrustedComponent, ComponentPolicy] = {
     TrustedComponent.RUN_COMPARISON_PANEL: ComponentPolicy(frozenset({EvidenceKind.RUN_RECORD})),
     TrustedComponent.RUN_BLOCKER_PANEL: ComponentPolicy(frozenset({EvidenceKind.RUN_RECORD})),
     TrustedComponent.PENDING_PROPOSAL_LIST: ComponentPolicy(frozenset({EvidenceKind.AUDIT_RECORD})),
+    TrustedComponent.PROJECT_PROGRESS_BOARD: ComponentPolicy(
+        frozenset({EvidenceKind.PROJECT_MANIFEST})
+    ),
 }

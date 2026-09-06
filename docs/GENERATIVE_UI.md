@@ -9,14 +9,16 @@ untrusted display text and is never evaluated.
 
 This module is a contract and interaction-boundary layer plus a trusted
 ProjectRuntime adapter. It includes a framework-neutral renderer document and a
-runnable, local receiver-owned browser/API application. It does not include a
-model call, controller approval, or task executor.
+runnable, local receiver-owned browser/API application. An optional bounded
+structured model may classify a long-tail question or arrange server-owned
+component candidates. It does not include controller approval or a task
+executor, and the provider never authors renderer content.
 
 ## Evidence-native project workspace
 
-`WorkspaceSurfaceFactory` is the server-owned composer for seven closed views:
-project list, project overview, run/stage explorer, paper/evidence, run
-comparison, blockers, and pending proposals. A browser may select only the
+`WorkspaceSurfaceFactory` is the server-owned composer for eight closed views:
+project list, project progress, project overview, run/stage explorer,
+paper/evidence, run comparison, blockers, and pending proposals. A browser may select only the
 view and canonical project-owned run or paper identities defined by the
 corresponding discriminated query model. It cannot submit components, fields,
 layout, evidence, filters, prose, or renderer code.
@@ -28,14 +30,226 @@ closed. Empty projects, absent papers, unavailable stages, and missing
 comparable metrics use explicit typed availability states; the composer does not
 invent research progress or substitute model-authored explanations.
 
-The fixed receiver provides a project switcher, the six project-scoped view
+The fixed receiver provides a project switcher, the seven project-scoped view
 controls, run and paper selection, comparison controls, freshness/provenance,
 and browser back/forward deep links. Conditional GET uses the workspace
 fingerprint as an ETag. The responsive shell and all navigation remain receiver
 code shipped in the package; only validated component data changes. Every
 workspace render and project-selector change clears the prior run and paper
 catalogs before admitting identities from the newly validated view, so browser
-history cannot retain another project's selection controls.
+history cannot retain another project's selection controls. A project change
+also clears the prior quick-intent catalog, free-question value, generated
+layout, proposal result, artifact preview, response cache, and current document
+before any newly selected project is rendered.
+
+### Progress-first self-hosting view
+
+`project-progress` is the default view after selecting a project. Its
+`ProjectProgressBoard` is a receiver-owned component built from the current
+`PROJECT.json`, registered run records, current stage binding, and registered
+paper manifests. It reports observed record counts, the selected current run,
+declared focus and next gate, latest registered activity in manifest order,
+completed AutoResearchClaw stages where those semantics apply, paper state,
+blocked/failed run attention, and evidence-supported next-step candidates.
+
+Progress is categorical rather than numeric. The contract distinguishes
+`observed_completed`, `current_work`, `blocked`, `failed`, `candidate`,
+`unavailable`, and `unknown`; it deliberately has no percent, ratio, schedule,
+or estimated-completion field. A selected `current_run` is described as a
+selection and never upgraded to currently executing. A completed run also does
+not make the project complete. Status mapping uses a small exact allowlist so a
+novel or compound status remains `unknown` unless its meaning is explicitly
+registered.
+
+Every visible progress row carries supporting evidence references. Run and
+paper status rows cite both `PROJECT.json` and their content-addressed run or
+paper record because selection and status come from the project manifest.
+Optional `current_focus`, run `blockers`, and `iterations` extensions are parsed
+through strict local schemas. Invalid extensions degrade to an explicit
+unavailable/fallback state rather than becoming display data. A milestone
+locator covered by a bound evidence directory is marked `content_addressed`;
+otherwise it remains only `manifest_declared` and is never exposed as an
+inspection target.
+
+Next-step entries are capabilities for later intent planning, not controller
+decisions. They can offer progress review, blocker diagnosis, comparison of the
+latest two registered runs, paper-evidence review, or review of a declared next
+gate only when their required project records exist. They contain no command or
+execution authority.
+
+The existing `scitaste-self-development` project is a read-only self-hosting
+acceptance case. At revision 21 it truthfully yields nine registered runs, four
+observed completions, two blocked records, one failed record, one candidate,
+one unknown reference, four manifest-declared milestones, no registered paper,
+and a blocked overall project status. That project record predates some later
+repository work, so the UI must not infer newer progress from Git or docs. Main
+must register later milestones through the normal `ProjectRuntime` workflow if
+they should appear in this view.
+
+### Unified intent and surface-plan contracts
+
+Quick clicks and free questions enter one snapshot-bound intent boundary. A
+`QuickIntentRequest` names only a server-issued quick-intent ID; a
+`FreeQuestionRequest` carries bounded opaque text for resolution but that text
+is deliberately absent from every `WorkspaceIntent`, `IntentResolution`,
+surface, renderer, and audit document. Request fingerprints retain request
+identity without turning the question into display content.
+
+`WorkspaceIntentResolver` derives its quick catalog from the current
+`ProjectProgressBoard.next_step_candidates`. An empty project therefore offers
+only progress review; blocker diagnosis, run comparison, paper review, and
+next-gate review appear only when the current manifest and evidence binding make
+them possible. Equivalent quick and recognized free-form requests resolve to
+the same canonical `WorkspaceIntent` fingerprint.
+
+The initial deterministic resolver recognizes progress, blocker, comparison,
+paper-evidence, and next-step goals in Chinese or English. A free comparison
+must name exactly two registered Run IDs or returns a bounded Run candidate set.
+A paper request with multiple registered papers likewise requests
+clarification. Unknown long-tail language returns
+`provider_unavailable/long-tail-question-requires-planner` until the optional
+planner boundary is configured; it never guesses an entity or fabricates an
+answer.
+
+Resolved intents contain one project-manifest binding plus only the Run or paper
+evidence roles required by the closed goal. The raw question and input modality
+are excluded, so the intent is a scientific target rather than a transcript.
+All references are revalidated against the exact `SnapshotBinding`.
+
+`SurfaceCandidateFactory` then assembles complete server-owned component and
+action candidates from the existing closed workspace views. It scopes component
+and action IDs to prevent collisions and validates the whole catalog as one
+legal `SurfaceSpec`. An external planner receives only
+`SurfaceCandidateDescriptor`: candidate ID, registered component enum, source
+view, evidence IDs, reason code, and allowed group/emphasis enums. Component
+data, titles, action proposals, paths, and evidence content are withheld.
+
+A `SurfacePlan` can contain only an ordered candidate ID, closed group,
+closed emphasis, and optional focus evidence IDs for each entry. It is bound to
+the project, snapshot, canonical intent, and complete candidate-catalog
+fingerprints. It has no prose, component schema, component data, action, URL,
+path, callback, command, or authority field. Materialization copies the selected
+trusted `ComponentSpec` and `ActionBinding` objects unchanged; an unknown
+candidate, cross-candidate evidence reference, disallowed group, duplicate ID,
+or stale fingerprint rejects the complete plan.
+
+### Planner boundary and offline fallback
+
+`WorkspacePlanner` exposes only two advisory operations: classify a long-tail
+question by selecting one server-issued quick-intent ID, and compose a surface
+by returning a closed `SurfacePlan`. There is deliberately no execute, mutate,
+transition, callback, fetch, or tool method. Deterministic intent recognition in
+`WorkspaceIntentResolver` remains the first path; the optional classifier is
+only useful after that path returns `long-tail-question-requires-planner`.
+
+`DeterministicWorkspacePlanner` orders trusted candidates by a versioned stable
+rule and works without a provider. `StructuredWorkspacePlanner` adapts the
+existing provider-neutral `StructuredModelBackend`; it does not import a vendor
+SDK or read credentials itself. Classification receives the bounded question
+and a list of closed quick-intent IDs/goals/registered target IDs. Composition
+receives only snapshot and intent hashes plus data-free candidate descriptors.
+Neither operation receives evidence content, component data, action proposals,
+artifact paths, titles, URLs, or controller state.
+
+The model response is untrusted. Backend/model identity, request bytes,
+response bytes, token telemetry, latency, tool-call absence, exact response
+binding, closed Pydantic schema, snapshot hashes, intent hash, catalog hash, and
+final plan materialization are all checked in code. Prompt instructions are
+defense in depth, not the trust boundary. A failed or malicious composition is
+replaced by the deterministic layout through `FallbackWorkspacePlanner`; a
+failed long-tail classification remains explicitly unavailable because guessing
+an intent would change meaning.
+
+Accepted provenance records planner implementation and configuration hashes,
+snapshot, intent, candidate catalog, structured request, provider response hash,
+and result plan hash. It never records the free question or credentials.
+Model-assisted results set `deterministic_reproducible=false`; deterministic
+fallbacks identify the attempted provider planner and bind the independently
+reproducible fallback plan. The existing OpenAI-compatible backend supplies the
+transport timeout and server-side environment-variable credential lookup; the
+UI adapter additionally rejects provider configurations whose retry-adjusted
+timeout exceeds its policy bound.
+
+The CLI injects `BoundedPlannerHTTPTransport` into the compatible backend. It
+streams decoded response bytes under the planner limit before building a
+response string, checks any declared length, requires UTF-8, rejects duplicate
+JSON keys and non-finite values, and requires an object root. The planner then
+repeats a canonical post-read size check before schema admission.
+
+```text
+question ──> deterministic resolver ──resolved──┐
+   │                                            │
+   └─long-tail─> optional ID-only classifier ───┤
+                                                v
+project snapshot ─> trusted candidate factory ─> planner
+                                                │ IDs/enums only
+                                                v
+                                 validate + materialize SurfacePlan
+                                                │
+                                                v
+                                  fixed native component receiver
+```
+
+Provider construction remains disabled unless the server receives both a
+non-secret planner configuration and explicit live-planner authorization. With
+no provider, the same visible interaction uses the deterministic planner.
+
+### Visible generation-as-content flow
+
+The fixed navigation now asks “What do you want to understand?” and provides
+both evidence-derived quick-intent buttons and an editable bounded question
+field. The buttons are not a universal prompt menu: each comes from the current
+`ProjectProgressBoard.next_step_candidates`. Both controls submit a
+`WorkspaceGenerationRequest` to the same service and bind the exact quick
+catalog, project revision, snapshot hash, and request fingerprint.
+
+Successful generation visibly changes component order, grouping, emphasis, and
+the set of goal-relevant panels. The receiver shows the admitted intent goal,
+planner mode, snapshot revision, execution authority, and a short server-owned
+explanation for each component. Layout classes affect only the fixed CSS grid;
+the response still contains no markup or renderer code. A failed request leaves
+the current workspace visible and reports clarification candidates, missing
+evidence, provider unavailability, stale state, or rejected planning in the
+intent panel.
+
+Generated surfaces are retained in memory by exact project and surface ID so
+browser back/forward and proposal-only actions resolve against the precise
+validated surface instead of invoking the model again. Every retrieval and
+action rehashes current project evidence. A server restart deliberately drops
+this cache; an old generated deep link then fails stale rather than attempting
+to recreate a non-deterministic result. Opening a generated surface starts the
+same project-owned audit epoch used by fixed views. Generated actions and
+artifact inspections still stop at their existing proposal/read-only
+boundaries. The process retains at most 128 generated surfaces using
+least-recently-used eviction; an evicted link likewise fails stale.
+
+### Self-hosting verification
+
+On 2026-09-06 the offline receiver was exercised against a temporary copy of
+the existing `scitaste-self-development` project, leaving the repository's
+`outputs/` untouched. The progress endpoint opened revision 21 as `blocked` and
+reported exactly nine registered runs: four observed completed, two blocked,
+one failed, one candidate, and one unknown; it reported no registered paper or
+AutoResearchClaw stage completion. The quick catalog offered progress review,
+blocker diagnosis, run comparison, and next-step review, but correctly omitted
+paper review.
+
+Selecting progress review produced an admitted deterministic generation with
+five native components grouped as primary, attention, and context. The response
+and renderer both reported `execution_authority: none`. This verifies current
+project-management usefulness and the offline generation path; it is not an
+effectiveness result, a live-provider result, or evidence that unregistered
+repository work is complete.
+
+Final offline verification for this branch passed 223 Generative UI and focused
+CLI tests with 86.03% branch-aware coverage of `scitaste.generative_ui` (the
+configured 85% floor), followed by all 626 repository tests through
+`PYTHONPATH=src make check` and `node --check` for the receiver. An isolated
+wheel contained all seven required generation/planner/static assets among 135
+entries and contained no `outputs/`, tests, `third_party/`, key, or environment
+files. The first no-build-isolation wheel attempt did not start because the
+shared virtual environment lacks Hatchling; the standard isolated build then
+completed successfully.
 
 ## Trusted project surface factory
 
@@ -115,7 +329,7 @@ snapshots. Surface requests rebuild current authoritative state and return a
 `RendererDocument`; the browser never receives the server-owned `SurfaceSpec`
 action payloads.
 
-The versioned same-origin JSON API is deliberately small:
+The versioned same-origin JSON API is deliberately closed:
 
 - `GET /api/v1/projects` returns canonical project IDs and revisions;
 - `GET /api/v1/projects/<project-id>/surface` returns the current fixed-shell
@@ -130,6 +344,15 @@ The versioned same-origin JSON API is deliberately small:
   interaction;
 - `POST` to a workspace path containing a visible artifact plus `/inspections` accepts exactly
   `ArtifactInspectionEvent` and returns a bounded `ArtifactInspectionDocument`.
+- `GET /api/v3/generative/projects/<project-id>/intents` returns the current
+  evidence-derived `QuickIntentCatalog` and fingerprint;
+- `POST /api/v3/generative/projects/<project-id>/workspace` accepts one
+  `WorkspaceGenerationRequest` and returns a question-free
+  `GeneratedWorkspaceDocument`;
+- `GET /api/v3/generative/projects/<project-id>/generations/<surface-id>`
+  revalidates and returns an exact in-memory admitted generation;
+- `POST` to that generated path plus `/events` or `/inspections` resolves only
+  against the retained server-owned surface.
 
 There is no general filesystem, artifact download, callback, controller, tool,
 or model endpoint. Query strings are rejected, so credentials cannot be passed
@@ -172,6 +395,27 @@ There is intentionally no plaintext token argument. A non-loopback `--host`
 fails validation unless `--i-understand-non-loopback-exposure` is also present.
 `--dry-run` validates the complete configuration and credential source without
 opening a listening socket or creating the outputs root.
+
+The offline deterministic planner is the default. Enabling the optional
+OpenAI-compatible structured planner requires two independent operator inputs:
+
+```bash
+export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
+export ZAI_API_KEY='read-by-the-provider-backend-only'
+.venv/bin/scitaste ui serve \
+  --outputs-root outputs \
+  --planner-config configs/model_nodes/zhipu_glm53_flash.unpriced_probe.yaml \
+  --enable-live-planner
+```
+
+The committed GLM-5.3-Flash probe config is an explicitly unpriced engineering
+condition, not a production price claim. A normal live configuration must use
+confirmed pricing as required by `StructuredOpenAICompatibleConfig`.
+`--planner-config` without `--enable-live-planner`, or the flag without a
+configuration, fails validation. The YAML may name only the API-key environment
+variable; embedded credentials are rejected. Dry-run output includes only the
+provider, model, mode, and configuration hash, never the endpoint credential or
+question. No live provider call is part of the automated test suite.
 
 This receiver does not approve or execute the returned proposal. The only next
 boundary named by a valid receipt is `deterministic_controller`, which is not
@@ -255,6 +499,7 @@ of their content-addressed artifact evidence.
 | `RunComparisonPanel` | `RunComparisonPanelData` |
 | `RunBlockerPanel` | `RunBlockerPanelData` |
 | `PendingProposalList` | `PendingProposalListData` |
+| `ProjectProgressBoard` | `ProjectProgressBoardData` |
 
 Adapters and receivers can obtain the exact JSON Schema for any registry member
 with `component_data_json_schema`; every object in those schemas forbids extra
@@ -365,7 +610,8 @@ The registry contains `ProjectSummaryCard`, `StageTimeline`,
 `BlockerList`, `RunHealth`, `BudgetMeter`, `DecisionComparison`, `EvidenceGraph`,
 `ClaimMatrix`, `ReviewerQueue`, `ArtifactViewer`, `PaperPreview`,
 `AvailabilityNotice`, `RunStageExplorer`, `EvidenceInventory`,
-`RunComparisonPanel`, `RunBlockerPanel`, and `PendingProposalList`. A renderer
+`RunComparisonPanel`, `RunBlockerPanel`, `PendingProposalList`, and
+`ProjectProgressBoard`. A renderer
 must map these identifiers to code shipped with and trusted by the application.
 An unknown component is invalid rather than a request to generate new UI code.
 
@@ -386,11 +632,15 @@ Together, the Pydantic contracts and closed schemas reject:
 - absolute paths, backslashes, encoded traversal, repeated separators, and dot
   segments;
 - unknown components and unknown evidence IDs;
+- forged quick-intent or surface-candidate IDs and stale catalog fingerprints;
 - duplicate component, action, metric, or evidence IDs;
+- duplicate plan entries and cross-candidate focus evidence;
 - action evidence that is outside the component to which the action is bound;
 - proposal targets with the wrong evidence kind;
 - status or paper fields without suitable content-addressed evidence;
 - executable authority or undeclared fields;
+- oversized/control-bearing questions, oversized provider responses, provider
+  tool calls, backend/model mismatches, and resource telemetry overruns;
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
 - surface revisions based on stale fingerprints or inconsistent snapshot hashes;
 - changed, truncated, reordered, or semantically inconsistent audit histories;
@@ -410,6 +660,27 @@ Project-runtime identity is canonical lowercase kebab-case. Existing
 reject or explicitly migrate a non-canonical ID before snapshot construction. It
 must not silently lowercase, trim, or replace characters because that could merge
 two project identities.
+
+## Known limitations
+
+- Generated deep links survive browser history only while the same server
+  process retains the admitted surface. Restart and least-recently-used eviction
+  intentionally return stale rather than regenerating it.
+- The first deterministic free-question resolver is a bounded Chinese/English
+  keyword classifier. Unknown phrasing needs the optional model selector; the
+  model can still choose only a currently offered quick intent and cannot answer
+  an arbitrary research question.
+- The browser credential remains only in the page's password input. This is a
+  loopback-first engineering receiver, not a multi-user identity or remote
+  authorization system.
+- UI audit chains detect mutation relative to the inspected chain but are not
+  signatures and are not yet anchored into the project event log.
+- Automated tests use fake structured backends. The GLM-5.3-Flash configuration
+  and double gate are validated offline in this Epic; no new live response or
+  cost claim is recorded here.
+- The self-development project manifest at revision 21 predates later native
+  executor and UI work. Updating that visible progress belongs to the normal
+  main-window `ProjectRuntime` workflow, not UI inference.
 
 ## Deterministic fixtures
 
@@ -442,6 +713,10 @@ on an A2UI package in this phase:
 | `RendererDocument` | receiver-owned shell plus declarative workspace update |
 | `SurfaceEvent` | identity-only user event returned to the agent boundary |
 | `WorkspaceQuery` | closed client-selectable view identity |
+| `WorkspaceIntent` | snapshot-bound semantic goal and evidence entities |
+| `SurfaceCandidateDescriptor` | data-free receiver catalog projection |
+| `SurfacePlan` | ID-only ordered/grouped declarative layout |
+| `GeneratedWorkspaceDocument` | validated generated surface plus provenance |
 | `ArtifactInspectionEvent` | identity-only request for a visible evidence preview |
 | `SurfaceAuditRecord` | receiver-side append-only interaction history |
 

@@ -1,0 +1,330 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Callable
+from pathlib import Path
+
+import pytest
+
+from scitaste.backends.base import Usage
+from scitaste.generative_ui.intent import FreeQuestionRequest, WorkspaceIntentResolver
+from scitaste.generative_ui.planner import (
+    DeterministicWorkspacePlanner,
+    FallbackWorkspacePlanner,
+    ModelPlannerPolicy,
+    PlannerMode,
+    StructuredWorkspacePlanner,
+    WorkspacePlanner,
+)
+from scitaste.generative_ui.planning import SurfaceCandidateCatalog, SurfaceCandidateFactory
+from scitaste.model_nodes.models import (
+    StructuredModelRequest,
+    StructuredModelResponse,
+    ToolCallProposal,
+)
+from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
+
+
+class FakeStructuredBackend:
+    name = "test-provider"
+    model = "test-model"
+
+    def __init__(
+        self,
+        responder: Callable[[StructuredModelRequest], object],
+        *,
+        latency_ms: float = 2,
+        tool_calls: list[ToolCallProposal] | None = None,
+        response_bytes: int | None = None,
+    ) -> None:
+        self.responder = responder
+        self.latency_ms = latency_ms
+        self.tool_calls = tool_calls or []
+        self.response_bytes = response_bytes
+        self.calls: list[StructuredModelRequest] = []
+
+    def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
+        self.calls.append(request)
+        payload = self.responder(request)
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        if self.response_bytes is not None:
+            raw = "x" * self.response_bytes
+        return StructuredModelResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            output_payload=payload,
+            backend=self.name,
+            model=self.model,
+            raw_response=raw,
+            raw_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+            latency_ms=self.latency_ms,
+            usage=Usage(input_tokens=100, output_tokens=50, cost_usd=0),
+            tool_calls=self.tool_calls,
+        )
+
+
+def _runtime(tmp_path: Path) -> ProjectRuntime:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="planner-project",
+            title="Planner project",
+            research_direction="Bound generated workspaces to evidence.",
+            status="active",
+        )
+    )
+    for index, (run_id, status) in enumerate(
+        (("baseline-run", "complete"), ("candidate-run", "failed"))
+    ):
+        snapshot = runtime.begin_run(
+            "planner-project",
+            ProjectRun(
+                run_id=run_id,
+                provider="scripted",
+                model=f"fixture-{index}",
+                condition="planner-fixture",
+                seed=index,
+                status=status,
+                evidence_scope="engineering-only",
+            ),
+            expected_revision=snapshot.revision,
+        )
+    return runtime
+
+
+def _inputs(
+    runtime: ProjectRuntime,
+) -> tuple[WorkspaceIntentResolver, FreeQuestionRequest, SurfaceCandidateCatalog]:
+    resolver = WorkspaceIntentResolver(runtime)
+    quick = resolver.quick_catalog("planner-project")
+    request = FreeQuestionRequest(
+        project_id=quick.snapshot.project_id,
+        snapshot_revision=quick.snapshot.snapshot_revision,
+        snapshot_sha256=quick.snapshot.snapshot_sha256,
+        question="比较 baseline-run 和 candidate-run",
+    )
+    resolution = resolver.resolve(request)
+    assert resolution.intent is not None
+    return resolver, request, SurfaceCandidateFactory(runtime).build(resolution.intent)
+
+
+def _policy(**updates: object) -> ModelPlannerPolicy:
+    values: dict[str, object] = {
+        "expected_backend": "test-provider",
+        "expected_model": "test-model",
+    }
+    values.update(updates)
+    return ModelPlannerPolicy.model_validate(values)
+
+
+def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
+    payload = request.input_payload
+    candidates = payload["candidates"]
+    assert isinstance(candidates, list)
+    first = candidates[0]
+    assert isinstance(first, dict)
+    allowed_groups = first["allowed_groups"]
+    allowed_emphasis = first["allowed_emphasis"]
+    assert isinstance(allowed_groups, list)
+    assert isinstance(allowed_emphasis, list)
+    return {
+        "schema_version": "1.0",
+        "project_id": payload["project_id"],
+        "snapshot_revision": payload["snapshot_revision"],
+        "snapshot_sha256": payload["snapshot_sha256"],
+        "intent_fingerprint": payload["intent_fingerprint"],
+        "catalog_fingerprint": payload["catalog_fingerprint"],
+        "entries": [
+            {
+                "candidate_id": first["candidate_id"],
+                "group": allowed_groups[0],
+                "emphasis": allowed_emphasis[0],
+                "focus_ref_ids": [],
+            }
+        ],
+    }
+
+
+def test_deterministic_planner_is_stable_admitted_and_non_executable(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    planner = DeterministicWorkspacePlanner()
+
+    first = planner.compose(catalog)
+    repeated = planner.compose(catalog)
+
+    assert isinstance(planner, WorkspacePlanner)
+    assert not hasattr(planner, "execute")
+    assert first == repeated
+    assert first.status == "planned"
+    assert first.plan is not None
+    assert first.provenance is not None
+    assert first.provenance.mode == PlannerMode.DETERMINISTIC
+    assert first.provenance.deterministic_reproducible is True
+    assert first.provenance.result_fingerprint == first.plan.fingerprint
+    assert len(first.provenance.fingerprint) == 64
+    assert len(first.plan.entries) <= 12
+
+
+def test_model_classification_can_only_select_a_server_issued_intent(tmp_path: Path) -> None:
+    resolver, request, _ = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+    selected_id = quick.intents[0].quick_intent_id
+    backend = FakeStructuredBackend(lambda _: {"quick_intent_id": selected_id})
+    planner = StructuredWorkspacePlanner(backend, _policy())
+
+    outcome = planner.classify(
+        request.model_copy(update={"question": "A long-tail phrasing with <script>"}),
+        quick,
+    )
+
+    assert outcome.status == "selected"
+    assert outcome.selected_quick_intent_id == selected_id
+    assert outcome.provenance is not None
+    assert outcome.provenance.mode == PlannerMode.MODEL_ASSISTED
+    assert outcome.provenance.deterministic_reproducible is False
+    serialized = outcome.model_dump_json()
+    assert "long-tail" not in serialized
+    assert "script" not in serialized
+    assert set(backend.calls[0].input_payload) == {"question", "options"}
+    assert "evidence_ref_ids" not in backend.calls[0].model_dump_json()
+
+
+def test_model_classification_rejects_unknown_ids_without_guessing(tmp_path: Path) -> None:
+    resolver, request, _ = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+    backend = FakeStructuredBackend(lambda _: {"quick_intent_id": "forged-intent"})
+
+    outcome = StructuredWorkspacePlanner(backend, _policy()).classify(request, quick)
+
+    assert outcome.status == "rejected"
+    assert outcome.selected_quick_intent_id is None
+    assert outcome.provenance is None
+
+
+def test_model_composition_receives_only_descriptors_and_admits_closed_plan(
+    tmp_path: Path,
+) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    backend = FakeStructuredBackend(_model_plan)
+    outcome = StructuredWorkspacePlanner(backend, _policy()).compose(catalog)
+
+    assert outcome.status == "planned"
+    assert outcome.plan is not None
+    assert outcome.provenance is not None
+    assert outcome.provenance.mode == PlannerMode.MODEL_ASSISTED
+    request_payload = backend.calls[0].input_payload
+    serialized = json.dumps(request_payload)
+    assert "component_id" not in serialized
+    assert '"data"' not in serialized
+    assert '"actions"' not in serialized
+    assert '"proposal"' not in serialized
+    assert "locator" not in serialized
+    assert "http" not in serialized
+
+
+@pytest.mark.parametrize(
+    "malicious_field, malicious_value",
+    [
+        ("html", "<script>alert(1)</script>"),
+        ("command", "rm -rf /"),
+        ("url", "https://attacker.invalid"),
+        ("actions", [{"kind": "execute"}]),
+        ("component", "ArbitraryRenderer"),
+    ],
+)
+def test_malformed_model_plan_falls_back_to_deterministic_layout(
+    tmp_path: Path,
+    malicious_field: str,
+    malicious_value: object,
+) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+
+    def malicious(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        entries = payload["entries"]
+        assert isinstance(entries, list)
+        entry = entries[0]
+        assert isinstance(entry, dict)
+        entry[malicious_field] = malicious_value
+        return payload
+
+    primary = StructuredWorkspacePlanner(FakeStructuredBackend(malicious), _policy())
+    outcome = FallbackWorkspacePlanner(primary).compose(catalog)
+
+    assert outcome.status == "fallback"
+    assert outcome.reason_code == "model-surface-plan-unavailable"
+    assert outcome.plan is not None
+    assert outcome.provenance is not None
+    assert outcome.provenance.mode == PlannerMode.DETERMINISTIC_FALLBACK
+    assert outcome.provenance.attempted_planner == primary.identity
+    assert outcome.provenance.deterministic_reproducible is True
+
+
+def test_provider_error_tool_call_and_resource_overruns_fail_closed(tmp_path: Path) -> None:
+    resolver, request, catalog = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+
+    def failure(_: StructuredModelRequest) -> object:
+        raise RuntimeError("provider secret-like diagnostic must not escape")
+
+    failed = StructuredWorkspacePlanner(FakeStructuredBackend(failure), _policy())
+    classification = failed.classify(request, quick)
+    assert classification.status == "unavailable"
+    assert "secret" not in classification.model_dump_json()
+    assert FallbackWorkspacePlanner(failed).compose(catalog).status == "fallback"
+
+    tool_backend = FakeStructuredBackend(
+        _model_plan,
+        tool_calls=[ToolCallProposal(name="shell", arguments={"command": "whoami"})],
+    )
+    tool_outcome = FallbackWorkspacePlanner(
+        StructuredWorkspacePlanner(tool_backend, _policy())
+    ).compose(catalog)
+    assert tool_outcome.status == "fallback"
+
+    slow_backend = FakeStructuredBackend(_model_plan, latency_ms=101)
+    slow = StructuredWorkspacePlanner(slow_backend, _policy(max_latency_ms=100))
+    assert FallbackWorkspacePlanner(slow).compose(catalog).status == "fallback"
+
+    large_backend = FakeStructuredBackend(_model_plan, response_bytes=501)
+    large = StructuredWorkspacePlanner(large_backend, _policy(max_response_bytes=500))
+    assert FallbackWorkspacePlanner(large).compose(catalog).status == "fallback"
+
+
+def test_backend_identity_and_cross_snapshot_classification_are_rejected(
+    tmp_path: Path,
+) -> None:
+    resolver, request, _ = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+    backend = FakeStructuredBackend(lambda _: {"quick_intent_id": quick.intents[0].quick_intent_id})
+    with pytest.raises(ValueError, match="identity differs"):
+        StructuredWorkspacePlanner(backend, _policy(expected_model="other-model"))
+
+    planner = StructuredWorkspacePlanner(backend, _policy())
+    stale = request.model_copy(update={"snapshot_revision": request.snapshot_revision + 1})
+    with pytest.raises(ValueError, match="snapshots differ"):
+        planner.classify(stale, quick)
+    assert backend.calls == []
+
+
+def test_glm53_flash_provider_identity_is_supported() -> None:
+    policy = ModelPlannerPolicy(
+        expected_backend="zhipu-direct",
+        expected_model="glm-5.3-flash",
+    )
+
+    assert policy.expected_model == "glm-5.3-flash"
+
+
+def test_request_byte_ceiling_returns_typed_unavailable_state(tmp_path: Path) -> None:
+    resolver, request, _ = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+    backend = FakeStructuredBackend(lambda _: {"quick_intent_id": quick.intents[0].quick_intent_id})
+    planner = StructuredWorkspacePlanner(backend, _policy(max_request_bytes=512))
+
+    outcome = planner.classify(request, quick)
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "model-intent-provider-unavailable"
+    assert backend.calls == []

@@ -16,8 +16,14 @@ const comparisonControls = document.getElementById("comparison-controls");
 const baselineRun = document.getElementById("baseline-run");
 const candidateRun = document.getElementById("candidate-run");
 const compareRunsButton = document.getElementById("compare-runs");
+const quickIntents = document.getElementById("quick-intents");
+const intentForm = document.getElementById("intent-form");
+const intentQuestion = document.getElementById("intent-question");
+const generateWorkspaceButton = document.getElementById("generate-workspace");
+const intentResult = document.getElementById("intent-result");
 
 const workspaceViews = Object.freeze(new Set([
+  "project-progress",
   "project-overview",
   "run-stage-explorer",
   "paper-evidence",
@@ -29,6 +35,8 @@ const responseCache = new Map();
 let currentDocument = null;
 let runCatalog = [];
 let paperCatalog = [];
+let quickIntentCatalog = null;
+let activeProjectId = "";
 let eventCounter = 0;
 let artifactObjectUrl = null;
 
@@ -183,6 +191,130 @@ function renderArtifactViewer(data) {
   return container;
 }
 
+function renderProjectProgress(data) {
+  const container = document.createElement("div");
+  container.className = "progress-board";
+
+  const status = document.createElement("div");
+  status.className = `progress-status state-${data.project_state}`;
+  const statusTitle = document.createElement("strong");
+  appendText(statusTitle, `Observed project state · ${data.project_state}`);
+  status.append(statusTitle, fixedFields(data, [
+    "project_status", "publication_ready", "summary_ref_ids",
+  ]));
+
+  const counts = fixedFields(data.counts, [
+    "runs_registered",
+    "runs_completed",
+    "runs_active",
+    "runs_candidates",
+    "runs_blocked",
+    "runs_failed",
+    "runs_unavailable",
+    "runs_unknown",
+    "completed_stages",
+    "papers_registered",
+  ]);
+  counts.classList.add("progress-counts");
+  container.append(status, titledSection("Observed records · no inferred percentage", counts));
+
+  container.appendChild(titledSection("Declared focus and next gate", fixedFields(data, [
+    "focus",
+    "focus_status",
+    "next_gate",
+    "focus_ref_ids",
+  ])));
+
+  if (data.current_run_id) {
+    container.appendChild(titledSection("Selected current run · selection is not execution", fixedFields(data, [
+      "current_run_id",
+      "current_run_status",
+      "current_run_state",
+      "current_run_ref_ids",
+    ])));
+  }
+
+  if (data.milestones.length > 0) {
+    container.appendChild(titledSection("Declared project milestones", fixedRows(data.milestones, [
+      "milestone_id",
+      "recorded_on",
+      "reported_status",
+      "observed_state",
+      "decision",
+      "evidence_locator",
+      "evidence_binding",
+      "support_ref_ids",
+    ])));
+  } else {
+    container.appendChild(titledSection("Declared project milestones", fixedFields(data, [
+      "milestone_state", "milestone_reason_code",
+    ])));
+  }
+
+  if (data.attention.length > 0) {
+    container.appendChild(titledSection("Blocked and failed registered work", fixedRows(data.attention, [
+      "run_id",
+      "reported_status",
+      "classification",
+      "detail_state",
+      "recorded_reasons",
+      "source_locator",
+      "support_ref_ids",
+    ])));
+  }
+
+  container.appendChild(titledSection("Latest registered activity · manifest order", fixedRows(
+    data.recent_activity,
+    [
+      "run_id",
+      "reported_status",
+      "observed_state",
+      "provider",
+      "model_name",
+      "condition",
+      "evidence_scope",
+      "selected",
+      "superseded",
+      "source_locator",
+      "support_ref_ids",
+    ],
+  )));
+
+  if (data.stages.length > 0) {
+    container.appendChild(titledSection("Observed AutoResearchClaw stages", fixedRows(data.stages, [
+      "stage",
+      "label_en",
+      "label_zh",
+      "observed_state",
+      "artifact_count",
+      "output_locator",
+      "support_ref_ids",
+    ])));
+  } else {
+    container.appendChild(titledSection("AutoResearchClaw stage evidence", fixedFields(data, [
+      "stage_semantics", "stage_state", "stage_reason_code",
+    ])));
+  }
+
+  if (data.papers.length > 0) {
+    container.appendChild(titledSection("Registered papers", fixedRows(data.papers, [
+      "paper_id",
+      "title",
+      "reported_status",
+      "observed_state",
+      "publication_ready",
+      "selected",
+      "support_ref_ids",
+    ])));
+  }
+
+  container.appendChild(titledSection("Evidence-supported next-step candidates", fixedRows(
+    data.next_step_candidates,
+    ["kind", "label_code", "target_ids", "support_ref_ids"],
+  )));
+  return container;
+}
+
 const componentRenderers = Object.freeze({
   ProjectSummaryCard: (data) => fixedFields(
     data,
@@ -230,13 +362,22 @@ const componentRenderers = Object.freeze({
     data.proposals,
     ["event_id", "action_id", "status", "next_boundary", "execution_authority"],
   ),
+  ProjectProgressBoard: renderProjectProgress,
 });
 
 function renderWorkspace(documentValue) {
   const renderer = documentValue.renderer;
+  const generated = documentValue.status === "generated";
+  const placements = new Map((documentValue.placements || []).map(
+    (item) => [item.component_id, item],
+  ));
+  workspace.classList.toggle("generated-workspace", generated);
   workspace.replaceChildren();
   proposalResult.replaceChildren();
   clearArtifactPreview();
+  if (generated) {
+    workspace.appendChild(renderGenerationSummary(documentValue));
+  }
   const title = document.createElement("h2");
   title.className = "workspace-title";
   appendText(title, renderer.title);
@@ -249,9 +390,20 @@ function renderWorkspace(documentValue) {
     }
     const card = document.createElement("section");
     card.className = "component-card";
+    const placement = placements.get(component.component_id);
+    if (placement) {
+      card.classList.add(`plan-group-${placement.group}`);
+      card.classList.add(`plan-emphasis-${placement.emphasis}`);
+    }
     const heading = document.createElement("h2");
     appendText(heading, component.title);
     card.append(heading, renderComponent(component.data));
+    if (placement) {
+      const explanation = document.createElement("p");
+      explanation.className = "placement-explanation";
+      appendText(explanation, placement.explanation);
+      card.appendChild(explanation);
+    }
     workspace.appendChild(card);
     cards.set(component.component_id, card);
   }
@@ -274,9 +426,31 @@ function renderWorkspace(documentValue) {
   }
   updateCatalogs(documentValue);
   updateFreshness(documentValue);
-  updateActiveView(documentValue.query.view);
+  updateActiveView(generated ? null : documentValue.query.view);
   workspace.setAttribute("aria-busy", "false");
   workspace.focus({preventScroll: true});
+}
+
+function renderGenerationSummary(documentValue) {
+  const summary = document.createElement("section");
+  summary.className = "generation-summary";
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow dark";
+  appendText(eyebrow, "Validated generated workspace");
+  const heading = document.createElement("h2");
+  appendText(heading, documentValue.intent.goal.replaceAll("_", " "));
+  const planner = documentValue.planning?.provenance;
+  summary.append(
+    eyebrow,
+    heading,
+    fixedFields({
+      planner_mode: planner?.mode,
+      reason_code: documentValue.reason_code,
+      snapshot_revision: documentValue.snapshot_revision,
+      execution_authority: documentValue.execution_authority,
+    }, ["planner_mode", "reason_code", "snapshot_revision", "execution_authority"]),
+  );
+  return summary;
 }
 
 function updateFreshness(documentValue) {
@@ -371,7 +545,7 @@ async function submitAction(action) {
     action_id: action.action_id,
   };
   try {
-    const receipt = await api(`${workspacePath(currentDocument.query)}/events`, {
+    const receipt = await api(interactionPath("events"), {
       method: "POST",
       body: JSON.stringify(event),
     });
@@ -412,7 +586,7 @@ async function inspectArtifact(artifactRefId) {
   };
   artifactResult.setAttribute("aria-busy", "true");
   try {
-    const preview = await api(`${workspacePath(currentDocument.query)}/inspections`, {
+    const preview = await api(interactionPath("inspections"), {
       method: "POST",
       body: JSON.stringify(event),
     });
@@ -431,6 +605,18 @@ function clearArtifactPreview() {
     artifactObjectUrl = null;
   }
   artifactResult.replaceChildren();
+}
+
+function interactionPath(operation) {
+  if (!currentDocument || !["events", "inspections"].includes(operation)) {
+    throw new Error("No current trusted interaction surface is available.");
+  }
+  if (currentDocument.status === "generated") {
+    const renderer = currentDocument.renderer;
+    return `/api/v3/generative/projects/${encodeURIComponent(renderer.project_id)}`
+      + `/generations/${encodeURIComponent(renderer.surface_id)}/${operation}`;
+  }
+  return `${workspacePath(currentDocument.query)}/${operation}`;
 }
 
 function renderArtifactPreview(preview) {
@@ -468,7 +654,155 @@ function renderArtifactPreview(preview) {
   artifactResult.appendChild(source);
 }
 
+function setIntentEnabled(enabled) {
+  intentQuestion.disabled = !enabled;
+  generateWorkspaceButton.disabled = !enabled;
+  for (const button of quickIntents.querySelectorAll("button")) {
+    button.disabled = !enabled;
+  }
+}
+
+function clearProjectContext(projectId = "") {
+  activeProjectId = projectId;
+  currentDocument = null;
+  quickIntentCatalog = null;
+  responseCache.clear();
+  resetCatalogs();
+  intentQuestion.value = "";
+  quickIntents.replaceChildren();
+  const quickMessage = document.createElement("p");
+  quickMessage.className = "muted";
+  appendText(quickMessage, projectId
+    ? "Loading prompts grounded in this project..."
+    : "Open a project to load applicable prompts.");
+  quickIntents.appendChild(quickMessage);
+  intentResult.replaceChildren();
+  const intentMessage = document.createElement("p");
+  intentMessage.className = "muted";
+  appendText(intentMessage, "No generated workspace requested.");
+  intentResult.appendChild(intentMessage);
+  proposalResult.replaceChildren();
+  clearArtifactPreview();
+  freshness.textContent = "No authoritative project view loaded.";
+  workspace.replaceChildren();
+  workspace.classList.remove("generated-workspace");
+  const empty = document.createElement("p");
+  empty.className = "empty-state";
+  appendText(empty, projectId
+    ? "Open the selected project to load its evidence."
+    : "No trusted project workspace is loaded.");
+  workspace.appendChild(empty);
+  setIntentEnabled(false);
+}
+
+async function loadQuickIntents(projectId) {
+  const requestedProject = projectId;
+  try {
+    const catalog = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(projectId)}/intents`,
+    );
+    if (activeProjectId !== requestedProject || projectSelect.value !== requestedProject) {
+      return;
+    }
+    quickIntentCatalog = catalog;
+    quickIntents.replaceChildren();
+    for (const descriptor of catalog.intents) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-intent-button";
+      button.dataset.quickIntentId = descriptor.quick_intent_id;
+      appendText(button, descriptor.label);
+      button.addEventListener("click", () => generateWithIntent({
+        schema_version: "1.0",
+        kind: "quick",
+        project_id: catalog.snapshot.project_id,
+        snapshot_revision: catalog.snapshot.snapshot_revision,
+        snapshot_sha256: catalog.snapshot.snapshot_sha256,
+        quick_intent_id: descriptor.quick_intent_id,
+      }));
+      quickIntents.appendChild(button);
+    }
+    setIntentEnabled(true);
+  } catch (error) {
+    quickIntentCatalog = null;
+    setIntentEnabled(false);
+    showError(intentResult, error);
+  }
+}
+
+async function generateWithIntent(intentRequest) {
+  if (!quickIntentCatalog || intentRequest.project_id !== activeProjectId) {
+    showError(intentResult, new Error("Reload this project's current intent catalog."));
+    return;
+  }
+  const requestedProject = activeProjectId;
+  const requestedCatalog = quickIntentCatalog.fingerprint;
+  setIntentEnabled(false);
+  intentResult.replaceChildren();
+  const planning = document.createElement("p");
+  planning.className = "muted";
+  appendText(planning, "Resolving intent and validating a component plan...");
+  intentResult.appendChild(planning);
+  try {
+    const documentValue = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}/workspace`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          quick_catalog_fingerprint: requestedCatalog,
+          intent_request: intentRequest,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) {
+      return;
+    }
+    if (documentValue.status !== "generated") {
+      renderGenerationFailure(documentValue);
+      return;
+    }
+    currentDocument = documentValue;
+    renderWorkspace(documentValue);
+    const mode = documentValue.planning.provenance.mode.replaceAll("_", " ");
+    intentResult.replaceChildren();
+    const accepted = document.createElement("p");
+    accepted.className = "generation-accepted";
+    appendText(accepted, `Generated from verified evidence · ${mode} · no execution authority.`);
+    intentResult.appendChild(accepted);
+    const route = generatedWorkspaceHash(documentValue);
+    history.pushState({route}, "", route);
+  } catch (error) {
+    showError(intentResult, error);
+    if (error instanceof Error && error.message.includes("current trusted surface")) {
+      quickIntentCatalog = null;
+    }
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
+function renderGenerationFailure(documentValue) {
+  intentResult.replaceChildren();
+  const alert = document.createElement("div");
+  alert.className = "generation-failure";
+  alert.setAttribute("role", "alert");
+  const heading = document.createElement("strong");
+  appendText(heading, documentValue.status.replaceAll("_", " "));
+  alert.append(heading, fixedFields(documentValue, ["reason_code", "snapshot_revision"]));
+  if ((documentValue.entity_candidates || []).length > 0) {
+    alert.appendChild(titledSection(
+      "Choose a registered identity and ask again",
+      fixedRows(documentValue.entity_candidates, ["entity_id", "entity_kind"]),
+    ));
+  }
+  intentResult.appendChild(alert);
+}
+
 async function loadProjects() {
+  clearProjectContext();
   setBusy(true);
   try {
     const discovery = await api("/api/v2/workspace/projects");
@@ -495,7 +829,11 @@ async function loadProjects() {
     const deepLink = parseWorkspaceHash();
     if (deepLink && discovery.projects.some((item) => item.project_id === deepLink.project_id)) {
       projectSelect.value = deepLink.project_id;
-      await loadWorkspace(deepLink, "replace");
+      if (deepLink.generation_id) {
+        await loadGeneratedWorkspace(deepLink, "replace");
+      } else {
+        await loadWorkspace(deepLink, "replace");
+      }
     } else {
       await loadWorkspace(defaultQuery(projectSelect.value), "replace");
     }
@@ -513,7 +851,11 @@ async function loadProjects() {
 
 async function loadWorkspace(query, historyMode = "push") {
   const canonical = validateIdentityQuery(query);
-  resetCatalogs();
+  if (activeProjectId !== canonical.project_id) {
+    clearProjectContext(canonical.project_id);
+  } else {
+    resetCatalogs();
+  }
   setBusy(true);
   try {
     const documentValue = await api(workspacePath(canonical));
@@ -529,10 +871,54 @@ async function loadWorkspace(query, historyMode = "push") {
       }
     }
     connectionStatus.textContent = "Current content-addressed workspace loaded.";
+    if (!quickIntentCatalog
+        || quickIntentCatalog.snapshot.snapshot_sha256 !== documentValue.freshness.snapshot_sha256) {
+      await loadQuickIntents(documentValue.query.project_id);
+    }
   } catch (error) {
     currentDocument = null;
     setBusy(false);
     freshness.textContent = "Workspace freshness could not be verified.";
+    showError(workspace, error);
+    workspace.focus({preventScroll: true});
+  }
+}
+
+async function loadGeneratedWorkspace(route, historyMode = "push") {
+  if (!validProjectId(route.project_id) || !validEntryId(route.generation_id)) {
+    throw new Error("Generated workspace identity is invalid.");
+  }
+  if (activeProjectId !== route.project_id) {
+    clearProjectContext(route.project_id);
+  }
+  setBusy(true);
+  try {
+    const documentValue = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(route.project_id)}`
+      + `/generations/${encodeURIComponent(route.generation_id)}`,
+    );
+    if (documentValue.status !== "generated") {
+      throw new Error("The retained generation is not renderable.");
+    }
+    currentDocument = documentValue;
+    projectSelect.value = documentValue.project_id;
+    renderWorkspace(documentValue);
+    if (historyMode !== "none") {
+      const hash = generatedWorkspaceHash(documentValue);
+      if (historyMode === "replace") {
+        history.replaceState({route: hash}, "", hash);
+      } else {
+        history.pushState({route: hash}, "", hash);
+      }
+    }
+    connectionStatus.textContent = "Retained generated workspace revalidated.";
+    if (!quickIntentCatalog) {
+      await loadQuickIntents(documentValue.project_id);
+    }
+  } catch (error) {
+    currentDocument = null;
+    setBusy(false);
+    freshness.textContent = "Generated workspace freshness could not be verified.";
     showError(workspace, error);
     workspace.focus({preventScroll: true});
   }
@@ -567,11 +953,12 @@ async function activateView(view) {
 }
 
 function currentProjectId() {
-  return projectSelect.value || currentDocument?.query?.project_id || "";
+  return activeProjectId || projectSelect.value || currentDocument?.project_id
+    || currentDocument?.query?.project_id || "";
 }
 
 function defaultQuery(projectId) {
-  return {view: "project-overview", project_id: projectId};
+  return {view: "project-progress", project_id: projectId};
 }
 
 function validateIdentityQuery(query) {
@@ -625,6 +1012,11 @@ function workspaceHash(query) {
   return `#${workspacePath(query).replace("/api/v2/workspace", "")}`;
 }
 
+function generatedWorkspaceHash(documentValue) {
+  return `#/projects/${encodeURIComponent(documentValue.project_id)}`
+    + `/generated/${encodeURIComponent(documentValue.renderer.surface_id)}`;
+}
+
 function parseWorkspaceHash() {
   const prefix = "#/projects/";
   if (!location.hash.startsWith(prefix)) {
@@ -640,6 +1032,12 @@ function parseWorkspaceHash() {
     return null;
   }
   const [projectId, view, marker, first, second] = parts;
+  if (view === "generated" && marker && parts.length === 3) {
+    if (!validProjectId(projectId) || !validEntryId(marker)) {
+      return null;
+    }
+    return {project_id: projectId, generation_id: marker};
+  }
   let query = {project_id: projectId, view};
   if (view === "run-stage-explorer" && marker === "runs" && first && !second) {
     query = {...query, run_id: first};
@@ -705,7 +1103,27 @@ tokenInput.addEventListener("keydown", (event) => {
 });
 loadButton.addEventListener("click", () => loadWorkspace(defaultQuery(projectSelect.value)));
 projectSelect.addEventListener("change", () => {
-  resetCatalogs();
+  clearProjectContext(projectSelect.value);
+});
+intentForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!quickIntentCatalog) {
+    return;
+  }
+  const question = intentQuestion.value.trim();
+  if (!question) {
+    showError(intentResult, new Error("Enter a question before generating a workspace."));
+    return;
+  }
+  intentQuestion.value = "";
+  generateWithIntent({
+    schema_version: "1.0",
+    kind: "free_question",
+    project_id: quickIntentCatalog.snapshot.project_id,
+    snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+    snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+    question,
+  });
 });
 for (const button of viewButtons) {
   button.addEventListener("click", () => activateView(button.dataset.view));
@@ -727,8 +1145,12 @@ compareRunsButton.addEventListener("click", () => loadWorkspace({
   candidate_run_id: candidateRun.value,
 }));
 window.addEventListener("popstate", () => {
-  const query = parseWorkspaceHash();
-  if (query && tokenInput.value) {
-    loadWorkspace(query, "none");
+  const route = parseWorkspaceHash();
+  if (route && tokenInput.value) {
+    if (route.generation_id) {
+      loadGeneratedWorkspace(route, "none");
+    } else {
+      loadWorkspace(route, "none");
+    }
   }
 });

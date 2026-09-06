@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import date
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
@@ -14,6 +15,8 @@ from pydantic import (
     ConfigDict,
     Field,
     TypeAdapter,
+    ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -42,7 +45,13 @@ from scitaste.generative_ui.registry import (
     SurfacePurpose,
     TrustedComponent,
 )
-from scitaste.generative_ui.safety import ProjectIdentifier, Sha256
+from scitaste.generative_ui.safety import (
+    ProjectIdentifier,
+    SafeIdentifier,
+    SafeLocator,
+    SafeText,
+    Sha256,
+)
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import (
     ProjectPaperEntry,
@@ -65,6 +74,7 @@ class WorkspaceView(StrEnum):
 
     PROJECT_LIST = "project-list"
     PROJECT_OVERVIEW = "project-overview"
+    PROJECT_PROGRESS = "project-progress"
     RUN_STAGE_EXPLORER = "run-stage-explorer"
     PAPER_EVIDENCE = "paper-evidence"
     RUN_COMPARISON = "run-comparison"
@@ -95,6 +105,14 @@ class ProjectOverviewQuery(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     view: Literal[WorkspaceView.PROJECT_OVERVIEW] = WorkspaceView.PROJECT_OVERVIEW
+    project_id: ProjectIdentifier
+
+
+class ProjectProgressQuery(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    view: Literal[WorkspaceView.PROJECT_PROGRESS] = WorkspaceView.PROJECT_PROGRESS
     project_id: ProjectIdentifier
 
 
@@ -149,9 +167,41 @@ class PendingProposalsQuery(BaseModel):
     project_id: ProjectIdentifier
 
 
+class _ManifestCurrentFocus(BaseModel):
+    """Strictly admitted subset of the optional project extension."""
+
+    model_config = _MODEL_CONFIG
+
+    decision_id: SafeIdentifier
+    status: SafeText
+    selected_option: SafeIdentifier
+    online_model: SafeText
+    next_gate: SafeText
+
+
+class _ManifestIteration(BaseModel):
+    """Strictly admitted self-development milestone, independent of project ID."""
+
+    model_config = _MODEL_CONFIG
+
+    iteration_id: SafeIdentifier
+    date: date
+    status: SafeText
+    decision: SafeText
+    evidence: SafeLocator
+
+    @field_validator("evidence", mode="before")
+    @classmethod
+    def normalize_declared_directory_locator(cls, value: object) -> object:
+        if isinstance(value, str) and value.endswith("/") and not value.endswith("//"):
+            return value[:-1]
+        return value
+
+
 WorkspaceQuery = Annotated[
     ProjectListQuery
     | ProjectOverviewQuery
+    | ProjectProgressQuery
     | RunStageQuery
     | PaperEvidenceQuery
     | RunComparisonQuery
@@ -161,6 +211,7 @@ WorkspaceQuery = Annotated[
 ]
 ProjectWorkspaceQuery = (
     ProjectOverviewQuery
+    | ProjectProgressQuery
     | RunStageQuery
     | PaperEvidenceQuery
     | RunComparisonQuery
@@ -303,7 +354,9 @@ class WorkspaceSurfaceFactory:
             )
 
         snapshot, binding = self._context(parsed.project_id)
-        if isinstance(parsed, RunStageQuery):
+        if isinstance(parsed, ProjectProgressQuery):
+            surface = self._project_progress_surface(parsed, snapshot, binding)
+        elif isinstance(parsed, RunStageQuery):
             surface = self._run_stage_surface(parsed, snapshot, binding)
         elif isinstance(parsed, PaperEvidenceQuery):
             surface = self._paper_evidence_surface(parsed, snapshot, binding)
@@ -315,6 +368,258 @@ class WorkspaceSurfaceFactory:
             surface = self._pending_surface(parsed, snapshot, binding)
         self._confirm(snapshot, binding)
         return surface
+
+    def _project_progress_surface(
+        self,
+        query: ProjectProgressQuery,
+        snapshot: ProjectSnapshot,
+        binding: SnapshotBinding,
+    ) -> SurfaceSpec:
+        project_ref = _manifest_ref(binding)
+        evidence_ref_ids = [project_ref.evidence_id]
+        run_refs: dict[str, EvidenceRef] = {}
+        run_states: list[str] = []
+        attention_rows: list[dict[str, object]] = []
+        for run in snapshot.manifest.runs:
+            run_ref = _run_ref(snapshot, binding, run.run_id)
+            run_refs[run.run_id] = run_ref
+            evidence_ref_ids.append(run_ref.evidence_id)
+            state = _progress_state(run.status)
+            run_states.append(state)
+            if state in {"blocked", "failed"}:
+                recorded_reasons = _recorded_blockers(run)
+                attention_rows.append(
+                    {
+                        "run_ref_id": run_ref.evidence_id,
+                        "run_id": run.run_id,
+                        "reported_status": run.status,
+                        "classification": state,
+                        "reason_code": f"registered-status-{state}",
+                        "source_locator": run_ref.locator,
+                        "detail_state": "recorded" if recorded_reasons else "unavailable",
+                        "recorded_reasons": list(recorded_reasons),
+                        "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+                    }
+                )
+
+        recent_activity = []
+        for run in reversed(snapshot.manifest.runs[-10:]):
+            run_ref = run_refs[run.run_id]
+            recent_activity.append(
+                {
+                    "run_ref_id": run_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "reported_status": run.status,
+                    "observed_state": _progress_state(run.status),
+                    "provider": run.provider,
+                    "model_name": run.model,
+                    "condition": run.condition,
+                    "evidence_scope": run.evidence_scope,
+                    "selected": run.run_id == snapshot.manifest.current_run,
+                    "superseded": run.superseded_by is not None,
+                    "source_locator": run_ref.locator,
+                    "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+                }
+            )
+
+        stage_rows: list[dict[str, object]] = []
+        if snapshot.manifest.stage_semantics != "autoresearchclaw-stages":
+            stage_state = "unavailable"
+            stage_reason_code = "alternate-stage-semantics"
+        elif not snapshot.manifest.completed_stages:
+            stage_state = "empty"
+            stage_reason_code = "no-completed-stages-recorded"
+        elif snapshot.current_stage_locator is None:
+            stage_state = "unavailable"
+            stage_reason_code = "completed-stage-evidence-unavailable"
+        else:
+            stage_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.STAGE_RECORD,
+                _project_relative(snapshot, snapshot.current_stage_locator),
+            )
+            evidence_ref_ids.append(stage_ref.evidence_id)
+            for stage in snapshot.manifest.completed_stages:
+                name, label_en, label_zh = _STAGE_LABELS[stage]
+                stage_rows.append(
+                    {
+                        "stage_ref_id": stage_ref.evidence_id,
+                        "stage": stage,
+                        "name": name,
+                        "label_en": label_en,
+                        "label_zh": label_zh,
+                        "observed_state": "observed_completed",
+                        "artifact_count": _stage_artifact_count(
+                            self._runtime,
+                            snapshot.project_id,
+                            stage,
+                        ),
+                        "output_locator": f"stages/current/stage-{stage:02d}",
+                        "support_ref_ids": [project_ref.evidence_id, stage_ref.evidence_id],
+                    }
+                )
+            stage_state = "available"
+            stage_reason_code = "observed-completed-stage-records"
+
+        paper_rows: list[dict[str, object]] = []
+        current_paper_id = (
+            PurePosixPath(snapshot.manifest.current_paper).parts[-1]
+            if snapshot.manifest.current_paper is not None
+            else None
+        )
+        for paper in snapshot.papers:
+            paper_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.PAPER,
+                f"papers/{paper.directory_name}/MANIFEST.json",
+            )
+            evidence_ref_ids.append(paper_ref.evidence_id)
+            paper_rows.append(
+                {
+                    "paper_ref_id": paper_ref.evidence_id,
+                    "paper_id": paper.directory_name,
+                    "title": paper.manifest.title,
+                    "reported_status": paper.manifest.status,
+                    "observed_state": _progress_state(paper.manifest.status),
+                    "publication_ready": paper.manifest.publication_ready,
+                    "selected": paper.directory_name == current_paper_id,
+                    "support_ref_ids": [project_ref.evidence_id, paper_ref.evidence_id],
+                }
+            )
+
+        focus, focus_status, next_gate = _project_focus(snapshot)
+        milestone_state, milestone_reason_code, milestone_rows = _project_milestones(
+            snapshot,
+            binding,
+            project_ref,
+        )
+        for row in milestone_rows:
+            evidence_ref_ids.extend(row["support_ref_ids"])
+
+        current_run_ref_id = None
+        current_run_status = None
+        current_run_state = None
+        current_run_ref_ids: list[str] = []
+        if snapshot.manifest.current_run is not None:
+            current_run = _require_run(snapshot, snapshot.manifest.current_run)
+            current_run_ref_id = run_refs[current_run.run_id].evidence_id
+            current_run_status = current_run.status
+            current_run_state = _progress_state(current_run.status)
+            current_run_ref_ids = [project_ref.evidence_id, current_run_ref_id]
+
+        next_step_candidates = [
+            {
+                "candidate_id": "review-project-progress",
+                "kind": "review_progress",
+                "label_code": "review-observed-project-progress",
+                "support_ref_ids": [project_ref.evidence_id],
+                "target_ids": [],
+            }
+        ]
+        if attention_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "diagnose-recorded-blockers",
+                    "kind": "diagnose_blockers",
+                    "label_code": "diagnose-blocked-and-failed-runs",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in attention_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["run_id"] for item in attention_rows],
+                }
+            )
+        if len(snapshot.manifest.runs) >= 2:
+            comparison_runs = snapshot.manifest.runs[-2:]
+            next_step_candidates.append(
+                {
+                    "candidate_id": "compare-latest-registered-runs",
+                    "kind": "compare_runs",
+                    "label_code": "compare-latest-registered-run-records",
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        *(run_refs[run.run_id].evidence_id for run in comparison_runs),
+                    ],
+                    "target_ids": [run.run_id for run in comparison_runs],
+                }
+            )
+        if paper_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-registered-paper-evidence",
+                    "kind": "review_paper_evidence",
+                    "label_code": "review-registered-paper-evidence",
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        *(row["paper_ref_id"] for row in paper_rows),
+                    ],
+                    "target_ids": [row["paper_id"] for row in paper_rows],
+                }
+            )
+        if next_gate is not None:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-declared-next-gate",
+                    "kind": "review_next_gate",
+                    "label_code": "review-manifest-declared-next-gate",
+                    "support_ref_ids": [project_ref.evidence_id],
+                    "target_ids": [],
+                }
+            )
+
+        component = ComponentSpec(
+            component_id="project-progress-board",
+            component=TrustedComponent.PROJECT_PROGRESS_BOARD,
+            title="Evidence-grounded project progress",
+            evidence_ref_ids=list(dict.fromkeys(evidence_ref_ids)),
+            data={
+                "project_ref_id": project_ref.evidence_id,
+                "summary_ref_ids": [project_ref.evidence_id],
+                "project_status": snapshot.manifest.status,
+                "project_state": _progress_state(snapshot.manifest.status),
+                "publication_ready": snapshot.manifest.publication_ready,
+                "focus": focus,
+                "focus_status": focus_status,
+                "next_gate": next_gate,
+                "focus_ref_ids": [project_ref.evidence_id],
+                "stage_semantics": snapshot.manifest.stage_semantics,
+                "stage_state": stage_state,
+                "stage_reason_code": stage_reason_code,
+                "milestone_state": milestone_state,
+                "milestone_reason_code": milestone_reason_code,
+                "counts": {
+                    "runs_registered": len(snapshot.manifest.runs),
+                    "runs_completed": run_states.count("observed_completed"),
+                    "runs_failed": run_states.count("failed"),
+                    "runs_blocked": run_states.count("blocked"),
+                    "runs_active": run_states.count("current_work"),
+                    "runs_candidates": run_states.count("candidate"),
+                    "runs_unavailable": run_states.count("unavailable"),
+                    "runs_unknown": run_states.count("unknown"),
+                    "completed_stages": len(stage_rows),
+                    "papers_registered": len(paper_rows),
+                },
+                "current_run_id": snapshot.manifest.current_run,
+                "current_run_ref_id": current_run_ref_id,
+                "current_run_status": current_run_status,
+                "current_run_state": current_run_state,
+                "current_run_ref_ids": current_run_ref_ids,
+                "current_paper_id": current_paper_id,
+                "recent_activity": recent_activity,
+                "activity_total": len(snapshot.manifest.runs),
+                "activity_truncated": len(snapshot.manifest.runs) > len(recent_activity),
+                "stages": stage_rows,
+                "papers": paper_rows,
+                "milestones": milestone_rows,
+                "attention": attention_rows,
+                "next_step_candidates": next_step_candidates,
+            },
+        )
+        return _surface(query, snapshot, binding, components=[component])
 
     def _context(self, project_id: str) -> tuple[ProjectSnapshot, SnapshotBinding]:
         validate_project_id(project_id)
@@ -858,6 +1163,115 @@ def _run_outcome(status: str) -> str:
     return "unknown"
 
 
+def _progress_state(status: str) -> str:
+    """Classify only exact, documented status values; unknown is intentional."""
+
+    normalized = status.strip().lower().replace("_", "-")
+    if normalized in {
+        "complete",
+        "completed",
+        "success",
+        "succeeded",
+        "completed-dogfooding",
+    }:
+        return "observed_completed"
+    if normalized in {"failed", "failure", "error"}:
+        return "failed"
+    if normalized in {
+        "blocked",
+        "blocker",
+        "blocked-approval",
+        "active-pilot-blocked",
+        "implementation-preaccepted-live-pilot-blocked",
+    }:
+        return "blocked"
+    if normalized in {"active", "running", "in-progress", "reviewed-draft", "peer-reviewed-draft"}:
+        return "current_work"
+    if normalized in {"planned", "pending", "proposed", "registered", "queued"}:
+        return "candidate"
+    if normalized in {"unavailable", "not-available"}:
+        return "unavailable"
+    return "unknown"
+
+
+def _project_focus(snapshot: ProjectSnapshot) -> tuple[str, str | None, str | None]:
+    extra = snapshot.manifest.model_extra or {}
+    raw = extra.get("current_focus")
+    if not isinstance(raw, dict):
+        return snapshot.manifest.research_direction, None, None
+    try:
+        current = _ManifestCurrentFocus.model_validate(raw)
+    except ValidationError:
+        return snapshot.manifest.research_direction, None, None
+    return current.decision_id, current.status, current.next_gate
+
+
+def _recorded_blockers(run: ProjectRun) -> tuple[str, ...]:
+    raw = (run.model_extra or {}).get("blockers")
+    if not isinstance(raw, list) or not raw or len(raw) > 20:
+        return ()
+    try:
+        return TypeAdapter(tuple[SafeText, ...]).validate_python(raw)
+    except ValidationError:
+        return ()
+
+
+def _project_milestones(
+    snapshot: ProjectSnapshot,
+    binding: SnapshotBinding,
+    project_ref: EvidenceRef,
+) -> tuple[str, str, list[dict[str, object]]]:
+    raw = (snapshot.manifest.model_extra or {}).get("iterations")
+    if raw is None or raw == []:
+        return "empty", "no-declared-project-milestones", []
+    if not isinstance(raw, list) or len(raw) > 100:
+        return "unavailable", "invalid-project-milestone-extension", []
+    try:
+        milestones = [_ManifestIteration.model_validate(item) for item in raw]
+    except ValidationError:
+        return "unavailable", "invalid-project-milestone-extension", []
+    identities = [item.iteration_id for item in milestones]
+    if len(identities) != len(set(identities)):
+        return "unavailable", "invalid-project-milestone-extension", []
+
+    rows: list[dict[str, object]] = []
+    for milestone in milestones:
+        matched = _bound_ref_for_declared_locator(binding, milestone.evidence)
+        support_ref_ids = [project_ref.evidence_id]
+        if matched is not None:
+            support_ref_ids.append(matched.evidence_id)
+        rows.append(
+            {
+                "milestone_id": milestone.iteration_id,
+                "recorded_on": milestone.date.isoformat(),
+                "reported_status": milestone.status,
+                "observed_state": _progress_state(milestone.status),
+                "decision": milestone.decision,
+                "support_ref_ids": support_ref_ids,
+                "evidence_locator": milestone.evidence,
+                "evidence_binding": (
+                    "content_addressed" if matched is not None else "manifest_declared"
+                ),
+            }
+        )
+    return "available", "manifest-declared-project-milestones", rows
+
+
+def _bound_ref_for_declared_locator(
+    binding: SnapshotBinding,
+    locator: str,
+) -> EvidenceRef | None:
+    candidates = [
+        item
+        for item in binding.evidence_refs
+        if item.kind != EvidenceKind.PROJECT_MANIFEST
+        and (locator == item.locator or locator.startswith(f"{item.locator}/"))
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: len(item.locator))
+
+
 def _compared_run(run: ProjectRun, ref: EvidenceRef) -> dict[str, object]:
     return {
         "run_ref_id": ref.evidence_id,
@@ -934,6 +1348,7 @@ def _fingerprint(payload: dict[str, object]) -> str:
 
 _SURFACE_PURPOSE = {
     WorkspaceView.PROJECT_OVERVIEW: SurfacePurpose.PROJECT_OVERVIEW,
+    WorkspaceView.PROJECT_PROGRESS: SurfacePurpose.PROJECT_PROGRESS,
     WorkspaceView.RUN_STAGE_EXPLORER: SurfacePurpose.RUN_STAGE_EXPLORER,
     WorkspaceView.PAPER_EVIDENCE: SurfacePurpose.PAPER_EVIDENCE,
     WorkspaceView.RUN_COMPARISON: SurfacePurpose.WORKSPACE_RUN_COMPARISON,
@@ -943,6 +1358,7 @@ _SURFACE_PURPOSE = {
 
 _VIEW_TITLES = {
     WorkspaceView.PROJECT_OVERVIEW: "Project overview",
+    WorkspaceView.PROJECT_PROGRESS: "Project progress",
     WorkspaceView.RUN_STAGE_EXPLORER: "Run and stage explorer",
     WorkspaceView.PAPER_EVIDENCE: "Paper and evidence",
     WorkspaceView.RUN_COMPARISON: "Run comparison",

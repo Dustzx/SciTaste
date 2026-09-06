@@ -11,6 +11,7 @@ from scitaste.generative_ui import (
     PendingProposalsQuery,
     ProjectListQuery,
     ProjectOverviewQuery,
+    ProjectProgressQuery,
     RunComparisonQuery,
     RunStageQuery,
     TrustedComponent,
@@ -116,6 +117,7 @@ def test_workspace_query_catalog_is_closed_and_rejects_client_layout() -> None:
     assert {item.value for item in WorkspaceView} == {
         "project-list",
         "project-overview",
+        "project-progress",
         "run-stage-explorer",
         "paper-evidence",
         "run-comparison",
@@ -171,6 +173,7 @@ def test_all_project_workspace_views_bind_query_and_fresh_evidence(tmp_path: Pat
     factory = WorkspaceSurfaceFactory(_runtime(tmp_path))
     documents = [
         factory.build(ProjectOverviewQuery(project_id="workspace-project")),
+        factory.build(ProjectProgressQuery(project_id="workspace-project")),
         factory.build(RunStageQuery(project_id="workspace-project")),
         factory.build(PaperEvidenceQuery(project_id="workspace-project")),
         factory.build(
@@ -184,8 +187,8 @@ def test_all_project_workspace_views_bind_query_and_fresh_evidence(tmp_path: Pat
         factory.build(PendingProposalsQuery(project_id="workspace-project")),
     ]
 
-    assert len({item.query.view for item in documents}) == 6
-    assert len({item.renderer.surface_id for item in documents}) == 6
+    assert len({item.query.view for item in documents}) == 7
+    assert len({item.renderer.surface_id for item in documents}) == 7
     for document in documents:
         assert document.query.project_id == document.renderer.project_id
         assert document.freshness.surface_fingerprint == document.renderer.surface_fingerprint

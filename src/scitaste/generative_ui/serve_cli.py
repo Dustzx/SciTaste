@@ -7,9 +7,18 @@ import json
 import os
 import re
 import stat
+from hashlib import sha256
 from pathlib import Path
 
+import yaml
+
 from scitaste.generative_ui.application import GenerativeUIApplication
+from scitaste.generative_ui.planner import (
+    ModelPlannerPolicy,
+    StructuredWorkspacePlanner,
+    WorkspacePlanner,
+)
+from scitaste.generative_ui.planner_transport import BoundedPlannerHTTPTransport
 from scitaste.generative_ui.server import (
     BearerCredential,
     LocalServerConfig,
@@ -20,6 +29,7 @@ from scitaste.project import ProjectRuntime
 _DEFAULT_TOKEN_ENV = "SCITASTE_UI_TOKEN"
 _ENVIRONMENT_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _MAX_CREDENTIAL_FILE_BYTES = 4096
+_MAX_PLANNER_CONFIG_BYTES = 64 * 1024
 
 
 def add_ui_commands(
@@ -51,6 +61,17 @@ def add_ui_commands(
         action="store_true",
         help="explicitly acknowledge unsafe exposure when binding outside loopback",
     )
+    serve.add_argument(
+        "--planner-config",
+        type=Path,
+        default=None,
+        help="load a non-secret StructuredOpenAICompatibleConfig YAML file",
+    )
+    serve.add_argument(
+        "--enable-live-planner",
+        action="store_true",
+        help="explicitly authorize the configured bounded model planner",
+    )
     serve.add_argument("--dry-run", action="store_true")
     serve.add_argument(
         "--log-level",
@@ -70,6 +91,10 @@ def _handle_ui_serve(args: argparse.Namespace) -> int:
         token_env=args.token_env,
         token_file=args.token_file,
     )
+    planner, planner_summary = _load_planner(
+        planner_config=args.planner_config,
+        enable_live_planner=args.enable_live_planner,
+    )
     if args.dry_run:
         print(
             json.dumps(
@@ -78,6 +103,7 @@ def _handle_ui_serve(args: argparse.Namespace) -> int:
                     "host": config.host,
                     "loopback": config.is_loopback,
                     "outputs_root": str(args.outputs_root),
+                    "planner": planner_summary,
                     "port": config.port,
                     "status": "planned",
                 },
@@ -87,7 +113,10 @@ def _handle_ui_serve(args: argparse.Namespace) -> int:
         )
         return 0
 
-    application = GenerativeUIApplication(ProjectRuntime(args.outputs_root))
+    application = GenerativeUIApplication(
+        ProjectRuntime(args.outputs_root),
+        planner=planner,
+    )
     serve_local_application(application, credential=credential, config=config)
     return 0
 
@@ -113,27 +142,106 @@ def _load_credential(
 
 
 def _read_credential_file(path: Path) -> str:
+    return _read_regular_utf8(
+        path,
+        max_bytes=_MAX_CREDENTIAL_FILE_BYTES,
+        description="bearer credential file",
+    )
+
+
+def _load_planner(
+    *,
+    planner_config: Path | None,
+    enable_live_planner: bool,
+) -> tuple[WorkspacePlanner | None, dict[str, object]]:
+    if planner_config is None:
+        if enable_live_planner:
+            raise ValueError("--enable-live-planner requires --planner-config")
+        return None, {"mode": "deterministic", "network_enabled": False}
+    if not enable_live_planner:
+        raise ValueError("--planner-config requires --enable-live-planner")
+
+    raw = _read_regular_utf8(
+        planner_config,
+        max_bytes=_MAX_PLANNER_CONFIG_BYTES,
+        description="planner configuration file",
+    )
+    try:
+        payload = yaml.safe_load(raw)
+        _reject_secret_fields(payload)
+        from scitaste.model_nodes.openai_compatible import (
+            StructuredOpenAICompatibleBackend,
+            StructuredOpenAICompatibleConfig,
+        )
+
+        config = StructuredOpenAICompatibleConfig.model_validate(payload)
+    except (TypeError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError("planner configuration is invalid or contains credentials") from exc
+    if not config.live_enabled:
+        raise ValueError("planner configuration must explicitly set live_enabled=true")
+    latency_ms = config.timeout_seconds * (config.max_retries + 1) * 1000
+    response_bytes = min(max(24_000, config.max_output_tokens * 16), 1_000_000)
+    planner = StructuredWorkspacePlanner(
+        StructuredOpenAICompatibleBackend(
+            config,
+            transport=BoundedPlannerHTTPTransport(
+                max_response_bytes=response_bytes,
+            ),
+        ),
+        ModelPlannerPolicy(
+            expected_backend=config.provider,
+            expected_model=config.model,
+            max_response_bytes=response_bytes,
+            max_output_tokens=config.max_output_tokens,
+            max_latency_ms=latency_ms,
+        ),
+    )
+    return planner, {
+        "configuration_sha256": sha256(raw.encode()).hexdigest(),
+        "mode": "structured-model",
+        "model": config.model,
+        "network_enabled": True,
+        "provider": config.provider,
+    }
+
+
+def _reject_secret_fields(value: object) -> None:
+    if isinstance(value, dict):
+        forbidden = {"api_key", "authorization", "bearer_token", "password", "secret"}
+        if any(str(key).casefold().replace("-", "_") in forbidden for key in value):
+            raise ValueError("planner configuration cannot contain credentials")
+        for nested in value.values():
+            _reject_secret_fields(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            _reject_secret_fields(nested)
+
+
+def _read_regular_utf8(
+    path: Path,
+    *,
+    max_bytes: int,
+    description: str,
+) -> str:
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     if not hasattr(os, "O_NOFOLLOW") and path.is_symlink():
-        raise ValueError("bearer credential file must be a regular non-symlink file")
+        raise ValueError(f"{description} must be a regular non-symlink file")
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:
-        raise ValueError(
-            "bearer credential file must be a readable regular non-symlink file"
-        ) from exc
+        raise ValueError(f"{description} must be a readable regular non-symlink file") from exc
     try:
         metadata = os.fstat(descriptor)
         if not stat.S_ISREG(metadata.st_mode):
-            raise ValueError("bearer credential file must be a regular non-symlink file")
-        if metadata.st_size > _MAX_CREDENTIAL_FILE_BYTES:
-            raise ValueError("bearer credential file is too large")
-        content = os.read(descriptor, _MAX_CREDENTIAL_FILE_BYTES + 1)
-        if len(content) > _MAX_CREDENTIAL_FILE_BYTES:
-            raise ValueError("bearer credential file is too large")
+            raise ValueError(f"{description} must be a regular non-symlink file")
+        if metadata.st_size > max_bytes:
+            raise ValueError(f"{description} is too large")
+        content = os.read(descriptor, max_bytes + 1)
+        if len(content) > max_bytes:
+            raise ValueError(f"{description} is too large")
         try:
             return content.decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise ValueError("bearer credential file must contain UTF-8 text") from exc
+            raise ValueError(f"{description} must contain UTF-8 text") from exc
     finally:
         os.close(descriptor)

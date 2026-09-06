@@ -32,9 +32,32 @@
           <button id="load-project" type="button" disabled>Open project</button>
           <p id="connection-status" role="status">Enter the configured local credential.</p>
         </div>
+        <div class="nav-section intent-panel" aria-labelledby="intent-heading">
+          <p class="eyebrow dark">Generation as content</p>
+          <h2 id="intent-heading">What do you want to understand?</h2>
+          <p class="control-hint">Choose an evidence-derived prompt or ask a bounded free question.</p>
+          <div id="quick-intents" class="quick-intents" role="group" aria-label="Evidence-derived quick intents">
+            <p class="muted">Open a project to load applicable prompts.</p>
+          </div>
+          <form id="intent-form">
+            <label for="intent-question">Free question</label>
+            <textarea
+              id="intent-question"
+              maxlength="1000"
+              rows="3"
+              disabled
+              placeholder="Ask about progress, blockers, runs, papers, or next steps"
+            ></textarea>
+            <button id="generate-workspace" type="submit" disabled>Generate evidence workspace</button>
+          </form>
+          <div id="intent-result" role="status" aria-live="polite">
+            <p class="muted">No generated workspace requested.</p>
+          </div>
+        </div>
         <div class="nav-section" aria-labelledby="view-heading">
           <h2 id="view-heading">Workspace views</h2>
           <div class="view-navigation">
+            <button class="view-button" data-view="project-progress" type="button" disabled>Progress</button>
             <button class="view-button" data-view="project-overview" type="button" disabled>Overview</button>
             <button class="view-button" data-view="run-stage-explorer" type="button" disabled>Runs &amp; stages</button>
             <button class="view-button" data-view="paper-evidence" type="button" disabled>Papers &amp; evidence</button>

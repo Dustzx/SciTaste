@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Iterable
+from datetime import date
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -569,6 +571,337 @@ class PendingProposalListData(BaseModel):
         return self
 
 
+ObservedProgressState = Literal[
+    "observed_completed",
+    "current_work",
+    "blocked",
+    "failed",
+    "candidate",
+    "unavailable",
+    "unknown",
+]
+
+
+class ProjectProgressCounts(BaseModel):
+    """Observed project records, never an inferred completion percentage."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    runs_registered: int = Field(ge=0)
+    runs_completed: int = Field(ge=0)
+    runs_failed: int = Field(ge=0)
+    runs_blocked: int = Field(ge=0)
+    runs_active: int = Field(ge=0)
+    runs_candidates: int = Field(ge=0)
+    runs_unavailable: int = Field(ge=0)
+    runs_unknown: int = Field(ge=0)
+    completed_stages: int = Field(ge=0)
+    papers_registered: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
+        classified = (
+            self.runs_completed
+            + self.runs_failed
+            + self.runs_blocked
+            + self.runs_active
+            + self.runs_candidates
+            + self.runs_unavailable
+            + self.runs_unknown
+        )
+        if classified != self.runs_registered:
+            raise ValueError("project progress run counts must cover every registered run")
+        return self
+
+
+class ProjectProgressActivityItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    reported_status: SafeText
+    observed_state: ObservedProgressState
+    provider: SafeText
+    model_name: SafeText
+    condition: SafeText
+    evidence_scope: SafeText
+    selected: bool
+    superseded: bool
+    source_locator: SafeLocator
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def activity_support_is_closed(self) -> ProjectProgressActivityItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress activity evidence references must be unique")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("project progress activity must cite its run record")
+        return self
+
+
+class ProjectProgressStageItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    stage_ref_id: SafeIdentifier
+    stage: int = Field(ge=1, le=23)
+    name: SafeIdentifier
+    label_en: SafeText
+    label_zh: SafeText
+    observed_state: Literal["observed_completed"] = "observed_completed"
+    artifact_count: int = Field(ge=0)
+    output_locator: SafeLocator
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def stage_support_is_closed(self) -> ProjectProgressStageItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress stage evidence references must be unique")
+        if self.stage_ref_id not in self.support_ref_ids:
+            raise ValueError("project progress stage must cite its stage record")
+        return self
+
+
+class ProjectProgressPaperItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    paper_ref_id: SafeIdentifier
+    paper_id: str = Field(
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    title: SafeText
+    reported_status: SafeText
+    observed_state: ObservedProgressState
+    publication_ready: bool
+    selected: bool
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def paper_support_is_closed(self) -> ProjectProgressPaperItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress paper evidence references must be unique")
+        if self.paper_ref_id not in self.support_ref_ids:
+            raise ValueError("project progress paper must cite its paper record")
+        return self
+
+
+class ProjectProgressMilestoneItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    milestone_id: SafeIdentifier
+    recorded_on: date
+    reported_status: SafeText
+    observed_state: ObservedProgressState
+    decision: SafeText
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    evidence_locator: SafeLocator | None = None
+    evidence_binding: Literal["content_addressed", "manifest_declared"]
+
+    @model_validator(mode="after")
+    def milestone_support_is_closed(self) -> ProjectProgressMilestoneItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress milestone evidence references must be unique")
+        return self
+
+
+class ProjectProgressAttentionItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    reported_status: SafeText
+    classification: Literal["blocked", "failed"]
+    reason_code: SafeIdentifier
+    source_locator: SafeLocator
+    detail_state: Literal["recorded", "unavailable"]
+    recorded_reasons: tuple[SafeText, ...] = ()
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def attention_support_is_closed(self) -> ProjectProgressAttentionItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress attention evidence references must be unique")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("project progress attention must cite its run record")
+        if self.detail_state == "recorded" and not self.recorded_reasons:
+            raise ValueError("recorded project progress attention requires reasons")
+        if self.detail_state == "unavailable" and self.recorded_reasons:
+            raise ValueError("unavailable project progress attention cannot include reasons")
+        return self
+
+
+class ProjectProgressCandidateItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    candidate_id: SafeIdentifier
+    kind: Literal[
+        "review_progress",
+        "diagnose_blockers",
+        "compare_runs",
+        "review_paper_evidence",
+        "review_next_gate",
+    ]
+    label_code: SafeIdentifier
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    target_ids: tuple[str, ...] = ()
+
+    @field_validator("target_ids")
+    @classmethod
+    def targets_are_safe_entry_ids(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        pattern = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        if any(not re.fullmatch(pattern, value) for value in values):
+            raise ValueError("project progress candidate targets must be safe entry IDs")
+        if len(values) != len(set(values)):
+            raise ValueError("project progress candidate targets must be unique")
+        return values
+
+    @model_validator(mode="after")
+    def candidate_support_is_unique(self) -> ProjectProgressCandidateItem:
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project progress candidate evidence references must be unique")
+        return self
+
+
+class ProjectProgressBoardData(BaseModel):
+    """Evidence-native project status without guessed schedules or percentages."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    project_ref_id: SafeIdentifier
+    summary_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    project_status: SafeText
+    project_state: ObservedProgressState
+    publication_ready: bool
+    focus: SafeText
+    focus_status: SafeText | None = None
+    next_gate: SafeText | None = None
+    focus_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    stage_semantics: SafeText
+    stage_state: Literal["available", "empty", "unavailable"]
+    stage_reason_code: SafeIdentifier
+    milestone_state: Literal["available", "empty", "unavailable"]
+    milestone_reason_code: SafeIdentifier
+    counts: ProjectProgressCounts
+    current_run_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    current_run_ref_id: SafeIdentifier | None = None
+    current_run_status: SafeText | None = None
+    current_run_state: ObservedProgressState | None = None
+    current_run_ref_ids: tuple[SafeIdentifier, ...] = ()
+    current_paper_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    recent_activity: tuple[ProjectProgressActivityItem, ...] = ()
+    activity_total: int = Field(ge=0)
+    activity_truncated: bool
+    stages: tuple[ProjectProgressStageItem, ...] = ()
+    papers: tuple[ProjectProgressPaperItem, ...] = ()
+    milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
+    attention: tuple[ProjectProgressAttentionItem, ...] = ()
+    next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def progress_rows_are_closed(self) -> ProjectProgressBoardData:
+        if self.project_ref_id not in self.summary_ref_ids:
+            raise ValueError("project progress summary must cite the project manifest")
+        if self.project_ref_id not in self.focus_ref_ids:
+            raise ValueError("project progress focus must cite the project manifest")
+        for refs in (self.summary_ref_ids, self.focus_ref_ids, self.current_run_ref_ids):
+            if len(refs) != len(set(refs)):
+                raise ValueError("project progress evidence references must be unique")
+
+        if self.current_run_id is None:
+            if (
+                any(
+                    value is not None
+                    for value in (
+                        self.current_run_ref_id,
+                        self.current_run_status,
+                        self.current_run_state,
+                    )
+                )
+                or self.current_run_ref_ids
+            ):
+                raise ValueError("project progress cannot describe an absent current run")
+        elif (
+            self.current_run_ref_id is None
+            or self.current_run_status is None
+            or self.current_run_state is None
+            or self.current_run_ref_id not in self.current_run_ref_ids
+            or self.project_ref_id not in self.current_run_ref_ids
+        ):
+            raise ValueError("project progress current run must cite project and run evidence")
+
+        activity_ids = [item.run_id for item in self.recent_activity]
+        if len(activity_ids) != len(set(activity_ids)):
+            raise ValueError("project progress activity run IDs must be unique")
+        if self.activity_total < len(self.recent_activity):
+            raise ValueError("project progress activity total cannot be smaller than shown rows")
+        if self.activity_total != self.counts.runs_registered:
+            raise ValueError("project progress activity total must match registered run count")
+        if self.activity_truncated != (self.activity_total > len(self.recent_activity)):
+            raise ValueError("project progress activity truncation flag is inconsistent")
+        grounded_rows = (
+            *self.recent_activity,
+            *self.stages,
+            *self.papers,
+            *self.milestones,
+            *self.attention,
+            *self.next_step_candidates,
+        )
+        if any(self.project_ref_id not in item.support_ref_ids for item in grounded_rows):
+            raise ValueError("every project progress claim must cite the project manifest")
+
+        paper_ids = [item.paper_id for item in self.papers]
+        if len(paper_ids) != len(set(paper_ids)):
+            raise ValueError("project progress paper IDs must be unique")
+        if self.counts.papers_registered != len(self.papers):
+            raise ValueError("project progress paper count must match its paper rows")
+        selected_papers = [item.paper_id for item in self.papers if item.selected]
+        if selected_papers != ([self.current_paper_id] if self.current_paper_id else []):
+            raise ValueError("project progress current paper must match exactly one paper row")
+
+        stages = [item.stage for item in self.stages]
+        if stages != sorted(set(stages)):
+            raise ValueError("project progress stages must be sorted and unique")
+        if self.counts.completed_stages != len(self.stages):
+            raise ValueError("project progress stage count must match its stage rows")
+        if self.stage_state == "available" and not self.stages:
+            raise ValueError("available project progress stages require observed rows")
+        if self.stage_state != "available" and self.stages:
+            raise ValueError("empty or unavailable project progress stages cannot have rows")
+
+        milestone_ids = [item.milestone_id for item in self.milestones]
+        if len(milestone_ids) != len(set(milestone_ids)):
+            raise ValueError("project progress milestone IDs must be unique")
+        if self.milestone_state == "available" and not self.milestones:
+            raise ValueError("available project progress milestones require observed rows")
+        if self.milestone_state != "available" and self.milestones:
+            raise ValueError("empty or unavailable project progress milestones cannot have rows")
+
+        attention_ids = [item.run_id for item in self.attention]
+        if len(attention_ids) != len(set(attention_ids)):
+            raise ValueError("project progress attention run IDs must be unique")
+        candidate_ids = [item.candidate_id for item in self.next_step_candidates]
+        if len(candidate_ids) != len(set(candidate_ids)):
+            raise ValueError("project progress candidate IDs must be unique")
+        return self
+
+
 _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
     TrustedComponent.PROJECT_SUMMARY_CARD: TypeAdapter(ProjectSummaryData),
     TrustedComponent.STAGE_TIMELINE: TypeAdapter(StageTimelineData),
@@ -587,6 +920,7 @@ _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
     TrustedComponent.RUN_COMPARISON_PANEL: TypeAdapter(RunComparisonPanelData),
     TrustedComponent.RUN_BLOCKER_PANEL: TypeAdapter(RunBlockerPanelData),
     TrustedComponent.PENDING_PROPOSAL_LIST: TypeAdapter(PendingProposalListData),
+    TrustedComponent.PROJECT_PROGRESS_BOARD: TypeAdapter(ProjectProgressBoardData),
 }
 
 
@@ -955,6 +1289,7 @@ _DATA_REF_EVIDENCE_KINDS: dict[str, frozenset[EvidenceKind]] = {
     "stage_ref_id": frozenset({EvidenceKind.STAGE_RECORD}),
     "blocker_ref_id": frozenset({EvidenceKind.BLOCKER}),
     "run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
+    "current_run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
     "baseline_run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
     "candidate_run_ref_id": frozenset({EvidenceKind.RUN_RECORD}),
     "usage_ref_id": frozenset({EvidenceKind.RESOURCE_USAGE}),
