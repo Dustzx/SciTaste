@@ -8,8 +8,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from scitaste.discovery.hypothesis import HypothesisSeed
 from scitaste.discovery.landscape import LandscapeFinding
+from scitaste.state.research_state import ResearchObservation, WorkingHypothesis
 
 DISCOVERY_HYPOTHESIS_NODE = "discovery-hypothesis"
+DISCOVERY_REFORMULATION_NODE = "discovery-reformulation"
+DISCOVERY_SEMANTIC_NODES = (
+    DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_REFORMULATION_NODE,
+)
 DEFAULT_PROBE_TYPES = (
     "ablation",
     "benchmark",
@@ -102,11 +108,82 @@ class DiscoveryHypothesisProposal(DiscoverySemanticModel):
         return self
 
 
+class DiscoveryReformulationInput(DiscoverySemanticModel):
+    """Contradictory state evidence visible to one bounded reformulation call."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    research_direction: str = Field(min_length=1, max_length=4_000)
+    target_domain: str = Field(min_length=1, max_length=500)
+    target_venue: str | None = Field(default=None, max_length=500)
+    parent_hypothesis: WorkingHypothesis
+    observations: tuple[ResearchObservation, ...] = Field(min_length=1, max_length=40)
+    permitted_probe_types: tuple[str, ...] = Field(
+        default=DEFAULT_PROBE_TYPES,
+        min_length=1,
+        max_length=20,
+    )
+
+    @field_validator("observations")
+    @classmethod
+    def observations_are_unique(
+        cls,
+        values: tuple[ResearchObservation, ...],
+    ) -> tuple[ResearchObservation, ...]:
+        identifiers = [item.observation_id for item in values]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("reformulation observation identifiers must be unique")
+        return values
+
+    @field_validator("permitted_probe_types")
+    @classmethod
+    def probe_types_are_bounded_and_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        return DiscoveryHypothesisInput.probe_types_are_bounded_and_unique(values)
+
+    @model_validator(mode="after")
+    def includes_parent_contradiction(self) -> DiscoveryReformulationInput:
+        observed = {item.observation_id for item in self.observations}
+        if not observed.intersection(self.parent_hypothesis.contradicting_evidence_ids):
+            raise ValueError("reformulation requires a registered parent contradiction")
+        return self
+
+    @property
+    def observation_ids(self) -> tuple[str, ...]:
+        return tuple(sorted(item.observation_id for item in self.observations))
+
+
+class DiscoveryReformulationProposal(DiscoverySemanticModel):
+    """Evidence-linked replacement hypothesis without transition authority."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    hypothesis: HypothesisSeed
+    supporting_observation_ids: tuple[str, ...] = Field(min_length=1, max_length=40)
+    retained_constraints: tuple[str, ...] = Field(min_length=1, max_length=8)
+    alternative_explanations: tuple[str, ...] = Field(min_length=1, max_length=5)
+    uncertainty: str = Field(min_length=1, max_length=2_000)
+
+    @field_validator("supporting_observation_ids")
+    @classmethod
+    def observation_ids_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if len(values) != len(set(values)):
+            raise ValueError("supporting observation identifiers must be unique")
+        return tuple(sorted(values))
+
+    @field_validator("retained_constraints", "alternative_explanations")
+    @classmethod
+    def bounded_text_is_distinct(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        stripped = tuple(item.strip() for item in values)
+        if any(not item or len(item) > 2_000 for item in stripped):
+            raise ValueError("reformulation text items must be non-blank and bounded")
+        if len({item.casefold() for item in stripped}) != len(stripped):
+            raise ValueError("reformulation text items must be distinct")
+        return stripped
+
+
 class DiscoverySemanticReference(DiscoverySemanticModel):
     """Content binding from a discovery state to one accepted runtime proposal."""
 
     schema_version: Literal["1.0"] = "1.0"
-    node_name: Literal["discovery-hypothesis"] = DISCOVERY_HYPOTHESIS_NODE
+    node_name: Literal["discovery-hypothesis", "discovery-reformulation"]
     invocation_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     ledger_entry_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -123,8 +200,12 @@ class DiscoverySemanticReference(DiscoverySemanticModel):
 __all__ = [
     "DEFAULT_PROBE_TYPES",
     "DISCOVERY_HYPOTHESIS_NODE",
+    "DISCOVERY_REFORMULATION_NODE",
+    "DISCOVERY_SEMANTIC_NODES",
     "DiscoveryHypothesisInput",
     "DiscoveryHypothesisProposal",
     "DiscoveryIntuitionProposal",
+    "DiscoveryReformulationInput",
+    "DiscoveryReformulationProposal",
     "DiscoverySemanticReference",
 ]

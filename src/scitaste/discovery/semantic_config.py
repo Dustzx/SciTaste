@@ -20,7 +20,7 @@ from scitaste.model_nodes.runtime_config import (
 
 
 class DiscoverySemanticRuntimeConfig(BaseModel):
-    """Backend and policy config; scientific input is always derived from the project."""
+    """Backend and policy config; semantic input is always project-derived."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -49,6 +49,10 @@ class DiscoverySemanticRuntimeConfig(BaseModel):
     ) -> DiscoverySemanticBinding:
         return DiscoverySemanticBinding(
             backend=self.backend.build(self.request_id or invocation_id),
+            backend_factory=(
+                None if self.request_id is not None else self.backend.build
+            ),
+            backend_configuration=self.backend.model_dump(mode="json"),
             profile=profile,
             policy=self.policy,
             backend_mode=self.backend.mode,

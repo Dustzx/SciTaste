@@ -9,6 +9,7 @@ from scitaste.backends.base import Usage
 from scitaste.discovery import DiscoveryCommand, ProjectDiscoveryWorkflow, load_discovery_scenario
 from scitaste.discovery.semantic import (
     DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_REFORMULATION_NODE,
     DiscoverySemanticBinding,
     discovery_node_types,
 )
@@ -73,18 +74,28 @@ def _proposal(*, source_id: str = "project-spec-6.1") -> dict[str, object]:
     }
 
 
-def _binding(backend: ScriptedStructuredBackend) -> DiscoverySemanticBinding:
+def _binding(
+    backend: ScriptedStructuredBackend,
+    *,
+    node_name: str = DISCOVERY_HYPOTHESIS_NODE,
+) -> DiscoverySemanticBinding:
     base = load_model_node_profile_set(PROFILE_SET).profiles["short-structured-semantic"]
     profile = base.model_copy(
         update={
-            "profile_id": "discovery-hypothesis-test",
-            "allowed_node_names": (DISCOVERY_HYPOTHESIS_NODE,),
+            "profile_id": f"{node_name}-test",
+            "allowed_node_names": (node_name,),
+            "admission": base.admission.model_copy(
+                update={"max_response_cost_usd": 0.01}
+            ),
+            "cumulative_project": base.cumulative_project.model_copy(
+                update={"max_api_cost_usd": 0.05}
+            ),
         }
     )
     policy = NodePolicy(
-        policy_id="discovery-hypothesis-test",
+        policy_id=f"{node_name}-test",
         enabled=True,
-        allowed_node_names=[DISCOVERY_HYPOTHESIS_NODE],
+        allowed_node_names=[node_name],
         expected_backend=profile.provider,
         expected_model=profile.model,
         allowed_tool_names=[],
@@ -113,6 +124,44 @@ def _backend(*, source_id: str = "project-spec-6.1") -> ScriptedStructuredBacken
                 output_payload=_proposal(source_id=source_id),
                 usage=Usage(input_tokens=31, output_tokens=23, cost_usd=0.01),
                 latency_ms=3,
+            )
+        },
+    )
+
+
+def _reformulation_proposal(
+    *,
+    observation_id: str = "obs-probe-01-working-hypothesis-01",
+) -> dict[str, object]:
+    return {
+        "schema_version": "1.0",
+        "hypothesis": {
+            "statement": "Evidence-conflict structure, not scale, drives unstable decisions.",
+            "falsifiable_predictions": [
+                "Instability concentrates at reproducible conflict boundaries under matched scale."
+            ],
+            "proposed_probe_types": ["ablation"],
+            "confidence": 0.67,
+        },
+        "supporting_observation_ids": [observation_id],
+        "retained_constraints": ["Hold model scale and task difficulty fixed."],
+        "alternative_explanations": ["Prompt sensitivity may induce the same pattern."],
+        "uncertainty": "Only one registered contradiction is currently available.",
+    }
+
+
+def _reformulation_backend(
+    *,
+    observation_id: str = "obs-probe-01-working-hypothesis-01",
+) -> ScriptedStructuredBackend:
+    return ScriptedStructuredBackend(
+        name="scripted",
+        model="scripted-v1",
+        replies={
+            "discovery-reformulation-003": ScriptedStructuredReply(
+                output_payload=_reformulation_proposal(observation_id=observation_id),
+                usage=Usage(input_tokens=37, output_tokens=29, cost_usd=0.01),
+                latency_ms=4,
             )
         },
     )
@@ -226,8 +275,227 @@ def test_semantic_hypothesis_is_project_owned_advice_not_execution_authority(
         expected_revision=next_report.project_revision,
         semantic_binding_sha256="0" * 64,
     )
-    with pytest.raises(ValueError, match="differs from the runtime intent"):
+    with pytest.raises(ValueError, match="bindings are inconsistent"):
         workflow.verify(PROJECT_ID, RUN_ID)
+
+
+def test_semantic_reformulation_uses_registered_contradiction_and_extends_history(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project = _project(outputs)
+    workflow = ProjectDiscoveryWorkflow(outputs, seed=7)
+    initial = _advance(workflow, 0, _binding(_backend()))
+    probed = workflow.advance(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.PROBE,
+        expected_revision=initial.project_revision,
+    )
+    backend = _reformulation_backend()
+    binding = _binding(backend, node_name=DISCOVERY_REFORMULATION_NODE)
+
+    preview = workflow.preview(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.REFORMULATE,
+        expected_revision=probed.project_revision,
+        semantic=binding,
+    )
+    assert preview.semantic_generation is True
+    assert backend.calls == []
+
+    report = workflow.advance(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.REFORMULATE,
+        expected_revision=probed.project_revision,
+        semantic=binding,
+    )
+    assert report.verification.semantic_proposal_count == 2
+    assert report.command_report.details["content_origin"] == (
+        "bounded-semantic-reformulation"
+    )
+    assert report.command_report.details["supporting_observation_ids"] == [
+        "obs-probe-01-working-hypothesis-01"
+    ]
+    assert len(backend.calls) == 1
+
+    state = json.loads(
+        (
+            outputs
+            / "projects"
+            / PROJECT_ID
+            / "runs"
+            / RUN_ID
+            / "discovery/steps/003-reformulate/research_state.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["working_hypotheses"][-1]["statement"].startswith(
+        "Evidence-conflict structure"
+    )
+    assert state["working_hypotheses"][-1]["derived_from_hypothesis_ids"] == [
+        "working-hypothesis-01"
+    ]
+    assert state["resource_usage"]["api_cost_usd"] == pytest.approx(0.02)
+    assert [
+        item["node_name"] for item in state["executor_context"]["discovery_semantics"]
+    ] == [DISCOVERY_HYPOTHESIS_NODE, DISCOVERY_REFORMULATION_NODE]
+    assert (
+        ModelNodeRuntime(project, node_types=discovery_node_types())
+        .status(project_id=PROJECT_ID, run_id=RUN_ID)
+        .entry_count
+        == 2
+    )
+
+
+def test_semantic_reformulation_rejects_unregistered_observation_before_state(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project = _project(outputs)
+    workflow = ProjectDiscoveryWorkflow(outputs, seed=7)
+    initial = _advance(workflow, 0, _binding(_backend()))
+    probed = workflow.advance(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.PROBE,
+        expected_revision=initial.project_revision,
+    )
+    backend = _reformulation_backend(observation_id="invented-observation")
+
+    with pytest.raises(ValueError, match="not accepted"):
+        workflow.advance(
+            _scenario(),
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            command=DiscoveryCommand.REFORMULATE,
+            expected_revision=probed.project_revision,
+            semantic=_binding(backend, node_name=DISCOVERY_REFORMULATION_NODE),
+        )
+
+    snapshot = project.open(PROJECT_ID)
+    assert snapshot.manifest.runs[0].status == "failed"
+    assert not (
+        outputs
+        / f"projects/{PROJECT_ID}/runs/{RUN_ID}/discovery/steps/003-reformulate"
+    ).exists()
+    entry = ModelNodeRuntime(project, node_types=discovery_node_types()).entry(
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        invocation_id="discovery-reformulation-003",
+    )
+    assert entry.outcome is RuntimeOutcome.REJECTED
+
+
+def test_semantic_reformulation_resume_reuses_ledger_entry(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project = _project(outputs)
+
+    def fail_reformulation(state, action):
+        return ExecutionResult(
+            action_id=action.action_id,
+            status=ExecutionStatus.FAILED,
+            executor="semantic-reformulation-resume-test",
+            error="fail after reformulation generation",
+        )
+
+    failed_workflow = ProjectDiscoveryWorkflow(
+        outputs,
+        seed=7,
+        executor=MockExecutor(
+            seed=7,
+            handlers={MetaAction.REFORMULATE_HYPOTHESIS: fail_reformulation},
+        ),
+    )
+    initial = _advance(failed_workflow, 0, _binding(_backend()))
+    probed = failed_workflow.advance(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.PROBE,
+        expected_revision=initial.project_revision,
+    )
+    first_backend = _reformulation_backend()
+    with pytest.raises(RuntimeError, match="fail after reformulation generation"):
+        failed_workflow.advance(
+            _scenario(),
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            command=DiscoveryCommand.REFORMULATE,
+            expected_revision=probed.project_revision,
+            semantic=_binding(first_backend, node_name=DISCOVERY_REFORMULATION_NODE),
+        )
+    assert len(first_backend.calls) == 1
+    failed_revision = project.open(PROJECT_ID).revision
+
+    recovery_backend = _reformulation_backend()
+    recovered = ProjectDiscoveryWorkflow(outputs, seed=7).advance(
+        _scenario(),
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.REFORMULATE,
+        expected_revision=failed_revision,
+        resume=True,
+        semantic=_binding(recovery_backend, node_name=DISCOVERY_REFORMULATION_NODE),
+    )
+    assert recovered.verification.semantic_proposal_count == 2
+    assert recovery_backend.calls == []
+    assert (
+        ModelNodeRuntime(project, node_types=discovery_node_types())
+        .status(project_id=PROJECT_ID, run_id=RUN_ID)
+        .entry_count
+        == 2
+    )
+
+
+def test_semantic_reformulation_cumulative_ceiling_precedes_reservation(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project = _project(outputs)
+    budget_scenario = _scenario().model_copy(
+        update={
+            "resource_budget": _scenario().resource_budget.model_copy(
+                update={"max_api_cost_usd": 0.015}
+            )
+        }
+    )
+    workflow = ProjectDiscoveryWorkflow(outputs, seed=7)
+    initial = workflow.advance(
+        budget_scenario,
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.HYPOTHESIZE,
+        expected_revision=0,
+        semantic=_binding(_backend()),
+    )
+    probed = workflow.advance(
+        budget_scenario,
+        project_id=PROJECT_ID,
+        run_id=RUN_ID,
+        command=DiscoveryCommand.PROBE,
+        expected_revision=initial.project_revision,
+    )
+    backend = _reformulation_backend()
+
+    with pytest.raises(ValueError, match="cumulative semantic cost ceiling"):
+        workflow.preview(
+            budget_scenario,
+            project_id=PROJECT_ID,
+            run_id=RUN_ID,
+            command=DiscoveryCommand.REFORMULATE,
+            expected_revision=probed.project_revision,
+            semantic=_binding(backend, node_name=DISCOVERY_REFORMULATION_NODE),
+        )
+    assert project.open(PROJECT_ID).revision == probed.project_revision
+    assert backend.calls == []
 
 
 def test_unregistered_semantic_source_fails_closed_before_discovery_state(

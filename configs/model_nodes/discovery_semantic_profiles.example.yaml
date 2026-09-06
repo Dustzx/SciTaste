@@ -7,3 +7,6 @@ profiles:
   - path: profile_discovery_hypothesis_scripted_v1.yaml
     sha256: dab392cb3c0ce873b7fced50b6a2f235c79cd43ecf24c3e09c2c538c4c073e77
     profile_sha256: 2c34ac5368da5d89725d962905dc0739367d849c904bfd1f3e850207062728b7
+  - path: profile_discovery_reformulation_scripted_v1.yaml
+    sha256: 8e46f3884a95040525926835b58ccd2a9b71f4ad86c53e48e031d7096b97f226
+    profile_sha256: ebece62a5089a474f647e3e286539e4ae4f9ab76b6a4c8262b16cef366a95a13

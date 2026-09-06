@@ -240,7 +240,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--semantic-config",
         type=Path,
         default=None,
-        help="opt in to a bounded hypothesis model-node config",
+        help="opt in to a command-compatible bounded semantic model-node config",
     )
     project_discovery_advance.add_argument("--semantic-profile-set", type=Path, default=None)
     project_discovery_advance.add_argument("--semantic-profile-id", default=None)

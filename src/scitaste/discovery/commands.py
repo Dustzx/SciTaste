@@ -23,7 +23,10 @@ from scitaste.discovery.probe_agent import (
 )
 from scitaste.discovery.problem import ProblemFormationAgent
 from scitaste.discovery.semantic_models import (
+    DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_REFORMULATION_NODE,
     DiscoveryHypothesisProposal,
+    DiscoveryReformulationProposal,
     DiscoverySemanticReference,
 )
 from scitaste.executor.base import ExecutionResult, ResearchExecutor, require_execution_success
@@ -39,6 +42,8 @@ from scitaste.state.research_state import (
 )
 from scitaste.state.transitions import apply_transition
 from scitaste.taste.controller import TasteController
+
+_SemanticProposal = DiscoveryHypothesisProposal | DiscoveryReformulationProposal
 
 if TYPE_CHECKING:
     from scitaste.discovery.loop import DiscoveryScenario
@@ -226,7 +231,7 @@ class DiscoveryCommandRunner:
         signal_number: int | None = None,
         reformulation_number: int | None = None,
         receipt_paths: Literal["filesystem", "step-relative"] = "filesystem",
-        semantic_proposal: DiscoveryHypothesisProposal | None = None,
+        semantic_proposal: _SemanticProposal | None = None,
         semantic_reference: DiscoverySemanticReference | None = None,
     ) -> DiscoveryCommandReport:
         """Execute and exclusively own a new discovery-step directory."""
@@ -238,8 +243,24 @@ class DiscoveryCommandRunner:
             raise FileExistsError(f"refusing to replace discovery command output: {root}")
         if (semantic_proposal is None) != (semantic_reference is None):
             raise ValueError("semantic proposal and reference must be supplied together")
-        if semantic_proposal is not None and command is not DiscoveryCommand.HYPOTHESIZE:
-            raise ValueError("semantic hypothesis proposal is valid only for hypothesize")
+        if semantic_proposal is not None:
+            expected = {
+                DiscoveryCommand.HYPOTHESIZE: (
+                    DiscoveryHypothesisProposal,
+                    DISCOVERY_HYPOTHESIS_NODE,
+                ),
+                DiscoveryCommand.REFORMULATE: (
+                    DiscoveryReformulationProposal,
+                    DISCOVERY_REFORMULATION_NODE,
+                ),
+            }.get(command)
+            if (
+                expected is None
+                or not isinstance(semantic_proposal, expected[0])
+                or semantic_reference is None
+                or semantic_reference.node_name != expected[1]
+            ):
+                raise ValueError("semantic proposal type does not match the discovery command")
         preview = self.preview(
             command,
             scenario,
@@ -263,6 +284,12 @@ class DiscoveryCommandRunner:
                 scenario,
                 state,
                 reformulation_number=preview.reformulation_number,
+                semantic_proposal=(
+                    semantic_proposal
+                    if isinstance(semantic_proposal, DiscoveryReformulationProposal)
+                    else None
+                ),
+                semantic_reference=semantic_reference,
             )
         elif command == DiscoveryCommand.IDEATE:
             assert state is not None
@@ -292,19 +319,22 @@ class DiscoveryCommandRunner:
             if semantic_reference is not None
             else None
         )
+        executor_context: dict[str, Any] = {
+            "discovery_command": {
+                "schema_version": "1.0",
+                "scenario_sha256": self._scenario_sha256(scenario),
+            },
+            "discovery_semantic": semantic_context,
+        }
+        if semantic_context is not None:
+            executor_context["discovery_semantics"] = [semantic_context]
         state = ResearchState(
             project_id=scenario.project_id,
             research_direction=scenario.research_direction,
             target_domain=scenario.target_domain,
             target_venue=scenario.target_venue,
             resource_budget=scenario.resource_budget,
-            executor_context={
-                "discovery_command": {
-                    "schema_version": "1.0",
-                    "scenario_sha256": self._scenario_sha256(scenario),
-                },
-                "discovery_semantic": semantic_context,
-            },
+            executor_context=executor_context,
         )
         if semantic_reference is not None:
             state.resource_usage.api_cost_usd = semantic_reference.cost_usd
@@ -522,8 +552,12 @@ class DiscoveryCommandRunner:
         source_state: ResearchState,
         *,
         reformulation_number: int,
+        semantic_proposal: DiscoveryReformulationProposal | None = None,
+        semantic_reference: DiscoverySemanticReference | None = None,
     ) -> _CommandOutcome:
         state = source_state.model_copy(deep=True)
+        if semantic_reference is not None:
+            self._bind_semantic_reference(state, semantic_reference)
         parent = self._active_hypothesis(state)
         state, decision, result = self._act(
             state,
@@ -546,21 +580,40 @@ class DiscoveryCommandRunner:
         hypothesis_id = self._next_hypothesis_id(state)
         revised = HypothesisAgent().form_working_hypothesis(
             hypothesis_id=hypothesis_id,
-            seed=scenario.reformulations[reformulation_number - 1],
+            seed=(
+                semantic_proposal.hypothesis
+                if semantic_proposal is not None
+                else scenario.reformulations[reformulation_number - 1]
+            ),
             intuition_ids=parent.derived_from_intuition_ids,
             parent_hypothesis_ids=[parent.hypothesis_id],
         )
         state.working_hypotheses.append(revised)
         state.active_working_hypothesis_id = revised.hypothesis_id
+        details: dict[str, Any] = {
+            "reformulation_number": reformulation_number,
+            "parent_hypothesis_id": parent.hypothesis_id,
+            "hypothesis_id": revised.hypothesis_id,
+        }
+        if semantic_proposal is not None:
+            details.update(
+                {
+                    "content_origin": "bounded-semantic-reformulation",
+                    "supporting_observation_ids": list(
+                        semantic_proposal.supporting_observation_ids
+                    ),
+                    "retained_constraints": list(semantic_proposal.retained_constraints),
+                    "alternative_explanations": list(
+                        semantic_proposal.alternative_explanations
+                    ),
+                    "uncertainty": semantic_proposal.uncertainty,
+                }
+            )
         return _CommandOutcome(
             state=state,
             decisions=[decision],
             results=[result],
-            details={
-                "reformulation_number": reformulation_number,
-                "parent_hypothesis_id": parent.hypothesis_id,
-                "hypothesis_id": revised.hypothesis_id,
-            },
+            details=details,
         )
 
     def _ideate(
@@ -681,6 +734,27 @@ class DiscoveryCommandRunner:
         decision.actual_outcome = result.model_dump(mode="json")
         require_execution_success(result)
         return apply_transition(state, decision), decision, result
+
+    @staticmethod
+    def _bind_semantic_reference(
+        state: ResearchState,
+        reference: DiscoverySemanticReference,
+    ) -> None:
+        raw_history = state.executor_context.get("discovery_semantics")
+        if raw_history is None:
+            legacy = state.executor_context.get("discovery_semantic")
+            history = [] if legacy is None else [legacy]
+        elif isinstance(raw_history, list) and all(
+            isinstance(item, dict) for item in raw_history
+        ):
+            history = list(raw_history)
+        else:
+            raise ValueError("discovery semantic history is malformed")
+        if any(item.get("invocation_id") == reference.invocation_id for item in history):
+            raise ValueError("discovery semantic invocation is already bound to state")
+        history.append(reference.model_dump(mode="json"))
+        state.executor_context["discovery_semantics"] = history
+        state.resource_usage.api_cost_usd += reference.cost_usd
 
     def _publish(
         self,

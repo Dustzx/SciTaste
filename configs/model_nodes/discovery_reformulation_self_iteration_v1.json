@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "request_id": null,
+  "policy": {
+    "policy_id": "discovery-reformulation-self-iteration-v1",
+    "enabled": true,
+    "allowed_node_names": ["discovery-reformulation"],
+    "expected_backend": "scripted",
+    "expected_model": "scripted-v1",
+    "allowed_tool_names": [],
+    "allowed_action_types": [],
+    "max_request_bytes": 140000,
+    "max_input_tokens": 8000,
+    "max_output_tokens": 1800,
+    "max_total_tokens": 9800,
+    "max_api_cost_usd": 0.01,
+    "max_latency_ms": 60000,
+    "require_cost_telemetry": true,
+    "ambiguity_margin_max": 0.05
+  },
+  "backend": {
+    "kind": "scripted",
+    "provider": "scripted",
+    "model": "scripted-v1",
+    "reply": {
+      "output_payload": {
+        "schema_version": "1.0",
+        "hypothesis": {
+          "statement": "Adaptive Discovery requires each evidence-triggered reformulation to have its own typed, state-bound semantic proposal rather than inheriting only the initial semantic call.",
+          "falsifiable_predictions": [
+            "A semantic reformulation should cite the exact contradictory observation and differ from its parent hypothesis while the controller remains the only source of the REFORMULATE_HYPOTHESIS action.",
+            "Unknown observation identifiers should reject the proposal before a reformulation state is published.",
+            "A post-generation execution failure should resume from the same ledger entry without a second backend call."
+          ],
+          "proposed_probe_types": ["sanity-check", "reproduction"],
+          "confidence": 0.89
+        },
+        "supporting_observation_ids": [
+          "obs-probe-01-working-hypothesis-01"
+        ],
+        "retained_constraints": [
+          "Keep semantic output proposal-only and preserve deterministic action selection.",
+          "Bind every accepted proposal to project revision, predecessor state, usage, recording, and ledger hashes."
+        ],
+        "alternative_explanations": [
+          "A richer deterministic reformulation template could provide some content diversity without a second semantic node."
+        ],
+        "uncertainty": "The scripted self-iteration verifies state, authority, budget, and recovery contracts but does not measure open-ended scientific quality."
+      },
+      "usage": {
+        "input_tokens": 151,
+        "output_tokens": 187,
+        "cost_usd": 0.0
+      },
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

@@ -1,0 +1,76 @@
+project_id: scitaste-self-development
+research_direction: Use SciTaste's own design, implementation, and validation decisions as an auditable self-iteration project without treating self-evidence as an effectiveness result.
+target_domain: autonomous-research-systems
+target_venue: software-artifact
+resource_budget:
+  gpu_hours: 0.2
+  max_experiments: 4
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+  compute_constraints: [deterministic registered diagnostics, bounded semantic fixtures, no live model calls]
+landscape_findings:
+  - category: active_problem
+    statement: Project-owned Discovery can generate its initial hypothesis semantically, but later contradiction-triggered reformulation still uses fixed scenario prose.
+    source_ids: [project-owned-discovery-v2]
+  - category: methodological_bottleneck
+    statement: A single semantic reference cannot express an auditable history of content proposals across nonlinear Discovery commands.
+    source_ids: [model-node-runtime-registry-audit]
+  - category: unexplained_failure
+    statement: A reformulation model call must survive interruption without detaching its cost or response from the predecessor state.
+    source_ids: [semantic-resume-boundary-analysis]
+intuition:
+  statement: Typed semantic proposals may make nonlinear Discovery content adaptive while deterministic policy retains execution authority.
+  source: architecture-audit
+  confidence: 0.78
+initial_hypothesis:
+  statement: One project-bound semantic hypothesis call is sufficient for adaptive Discovery content.
+  falsifiable_predictions:
+    - Later contradiction-triggered reformulations should already be evidence-generated.
+  proposed_probe_types: [sanity-check]
+  confidence: 0.72
+reformulations:
+  - statement: Every evidence-triggered reformulation needs a separate typed semantic proposal bound to its predecessor state.
+    falsifiable_predictions:
+      - The reformulation should cite the contradiction and remain recoverable without duplicate backend work.
+    proposed_probe_types: [sanity-check, reproduction]
+    confidence: 0.82
+probe_signals:
+  - observation: The initial semantic proposal was adaptive, but contradiction-triggered reformulation still depended on a fixed scenario seed.
+    expected: false
+    reproducible: true
+    stability: 0.97
+    effect_size: 0.9
+    boundary_conditions: [project-owned Discovery, one initial semantic node]
+    alternative_explanations: [a richer scenario template may imitate adaptive reformulation]
+  - observation: The new reformulation cited the registered contradiction, preserved controller authority, accumulated known cost, and resumed from one ledger entry.
+    expected: true
+    reproducible: true
+    stability: 0.98
+    effect_size: 0.94
+    boundary_conditions: [typed structured proposal, registered predecessor state, offline scripted backend]
+    alternative_explanations: [typed contracts rather than semantic generation may explain part of the robustness]
+problem:
+  explanation_gap: Nonlinear research systems need adaptive content after evidence changes, but repeated model calls can silently lose evidence scope, budget lineage, or action boundaries.
+  importance: Evidence-triggered content generation is necessary for useful research autonomy beyond a single initial prompt.
+idea_seeds:
+  - generator: semantic-history
+    hypothesis: A typed semantic history can make nonlinear Discovery adaptive without transferring transition authority.
+    proposed_mechanism: Register command-specific semantic nodes, bind each request to its predecessor state, append accepted references to canonical state, and verify the entire model ledger.
+    expected_validation: [contradiction-scope rejection, action invariance, cumulative budget admission, exact resume]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.3}
+    expected_value: {problem_validity: 0.98, novelty: 0.84, feasibility: 0.92, evidence_tractability: 0.97, expected_empirical_signal: 0.94}
+    main_risk: Open-ended scientific-quality improvement remains unmeasured.
+  - generator: template-expansion
+    hypothesis: Larger scenario-authored reformulation lists provide adequate flexibility.
+    proposed_mechanism: Add more fixed contradiction-to-hypothesis templates selected by deterministic rules.
+    expected_validation: [fixture diversity, deterministic replay]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.15}
+    expected_value: {problem_validity: 0.55, novelty: 0.2, feasibility: 0.98, evidence_tractability: 0.9, expected_empirical_signal: 0.4}
+    main_risk: The caller still has to anticipate every useful evidence-driven reformulation.
+  - generator: direct-agent-control
+    hypothesis: A free-form model should both reformulate and decide the next action.
+    proposed_mechanism: Give the provider direct state mutation and tool execution access after a contradiction.
+    expected_validation: [open-ended task completion]
+    expected_cost: {gpu_hours: 0.1, experiments: 3, implementation_risk: 0.9}
+    expected_value: {problem_validity: 0.5, novelty: 0.4, feasibility: 0.45, evidence_tractability: 0.15, expected_empirical_signal: 0.6}
+    main_risk: Evidence, budget, and transition authority become unauditable.

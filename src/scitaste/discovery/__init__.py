@@ -16,6 +16,8 @@ from scitaste.discovery.semantic_models import (
     DiscoveryHypothesisInput,
     DiscoveryHypothesisProposal,
     DiscoveryIntuitionProposal,
+    DiscoveryReformulationInput,
+    DiscoveryReformulationProposal,
     DiscoverySemanticReference,
 )
 
@@ -29,6 +31,7 @@ _PROJECT_WORKFLOW_EXPORTS = {
 }
 _SEMANTIC_RUNTIME_EXPORTS = {
     "DiscoveryHypothesisNode",
+    "DiscoveryReformulationNode",
     "DiscoverySemanticBinding",
 }
 
@@ -57,6 +60,9 @@ __all__ = [
     "DiscoveryHypothesisProposal",
     "DiscoveryIntuitionProposal",
     "DiscoveryLoop",
+    "DiscoveryReformulationInput",
+    "DiscoveryReformulationNode",
+    "DiscoveryReformulationProposal",
     "DiscoveryScenario",
     "DiscoverySemanticBinding",
     "DiscoverySemanticReference",

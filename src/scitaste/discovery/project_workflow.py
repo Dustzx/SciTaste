@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import math
 import os
 import tempfile
 from collections.abc import Iterator
@@ -23,13 +24,17 @@ from scitaste.discovery.commands import (
 from scitaste.discovery.loop import DiscoveryScenario
 from scitaste.discovery.semantic import (
     DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_REFORMULATION_NODE,
     DiscoveryHypothesisInput,
     DiscoveryHypothesisProposal,
+    DiscoveryReformulationInput,
+    DiscoveryReformulationProposal,
     DiscoverySemanticBinding,
     DiscoverySemanticReference,
     discovery_node_types,
     semantic_proposal_from_receipt,
     semantic_reference_from_receipt,
+    semantic_reformulation_from_receipt,
 )
 from scitaste.executor.base import ResearchExecutor
 from scitaste.model_nodes.models import NodeContext
@@ -60,6 +65,11 @@ _MODEL = "deterministic-taste-controller"
 _CONDITION = "composable-discovery-commands-v1"
 _STAGE_PATH = "discovery"
 _MANIFEST_NAME = "DISCOVERY.json"
+_SEMANTIC_COMMAND_NODES = {
+    DiscoveryCommand.HYPOTHESIZE: DISCOVERY_HYPOTHESIS_NODE,
+    DiscoveryCommand.REFORMULATE: DISCOVERY_REFORMULATION_NODE,
+}
+_SemanticProposal = DiscoveryHypothesisProposal | DiscoveryReformulationProposal
 
 
 class ProjectDiscoveryStep(BaseModel):
@@ -93,8 +103,9 @@ class ProjectDiscoveryStep(BaseModel):
         expected = f"steps/{self.ordinal:03d}-{self.command.value}"
         if self.locator != expected:
             raise ValueError(f"discovery step locator must be {expected!r}")
-        if self.semantic_proposal is not None and self.command is not DiscoveryCommand.HYPOTHESIZE:
-            raise ValueError("only hypothesize can bind a discovery semantic proposal")
+        expected_node = _SEMANTIC_COMMAND_NODES.get(self.command)
+        if self.semantic_proposal is not None and self.semantic_proposal.node_name != expected_node:
+            raise ValueError("discovery semantic reference does not match its command")
         return self
 
 
@@ -151,8 +162,19 @@ class ProjectDiscoveryManifest(BaseModel):
                     raise ValueError("the first discovery step cannot have an input state")
             elif step.input_state_id != self.steps[expected_ordinal - 2].output_state_id:
                 raise ValueError("project discovery state lineage is not contiguous")
-            if step.semantic_proposal is not None and expected_ordinal != 1:
+            if (
+                step.semantic_proposal is not None
+                and step.semantic_proposal.node_name == DISCOVERY_HYPOTHESIS_NODE
+                and expected_ordinal != 1
+            ):
                 raise ValueError("discovery semantic hypothesis must belong to the first step")
+        invocation_ids = [
+            step.semantic_proposal.invocation_id
+            for step in self.steps
+            if step.semantic_proposal is not None
+        ]
+        if len(invocation_ids) != len(set(invocation_ids)):
+            raise ValueError("discovery semantic invocation identifiers must be unique")
         portfolio_positions = [
             index
             for index, step in enumerate(self.steps)
@@ -209,7 +231,7 @@ class ProjectDiscoveryVerification(BaseModel):
     latest_state_id: _StateId
     latest_state: str
     final_stage: ResearchStage
-    semantic_proposal_count: int = Field(default=0, ge=0, le=1)
+    semantic_proposal_count: int = Field(default=0, ge=0)
 
 
 class ProjectDiscoveryAdvanceReport(BaseModel):
@@ -288,6 +310,7 @@ class ProjectDiscoveryWorkflow:
             expected_revision=expected_revision,
             resume=resume,
         )
+        self._validate_semantic_budget(scenario, admission.state, semantic)
         self._require_semantic_identity(admission, command=command, semantic=semantic)
         if admission.recovers_completed_step:
             assert admission.manifest is not None
@@ -379,6 +402,7 @@ class ProjectDiscoveryWorkflow:
                 expected_revision=expected_revision,
                 resume=resume,
             )
+            self._validate_semantic_budget(scenario, admission.state, semantic)
             self._require_semantic_identity(admission, command=command, semantic=semantic)
             if admission.recovers_completed_step:
                 assert admission.manifest is not None
@@ -446,14 +470,17 @@ class ProjectDiscoveryWorkflow:
                 )
                 if reserved.revision != expected_reserved_revision:
                     raise ValueError("project discovery reservation revision is inconsistent")
-                semantic_proposal: DiscoveryHypothesisProposal | None = None
+                semantic_proposal: _SemanticProposal | None = None
                 semantic_reference: DiscoverySemanticReference | None = None
                 if semantic is not None:
-                    semantic_proposal, semantic_reference = self._generate_semantic_hypothesis(
+                    semantic_proposal, semantic_reference = self._generate_semantic_proposal(
                         scenario,
                         project_id=project_id,
                         run_id=run_id,
+                        command=command,
+                        ordinal=admission.ordinal,
                         project_revision=reserved.revision,
+                        state=admission.state,
                         resume=admission.resumes_run,
                         binding=semantic,
                     )
@@ -743,6 +770,17 @@ class ProjectDiscoveryWorkflow:
         semantic: DiscoverySemanticBinding | None,
     ) -> ProjectSnapshot:
         reserved_revision = admission.snapshot.revision + (2 if admission.creates_run else 1)
+        semantic_bindings = self._registered_semantic_bindings(admission.registered_run)
+        permanent_semantic: dict[str, Any] = {}
+        if semantic is not None:
+            invocation_id = self._semantic_invocation_id(command, admission.ordinal)
+            existing_binding = semantic_bindings.get(invocation_id)
+            if existing_binding is not None and existing_binding != semantic.fingerprint:
+                raise ValueError("registered semantic invocation has a different binding")
+            semantic_bindings[invocation_id] = semantic.fingerprint
+            permanent_semantic["semantic_binding_sha256s"] = semantic_bindings
+            if command is DiscoveryCommand.HYPOTHESIZE:
+                permanent_semantic["semantic_binding_sha256"] = semantic.fingerprint
         pending = {
             "pending_command": command.value,
             "pending_ordinal": admission.ordinal,
@@ -772,9 +810,7 @@ class ProjectDiscoveryWorkflow:
                     scenario_sha256=self._scenario_sha256(scenario),
                     resume_attempt=0,
                     effectiveness_claim=False,
-                    semantic_binding_sha256=(
-                        semantic.fingerprint if semantic is not None else None
-                    ),
+                    **permanent_semantic,
                     **pending,
                 ),
                 expected_revision=admission.snapshot.revision,
@@ -792,6 +828,7 @@ class ProjectDiscoveryWorkflow:
             status="running",
             resume_attempt=self._next_resume_attempt(admission),
             failure=None,
+            **permanent_semantic,
             **pending,
         )
 
@@ -922,7 +959,7 @@ class ProjectDiscoveryWorkflow:
             raise ValueError("discovery step directories do not match the manifest")
         previous_output: str | None = None
         previous_decision_ids: list[str] = []
-        bound_semantic_reference: DiscoverySemanticReference | None = None
+        bound_semantic_references: list[DiscoverySemanticReference] = []
         for step in manifest.steps:
             step_root = root / step.locator
             if step_root.is_symlink() or not step_root.is_dir():
@@ -983,19 +1020,20 @@ class ProjectDiscoveryWorkflow:
             if report.semantic_proposal != step.semantic_proposal:
                 raise ValueError("discovery semantic reference differs from its manifest step")
             if report.semantic_proposal is not None:
-                if bound_semantic_reference is not None:
-                    raise ValueError("discovery lineage binds more than one semantic hypothesis")
-                bound_semantic_reference = report.semantic_proposal
-            semantic_context = state.executor_context.get("discovery_semantic")
-            expected_semantic_context = (
-                bound_semantic_reference.model_dump(mode="json")
-                if bound_semantic_reference is not None
-                else None
-            )
-            if semantic_context != expected_semantic_context:
-                raise ValueError("discovery state semantic binding is invalid")
-            if bound_semantic_reference is not None and state.resource_usage.api_cost_usd != (
-                bound_semantic_reference.cost_usd
+                if any(
+                    item.invocation_id == report.semantic_proposal.invocation_id
+                    for item in bound_semantic_references
+                ):
+                    raise ValueError("discovery lineage repeats a semantic invocation")
+                bound_semantic_references.append(report.semantic_proposal)
+            if self._state_semantic_references(state) != bound_semantic_references:
+                raise ValueError("discovery state semantic history is invalid")
+            expected_semantic_cost = sum(item.cost_usd for item in bound_semantic_references)
+            if not math.isclose(
+                state.resource_usage.api_cost_usd,
+                expected_semantic_cost,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
             ):
                 raise ValueError("discovery state semantic cost differs from its ledger reference")
             if report.semantic_proposal is not None:
@@ -1036,7 +1074,7 @@ class ProjectDiscoveryWorkflow:
             run_id=manifest.run_id,
             invocation_id=reference.invocation_id,
         )
-        if entry.intent.node_name != DISCOVERY_HYPOTHESIS_NODE:
+        if entry.intent.node_name != reference.node_name:
             raise ValueError("discovery semantic reference points to another node type")
         if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
             raise ValueError("discovery semantic reference is not an accepted ledger entry")
@@ -1072,7 +1110,13 @@ class ProjectDiscoveryWorkflow:
             self.runtime.open(manifest.project_id),
             manifest.run_id,
         )
-        run_binding = (registered.model_extra or {}).get("semantic_binding_sha256")
+        extra = registered.model_extra or {}
+        semantic_bindings = self._registered_semantic_bindings(registered)
+        run_binding = semantic_bindings.get(reference.invocation_id)
+        if reference.node_name == DISCOVERY_HYPOTHESIS_NODE:
+            legacy_binding = extra.get("semantic_binding_sha256")
+            if legacy_binding is not None and legacy_binding != run_binding:
+                raise ValueError("registered discovery semantic bindings are inconsistent")
         if not isinstance(run_binding, str) or not _is_digest(run_binding):
             raise ValueError("registered discovery semantic binding is missing or invalid")
         intent_binding = entry.intent.context.metadata.get("semantic_binding_sha256")
@@ -1112,13 +1156,30 @@ class ProjectDiscoveryWorkflow:
     ) -> None:
         if semantic is None:
             return
-        if command is not DiscoveryCommand.HYPOTHESIZE:
-            raise ValueError("bounded semantic generation is currently valid only for hypothesize")
+        expected_node = _SEMANTIC_COMMAND_NODES.get(command)
+        if expected_node is None:
+            raise ValueError("bounded semantic generation is not valid for this command")
+        if semantic.node_name != expected_node:
+            raise ValueError("semantic binding node does not match the discovery command")
         api_budget = scenario.resource_budget.max_api_cost_usd
         if api_budget is not None and semantic.profile.admission.max_response_cost_usd > api_budget:
             raise ValueError(
                 "semantic response cost ceiling exceeds the discovery scenario API budget"
             )
+
+    @staticmethod
+    def _validate_semantic_budget(
+        scenario: DiscoveryScenario,
+        state: ResearchState | None,
+        semantic: DiscoverySemanticBinding | None,
+    ) -> None:
+        if semantic is None or scenario.resource_budget.max_api_cost_usd is None:
+            return
+        consumed = state.resource_usage.api_cost_usd if state is not None else 0.0
+        if consumed + semantic.profile.admission.max_response_cost_usd > (
+            scenario.resource_budget.max_api_cost_usd
+        ):
+            raise ValueError("cumulative semantic cost ceiling exceeds the discovery API budget")
 
     @staticmethod
     def _require_semantic_identity(
@@ -1133,57 +1194,93 @@ class ProjectDiscoveryWorkflow:
         expected = semantic.fingerprint if semantic is not None else None
         if extra.get("pending_semantic_binding_sha256") != expected:
             raise ValueError("resume semantic binding differs from the reserved operation")
-        if command is DiscoveryCommand.HYPOTHESIZE and extra.get(
-            "semantic_binding_sha256"
-        ) != expected:
+        if semantic is None:
+            return
+        invocation_id = ProjectDiscoveryWorkflow._semantic_invocation_id(
+            command,
+            admission.ordinal,
+        )
+        bindings = ProjectDiscoveryWorkflow._registered_semantic_bindings(
+            admission.registered_run
+        )
+        if bindings.get(invocation_id) != expected:
             raise ValueError("registered discovery semantic identity is inconsistent")
 
-    def _generate_semantic_hypothesis(
+    def _generate_semantic_proposal(
         self,
         scenario: DiscoveryScenario,
         *,
         project_id: str,
         run_id: str,
+        command: DiscoveryCommand,
+        ordinal: int,
         project_revision: int,
+        state: ResearchState | None,
         resume: bool,
         binding: DiscoverySemanticBinding,
-    ) -> tuple[DiscoveryHypothesisProposal, DiscoverySemanticReference]:
-        node_input = DiscoveryHypothesisInput(
-            research_direction=scenario.research_direction,
-            target_domain=scenario.target_domain,
-            target_venue=scenario.target_venue,
-            landscape_findings=tuple(scenario.landscape_findings),
-        )
-        invocation_id = "discovery-hypothesis-001"
+    ) -> tuple[_SemanticProposal, DiscoverySemanticReference]:
+        invocation_id = self._semantic_invocation_id(command, ordinal)
+        if command is DiscoveryCommand.HYPOTHESIZE:
+            node_input: DiscoveryHypothesisInput | DiscoveryReformulationInput = (
+                DiscoveryHypothesisInput(
+                    research_direction=scenario.research_direction,
+                    target_domain=scenario.target_domain,
+                    target_venue=scenario.target_venue,
+                    landscape_findings=tuple(scenario.landscape_findings),
+                )
+            )
+            state_snapshot = f"scenario-{self._scenario_sha256(scenario)}"
+            evidence_ids = list(node_input.source_ids)
+            state_cost = 0.0
+        elif command is DiscoveryCommand.REFORMULATE:
+            if state is None:
+                raise ValueError("semantic reformulation requires a predecessor state")
+            node_input = DiscoveryReformulationInput(
+                research_direction=state.research_direction,
+                target_domain=state.target_domain,
+                target_venue=state.target_venue,
+                parent_hypothesis=self.runner._active_hypothesis(state),
+                observations=tuple(state.observations),
+            )
+            state_snapshot = snapshot_id(state)
+            evidence_ids = list(node_input.observation_ids)
+            state_cost = state.resource_usage.api_cost_usd
+        else:
+            raise ValueError("semantic proposal command is unsupported")
         receipt = ModelNodeRuntime(
             self.runtime,
             node_types=discovery_node_types(),
         ).execute(
-            backend=binding.backend,
+            backend=binding.backend_for(invocation_id),
             resume=resume,
             allow_live=binding.allow_live,
             project_id=project_id,
             run_id=run_id,
             invocation_id=invocation_id,
             expected_project_revision=project_revision,
-            state_revision=0,
-            node_name=DISCOVERY_HYPOTHESIS_NODE,
+            state_revision=(state.revision if state is not None else 0),
+            node_name=binding.node_name,
             node_input=node_input,
             context=NodeContext(
                 project_id=project_id,
                 stage=ResearchStage.DISCOVERY.value,
-                state_snapshot_id=f"scenario-{self._scenario_sha256(scenario)}",
-                cumulative_api_cost_usd=0.0,
-                evidence_ids=list(node_input.source_ids),
+                state_snapshot_id=state_snapshot,
+                cumulative_api_cost_usd=state_cost,
+                evidence_ids=evidence_ids,
                 metadata={
                     "run_id": run_id,
                     "authority": "proposal-only",
+                    "command": command.value,
                     "semantic_binding_sha256": binding.fingerprint,
                 },
             ),
             trigger=ModelNodeTrigger(
-                trigger_id="project-discovery-hypothesize",
-                reason="A registered landscape requires bounded hypothesis semantics.",
+                trigger_id=f"project-discovery-{command.value}",
+                reason=(
+                    "A registered landscape requires bounded hypothesis semantics."
+                    if command is DiscoveryCommand.HYPOTHESIZE
+                    else "A registered contradiction requires bounded reformulation semantics."
+                ),
             ),
             profile=binding.profile,
             policy=binding.policy,
@@ -1192,12 +1289,82 @@ class ProjectDiscoveryWorkflow:
             request_id=binding.request_id,
             seed=self.seed,
         )
-        proposal = semantic_proposal_from_receipt(receipt)
+        proposal = (
+            semantic_proposal_from_receipt(receipt)
+            if command is DiscoveryCommand.HYPOTHESIZE
+            else semantic_reformulation_from_receipt(receipt)
+        )
         api_budget = scenario.resource_budget.max_api_cost_usd
         observed_cost = receipt.telemetry.cost_usd
-        if observed_cost is None or (api_budget is not None and observed_cost > api_budget):
+        if observed_cost is None or (
+            api_budget is not None and state_cost + observed_cost > api_budget
+        ):
             raise ValueError("semantic invocation exceeds the discovery scenario API budget")
         return proposal, semantic_reference_from_receipt(receipt, proposal)
+
+    @staticmethod
+    def _semantic_invocation_id(command: DiscoveryCommand, ordinal: int) -> str:
+        if command is DiscoveryCommand.HYPOTHESIZE:
+            if ordinal != 1:
+                raise ValueError("semantic hypothesis invocation must be the first command")
+            return "discovery-hypothesis-001"
+        if command is DiscoveryCommand.REFORMULATE:
+            return f"discovery-reformulation-{ordinal:03d}"
+        raise ValueError("discovery command has no semantic invocation identity")
+
+    @staticmethod
+    def _registered_semantic_bindings(run: ProjectRun | None) -> dict[str, str]:
+        if run is None:
+            return {}
+        extra = run.model_extra or {}
+        raw = extra.get("semantic_binding_sha256s")
+        if raw is None:
+            bindings: dict[str, str] = {}
+        elif isinstance(raw, dict) and all(
+            isinstance(key, str)
+            and isinstance(value, str)
+            and _is_digest(value)
+            for key, value in raw.items()
+        ):
+            bindings = dict(raw)
+        else:
+            raise ValueError("registered discovery semantic binding map is invalid")
+        legacy = extra.get("semantic_binding_sha256")
+        if legacy is not None:
+            if not isinstance(legacy, str) or not _is_digest(legacy):
+                raise ValueError("registered discovery semantic binding is invalid")
+            existing = bindings.get("discovery-hypothesis-001")
+            if existing is not None and existing != legacy:
+                raise ValueError("registered discovery semantic bindings are inconsistent")
+            bindings["discovery-hypothesis-001"] = legacy
+        return bindings
+
+    @staticmethod
+    def _state_semantic_references(
+        state: ResearchState,
+    ) -> list[DiscoverySemanticReference]:
+        legacy_raw = state.executor_context.get("discovery_semantic")
+        legacy = (
+            DiscoverySemanticReference.model_validate(legacy_raw, strict=True)
+            if legacy_raw is not None
+            else None
+        )
+        history_raw = state.executor_context.get("discovery_semantics")
+        if history_raw is None:
+            references = [] if legacy is None else [legacy]
+        elif isinstance(history_raw, list):
+            references = [
+                DiscoverySemanticReference.model_validate(item, strict=True)
+                for item in history_raw
+            ]
+        else:
+            raise ValueError("discovery state semantic history is malformed")
+        if legacy is not None and (not references or references[0] != legacy):
+            raise ValueError("legacy discovery semantic reference differs from its history")
+        invocation_ids = [item.invocation_id for item in references]
+        if len(invocation_ids) != len(set(invocation_ids)):
+            raise ValueError("discovery state semantic history repeats an invocation")
+        return references
 
     def _require_project_identity(
         self,
