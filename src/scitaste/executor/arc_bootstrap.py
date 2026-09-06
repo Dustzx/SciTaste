@@ -96,22 +96,33 @@ def _install_offline_literature() -> None:
 def _install_frozen_benchmark_asset() -> None:
     """Inject one content-addressed task kernel into each upstream sandbox project."""
 
+    from researchclaw.experiment import validator
     from researchclaw.experiment.sandbox import ExperimentSandbox
     from researchclaw.pipeline.stage_impls import _code_generation
 
     source = Path(os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_PATH"])
     expected_sha256 = os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_SHA256"]
     module = os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_MODULE"]
+    entrypoint = Path(os.environ["SCITASTE_ARC_FROZEN_ENTRYPOINT_PATH"])
+    expected_entrypoint_sha256 = os.environ["SCITASTE_ARC_FROZEN_ENTRYPOINT_SHA256"]
     if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
         raise ValueError("invalid frozen benchmark SHA-256")
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", module):
         raise ValueError("invalid frozen benchmark module name")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_entrypoint_sha256):
+        raise ValueError("invalid frozen benchmark entrypoint SHA-256")
     if not source.is_file() or source.is_symlink():
         raise ValueError("frozen benchmark source is not a regular file")
+    if not entrypoint.is_file() or entrypoint.is_symlink():
+        raise ValueError("frozen benchmark entrypoint is not a regular file")
     payload = source.read_bytes()
+    entrypoint_payload = entrypoint.read_bytes()
     if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise ValueError("frozen benchmark source hash does not match")
+    if hashlib.sha256(entrypoint_payload).hexdigest() != expected_entrypoint_sha256:
+        raise ValueError("frozen benchmark entrypoint hash does not match")
     source_text = payload.decode("utf-8")
+    entrypoint_text = entrypoint_payload.decode("utf-8")
 
     upstream_extract = _code_generation._extract_multi_file_blocks
     if not getattr(upstream_extract, "_scitaste_frozen_benchmark", False):
@@ -119,11 +130,24 @@ def _install_frozen_benchmark_asset() -> None:
         def frozen_extract(content):
             files = upstream_extract(content)
             if "main.py" in files:
+                files["main.py"] = entrypoint_text
                 files[f"{module}.py"] = source_text
             return files
 
         frozen_extract._scitaste_frozen_benchmark = True
         _code_generation._extract_multi_file_blocks = frozen_extract
+
+    upstream_auto_fix = validator.auto_fix_unbound_locals
+    if not getattr(upstream_auto_fix, "_scitaste_frozen_benchmark", False):
+
+        def preserve_frozen_sources(code):
+            digest = hashlib.sha256(code.encode("utf-8")).hexdigest()
+            if digest in {expected_sha256, expected_entrypoint_sha256}:
+                return code, 0
+            return upstream_auto_fix(code)
+
+        preserve_frozen_sources._scitaste_frozen_benchmark = True
+        validator.auto_fix_unbound_locals = preserve_frozen_sources
 
     upstream_run_project = ExperimentSandbox.run_project
     if getattr(upstream_run_project, "_scitaste_frozen_benchmark", False):
@@ -132,14 +156,18 @@ def _install_frozen_benchmark_asset() -> None:
     def frozen_run_project(self, project_dir, *args, **kwargs):
         project = Path(project_dir).resolve()
         project.mkdir(parents=True, exist_ok=True)
-        destination = project / f"{module}.py"
-        if destination.is_symlink():
-            raise ValueError("frozen benchmark destination cannot be a symlink")
-        temporary = destination.with_suffix(".py.tmp")
-        temporary.write_bytes(payload)
-        os.replace(temporary, destination)
-        if hashlib.sha256(destination.read_bytes()).hexdigest() != expected_sha256:
-            raise ValueError("injected frozen benchmark hash does not match")
+        injections = (
+            (project / "main.py", entrypoint_payload, expected_entrypoint_sha256),
+            (project / f"{module}.py", payload, expected_sha256),
+        )
+        for destination, exact_payload, exact_sha256 in injections:
+            if destination.is_symlink():
+                raise ValueError("frozen benchmark destination cannot be a symlink")
+            temporary = destination.with_suffix(destination.suffix + ".tmp")
+            temporary.write_bytes(exact_payload)
+            os.replace(temporary, destination)
+            if hashlib.sha256(destination.read_bytes()).hexdigest() != exact_sha256:
+                raise ValueError("injected frozen benchmark hash does not match")
         return upstream_run_project(self, project_dir, *args, **kwargs)
 
     frozen_run_project._scitaste_frozen_benchmark = True

@@ -1,0 +1,106 @@
+task_id: diagnosis-friendly-v3
+category: diagnosis_friendly
+research_direction: Characterize reproducible failure boundaries in a synthetic long-context scientific claim-verification benchmark.
+domain: scientific-language-modeling
+starting_evidence:
+  - Aggregate verification accuracy can hide interactions among packet length, evidence position, contradiction density, and citation structure.
+  - The relative failure boundaries of three transparent decision rules are not yet measured on the frozen packet generator.
+constraints:
+  - Use only the frozen literature/search snapshot supplied to every condition.
+  - Execute the content-addressed benchmark kernel without rewriting its packet generator or scoring rules.
+  - Report stable contradictions, factor effects, and alternative explanations.
+deliverables:
+  - failure-boundary diagnosis
+  - working hypothesis
+  - controlled pilot
+  - evidence inventory
+  - evidence-linked paper draft
+research_brief: |
+  Characterize a controlled, CPU-executable synthetic claim-verification task.
+  The frozen kernel crosses relevant-item position (start/middle/end), packet
+  length (8/32/128 statements), contradiction density (0/0.25/0.50), and
+  citation topology (flat/chain). Each packet contains an explicit balanced
+  binary ground truth and seeded evidence records. Compare majority voting,
+  confidence-weighted voting, and a bounded position-aware probe on the same
+  packets, then diagnose factor effects without claiming language-model
+  evaluation or neural inference. Report a reproducible failure boundary when
+  a factor cell falls below 0.75 balanced accuracy on at least two registered
+  seeds.
+benchmark:
+  primary_metric: balanced_accuracy
+  metric_direction: maximize
+  conditions: [majority_vote, confidence_weighted_vote, position_aware_probe]
+  seeds: [7, 19, 31]
+  max_runs: 8
+  fixed_generator: Content-addressed diagnosis factorial v3 executable; 12 balanced examples per factor cell; numpy.random.SeedSequence-derived generators.
+  executable_asset:
+    path: configs/experiments/tasks/assets/diagnosis_factorial_v3.py
+    sha256: a6617eaf18107940b507c423e5d89e618a7384e1c722fef6fd9d9c981e156d6b
+    module: frozen_benchmark
+    entrypoint: run_and_emit
+  contract:
+    generator: diagnosis-factorial-v3
+    target_positions: [start, middle, end]
+    packet_lengths: [8, 32, 128]
+    contradiction_densities: [0.0, 0.25, 0.5]
+    citation_topologies: [flat, chain]
+    examples_per_cell: 12
+    failure_threshold: 0.75
+    minimum_reproducing_seeds: 2
+    conditions: [majority_vote, confidence_weighted_vote, position_aware_probe]
+    metrics: [balanced_accuracy, factor_effects, failure_boundaries]
+    seeds: [7, 19, 31]
+knowledge_documents:
+  - document_id: liu-2023-lost-middle
+    title: Position sensitivity in long contexts
+    content: Relevant evidence position and context length are separate causal factors; report their interaction rather than only aggregate accuracy.
+    citation:
+      key: liu-etal-2024-lost
+      title: "Lost in the Middle: How Language Models Use Long Contexts"
+      authors:
+        - Nelson F. Liu
+        - Kevin Lin
+        - John Hewitt
+        - Ashwin Paranjape
+        - Michele Bevilacqua
+        - Fabio Petroni
+        - Percy Liang
+      venue: Transactions of the Association for Computational Linguistics
+      volume: "12"
+      pages: 157--173
+      year: 2024
+      doi: 10.1162/tacl_a_00638
+      url: https://aclanthology.org/2024.tacl-1.9/
+  - document_id: fixed-generator-protocol-v3
+    title: Content-addressed factorial diagnosis contract
+    content: The frozen executable kernel generates every packet and prediction; a failure boundary is a factor cell below 0.75 balanced accuracy on at least two registered seeds, and orchestration conditions may interpret but may not rewrite those observations.
+candidate_actions:
+  - action_id: run-factor-probe
+    type: PROBE
+    description: Execute the preregistered low-cost factorial diagnosis before method commitment.
+    expected_cost: {experiments: 1.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.95, problem_validity: 0.9}
+  - action_id: commit-position-method
+    type: IDEATE
+    description: Commit immediately to a position-aware method without separating factors.
+    expected_cost: {experiments: 2.0, gpu_hours: 0.0}
+    expected_value: {information_gain: 0.2, problem_validity: 0.25}
+taste_cases:
+  - case_id: diagnosis-factor-before-method-v3
+    stage: DISCOVERY
+    context_summary: Aggregate performance obscures several registered causal factors.
+    problem_pattern: Unknown failure boundary under a factorial alternative set.
+    evidence_state: Aggregate trend only; no controlled factor evidence.
+    candidate_actions: [PROBE, IDEATE]
+    preferred_action: PROBE
+    rejected_actions: [IDEATE]
+    decision_principle: Separate plausible causal factors with the cheapest discriminating probe before method commitment.
+    why_preferred: A factorial probe can falsify multiple explanations and prevents optimizing for the wrong boundary.
+    confidence: 0.95
+    domain_tags: [scientific-language-modeling]
+pricing:
+  source: https://help.aliyun.com/zh/model-studio/qwen3-8-max
+  snapshot_model: qwen3.8-max-2026-09-02
+  input_cny_per_million: 12.0
+  output_cny_per_million: 36.0
+  cny_per_usd: 7.2

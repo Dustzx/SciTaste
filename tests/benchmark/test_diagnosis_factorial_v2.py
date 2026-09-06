@@ -10,10 +10,11 @@ import pytest
 from scitaste.benchmark.study_adapter import _parse_seed_evidence
 
 ASSET = Path("configs/experiments/tasks/assets/diagnosis_factorial_v2.py")
+BOUNDARY_ASSET = Path("configs/experiments/tasks/assets/diagnosis_factorial_v3.py")
 
 
-def load_kernel() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("diagnosis_factorial_v2_test", ASSET)
+def load_kernel(path: Path = ASSET) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(f"{path.stem}_test", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -72,3 +73,20 @@ def test_frozen_kernel_emits_adapter_readable_evidence(monkeypatch, capsys) -> N
     assert set(dispersion) == set(kernel.EXPECTED_CONTRACT["conditions"])
     assert reported["balanced_accuracy"] == evidence["primary_metric"]["value"]
     assert stdout.splitlines()[-1].startswith("SCITASTE_EVIDENCE_JSON=")
+
+
+def test_boundary_kernel_reports_only_cross_seed_reproducible_cells() -> None:
+    kernel = load_kernel(BOUNDARY_ASSET)
+
+    evidence = kernel.execute_benchmark(kernel.EXPECTED_CONTRACT)
+    boundaries = evidence["diagnostics"]["failure_boundaries"]
+
+    assert boundaries["balanced_accuracy_threshold"] == 0.75
+    assert boundaries["minimum_reproducing_seeds"] == 2
+    assert boundaries["by_condition"]["majority_vote"]["count"] > 0
+    assert boundaries["by_condition"]["confidence_weighted_vote"]["count"] == 0
+    assert all(
+        len(cell["reproducing_seeds"]) >= 2
+        for record in boundaries["by_condition"].values()
+        for cell in record["worst_cells"]
+    )

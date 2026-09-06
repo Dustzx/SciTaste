@@ -162,6 +162,9 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
     source = tmp_path / "registered_kernel.py"
     payload = b"def run_and_emit(contract):\n    return contract\n"
     source.write_bytes(payload)
+    entrypoint = tmp_path / "registered_main.py"
+    entrypoint_payload = b"from frozen_benchmark import run_and_emit\nrun_and_emit({})\n"
+    entrypoint.write_bytes(entrypoint_payload)
     observed: dict[str, str] = {}
 
     class FakeExperimentSandbox:
@@ -171,6 +174,9 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
         def run_project(self, project_dir, *args, **kwargs):
             injected = project_dir / "frozen_benchmark.py"
             observed["sha256"] = hashlib.sha256(injected.read_bytes()).hexdigest()
+            observed["sandbox_entrypoint_sha256"] = hashlib.sha256(
+                (project_dir / "main.py").read_bytes()
+            ).hexdigest()
             return SimpleNamespace(
                 returncode=0,
                 timed_out=False,
@@ -186,6 +192,9 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
 
     researchclaw = ModuleType("researchclaw")
     experiment = ModuleType("researchclaw.experiment")
+    validator = ModuleType("researchclaw.experiment.validator")
+    validator.auto_fix_unbound_locals = lambda code: (code + "# modified\n", 1)
+    experiment.validator = validator
     sandbox = ModuleType("researchclaw.experiment.sandbox")
     sandbox.ExperimentSandbox = FakeExperimentSandbox
     pipeline = ModuleType("researchclaw.pipeline")
@@ -200,11 +209,16 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
         observed["generated_sha256"] = hashlib.sha256(
             files["frozen_benchmark.py"].encode()
         ).hexdigest()
+        observed["entrypoint_sha256"] = hashlib.sha256(files["main.py"].encode()).hexdigest()
+        fixed, count = validator.auto_fix_unbound_locals(files["frozen_benchmark.py"])
+        observed["auto_fix_sha256"] = hashlib.sha256(fixed.encode()).hexdigest()
+        observed["auto_fix_count"] = str(count)
         return upstream_main(argv)
 
     cli.main = checked_upstream_main
     monkeypatch.setitem(sys.modules, "researchclaw", researchclaw)
     monkeypatch.setitem(sys.modules, "researchclaw.experiment", experiment)
+    monkeypatch.setitem(sys.modules, "researchclaw.experiment.validator", validator)
     monkeypatch.setitem(sys.modules, "researchclaw.experiment.sandbox", sandbox)
     monkeypatch.setitem(sys.modules, "researchclaw.pipeline", pipeline)
     monkeypatch.setitem(sys.modules, "researchclaw.pipeline.stage_impls", stage_impls)
@@ -215,7 +229,16 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
     monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_PATH", str(source))
     monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_SHA256", hashlib.sha256(payload).hexdigest())
     monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_MODULE", "frozen_benchmark")
+    monkeypatch.setenv("SCITASTE_ARC_FROZEN_ENTRYPOINT_PATH", str(entrypoint))
+    monkeypatch.setenv(
+        "SCITASTE_ARC_FROZEN_ENTRYPOINT_SHA256",
+        hashlib.sha256(entrypoint_payload).hexdigest(),
+    )
 
     assert main(["run"]) == 0
     assert observed["sha256"] == hashlib.sha256(payload).hexdigest()
     assert observed["generated_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert observed["entrypoint_sha256"] == hashlib.sha256(entrypoint_payload).hexdigest()
+    assert observed["sandbox_entrypoint_sha256"] == hashlib.sha256(entrypoint_payload).hexdigest()
+    assert observed["auto_fix_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert observed["auto_fix_count"] == "0"

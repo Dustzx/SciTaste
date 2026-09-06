@@ -115,11 +115,20 @@ def run_study_cell(
     if executable_asset is not None:
         asset_config, _ = executable_asset
         injected_asset = upstream_run / "stage-07" / f"{asset_config['module']}.py"
+        injected_entrypoint = upstream_run / "stage-07" / "frozen_entrypoint.py"
         if not injected_asset.is_file() or _sha256(injected_asset) != asset_config["sha256"]:
             raise ValueError("frozen executable benchmark copy is missing or does not match")
+        expected_entrypoint = _canonical_executable_entrypoint(task).encode()
+        if (
+            not injected_entrypoint.is_file()
+            or injected_entrypoint.read_bytes() != expected_entrypoint
+        ):
+            raise ValueError("frozen executable benchmark entrypoint is missing or does not match")
         environment["SCITASTE_ARC_FROZEN_BENCHMARK_PATH"] = str(injected_asset)
         environment["SCITASTE_ARC_FROZEN_BENCHMARK_SHA256"] = str(asset_config["sha256"])
         environment["SCITASTE_ARC_FROZEN_BENCHMARK_MODULE"] = str(asset_config["module"])
+        environment["SCITASTE_ARC_FROZEN_ENTRYPOINT_PATH"] = str(injected_entrypoint)
+        environment["SCITASTE_ARC_FROZEN_ENTRYPOINT_SHA256"] = _sha256(injected_entrypoint)
 
     def upstream_command(from_stage: str, through_stage: str) -> list[str]:
         return [
@@ -591,6 +600,8 @@ def _prepare_stage_seven(
         asset_config, source = executable_asset
         destination = stage / f"{asset_config['module']}.py"
         destination.write_bytes(source.read_bytes())
+        entrypoint = stage / "frozen_entrypoint.py"
+        entrypoint.write_text(_canonical_executable_entrypoint(task), encoding="utf-8")
         (stage / "frozen_benchmark_manifest.json").write_text(
             json.dumps(
                 {
@@ -599,6 +610,7 @@ def _prepare_stage_seven(
                     "entrypoint": asset_config["entrypoint"],
                     "sha256": asset_config["sha256"],
                     "source_path": asset_config["path"],
+                    "entrypoint_sha256": _sha256(entrypoint),
                 },
                 indent=2,
                 sort_keys=True,
@@ -839,6 +851,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
         if executable_instruction
         else "Implement the fixed synthetic benchmark as one self-contained Python file."
     )
+    code_token_limit = 2048 if executable_instruction else 12288
     entrypoint_instruction = (
         "End with an `if __name__ == '__main__'` guard that invokes the experiment exactly "
         "once; defining an unused experiment function is a failed execution."
@@ -893,7 +906,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"{machine_evidence} Return only:\n"
                     "```filename:main.py\n# complete code\n```\n\nTopic: {topic}\nPlan:\n{exp_plan}"
                 ),
-                "max_tokens": 12288,
+                "max_tokens": code_token_limit,
             },
             "research_decision": {
                 "system": (
@@ -944,7 +957,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"{machine_evidence} Return only the "
                     "complete corrected file.\n\nIssues:\n{issues_text}\n\nFiles:\n{all_files_ctx}"
                 ),
-                "max_tokens": 12288,
+                "max_tokens": code_token_limit,
             },
             "iterative_improve": {
                 "system": (
@@ -964,7 +977,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "```filename:main.py block.\n\nPlan:\n{exp_plan_anchor}\nCurrent code:\n"
                     "{files_context}\nRun summary:\n{run_summaries}"
                 ),
-                "max_tokens": 12288,
+                "max_tokens": code_token_limit,
             },
             "iterative_repair": {
                 "system": "You fix syntax/runtime errors while preserving a frozen contract.",
@@ -976,7 +989,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"{machine_evidence} Return corrected "
                     "Python only.\n\nIssues:\n{issue_text}\n\nFiles:\n{all_files_ctx}"
                 ),
-                "max_tokens": 12288,
+                "max_tokens": code_token_limit,
             },
         },
     }
@@ -1000,6 +1013,47 @@ def _executable_asset_instruction(task: dict[str, Any]) -> str:
         "executes every registered scoring rule, reports harness metrics, and emits the sole "
         "machine evidence record. Do not copy, redefine, approximate, wrap with alternative "
         "rules, or modify the frozen module; main.py is only a transparent executable entry."
+    )
+
+
+def _canonical_executable_entrypoint(task: dict[str, Any]) -> str:
+    """Render the condition-invariant runner for a content-addressed benchmark."""
+
+    resolved = _resolve_executable_asset(task)
+    if resolved is None:
+        raise ValueError("task does not define an executable benchmark")
+    asset, _ = resolved
+    benchmark_contract = task["benchmark"]["contract"]
+    contract = json.dumps(benchmark_contract, sort_keys=True, ensure_ascii=False)
+    packet_count = int(benchmark_contract["examples_per_cell"])
+    for name in (
+        "target_positions",
+        "packet_lengths",
+        "contradiction_densities",
+        "citation_topologies",
+        "seeds",
+    ):
+        packet_count *= len(benchmark_contract[name])
+    boundary_text = (
+        "It then identifies factor cells below the registered balanced-accuracy threshold "
+        "and retains only boundaries reproduced by the registered minimum number of seeds."
+        if "failure_threshold" in benchmark_contract
+        else "It reports per-factor effect ranges for each transparent decision rule."
+    )
+    return (
+        f"SCITASTE_BENCHMARK_CONTRACT = {contract}\n\n"
+        '"""Condition-invariant executable for the preregistered synthetic diagnosis.\n\n'
+        f"The content-addressed kernel generates exactly {packet_count} explicit balanced "
+        "binary evidence packets over every registered position, length, contradiction-density, "
+        "citation-topology, and seed cell. It applies all decision rules to the same packets and "
+        "computes balanced accuracy from their predictions rather than constructing metric "
+        f"values. {boundary_text} The kernel emits the sole machine evidence record.\n"
+        '"""\n\n'
+        f"from {asset['module']} import {asset['entrypoint']}\n\n\n"
+        "def main():\n"
+        f"    {asset['entrypoint']}(SCITASTE_BENCHMARK_CONTRACT)\n\n\n"
+        'if __name__ == "__main__":\n'
+        "    main()\n"
     )
 
 
@@ -2311,6 +2365,8 @@ def _validate_executable_asset_sources(sources: list[Path], task: dict[str, Any]
     main_files = [path for path in sources if path.name == "main.py"]
     if len(main_files) != 1:
         raise ValueError("selected executable benchmark requires exactly one main.py")
+    if main_files[0].read_text(encoding="utf-8") != _canonical_executable_entrypoint(task):
+        raise ValueError("selected experiment does not preserve the canonical frozen entrypoint")
     try:
         tree = ast.parse(main_files[0].read_text(encoding="utf-8"))
     except SyntaxError as exc:

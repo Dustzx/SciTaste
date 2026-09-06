@@ -11,6 +11,7 @@ from scitaste.benchmark.study_adapter import (
     _analysis_consistency_audit,
     _artifact_consistency_audit,
     _audit_upstream_run,
+    _canonical_executable_entrypoint,
     _citation_violations,
     _compact_refinement_log,
     _condition_context,
@@ -260,6 +261,10 @@ def test_stage_seven_materializes_content_addressed_executable(tmp_path) -> None
     assert hashlib.sha256(copied.read_bytes()).hexdigest() == executable["sha256"]
     assert manifest["sha256"] == executable["sha256"]
     assert manifest["entrypoint"] == "run_and_emit"
+    assert (
+        manifest["entrypoint_sha256"]
+        == hashlib.sha256((run_dir / "stage-07" / "frozen_entrypoint.py").read_bytes()).hexdigest()
+    )
 
 
 def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> None:
@@ -348,6 +353,19 @@ def test_prompt_override_uses_frozen_executable_and_real_entrypoint(tmp_path) ->
         assert task["benchmark"]["executable_asset"]["sha256"] in prompt
         assert "if __name__ == '__main__'" in prompt
     assert "Do not copy, redefine, approximate" in code["user"]
+    assert code["max_tokens"] == 2048
+
+    canonical = _canonical_executable_entrypoint(task)
+    assert "exactly 1944 explicit balanced binary evidence packets" in canonical
+    assert "computes balanced accuracy from their predictions" in canonical
+
+
+def test_boundary_task_entrypoint_exposes_registered_cross_seed_criterion() -> None:
+    task = load_task("diagnosis_friendly_v3.yaml")
+    canonical = _canonical_executable_entrypoint(task)
+
+    assert "below the registered balanced-accuracy threshold" in canonical
+    assert "minimum number of seeds" in canonical
 
 
 def test_executable_source_gate_requires_exact_kernel_and_call(tmp_path) -> None:
@@ -355,13 +373,7 @@ def test_executable_source_gate_requires_exact_kernel_and_call(tmp_path) -> None
     source = tmp_path / "main.py"
     kernel = tmp_path / "frozen_benchmark.py"
     kernel.write_bytes(open(task["benchmark"]["executable_asset"]["path"], "rb").read())
-    source.write_text(
-        "from frozen_benchmark import run_and_emit\n"
-        "SCITASTE_BENCHMARK_CONTRACT = {}\n"
-        "def main():\n    run_and_emit(SCITASTE_BENCHMARK_CONTRACT)\n"
-        "if __name__ == '__main__':\n    main()\n",
-        encoding="utf-8",
-    )
+    source.write_text(_canonical_executable_entrypoint(task), encoding="utf-8")
 
     _validate_executable_asset_sources([source, kernel], task)
 
@@ -369,7 +381,7 @@ def test_executable_source_gate_requires_exact_kernel_and_call(tmp_path) -> None
         "from frozen_benchmark import run_and_emit\ndef unused():\n    run_and_emit({})\n",
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="does not invoke"):
+    with pytest.raises(ValueError, match="does not preserve"):
         _validate_executable_asset_sources([source, kernel], task)
     kernel.write_text("tampered\n", encoding="utf-8")
     with pytest.raises(ValueError, match="lacks the exact"):
