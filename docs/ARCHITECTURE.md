@@ -487,6 +487,16 @@ proposal is rejected after project-revision drift. This closes the paid-response
 interruption gate, but does not authorize state mutation or establish model
 benefit.
 
+The first Tool Intelligence slice adds a typed `tool-plan` node over Knowledge
+query, Evidence inspection, and registered-run comparison plus a
+`structured-repair` node for four pinned output schemas. Complete controlled
+profiles, target schemas, project/state identity, argument scopes, dependency
+order, and budgets are deterministically checked and replay-bound. A provider
+function call is never an admitted step; a schema-valid repair is not an
+accepted target-node result. Both receipts remain advisory and non-executable,
+so this implements controlled semantic proposals without accepting an executor
+or changing this ADR's proposed status.
+
 The 2026-09-05 project-owned GLM-5.3-Flash probe completed seven cases and
 demonstrated schema parsing, exact recording, recovery, and enforcement on a
 real provider response. The live proposal still violated token, latency, cost,

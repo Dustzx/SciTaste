@@ -1,11 +1,11 @@
 # Parallel Task Board
 
-Board revision: `2026-09-06.11`
+Board revision: `2026-09-06.12`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Phase 9 local-system execution and core workflow | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
-| 2 | Tool Intelligence bounded-autonomy iteration | ready for main review | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | feature commit `ac19886` |
+| 2 | Tool Intelligence bounded-autonomy iteration | integrated; idle | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | main commit `3013bc4` |
 | 3 | Progress-first Generation as Content workspace | integrated; idle | `feat/generative-ui-intent-planner-v3` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
@@ -24,8 +24,8 @@ Board revision: `2026-09-06.11`
 
 ## Current non-overlap
 
-- Window 2 has completed the Tool Intelligence Epic at `ac19886`; its paths are
-  frozen pending main-window review and it must not continue from the completed
+- Window 2's Tool Intelligence Epic is integrated at `3013bc4` after main-window
+  review and focused verification; it must not continue from the completed
   token. Window 3's progress-first Generation as Content WP1--WP5 is integrated
   and remains idle.
 - Main owns Phase 9 local-system execution, core workflow development,

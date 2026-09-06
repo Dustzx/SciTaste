@@ -67,7 +67,10 @@ review remain pending, so no effectiveness claim is made from that pilot.
   deterministic feasibility, budget, evidence, and transition gates, plus a
   fail-closed compatible live backend, versioned self-development pilot, and
   durable project-owned runtime/CLI for layered profiles, execution, exact
-  replay, restart-safe accounting, auditable resume, and verification;
+  replay, restart-safe accounting, auditable resume, and verification. The
+  proposal-only Tool Intelligence catalog can now plan over three typed
+  read-only capabilities and propose schema-pinned repairs without executing
+  either result;
 - an opt-in `run full` evidence hook that projects the real immutable research
   state into `interpretation-threat`, binds its input/proposal/recording/ledger
   to the stage checkpoint, grants it no mutation or execution power, and exposes

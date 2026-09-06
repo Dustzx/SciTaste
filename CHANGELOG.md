@@ -7,6 +7,11 @@ semantic versioning.
 
 ### Added
 
+- Proposal-only Tool Intelligence contracts and durable runtime support for
+  bounded plans over Knowledge query, Evidence inspection, and registered-run
+  comparison, plus schema-pinned structured-repair proposals. Provider-native
+  tool calls remain untrusted and neither node can execute a tool or mutate
+  canonical state.
 - A loopback-only, bearer-protected OpenAI-compatible bridge for one explicitly
   pinned local Transformers checkpoint, plus an executable Qwen3-VL-4B study
   launcher that preserves the existing first-party Stage 8--18 adapter.

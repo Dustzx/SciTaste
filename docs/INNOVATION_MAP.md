@@ -88,7 +88,7 @@ designs:
 |---|---|---|
 | Scientific Taste control | Implemented and offline-tested | Formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces and typed intents implemented | Broader user studies and richer safe presentation repertoire |
-| Tool Intelligence | Typed bounded advice, replay, and live-provider gating implemented | More first-party semantic tools and controlled execution profiles |
+| Tool Intelligence | Proposal-only plans over three typed read-only capabilities, schema-pinned repair, replay, and live-provider gating implemented | Deterministic controlled executor, automatic workflow triggers, and registered effectiveness evidence |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
 | Native experiment execution | Isolated CPU replicate execution and metric derivation implemented | Dataset/GPU profiles, generated-code admission, broader workloads |
 | Evidence-to-writing binding | Measured projection, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose and citation generation |

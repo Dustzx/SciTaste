@@ -197,6 +197,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   external measurements/review cannot be replaced with fixtures. This closes
   the orchestration implementation gate but does not accept ADR-022 or provide
   effectiveness evidence.
+- Tool Intelligence now adds two normal durable nodes: one proposes an ordered,
+  dependency-checked plan over three closed read-only capability schemas, and
+  one proposes a repair against a content-bound supported output schema. The
+  runtime validates project runs, scopes, arguments, budgets, identities, and
+  exact replay while every receipt remains advisory and non-executable. No tool
+  executor or automatic workflow trigger is included, and ADR-022 remains
+  proposed pending intervention, cost, safety, and external-review evidence.
 - A real project-owned GLM-5.3-Flash engineering probe completed all seven
   registered cases. The online response was schema-valid and exactly recorded,
   but deterministic token, latency, missing-cost, and action-allowlist gates
