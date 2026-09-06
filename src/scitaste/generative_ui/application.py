@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections import OrderedDict
 from pathlib import Path
 from threading import RLock
 from typing import Literal
@@ -16,11 +17,17 @@ from scitaste.generative_ui.audit import (
     SurfaceAuditLog,
 )
 from scitaste.generative_ui.factory import ProjectSurfaceFactory
+from scitaste.generative_ui.generation import (
+    GeneratedWorkspaceDocument,
+    WorkspaceGenerationRequest,
+    WorkspaceGenerationService,
+)
 from scitaste.generative_ui.inspection import (
     ArtifactInspectionDocument,
     ArtifactInspectionEvent,
     ArtifactInspector,
 )
+from scitaste.generative_ui.intent import QuickIntentCatalog
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
     ProposalReceipt,
@@ -29,6 +36,8 @@ from scitaste.generative_ui.interaction import (
     SurfaceSession,
 )
 from scitaste.generative_ui.models import SurfaceSpec
+from scitaste.generative_ui.planner import WorkspacePlanner
+from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier
 from scitaste.generative_ui.workspace import (
@@ -41,7 +50,7 @@ from scitaste.generative_ui.workspace import (
     workspace_document,
 )
 from scitaste.project import ProjectRuntime
-from scitaste.project.models import validate_project_id
+from scitaste.project.models import validate_entry_id, validate_project_id
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -49,6 +58,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_MAX_RETAINED_GENERATIONS = 128
 
 
 class ProjectDiscoveryItem(BaseModel):
@@ -72,14 +82,25 @@ class ProjectDiscoveryDocument(BaseModel):
 class GenerativeUIApplication:
     """Resolve current trusted surfaces and persist proposal-only interactions."""
 
-    def __init__(self, runtime: ProjectRuntime) -> None:
+    def __init__(
+        self,
+        runtime: ProjectRuntime,
+        *,
+        planner: WorkspacePlanner | None = None,
+    ) -> None:
         if not isinstance(runtime, ProjectRuntime):
             raise TypeError("GenerativeUIApplication requires a trusted ProjectRuntime")
         self._runtime = runtime
         self._factory = ProjectSurfaceFactory(runtime)
         self._workspace_factory = WorkspaceSurfaceFactory(runtime)
+        self._generation_service = WorkspaceGenerationService(runtime, planner=planner)
+        self._snapshot_adapter = ProjectSnapshotAdapter(runtime)
         self._artifact_inspector = ArtifactInspector(runtime.projects_root)
         self._request_lock = RLock()
+        self._generated: OrderedDict[
+            tuple[str, str],
+            tuple[GeneratedWorkspaceDocument, SurfaceSpec],
+        ] = OrderedDict()
 
     @property
     def outputs_root(self) -> Path:
@@ -142,6 +163,114 @@ class GenerativeUIApplication:
             surface = self._workspace_factory.build_surface(parsed)
             self._open_audit(surface)
             return workspace_document(parsed, surface)
+
+    def quick_intents(self, project_id: str) -> QuickIntentCatalog:
+        """Return current evidence-derived quick intents without invoking a model."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._generation_service.quick_catalog(project_id)
+
+    def generate_workspace(
+        self,
+        project_id: str,
+        request: WorkspaceGenerationRequest | dict[str, object],
+    ) -> GeneratedWorkspaceDocument:
+        """Resolve and retain one exact generated surface for later safe interactions."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, WorkspaceGenerationRequest)
+            else WorkspaceGenerationRequest.model_validate(request)
+        )
+        parsed = WorkspaceGenerationRequest.model_validate(parsed.model_dump(mode="json"))
+        if parsed.intent_request.project_id != project_id:
+            raise StaleSurfaceError("generation request project_id does not match its endpoint")
+        with self._request_lock:
+            output = self._generation_service.generate_output(parsed)
+            if output.surface is not None:
+                self._open_audit(output.surface)
+                key = (project_id, output.surface.surface_id)
+                self._generated[key] = (output.document, output.surface)
+                self._generated.move_to_end(key)
+                while len(self._generated) > _MAX_RETAINED_GENERATIONS:
+                    self._generated.popitem(last=False)
+            return GeneratedWorkspaceDocument.model_validate(
+                output.document.model_dump(mode="json")
+            )
+
+    def current_generated_workspace(
+        self,
+        project_id: str,
+        generation_id: str,
+    ) -> GeneratedWorkspaceDocument:
+        """Replay only an exact surface admitted by this server process."""
+
+        with self._request_lock:
+            document, surface = self._current_generated(project_id, generation_id)
+            self._open_audit(surface)
+            return GeneratedWorkspaceDocument.model_validate(document.model_dump(mode="json"))
+
+    def submit_generated_event(
+        self,
+        project_id: str,
+        generation_id: str,
+        event: SurfaceEvent | dict[str, object],
+    ) -> ProposalReceipt:
+        """Resolve a generated action against its retained server-owned surface."""
+
+        parsed_event = (
+            event if isinstance(event, SurfaceEvent) else SurfaceEvent.model_validate(event)
+        )
+        parsed_event = SurfaceEvent.model_validate(parsed_event.model_dump(mode="json"))
+        with self._request_lock:
+            _, surface = self._current_generated(project_id, generation_id)
+            if parsed_event.project_id != project_id:
+                raise StaleSurfaceError("generated event project_id does not match its endpoint")
+            provisional = SurfaceSession(surface).activate(parsed_event)
+            audit = self._open_audit(surface)
+            try:
+                record = audit.append_interaction(parsed_event, provisional)
+            except AuditIntegrityError as exc:
+                if isinstance(exc.__cause__, DuplicateEventError):
+                    raise exc.__cause__ from exc
+                raise
+            if not isinstance(record.payload, ProposalIssuedAudit):
+                raise AuditIntegrityError("generated event did not produce a proposal audit record")
+            return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
+
+    def inspect_generated_artifact(
+        self,
+        project_id: str,
+        generation_id: str,
+        event: ArtifactInspectionEvent | dict[str, object],
+    ) -> ArtifactInspectionDocument:
+        """Inspect evidence visible on one retained generated surface."""
+
+        parsed_event = (
+            event
+            if isinstance(event, ArtifactInspectionEvent)
+            else ArtifactInspectionEvent.model_validate(event)
+        )
+        parsed_event = ArtifactInspectionEvent.model_validate(parsed_event.model_dump(mode="json"))
+        with self._request_lock:
+            _, surface = self._current_generated(project_id, generation_id)
+            if parsed_event.project_id != project_id:
+                raise StaleSurfaceError(
+                    "generated inspection project_id does not match its endpoint"
+                )
+            document = self._artifact_inspector.inspect(surface, parsed_event)
+            audit = self._open_audit(surface)
+            try:
+                record = audit.append_inspection(parsed_event, document.receipt)
+            except AuditIntegrityError as exc:
+                if isinstance(exc.__cause__, DuplicateEventError):
+                    raise exc.__cause__ from exc
+                raise
+            if not isinstance(record.payload, ArtifactInspectedAudit):
+                raise AuditIntegrityError("generated inspection did not produce an audit record")
+            return ArtifactInspectionDocument.model_validate(document.model_dump(mode="json"))
 
     def submit_event(
         self,
@@ -252,6 +381,30 @@ class GenerativeUIApplication:
         if session.surface != surface:
             raise AuditIntegrityError("project UI audit epoch does not match its current surface")
         return audit
+
+    def _current_generated(
+        self,
+        project_id: str,
+        generation_id: str,
+    ) -> tuple[GeneratedWorkspaceDocument, SurfaceSpec]:
+        validate_project_id(project_id)
+        validate_entry_id(generation_id, field_name="generation_id")
+        key = (project_id, generation_id)
+        retained = self._generated.get(key)
+        if retained is None:
+            raise StaleSurfaceError("generated surface is unavailable in this server process")
+        document, surface = retained
+        self._generated.move_to_end(key)
+        current = self._snapshot_adapter.build_binding(project_id)
+        if current != surface.snapshot:
+            raise StaleSurfaceError("generated surface evidence is stale")
+        if (
+            document.renderer is None
+            or document.renderer.surface_id != generation_id
+            or document.renderer.surface_fingerprint != surface.fingerprint
+        ):
+            raise AuditIntegrityError("generated document cache does not match its surface")
+        return document, surface
 
     def _audit_path(self, surface: SurfaceSpec) -> Path:
         project_root = self._runtime.projects_root / surface.project_id

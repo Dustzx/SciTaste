@@ -9,8 +9,10 @@ untrusted display text and is never evaluated.
 
 This module is a contract and interaction-boundary layer plus a trusted
 ProjectRuntime adapter. It includes a framework-neutral renderer document and a
-runnable, local receiver-owned browser/API application. It does not include a
-model call, controller approval, or task executor.
+runnable, local receiver-owned browser/API application. An optional bounded
+structured model may classify a long-tail question or arrange server-owned
+component candidates. It does not include controller approval or a task
+executor, and the provider never authors renderer content.
 
 ## Evidence-native project workspace
 
@@ -35,7 +37,10 @@ fingerprint as an ETag. The responsive shell and all navigation remain receiver
 code shipped in the package; only validated component data changes. Every
 workspace render and project-selector change clears the prior run and paper
 catalogs before admitting identities from the newly validated view, so browser
-history cannot retain another project's selection controls.
+history cannot retain another project's selection controls. A project change
+also clears the prior quick-intent catalog, free-question value, generated
+layout, proposal result, artifact preview, response cache, and current document
+before any newly selected project is rendered.
 
 ### Progress-first self-hosting view
 
@@ -179,11 +184,37 @@ project snapshot ─> trusted candidate factory ─> planner
                                   fixed native component receiver
 ```
 
-This work package defines the reusable boundary only. Provider construction is
-disabled unless a later server configuration explicitly injects an already
-enabled `StructuredModelBackend`; the visible HTTP intent flow and operator
-flags are added with the receiver integration rather than hidden in this model
-layer.
+Provider construction remains disabled unless the server receives both a
+non-secret planner configuration and explicit live-planner authorization. With
+no provider, the same visible interaction uses the deterministic planner.
+
+### Visible generation-as-content flow
+
+The fixed navigation now asks “What do you want to understand?” and provides
+both evidence-derived quick-intent buttons and an editable bounded question
+field. The buttons are not a universal prompt menu: each comes from the current
+`ProjectProgressBoard.next_step_candidates`. Both controls submit a
+`WorkspaceGenerationRequest` to the same service and bind the exact quick
+catalog, project revision, snapshot hash, and request fingerprint.
+
+Successful generation visibly changes component order, grouping, emphasis, and
+the set of goal-relevant panels. The receiver shows the admitted intent goal,
+planner mode, snapshot revision, execution authority, and a short server-owned
+explanation for each component. Layout classes affect only the fixed CSS grid;
+the response still contains no markup or renderer code. A failed request leaves
+the current workspace visible and reports clarification candidates, missing
+evidence, provider unavailability, stale state, or rejected planning in the
+intent panel.
+
+Generated surfaces are retained in memory by exact project and surface ID so
+browser back/forward and proposal-only actions resolve against the precise
+validated surface instead of invoking the model again. Every retrieval and
+action rehashes current project evidence. A server restart deliberately drops
+this cache; an old generated deep link then fails stale rather than attempting
+to recreate a non-deterministic result. Opening a generated surface starts the
+same project-owned audit epoch used by fixed views. Generated actions and
+artifact inspections still stop at their existing proposal/read-only
+boundaries.
 
 ## Trusted project surface factory
 
@@ -263,7 +294,7 @@ snapshots. Surface requests rebuild current authoritative state and return a
 `RendererDocument`; the browser never receives the server-owned `SurfaceSpec`
 action payloads.
 
-The versioned same-origin JSON API is deliberately small:
+The versioned same-origin JSON API is deliberately closed:
 
 - `GET /api/v1/projects` returns canonical project IDs and revisions;
 - `GET /api/v1/projects/<project-id>/surface` returns the current fixed-shell
@@ -278,6 +309,15 @@ The versioned same-origin JSON API is deliberately small:
   interaction;
 - `POST` to a workspace path containing a visible artifact plus `/inspections` accepts exactly
   `ArtifactInspectionEvent` and returns a bounded `ArtifactInspectionDocument`.
+- `GET /api/v3/generative/projects/<project-id>/intents` returns the current
+  evidence-derived `QuickIntentCatalog` and fingerprint;
+- `POST /api/v3/generative/projects/<project-id>/workspace` accepts one
+  `WorkspaceGenerationRequest` and returns a question-free
+  `GeneratedWorkspaceDocument`;
+- `GET /api/v3/generative/projects/<project-id>/generations/<surface-id>`
+  revalidates and returns an exact in-memory admitted generation;
+- `POST` to that generated path plus `/events` or `/inspections` resolves only
+  against the retained server-owned surface.
 
 There is no general filesystem, artifact download, callback, controller, tool,
 or model endpoint. Query strings are rejected, so credentials cannot be passed
@@ -320,6 +360,27 @@ There is intentionally no plaintext token argument. A non-loopback `--host`
 fails validation unless `--i-understand-non-loopback-exposure` is also present.
 `--dry-run` validates the complete configuration and credential source without
 opening a listening socket or creating the outputs root.
+
+The offline deterministic planner is the default. Enabling the optional
+OpenAI-compatible structured planner requires two independent operator inputs:
+
+```bash
+export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
+export ZAI_API_KEY='read-by-the-provider-backend-only'
+.venv/bin/scitaste ui serve \
+  --outputs-root outputs \
+  --planner-config configs/model_nodes/zhipu_glm53_flash.unpriced_probe.yaml \
+  --enable-live-planner
+```
+
+The committed GLM-5.3-Flash probe config is an explicitly unpriced engineering
+condition, not a production price claim. A normal live configuration must use
+confirmed pricing as required by `StructuredOpenAICompatibleConfig`.
+`--planner-config` without `--enable-live-planner`, or the flag without a
+configuration, fails validation. The YAML may name only the API-key environment
+variable; embedded credentials are rejected. Dry-run output includes only the
+provider, model, mode, and configuration hash, never the endpoint credential or
+question. No live provider call is part of the automated test suite.
 
 This receiver does not approve or execute the returned proposal. The only next
 boundary named by a valid receipt is `deterministic_controller`, which is not

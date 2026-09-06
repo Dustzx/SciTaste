@@ -299,10 +299,15 @@ class StructuredWorkspacePlanner:
             attempts = int(backend_config.max_retries) + 1
             if timeout_ms * attempts > self.policy.max_latency_ms:
                 raise ValueError("planner backend timeout exceeds policy latency bound")
+        configuration: dict[str, object] = {
+            "policy": self.policy.model_dump(mode="json", exclude={"fingerprint"}),
+        }
+        if isinstance(backend_config, BaseModel):
+            configuration["backend_config"] = backend_config.model_dump(mode="json")
         self.identity = PlannerIdentity(
             planner_id="structured-workspace-planner-v1",
             implementation="structured-model-v1",
-            configuration_sha256=self.policy.fingerprint,
+            configuration_sha256=_fingerprint(configuration),
             backend=backend.name,
             model=backend.model,
         )

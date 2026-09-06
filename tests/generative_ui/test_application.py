@@ -16,12 +16,14 @@ from scitaste.generative_ui import (
     GenerativeUIApplication,
     PaperEvidenceQuery,
     PendingProposalsQuery,
+    QuickIntentRequest,
     RunStageQuery,
     StaleSurfaceError,
     SurfaceAuditLog,
     SurfaceEvent,
     TrustedComponent,
     UnknownActionError,
+    WorkspaceGenerationRequest,
     WorkspaceSurfaceFactory,
     make_artifact_inspection_event,
     make_surface_event,
@@ -462,3 +464,51 @@ def test_pending_history_fails_closed_on_corrupt_audit_and_stays_project_local(
 
     with pytest.raises(AuditIntegrityError):
         app.current_workspace(PendingProposalsQuery(project_id="app-project"))
+
+
+def test_generated_workspace_is_retained_for_exact_actions_and_fails_stale(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    request = WorkspaceGenerationRequest(
+        quick_catalog_fingerprint=catalog.fingerprint,
+        intent_request=QuickIntentRequest(
+            project_id="app-project",
+            snapshot_revision=catalog.snapshot.snapshot_revision,
+            snapshot_sha256=catalog.snapshot.snapshot_sha256,
+            quick_intent_id=catalog.intents[0].quick_intent_id,
+        ),
+    )
+
+    document = app.generate_workspace("app-project", request)
+
+    assert document.status == "generated"
+    assert document.renderer is not None
+    generation_id = document.renderer.surface_id
+    assert app.current_generated_workspace("app-project", generation_id) == document
+    assert document.renderer.actions
+    action = document.renderer.actions[0]
+    event = SurfaceEvent(
+        event_id="generated-application-event",
+        project_id=document.project_id,
+        surface_id=generation_id,
+        surface_revision=document.renderer.surface_revision,
+        surface_fingerprint=document.renderer.surface_fingerprint,
+        snapshot_revision=document.snapshot_revision,
+        snapshot_sha256=document.snapshot_sha256,
+        action_id=action.action_id,
+    )
+    receipt = app.submit_generated_event("app-project", generation_id, event)
+    assert receipt.status == "proposal_pending"
+    assert receipt.execution_authority == "none"
+
+    restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
+    with pytest.raises(StaleSurfaceError, match="server process"):
+        restarted.current_generated_workspace("app-project", generation_id)
+
+    snapshot = runtime.open("app-project")
+    runtime.update("app-project", expected_revision=snapshot.revision, status="paused")
+    with pytest.raises(StaleSurfaceError, match="evidence is stale"):
+        app.current_generated_workspace("app-project", generation_id)

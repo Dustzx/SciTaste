@@ -21,6 +21,8 @@ def test_ui_serve_help_does_not_require_credentials_or_open_a_socket(capsys) -> 
     assert "--outputs-root" in help_text
     assert "--token-env" in help_text
     assert "--token-file" in help_text
+    assert "--planner-config" in help_text
+    assert "--enable-live-planner" in help_text
     assert "--i-understand-non-loopback-exposure" in help_text
 
 
@@ -62,6 +64,7 @@ def test_ui_serve_dry_run_validates_config_without_listening_or_exposing_token(
         "host": "127.0.0.1",
         "loopback": True,
         "outputs_root": str(outputs),
+        "planner": {"mode": "deterministic", "network_enabled": False},
         "port": 8844,
         "status": "planned",
     }
@@ -188,3 +191,72 @@ def test_ui_serve_rejects_non_regular_oversized_and_non_utf8_credential_files(
     with pytest.raises(SystemExit):
         main([*base, "--token-file", str(non_utf8)])
     assert "UTF-8" in capsys.readouterr().err
+
+
+def test_ui_live_planner_is_double_gated_and_dry_run_pins_glm53_without_a_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    monkeypatch.setenv("SCITASTE_UI_TOKEN", _TOKEN)
+    outputs = tmp_path / "outputs"
+    probe = Path("configs/model_nodes/zhipu_glm53_flash.unpriced_probe.yaml")
+    base = ["ui", "serve", "--outputs-root", str(outputs), "--dry-run"]
+
+    with pytest.raises(SystemExit):
+        main([*base, "--planner-config", str(probe)])
+    assert "requires --enable-live-planner" in capsys.readouterr().err
+
+    with pytest.raises(SystemExit):
+        main([*base, "--enable-live-planner"])
+    assert "requires --planner-config" in capsys.readouterr().err
+
+    assert (
+        main(
+            [
+                *base,
+                "--planner-config",
+                str(probe),
+                "--enable-live-planner",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planner"]["mode"] == "structured-model"
+    assert payload["planner"]["provider"] == "zhipu-direct"
+    assert payload["planner"]["model"] == "glm-5.3-flash"
+    assert payload["planner"]["network_enabled"] is True
+    assert len(payload["planner"]["configuration_sha256"]) == 64
+    assert "ZAI_API_KEY" not in json.dumps(payload)
+    assert not outputs.exists()
+
+
+def test_ui_planner_config_rejects_disabled_or_secret_bearing_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    monkeypatch.setenv("SCITASTE_UI_TOKEN", _TOKEN)
+    base = [
+        "ui",
+        "serve",
+        "--outputs-root",
+        str(tmp_path / "outputs"),
+        "--dry-run",
+        "--enable-live-planner",
+        "--planner-config",
+    ]
+    disabled = Path("configs/model_nodes/zhipu_glm53_flash.example.yaml")
+    with pytest.raises(SystemExit):
+        main([*base, str(disabled)])
+    assert "live_enabled=true" in capsys.readouterr().err
+
+    secret = tmp_path / "secret-planner.yaml"
+    secret.write_text(
+        "provider: test\nmodel: test\napi_key: exposed\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit):
+        main([*base, str(secret)])
+    assert "invalid or contains credentials" in capsys.readouterr().err

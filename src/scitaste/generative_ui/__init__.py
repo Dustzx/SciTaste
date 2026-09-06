@@ -30,6 +30,13 @@ from scitaste.generative_ui.fixtures import (
     build_run_comparison_fixture,
     fixture_snapshot_binding,
 )
+from scitaste.generative_ui.generation import (
+    GeneratedComponentPlacement,
+    GeneratedWorkspaceDocument,
+    WorkspaceGenerationOutput,
+    WorkspaceGenerationRequest,
+    WorkspaceGenerationService,
+)
 from scitaste.generative_ui.inspection import (
     ArtifactInspectionDocument,
     ArtifactInspectionError,
@@ -212,6 +219,8 @@ __all__ = [
     "FallbackWorkspacePlanner",
     "FixedApplicationShell",
     "FreeQuestionRequest",
+    "GeneratedComponentPlacement",
+    "GeneratedWorkspaceDocument",
     "GenerativeUIApplication",
     "GenerativeUIHTTPServer",
     "InspectArtifactPayload",
@@ -302,6 +311,9 @@ __all__ = [
     "UnknownWorkspaceSelectionError",
     "WorkspaceDocument",
     "WorkspaceFreshness",
+    "WorkspaceGenerationOutput",
+    "WorkspaceGenerationRequest",
+    "WorkspaceGenerationService",
     "WorkspaceIntent",
     "WorkspaceIntentResolver",
     "WorkspacePlanner",

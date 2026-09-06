@@ -24,13 +24,15 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 button,
 select,
-input {
+input,
+textarea {
   min-height: 2.65rem;
 }
 
@@ -130,6 +132,10 @@ select {
   width: 100%;
 }
 
+textarea {
+  resize: vertical;
+}
+
 .freshness-bar {
   background: #dcebe1;
   border-bottom: 1px solid #b7cbbd;
@@ -194,6 +200,36 @@ select {
   margin: 0;
 }
 
+.control-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+#intent-form,
+.quick-intents {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.quick-intent-button {
+  background: #eef5f0;
+  color: var(--forest);
+  text-align: left;
+}
+
+.generation-accepted,
+.generation-failure {
+  border-left: 0.25rem solid var(--forest);
+  font-size: 0.84rem;
+  margin: 0;
+  padding: 0.65rem;
+}
+
+.generation-failure {
+  border-left-color: var(--warning);
+}
+
 .view-navigation {
   display: grid;
   gap: 0.35rem;
@@ -234,6 +270,47 @@ fieldset {
 .workspace-title {
   font-size: 1.15rem;
   margin: 0;
+}
+
+.workspace.generated-workspace {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.generated-workspace > .generation-summary,
+.generated-workspace > .workspace-title,
+.generated-workspace > .plan-emphasis-featured {
+  grid-column: 1 / -1;
+}
+
+.generation-summary {
+  background: #dcebe1;
+  border: 1px solid #b7cbbd;
+  border-radius: 0.7rem;
+  padding: 0.9rem;
+}
+
+.generation-summary h2 {
+  margin: 0.2rem 0 0.7rem;
+}
+
+.plan-group-attention {
+  border-color: #cf8d83;
+}
+
+.plan-group-evidence {
+  border-color: #7f9eb5;
+}
+
+.plan-emphasis-compact {
+  font-size: 0.9rem;
+}
+
+.placement-explanation {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 1rem 0 0;
+  padding-top: 0.6rem;
 }
 
 .component-card {
@@ -432,7 +509,8 @@ code {
 
   .credential-panel,
   .application-grid,
-  .comparison-grid {
+  .comparison-grid,
+  .workspace.generated-workspace {
     grid-template-columns: 1fr;
   }
 
@@ -446,6 +524,12 @@ code {
   }
 
   .comparison-grid .nested-section:last-child {
+    grid-column: auto;
+  }
+
+  .generated-workspace > .generation-summary,
+  .generated-workspace > .workspace-title,
+  .generated-workspace > .plan-emphasis-featured {
     grid-column: auto;
   }
 

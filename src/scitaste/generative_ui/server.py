@@ -23,12 +23,14 @@ from scitaste.generative_ui.inspection import (
     ArtifactTooLargeError,
     ArtifactUnavailableError,
 )
+from scitaste.generative_ui.intent import StaleIntentRequestError
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
     StaleSurfaceError,
     SurfaceInteractionError,
     UnknownActionError,
 )
+from scitaste.generative_ui.planning import StaleSurfacePlanError
 from scitaste.generative_ui.workspace import (
     BlockerQuery,
     PaperEvidenceQuery,
@@ -172,7 +174,13 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                     "event was already accepted",
                 )
             )
-        except (StaleSurfaceError, UnknownActionError, ProjectSurfaceChangedError):
+        except (
+            StaleIntentRequestError,
+            StaleSurfaceError,
+            StaleSurfacePlanError,
+            UnknownActionError,
+            ProjectSurfaceChangedError,
+        ):
             self._send_problem(
                 _HTTPProblem(
                     HTTPStatus.CONFLICT,
@@ -249,6 +257,9 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/v2/workspace/"):
             self._dispatch_workspace_api(method, path)
             return
+        if path.startswith("/api/v3/generative/"):
+            self._dispatch_generative_api(method, path)
+            return
         if path == "/api/v1/projects":
             if method != "GET":
                 raise _method_not_allowed("GET")
@@ -274,6 +285,62 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             receipt = self.server.application.submit_event(project_id, payload)
             self._send_model(HTTPStatus.ACCEPTED, receipt)
             return
+        raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+
+    def _dispatch_generative_api(self, method: str, path: str) -> None:
+        parts = path.strip("/").split("/")
+        prefix = ["api", "v3", "generative", "projects"]
+        if len(parts) < 6 or parts[:4] != prefix:
+            raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+        project_id = parts[4]
+        resource = parts[5]
+        if len(parts) == 6 and resource == "intents":
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            catalog = self.server.application.quick_intents(project_id)
+            self._send_model(HTTPStatus.OK, catalog, etag=catalog.fingerprint)
+            return
+        if len(parts) == 6 and resource == "workspace":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            document = self.server.application.generate_workspace(
+                project_id,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.OK, document)
+            return
+        if len(parts) in {7, 8} and resource == "generations":
+            generation_id = parts[6]
+            operation = parts[7] if len(parts) == 8 else None
+            if operation is None:
+                if method != "GET":
+                    raise _method_not_allowed("GET")
+                document = self.server.application.current_generated_workspace(
+                    project_id,
+                    generation_id,
+                )
+                self._send_model(HTTPStatus.OK, document, etag=document.fingerprint)
+                return
+            if operation == "events":
+                if method != "POST":
+                    raise _method_not_allowed("POST")
+                receipt = self.server.application.submit_generated_event(
+                    project_id,
+                    generation_id,
+                    self._read_json_object(),
+                )
+                self._send_model(HTTPStatus.ACCEPTED, receipt)
+                return
+            if operation == "inspections":
+                if method != "POST":
+                    raise _method_not_allowed("POST")
+                document = self.server.application.inspect_generated_artifact(
+                    project_id,
+                    generation_id,
+                    self._read_json_object(),
+                )
+                self._send_model(HTTPStatus.OK, document)
+                return
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
 
     def _dispatch_workspace_api(self, method: str, path: str) -> None:

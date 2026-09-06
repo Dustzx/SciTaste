@@ -9,7 +9,15 @@ from enum import StrEnum
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from scitaste.generative_ui.models import (
     EvidenceRef,
@@ -188,9 +196,10 @@ class QuickIntentCatalog(BaseModel):
     snapshot: SnapshotBinding
     intents: tuple[QuickIntentDescriptor, ...] = Field(min_length=1, max_length=16)
 
+    @computed_field
     @property
     def fingerprint(self) -> str:
-        return _fingerprint(self.model_dump(mode="json"))
+        return _fingerprint(self.model_dump(mode="json", exclude={"fingerprint"}))
 
     @model_validator(mode="after")
     def descriptors_are_unique_and_grounded(self) -> QuickIntentCatalog:

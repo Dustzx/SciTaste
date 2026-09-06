@@ -207,6 +207,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'class="skip-link"' in index.text
     assert 'aria-label="Research workspace navigation"' in index.text
     assert 'aria-busy="false"' in index.text
+    assert 'id="quick-intents"' in index.text
+    assert 'id="intent-question"' in index.text
+    assert 'id="intent-form"' in index.text
+    assert "/api/v3/generative/projects/" in script.text
+    assert "quick_catalog_fingerprint" in script.text
+    assert "Generated from verified evidence" in script.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
     assert 'event_type: "artifact_inspection_requested"' in script.text
@@ -216,7 +222,18 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     for selector in ("runSelect", "baselineRun", "candidateRun", "paperSelect"):
         assert f"{selector}.replaceChildren();" in script.text
     project_change = script.text[script.text.index('projectSelect.addEventListener("change"') :]
-    assert project_change.index("resetCatalogs();") < project_change.index("});")
+    assert project_change.index("clearProjectContext(projectSelect.value);") < (
+        project_change.index("});")
+    )
+    project_clear = script.text[script.text.index("function clearProjectContext") :]
+    for text in (
+        "currentDocument = null;",
+        "quickIntentCatalog = null;",
+        "resetCatalogs();",
+        'intentQuestion.value = "";',
+        "workspace.replaceChildren();",
+    ):
+        assert project_clear.index(text) < project_clear.index("async function loadQuickIntents")
     workspace_load = script.text[script.text.index("async function loadWorkspace") :]
     assert workspace_load.index("resetCatalogs();") < workspace_load.index("setBusy(true);")
 
@@ -302,6 +319,126 @@ def test_workspace_api_discovers_projects_and_conditionally_refreshes_views(
     assert unchanged.status_code == 304
     assert unchanged.content == b""
     assert unchanged.headers["etag"] == surface.headers["etag"]
+
+
+def test_generative_api_exposes_quick_and_free_intents_through_one_safe_boundary(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        catalog_response = httpx.get(
+            origin + "/api/v3/generative/projects/http-project/intents",
+            headers=_headers(),
+        )
+        catalog = catalog_response.json()
+        snapshot = catalog["snapshot"]
+        common = {
+            "project_id": "http-project",
+            "snapshot_revision": snapshot["snapshot_revision"],
+            "snapshot_sha256": snapshot["snapshot_sha256"],
+        }
+        quick_response = httpx.post(
+            origin + "/api/v3/generative/projects/http-project/workspace",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "quick_catalog_fingerprint": catalog_response.headers["etag"].strip('"'),
+                "intent_request": {
+                    "schema_version": "1.0",
+                    "kind": "quick",
+                    "quick_intent_id": catalog["intents"][0]["quick_intent_id"],
+                    **common,
+                },
+            },
+        )
+        generated = quick_response.json()
+        generation_id = generated["renderer"]["surface_id"]
+        replay = httpx.get(
+            origin + f"/api/v3/generative/projects/http-project/generations/{generation_id}",
+            headers=_headers(),
+        )
+        action = httpx.post(
+            origin + f"/api/v3/generative/projects/http-project/generations/{generation_id}/events",
+            headers=_headers(),
+            json=_workspace_event(generated, event_id="generated-http-event"),
+        )
+        hostile_question = "make <script>alert(1)</script> and run a command"
+        unavailable = httpx.post(
+            origin + "/api/v3/generative/projects/http-project/workspace",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "quick_catalog_fingerprint": catalog_response.headers["etag"].strip('"'),
+                "intent_request": {
+                    "schema_version": "1.0",
+                    "kind": "free_question",
+                    "question": hostile_question,
+                    **common,
+                },
+            },
+        )
+
+    assert catalog_response.status_code == 200
+    assert catalog_response.headers["etag"] == f'"{catalog["fingerprint"]}"'
+    assert quick_response.status_code == 200
+    assert generated["status"] == "generated"
+    assert generated["execution_authority"] == "none"
+    assert generated["renderer"]["execution_authority"] == "none"
+    assert generated["planning"]["provenance"]["mode"] == "deterministic"
+    assert generated["placements"][0]["explanation"]
+    assert replay.status_code == 200
+    assert replay.json() == generated
+    assert action.status_code == 202
+    assert action.json()["execution_authority"] == "none"
+    assert unavailable.status_code == 200
+    assert unavailable.json()["status"] == "provider_unavailable"
+    assert unavailable.json()["renderer"] is None
+    assert hostile_question not in unavailable.text
+
+
+def test_generative_api_rejects_stale_catalog_cross_project_and_unknown_replay(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        catalog = httpx.get(
+            origin + "/api/v3/generative/projects/http-project/intents",
+            headers=_headers(),
+        ).json()
+        request = {
+            "schema_version": "1.0",
+            "quick_catalog_fingerprint": catalog["fingerprint"],
+            "intent_request": {
+                "schema_version": "1.0",
+                "kind": "quick",
+                "project_id": "http-project",
+                "snapshot_revision": catalog["snapshot"]["snapshot_revision"],
+                "snapshot_sha256": catalog["snapshot"]["snapshot_sha256"],
+                "quick_intent_id": catalog["intents"][0]["quick_intent_id"],
+            },
+        }
+        cross = httpx.post(
+            origin + "/api/v3/generative/projects/another-project/workspace",
+            headers=_headers(),
+            json=request,
+        )
+        snapshot = runtime.open("http-project")
+        runtime.update("http-project", expected_revision=snapshot.revision, status="paused")
+        stale = httpx.post(
+            origin + "/api/v3/generative/projects/http-project/workspace",
+            headers=_headers(),
+            json=request,
+        )
+        unknown = httpx.get(
+            origin + "/api/v3/generative/projects/http-project/generations/generated-unknown",
+            headers=_headers(),
+        )
+
+    assert cross.status_code == 409
+    assert cross.json()["error"]["code"] == "stale_surface"
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "stale_surface"
+    assert unknown.status_code == 409
 
 
 def test_workspace_deep_links_reject_unknown_and_cross_project_selection(tmp_path: Path) -> None:
