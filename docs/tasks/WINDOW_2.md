@@ -2,7 +2,30 @@
 
 Assignment token: `W2-tool-intelligence-20260906-r1`
 
-Status: `active`
+Status: `ready for main-window integration`
+
+## Handoff evidence
+
+- feature commit: `ac19886914633a69a166c0ad88632fc4586f98f6`
+- branch: `feat/tool-intelligence-v1`
+- focused Tool Intelligence and cross-process CLI tests: `19 passed`
+- complete model-node plus focused CLI tests: `155 passed`
+- focused coverage across contracts, nodes, facade, runtime and config: `85%`;
+  new `tool_intelligence.py`: `88%`
+- repository check: `654 passed`; Ruff format/check passed
+- `git diff --check`: passed; feature worktree clean
+
+The repository check used the shared main-worktree virtual environment through
+`PYTHONPATH=src make check PYTHON=/home/good/zfx/papers/SciTaste/.venv/bin/python`.
+The feature worktree's pinned AutoResearchClaw submodule was initialized at
+`12d3fd809fa9658e91a0328c3280a0e462c78386` before the final run; neither the
+submodule content nor its pin changed.
+
+Known limits remain intentional: this Epic does not execute a real tool, add a
+live provider profile, automatically trigger either node from Full Workflow, or
+change ADR-022's proposed status. Registered-run scope is resolved against the
+project manifest; the deterministic caller remains responsible for deriving
+library and evidence scope from verified project-owned records.
 
 This dispatch is authorized directly by the project owner on 2026-09-06. It
 follows the integrated project-scoped model-node runtime and implements the next
