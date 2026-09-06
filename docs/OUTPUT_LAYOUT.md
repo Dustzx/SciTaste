@@ -110,6 +110,13 @@ command receipt, and `research_state.json` all bind the same entry, request,
 proposal, and recording identities. The model-node directory is a sibling of
 `discovery/`, never an unowned top-level output.
 
+Later semantic commands append references to
+`executor_context.discovery_semantics`; the original singular field is retained
+as a backward-compatible pointer to the initial hypothesis proposal. Each
+manifest step may introduce at most its command-compatible reference, invocation
+IDs cannot repeat, and every successor state must retain the complete ordered
+history and its cumulative known API cost.
+
 For a native measured run, `stages/communication/evidence_projection.json`
 binds the manuscript measurement to its predecessor state, interpretation,
 native execution record, and raw replicate-derived metric artifact. `paper.md`

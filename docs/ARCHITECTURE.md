@@ -152,10 +152,12 @@ returns observations and artifacts but cannot select the next global action.
     invalid admission has no side effect; recovery never re-executes an already
     complete pending step.
 48. A Discovery semantic node may propose only typed content grounded in its
-    registered landscape. Its profile, policy, request, response, usage, and
-    recording are project-ledgered before use; it cannot choose an action, call
-    a tool, mutate state, or silently fall back after rejection. The normal
-    controller/executor path remains the sole transition authority.
+    registered landscape or predecessor-state evidence. Its profile, policy,
+    request, response, usage, and recording are project-ledgered before use; it
+    cannot choose an action, call a tool, mutate state, or silently fall back
+    after rejection. The normal controller/executor path remains the sole
+    transition authority, and every accepted proposal remains in one ordered,
+    cumulatively budgeted semantic history.
 
 ## Architecture decision records
 
@@ -887,3 +889,18 @@ rejected. The API cost is reflected in canonical resource usage.
 This establishes adaptive, recoverable content generation—not open-ended
 retrieval, direct tool autonomy, or scientific effectiveness. Those require
 separate registered handlers and matched evidence.
+
+The same decision applies after evidence changes. `discovery-reformulation`
+receives one predecessor hypothesis and at most forty registered observations,
+requires at least one contradiction linked to that parent, and must cite the
+contradiction in its revised hypothesis proposal. The project assigns a stable
+command-derived invocation identity, appends the accepted reference to state,
+and checks cumulative scenario cost before reservation and after telemetry. The
+controller still selects `REFORMULATE_HYPOTHESIS`; the provider cannot discard
+the parent, erase its contradictory observation, or advance state.
+
+Semantic configuration is also part of identity. Non-secret backend
+configuration—including scripted response fixtures—is hashed into the binding,
+while a backend factory maps that bound configuration to the actual
+command-derived invocation ID. This avoids treating provider/model names alone
+as sufficient replay identity.

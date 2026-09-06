@@ -451,6 +451,14 @@ For a live backend, the profile, profile-set, backend configuration, and explici
 silently fall back to scenario prose: rejection or unavailable accounting fails
 the pending operation before a Discovery state is published.
 
+After a reproducible contradiction, `reformulate` can use the same opt-in flags
+with `configs/model_nodes/discovery_reformulation_self_iteration_v1.json` and
+profile `discovery-reformulation-scripted`. That node sees the exact predecessor
+hypothesis and registered observations, must cite a parent contradiction, and
+adds a second reference to `executor_context.discovery_semantics`. The
+`REFORMULATE_HYPOTHESIS` decision is still made before content is applied by the
+normal controller/executor path.
+
 ## Offline Evidence Loop
 
 Run a supported claim or a stable contradictory result:

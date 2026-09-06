@@ -258,6 +258,37 @@ The verified Discovery head is
 the proposal digest is
 `5618ee996482335595636503ca5c946e0ebb43ed257bd88be4db0550aa3b6e04`.
 
+## Evidence-bound semantic reformulation case
+
+The initial semantic node did not yet make the nonlinear loop adaptive after a
+probe changed the evidence. The next self-case therefore preserves a stable
+contradiction, asks a separate typed node for revised hypothesis content, and
+keeps `REFORMULATE_HYPOTHESIS` under deterministic controller authority. Its
+scenario is `configs/cases/scitaste_semantic_reformulation_iteration.yaml`; the
+second offline condition is
+`configs/model_nodes/discovery_reformulation_self_iteration_v1.json`.
+
+The first attempted run, ending in `semantic-reformulation-v1__seed-07`, exposed
+a configuration-binding defect: the CLI constructed every scripted backend with
+the initial hypothesis invocation ID. The project retained the failed run and
+archived attempt. The fix hashes the complete non-secret backend fixture and
+constructs it for the actual command-derived invocation ID; the failed run was
+not rewritten or silently resumed under a different identity.
+
+The replacement run
+`2026-09-07__scitaste-native__semantic-reformulation-v2__seed-07` completed six
+commands and ten controller decisions at `PILOT`. Its ordered ledger contains an
+initial proposal and one state-bound reformulation (630 total scripted tokens,
+zero cost); the latter cites `obs-probe-01-working-hypothesis-01`, while the only
+selected reformulation action remains controller-generated. The selected idea is
+`idea-01-semantic-history`, the final state is
+`state-37df39047a85335e3bbdddf690b32f2aef2baab49abfb8d91372f08b3c02ae99`,
+and the verified Discovery head is
+`e09c1a20e8801b516f8f770319e617523fd0eeee8d211dde5620d15b85f0e22f`.
+The reformulation proposal digest is
+`2b134a32dd427db187f591320514707b84821bfd40f61cebee00c4c3da677929`.
+This remains implementation/recovery evidence, not a model-quality result.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

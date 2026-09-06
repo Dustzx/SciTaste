@@ -73,10 +73,19 @@ failure, resume validates and reuses the ledger entry without another provider
 call. Project verification rehashes both the Discovery lineage and the complete
 model-node ledger before trusting the state reference.
 
-The semantic reference is inherited by every successor state, although only the
-first manifest step introduces it. A metadata-only recovery records a cumulative
-count and the last recovered command/ordinal on the run, so a repaired head
-commit is visible after the transient failure metadata has been cleared.
+Every semantic reference is inherited by all successor states, although only
+its originating manifest step introduces it. A metadata-only recovery records a
+cumulative count and the last recovered command/ordinal on the run, so a
+repaired head commit is visible after transient failure metadata has been
+cleared.
+
+A reproducible contradiction may opt into `discovery-reformulation`. The input
+is derived from the exact predecessor state, includes the active parent and at
+most forty observations, and requires a registered contradiction. A separate
+binding and invocation ID are recorded for that command; the resulting reference
+is appended to the state semantic history. Scenario budget admission uses prior
+semantic cost plus the new response ceiling, and observed telemetry is checked
+again before the proposal enters state.
 
 The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
 the study as one project run, exposes the run's `study/` directory through the

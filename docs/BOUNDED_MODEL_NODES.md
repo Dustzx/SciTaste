@@ -517,8 +517,15 @@ domain consumers. Extensions must register a node class and its exact input and
 output models under the class's own name; they cannot replace built-ins. A
 runtime reopening a ledger must supply the same extension registry, otherwise
 typed verification fails closed. Project-owned Discovery uses this boundary for
-`discovery-hypothesis`, while retaining the shared cumulative ledger, recording,
-revision gate, and interruption recovery semantics.
+`discovery-hypothesis` and `discovery-reformulation`, while retaining the shared
+cumulative ledger, recording, revision gate, and interruption recovery
+semantics. The second node is scoped to a predecessor hypothesis and registered
+observations and must cite a contradiction already linked to that hypothesis.
+
+Application bindings hash the complete non-secret backend configuration, not
+only provider/model labels. Invocation-aware construction lets a single strict
+runtime config serve the command-derived ledger ID without weakening request or
+resume identity; embedded credential values remain forbidden.
 
 The live transport persists the exact request payload and decoded response body
 under the owning project before higher-level schema parsing. It deliberately

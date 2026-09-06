@@ -7,6 +7,12 @@ semantic versioning.
 
 ### Added
 
+- Contradiction-triggered Discovery reformulation can now opt into a second
+  typed semantic node. It receives only the predecessor hypothesis and bounded
+  registered observations, must cite an actual parent contradiction, cannot
+  select the reformulation action, and appends a costed reference to the
+  project-verified semantic history. Cumulative scenario budget admission and
+  no-second-call recovery apply across both semantic nodes.
 - Project-owned Discovery can now replace fixed `hypothesize` prose with an
   opt-in, typed `discovery-hypothesis` model proposal. The node sees only the
   registered landscape, cites only registered sources, chooses only bounded
@@ -295,6 +301,11 @@ semantic versioning.
 
 ### Fixed
 
+- Semantic runtime files now bind their complete non-secret backend fixture
+  configuration and construct scripted backends for the actual command-derived
+  invocation ID. This prevents a later semantic command from accidentally using
+  the initial-hypothesis request key and makes fixture drift change resume
+  identity.
 - Discovery lineage verification now requires the first semantic reference to
   persist across every successor state instead of incorrectly expecting later
   commands to erase it. Metadata-only recovery is recorded on the run with a
