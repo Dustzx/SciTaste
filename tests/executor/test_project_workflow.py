@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import pytest
 
 import scitaste.executor.project_workflow as project_workflow_module
 from scitaste.cli import main
+from scitaste.executor.base import ExecutionResult
+from scitaste.executor.call_protocol import ExternalCallPhase, ExternalCallProtocol
 from scitaste.executor.project_bootstrap import ProjectSubstrateBootstrapWorkflow
 from scitaste.executor.project_workflow import (
     ProjectSubstrateActionWorkflow,
@@ -16,9 +19,12 @@ from scitaste.executor.project_workflow import (
     load_project_substrate_config,
 )
 from scitaste.project import ProjectRuntime
+from scitaste.project.models import content_sha256
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.persistence import DecisionLogger, StateStore
 from scitaste.state.research_state import ResearchState
+from scitaste.state.resources import record_resource_usage
+from scitaste.state.transitions import apply_transition
 
 
 def _source_run(root: Path) -> Path:
@@ -57,6 +63,87 @@ def _config(root: Path, *, live_enabled: bool = True) -> ProjectSubstrateWorkflo
         autoresearchclaw_config=_executor_config(root),
         max_output_tokens=2048,
     )
+
+
+def _downgrade_selected_run(
+    outputs: Path,
+    run_id: str,
+    *,
+    schema_version: str = "1.1",
+) -> Path:
+    run_root = outputs / "projects/project-substrate-test/runs" / run_id
+    manifest_path = run_root / "substrate_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["schema_version"] = schema_version
+    manifest.pop("external_call_protocol_version")
+    manifest.pop("manifest_sha256")
+    manifest["manifest_sha256"] = content_sha256(
+        {key: value for key, value in manifest.items() if value is not None}
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    invocation_path = run_root / "substrate_action/invocation.json"
+    invocation = json.loads(invocation_path.read_text(encoding="utf-8"))
+    invocation["binding_sha256"] = manifest["manifest_sha256"]
+    invocation.pop("invocation_sha256")
+    invocation["invocation_sha256"] = content_sha256(invocation)
+    invocation_path.write_text(json.dumps(invocation), encoding="utf-8")
+
+    result_path = run_root / "substrate_action/executor_result.json"
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    result["data"].pop("call_started_sha256")
+    result["data"]["invocation_sha256"] = invocation["invocation_sha256"]
+    result_path.write_text(json.dumps(result), encoding="utf-8")
+
+    decisions_path = run_root / "substrate_action/decisions.jsonl"
+    if decisions_path.is_file():
+        decisions = [
+            json.loads(line) for line in decisions_path.read_text(encoding="utf-8").splitlines()
+        ]
+        for decision in decisions:
+            if decision.get("actual_outcome") is not None:
+                decision["actual_outcome"] = result
+        decisions_path.write_text(
+            "".join(json.dumps(decision) + "\n" for decision in decisions),
+            encoding="utf-8",
+        )
+        invocation_record = ResearchDecision.model_validate(decisions[0])
+        executor_result = ExecutionResult.model_validate(result)
+        store = StateStore(run_root / "substrate_action")
+        predecessor = store.load(invocation["state_snapshot_id"])
+        recovered = apply_transition(predecessor, invocation_record)
+        recovered = record_resource_usage(recovered, executor_result.cost)
+        session = executor_result.data.get("session")
+        if isinstance(session, dict):
+            recovered.executor_context["autoresearchclaw_session_id"] = session.get("session_id")
+            recovered.executor_context["autoresearchclaw_upstream_run_id"] = session.get(
+                "current_upstream_run_id"
+            )
+        store.save(recovered)
+
+    summary_path = run_root / "substrate_action/substrate_summary.json"
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary.pop("call_phase")
+        summary.pop("call_receipt_sha256")
+        summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    shutil.rmtree(run_root / "substrate_action/call_protocol")
+
+    project_path = outputs / "projects/project-substrate-test/PROJECT.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    registered = next(item for item in project["runs"] if item["run_id"] == run_id)
+    registered["manifest_sha256"] = manifest["manifest_sha256"]
+    registered["invocation_sha256"] = invocation["invocation_sha256"]
+    for key in (
+        "external_call_protocol_version",
+        "external_call_attempt",
+        "external_call_phase",
+        "external_call_phase_sha256",
+        "external_call_request_sha256",
+    ):
+        registered.pop(key, None)
+    project_path.write_text(json.dumps(project), encoding="utf-8")
+    return run_root
 
 
 def _successful_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -133,6 +220,8 @@ def test_project_owned_substrate_action_is_verified_and_charges_only_delta(
 
     assert result["status"] == "complete"
     assert result["execution_status"] == "SUCCEEDED"
+    assert result["external_call_phase"] == "result_published"
+    assert isinstance(result["external_call_phase_sha256"], str)
     assert result["transition_applied"] is True
     run = outputs / "projects/project-substrate-test/runs/selected-search-01"
     state = StateStore(run / "substrate_action").load()
@@ -197,6 +286,130 @@ def test_project_substrate_action_consumes_a_verified_project_bootstrap(
     assert status["source_receipt_sha256"] == result["source_receipt_sha256"]
 
 
+def test_project_substrate_resumes_prepared_attempt_without_replacing_invocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_update = ProjectRuntime.update_run
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_update(
+        self: ProjectRuntime,
+        project_id: str,
+        registered_run_id: str,
+        *,
+        expected_revision: int,
+        **changes: object,
+    ):
+        nonlocal fail_once
+        if fail_once and "invocation_sha256" in changes:
+            fail_once = False
+            raise OSError("controlled interruption after prepared")
+        return original_update(
+            self,
+            project_id,
+            registered_run_id,
+            expected_revision=expected_revision,
+            **changes,
+        )
+
+    monkeypatch.setattr(ProjectRuntime, "update_run", interrupted_update)
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="after prepared"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="prepared-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 0
+    action_root = (
+        outputs / "projects/project-substrate-test/runs/prepared-search-01/substrate_action"
+    )
+    invocation_before = (action_root / "invocation.json").read_bytes()
+    chain = ExternalCallProtocol(action_root / "call_protocol").load(required=True)
+    assert [entry.phase for entry in chain] == [ExternalCallPhase.PREPARED]
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="prepared-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert (action_root / "invocation.json").read_bytes() == invocation_before
+    run = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (run.model_extra or {})["external_call_attempt"] == 1
+
+
+def test_project_substrate_recovers_result_published_before_final_phase(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_publish = ExternalCallProtocol.publish_result
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_publish(self: ExternalCallProtocol, **kwargs: object):
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled interruption before result phase")
+        return original_publish(self, **kwargs)
+
+    monkeypatch.setattr(ExternalCallProtocol, "publish_result", interrupted_publish)
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="before result phase"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="unjournaled-result-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 1
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="unjournaled-result-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["recovered_without_provider"] is True
+    action_root = (
+        outputs
+        / "projects/project-substrate-test/runs/unjournaled-result-search-01/substrate_action"
+    )
+    assert (
+        ExternalCallProtocol(action_root / "call_protocol").load(required=True)[-1].phase
+        is ExternalCallPhase.RESULT_PUBLISHED
+    )
+
+
 def test_project_substrate_failure_resumes_from_immutable_input(tmp_path: Path) -> None:
     outputs = tmp_path / "outputs"
     source = _source_run(tmp_path)
@@ -249,6 +462,259 @@ def test_project_substrate_failure_resumes_from_immutable_input(tmp_path: Path) 
     ).is_file()
     assert (run / "inputs/autoresearchclaw/checkpoint.json").is_file()
     assert not (run / "inputs/autoresearchclaw/partial-provider-response.txt").exists()
+
+
+def test_project_substrate_running_failed_result_starts_exactly_one_new_attempt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def fail_once(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            work = Path(command[command.index("--output") + 1])
+            (work / "partial-provider-response.txt").write_text("failed", encoding="utf-8")
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+        return _successful_runner(command, **kwargs)
+
+    original_build = project_workflow_module._build_verification
+    interrupt_once = True
+
+    def interrupted_build(*args: object, **kwargs: object):
+        nonlocal interrupt_once
+        if interrupt_once:
+            interrupt_once = False
+            raise OSError("simulated death after failed result")
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(project_workflow_module, "_build_verification", interrupted_build)
+    monkeypatch.setattr(
+        ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=fail_once)
+    with pytest.raises(OSError, match="death after failed result"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="running-failed-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 1
+    assert ProjectRuntime(outputs).open(config.project_id).manifest.runs[0].status == "running"
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="running-failed-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 2
+    assert resumed["status"] == "complete"
+    run = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (run.model_extra or {})["external_call_attempt"] == 2
+    assert (run.model_extra or {})["resume_attempt"] == 1
+
+
+def test_schema_11_selected_success_recovers_without_second_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_append = DecisionLogger.append
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_append(self: DecisionLogger, decision: ResearchDecision) -> None:
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled legacy selected interruption")
+        original_append(self, decision)
+
+    monkeypatch.setattr(DecisionLogger, "append", interrupted_append)
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="legacy selected interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="legacy-success-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    _downgrade_selected_run(outputs, "legacy-success-search-01")
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-success-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+    assert resumed["external_call_phase"] == "legacy_unjournaled"
+    assert resumed["external_call_phase_sha256"] is None
+
+
+def test_schema_11_selected_success_accepts_legacy_summary_after_late_interruption(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_build = project_workflow_module._build_verification
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_build(*args: object, **kwargs: object):
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled legacy post-summary interruption")
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(project_workflow_module, "_build_verification", interrupted_build)
+    monkeypatch.setattr(
+        ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-summary interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="legacy-late-success-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    run_root = _downgrade_selected_run(outputs, "legacy-late-success-search-01")
+    legacy_summary = json.loads(
+        (run_root / "substrate_action/substrate_summary.json").read_text(encoding="utf-8")
+    )
+    assert "call_phase" not in legacy_summary
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-late-success-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+    assert (
+        json.loads(
+            (run_root / "substrate_action/substrate_summary.json").read_text(encoding="utf-8")
+        )
+        == legacy_summary
+    )
+
+
+def test_schema_11_selected_failure_retries_as_phase_aware_attempt_two(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def fail_once(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=fail_once)
+    failed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-failed-search-01",
+        source_run_dir=source,
+        allow_live=True,
+    )
+    assert failed["status"] == "failed"
+    run_root = _downgrade_selected_run(outputs, "legacy-failed-search-01")
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-failed-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 2
+    assert resumed["status"] == "complete"
+    registered = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (registered.model_extra or {})["external_call_attempt"] == 2
+    chain = ExternalCallProtocol(run_root / "substrate_action/call_protocol").load(required=True)
+    assert chain[-1].phase is ExternalCallPhase.RESULT_PUBLISHED
+    assert chain[-1].external_call_attempt == 2
+
+
+def test_schema_10_selected_run_remains_read_only(tmp_path: Path) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def failed_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=failed_runner)
+    workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-read-only-search-01",
+        source_run_dir=source,
+        allow_live=True,
+    )
+    _downgrade_selected_run(
+        outputs,
+        "legacy-read-only-search-01",
+        schema_version="1.0",
+    )
+
+    with pytest.raises(ValueError, match="read-only"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="legacy-read-only-search-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
 
 
 def test_project_substrate_resume_recovers_recorded_success_without_second_provider_call(
@@ -415,7 +881,10 @@ def test_project_substrate_retry_rejects_success_status_tamper(
     payload["data"]["returncode"] = 1
     result_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="contradicts successful terminal evidence"):
+    with pytest.raises(
+        ValueError,
+        match=r"contradicts successful terminal evidence|published external result identity drift",
+    ):
         workflow.run(
             config,
             outputs_root=outputs,
@@ -468,7 +937,10 @@ def test_project_substrate_recovery_binds_the_complete_work_tree(
     )
     (work / relative_path).write_text(contents, encoding="utf-8")
 
-    with pytest.raises(ValueError, match="normalized working_tree drift"):
+    with pytest.raises(
+        ValueError,
+        match=r"normalized working_tree drift|published external result identity drift",
+    ):
         workflow.run(
             config,
             outputs_root=outputs,
@@ -728,7 +1200,10 @@ def test_project_substrate_recovery_rejects_changed_stage_evidence_without_secon
         '["changed"]\n', encoding="utf-8"
     )
 
-    with pytest.raises(ValueError, match="artifact_manifest drift"):
+    with pytest.raises(
+        ValueError,
+        match=r"artifact_manifest drift|published external result identity drift",
+    ):
         workflow.run(
             config,
             outputs_root=outputs,

@@ -163,6 +163,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   pre-state, inputs, artifacts, result and predecessor. Full Workflow performs
   real local Knowledge Library retrieval and revalidates action/result bindings
   on resume.
+- Provider-facing compatibility attempts now have a durable three-phase call
+  protocol. Write-once prepared/start/result receipts bind the exact request,
+  non-secret call specification, pre/post work trees, result, and distinct
+  external-attempt counter. Prepared work can resume safely, a started call with
+  no result cannot repeat, and a verified failed result is the only authority for
+  incrementing the external attempt.
 - Explicit Discovery advancement now shares the project ownership boundary:
   callers supply project/run identity and current revision while the workflow
   derives state and destination. This closes fragmented command output and
@@ -480,7 +486,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   Selected-action recovery now also reuses an exact successful result after
   downstream interruption, binds its pre-call state/action/decision intent,
   revalidates the complete work tree and stage/cost evidence, verifies failures
-  before retry, and blocks ambiguous or concurrent calls.
+  before retry, and blocks ambiguous or concurrent calls. Manifest `1.2` adds
+  write-once prepared/start/result phase evidence, separates recovery attempts
+  from external-call attempts, safely continues pre-call work, and admits a new
+  call only after a prior failed result independently verifies.
   Full Stage 1–18 ownership and a priced, independently reviewed model-node
   effectiveness comparison remain pending; engineering evidence cannot be
   converted into an effectiveness claim.

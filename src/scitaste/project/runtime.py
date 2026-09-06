@@ -435,6 +435,7 @@ def _replace_symlink(path: Path, target: str) -> None:
     temporary.unlink(missing_ok=True)
     temporary.symlink_to(target, target_is_directory=True)
     os.replace(temporary, path)
+    _fsync_directory(path.parent)
 
 
 @contextmanager
@@ -461,9 +462,21 @@ def _atomic_text(path: Path, contents: str) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp_name, path)
+        _fsync_directory(path.parent)
     except BaseException:
         Path(temp_name).unlink(missing_ok=True)
         raise
+
+
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _default_readme(manifest: ProjectManifest) -> str:

@@ -55,8 +55,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
   traceable object-level patches;
 - a pinned, unmodified AutoResearchClaw adapter with prerequisite checks,
   contract-validated artifact manifests, stable session identity, runtime
-  accounting, no-repeat recovery for durable successful actions, and a
-  successful live Stage 1–3 vertical slice;
+  accounting, an append-only three-phase external-call protocol, no-repeat
+  recovery for durable results, and a successful live Stage 1–3 vertical slice;
 - an independent six-family SciTasteBench smoke suite with five isolated
   intrinsic/augmentation conditions, transfer and robustness diagnostics,
   paired comparisons, exact replay support, and content-hashed reports;
@@ -593,8 +593,10 @@ Provider-backed selected stages should first create their Stage 1–2 source wit
 `substrate project bootstrap plan|execute|status`, then use
 `substrate project plan|execute|status` with `--source-project-run`. This keeps
 the prerequisite, immutable input, mutable work, and exact completion evidence
-under one project and supports audited recovery without modifying
-AutoResearchClaw.
+under one project. Every new provider-facing attempt records write-once
+`prepared`, `call_started`, and `result_published` receipts, so a pre-call crash
+can continue safely, a started call with no result remains blocked, and a
+durable result is never paid for twice. AutoResearchClaw remains unmodified.
 
 SciTaste development itself is also tracked as a dogfooding case for process
 usability and auditability. It is deliberately excluded from independent

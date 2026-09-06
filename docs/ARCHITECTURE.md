@@ -981,3 +981,45 @@ Recovery does not make AutoResearchClaw part of SciTaste's default runtime and
 does not convert Stage 1--3 engineering evidence into a scientific-effectiveness
 claim. It closes an accounting and provenance gap in the optional compatibility
 adapter while the first-party native path remains the product default.
+
+### ADR-036: External-call phase evidence separates safe preparation from unknown execution
+
+Status: accepted for project-owned AutoResearchClaw bootstrap and selected actions.
+
+An invocation and a terminal result close the most expensive recovery window,
+but two materially different interruptions previously looked identical: a crash
+after local preparation but before the executor boundary, and a crash after the
+external call began but before a result was retained. Retrying the first is safe;
+retrying the second can duplicate cost and nondeterministic work. A mutable phase
+flag cannot be authoritative because it can be overwritten or advance without
+its predecessor evidence.
+
+Every new external attempt therefore owns three write-once, self-hashed,
+predecessor-linked records: `prepared`, `call_started`, and `result_published`.
+The stable identity contains project/run, a dedicated external-attempt number,
+the invocation or bootstrap-manifest hash, an exact non-secret call-spec hash,
+and the full pre-call work fingerprint. The start record is published after the
+last local preflight. The returned `ExecutionResult` binds that start record;
+the terminal phase also binds the exact result file, result ID/status, and full
+post-call work fingerprint. File and directory entries are fsynced before later
+authority is published.
+
+Recovery treats the phase files as truth and ProjectRun fields only as a cache.
+A cache may lag a valid chain and is repaired during normal finalization; it may
+not lead or contradict the chain. A sole valid prepared record reuses the
+original decision/invocation and can cross the call boundary once. A start with
+no valid result remains blocked. A valid result written before its final phase
+record is independently revalidated before that record is completed. Success
+never calls again. Failure must independently reproduce its command, pin,
+terminal evidence, error, cost, and full work tree before archive; only the next
+provider attempt increments `external_call_attempt`. Metadata-only resumes
+increment `resume_attempt` but not the external counter.
+
+Manifest `1.2` declares phase-v1. Manifest `1.1` stays readable as a phase-less
+legacy contract: exact results retain their existing recovery behavior, while
+missing results remain ambiguous and no synthetic phase history is created.
+Manifest `1.0` interrupted and failed runs remain read-only. This protocol does
+not claim distributed exactly-once execution: the interval after `call_started`
+and before a durable result is inherently unknowable without a provider-side
+idempotency key. Descriptor-relative storage and crash-safe failed-attempt
+rollover remain separate hardening work.

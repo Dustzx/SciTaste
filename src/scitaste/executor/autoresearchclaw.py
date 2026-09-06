@@ -309,7 +309,10 @@ class AutoResearchClawExecutor:
             if missing
             else None
         )
-        if set(result.data) == {"run_dir", "stage", "invocation_sha256"}:
+        if set(result.data) in (
+            {"run_dir", "stage", "invocation_sha256"},
+            {"run_dir", "stage", "invocation_sha256", "call_started_sha256"},
+        ):
             if (
                 expected_missing_error is None
                 or result.error != expected_missing_error

@@ -12,13 +12,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from scitaste.executor.autoresearchclaw import PINNED_COMMIT, AutoResearchClawExecutor
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.call_protocol import (
+    ExternalCallProtocol,
+    tree_fingerprint,
+)
 from scitaste.executor.project_workflow import (
     ProjectSubstrateActionWorkflow,
     ProjectSubstrateWorkflowConfig,
     _acquire_run_lock,
     _copy_file_exclusive,
     _copy_tree_exclusive,
+    _external_call_attempt,
     _file_sha256,
+    _fsync_directory,
     _is_sha256,
     _prepare_owned_parent,
     _registered_run,
@@ -28,6 +34,7 @@ from scitaste.executor.project_workflow import (
     _run_root,
     _tree_summary,
     _TreeSummary,
+    _validate_call_phase_cache,
     _workflow_config_sha256,
     _write_model_exclusive,
 )
@@ -50,7 +57,7 @@ class ProjectSubstrateBootstrapManifest(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     project_id: str
     run_id: str
     selected_action_type: Literal[MetaAction.SEARCH] = MetaAction.SEARCH
@@ -60,6 +67,7 @@ class ProjectSubstrateBootstrapManifest(BaseModel):
     executor_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     expected_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     actual_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    external_call_protocol_version: Literal["1.0"] | None = None
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @field_validator("project_id")
@@ -74,11 +82,20 @@ class ProjectSubstrateBootstrapManifest(BaseModel):
 
     @classmethod
     def create(cls, **payload: Any) -> ProjectSubstrateBootstrapManifest:
-        return cls.model_validate({**payload, "manifest_sha256": content_sha256(payload)})
+        canonical = {key: value for key, value in payload.items() if value is not None}
+        draft = cls.model_construct(**canonical, manifest_sha256="0" * 64)
+        identity = draft.model_dump(
+            mode="json",
+            exclude={"manifest_sha256"},
+            exclude_none=True,
+        )
+        return cls.model_validate({**identity, "manifest_sha256": content_sha256(identity)})
 
     @model_validator(mode="after")
     def self_hash_matches(self) -> ProjectSubstrateBootstrapManifest:
-        expected = content_sha256(self.model_dump(mode="json", exclude={"manifest_sha256"}))
+        expected = content_sha256(
+            self.model_dump(mode="json", exclude={"manifest_sha256"}, exclude_none=True)
+        )
         if self.manifest_sha256 != expected:
             raise ValueError("project substrate bootstrap manifest hash mismatch")
         if (
@@ -86,6 +103,8 @@ class ProjectSubstrateBootstrapManifest(BaseModel):
             or self.actual_substrate_commit != PINNED_COMMIT
         ):
             raise ValueError("project substrate bootstrap manifest pin mismatch")
+        if (self.schema_version == "1.2") != (self.external_call_protocol_version == "1.0"):
+            raise ValueError("bootstrap call protocol version disagrees with schema")
         return self
 
 
@@ -190,6 +209,8 @@ class ProjectSubstrateBootstrapWorkflow:
         workflow_hash = _workflow_config_sha256(config)
         executor_hash = _file_sha256(config.autoresearchclaw_config)
         recovery_without_provider_available = False
+        resume_disposition = "prepare_and_call"
+        call_phase: str | None = None
         if resume:
             snapshot = runtime.open(config.project_id)
             run = _registered_run(snapshot, run_id)
@@ -214,6 +235,14 @@ class ProjectSubstrateBootstrapWorkflow:
             recovery_without_provider_available = _bootstrap_success_available(
                 _run_root(runtime, config.project_id, run_id)
             )
+            resume_disposition, call_phase = self._resume_disposition(
+                runtime,
+                snapshot,
+                config,
+                run_id,
+                manifest,
+            )
+            recovery_without_provider_available = resume_disposition == "recover_result"
         else:
             try:
                 existing = runtime.open(config.project_id)
@@ -235,9 +264,13 @@ class ProjectSubstrateBootstrapWorkflow:
             "live_config_enabled": config.live_enabled,
             "caller_live_authorized": allow_live,
             "would_contact_provider": bool(
-                config.live_enabled and allow_live and not recovery_without_provider_available
+                config.live_enabled
+                and allow_live
+                and resume_disposition in {"prepare_and_call", "retry_verified_failure"}
             ),
             "recovery_without_provider_available": recovery_without_provider_available,
+            "resume_disposition": resume_disposition,
+            "external_call_phase": call_phase,
             "workflow_config_sha256": workflow_hash,
             "executor_config_sha256": executor_hash,
             "expected_substrate_commit": PINNED_COMMIT,
@@ -286,6 +319,8 @@ class ProjectSubstrateBootstrapWorkflow:
                     workflow_config_sha256=plan["workflow_config_sha256"],
                     bootstrap_target_stage=_BOOTSTRAP_TARGET,
                     resume_attempt=0,
+                    external_call_protocol_version="1.0",
+                    external_call_attempt=1,
                 ),
                 expected_revision=snapshot.revision,
             )
@@ -299,6 +334,7 @@ class ProjectSubstrateBootstrapWorkflow:
                 label="substrate bootstrap",
             )
             snapshot = runtime.open(config.project_id)
+            resume_prepared = False
             if resume:
                 for name in ("inputs", "work"):
                     _require_owned_directory(
@@ -312,9 +348,17 @@ class ProjectSubstrateBootstrapWorkflow:
                     config,
                     run_id,
                     workflow_hash=str(plan["workflow_config_sha256"]),
+                    resume_disposition=str(plan["resume_disposition"]),
+                )
+                registered = _registered_run(snapshot, run_id)
+                external_call_attempt = (
+                    _external_call_attempt(registered)
+                    if (registered.model_extra or {}).get("external_call_protocol_version") == "1.0"
+                    else 1
                 )
             else:
                 resume_attempt = 0
+                external_call_attempt = 1
             if not resume:
                 _copy_file_exclusive(
                     config.autoresearchclaw_config,
@@ -354,17 +398,85 @@ class ProjectSubstrateBootstrapWorkflow:
                         archived_attempt=None,
                         recovered_without_provider=True,
                     )
-                self._require_retry_safe(run_root, manifest, config)
-                archived_attempt = _archive_attempt(run_root)
-                (run_root / "substrate_bootstrap").mkdir(parents=True, exist_ok=False)
+                if plan["resume_disposition"] == "prepare_and_call":
+                    self._require_prepared_retry(
+                        runtime,
+                        snapshot,
+                        run_root,
+                        manifest,
+                        config,
+                        run_id,
+                    )
+                    resume_prepared = True
+                    archived_attempt = None
+                else:
+                    self._require_retry_safe(run_root, manifest, config)
+                    archived_attempt = _archive_attempt(run_root)
+                    external_call_attempt += 1
+                    snapshot = runtime.update_run(
+                        config.project_id,
+                        run_id,
+                        expected_revision=snapshot.revision,
+                        external_call_protocol_version="1.0",
+                        external_call_attempt=external_call_attempt,
+                        external_call_phase=None,
+                        external_call_phase_sha256=None,
+                        external_call_request_sha256=None,
+                    )
+                    (run_root / "substrate_bootstrap").mkdir(parents=True, exist_ok=False)
             work_root = run_root / "work/autoresearchclaw"
-            _prepare_owned_parent(run_root, work_root.parent)
-            work_root.mkdir(exist_ok=False)
-            result = self._executor(
+            if not resume_prepared:
+                _prepare_owned_parent(run_root, work_root.parent)
+                work_root.mkdir(exist_ok=False)
+            protocol = ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol")
+            call_spec_sha256 = _bootstrap_call_spec_sha256(config, run_root)
+            if resume_prepared:
+                prepared = protocol.require_prepared(
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    operation="bootstrap",
+                    external_call_attempt=external_call_attempt,
+                    request_sha256=manifest.manifest_sha256,
+                    call_spec_sha256=call_spec_sha256,
+                    pre_call_work_sha256=tree_fingerprint(work_root),
+                )
+            else:
+                prepared = protocol.publish_prepared(
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    operation="bootstrap",
+                    external_call_attempt=external_call_attempt,
+                    request_sha256=manifest.manifest_sha256,
+                    call_spec_sha256=call_spec_sha256,
+                    pre_call_work_sha256=tree_fingerprint(work_root),
+                )
+            snapshot = runtime.update_run(
+                config.project_id,
+                run_id,
+                expected_revision=snapshot.revision,
+                external_call_protocol_version="1.0",
+                external_call_attempt=external_call_attempt,
+                external_call_phase=prepared.phase.value,
+                external_call_phase_sha256=prepared.receipt_sha256,
+                external_call_request_sha256=manifest.manifest_sha256,
+            )
+            live_executor = self._executor(
                 config,
                 dry_run=False,
                 config_path=run_root / "inputs/autoresearchclaw-config.yaml",
-            ).baseline_run(
+            )
+            substrate = live_executor.verify_substrate()
+            if (
+                not substrate["initialized"]
+                or not substrate["pinned"]
+                or _file_sha256(run_root / "inputs/autoresearchclaw-config.yaml")
+                != manifest.executor_config_sha256
+                or tree_fingerprint(work_root) != prepared.pre_call_work_sha256
+                or _bootstrap_call_spec_sha256(config, run_root) != prepared.call_spec_sha256
+            ):
+                raise ValueError("bootstrap call failed its final local preflight")
+            started = protocol.publish_call_started()
+            result = live_executor.baseline_run(
                 topic=config.research_direction,
                 output_dir=work_root,
                 to_stage=_BOOTSTRAP_TARGET,
@@ -374,11 +486,18 @@ class ProjectSubstrateBootstrapWorkflow:
                     "data": {
                         **result.data,
                         "bootstrap_manifest_sha256": manifest.manifest_sha256,
+                        "call_started_sha256": started.receipt_sha256,
                     }
                 }
             )
             result_path = run_root / "substrate_bootstrap/executor_result.json"
             _write_model_exclusive(result_path, result)
+            protocol.publish_result(
+                executor_result_sha256=_file_sha256(result_path),
+                result_work_tree_sha256=tree_fingerprint(work_root),
+                result_id=result.result_id,
+                execution_status=result.status,
+            )
             receipt = self._build_receipt(run_root, manifest, result, config)
             _write_model_exclusive(
                 run_root / "substrate_bootstrap/source_receipt.json",
@@ -429,6 +548,35 @@ class ProjectSubstrateBootstrapWorkflow:
             )
         _verify_receipt(run_root, manifest, receipt)
         extra = run.model_extra or {}
+        phase_aware = (
+            manifest.schema_version == "1.2" or extra.get("external_call_protocol_version") == "1.0"
+        )
+        call_phase = "legacy_unjournaled"
+        call_phase_sha256: str | None = None
+        if phase_aware:
+            result = _load_bootstrap_result(run_root)
+            if result is None:
+                raise ValueError("completed bootstrap has no executor result")
+            protocol = ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol")
+            chain = protocol.load(required=True)
+            _validate_call_phase_cache(run, chain)
+            if len(chain) < 2 or result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+                raise ValueError("completed bootstrap result call-start binding drift")
+            phase_receipt = protocol.require_result(
+                project_id=project_id,
+                run_id=run_id,
+                operation="bootstrap",
+                external_call_attempt=_external_call_attempt(run),
+                request_sha256=manifest.manifest_sha256,
+                call_spec_sha256=chain[0].call_spec_sha256,
+                pre_call_work_sha256=chain[0].pre_call_work_sha256,
+                result_path=run_root / "substrate_bootstrap/executor_result.json",
+                result_work_tree_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+                result_id=result.result_id,
+                execution_status=result.status,
+            )
+            call_phase = phase_receipt.phase.value
+            call_phase_sha256 = phase_receipt.receipt_sha256
         expected_status = (
             "complete" if receipt.execution_status is ExecutionStatus.SUCCEEDED else "failed"
         )
@@ -440,6 +588,16 @@ class ProjectSubstrateBootstrapWorkflow:
             "source_snapshot_sha256": receipt.source_snapshot_sha256,
             "execution_status": receipt.execution_status.value,
         }
+        if phase_aware:
+            expected.update(
+                {
+                    "external_call_protocol_version": "1.0",
+                    "external_call_attempt": chain[-1].external_call_attempt,
+                    "external_call_phase": call_phase,
+                    "external_call_phase_sha256": call_phase_sha256,
+                    "external_call_request_sha256": manifest.manifest_sha256,
+                }
+            )
         if (
             run.status != expected_status
             or run.seed != manifest.seed
@@ -462,6 +620,8 @@ class ProjectSubstrateBootstrapWorkflow:
             "source_bytes": receipt.source_bytes,
             "telemetry_total_tokens": receipt.telemetry_total_tokens,
             "api_cost_measured": receipt.api_cost_measured,
+            "external_call_phase": call_phase,
+            "external_call_phase_sha256": call_phase_sha256,
             "source_locator": f"projects/{project_id}/runs/{run_id}/source/autoresearchclaw",
         }
 
@@ -508,7 +668,7 @@ class ProjectSubstrateBootstrapWorkflow:
         plan: dict[str, object],
     ) -> ProjectSubstrateBootstrapManifest:
         manifest = ProjectSubstrateBootstrapManifest.create(
-            schema_version="1.1",
+            schema_version="1.2",
             project_id=config.project_id,
             run_id=run_root.name,
             selected_action_type=MetaAction.SEARCH,
@@ -518,6 +678,7 @@ class ProjectSubstrateBootstrapWorkflow:
             executor_config_sha256=plan["executor_config_sha256"],
             expected_substrate_commit=PINNED_COMMIT,
             actual_substrate_commit=plan["actual_substrate_commit"],
+            external_call_protocol_version="1.0",
         )
         _write_model_exclusive(run_root / "bootstrap_manifest.json", manifest)
         return manifest
@@ -530,6 +691,7 @@ class ProjectSubstrateBootstrapWorkflow:
         run_id: str,
         *,
         workflow_hash: str,
+        resume_disposition: str,
     ) -> tuple[ProjectSnapshot, int]:
         run = _registered_run(snapshot, run_id)
         manifest = _load_manifest(_run_root(runtime, config.project_id, run_id))
@@ -542,12 +704,12 @@ class ProjectSubstrateBootstrapWorkflow:
         )
         if run.status not in {"failed", "running"}:
             raise ValueError("only a failed or recoverable running bootstrap can be resumed")
-        if run.status == "running" and not _bootstrap_success_available(
-            _run_root(runtime, config.project_id, run_id)
-        ):
-            raise ValueError(
-                "running bootstrap result publication is ambiguous; refusing a repeated call"
-            )
+        if resume_disposition in {"blocked_ambiguous", "legacy_read_only"}:
+            if run.status == "running":
+                raise ValueError(
+                    "running bootstrap result publication is ambiguous; refusing a repeated call"
+                )
+            raise ValueError("bootstrap result publication is ambiguous; refusing a repeated call")
         attempt = (run.model_extra or {}).get("resume_attempt", 0)
         if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 0:
             raise ValueError("registered bootstrap run has an invalid resume_attempt")
@@ -575,7 +737,7 @@ class ProjectSubstrateBootstrapWorkflow:
         workflow_hash: str,
         executor_hash: str,
     ) -> None:
-        if manifest.schema_version != "1.1":
+        if manifest.schema_version == "1.0":
             raise ValueError("legacy bootstrap runs lack no-repeat evidence and are read-only")
         expected = (
             config.project_id,
@@ -634,6 +796,7 @@ class ProjectSubstrateBootstrapWorkflow:
             if result is None:
                 raise ValueError("bootstrap receipt has no recorded executor result")
             self._verify_recorded_result(run_root, manifest, config, result)
+            self._verify_or_publish_call_result(run_root, manifest, config, result)
             _verify_receipt(run_root, manifest, receipt)
             if receipt.execution_status is ExecutionStatus.SUCCEEDED:
                 return receipt
@@ -642,11 +805,131 @@ class ProjectSubstrateBootstrapWorkflow:
         if result is None:
             return None
         self._verify_recorded_result(run_root, manifest, config, result)
+        self._verify_or_publish_call_result(run_root, manifest, config, result)
         if result.status is not ExecutionStatus.SUCCEEDED:
             return None
         receipt = self._build_receipt(run_root, manifest, result, config)
         _write_model_exclusive(receipt_path, receipt)
         return receipt
+
+    def _resume_disposition(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+        manifest: ProjectSubstrateBootstrapManifest,
+    ) -> tuple[str, str | None]:
+        run_root = _run_root(runtime, config.project_id, run_id)
+        result = _load_bootstrap_result(run_root)
+        if manifest.schema_version == "1.0":
+            return "legacy_read_only", None
+        run = _registered_run(snapshot, run_id)
+        phase_aware = (
+            manifest.schema_version == "1.2"
+            or (run.model_extra or {}).get("external_call_protocol_version") == "1.0"
+        )
+        if not phase_aware:
+            if result is None:
+                return "blocked_ambiguous", None
+            if result.status is ExecutionStatus.SUCCEEDED:
+                return "recover_result", "legacy_result_published"
+            if result.status is ExecutionStatus.FAILED:
+                return "retry_verified_failure", "legacy_result_published"
+            return "blocked_ambiguous", None
+
+        if (run.model_extra or {}).get("external_call_protocol_version") != "1.0":
+            raise ValueError("registered bootstrap call protocol version drift")
+        attempt = _external_call_attempt(run)
+        protocol = ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol")
+        chain = protocol.load(required=True)
+        expected_identity = (
+            config.project_id,
+            run_id,
+            "bootstrap",
+            attempt,
+            manifest.manifest_sha256,
+            _bootstrap_call_spec_sha256(config, run_root),
+        )
+        observed_identity = (
+            chain[0].project_id,
+            chain[0].run_id,
+            chain[0].operation,
+            chain[0].external_call_attempt,
+            chain[0].request_sha256,
+            chain[0].call_spec_sha256,
+        )
+        if observed_identity != expected_identity:
+            raise ValueError("bootstrap call protocol identity drift")
+        _validate_call_phase_cache(run, chain)
+        phase = chain[-1].phase.value
+        work_root = run_root / "work/autoresearchclaw"
+        if len(chain) == 1:
+            if result is not None:
+                raise ValueError("bootstrap result exists before call-start evidence")
+            protocol.require_prepared(
+                project_id=config.project_id,
+                run_id=run_id,
+                operation="bootstrap",
+                external_call_attempt=attempt,
+                request_sha256=manifest.manifest_sha256,
+                call_spec_sha256=_bootstrap_call_spec_sha256(config, run_root),
+                pre_call_work_sha256=tree_fingerprint(work_root),
+            )
+            return "prepare_and_call", phase
+        if result is None:
+            return "blocked_ambiguous", phase
+        if result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+            raise ValueError("bootstrap result call-start binding drift")
+        if len(chain) == 3:
+            protocol.require_result(
+                project_id=config.project_id,
+                run_id=run_id,
+                operation="bootstrap",
+                external_call_attempt=attempt,
+                request_sha256=manifest.manifest_sha256,
+                call_spec_sha256=_bootstrap_call_spec_sha256(config, run_root),
+                pre_call_work_sha256=chain[0].pre_call_work_sha256,
+                result_path=run_root / "substrate_bootstrap/executor_result.json",
+                result_work_tree_sha256=tree_fingerprint(work_root),
+                result_id=result.result_id,
+                execution_status=result.status,
+            )
+        if result.status is ExecutionStatus.SUCCEEDED:
+            return "recover_result", phase
+        if result.status is ExecutionStatus.FAILED:
+            return "retry_verified_failure", phase
+        return "blocked_ambiguous", phase
+
+    def _require_prepared_retry(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        run_root: Path,
+        manifest: ProjectSubstrateBootstrapManifest,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+    ) -> None:
+        if (
+            manifest.schema_version != "1.2"
+            and (_registered_run(snapshot, run_id).model_extra or {}).get(
+                "external_call_protocol_version"
+            )
+            != "1.0"
+        ):
+            raise ValueError("only phase-aware bootstrap runs can resume before call start")
+        if _load_bootstrap_result(run_root) is not None:
+            raise ValueError("prepared bootstrap attempt unexpectedly has an executor result")
+        run = _registered_run(snapshot, run_id)
+        ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol").require_prepared(
+            project_id=config.project_id,
+            run_id=run_id,
+            operation="bootstrap",
+            external_call_attempt=_external_call_attempt(run),
+            request_sha256=manifest.manifest_sha256,
+            call_spec_sha256=_bootstrap_call_spec_sha256(config, run_root),
+            pre_call_work_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+        )
 
     def _require_retry_safe(
         self,
@@ -658,8 +941,39 @@ class ProjectSubstrateBootstrapWorkflow:
         if result is None:
             raise ValueError("bootstrap result publication is ambiguous; refusing a repeated call")
         self._verify_recorded_result(run_root, manifest, config, result)
+        self._verify_or_publish_call_result(run_root, manifest, config, result)
         if result.status is not ExecutionStatus.FAILED:
             raise ValueError("a successful bootstrap result must be recovered, not retried")
+
+    def _verify_or_publish_call_result(
+        self,
+        run_root: Path,
+        manifest: ProjectSubstrateBootstrapManifest,
+        config: ProjectSubstrateWorkflowConfig,
+        result: ExecutionResult,
+    ) -> None:
+        protocol_root = run_root / "substrate_bootstrap/call_protocol"
+        phase_aware = manifest.schema_version == "1.2" or protocol_root.exists()
+        if not phase_aware:
+            return
+        protocol = ExternalCallProtocol(protocol_root)
+        chain = protocol.load(required=True)
+        if len(chain) < 2 or result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+            raise ValueError("recorded bootstrap result call-start binding drift")
+        protocol.require_result(
+            project_id=manifest.project_id,
+            run_id=manifest.run_id,
+            operation="bootstrap",
+            external_call_attempt=chain[0].external_call_attempt,
+            request_sha256=manifest.manifest_sha256,
+            call_spec_sha256=_bootstrap_call_spec_sha256(config, run_root),
+            pre_call_work_sha256=chain[0].pre_call_work_sha256,
+            result_path=run_root / "substrate_bootstrap/executor_result.json",
+            result_work_tree_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+            result_id=result.result_id,
+            execution_status=result.status,
+            allow_unjournaled_publication=len(chain) == 2,
+        )
 
     def _verify_recorded_result(
         self,
@@ -802,6 +1116,12 @@ class ProjectSubstrateBootstrapWorkflow:
     ) -> dict[str, object]:
         complete = receipt.execution_status is ExecutionStatus.SUCCEEDED
         status = "complete" if complete else "failed"
+        run_root = _run_root(runtime, config.project_id, run_id)
+        protocol = ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol")
+        chain = protocol.load(required=False)
+        call_phase = chain[-1].phase.value if chain else "legacy_unjournaled"
+        call_phase_sha256 = chain[-1].receipt_sha256 if chain else None
+        external_call_attempt = chain[-1].external_call_attempt if chain else None
         snapshot = runtime.update_run(
             config.project_id,
             run_id,
@@ -813,6 +1133,11 @@ class ProjectSubstrateBootstrapWorkflow:
             source_snapshot_sha256=receipt.source_snapshot_sha256,
             execution_status=receipt.execution_status.value,
             recovered_without_provider=recovered_without_provider,
+            external_call_protocol_version="1.0" if chain else None,
+            external_call_attempt=external_call_attempt,
+            external_call_phase=call_phase,
+            external_call_phase_sha256=call_phase_sha256,
+            external_call_request_sha256=manifest.manifest_sha256 if chain else None,
             failure_type=None,
             failure_message=None,
         )
@@ -831,6 +1156,8 @@ class ProjectSubstrateBootstrapWorkflow:
             "source_bytes": receipt.source_bytes,
             "telemetry_total_tokens": receipt.telemetry_total_tokens,
             "api_cost_measured": receipt.api_cost_measured,
+            "external_call_phase": call_phase,
+            "external_call_phase_sha256": call_phase_sha256,
         }
 
 
@@ -839,6 +1166,37 @@ def _load_manifest(run_root: Path) -> ProjectSubstrateBootstrapManifest:
     if path.is_symlink() or not path.is_file():
         raise ValueError("bootstrap manifest must be a regular owned file")
     return ProjectSubstrateBootstrapManifest.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _bootstrap_call_spec_sha256(
+    config: ProjectSubstrateWorkflowConfig,
+    run_root: Path,
+) -> str:
+    config_path = run_root / "inputs/autoresearchclaw-config.yaml"
+    executor = AutoResearchClawExecutor(
+        config_path=config_path,
+        timeout_seconds=config.timeout_seconds,
+        max_output_tokens=config.max_output_tokens,
+        max_total_tokens=config.max_total_tokens,
+    )
+    command = executor._base_command(
+        topic=config.research_direction,
+        output_dir=run_root / "work/autoresearchclaw",
+    )
+    command.extend(["--to-stage", _BOOTSTRAP_TARGET])
+    return content_sha256(
+        {
+            "schema_version": "1.0",
+            "operation": "bootstrap",
+            "executor": "autoresearchclaw",
+            "command": command,
+            "timeout_seconds": config.timeout_seconds,
+            "max_output_tokens": config.max_output_tokens,
+            "max_total_tokens": config.max_total_tokens,
+            "executor_config_sha256": _file_sha256(config_path),
+            "substrate_commit": PINNED_COMMIT,
+        }
+    )
 
 
 def _load_receipt(run_root: Path) -> ProjectSubstrateSourceReceipt:
@@ -1021,14 +1379,18 @@ def _archive_attempt(run_root: Path) -> str | None:
     for source in existing:
         _require_owned_directory(run_root, source, label="archived bootstrap attempt")
     _prepare_owned_parent(run_root, archive_root)
+    _fsync_directory(run_root)
     index = 1
     while (archive_root / f"attempt-{index:03d}").exists():
         index += 1
     destination = archive_root / f"attempt-{index:03d}"
     destination.mkdir()
+    _fsync_directory(archive_root)
     _require_owned_directory(archive_root, destination, label="bootstrap attempt archive")
     for source in existing:
         os.replace(source, destination / source.name)
+    _fsync_directory(destination)
+    _fsync_directory(run_root)
     return destination.relative_to(run_root).as_posix()
 
 

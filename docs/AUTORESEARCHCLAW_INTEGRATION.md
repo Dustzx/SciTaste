@@ -141,28 +141,43 @@ Generated upstream artifacts and exact execution logs stay under ignored
 `outputs/`. Aggregate hashes and acceptance facts may be committed.
 
 An interrupted selected action has the same no-repeat boundary as the bootstrap.
-An owned run lock prevents concurrent calls. Before provider access, an immutable
-invocation binds the exact state snapshot, selected action, original decision
-intent, and project manifest; the executor result then binds that invocation.
-On explicit resume, SciTaste revalidates the pinned command, immutable
-predecessor, complete work tree, terminal checkpoint, stage artifacts, summary,
-and incremental cost, then completes local bookkeeping without another call.
-Even a recorded `FAILED` result must reproduce its failure evidence before a
-retry. A hard-crashed `running` run is locally recoverable only from a verified
-success; all unknown or contradictory outcomes remain blocked.
+An owned run lock prevents concurrent calls. Manifest schema `1.2` adds a
+phase-v1 append-only journal beneath the action/bootstrap directory. Its
+write-once records form this chain:
 
-This contract is identified by project substrate manifest schema `1.1` and
-normalized executor evidence `autoresearchclaw-result-v2`. Earlier completed
-runs remain readable through their existing receipts, but interrupted or failed
-legacy runs are deliberately read-only and require a new run ID; SciTaste does
-not guess at missing pre-call evidence.
+```text
+prepared → call_started → result_published
+```
+
+`prepared` binds project/run identity, the external-attempt number, invocation
+or bootstrap manifest, exact non-secret command specification, pin, token/time
+limits, configuration hash, and complete pre-call work tree. `call_started`
+predecessor-binds that record and is published only after final local preflight.
+The executor result binds the call-start receipt; `result_published` then binds
+the result file hash, result ID/status, and resulting complete work tree.
+
+Explicit resume interprets those files before mutable project metadata. A sole
+valid `prepared` record reuses the same invocation and does not increment
+`external_call_attempt`. `call_started` without a result is an unknowable
+external outcome and always blocks. If the result was fsynced but the final phase
+record was interrupted, SciTaste independently validates it before completing
+the chain. A verified success completes local bookkeeping without another call.
+A verified failure may be archived, increments `external_call_attempt`, and only
+then admits the next call. `resume_attempt` remains a separate recovery counter.
+
+Schema `1.1` remains a verifiable phase-less legacy boundary: exact durable
+successes can recover and exact durable failures can authorize a new phase-v1
+attempt, but a missing result remains ambiguous and no historical phase records
+are invented. Schema `1.0` interrupted or failed runs remain read-only. Executor
+normalization remains `autoresearchclaw-result-v2`.
 
 The current filesystem guard rejects symlinked owned directories, rechecks copy
 destinations before publication, and requires a regular lock inode. It is not a
 hostile-writer sandbox: eliminating every path check/use race would require a
-future descriptor-relative (`openat`) storage layer. A crash with no durable
-result remains intentionally ambiguous, including the narrow interval after a
-verified failed attempt is archived but before the next result is published.
+future descriptor-relative (`openat`) storage layer. A started call with no
+durable result remains intentionally ambiguous. Attempt-rollover recovery after
+a verified failed attempt is still conservative if interruption happens between
+archive publication and the next `prepared` record.
 
 ## Current limit
 

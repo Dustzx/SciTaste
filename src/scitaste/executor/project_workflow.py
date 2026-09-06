@@ -21,6 +21,11 @@ from scitaste.executor.autoresearchclaw import (
     CommandRunner,
 )
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.call_protocol import (
+    ExternalCallPhase,
+    ExternalCallProtocol,
+    tree_fingerprint,
+)
 from scitaste.executor.workflow import SubstrateActionInvocation, SubstrateActionWorkflow
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
@@ -76,7 +81,7 @@ class ProjectSubstrateRunManifest(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0", "1.1"] = "1.1"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     project_id: str
     run_id: str
     action_type: MetaAction
@@ -91,6 +96,7 @@ class ProjectSubstrateRunManifest(BaseModel):
     source_receipt_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     pre_state_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     action_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    external_call_protocol_version: Literal["1.0"] | None = None
     expected_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     actual_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -133,6 +139,8 @@ class ProjectSubstrateRunManifest(BaseModel):
             raise ValueError("project substrate source provenance fields disagree")
         if (self.pre_state_sha256 is None) != (self.action_sha256 is None):
             raise ValueError("project substrate pre-call identity fields disagree")
+        if (self.schema_version == "1.2") != (self.external_call_protocol_version == "1.0"):
+            raise ValueError("project substrate call protocol version disagrees with schema")
         return self
 
 
@@ -230,6 +238,8 @@ class ProjectSubstrateActionWorkflow:
         source_summary: _TreeSummary | None = None
         source_receipt_sha256: str | None = None
         recovery_without_provider_available = False
+        resume_disposition = "prepare_and_call"
+        call_phase: str | None = None
         if resume:
             snapshot = runtime.open(config.project_id)
             registered = _registered_run(snapshot, run_id)
@@ -263,6 +273,14 @@ class ProjectSubstrateActionWorkflow:
             recovery_without_provider_available = _recorded_success_available(
                 _run_root(runtime, config.project_id, run_id)
             )
+            resume_disposition, call_phase = self._resume_disposition(
+                runtime,
+                snapshot,
+                config,
+                run_id,
+                manifest,
+            )
+            recovery_without_provider_available = resume_disposition == "recover_result"
         else:
             if (source_run_dir is None) == (source_project_run_id is None):
                 raise ValueError(
@@ -305,9 +323,13 @@ class ProjectSubstrateActionWorkflow:
             "live_config_enabled": config.live_enabled,
             "caller_live_authorized": allow_live,
             "would_contact_provider": bool(
-                config.live_enabled and allow_live and not recovery_without_provider_available
+                config.live_enabled
+                and allow_live
+                and resume_disposition in {"prepare_and_call", "retry_verified_failure"}
             ),
             "recovery_without_provider_available": recovery_without_provider_available,
+            "resume_disposition": resume_disposition,
+            "external_call_phase": call_phase,
             "workflow_config_sha256": workflow_config_sha256,
             "executor_config_sha256": executor_config_sha256,
             "source_snapshot_sha256": source_summary.fingerprint,
@@ -364,6 +386,8 @@ class ProjectSubstrateActionWorkflow:
                     source_project_run_id=plan["source_project_run_id"],
                     source_receipt_sha256=plan["source_receipt_sha256"],
                     resume_attempt=0,
+                    external_call_protocol_version="1.0",
+                    external_call_attempt=1,
                 ),
                 expected_revision=snapshot.revision,
             )
@@ -382,6 +406,7 @@ class ProjectSubstrateActionWorkflow:
                 label="substrate action",
             )
             snapshot = runtime.open(config.project_id)
+            resume_prepared = False
             if resume:
                 for name in ("inputs", "work", "substrate_action"):
                     _require_owned_directory(
@@ -396,6 +421,12 @@ class ProjectSubstrateActionWorkflow:
                     run_id,
                     plan,
                 )
+                registered = _registered_run(snapshot, run_id)
+                external_call_attempt = (
+                    _external_call_attempt(registered)
+                    if (registered.model_extra or {}).get("external_call_protocol_version") == "1.0"
+                    else 1
+                )
                 recovered = self._recover_completed_action(
                     runtime,
                     snapshot,
@@ -406,10 +437,26 @@ class ProjectSubstrateActionWorkflow:
                 )
                 if recovered is not None:
                     return recovered
-                self._require_retry_safe(runtime, snapshot, config, run_id)
-                archived_attempt = _archive_attempt(run_root)
+                if plan["resume_disposition"] == "prepare_and_call":
+                    self._require_prepared_retry(runtime, snapshot, config, run_id)
+                    resume_prepared = True
+                    archived_attempt = None
+                else:
+                    self._require_retry_safe(runtime, snapshot, config, run_id)
+                    archived_attempt = _archive_attempt(run_root)
+                    external_call_attempt += 1
+                    snapshot = runtime.update_run(
+                        config.project_id,
+                        run_id,
+                        expected_revision=snapshot.revision,
+                        external_call_attempt=external_call_attempt,
+                        external_call_phase=None,
+                        external_call_phase_sha256=None,
+                        external_call_request_sha256=None,
+                    )
             else:
                 resume_attempt = 0
+                external_call_attempt = 1
                 if source_project_run_id is not None:
                     from scitaste.executor.project_bootstrap import (
                         ProjectSubstrateBootstrapWorkflow,
@@ -445,7 +492,8 @@ class ProjectSubstrateActionWorkflow:
                 raise ValueError("owned AutoResearchClaw input snapshot changed before execution")
             manifest = self._publish_or_validate_manifest(run_root, config, plan, source_summary)
             work_root = run_root / "work/autoresearchclaw"
-            _copy_tree_exclusive(run_root / "inputs/autoresearchclaw", work_root)
+            if not resume_prepared:
+                _copy_tree_exclusive(run_root / "inputs/autoresearchclaw", work_root)
             executor = self._executor(
                 config,
                 dry_run=False,
@@ -465,6 +513,17 @@ class ProjectSubstrateActionWorkflow:
                     != manifest.action_sha256
                 ):
                     raise ValueError("substrate invocation differs from its pre-call manifest")
+                prepared = ExternalCallProtocol(
+                    run_root / "substrate_action/call_protocol"
+                ).require_prepared(
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    operation="selected_action",
+                    external_call_attempt=external_call_attempt,
+                    request_sha256=invocation.invocation_sha256,
+                    call_spec_sha256=_selected_call_spec_sha256(config, run_root),
+                    pre_call_work_sha256=tree_fingerprint(work_root),
+                )
                 snapshot = runtime.update_run(
                     config.project_id,
                     run_id,
@@ -473,15 +532,41 @@ class ProjectSubstrateActionWorkflow:
                     pre_state_sha256=manifest.pre_state_sha256,
                     action_sha256=manifest.action_sha256,
                     invocation_sha256=invocation.invocation_sha256,
+                    external_call_protocol_version="1.0",
+                    external_call_attempt=external_call_attempt,
+                    external_call_phase=ExternalCallPhase.PREPARED.value,
+                    external_call_phase_sha256=prepared.receipt_sha256,
+                    external_call_request_sha256=invocation.invocation_sha256,
                 )
 
-            action_summary = SubstrateActionWorkflow(executor=executor, seed=self.seed).run(
+            def validate_pre_call(state: ResearchState, action: ResearchAction) -> None:
+                substrate = executor.verify_substrate()
+                stage = ACTION_TO_STAGE[config.action_type]
+                missing = executor._missing_inputs(work_root, stage)
+                if (
+                    not substrate["initialized"]
+                    or not substrate["pinned"]
+                    or missing
+                    or content_sha256(state.model_dump(mode="json")) != manifest.pre_state_sha256
+                    or content_sha256(action.model_dump(mode="json")) != manifest.action_sha256
+                    or _file_sha256(run_root / "inputs/autoresearchclaw-config.yaml")
+                    != manifest.executor_config_sha256
+                ):
+                    raise ValueError("selected substrate call failed its final local preflight")
+
+            action_workflow = SubstrateActionWorkflow(executor=executor, seed=self.seed)
+            execute = action_workflow.resume_prepared if resume_prepared else action_workflow.run
+            action_summary = execute(
                 action_type=config.action_type,
                 run_dir=work_root,
                 output_dir=run_root / "substrate_action",
                 invocation_binding=manifest.manifest_sha256,
                 before_execute=bind_invocation,
+                before_call=validate_pre_call,
                 project_id=config.project_id,
+                owned_run_id=run_id,
+                external_call_attempt=external_call_attempt,
+                call_spec_sha256=_selected_call_spec_sha256(config, run_root),
                 topic=config.research_direction,
                 target_domain=config.execution_target_domain,
             )
@@ -509,6 +594,10 @@ class ProjectSubstrateActionWorkflow:
                 verification_sha256=verification.verification_sha256,
                 execution_status=action_summary["execution_status"],
                 recovered_without_provider=False,
+                external_call_protocol_version="1.0",
+                external_call_attempt=external_call_attempt,
+                external_call_phase=action_summary["call_phase"],
+                external_call_phase_sha256=action_summary["call_receipt_sha256"],
                 failure_type=None,
                 failure_message=None,
             )
@@ -527,6 +616,8 @@ class ProjectSubstrateActionWorkflow:
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
             "execution_status": action_summary["execution_status"],
+            "external_call_phase": action_summary["call_phase"],
+            "external_call_phase_sha256": action_summary["call_receipt_sha256"],
             "transition_applied": action_summary["transition_applied"],
             "state_revision": action_summary["state_revision"],
             "artifact_count": action_summary["artifact_count"],
@@ -586,6 +677,11 @@ class ProjectSubstrateActionWorkflow:
             dry_run=False,
             config_path=run_root / "inputs/autoresearchclaw-config.yaml",
         )
+        phase_aware = (
+            manifest.schema_version == "1.2"
+            or (registered.model_extra or {}).get("external_call_protocol_version") == "1.0"
+        )
+        external_call_attempt = _external_call_attempt(registered) if phase_aware else 1
         action_summary = SubstrateActionWorkflow(
             executor=executor, seed=self.seed
         ).recover_recorded_success(
@@ -595,8 +691,12 @@ class ProjectSubstrateActionWorkflow:
             output_dir=action_root,
             invocation_binding=manifest.manifest_sha256,
             project_id=config.project_id,
+            owned_run_id=run_id,
+            external_call_attempt=external_call_attempt,
+            call_spec_sha256=_selected_call_spec_sha256(config, run_root),
             topic=config.research_direction,
             target_domain=config.execution_target_domain,
+            require_call_protocol=phase_aware,
         )
         if action_summary is None:  # pragma: no cover - guarded by the parsed successful result
             raise ValueError("recorded substrate success disappeared during recovery")
@@ -631,6 +731,10 @@ class ProjectSubstrateActionWorkflow:
             verification_sha256=verification.verification_sha256,
             execution_status=ExecutionStatus.SUCCEEDED.value,
             recovered_without_provider=True,
+            external_call_protocol_version="1.0" if phase_aware else None,
+            external_call_attempt=external_call_attempt if phase_aware else None,
+            external_call_phase=action_summary.get("call_phase", "legacy_unjournaled"),
+            external_call_phase_sha256=action_summary.get("call_receipt_sha256"),
             failure_type=None,
             failure_message=None,
         )
@@ -644,6 +748,8 @@ class ProjectSubstrateActionWorkflow:
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
             "execution_status": action_summary["execution_status"],
+            "external_call_phase": action_summary.get("call_phase", "legacy_unjournaled"),
+            "external_call_phase_sha256": action_summary.get("call_receipt_sha256"),
             "transition_applied": action_summary["transition_applied"],
             "state_revision": action_summary["state_revision"],
             "artifact_count": action_summary["artifact_count"],
@@ -681,6 +787,18 @@ class ProjectSubstrateActionWorkflow:
         )
         if result.data.get("invocation_sha256") != invocation.invocation_sha256:
             raise ValueError("recorded substrate failed result invocation binding drift")
+        registered = _registered_run(snapshot, run_id)
+        phase_aware = (
+            manifest.schema_version == "1.2"
+            or (registered.model_extra or {}).get("external_call_protocol_version") == "1.0"
+        )
+        protocol: ExternalCallProtocol | None = None
+        chain: tuple[Any, ...] = ()
+        if phase_aware:
+            protocol = ExternalCallProtocol(action_root / "call_protocol")
+            chain = protocol.load(required=True)
+            if len(chain) < 2 or result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+                raise ValueError("recorded substrate failed result call-start binding drift")
         executor = self._executor(
             config,
             dry_run=False,
@@ -692,6 +810,155 @@ class ProjectSubstrateActionWorkflow:
             result,
             predecessor_run_dir=run_root / "inputs/autoresearchclaw",
         )
+        if protocol is not None:
+            protocol.require_result(
+                project_id=config.project_id,
+                run_id=run_id,
+                operation="selected_action",
+                external_call_attempt=_external_call_attempt(registered),
+                request_sha256=invocation.invocation_sha256,
+                call_spec_sha256=_selected_call_spec_sha256(config, run_root),
+                pre_call_work_sha256=chain[0].pre_call_work_sha256,
+                result_path=action_root / "executor_result.json",
+                result_work_tree_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+                result_id=result.result_id,
+                execution_status=result.status,
+                allow_unjournaled_publication=len(chain) == 2,
+            )
+
+    def _require_prepared_retry(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+    ) -> None:
+        run_root = _run_root(runtime, config.project_id, run_id)
+        manifest = _load_manifest(run_root)
+        if manifest.schema_version != "1.2":
+            raise ValueError("only phase-aware substrate runs can resume before call start")
+        action_root = run_root / "substrate_action"
+        invocation = _load_action_invocation(action_root)
+        predecessor = StateStore(action_root).load(invocation.state_snapshot_id)
+        _validate_recorded_pre_call_binding(
+            run_root,
+            _registered_run(snapshot, run_id),
+            manifest,
+            invocation,
+            predecessor,
+            allow_lagging_cache=True,
+        )
+        result = _load_action_result(action_root)
+        if result is not None:
+            raise ValueError("prepared substrate attempt unexpectedly has an executor result")
+        ExternalCallProtocol(action_root / "call_protocol").require_prepared(
+            project_id=config.project_id,
+            run_id=run_id,
+            operation="selected_action",
+            external_call_attempt=_external_call_attempt(_registered_run(snapshot, run_id)),
+            request_sha256=invocation.invocation_sha256,
+            call_spec_sha256=_selected_call_spec_sha256(config, run_root),
+            pre_call_work_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+        )
+
+    def _resume_disposition(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+        manifest: ProjectSubstrateRunManifest,
+    ) -> tuple[str, str | None]:
+        run_root = _run_root(runtime, config.project_id, run_id)
+        action_root = run_root / "substrate_action"
+        result = _load_action_result(action_root)
+        if manifest.schema_version == "1.0":
+            return "legacy_read_only", None
+        run = _registered_run(snapshot, run_id)
+        phase_aware = (
+            manifest.schema_version == "1.2"
+            or (run.model_extra or {}).get("external_call_protocol_version") == "1.0"
+        )
+        if not phase_aware:
+            if result is None:
+                return "blocked_ambiguous", None
+            if result.status is ExecutionStatus.SUCCEEDED:
+                return "recover_result", "legacy_result_published"
+            if result.status is ExecutionStatus.FAILED:
+                return "retry_verified_failure", "legacy_result_published"
+            return "blocked_ambiguous", None
+
+        if (run.model_extra or {}).get("external_call_protocol_version") != "1.0":
+            raise ValueError("registered substrate call protocol version drift")
+        attempt = _external_call_attempt(run)
+        invocation = _load_action_invocation(action_root)
+        predecessor = StateStore(action_root).load(invocation.state_snapshot_id)
+        _validate_recorded_pre_call_binding(
+            run_root,
+            run,
+            manifest,
+            invocation,
+            predecessor,
+            allow_lagging_cache=True,
+        )
+        protocol = ExternalCallProtocol(action_root / "call_protocol")
+        chain = protocol.load(required=True)
+        expected_identity = (
+            config.project_id,
+            run_id,
+            "selected_action",
+            attempt,
+            invocation.invocation_sha256,
+            _selected_call_spec_sha256(config, run_root),
+        )
+        observed_identity = (
+            chain[0].project_id,
+            chain[0].run_id,
+            chain[0].operation,
+            chain[0].external_call_attempt,
+            chain[0].request_sha256,
+            chain[0].call_spec_sha256,
+        )
+        if observed_identity != expected_identity:
+            raise ValueError("substrate call protocol identity drift")
+        _validate_call_phase_cache(run, chain)
+        phase = chain[-1].phase.value
+        if len(chain) == 1:
+            if result is not None:
+                raise ValueError("substrate result exists before call-start evidence")
+            protocol.require_prepared(
+                project_id=config.project_id,
+                run_id=run_id,
+                operation="selected_action",
+                external_call_attempt=attempt,
+                request_sha256=invocation.invocation_sha256,
+                call_spec_sha256=_selected_call_spec_sha256(config, run_root),
+                pre_call_work_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+            )
+            return "prepare_and_call", phase
+        if result is None:
+            return "blocked_ambiguous", phase
+        if result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+            raise ValueError("substrate result call-start binding drift")
+        if len(chain) == 3:
+            protocol.require_result(
+                project_id=config.project_id,
+                run_id=run_id,
+                operation="selected_action",
+                external_call_attempt=attempt,
+                request_sha256=invocation.invocation_sha256,
+                call_spec_sha256=_selected_call_spec_sha256(config, run_root),
+                pre_call_work_sha256=chain[0].pre_call_work_sha256,
+                result_path=action_root / "executor_result.json",
+                result_work_tree_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+                result_id=result.result_id,
+                execution_status=result.status,
+            )
+        if result.status is ExecutionStatus.SUCCEEDED:
+            return "recover_result", phase
+        if result.status is ExecutionStatus.FAILED:
+            return "retry_verified_failure", phase
+        return "blocked_ambiguous", phase
 
     def status(
         self,
@@ -731,6 +998,39 @@ class ProjectSubstrateActionWorkflow:
         )
         _verify_final_evidence(run_root, manifest, verification)
         extra = run.model_extra or {}
+        phase_aware = (
+            manifest.schema_version == "1.2" or extra.get("external_call_protocol_version") == "1.0"
+        )
+        call_phase = "legacy_unjournaled"
+        call_receipt_sha256: str | None = None
+        if phase_aware:
+            invocation = _load_action_invocation(run_root / "substrate_action")
+            result = _load_action_result(run_root / "substrate_action")
+            if result is None:
+                raise ValueError("completed substrate run has no executor result")
+            chain = ExternalCallProtocol(run_root / "substrate_action/call_protocol").load(
+                required=True
+            )
+            _validate_call_phase_cache(run, chain)
+            if len(chain) < 2 or result.data.get("call_started_sha256") != chain[1].receipt_sha256:
+                raise ValueError("completed substrate result call-start binding drift")
+            receipt = ExternalCallProtocol(
+                run_root / "substrate_action/call_protocol"
+            ).require_result(
+                project_id=project_id,
+                run_id=run_id,
+                operation="selected_action",
+                external_call_attempt=_external_call_attempt(run),
+                request_sha256=invocation.invocation_sha256,
+                call_spec_sha256=chain[0].call_spec_sha256,
+                pre_call_work_sha256=chain[0].pre_call_work_sha256,
+                result_path=run_root / "substrate_action/executor_result.json",
+                result_work_tree_sha256=tree_fingerprint(run_root / "work/autoresearchclaw"),
+                result_id=result.result_id,
+                execution_status=result.status,
+            )
+            call_phase = receipt.phase.value
+            call_receipt_sha256 = receipt.receipt_sha256
         expected = {
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
@@ -738,6 +1038,14 @@ class ProjectSubstrateActionWorkflow:
             "source_project_run_id": manifest.source_project_run_id,
             "source_receipt_sha256": manifest.source_receipt_sha256,
         }
+        if phase_aware:
+            expected.update(
+                {
+                    "external_call_protocol_version": "1.0",
+                    "external_call_phase": call_phase,
+                    "external_call_phase_sha256": call_receipt_sha256,
+                }
+            )
         if any(extra.get(key) != value for key, value in expected.items()):
             raise ValueError("registered substrate run metadata drift")
         expected_status = (
@@ -760,6 +1068,8 @@ class ProjectSubstrateActionWorkflow:
             "transition_applied": verification.transition_applied,
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
+            "external_call_phase": call_phase,
+            "external_call_phase_sha256": call_receipt_sha256,
             "run_locator": f"projects/{project_id}/runs/{run_id}",
         }
 
@@ -839,12 +1149,12 @@ class ProjectSubstrateActionWorkflow:
         )
         if run.status not in {"failed", "running"}:
             raise ValueError("only a failed or recoverable running substrate run can be resumed")
-        if run.status == "running" and not _recorded_success_available(
-            _run_root(runtime, config.project_id, run_id)
-        ):
-            raise ValueError(
-                "running substrate result publication is ambiguous; refusing a repeated call"
-            )
+        if plan.get("resume_disposition") in {"blocked_ambiguous", "legacy_read_only"}:
+            if run.status == "running":
+                raise ValueError(
+                    "running substrate result publication is ambiguous; refusing a repeated call"
+                )
+            raise ValueError("substrate result publication is ambiguous; refusing a repeated call")
         raw_attempt = (run.model_extra or {}).get("resume_attempt", 0)
         if not isinstance(raw_attempt, int) or isinstance(raw_attempt, bool) or raw_attempt < 0:
             raise ValueError("registered substrate run has an invalid resume_attempt")
@@ -874,7 +1184,7 @@ class ProjectSubstrateActionWorkflow:
         workflow_config_sha256: str,
         executor_config_sha256: str,
     ) -> None:
-        if manifest.schema_version != "1.1":
+        if manifest.schema_version == "1.0":
             raise ValueError("legacy substrate runs lack no-repeat evidence and are read-only")
         if run.seed != seed or manifest.seed != seed:
             raise ValueError("resume seed does not match owned substrate run")
@@ -924,6 +1234,7 @@ class ProjectSubstrateActionWorkflow:
         pre_state_sha256, action_sha256 = _substrate_pre_call_identity(config, run_root)
         if path.exists():
             manifest = _load_manifest(run_root)
+            protocol_version = "1.0" if manifest.schema_version == "1.2" else None
             expected = (
                 config.project_id,
                 run_root.name,
@@ -939,6 +1250,7 @@ class ProjectSubstrateActionWorkflow:
                 plan["source_receipt_sha256"],
                 pre_state_sha256,
                 action_sha256,
+                protocol_version,
                 PINNED_COMMIT,
                 plan["actual_substrate_commit"],
             )
@@ -957,6 +1269,7 @@ class ProjectSubstrateActionWorkflow:
                 manifest.source_receipt_sha256,
                 manifest.pre_state_sha256,
                 manifest.action_sha256,
+                manifest.external_call_protocol_version,
                 manifest.expected_substrate_commit,
                 manifest.actual_substrate_commit,
             )
@@ -964,7 +1277,7 @@ class ProjectSubstrateActionWorkflow:
                 raise ValueError("owned substrate manifest no longer matches execution plan")
             return manifest
         manifest = ProjectSubstrateRunManifest.create(
-            schema_version="1.1",
+            schema_version="1.2",
             project_id=config.project_id,
             run_id=run_root.name,
             action_type=config.action_type,
@@ -979,6 +1292,7 @@ class ProjectSubstrateActionWorkflow:
             source_receipt_sha256=plan["source_receipt_sha256"],
             pre_state_sha256=pre_state_sha256,
             action_sha256=action_sha256,
+            external_call_protocol_version="1.0",
             expected_substrate_commit=PINNED_COMMIT,
             actual_substrate_commit=plan["actual_substrate_commit"],
         )
@@ -1164,16 +1478,27 @@ def _validate_recorded_pre_call_binding(
     manifest: ProjectSubstrateRunManifest,
     invocation: SubstrateActionInvocation,
     predecessor: ResearchState,
+    *,
+    allow_lagging_cache: bool = False,
 ) -> None:
     extra = run.model_extra or {}
     expected_run_dir = str((run_root / "work/autoresearchclaw").resolve(strict=True))
+    expected_cache = {
+        "manifest_sha256": manifest.manifest_sha256,
+        "pre_state_sha256": manifest.pre_state_sha256,
+        "action_sha256": manifest.action_sha256,
+        "invocation_sha256": invocation.invocation_sha256,
+    }
+    if allow_lagging_cache:
+        cache_matches = all(
+            extra.get(key) in {None, expected} for key, expected in expected_cache.items()
+        )
+    else:
+        cache_matches = all(extra.get(key) == expected for key, expected in expected_cache.items())
     if (
         manifest.pre_state_sha256 is None
         or manifest.action_sha256 is None
-        or extra.get("manifest_sha256") != manifest.manifest_sha256
-        or extra.get("pre_state_sha256") != manifest.pre_state_sha256
-        or extra.get("action_sha256") != manifest.action_sha256
-        or extra.get("invocation_sha256") != invocation.invocation_sha256
+        or not cache_matches
         or invocation.project_id != manifest.project_id
         or invocation.run_dir != expected_run_dir
         or invocation.binding_sha256 != manifest.manifest_sha256
@@ -1182,6 +1507,65 @@ def _validate_recorded_pre_call_binding(
         or content_sha256(predecessor.model_dump(mode="json")) != manifest.pre_state_sha256
     ):
         raise ValueError("recorded substrate pre-call binding drift")
+
+
+def _external_call_attempt(run: ProjectRun) -> int:
+    value = (run.model_extra or {}).get("external_call_attempt")
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise ValueError("registered substrate run has an invalid external_call_attempt")
+    return value
+
+
+def _validate_call_phase_cache(
+    run: ProjectRun,
+    chain: tuple[Any, ...],
+) -> None:
+    extra = run.model_extra or {}
+    cached_phase = extra.get("external_call_phase")
+    cached_sha = extra.get("external_call_phase_sha256")
+    cached_request = extra.get("external_call_request_sha256")
+    if cached_phase is None:
+        if cached_sha is not None or cached_request is not None:
+            raise ValueError("registered substrate call phase cache is incomplete")
+        return
+    phases = [receipt.phase.value for receipt in chain]
+    if cached_phase not in phases:
+        raise ValueError("registered substrate call phase is ahead of durable evidence")
+    cached = chain[phases.index(cached_phase)]
+    if cached_sha != cached.receipt_sha256 or cached_request != cached.request_sha256:
+        raise ValueError("registered substrate call phase cache drift")
+
+
+def _selected_call_spec_sha256(
+    config: ProjectSubstrateWorkflowConfig,
+    run_root: Path,
+) -> str:
+    config_path = run_root / "inputs/autoresearchclaw-config.yaml"
+    executor = AutoResearchClawExecutor(
+        config_path=config_path,
+        timeout_seconds=config.timeout_seconds,
+        max_output_tokens=config.max_output_tokens,
+        max_total_tokens=config.max_total_tokens,
+    )
+    command = executor._base_command(
+        topic=config.research_direction,
+        output_dir=run_root / "work/autoresearchclaw",
+    )
+    stage = ACTION_TO_STAGE[config.action_type]
+    command.extend(["--from-stage", stage, "--to-stage", stage])
+    return content_sha256(
+        {
+            "schema_version": "1.0",
+            "operation": "selected_action",
+            "executor": "autoresearchclaw",
+            "command": command,
+            "timeout_seconds": config.timeout_seconds,
+            "max_output_tokens": config.max_output_tokens,
+            "max_total_tokens": config.max_total_tokens,
+            "executor_config_sha256": _file_sha256(config_path),
+            "substrate_commit": PINNED_COMMIT,
+        }
+    )
 
 
 def _workflow_config_sha256(config: ProjectSubstrateWorkflowConfig) -> str:
@@ -1296,6 +1680,12 @@ def _build_verification(
         "research_state.json",
         "substrate_summary.json",
     )
+    if (stage / "call_protocol").is_dir():
+        required += (
+            "call_protocol/prepared.json",
+            "call_protocol/call_started.json",
+            "call_protocol/result_published.json",
+        )
     evidence = {f"substrate_action/{name}": _file_sha256(stage / name) for name in required}
     return ProjectSubstrateVerification.create(
         schema_version="1.0",
@@ -1351,30 +1741,36 @@ def _archive_attempt(run_root: Path) -> str | None:
     for source in existing:
         _require_owned_directory(run_root, source, label="archived substrate attempt")
     _prepare_owned_parent(run_root, archive_root)
+    _fsync_directory(run_root)
     index = 1
     while (archive_root / f"attempt-{index:03d}").exists():
         index += 1
     destination = archive_root / f"attempt-{index:03d}"
     destination.mkdir()
+    _fsync_directory(archive_root)
     _require_owned_directory(archive_root, destination, label="substrate attempt archive")
     for source in existing:
         os.replace(source, destination / source.name)
+    _fsync_directory(destination)
+    _fsync_directory(run_root)
     return destination.relative_to(run_root).as_posix()
 
 
 def _write_model_exclusive(path: Path, model: BaseModel) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     rendered = model.model_dump_json(indent=2) + "\n"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    descriptor = os.open(path, flags, 0o600)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             stream.write(rendered)
             stream.flush()
             os.fsync(stream.fileno())
-    except BaseException:
-        path.unlink(missing_ok=True)
-        raise
+        os.link(temporary, path)
+        _fsync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+        _fsync_directory(path.parent)
 
 
 def _file_sha256(path: Path) -> str:
@@ -1383,6 +1779,17 @@ def _file_sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _is_sha256(value: str) -> bool:

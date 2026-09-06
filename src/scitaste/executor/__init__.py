@@ -6,6 +6,11 @@ from scitaste.executor.base import (
     ResearchExecutor,
     require_execution_success,
 )
+from scitaste.executor.call_protocol import (
+    ExternalCallPhase,
+    ExternalCallPhaseReceipt,
+    ExternalCallProtocol,
+)
 from scitaste.executor.mock import MockExecutor
 from scitaste.executor.native import (
     NativeCapability,
@@ -44,6 +49,9 @@ from scitaste.executor.project_workflow import (
 __all__ = [
     "ExecutionResult",
     "ExecutionStatus",
+    "ExternalCallPhase",
+    "ExternalCallPhaseReceipt",
+    "ExternalCallProtocol",
     "MetricDirection",
     "MockExecutor",
     "NativeCapability",

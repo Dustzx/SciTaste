@@ -132,11 +132,17 @@ and registered identity revalidate; an already persisted successful bootstrap
 or selected-action executor result is finalized without paying for the same call
 again. Selected-action recovery independently reconstructs and checks its
 controller decision, resource-charged state, summary, stage contract, and final
-verification. Both paths serialize live work with an owned run lock, accept a
-hard-crashed `running` run only when a successful result independently verifies,
-and validate a failed result before authorizing its archive and retry. If any
-invocation, result, or work-tree evidence is absent or contradictory, the outcome
-is ambiguous and resume blocks instead of risking a duplicate provider request.
+verification. Both paths serialize live work with an owned run lock and a
+phase-v1 append-only call journal. `prepared` binds the exact request, command
+specification, attempt number, configuration, pin, limits, and pre-call tree;
+`call_started` is the last durable transition before crossing the executor
+boundary; `result_published` binds the immutable result file, result
+identity/status, and resulting full work tree. A pure prepared attempt can
+continue with its original identity. A started call with no result is ambiguous
+and cannot retry. A durable success is finalized without a call, while a durable
+failure must independently verify before archive and the next external-attempt
+number. `resume_attempt` counts recovery operations and is therefore deliberately
+separate from `external_call_attempt`.
 
 `model-node runtime plan|execute|replay|status|verify` provides the normal-project
 boundary for bounded semantic advice. Each invocation binds the project revision,

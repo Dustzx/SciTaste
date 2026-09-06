@@ -167,7 +167,8 @@ runs/<bootstrap-run-id>/
 ├── inputs/autoresearchclaw-config.yaml
 ├── work/autoresearchclaw/             # exact Stage 1-2 executor output
 ├── source/autoresearchclaw/           # immutable verified reusable copy
-├── substrate_bootstrap/{executor_result.json,source_receipt.json}
+├── substrate_bootstrap/{executor_result.json,source_receipt.json,
+│   call_protocol/{prepared.json,call_started.json,result_published.json}}
 └── failed_attempts/attempt-NNN/       # only after a resumable failed attempt
 ```
 
@@ -184,7 +185,8 @@ runs/<run-id>/
 ├── inputs/{autoresearchclaw/,autoresearchclaw-config.yaml}
 ├── work/autoresearchclaw/
 ├── substrate_action/{invocation.json,decisions.jsonl,executor_result.json,
-│                    research_state.json,substrate_summary.json,verification.json}
+│   research_state.json,substrate_summary.json,verification.json,
+│   call_protocol/{prepared.json,call_started.json,result_published.json}}
 └── failed_attempts/attempt-NNN/  # only after a resumable failed attempt
 ```
 
@@ -197,6 +199,13 @@ action, decision intent, and project manifest. `executor_result.json` binds that
 invocation and the complete normalized work tree. Resume may finish missing
 deterministic files in place, while an unknown, changed, or contradictory outcome
 is retained and blocked rather than archived and called again.
+
+The three call-protocol records are immutable and predecessor-hashed. They bind
+the project/run identity, external-attempt number, request, exact non-secret call
+specification, pre-call work fingerprint, call-start receipt, result file,
+result identity/status, and final work fingerprint. Project metadata caches the
+latest phase for navigation, but the files are authoritative and a cache that is
+ahead of them is rejected.
 
 Normal bounded model-node calls belong to the selected project run:
 

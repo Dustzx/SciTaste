@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -8,9 +9,15 @@ import pytest
 
 import scitaste.executor.project_bootstrap as bootstrap_module
 from scitaste.cli import main
-from scitaste.executor.project_bootstrap import ProjectSubstrateBootstrapWorkflow
+from scitaste.executor.autoresearchclaw import PINNED_COMMIT
+from scitaste.executor.call_protocol import ExternalCallPhase, ExternalCallProtocol
+from scitaste.executor.project_bootstrap import (
+    ProjectSubstrateBootstrapManifest,
+    ProjectSubstrateBootstrapWorkflow,
+)
 from scitaste.executor.project_workflow import ProjectSubstrateWorkflowConfig
 from scitaste.project import ProjectRuntime
+from scitaste.project.models import content_sha256
 
 
 def _executor_config(root: Path) -> Path:
@@ -33,6 +40,45 @@ def _config(root: Path, *, live_enabled: bool = True) -> ProjectSubstrateWorkflo
         max_output_tokens=4096,
         max_total_tokens=100_000,
     )
+
+
+def _downgrade_bootstrap_run(
+    outputs: Path,
+    run_id: str,
+    *,
+    schema_version: str = "1.1",
+) -> Path:
+    run_root = outputs / "projects/bootstrap-test-project/runs" / run_id
+    manifest_path = run_root / "bootstrap_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["schema_version"] = schema_version
+    manifest.pop("external_call_protocol_version")
+    manifest.pop("manifest_sha256")
+    manifest["manifest_sha256"] = content_sha256(manifest)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result_path = run_root / "substrate_bootstrap/executor_result.json"
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    result["data"]["bootstrap_manifest_sha256"] = manifest["manifest_sha256"]
+    result["data"].pop("call_started_sha256")
+    result_path.write_text(json.dumps(result), encoding="utf-8")
+    shutil.rmtree(run_root / "substrate_bootstrap/call_protocol")
+    (run_root / "substrate_bootstrap/source_receipt.json").unlink(missing_ok=True)
+
+    project_path = outputs / "projects/bootstrap-test-project/PROJECT.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    registered = next(item for item in project["runs"] if item["run_id"] == run_id)
+    registered["bootstrap_manifest_sha256"] = manifest["manifest_sha256"]
+    for key in (
+        "external_call_protocol_version",
+        "external_call_attempt",
+        "external_call_phase",
+        "external_call_phase_sha256",
+        "external_call_request_sha256",
+    ):
+        registered.pop(key, None)
+    project_path.write_text(json.dumps(project), encoding="utf-8")
+    return run_root
 
 
 def _successful_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -75,6 +121,26 @@ def _successful_runner(command: list[str], **_kwargs: object) -> subprocess.Comp
         encoding="utf-8",
     )
     return subprocess.CompletedProcess(command, 0, stdout="complete", stderr="")
+
+
+def test_schema_11_bootstrap_manifest_canonicalizes_an_explicit_null_protocol() -> None:
+    manifest = ProjectSubstrateBootstrapManifest.create(
+        schema_version="1.1",
+        project_id="bootstrap-test-project",
+        run_id="legacy-manifest-01",
+        workflow_config_sha256="a" * 64,
+        executor_config_sha256="b" * 64,
+        expected_substrate_commit=PINNED_COMMIT,
+        actual_substrate_commit=PINNED_COMMIT,
+        seed=7,
+        external_call_protocol_version=None,
+    )
+
+    assert manifest.external_call_protocol_version is None
+    assert (
+        ProjectSubstrateBootstrapManifest.model_validate_json(manifest.model_dump_json())
+        == manifest
+    )
 
 
 def test_project_bootstrap_publishes_and_revalidates_owned_source(tmp_path: Path) -> None:
@@ -148,6 +214,160 @@ def test_project_bootstrap_plan_is_read_only_and_live_is_double_gated(
     assert not outputs.exists()
 
 
+def test_project_bootstrap_resumes_prepared_attempt_before_any_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_update = ProjectRuntime.update_run
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_update(
+        self: ProjectRuntime,
+        project_id: str,
+        registered_run_id: str,
+        *,
+        expected_revision: int,
+        **changes: object,
+    ):
+        nonlocal fail_once
+        if fail_once and changes.get("external_call_phase") == "prepared":
+            fail_once = False
+            raise OSError("controlled bootstrap interruption after prepared")
+        return original_update(
+            self,
+            project_id,
+            registered_run_id,
+            expected_revision=expected_revision,
+            **changes,
+        )
+
+    monkeypatch.setattr(ProjectRuntime, "update_run", interrupted_update)
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="after prepared"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="prepared-bootstrap-01",
+            allow_live=True,
+        )
+    assert calls == 0
+    action_root = (
+        outputs / "projects/bootstrap-test-project/runs/prepared-bootstrap-01/substrate_bootstrap"
+    )
+    assert [
+        entry.phase
+        for entry in ExternalCallProtocol(action_root / "call_protocol").load(required=True)
+    ] == [ExternalCallPhase.PREPARED]
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="prepared-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    run = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (run.model_extra or {})["external_call_attempt"] == 1
+
+
+def test_project_bootstrap_recovers_result_before_final_phase_without_recalling(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+    original_publish = ExternalCallProtocol.publish_result
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_publish(self: ExternalCallProtocol, **kwargs: object):
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled bootstrap interruption before result phase")
+        return original_publish(self, **kwargs)
+
+    monkeypatch.setattr(ExternalCallProtocol, "publish_result", interrupted_publish)
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="before result phase"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="unjournaled-bootstrap-01",
+            allow_live=True,
+        )
+    assert calls == 1
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="unjournaled-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["recovered_without_provider"] is True
+    action_root = (
+        outputs
+        / "projects/bootstrap-test-project/runs/unjournaled-bootstrap-01/substrate_bootstrap"
+    )
+    assert (
+        ExternalCallProtocol(action_root / "call_protocol").load(required=True)[-1].phase
+        is ExternalCallPhase.RESULT_PUBLISHED
+    )
+
+
+def test_project_bootstrap_call_started_without_result_remains_ambiguous(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def interrupted_runner(
+        _command: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        raise OSError("unknown bootstrap provider outcome")
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=interrupted_runner)
+    with pytest.raises(OSError, match="unknown bootstrap provider outcome"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="ambiguous-bootstrap-01",
+            allow_live=True,
+        )
+    assert calls == 1
+    with pytest.raises(ValueError, match="publication is ambiguous"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="ambiguous-bootstrap-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
 def test_project_bootstrap_recovers_a_persisted_paid_success_without_recalling(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -193,7 +413,189 @@ def test_project_bootstrap_recovers_a_persisted_paid_success_without_recalling(
     assert calls == 1
     assert resumed["status"] == "complete"
     assert resumed["recovered_without_provider"] is True
+
+
+def test_project_bootstrap_running_failed_result_starts_one_new_external_attempt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def fail_once(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            work = Path(command[command.index("--output") + 1])
+            (work / "partial-provider-response.txt").write_text("failed", encoding="utf-8")
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=fail_once)
+    original = workflow._build_receipt
+    interrupt_once = True
+
+    def interrupted(*args: object, **kwargs: object):
+        nonlocal interrupt_once
+        if interrupt_once:
+            interrupt_once = False
+            raise OSError("simulated death after failed bootstrap result")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(workflow, "_build_receipt", interrupted)
+    monkeypatch.setattr(
+        bootstrap_module.ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    with pytest.raises(OSError, match="failed bootstrap result"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="running-failed-bootstrap-01",
+            allow_live=True,
+        )
+    assert calls == 1
+    assert ProjectRuntime(outputs).open(config.project_id).manifest.runs[0].status == "running"
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="running-failed-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 2
+    assert resumed["status"] == "complete"
+    run = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (run.model_extra or {})["external_call_attempt"] == 2
+    assert (run.model_extra or {})["resume_attempt"] == 1
     assert resumed["resume_attempt"] == 1
+
+
+def test_schema_11_bootstrap_success_recovers_without_second_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+    fail_once = True
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=counted_runner)
+    original = workflow._build_receipt
+
+    def interrupted(*args: object, **kwargs: object):
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled legacy bootstrap interruption")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(workflow, "_build_receipt", interrupted)
+    with pytest.raises(OSError, match="legacy bootstrap interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="legacy-success-bootstrap-01",
+            allow_live=True,
+        )
+    _downgrade_bootstrap_run(outputs, "legacy-success-bootstrap-01")
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-success-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+    assert resumed["external_call_phase"] == "legacy_unjournaled"
+
+
+def test_schema_11_bootstrap_failure_retries_as_phase_aware_attempt_two(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def fail_once(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=fail_once)
+    failed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-failed-bootstrap-01",
+        allow_live=True,
+    )
+    assert failed["status"] == "failed"
+    run_root = _downgrade_bootstrap_run(outputs, "legacy-failed-bootstrap-01")
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-failed-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 2
+    assert resumed["status"] == "complete"
+    registered = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert (registered.model_extra or {})["external_call_attempt"] == 2
+    chain = ExternalCallProtocol(run_root / "substrate_bootstrap/call_protocol").load(required=True)
+    assert chain[-1].phase is ExternalCallPhase.RESULT_PUBLISHED
+    assert chain[-1].external_call_attempt == 2
+
+
+def test_schema_10_bootstrap_run_remains_read_only(tmp_path: Path) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def failed_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=failed_runner)
+    workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="legacy-read-only-bootstrap-01",
+        allow_live=True,
+    )
+    _downgrade_bootstrap_run(
+        outputs,
+        "legacy-read-only-bootstrap-01",
+        schema_version="1.0",
+    )
+
+    with pytest.raises(ValueError, match="read-only"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="legacy-read-only-bootstrap-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
 
 
 def test_project_bootstrap_recovers_running_hard_crash_without_recalling(
@@ -294,7 +696,10 @@ def test_project_bootstrap_retry_rejects_success_status_tamper(
     payload["data"]["partial_after_timeout"] = True
     result_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="contradicts successful terminal evidence"):
+    with pytest.raises(
+        ValueError,
+        match=r"contradicts successful terminal evidence|published external result identity drift",
+    ):
         workflow.run(
             config,
             outputs_root=outputs,

@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Provider-facing bootstrap and selected-action attempts now publish a durable
+  `prepared → call_started → result_published` evidence chain. Each phase is
+  write-once, self-hashed, predecessor-bound, and tied to the exact request,
+  call specification, pre-call work tree, external-attempt number, result file,
+  result identity, and terminal status. Resume can safely continue a prepared
+  attempt, repairs a verified result whose final phase marker was interrupted,
+  never repeats an ambiguous started call, and increments the external attempt
+  only after an independently verified failure.
 - Project-owned AutoResearchClaw actions now recover a successfully recorded
   external result through deterministic decision/state/verification publication
   without a second provider call. A pre-call invocation binds the exact state,
