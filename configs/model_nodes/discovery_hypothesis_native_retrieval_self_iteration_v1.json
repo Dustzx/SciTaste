@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "request_id": null,
+  "policy": {
+    "policy_id": "discovery-hypothesis-native-retrieval-self-iteration-v1",
+    "enabled": true,
+    "allowed_node_names": ["discovery-hypothesis"],
+    "expected_backend": "scripted",
+    "expected_model": "scripted-v1",
+    "allowed_tool_names": [],
+    "allowed_action_types": [],
+    "max_request_bytes": 140000,
+    "max_input_tokens": 8000,
+    "max_output_tokens": 1800,
+    "max_total_tokens": 9800,
+    "max_api_cost_usd": 0.01,
+    "max_latency_ms": 60000,
+    "require_cost_telemetry": true,
+    "ambiguity_margin_max": 0.05
+  },
+  "backend": {
+    "kind": "scripted",
+    "provider": "scripted",
+    "model": "scripted-v1",
+    "reply": {
+      "output_payload": {
+        "schema_version": "1.0",
+        "intuition": {
+          "statement": "Adaptive Discovery can ground its first semantic proposal in an immutable native retrieval without transferring search or action authority to the model.",
+          "supporting_source_ids": [
+            "knowledge-native-retrieval-gap",
+            "knowledge-controller-authority-boundary"
+          ],
+          "confidence": 0.88
+        },
+        "hypothesis": {
+          "statement": "A run-owned Knowledge corpus and deterministic retrieval plan will make Discovery evidence reproducible while preserving typed semantic, controller, and executor boundaries.",
+          "falsifiable_predictions": [
+            "The accepted semantic proposal will cite retrieved document identifiers that are present in the native retrieval artifact.",
+            "The controller will still select the fixed SEARCH, FORM_INTUITION, and FORM_WORKING_HYPOTHESIS actions.",
+            "Corpus, plan, execution-record, or state-reference tampering will fail independent project verification."
+          ],
+          "proposed_probe_types": ["sanity-check", "reproduction"],
+          "confidence": 0.9
+        },
+        "alternative_explanations": [
+          "The auditability gain may arise mainly from immutable input copying rather than retrieval quality."
+        ],
+        "uncertainty": "This self-iteration validates evidence flow and recovery semantics, not comparative scientific-quality gains from retrieval."
+      },
+      "usage": {
+        "input_tokens": 156,
+        "output_tokens": 188,
+        "cost_usd": 0.0
+      },
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

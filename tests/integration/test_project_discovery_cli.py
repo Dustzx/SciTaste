@@ -16,6 +16,10 @@ REFORMULATION_CONFIG_PATH = Path(
     "configs/model_nodes/discovery_reformulation_self_iteration_v1.json"
 )
 IDEATION_CONFIG_PATH = Path("configs/model_nodes/discovery_ideation_self_iteration_v1.json")
+KNOWLEDGE_CONFIG_PATH = Path("configs/cases/scitaste_discovery_knowledge_v1.yaml")
+KNOWLEDGE_SEMANTIC_CONFIG_PATH = Path(
+    "configs/model_nodes/discovery_hypothesis_native_retrieval_self_iteration_v1.json"
+)
 
 
 def _invoke(capsys, *arguments: str) -> dict[str, object]:
@@ -134,6 +138,92 @@ def test_project_discovery_cli_runs_bounded_semantic_hypothesis(
     assert advanced["command_report"]["details"]["content_origin"] == ("bounded-semantic-proposal")
     assert advanced["command_report"]["semantic_proposal"]["advisory_only"] is True
     assert advanced["command_report"]["semantic_proposal"]["executable"] is False
+
+
+def test_project_discovery_cli_binds_native_retrieval_before_semantic_hypothesis(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    outputs = tmp_path / "outputs"
+    scenario = load_discovery_scenario(REFORMULATION_SCENARIO_PATH)
+    runtime = ProjectRuntime(outputs)
+    runtime.create(
+        ProjectManifest(
+            project_id=scenario.project_id,
+            title="SciTaste native Knowledge self iteration",
+            research_direction=scenario.research_direction,
+            target_domain=scenario.target_domain,
+            target_venue=scenario.target_venue,
+            status="active",
+        )
+    )
+    common = (
+        "--project-id",
+        scenario.project_id,
+        "--run-id",
+        "native-knowledge-semantic-cli",
+        "--operation",
+        "hypothesize",
+        "--config",
+        str(REFORMULATION_SCENARIO_PATH),
+        "--seed",
+        "7",
+        "--expected-revision",
+        "0",
+        "--outputs-root",
+        str(outputs),
+        "--native-knowledge-config",
+        str(KNOWLEDGE_CONFIG_PATH),
+        "--semantic-config",
+        str(KNOWLEDGE_SEMANTIC_CONFIG_PATH),
+        "--semantic-profile-set",
+        str(SEMANTIC_PROFILE_SET),
+        "--semantic-profile-id",
+        "discovery-hypothesis-scripted",
+    )
+
+    preview = _invoke(capsys, "project", "discovery", "advance", *common, "--dry-run")
+    assert preview["knowledge_retrieval"] is True
+    assert preview["semantic_generation"] is True
+    assert not (
+        outputs / f"projects/{scenario.project_id}/runs/native-knowledge-semantic-cli"
+    ).exists()
+
+    advanced = _invoke(capsys, "project", "discovery", "advance", *common)
+
+    assert advanced["verification"]["knowledge_retrieval"] is True
+    assert advanced["verification"]["retrieved_document_count"] == 3
+    assert advanced["verification"]["native_execution_record_count"] == 3
+    assert advanced["verification"]["semantic_proposal_count"] == 1
+    assert advanced["command_report"]["details"]["retrieved_document_ids"] == [
+        "knowledge-native-retrieval-gap",
+        "knowledge-project-owned-discovery-history",
+        "knowledge-controller-authority-boundary",
+    ]
+    state_path = (
+        outputs
+        / f"projects/{scenario.project_id}/runs/native-knowledge-semantic-cli"
+        / "discovery/steps/001-hypothesize/research_state.json"
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["research_intuitions"][0]["supporting_context_ids"] == [
+        "knowledge-controller-authority-boundary",
+        "knowledge-native-retrieval-gap",
+    ]
+    ledger = _invoke(
+        capsys,
+        "model-node",
+        "runtime",
+        "status",
+        "--project-id",
+        scenario.project_id,
+        "--run-id",
+        "native-knowledge-semantic-cli",
+        "--outputs-root",
+        str(outputs),
+    )
+    assert ledger["status"] == "verified"
+    assert ledger["cumulative_telemetry"]["accepted_count"] == 1
 
 
 def test_project_discovery_cli_runs_state_bound_semantic_reformulation(

@@ -77,6 +77,7 @@ class SciTasteNativeExecutor:
         artifact_root: str | Path | None = None,
         knowledge_library: KnowledgeLibrary | None = None,
         experiment_runner: NativeExperimentRunner | None = None,
+        recover_completed_retrieval: bool = False,
     ) -> None:
         self.handlers = handlers or {}
         if workspace is None and artifact_root is not None:
@@ -89,6 +90,7 @@ class SciTasteNativeExecutor:
             else None
         )
         self.knowledge_library = knowledge_library
+        self.recover_completed_retrieval = recover_completed_retrieval
         if experiment_runner is not None and self.store is None:
             raise ValueError("native experiment runner requires a project-owned workspace")
         self.experiment_runner = experiment_runner
@@ -136,6 +138,28 @@ class SciTasteNativeExecutor:
         capability: NativeCapability,
     ) -> ExecutionResult:
         input_paths: tuple[Path, ...] = ()
+        if (
+            capability == NativeCapability.RETRIEVAL
+            and self.recover_completed_retrieval
+            and self.store is not None
+        ):
+            recovered = self.store.recover_successful(
+                state=state,
+                action=action,
+                capability=capability.value,
+            )
+            if recovered is not None:
+                record, locator = recovered
+                return record.result.model_copy(
+                    update={
+                        "data": {
+                            **record.result.data,
+                            "execution_record": locator,
+                            "execution_record_sha256": record.record_sha256,
+                            "execution_sequence": record.sequence,
+                        }
+                    }
+                )
         if handler := self.handlers.get(action.type):
             result = handler(state, action)
             if result.action_id != action.action_id:
@@ -335,6 +359,7 @@ def build_builtin_executor(
     artifact_root: str | Path | None = None,
     knowledge_library: KnowledgeLibrary | None = None,
     experiment_runner: NativeExperimentRunner | None = None,
+    recover_completed_retrieval: bool = False,
 ):
     """Build a dependency-free executor used by the integrated workflow."""
 
@@ -344,6 +369,7 @@ def build_builtin_executor(
             artifact_root=artifact_root,
             knowledge_library=knowledge_library,
             experiment_runner=experiment_runner,
+            recover_completed_retrieval=recover_completed_retrieval,
         )
     if name == "mock":
         from scitaste.executor.mock import MockExecutor

@@ -46,6 +46,7 @@ from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
 from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.commands import DiscoveryCommand, DiscoveryCommandRunner
+from scitaste.discovery.knowledge import load_discovery_knowledge_binding
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.discovery.project_workflow import ProjectDiscoveryWorkflow
 from scitaste.discovery.semantic import DiscoverySemanticBinding
@@ -245,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     project_discovery_advance.add_argument("--semantic-profile-set", type=Path, default=None)
     project_discovery_advance.add_argument("--semantic-profile-id", default=None)
     project_discovery_advance.add_argument("--semantic-allow-live", action="store_true")
+    project_discovery_advance.add_argument(
+        "--native-knowledge-config",
+        type=Path,
+        default=None,
+        help="bind a copied local Knowledge corpus to native Discovery retrieval",
+    )
     _add_project_options(project_discovery_advance)
     project_discovery_advance.set_defaults(handler=_handle_project_discovery_advance)
     project_discovery_verify = project_discovery_commands.add_parser(
@@ -654,6 +661,11 @@ def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
     workflow = ProjectDiscoveryWorkflow(args.outputs_root, seed=args.seed)
     operation = DiscoveryCommand(args.operation)
     semantic = _load_project_discovery_semantic(args)
+    knowledge = (
+        load_discovery_knowledge_binding(args.native_knowledge_config)
+        if args.native_knowledge_config is not None
+        else None
+    )
     arguments = {
         "project_id": args.project_id,
         "run_id": args.run_id,
@@ -663,6 +675,7 @@ def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
         "reformulation_number": args.reformulation_number,
         "resume": args.resume,
         "semantic": semantic,
+        "knowledge": knowledge,
     }
     if args.dry_run:
         print(workflow.preview(scenario, **arguments).model_dump_json(indent=2))

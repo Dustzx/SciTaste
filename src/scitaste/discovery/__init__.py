@@ -37,6 +37,16 @@ _SEMANTIC_RUNTIME_EXPORTS = {
     "DiscoveryReformulationNode",
     "DiscoverySemanticBinding",
 }
+_KNOWLEDGE_EXPORTS = {
+    "DiscoveryKnowledgeBinding",
+    "DiscoveryKnowledgeConfig",
+    "DiscoveryKnowledgeEntry",
+    "DiscoveryKnowledgePlan",
+    "DiscoveryKnowledgeReference",
+    "PreparedDiscoveryKnowledge",
+    "load_discovery_knowledge_binding",
+    "verify_discovery_knowledge_context",
+}
 
 
 def __getattr__(name: str):
@@ -50,6 +60,10 @@ def __getattr__(name: str):
         from scitaste.discovery import semantic
 
         return getattr(semantic, name)
+    if name in _KNOWLEDGE_EXPORTS:
+        from scitaste.discovery import knowledge
+
+        return getattr(knowledge, name)
     raise AttributeError(name)
 
 
@@ -66,6 +80,11 @@ __all__ = [
     "DiscoveryIdeationNode",
     "DiscoveryIdeationProposal",
     "DiscoveryIntuitionProposal",
+    "DiscoveryKnowledgeBinding",
+    "DiscoveryKnowledgeConfig",
+    "DiscoveryKnowledgeEntry",
+    "DiscoveryKnowledgePlan",
+    "DiscoveryKnowledgeReference",
     "DiscoveryLoop",
     "DiscoveryReformulationInput",
     "DiscoveryReformulationNode",
@@ -75,11 +94,14 @@ __all__ = [
     "DiscoverySemanticReference",
     "EvidenceBackedIdeationResult",
     "EvidenceToIdeaEngine",
+    "PreparedDiscoveryKnowledge",
     "ProjectDiscoveryAdvanceReport",
     "ProjectDiscoveryManifest",
     "ProjectDiscoveryPreview",
     "ProjectDiscoveryStep",
     "ProjectDiscoveryVerification",
     "ProjectDiscoveryWorkflow",
+    "load_discovery_knowledge_binding",
     "load_discovery_scenario",
+    "verify_discovery_knowledge_context",
 ]

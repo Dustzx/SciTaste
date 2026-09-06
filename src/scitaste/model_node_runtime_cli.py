@@ -7,11 +7,21 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scitaste.discovery.semantic import discovery_node_types
 from scitaste.model_nodes.facade import ModelNodeFacade, ModelNodeFacadeRequest
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.runtime import ModelNodeRuntime, RuntimeOutcome
 from scitaste.model_nodes.runtime_config import load_model_node_runtime_config
 from scitaste.project import ProjectRuntime
+
+
+def _runtime(outputs_root: Path) -> ModelNodeRuntime:
+    """Build the CLI verifier with every shipped additive node registry."""
+
+    return ModelNodeRuntime(
+        ProjectRuntime(outputs_root),
+        node_types=discovery_node_types(),
+    )
 
 
 def register_model_node_runtime_cli(commands: argparse._SubParsersAction) -> None:
@@ -110,7 +120,7 @@ def _load_request(args: argparse.Namespace) -> tuple[ModelNodeFacadeRequest, Any
 
 def _handle_plan(args: argparse.Namespace) -> int:
     request, loaded_config, loaded_profiles = _load_request(args)
-    result = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root))).plan(
+    result = ModelNodeFacade(_runtime(args.outputs_root)).plan(
         request,
         backend=loaded_config.config.build_backend(args.invocation_id),
         allow_live=args.allow_live,
@@ -127,7 +137,7 @@ def _handle_plan(args: argparse.Namespace) -> int:
 
 def _handle_execute(args: argparse.Namespace) -> int:
     request, loaded_config, loaded_profiles = _load_request(args)
-    facade = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root)))
+    facade = ModelNodeFacade(_runtime(args.outputs_root))
     backend = loaded_config.config.build_backend(args.invocation_id)
     if args.dry_run:
         result = facade.plan(request, backend=backend, allow_live=args.allow_live)
@@ -150,7 +160,7 @@ def _handle_execute(args: argparse.Namespace) -> int:
 
 def _handle_replay(args: argparse.Namespace) -> int:
     request, loaded_config, loaded_profiles = _load_request(args)
-    result = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root))).replay(
+    result = ModelNodeFacade(_runtime(args.outputs_root)).replay(
         request,
         source_invocation_id=args.source_invocation,
         resume=args.resume,
@@ -166,7 +176,7 @@ def _handle_replay(args: argparse.Namespace) -> int:
 
 
 def _handle_verify(args: argparse.Namespace) -> int:
-    verification = ModelNodeFacade(ModelNodeRuntime(ProjectRuntime(args.outputs_root))).verify(
+    verification = ModelNodeFacade(_runtime(args.outputs_root)).verify(
         project_id=args.project_id, run_id=args.run_id
     )
     profiles = [

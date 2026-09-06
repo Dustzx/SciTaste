@@ -233,3 +233,39 @@ def test_native_knowledge_search_rejects_invalid_bounds_and_records_failure(tmp_
     assert result.data["execution_sequence"] == 1
     assert result.data["execution_record_sha256"]
     assert executor.store.verify().record_count == 1  # type: ignore[union-attr]
+
+
+def test_native_knowledge_recovery_reuses_the_exact_successful_retrieval(tmp_path) -> None:
+    root = tmp_path / "run"
+    knowledge = KnowledgeLibrary(root / "knowledge.jsonl")
+    knowledge.add(
+        KnowledgeDocument(
+            document_id="knowledge-recovery",
+            title="Interruption-safe retrieval",
+            content="An exact successful retrieval can be reused during explicit recovery.",
+            provenance=[ProvenanceRecord(source_type="test", locator="fixture://recovery")],
+        )
+    )
+    action = ResearchAction(
+        action_id="recover-search",
+        type=MetaAction.SEARCH,
+        description="Retrieve interruption-safe evidence",
+        parameters={"query": "interruption safe retrieval", "domain_tags": [], "limit": 1},
+    )
+    first_executor = SciTasteNativeExecutor(
+        workspace=root / "native_execution",
+        artifact_root=root,
+        knowledge_library=knowledge,
+    )
+    first = first_executor.execute(_state(), action)
+    recovering_executor = SciTasteNativeExecutor(
+        workspace=root / "native_execution",
+        artifact_root=root,
+        knowledge_library=knowledge,
+        recover_completed_retrieval=True,
+    )
+
+    recovered = recovering_executor.execute(_state(), action)
+
+    assert recovered == first
+    assert recovering_executor.store.verify().record_count == 1  # type: ignore[union-attr]

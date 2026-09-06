@@ -12,7 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from scitaste.executor.base import ExecutionResult
+from scitaste.executor.base import ExecutionResult, ExecutionStatus
 from scitaste.project.models import content_sha256
 from scitaste.schema.actions import ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -52,6 +52,8 @@ class NativeExecutionRecord(BaseModel):
     def hashes_match(self) -> NativeExecutionRecord:
         if self.action_sha256 != content_sha256(self.action.model_dump(mode="json")):
             raise ValueError("native execution action hash mismatch")
+        if self.result.action_id != self.action.action_id:
+            raise ValueError("native execution result belongs to another action")
         expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
         if self.record_sha256 != expected:
             raise ValueError("native execution record hash mismatch")
@@ -154,6 +156,33 @@ class NativeExecutionStore:
             head_record_sha256=record.record_sha256,
             head_record_locator=self.locator(path),
         )
+
+    def entries(self) -> tuple[tuple[str, NativeExecutionRecord], ...]:
+        """Return the verified record chain with project-relative locators."""
+
+        return tuple((self.locator(path), record) for path, record in self._load_verified_records())
+
+    def recover_successful(
+        self,
+        *,
+        state: ResearchState,
+        action: ResearchAction,
+        capability: str,
+    ) -> tuple[NativeExecutionRecord, str] | None:
+        """Reuse one exact successful action during explicit workflow recovery."""
+
+        state_sha256 = content_sha256(state.model_dump(mode="json"))
+        action_sha256 = content_sha256(action.model_dump(mode="json"))
+        for path, record in reversed(self._load_verified_records()):
+            if (
+                record.project_id == state.project_id
+                and record.state_sha256 == state_sha256
+                and record.action_sha256 == action_sha256
+                and record.capability == capability
+                and record.result.status is ExecutionStatus.SUCCEEDED
+            ):
+                return record, self.locator(path)
+        return None
 
     def _load_verified_records(self) -> list[tuple[Path, NativeExecutionRecord]]:
         records: list[tuple[Path, NativeExecutionRecord]] = []

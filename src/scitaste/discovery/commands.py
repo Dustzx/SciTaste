@@ -16,7 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from scitaste.discovery.hypothesis import HypothesisAgent
 from scitaste.discovery.ideas import IdeaPortfolioBuilder, MatureIdeaGenerator
-from scitaste.discovery.landscape import LiteratureLandscapeAgent
+from scitaste.discovery.knowledge import DiscoveryKnowledgeReference
+from scitaste.discovery.landscape import LandscapeFinding, LiteratureLandscapeAgent
 from scitaste.discovery.probe_agent import (
     DiagnosticProbeAgent,
     ProbeDisposition,
@@ -237,6 +238,9 @@ class DiscoveryCommandRunner:
         receipt_paths: Literal["filesystem", "step-relative"] = "filesystem",
         semantic_proposal: _SemanticProposal | None = None,
         semantic_reference: DiscoverySemanticReference | None = None,
+        landscape_findings: list[LandscapeFinding] | None = None,
+        knowledge_reference: DiscoveryKnowledgeReference | None = None,
+        expected_retrieved_document_ids: tuple[str, ...] | None = None,
     ) -> DiscoveryCommandReport:
         """Execute and exclusively own a new discovery-step directory."""
 
@@ -247,6 +251,18 @@ class DiscoveryCommandRunner:
             raise FileExistsError(f"refusing to replace discovery command output: {root}")
         if (semantic_proposal is None) != (semantic_reference is None):
             raise ValueError("semantic proposal and reference must be supplied together")
+        knowledge_values = (
+            landscape_findings,
+            knowledge_reference,
+            expected_retrieved_document_ids,
+        )
+        if any(value is not None for value in knowledge_values) and (
+            command is not DiscoveryCommand.HYPOTHESIZE
+            or any(value is None for value in knowledge_values)
+        ):
+            raise ValueError(
+                "native Knowledge context belongs only to a complete hypothesize command"
+            )
         if semantic_proposal is not None:
             expected = {
                 DiscoveryCommand.HYPOTHESIZE: (
@@ -282,6 +298,9 @@ class DiscoveryCommandRunner:
                 scenario,
                 semantic_proposal=semantic_proposal,
                 semantic_reference=semantic_reference,
+                landscape_findings=landscape_findings,
+                knowledge_reference=knowledge_reference,
+                expected_retrieved_document_ids=expected_retrieved_document_ids,
             )
         elif command == DiscoveryCommand.PROBE:
             assert state is not None and preview.signal_number is not None
@@ -330,6 +349,9 @@ class DiscoveryCommandRunner:
         *,
         semantic_proposal: DiscoveryHypothesisProposal | None = None,
         semantic_reference: DiscoverySemanticReference | None = None,
+        landscape_findings: list[LandscapeFinding] | None = None,
+        knowledge_reference: DiscoveryKnowledgeReference | None = None,
+        expected_retrieved_document_ids: tuple[str, ...] | None = None,
     ) -> _CommandOutcome:
         semantic_context = (
             semantic_reference.model_dump(mode="json") if semantic_reference is not None else None
@@ -343,6 +365,8 @@ class DiscoveryCommandRunner:
         }
         if semantic_context is not None:
             executor_context["discovery_semantics"] = [semantic_context]
+        if knowledge_reference is not None:
+            executor_context["discovery_knowledge"] = knowledge_reference.model_dump(mode="json")
         state = ResearchState(
             project_id=scenario.project_id,
             research_direction=scenario.research_direction,
@@ -375,7 +399,15 @@ class DiscoveryCommandRunner:
         )
         decisions.append(decision)
         results.append(result)
-        state.literature_landscape = LiteratureLandscapeAgent().build(scenario.landscape_findings)
+        if expected_retrieved_document_ids is not None and (
+            result.data.get("result_basis") != "knowledge-library-retrieval"
+            or result.data.get("retrieved_document_ids") != list(expected_retrieved_document_ids)
+        ):
+            raise ValueError(
+                "native Knowledge execution differs from the registered retrieval plan"
+            )
+        effective_findings = landscape_findings or scenario.landscape_findings
+        state.literature_landscape = LiteratureLandscapeAgent().build(effective_findings)
 
         state, decision, result = self._act(
             state,
@@ -394,9 +426,7 @@ class DiscoveryCommandRunner:
         context_ids = (
             list(semantic_proposal.intuition.supporting_source_ids)
             if semantic_proposal is not None
-            else sorted(
-                {source for finding in scenario.landscape_findings for source in finding.source_ids}
-            )
+            else sorted({source for finding in effective_findings for source in finding.source_ids})
         )
         hypothesis_agent = HypothesisAgent()
         intuition = hypothesis_agent.form_intuition(
@@ -445,26 +475,35 @@ class DiscoveryCommandRunner:
         )
         state.working_hypotheses.append(hypothesis)
         state.active_working_hypothesis_id = hypothesis.hypothesis_id
+        details: dict[str, Any] = {
+            "hypothesis_id": hypothesis.hypothesis_id,
+            "content_origin": (
+                "bounded-semantic-proposal"
+                if semantic_proposal is not None
+                else "registered-scenario-seed"
+            ),
+            "alternative_explanations": (
+                list(semantic_proposal.alternative_explanations)
+                if semantic_proposal is not None
+                else []
+            ),
+            "uncertainty": (
+                semantic_proposal.uncertainty if semantic_proposal is not None else None
+            ),
+        }
+        if knowledge_reference is not None:
+            details.update(
+                {
+                    "retrieved_document_ids": list(expected_retrieved_document_ids or ()),
+                    "landscape_finding_count": len(effective_findings),
+                    "knowledge_context_sha256": knowledge_reference.record_sha256,
+                }
+            )
         return _CommandOutcome(
             state=state,
             decisions=decisions,
             results=results,
-            details={
-                "hypothesis_id": hypothesis.hypothesis_id,
-                "content_origin": (
-                    "bounded-semantic-proposal"
-                    if semantic_proposal is not None
-                    else "registered-scenario-seed"
-                ),
-                "alternative_explanations": (
-                    list(semantic_proposal.alternative_explanations)
-                    if semantic_proposal is not None
-                    else []
-                ),
-                "uncertainty": (
-                    semantic_proposal.uncertainty if semantic_proposal is not None else None
-                ),
-            },
+            details=details,
         )
 
     def _probe(

@@ -1,0 +1,47 @@
+schema_version: "1.0"
+entries:
+  - category: active_problem
+    statement: Project Discovery currently begins from scenario-registered findings rather than reproducing a retrieval over a run-owned Knowledge corpus.
+    document:
+      document_id: knowledge-project-owned-discovery-history
+      title: Project-owned Discovery state and recovery history
+      abstract: SciTaste records immutable Discovery steps and revision-guards their project metadata.
+      content: Project-owned Discovery already preserves state lineage, semantic proposal receipts, and interruption recovery, but its initial literature evidence has remained caller-authored scenario content.
+      domain_tags: [autonomous-research-systems]
+      method_tags: [project-runtime, discovery]
+      provenance:
+        - source_type: self-development
+          locator: docs/PROJECT_RUNTIME.md
+          accessed_at: "2026-09-07T00:00:00Z"
+          redistributable: true
+          personal_data_removed: true
+  - category: methodological_bottleneck
+    statement: A useful native search must copy admitted inputs, expose deterministic document identities, and bind its result to an independently verifiable execution record.
+    document:
+      document_id: knowledge-native-retrieval-gap
+      title: Native execution retrieval boundary
+      abstract: Retrieval becomes trustworthy only when input and output artifacts remain content-bound to the owning run.
+      content: The SciTaste native executor can retrieve a KnowledgeLibrary and write content-bound evidence, but composable Discovery must own the corpus, plan the query, and verify the exact selected action and result.
+      domain_tags: [autonomous-research-systems]
+      method_tags: [native-execution, knowledge-retrieval]
+      provenance:
+        - source_type: self-development
+          locator: docs/NATIVE_EXECUTION.md
+          accessed_at: "2026-09-07T00:00:00Z"
+          redistributable: true
+          personal_data_removed: true
+  - category: evaluation_gap
+    statement: Semantic scientific content can use retrieved evidence while the deterministic controller alone retains action selection and the executor alone retains tool authority.
+    document:
+      document_id: knowledge-controller-authority-boundary
+      title: Evidence-bound semantics and controller authority
+      abstract: Model proposals are bounded content, not direct research actions or mutable execution plans.
+      content: SciTaste separates typed semantic proposals, TasteController action selection, first-party execution, and project verification so adaptive content does not silently become tool authority.
+      domain_tags: [autonomous-research-systems]
+      method_tags: [semantic-nodes, controller-authority]
+      provenance:
+        - source_type: self-development
+          locator: docs/BOUNDED_MODEL_NODES.md
+          accessed_at: "2026-09-07T00:00:00Z"
+          redistributable: true
+          personal_data_removed: true
