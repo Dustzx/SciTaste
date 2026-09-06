@@ -1,0 +1,27 @@
+schema_version: "1.0"
+launchers:
+  autoresearchclaw: &local_qwen_launcher
+    command:
+      - "{asset_root}/.venv/bin/python"
+      - -m
+      - scitaste.benchmark.local_study_adapter
+      - --request
+      - "{cell_request}"
+      - --result
+      - "{cell_result}"
+      - --model-config
+      - "{asset_root}/configs/backends/local_transformers_qwen3vl4b_study_v2.yaml"
+      - --model-config-sha256
+      - 3f457e1b42591003fb860f76840469f5866a1769e1cf867cdc0a481be1a81120
+      - --to-stage
+      - PEER_REVIEW
+      - --max-output-tokens
+      - "8192"
+      - --reuse-existing
+    gpu_count: 1
+    timeout_seconds: 10800
+    pass_environment:
+      - SCITASTE_LOCAL_MODEL_PATH
+  knowledge_rag: *local_qwen_launcher
+  taste_library: *local_qwen_launcher
+  full_scitaste: *local_qwen_launcher

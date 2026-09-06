@@ -168,8 +168,15 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
     assert report.blockers == []
 
 
-def test_pilot_scope_cannot_become_headline_evidence() -> None:
-    protocol = load_study_protocol("configs/experiments/matched_budget_local_pilot_v1.yaml")
+@pytest.mark.parametrize(
+    "protocol_path",
+    [
+        "configs/experiments/matched_budget_local_pilot_v1.yaml",
+        "configs/experiments/matched_budget_local_preacceptance_v2.yaml",
+    ],
+)
+def test_pilot_scope_cannot_become_headline_evidence(protocol_path: str) -> None:
+    protocol = load_study_protocol(protocol_path)
     synthetic = synthetic_results(protocol)
     real = synthetic.model_copy(
         update={
@@ -201,6 +208,17 @@ def test_pilot_scope_cannot_become_headline_evidence() -> None:
 
     assert report.status == StudyStatus.ACCEPTANCE_ONLY
     assert report.headline_eligible is False
+
+
+def test_local_preacceptance_v2_has_completion_calibrated_finite_budgets() -> None:
+    protocol = load_study_protocol("configs/experiments/matched_budget_local_preacceptance_v2.yaml")
+
+    assert protocol.scope.value == "pilot"
+    assert protocol.budget.max_llm_tokens == 200_000
+    assert protocol.budget.gpu_hours == 3.0
+    assert protocol.budget.max_wall_time_hours == 3.0
+    assert protocol.budget.max_search_queries == 0
+    assert len(MatchedStudyPlanner().plan(protocol).cells) == 16
 
 
 def test_budget_or_telemetry_violation_blocks_study() -> None:

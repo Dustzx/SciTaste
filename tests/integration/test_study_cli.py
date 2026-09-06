@@ -91,32 +91,48 @@ def test_study_run_cli_dry_runs_four_local_pilot_conditions(tmp_path, capsys) ->
 def test_local_qwen_study_launchers_are_fully_rendered(tmp_path, capsys, monkeypatch) -> None:
     monkeypatch.setenv("SCITASTE_LOCAL_MODEL_PATH", "/models/qwen3-vl-4b")
 
-    assert (
-        main(
-            [
-                "study",
-                "run",
-                "--config",
-                "configs/experiments/matched_budget_local_pilot_v1.yaml",
-                "--launch-config",
-                "configs/experiments/study_launchers_qwen3vl4b_local_v1.yaml",
-                "--task",
-                "diagnosis-friendly-v1",
-                "--output",
-                str(tmp_path / "local-qwen-plan"),
-                "--dry-run",
-            ]
+    cases = [
+        (
+            "configs/experiments/matched_budget_local_pilot_v1.yaml",
+            "configs/experiments/study_launchers_qwen3vl4b_local_v1.yaml",
+            "2048",
+        ),
+        (
+            "configs/experiments/matched_budget_local_preacceptance_v2.yaml",
+            "configs/experiments/study_launchers_qwen3vl4b_local_v2.yaml",
+            "8192",
+        ),
+    ]
+    for index, (protocol, launch_config, output_ceiling) in enumerate(cases):
+        assert (
+            main(
+                [
+                    "study",
+                    "run",
+                    "--config",
+                    protocol,
+                    "--launch-config",
+                    launch_config,
+                    "--task",
+                    "diagnosis-friendly-v1",
+                    "--output",
+                    str(tmp_path / f"local-qwen-plan-{index}"),
+                    "--dry-run",
+                ]
+            )
+            == 0
         )
-        == 0
-    )
 
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["selected_cells"] == 4
-    assert all(
-        "scitaste.benchmark.local_study_adapter" in launch["command"]
-        for launch in payload["launches"]
-    )
-    assert all("replace-with" not in " ".join(launch["command"]) for launch in payload["launches"])
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["selected_cells"] == 4
+        assert all(
+            "scitaste.benchmark.local_study_adapter" in launch["command"]
+            for launch in payload["launches"]
+        )
+        assert all(output_ceiling in launch["command"] for launch in payload["launches"])
+        assert all(
+            "replace-with" not in " ".join(launch["command"]) for launch in payload["launches"]
+        )
 
 
 def test_study_run_cli_executes_standard_result_contract(tmp_path) -> None:
