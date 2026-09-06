@@ -128,6 +128,63 @@ trusted `ComponentSpec` and `ActionBinding` objects unchanged; an unknown
 candidate, cross-candidate evidence reference, disallowed group, duplicate ID,
 or stale fingerprint rejects the complete plan.
 
+### Planner boundary and offline fallback
+
+`WorkspacePlanner` exposes only two advisory operations: classify a long-tail
+question by selecting one server-issued quick-intent ID, and compose a surface
+by returning a closed `SurfacePlan`. There is deliberately no execute, mutate,
+transition, callback, fetch, or tool method. Deterministic intent recognition in
+`WorkspaceIntentResolver` remains the first path; the optional classifier is
+only useful after that path returns `long-tail-question-requires-planner`.
+
+`DeterministicWorkspacePlanner` orders trusted candidates by a versioned stable
+rule and works without a provider. `StructuredWorkspacePlanner` adapts the
+existing provider-neutral `StructuredModelBackend`; it does not import a vendor
+SDK or read credentials itself. Classification receives the bounded question
+and a list of closed quick-intent IDs/goals/registered target IDs. Composition
+receives only snapshot and intent hashes plus data-free candidate descriptors.
+Neither operation receives evidence content, component data, action proposals,
+artifact paths, titles, URLs, or controller state.
+
+The model response is untrusted. Backend/model identity, request bytes,
+response bytes, token telemetry, latency, tool-call absence, exact response
+binding, closed Pydantic schema, snapshot hashes, intent hash, catalog hash, and
+final plan materialization are all checked in code. Prompt instructions are
+defense in depth, not the trust boundary. A failed or malicious composition is
+replaced by the deterministic layout through `FallbackWorkspacePlanner`; a
+failed long-tail classification remains explicitly unavailable because guessing
+an intent would change meaning.
+
+Accepted provenance records planner implementation and configuration hashes,
+snapshot, intent, candidate catalog, structured request, provider response hash,
+and result plan hash. It never records the free question or credentials.
+Model-assisted results set `deterministic_reproducible=false`; deterministic
+fallbacks identify the attempted provider planner and bind the independently
+reproducible fallback plan. The existing OpenAI-compatible backend supplies the
+transport timeout and server-side environment-variable credential lookup; the
+UI adapter additionally rejects provider configurations whose retry-adjusted
+timeout exceeds its policy bound.
+
+```text
+question ──> deterministic resolver ──resolved──┐
+   │                                            │
+   └─long-tail─> optional ID-only classifier ───┤
+                                                v
+project snapshot ─> trusted candidate factory ─> planner
+                                                │ IDs/enums only
+                                                v
+                                 validate + materialize SurfacePlan
+                                                │
+                                                v
+                                  fixed native component receiver
+```
+
+This work package defines the reusable boundary only. Provider construction is
+disabled unless a later server configuration explicitly injects an already
+enabled `StructuredModelBackend`; the visible HTTP intent flow and operator
+flags are added with the receiver integration rather than hidden in this model
+layer.
+
 ## Trusted project surface factory
 
 `ProjectSurfaceFactory` is the first-party entry point for a real project
