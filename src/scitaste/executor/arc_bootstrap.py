@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -92,6 +93,45 @@ def _install_offline_literature() -> None:
     literature_verify.verify_citations = verify_frozen_citations
 
 
+def _install_frozen_benchmark_asset() -> None:
+    """Inject one content-addressed task kernel into each upstream sandbox project."""
+
+    from researchclaw.experiment.sandbox import ExperimentSandbox
+
+    source = Path(os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_PATH"])
+    expected_sha256 = os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_SHA256"]
+    module = os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_MODULE"]
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
+        raise ValueError("invalid frozen benchmark SHA-256")
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", module):
+        raise ValueError("invalid frozen benchmark module name")
+    if not source.is_file() or source.is_symlink():
+        raise ValueError("frozen benchmark source is not a regular file")
+    payload = source.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != expected_sha256:
+        raise ValueError("frozen benchmark source hash does not match")
+
+    upstream_run_project = ExperimentSandbox.run_project
+    if getattr(upstream_run_project, "_scitaste_frozen_benchmark", False):
+        return
+
+    def frozen_run_project(self, project_dir, *args, **kwargs):
+        project = Path(project_dir).resolve()
+        project.mkdir(parents=True, exist_ok=True)
+        destination = project / f"{module}.py"
+        if destination.is_symlink():
+            raise ValueError("frozen benchmark destination cannot be a symlink")
+        temporary = destination.with_suffix(".py.tmp")
+        temporary.write_bytes(payload)
+        os.replace(temporary, destination)
+        if hashlib.sha256(destination.read_bytes()).hexdigest() != expected_sha256:
+            raise ValueError("injected frozen benchmark hash does not match")
+        return upstream_run_project(self, project_dir, *args, **kwargs)
+
+    frozen_run_project._scitaste_frozen_benchmark = True
+    ExperimentSandbox.run_project = frozen_run_project
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run unmodified ResearchClaw with an explicit per-call output-token ceiling."""
 
@@ -100,6 +140,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     telemetry_path = os.environ.get("SCITASTE_ARC_TELEMETRY_PATH", "")
     if os.environ.get("SCITASTE_ARC_TRACE_SANDBOX", "").casefold() in {"1", "true", "yes"}:
         _install_sandbox_trace()
+    if os.environ.get("SCITASTE_ARC_FROZEN_BENCHMARK_PATH"):
+        _install_frozen_benchmark_asset()
     if os.environ.get("SCITASTE_ARC_OFFLINE", "").casefold() in {"1", "true", "yes"}:
         _install_offline_literature()
     if os.environ.get("SCITASTE_ARC_DISABLE_THINKING", "").casefold() in {"1", "true", "yes"}:

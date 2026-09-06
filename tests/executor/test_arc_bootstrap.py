@@ -152,3 +152,51 @@ def test_bootstrap_traces_exact_sandbox_result(monkeypatch, tmp_path) -> None:
     assert (
         trace["project_source_sha256"]["main.py"] == hashlib.sha256(source.read_bytes()).hexdigest()
     )
+
+
+def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, tmp_path) -> None:
+    project = tmp_path / "project"
+    workdir = tmp_path / "sandbox"
+    project.mkdir()
+    workdir.mkdir()
+    source = tmp_path / "registered_kernel.py"
+    payload = b"def run_and_emit(contract):\n    return contract\n"
+    source.write_bytes(payload)
+    observed: dict[str, str] = {}
+
+    class FakeExperimentSandbox:
+        def __init__(self):
+            self.workdir = workdir
+
+        def run_project(self, project_dir, *args, **kwargs):
+            injected = project_dir / "frozen_benchmark.py"
+            observed["sha256"] = hashlib.sha256(injected.read_bytes()).hexdigest()
+            return SimpleNamespace(
+                returncode=0,
+                timed_out=False,
+                elapsed_sec=0.1,
+                metrics={},
+                stdout="",
+                stderr="",
+            )
+
+    def upstream_main(argv):
+        FakeExperimentSandbox().run_project(project)
+        return 0
+
+    researchclaw = ModuleType("researchclaw")
+    experiment = ModuleType("researchclaw.experiment")
+    sandbox = ModuleType("researchclaw.experiment.sandbox")
+    sandbox.ExperimentSandbox = FakeExperimentSandbox
+    cli = ModuleType("researchclaw.cli")
+    cli.main = upstream_main
+    monkeypatch.setitem(sys.modules, "researchclaw", researchclaw)
+    monkeypatch.setitem(sys.modules, "researchclaw.experiment", experiment)
+    monkeypatch.setitem(sys.modules, "researchclaw.experiment.sandbox", sandbox)
+    monkeypatch.setitem(sys.modules, "researchclaw.cli", cli)
+    monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_PATH", str(source))
+    monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_SHA256", hashlib.sha256(payload).hexdigest())
+    monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_MODULE", "frozen_benchmark")
+
+    assert main(["run"]) == 0
+    assert observed["sha256"] == hashlib.sha256(payload).hexdigest()

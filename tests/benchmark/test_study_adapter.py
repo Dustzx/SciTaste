@@ -31,6 +31,7 @@ from scitaste.benchmark.study_adapter import (
     _stage_completed,
     _stdout_seed_ids,
     _usage,
+    _validate_executable_asset_sources,
     _validate_outline_artifact,
     _validate_paper_draft_artifact,
     _validate_selected_experiment,
@@ -161,6 +162,13 @@ def test_reader_facing_topic_describes_task_without_internal_contract_id() -> No
     assert "diagnosis-factorial-v1" not in topic
 
 
+def test_reader_facing_topic_recognizes_content_addressed_executable() -> None:
+    topic = _reader_facing_research_topic(load_task("diagnosis_friendly_v2.yaml"))
+
+    assert "content-addressed executable benchmark kernel" in topic
+    assert "diagnosis-factorial-v2" not in topic
+
+
 def test_publication_resume_stage_rewinds_to_earliest_missing_prerequisite(tmp_path) -> None:
     assert _publication_resume_stage(tmp_path, "PAPER_DRAFT") == "RESULT_ANALYSIS"
 
@@ -235,6 +243,25 @@ def test_stage_seven_materializes_only_registered_frozen_citations(tmp_path) -> 
     assert [item["cite_key"] for item in candidates] == ["liu-etal-2024-lost"]
 
 
+def test_stage_seven_materializes_content_addressed_executable(tmp_path) -> None:
+    run_dir = tmp_path / "run"
+    task = load_task("diagnosis_friendly_v2.yaml")
+
+    _prepare_stage_seven(
+        run_dir,
+        task,
+        SystemCondition.AUTORESEARCHCLAW,
+        {"controller_decision": None},
+    )
+
+    executable = task["benchmark"]["executable_asset"]
+    copied = run_dir / "stage-07" / "frozen_benchmark.py"
+    manifest = json.loads((run_dir / "stage-07" / "frozen_benchmark_manifest.json").read_text())
+    assert hashlib.sha256(copied.read_bytes()).hexdigest() == executable["sha256"]
+    assert manifest["sha256"] == executable["sha256"]
+    assert manifest["entrypoint"] == "run_and_emit"
+
+
 def test_publication_sanitization_replaces_ids_and_records_hashes(tmp_path) -> None:
     analysis = tmp_path / "stage-14" / "analysis.md"
     analysis.parent.mkdir()
@@ -307,6 +334,46 @@ def test_prompt_override_freezes_plan_and_single_file_code(tmp_path) -> None:
     assert "authoritative selected-experiment evidence" in synthesis["system"]
     assert "balanced accuracy=0.750000" in synthesis["user"]
     assert "{perspectives}" in synthesis["user"]
+
+
+def test_prompt_override_uses_frozen_executable_and_real_entrypoint(tmp_path) -> None:
+    task = load_task("diagnosis_friendly_v2.yaml")
+    path = _write_prompt_overrides(tmp_path, task)
+    override = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+    code = override["stages"]["code_generation"]
+    for prompt in (code["system"], code["user"]):
+        assert "frozen_benchmark" in prompt
+        assert "run_and_emit" in prompt
+        assert task["benchmark"]["executable_asset"]["sha256"] in prompt
+        assert "if __name__ == '__main__'" in prompt
+    assert "Do not copy, redefine, approximate" in code["user"]
+
+
+def test_executable_source_gate_requires_exact_kernel_and_call(tmp_path) -> None:
+    task = load_task("diagnosis_friendly_v2.yaml")
+    source = tmp_path / "main.py"
+    kernel = tmp_path / "frozen_benchmark.py"
+    kernel.write_bytes(open(task["benchmark"]["executable_asset"]["path"], "rb").read())
+    source.write_text(
+        "from frozen_benchmark import run_and_emit\n"
+        "SCITASTE_BENCHMARK_CONTRACT = {}\n"
+        "def main():\n    run_and_emit(SCITASTE_BENCHMARK_CONTRACT)\n"
+        "if __name__ == '__main__':\n    main()\n",
+        encoding="utf-8",
+    )
+
+    _validate_executable_asset_sources([source, kernel], task)
+
+    source.write_text(
+        "from frozen_benchmark import run_and_emit\ndef unused():\n    run_and_emit({})\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="does not invoke"):
+        _validate_executable_asset_sources([source, kernel], task)
+    kernel.write_text("tampered\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="lacks the exact"):
+        _validate_executable_asset_sources([source, kernel], task)
 
 
 def test_contract_match_accepts_equivalent_upstream_labels() -> None:

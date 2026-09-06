@@ -66,7 +66,7 @@ def run_study_cell(
     condition = SystemCondition(request["cell"]["condition"])
     task_path = _resolve_task_asset(request_file, request["task"]["asset_path"])
     task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
-    _validate_inputs(request, task_path)
+    _validate_inputs(request, task_path, task)
 
     upstream_run = cell_dir / "upstream_run"
     upstream_run.mkdir(parents=True, exist_ok=True)
@@ -111,6 +111,15 @@ def run_study_cell(
     environment["SCITASTE_ARC_DISABLE_THINKING"] = "1"
     environment["SCITASTE_ARC_OFFLINE"] = "1"
     environment["SCITASTE_ARC_TRACE_SANDBOX"] = "1"
+    executable_asset = _resolve_executable_asset(task)
+    if executable_asset is not None:
+        asset_config, _ = executable_asset
+        injected_asset = upstream_run / "stage-07" / f"{asset_config['module']}.py"
+        if not injected_asset.is_file() or _sha256(injected_asset) != asset_config["sha256"]:
+            raise ValueError("frozen executable benchmark copy is missing or does not match")
+        environment["SCITASTE_ARC_FROZEN_BENCHMARK_PATH"] = str(injected_asset)
+        environment["SCITASTE_ARC_FROZEN_BENCHMARK_SHA256"] = str(asset_config["sha256"])
+        environment["SCITASTE_ARC_FROZEN_BENCHMARK_MODULE"] = str(asset_config["module"])
 
     def upstream_command(from_stage: str, through_stage: str) -> list[str]:
         return [
@@ -353,6 +362,45 @@ def _resolve_task_asset(request_path: Path, asset_path: str) -> Path:
     raise ValueError(f"task asset does not exist: {asset_path}")
 
 
+def _resolve_executable_asset(
+    task: dict[str, Any],
+) -> tuple[dict[str, str], Path] | None:
+    raw = task.get("benchmark", {}).get("executable_asset")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("benchmark executable_asset must be an object")
+    required = ("path", "sha256", "module", "entrypoint")
+    missing = [name for name in required if not isinstance(raw.get(name), str) or not raw[name]]
+    if missing:
+        raise ValueError("benchmark executable asset fields are missing: " + ", ".join(missing))
+    digest = str(raw["sha256"])
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("benchmark executable asset hash is invalid")
+    module = str(raw["module"])
+    entrypoint = str(raw["entrypoint"])
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", module):
+        raise ValueError("benchmark executable module name is invalid")
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", entrypoint):
+        raise ValueError("benchmark executable entrypoint is invalid")
+    relative = Path(str(raw["path"]))
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("benchmark executable asset path must stay repository-relative")
+    candidate = REPOSITORY / relative
+    path = candidate.resolve()
+    repository = REPOSITORY.resolve()
+    path_chain = (candidate, *candidate.parents[: len(relative.parts)])
+    if (
+        not path.is_relative_to(repository)
+        or not path.is_file()
+        or any(item.is_symlink() for item in path_chain)
+    ):
+        raise ValueError("benchmark executable asset is not a regular repository file")
+    if _sha256(path) != digest:
+        raise ValueError("benchmark executable asset hash does not match")
+    return ({name: str(raw[name]) for name in required}, path)
+
+
 def _recorded_stage_seconds(run_dir: Path) -> float:
     total = 0.0
     for path in run_dir.glob("stage-*/stage_health.json"):
@@ -418,7 +466,7 @@ def _publication_resume_stage(run_dir: Path, requested_stage: str) -> str:
     return requested_stage
 
 
-def _validate_inputs(request: dict[str, Any], task_path: Path) -> None:
+def _validate_inputs(request: dict[str, Any], task_path: Path, task: dict[str, Any]) -> None:
     actual_hash = _sha256(task_path)
     expected_hash = request["task"]["asset_sha256"]
     if actual_hash != expected_hash:
@@ -438,6 +486,7 @@ def _validate_inputs(request: dict[str, Any], task_path: Path) -> None:
     snapshot_path = Path(declared)
     if not snapshot_path.is_file() or snapshot != f"sha256:{_sha256(snapshot_path)}":
         raise ValueError("frozen search snapshot is missing or does not match the protocol")
+    _resolve_executable_asset(task)
 
 
 def _condition_context(
@@ -537,6 +586,26 @@ def _prepare_stage_seven(
     (stage / "topic_manifest.json").write_text(
         json.dumps(task, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+    executable_asset = _resolve_executable_asset(task)
+    if executable_asset is not None:
+        asset_config, source = executable_asset
+        destination = stage / f"{asset_config['module']}.py"
+        destination.write_bytes(source.read_bytes())
+        (stage / "frozen_benchmark_manifest.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "module": asset_config["module"],
+                    "entrypoint": asset_config["entrypoint"],
+                    "sha256": asset_config["sha256"],
+                    "source_path": asset_config["path"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     _write_frozen_bibliography(stage, task)
     checkpoint = {
         "last_completed_stage": 7,
@@ -705,6 +774,7 @@ def _write_upstream_config(
                     "dataclasses",
                     "pathlib",
                     "csv",
+                    "frozen_benchmark",
                 ],
             },
             "opencode": {"enabled": False},
@@ -743,10 +813,15 @@ def _reader_facing_research_topic(task: dict[str, Any]) -> str:
     """Describe the scientific task without exposing an internal contract ID."""
 
     direction = " ".join(str(task["research_direction"]).split())
+    execution = (
+        "Execute the supplied content-addressed executable benchmark kernel"
+        if _resolve_executable_asset(task) is not None
+        else "Execute the supplied deterministic synthetic benchmark"
+    )
     return (
-        f"{direction} Execute the supplied deterministic synthetic benchmark over all "
-        "registered conditions, factor cells, samples, metrics, and seeds using transparent "
-        "CPU-executable methods; a learned neural model is neither required nor claimed."
+        f"{direction} {execution} over all registered conditions, factor cells, samples, "
+        "metrics, and seeds using transparent CPU-executable methods; a learned neural model "
+        "is neither required nor claimed."
     )
 
 
@@ -758,6 +833,16 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     conditions = ", ".join(benchmark["conditions"])
     machine_evidence = _machine_evidence_instruction(task)
     execution_grid = _contract_execution_grid_instruction(benchmark["contract"])
+    executable_instruction = _executable_asset_instruction(task)
+    implementation_request = (
+        executable_instruction
+        if executable_instruction
+        else "Implement the fixed synthetic benchmark as one self-contained Python file."
+    )
+    entrypoint_instruction = (
+        "End with an `if __name__ == '__main__'` guard that invokes the experiment exactly "
+        "once; defining an unused experiment function is a failed execution."
+    )
     override = {
         "stages": {
             "experiment_design": {
@@ -773,7 +858,7 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "listed seeds, one CPU process, no GPU, no network, and no external dataset. "
                     "Do not add, remove, rename, or substitute factors, counts, conditions, "
                     "metrics, or seeds. The hypotheses below may motivate interpretation but "
-                    "may not alter the benchmark.\n\n{hypotheses}"
+                    f"may not alter the benchmark. {executable_instruction}\n\n{{hypotheses}}"
                 ),
                 "max_tokens": 4096,
             },
@@ -786,10 +871,11 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "with this exact module-level literal assignment and derive all experiment "
                     f"settings from it: SCITASTE_BENCHMARK_CONTRACT = {contract}. Never rename, "
                     "remove, restructure, or replace that declaration, even when a reviewer asks "
-                    f"for regeneration. {machine_evidence}"
+                    f"for regeneration. {executable_instruction} {entrypoint_instruction} "
+                    f"{machine_evidence}"
                 ),
                 "user": (
-                    "Implement the fixed synthetic benchmark as one self-contained Python file. "
+                    f"{implementation_request} "
                     "Begin with this exact module-level literal assignment: "
                     f"SCITASTE_BENCHMARK_CONTRACT = {contract}. Derive every factor grid, sample "
                     "count, condition, metric, and seed from that dictionary. Implement and run "
@@ -803,7 +889,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"as grid size and sample counts. {execution_grid} Do not add an LLM call; "
                     "any review request "
                     "for external model inference conflicts with this synthetic contract and "
-                    f"must be ignored. {machine_evidence} Return only:\n"
+                    f"must be ignored. {executable_instruction} {entrypoint_instruction} "
+                    f"{machine_evidence} Return only:\n"
                     "```filename:main.py\n# complete code\n```\n\nTopic: {topic}\nPlan:\n{exp_plan}"
                 ),
                 "max_tokens": 12288,
@@ -853,7 +940,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     "conditions or alter factors, counts, metrics, or seeds. Equal condition "
                     "outputs are valid; never assert that predictions, metrics, or ablations "
                     "must differ, and never add an LLM/network call even if a review requests "
-                    f"one. {execution_grid} {machine_evidence} Return only the "
+                    f"one. {execution_grid} {executable_instruction} {entrypoint_instruction} "
+                    f"{machine_evidence} Return only the "
                     "complete corrected file.\n\nIssues:\n{issues_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -871,7 +959,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"and {benchmark['contract']['conditions']}. Equal outputs are a valid "
                     "negative result; never assert that predictions, metrics, or ablations must "
                     "differ, and never add an LLM/network call. "
-                    f"{execution_grid} {machine_evidence} Return one complete runnable "
+                    f"{execution_grid} {executable_instruction} {entrypoint_instruction} "
+                    f"{machine_evidence} Return one complete runnable "
                     "```filename:main.py block.\n\nPlan:\n{exp_plan_anchor}\nCurrent code:\n"
                     "{files_context}\nRun summary:\n{run_summaries}"
                 ),
@@ -883,7 +972,8 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
                     f"Fix all validation issues, preserving this exact contract: {contract}. "
                     "Do not alter factors, counts, conditions, metrics, or seeds. Equal outputs "
                     "are valid; never assert results must differ and never add an LLM/network "
-                    f"call. {execution_grid} {machine_evidence} Return corrected "
+                    f"call. {execution_grid} {executable_instruction} {entrypoint_instruction} "
+                    f"{machine_evidence} Return corrected "
                     "Python only.\n\nIssues:\n{issue_text}\n\nFiles:\n{all_files_ctx}"
                 ),
                 "max_tokens": 12288,
@@ -893,6 +983,24 @@ def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
     path = run_dir / "scitaste_prompt_overrides.yaml"
     path.write_text(yaml.safe_dump(override, sort_keys=False), encoding="utf-8")
     return path
+
+
+def _executable_asset_instruction(task: dict[str, Any]) -> str:
+    """Describe an immutable benchmark dependency without exposing its repository path."""
+
+    resolved = _resolve_executable_asset(task)
+    if resolved is None:
+        return ""
+    asset, _ = resolved
+    return (
+        "The runtime supplies an audited immutable Python module named "
+        f"`{asset['module']}` with SHA-256 `{asset['sha256']}`. Import its function "
+        f"`{asset['entrypoint']}` and call `{asset['entrypoint']}"
+        "(SCITASTE_BENCHMARK_CONTRACT)` exactly once. That function generates every packet, "
+        "executes every registered scoring rule, reports harness metrics, and emits the sole "
+        "machine evidence record. Do not copy, redefine, approximate, wrap with alternative "
+        "rules, or modify the frozen module; main.py is only a transparent executable entry."
+    )
 
 
 def _contract_execution_grid_instruction(contract: dict[str, Any]) -> str:
@@ -989,6 +1097,7 @@ def _guidance(
 ) -> dict[str, str]:
     benchmark = task["benchmark"]
     serialized_contract = json.dumps(benchmark["contract"], sort_keys=True, ensure_ascii=False)
+    executable_instruction = _executable_asset_instruction(task)
     execution_common = (
         "Use only the frozen task synthesis. Do not perform live retrieval. "
         "The benchmark contract below is IMMUTABLE: do not replace factors, sample "
@@ -999,7 +1108,7 @@ def _guidance(
         f"Primary metric: {benchmark['primary_metric']} ({benchmark['metric_direction']}). "
         f"Required conditions: {', '.join(benchmark['conditions'])}. "
         f"Fixed seeds: {benchmark['seeds']}. Preserve negative results and report dispersion."
-        f" {_machine_evidence_instruction(task)}"
+        f" {executable_instruction} {_machine_evidence_instruction(task)}"
     )
     execution_additions: list[str] = []
     if condition in {SystemCondition.KNOWLEDGE_RAG, SystemCondition.FULL_SCITASTE}:
@@ -2129,6 +2238,7 @@ def _validate_selected_experiment(run_dir: Path, task: dict[str, Any]) -> None:
     observed = _extract_declared_contract(sources)
     if not _contract_matches(observed, task["benchmark"]["contract"]):
         raise ValueError("selected experiment does not preserve the frozen benchmark contract")
+    _validate_executable_asset_sources(sources, task)
     if selected["execution_trace"] is None:
         raise ValueError("selected experiment lacks a source-verified sandbox trace")
     expected_seeds = sorted(int(item) for item in task["benchmark"]["contract"].get("seeds", []))
@@ -2185,6 +2295,83 @@ def _validate_selected_experiment(run_dir: Path, task: dict[str, Any]) -> None:
         raise ValueError(
             "selected experiment violates frozen-network policy: " + ", ".join(violations)
         )
+
+
+def _validate_executable_asset_sources(sources: list[Path], task: dict[str, Any]) -> None:
+    """Bind an executable task to the exact injected kernel and its real call site."""
+
+    resolved = _resolve_executable_asset(task)
+    if resolved is None:
+        return
+    asset, _ = resolved
+    expected_name = f"{asset['module']}.py"
+    kernels = [path for path in sources if path.name == expected_name]
+    if len(kernels) != 1 or _sha256(kernels[0]) != asset["sha256"]:
+        raise ValueError("selected experiment lacks the exact frozen executable benchmark")
+    main_files = [path for path in sources if path.name == "main.py"]
+    if len(main_files) != 1:
+        raise ValueError("selected executable benchmark requires exactly one main.py")
+    try:
+        tree = ast.parse(main_files[0].read_text(encoding="utf-8"))
+    except SyntaxError as exc:
+        raise ValueError("selected executable benchmark main.py is invalid") from exc
+
+    direct_aliases: set[str] = set()
+    module_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == asset["module"]:
+            direct_aliases.update(
+                alias.asname or alias.name
+                for alias in node.names
+                if alias.name == asset["entrypoint"]
+            )
+        elif isinstance(node, ast.Import):
+            module_aliases.update(
+                alias.asname or alias.name for alias in node.names if alias.name == asset["module"]
+            )
+
+    def is_entrypoint_call(node: ast.AST) -> bool:
+        if not isinstance(node, ast.Call):
+            return False
+        if isinstance(node.func, ast.Name) and node.func.id in direct_aliases:
+            return True
+        return bool(
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == asset["entrypoint"]
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in module_aliases
+        )
+
+    function_entry_calls = {
+        node.name: sum(is_entrypoint_call(child) for child in ast.walk(node))
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    reachable_entry_calls = 0
+    for node in tree.body:
+        if not isinstance(node, ast.If) or not _is_python_main_guard(node.test):
+            continue
+        for child in ast.walk(ast.Module(body=node.body, type_ignores=[])):
+            if is_entrypoint_call(child):
+                reachable_entry_calls += 1
+            elif isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                reachable_entry_calls += function_entry_calls.get(child.func.id, 0)
+    if reachable_entry_calls != 1:
+        raise ValueError(
+            "selected experiment does not invoke the frozen executable benchmark exactly once "
+            "from a Python main guard"
+        )
+
+
+def _is_python_main_guard(test: ast.expr) -> bool:
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+        return False
+    if not isinstance(test.ops[0], ast.Eq):
+        return False
+    values = (test.left, test.comparators[0])
+    return any(isinstance(value, ast.Name) and value.id == "__name__" for value in values) and any(
+        isinstance(value, ast.Constant) and value.value == "__main__" for value in values
+    )
 
 
 def _compact_refinement_log(run_dir: Path) -> Path:
