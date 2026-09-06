@@ -161,8 +161,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Explicit Discovery advancement now shares the project ownership boundary:
   callers supply project/run identity and current revision while the workflow
   derives state and destination. This closes fragmented command output and
-  concurrent-advance ambiguity for registered deterministic scenarios; it does
-  not yet provide open-ended model-generated hypotheses or retrieval.
+  concurrent-advance ambiguity for registered deterministic scenarios. Its
+  first bounded semantic handler now synthesizes a typed hypothesis from the
+  registered landscape while remaining project-ledgered, budgeted,
+  non-executable, fail-closed, and reusable across command recovery. Open-ended
+  retrieval and comparative scientific-quality evidence remain pending.
 - A registered CPU experiment now runs through a shell-free Bubblewrap launcher
   with no network and a read-only filesystem, resource ceilings, exact source/stdout/
   stderr retention, strict replicate records, and independently derived metrics.
@@ -449,6 +452,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and stage artifacts are hash-bound; it has no state-transition or execution
   authority. Live interruption recovery consumes an already recorded response
   without a second provider call and refuses ambiguous repeats.
+- Project-owned Discovery is the second normal model-node consumer. Its typed
+  hypothesis node can replace scenario prose but cannot choose actions, call
+  tools, mutate state, or bypass project reservation. Offline self-iteration
+  covers accepted content, invalid-reference rejection, budget admission, and
+  no-second-call resume; live scientific-quality gain is not yet claimed.
 - The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result

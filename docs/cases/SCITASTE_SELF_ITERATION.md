@@ -221,6 +221,43 @@ commands and eight decisions at `PILOT`; independent verification bound the
 final state and `DISCOVERY.json` head. This is exactly the kind of project
 configuration defect that self-iteration should preserve rather than conceal.
 
+## Bounded semantic Discovery case
+
+The next self-iteration addresses the remaining fixed-content boundary. A
+project-owned command could already recover its deterministic execution, but
+`hypothesize` still copied intuition and hypothesis prose from the scenario.
+The chosen alternative adds a typed, proposal-only semantic node after project
+reservation. Direct state/tool authority and a larger template library remain
+explicit comparators rather than being conflated with the chosen mechanism.
+
+The registered scenario is
+`configs/cases/scitaste_bounded_semantic_discovery_iteration.yaml`; its offline
+structured condition is
+`configs/model_nodes/discovery_hypothesis_self_iteration_v1.json`. Acceptance
+requires content different from the fallback seed, the same three controller
+actions, rejection of unknown source/probe identifiers, known resource usage,
+one hash-bound ledger entry, and no second backend call after downstream failure.
+The complete self-run is integration evidence only: scripted semantic content
+cannot establish scientific-quality improvement or open-ended autonomy.
+
+The real self-run exposed one additional validator defect after its probe step:
+the first implementation expected inherited semantic provenance to disappear in
+successor states. The step had already completed atomically, so the corrected
+validator recovered and committed it without another execution. The run keeps
+that recovery count and command identity as negative evidence instead of hiding
+the failed intermediate project revision.
+
+The completed run is
+`2026-09-07__scitaste-native__bounded-semantic-discovery-v1__seed-07`. It reached
+`PILOT` through four commands and eight controller decisions, retained one
+292-token/zero-cost scripted semantic ledger entry, selected
+`idea-01-bounded-semantic-node`, and ended at state
+`state-e2606a0f9700da5cc33d2ae95221887b98808e505ab072e9b25e49034164312e`.
+The verified Discovery head is
+`93373a4754e42c2f3c037bf487a4b184e46f5ea59470b977869059ca0ab434e2`;
+the proposal digest is
+`5618ee996482335595636503ca5c946e0ebb43ed257bd88be4db0550aa3b6e04`.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

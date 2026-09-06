@@ -58,6 +58,26 @@ head and finalizes it without a second executor call. Invalid stage
 preconditions and stale revisions fail before reservation and therefore create
 no project mutation.
 
+The initial `hypothesize` operation may additionally run the typed
+`discovery-hypothesis` extension after project reservation. Its input is derived
+from the registered landscape; source identifiers and probe types are closed
+against that input. The provider receives no tool or action allowlist and its
+result remains advisory until the normal TasteController independently admits
+`SEARCH`, `FORM_INTUITION`, and `FORM_WORKING_HYPOTHESIS`. Known API cost is
+written into both the model ledger and `ResearchState.resource_usage`.
+
+Semantic identity is part of the pending reservation. A rejected response cannot
+fall back to scenario content, and resuming with a different profile/policy/
+backend identity fails. If semantic generation completed before a later executor
+failure, resume validates and reuses the ledger entry without another provider
+call. Project verification rehashes both the Discovery lineage and the complete
+model-node ledger before trusting the state reference.
+
+The semantic reference is inherited by every successor state, although only the
+first manifest step introduces it. A metadata-only recovery records a cumulative
+count and the last recovered command/ordinal on the run, so a repaired head
+commit is visible after the transient failure metadata has been cleared.
+
 The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
 the study as one project run, exposes the run's `study/` directory through the
 normal current-stage alias, and binds its protocol, plan, launcher configuration,

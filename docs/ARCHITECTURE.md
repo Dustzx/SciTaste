@@ -151,6 +151,11 @@ returns observations and artifacts but cannot select the next global action.
     and advances a self-hashed run head only after full verification. A stale or
     invalid admission has no side effect; recovery never re-executes an already
     complete pending step.
+48. A Discovery semantic node may propose only typed content grounded in its
+    registered landscape. Its profile, policy, request, response, usage, and
+    recording are project-ledgered before use; it cannot choose an action, call
+    a tool, mutate state, or silently fall back after rejection. The normal
+    controller/executor path remains the sole transition authority.
 
 ## Architecture decision records
 
@@ -850,3 +855,35 @@ without another executor call. Per-run locking and optimistic project revisions
 prevent two API workers from silently advancing the same run. This decision is
 an ownership and recovery result for deterministic scenarios, not evidence of
 open-ended autonomy, model quality, or scientific effectiveness.
+
+### ADR-033: Adaptive Discovery content is proposal-only and project-ledgered
+
+Status: accepted for bounded hypothesis formation.
+
+Fixed scenario seeds make the native loop reproducible, but they do not let the
+system synthesize a new intuition or hypothesis from a registered landscape.
+Calling a model before run reservation would solve the prose problem by creating
+a larger provenance and accounting problem: provider cost, interrupted results,
+and the content entering state would not share one recoverable identity.
+
+`discovery-hypothesis` is therefore a domain extension of the durable model-node
+runtime. The runtime accepts an additive typed registry while prohibiting
+replacement of built-in nodes. The request contains project-derived research
+identity, at most forty landscape findings, their exact source identifiers, and
+a closed probe-type list. The response contains an intuition, one falsifiable
+working hypothesis, alternatives, and uncertainty—no action, state, budget, or
+executable tool field. Deterministic validation rejects unknown sources, probe
+types, duplicate predictions, excess content, provider tool calls, or missing
+cost telemetry.
+
+The project reserves `hypothesize` before the model call. An accepted response is
+recorded in the run's hash-chained model ledger and then referenced by the
+Discovery command receipt, manifest step, and state executor context. The normal
+TasteController still selects the three actions and ResearchExecutor must succeed
+before publication. Semantic rejection publishes no Discovery state; a completed
+response is reused after downstream interruption, and binding drift on resume is
+rejected. The API cost is reflected in canonical resource usage.
+
+This establishes adaptive, recoverable content generation—not open-ended
+retrieval, direct tool autonomy, or scientific effectiveness. Those require
+separate registered handlers and matched evidence.

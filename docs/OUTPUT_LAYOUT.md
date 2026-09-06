@@ -103,6 +103,13 @@ and any pending operation. `project discovery verify` rehashes the complete tree
 The command derives every path from project/run identity; it never creates an
 unowned top-level stage directory.
 
+When `hypothesize` uses bounded semantic generation, the same run also owns
+`model_nodes/ledger/` and `model_nodes/recordings/`. The first Discovery step
+stores a proposal-only reference to that ledger entry; `DISCOVERY.json`, the
+command receipt, and `research_state.json` all bind the same entry, request,
+proposal, and recording identities. The model-node directory is a sibling of
+`discovery/`, never an unowned top-level output.
+
 For a native measured run, `stages/communication/evidence_projection.json`
 binds the manuscript measurement to its predecessor state, interpretation,
 native execution record, and raw replicate-derived metric artifact. `paper.md`

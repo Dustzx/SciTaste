@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- Project-owned Discovery can now replace fixed `hypothesize` prose with an
+  opt-in, typed `discovery-hypothesis` model proposal. The node sees only the
+  registered landscape, cites only registered sources, chooses only bounded
+  probe types, receives no action/tool authority, records usage before use, and
+  binds its request, proposal, recording, and ledger hashes into the immutable
+  Discovery step and state. Rejection publishes no state, while resume reuses a
+  completed invocation without another backend call.
+- The durable model-node runtime now accepts validated domain extension
+  registries without allowing extensions to replace built-in nodes. A complete
+  chained ledger can expose one verified entry through the same typed registry.
 - Real, composable `hypothesize`, `probe`, `reformulate`, `ideate`, and
   `portfolio select` commands replace the Phase 4 CLI placeholders. Each command
   validates scenario/state identity, preserves controller selection and executor
@@ -285,6 +295,10 @@ semantic versioning.
 
 ### Fixed
 
+- Discovery lineage verification now requires the first semantic reference to
+  persist across every successor state instead of incorrectly expecting later
+  commands to erase it. Metadata-only recovery is recorded on the run with a
+  cumulative count and last recovered command identity.
 - AutoResearchClaw staged actions now require fresh exact-stage completion
   evidence, reject unsafe artifacts and invalid cost logs, preserve partial
   timeout telemetry, apply configurable cumulative-token limits, and charge only

@@ -429,6 +429,28 @@ it does not accept an unrelated `--state` or `--output`. A failed or interrupted
 operation requires `--resume`. If its complete immutable step already exists,
 resume verifies and commits it without executing the command again.
 
+The first command can optionally synthesize its intuition and falsifiable
+hypothesis from the registered landscape through the same durable model-node
+runtime:
+
+```bash
+.venv/bin/scitaste project discovery advance \
+  --project-id scitaste-self-development \
+  --run-id 2026-09-07__scitaste-native__bounded-semantic-discovery__seed-07 \
+  --operation hypothesize \
+  --config configs/cases/scitaste_bounded_semantic_discovery_iteration.yaml \
+  --semantic-config configs/model_nodes/discovery_hypothesis_self_iteration_v1.json \
+  --semantic-profile-set configs/model_nodes/discovery_semantic_profiles.example.yaml \
+  --semantic-profile-id discovery-hypothesis-scripted \
+  --seed 7 --expected-revision 0 --outputs-root outputs
+```
+
+This shipped condition is an executable offline fixture, not a quality claim.
+For a live backend, the profile, profile-set, backend configuration, and explicit
+`--semantic-allow-live` gate must all agree. An enabled semantic node cannot
+silently fall back to scenario prose: rejection or unavailable accounting fails
+the pending operation before a Discovery state is published.
+
 ## Offline Evidence Loop
 
 Run a supported claim or a stable contradictory result:

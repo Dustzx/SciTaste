@@ -512,6 +512,14 @@ revision, protocol/config/report/verification hashes, case completion/planned/
 blocker counts, exact acceptance state, and measured token/cost/latency totals.
 They never include API-key values or raw provider responses.
 
+The runtime has an additive `ModelNodeRegistration` extension boundary for
+domain consumers. Extensions must register a node class and its exact input and
+output models under the class's own name; they cannot replace built-ins. A
+runtime reopening a ledger must supply the same extension registry, otherwise
+typed verification fails closed. Project-owned Discovery uses this boundary for
+`discovery-hypothesis`, while retaining the shared cumulative ledger, recording,
+revision gate, and interruption recovery semantics.
+
 The live transport persists the exact request payload and decoded response body
 under the owning project before higher-level schema parsing. It deliberately
 omits authorization headers. The file hash is bound into the case checkpoint
