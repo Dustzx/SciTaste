@@ -31,6 +31,7 @@ from scitaste.benchmark.study_adapter import (
     _remove_missing_publication_images,
     _sanitize_publication_artifacts,
     _selected_experiment,
+    _selected_stdout_summary,
     _stage_completed,
     _stdout_seed_ids,
     _usage,
@@ -1463,6 +1464,18 @@ def test_seed_evidence_parser_prefers_verified_machine_record() -> None:
     assert "bad_condition" not in per_seed["7"]
     assert per_seed["31"]["confidence_weighted_vote"] == 0.9
     assert dispersion["majority_vote"] == {"mean": 0.7, "std": 0.0}
+
+
+def test_publication_stdout_summary_excludes_machine_record() -> None:
+    payload = json.dumps(v3_machine_evidence(), separators=(",", ":"))
+    stdout = f"Seed 7\nmajority_vote: balanced_accuracy=0.8\nSCITASTE_EVIDENCE_JSON={payload}\n"
+
+    summary = _selected_stdout_summary(stdout, "balanced_accuracy")
+
+    assert "Seed 7" in summary
+    assert "majority_vote" in summary
+    assert "SCITASTE_EVIDENCE_JSON" not in summary
+    assert '"diagnostics"' not in summary
 
 
 def test_seed_evidence_parser_rejects_inconsistent_machine_record() -> None:

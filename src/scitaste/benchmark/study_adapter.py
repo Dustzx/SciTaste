@@ -111,6 +111,9 @@ def run_study_cell(
     environment["SCITASTE_ARC_DISABLE_THINKING"] = "1"
     environment["SCITASTE_ARC_OFFLINE"] = "1"
     environment["SCITASTE_ARC_TRACE_SANDBOX"] = "1"
+    environment["SCITASTE_ARC_ANALYSIS_GUIDANCE_PATH"] = str(
+        upstream_run / "scitaste_prompts" / "result_analysis.md"
+    )
     executable_asset = _resolve_executable_asset(task)
     if executable_asset is not None:
         asset_config, _ = executable_asset
@@ -1888,7 +1891,6 @@ def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
         "condition:",
         "condition=",
         "mean_ba=",
-        MACHINE_EVIDENCE_PREFIX.casefold(),
         "seed ",
         ": mean=",
         "overall_",
@@ -1904,7 +1906,8 @@ def _selected_stdout_summary(stdout: str, primary_metric: str) -> str:
     lines = [
         line.rstrip()
         for line in stdout.splitlines()
-        if any(marker in line.casefold() for marker in markers)
+        if not line.strip().startswith(MACHINE_EVIDENCE_PREFIX)
+        and any(marker in line.casefold() for marker in markers)
     ]
     return "\n".join(lines[-160:])[-16000:]
 

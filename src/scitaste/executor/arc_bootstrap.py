@@ -93,6 +93,47 @@ def _install_offline_literature() -> None:
     literature_verify.verify_citations = verify_frozen_citations
 
 
+def _install_analysis_debate_guidance() -> None:
+    """Bind every Stage 14 debate role to SciTaste's selected evidence projection."""
+
+    from researchclaw.prompts.manager import PromptManager
+
+    path = Path(os.environ["SCITASTE_ARC_ANALYSIS_GUIDANCE_PATH"])
+    if not path.is_absolute() or not path.is_file() or path.is_symlink():
+        raise ValueError("analysis guidance must be an absolute regular file")
+    if path.stat().st_size > 65_536:
+        raise ValueError("analysis guidance exceeds the process-local size limit")
+    guidance = path.read_text(encoding="utf-8")
+    if not guidance.strip():
+        raise ValueError("analysis guidance is empty")
+
+    upstream_roles = PromptManager.debate_roles_analysis
+    if getattr(upstream_roles, "_scitaste_evidence_bound", False):
+        return
+
+    def evidence_bound_roles(self):
+        roles = upstream_roles(self)
+        result: dict[str, dict[str, str]] = {}
+        for role_name, prompts in roles.items():
+            result[role_name] = {
+                "system": (
+                    str(prompts["system"])
+                    + " The appended authoritative evidence overrides missing or conflicting "
+                    "run summaries. Never expose machine-record identifiers or write the "
+                    "literal single-run statistical shorthand prohibited by that evidence."
+                ),
+                "user": (
+                    str(prompts["user"])
+                    + "\n\nAUTHORITATIVE SELECTED-EXPERIMENT GUIDANCE:\n"
+                    + guidance
+                ),
+            }
+        return result
+
+    evidence_bound_roles._scitaste_evidence_bound = True
+    PromptManager.debate_roles_analysis = evidence_bound_roles
+
+
 def _install_frozen_benchmark_asset() -> None:
     """Inject one content-addressed task kernel into each upstream sandbox project."""
 
@@ -186,6 +227,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         _install_frozen_benchmark_asset()
     if os.environ.get("SCITASTE_ARC_OFFLINE", "").casefold() in {"1", "true", "yes"}:
         _install_offline_literature()
+    if os.environ.get("SCITASTE_ARC_ANALYSIS_GUIDANCE_PATH"):
+        _install_analysis_debate_guidance()
     if os.environ.get("SCITASTE_ARC_DISABLE_THINKING", "").casefold() in {"1", "true", "yes"}:
         import urllib.request
 

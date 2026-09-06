@@ -7,7 +7,11 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from scitaste.executor.arc_bootstrap import _install_offline_literature, main
+from scitaste.executor.arc_bootstrap import (
+    _install_analysis_debate_guidance,
+    _install_offline_literature,
+    main,
+)
 
 
 def test_bootstrap_clamps_upstream_output_tokens(monkeypatch) -> None:
@@ -72,6 +76,51 @@ def test_bootstrap_offline_mode_disables_search_and_citation_network(monkeypatch
     report = verify.verify_citations("frozen")
     assert report.total == 2
     assert report.skipped == 2
+
+
+def test_bootstrap_binds_every_analysis_role_to_selected_evidence(monkeypatch, tmp_path) -> None:
+    guidance = tmp_path / "analysis-guidance.md"
+    guidance.write_text("Registered grid evidence: 16 / 0 / 3 boundaries.\n", encoding="utf-8")
+
+    class FakePromptManager:
+        def debate_roles_analysis(self):
+            return {
+                "optimist": {"system": "optimistic", "user": "{data_context}"},
+                "skeptic": {"system": "skeptical", "user": "{data_context}"},
+            }
+
+    prompts = ModuleType("researchclaw.prompts")
+    manager = ModuleType("researchclaw.prompts.manager")
+    manager.PromptManager = FakePromptManager
+    monkeypatch.setitem(sys.modules, "researchclaw", ModuleType("researchclaw"))
+    monkeypatch.setitem(sys.modules, "researchclaw.prompts", prompts)
+    monkeypatch.setitem(sys.modules, "researchclaw.prompts.manager", manager)
+    monkeypatch.setenv("SCITASTE_ARC_ANALYSIS_GUIDANCE_PATH", str(guidance.resolve()))
+
+    _install_analysis_debate_guidance()
+
+    roles = FakePromptManager().debate_roles_analysis()
+    assert set(roles) == {"optimist", "skeptic"}
+    for role in roles.values():
+        assert "authoritative evidence overrides" in role["system"]
+        assert "16 / 0 / 3 boundaries" in role["user"]
+
+
+def test_bootstrap_rejects_relative_analysis_guidance(monkeypatch) -> None:
+    class FakePromptManager:
+        def debate_roles_analysis(self):
+            return {}
+
+    prompts = ModuleType("researchclaw.prompts")
+    manager = ModuleType("researchclaw.prompts.manager")
+    manager.PromptManager = FakePromptManager
+    monkeypatch.setitem(sys.modules, "researchclaw", ModuleType("researchclaw"))
+    monkeypatch.setitem(sys.modules, "researchclaw.prompts", prompts)
+    monkeypatch.setitem(sys.modules, "researchclaw.prompts.manager", manager)
+    monkeypatch.setenv("SCITASTE_ARC_ANALYSIS_GUIDANCE_PATH", "relative.md")
+
+    with pytest.raises(ValueError, match="absolute regular file"):
+        _install_analysis_debate_guidance()
 
 
 def test_bootstrap_stops_after_exact_total_token_overrun(monkeypatch) -> None:

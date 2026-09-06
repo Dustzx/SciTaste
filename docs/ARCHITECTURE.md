@@ -136,6 +136,11 @@ returns observations and artifacts but cannot select the next global action.
     decision-bound native record, and the independently parsed replicate artifact.
     Audit drafts retain internal trace markers; publication projections remove
     those identifiers without adding scientific content.
+45. A registered executable study task binds its contract, kernel, canonical
+    entrypoint, exact sandbox trace, sole machine-evidence record, and downstream
+    diagnostic projection. Aggregate summaries cannot erase factor effects or
+    failure boundaries, and analysis or writing that negates those observations
+    fails before publication.
 
 ## Architecture decision records
 
@@ -740,3 +745,37 @@ a non-zero result claiming success is forcibly failed and loses its claimed
 outcome/artifacts. Historical records are never rewritten. The local transport
 is therefore admitted, but budget revision and a complete Stage 8--18 run remain
 required before operational acceptance.
+
+### ADR-030: Executable study diagnostics remain authoritative through publication
+
+Status: accepted for evidence integrity; complete local-cell operational
+acceptance requires a clean Stage 8--18 run.
+
+The frozen task brief alone was insufficient for local small-model execution:
+generated code could preserve the apparent contract while never calling a real
+benchmark, or a generic code reviewer could rewrite the registered entrypoint.
+Executable tasks may therefore declare one repository-relative asset by path,
+SHA-256 digest, module, and entrypoint. The adapter copies that exact kernel and
+a condition-invariant canonical runner into Stage 7, injects them process-locally
+at code extraction and sandbox execution, and rejects any selected source whose
+bytes, call site, main guard, contract, or source-verified execution trace differ.
+No change is made inside the pinned AutoResearchClaw submodule.
+
+The executable emits exactly one compact machine-evidence record. SciTaste
+validates its registered condition/seed matrix, descriptive dispersion, packet
+counts, factor levels, factor-effect ranges, failure threshold, reproduction
+minimum, boundary counts, and reported boundary cells before projecting them
+into analysis or writing. The internal record may retain kernel identifiers for
+audit, while its publication projection uses reader-facing method and factor
+names. Downstream prompts receive both the per-seed matrix and registered
+diagnostics; deterministic checkpoints materialize missing evidence but do not
+invent or revise prose.
+
+Generic upstream warnings and debate perspectives remain useful criticism, not
+evidence authority. A manuscript may describe limits of the registered grid,
+but cannot turn untested additional levels into a claim that executed levels
+were absent, flatten three seeds into statistical N=1, attribute synthetic rules
+to neural-model internals, or deny an observed boundary. Those contradictions
+fail at analysis, outline, and draft gates. Historical failed runs remain
+immutable evidence of each exposed boundary defect and cannot be promoted after
+the implementation changes.
