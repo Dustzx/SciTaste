@@ -81,6 +81,53 @@ repository work, so the UI must not infer newer progress from Git or docs. Main
 must register later milestones through the normal `ProjectRuntime` workflow if
 they should appear in this view.
 
+### Unified intent and surface-plan contracts
+
+Quick clicks and free questions enter one snapshot-bound intent boundary. A
+`QuickIntentRequest` names only a server-issued quick-intent ID; a
+`FreeQuestionRequest` carries bounded opaque text for resolution but that text
+is deliberately absent from every `WorkspaceIntent`, `IntentResolution`,
+surface, renderer, and audit document. Request fingerprints retain request
+identity without turning the question into display content.
+
+`WorkspaceIntentResolver` derives its quick catalog from the current
+`ProjectProgressBoard.next_step_candidates`. An empty project therefore offers
+only progress review; blocker diagnosis, run comparison, paper review, and
+next-gate review appear only when the current manifest and evidence binding make
+them possible. Equivalent quick and recognized free-form requests resolve to
+the same canonical `WorkspaceIntent` fingerprint.
+
+The initial deterministic resolver recognizes progress, blocker, comparison,
+paper-evidence, and next-step goals in Chinese or English. A free comparison
+must name exactly two registered Run IDs or returns a bounded Run candidate set.
+A paper request with multiple registered papers likewise requests
+clarification. Unknown long-tail language returns
+`provider_unavailable/long-tail-question-requires-planner` until the optional
+planner boundary is configured; it never guesses an entity or fabricates an
+answer.
+
+Resolved intents contain one project-manifest binding plus only the Run or paper
+evidence roles required by the closed goal. The raw question and input modality
+are excluded, so the intent is a scientific target rather than a transcript.
+All references are revalidated against the exact `SnapshotBinding`.
+
+`SurfaceCandidateFactory` then assembles complete server-owned component and
+action candidates from the existing closed workspace views. It scopes component
+and action IDs to prevent collisions and validates the whole catalog as one
+legal `SurfaceSpec`. An external planner receives only
+`SurfaceCandidateDescriptor`: candidate ID, registered component enum, source
+view, evidence IDs, reason code, and allowed group/emphasis enums. Component
+data, titles, action proposals, paths, and evidence content are withheld.
+
+A `SurfacePlan` can contain only an ordered candidate ID, closed group,
+closed emphasis, and optional focus evidence IDs for each entry. It is bound to
+the project, snapshot, canonical intent, and complete candidate-catalog
+fingerprints. It has no prose, component schema, component data, action, URL,
+path, callback, command, or authority field. Materialization copies the selected
+trusted `ComponentSpec` and `ActionBinding` objects unchanged; an unknown
+candidate, cross-candidate evidence reference, disallowed group, duplicate ID,
+or stale fingerprint rejects the complete plan.
+
 ## Trusted project surface factory
 
 `ProjectSurfaceFactory` is the first-party entry point for a real project

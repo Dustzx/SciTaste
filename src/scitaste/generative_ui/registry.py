@@ -58,6 +58,7 @@ class SurfacePurpose(StrEnum):
     BLOCKER_VIEW = "blocker_view"
     PENDING_PROPOSALS = "pending_proposals"
     PROJECT_PROGRESS = "project_progress"
+    GENERATED_WORKSPACE = "generated_workspace"
 
 
 class ProposalKind(StrEnum):
