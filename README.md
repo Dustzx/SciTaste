@@ -366,6 +366,43 @@ The second performs one sanity check before maturing an idea. `evidence-first-li
 and `idea-first-like` are computed descriptions of those trajectories, not
 hard-coded execution modes.
 
+The same native loop can be advanced as explicit, inspectable operations. Every
+step reads the prior state without changing it and refuses to replace an existing
+output directory:
+
+```bash
+.venv/bin/scitaste hypothesize \
+  --config configs/experiments/discovery_weak.yaml \
+  --output outputs/discovery-steps/01-hypothesize --seed 7
+.venv/bin/scitaste probe \
+  --config configs/experiments/discovery_weak.yaml \
+  --state outputs/discovery-steps/01-hypothesize/research_state.json \
+  --output outputs/discovery-steps/02-probe --seed 7
+.venv/bin/scitaste reformulate \
+  --config configs/experiments/discovery_weak.yaml \
+  --state outputs/discovery-steps/02-probe/research_state.json \
+  --output outputs/discovery-steps/03-reformulate --seed 7
+.venv/bin/scitaste probe \
+  --config configs/experiments/discovery_weak.yaml \
+  --state outputs/discovery-steps/03-reformulate/research_state.json \
+  --output outputs/discovery-steps/04-probe --seed 7
+.venv/bin/scitaste ideate \
+  --config configs/experiments/discovery_weak.yaml \
+  --state outputs/discovery-steps/04-probe/research_state.json \
+  --output outputs/discovery-steps/05-ideate --seed 7
+.venv/bin/scitaste portfolio select \
+  --config configs/experiments/discovery_weak.yaml \
+  --state outputs/discovery-steps/05-ideate/research_state.json \
+  --output outputs/discovery-steps/06-portfolio --seed 7
+```
+
+Each directory contains `research_state.json`, its immutable state snapshot,
+`decisions.jsonl`, and `discovery_command.json`. The receipt binds the validated
+scenario, input/output state identities, selected actions, executor results, and
+the decision-log digest. `--dry-run` performs admission checks without creating
+the destination. These offline commands use the deterministic mock executor and
+do not claim open-ended model autonomy or research effectiveness.
+
 ## Offline Evidence Loop
 
 Run a supported claim or a stable contradictory result:

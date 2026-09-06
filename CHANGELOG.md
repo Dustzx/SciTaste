@@ -7,6 +7,11 @@ semantic versioning.
 
 ### Added
 
+- Real, composable `hypothesize`, `probe`, `reformulate`, `ideate`, and
+  `portfolio select` commands replace the Phase 4 CLI placeholders. Each command
+  validates scenario/state identity, preserves controller selection and executor
+  success gates, and publishes a new content-addressed state lineage with a
+  hash-bound command decision log instead of mutating its input.
 - A content-addressed executable diagnosis benchmark with an exact canonical
   entrypoint, 1,944 generated packets, three registered seeds, independently
   derived factor effects, and a cross-seed failure-boundary criterion.

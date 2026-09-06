@@ -141,6 +141,11 @@ returns observations and artifacts but cannot select the next global action.
     diagnostic projection. Aggregate summaries cannot erase factor effects or
     failure boundaries, and analysis or writing that negates those observations
     fails before publication.
+46. A composable discovery command consumes one exact state snapshot and a
+    matching validated scenario, leaves that input unchanged, and publishes a
+    new state plus the hash of its command-local decision log. Direct CLI use
+    cannot bypass TasteController selection, executor success, or stage
+    preconditions.
 
 ## Architecture decision records
 
@@ -779,3 +784,36 @@ to neural-model internals, or deny an observed boundary. Those contradictions
 fail at analysis, outline, and draft gates. Historical failed runs remain
 immutable evidence of each exposed boundary defect and cannot be promoted after
 the implementation changes.
+
+### ADR-031: Discovery operations are immutable state transformations
+
+Status: accepted for the deterministic native Discovery Loop.
+
+The Phase 4 domain objects were complete before every required public operation
+was usable: `hypothesize`, `probe`, `reformulate`, `ideate`, and
+`portfolio select` still returned a reserved-command response. Treating the
+monolithic `discover` demonstration as sufficient hid this product boundary.
+
+Each operation now accepts the same validated `DiscoveryScenario`; all but the
+initial hypothesis operation consume one exact `ResearchState`. Scenario and
+state project identity, direction, domain, venue, stage, and operation-specific
+preconditions are checked before execution. The existing TasteController still
+ranks candidates, the selected action must succeed through ResearchExecutor,
+and the transition reducer appends the canonical decision and state transition.
+`probe` records support, contradiction, or inconclusive evidence and retains the
+corresponding validate or re-probe decision; contradictions must be explicitly
+carried into `reformulate` rather than silently rewritten.
+
+No operation edits its input or appends into an ambiguous shared directory. It
+publishes a new output tree containing the resulting state, its immutable
+content-addressed snapshot, only the command-local decisions, and a receipt that
+binds the canonical scenario digest, input/output state identities, decision and
+executor-result identifiers, and decision-log SHA-256. Existing destinations
+fail closed. The full `discover` command remains a convenience macro over the
+same scientific semantics, not a second Idea-First or Evidence-First pipeline.
+
+This acceptance is deliberately scoped to registered deterministic scenarios
+and the mock executor. It removes public CLI placeholders and establishes a
+composable provenance contract; open-ended retrieval, model-generated
+hypotheses, and independently evaluated research quality remain later native
+capability gates under ADR-028.

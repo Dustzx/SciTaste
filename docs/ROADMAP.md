@@ -51,6 +51,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `REFORMULATE_HYPOTHESIS` decisions.
 - Problem formation, style-normalized divergent ideas, controller-ranked idea
   selection, and multi-slot portfolios.
+- The required `hypothesize`, `probe`, `reformulate`, `ideate`, and
+  `portfolio select` CLI operations are implemented rather than reserved. They
+  compose through immutable state snapshots, validate scenario identity and
+  stage preconditions, retain controller decisions/executor outcomes, and bind
+  every new-step decision log by SHA-256. The monolithic `discover` command is a
+  convenience orchestration path, not a separate discovery strategy.
 - Stable contradictory pilot evidence can produce a new problem and idea.
 - Integration acceptance: weak intuition takes two probes and reformulates;
   strong prior evidence takes one sanity probe. Both finish at `PILOT` through
