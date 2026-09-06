@@ -22,6 +22,10 @@ from scitaste.discovery.probe_agent import (
     ProbeDisposition,
 )
 from scitaste.discovery.problem import ProblemFormationAgent
+from scitaste.discovery.semantic_models import (
+    DiscoveryHypothesisProposal,
+    DiscoverySemanticReference,
+)
 from scitaste.executor.base import ExecutionResult, ResearchExecutor, require_execution_success
 from scitaste.executor.mock import MockExecutor
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -91,6 +95,7 @@ class DiscoveryCommandReport(BaseModel):
     active_problem_id: str | None = None
     active_idea_id: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
+    semantic_proposal: DiscoverySemanticReference | None = None
     state: str
     decision_log: str
     decision_log_sha256: _ContentDigest
@@ -221,6 +226,8 @@ class DiscoveryCommandRunner:
         signal_number: int | None = None,
         reformulation_number: int | None = None,
         receipt_paths: Literal["filesystem", "step-relative"] = "filesystem",
+        semantic_proposal: DiscoveryHypothesisProposal | None = None,
+        semantic_reference: DiscoverySemanticReference | None = None,
     ) -> DiscoveryCommandReport:
         """Execute and exclusively own a new discovery-step directory."""
 
@@ -229,6 +236,10 @@ class DiscoveryCommandRunner:
         root = Path(output_dir)
         if root.exists():
             raise FileExistsError(f"refusing to replace discovery command output: {root}")
+        if (semantic_proposal is None) != (semantic_reference is None):
+            raise ValueError("semantic proposal and reference must be supplied together")
+        if semantic_proposal is not None and command is not DiscoveryCommand.HYPOTHESIZE:
+            raise ValueError("semantic hypothesis proposal is valid only for hypothesize")
         preview = self.preview(
             command,
             scenario,
@@ -238,7 +249,11 @@ class DiscoveryCommandRunner:
         )
         input_state_id = snapshot_id(state) if state is not None else None
         if command == DiscoveryCommand.HYPOTHESIZE:
-            outcome = self._hypothesize(scenario)
+            outcome = self._hypothesize(
+                scenario,
+                semantic_proposal=semantic_proposal,
+                semantic_reference=semantic_reference,
+            )
         elif command == DiscoveryCommand.PROBE:
             assert state is not None and preview.signal_number is not None
             outcome = self._probe(scenario, state, signal_number=preview.signal_number)
@@ -262,9 +277,21 @@ class DiscoveryCommandRunner:
             input_state_id=input_state_id,
             outcome=outcome,
             receipt_paths=receipt_paths,
+            semantic_reference=semantic_reference,
         )
 
-    def _hypothesize(self, scenario: DiscoveryScenario) -> _CommandOutcome:
+    def _hypothesize(
+        self,
+        scenario: DiscoveryScenario,
+        *,
+        semantic_proposal: DiscoveryHypothesisProposal | None = None,
+        semantic_reference: DiscoverySemanticReference | None = None,
+    ) -> _CommandOutcome:
+        semantic_context = (
+            semantic_reference.model_dump(mode="json")
+            if semantic_reference is not None
+            else None
+        )
         state = ResearchState(
             project_id=scenario.project_id,
             research_direction=scenario.research_direction,
@@ -275,9 +302,12 @@ class DiscoveryCommandRunner:
                 "discovery_command": {
                     "schema_version": "1.0",
                     "scenario_sha256": self._scenario_sha256(scenario),
-                }
+                },
+                "discovery_semantic": semantic_context,
             },
         )
+        if semantic_reference is not None:
+            state.resource_usage.api_cost_usd = semantic_reference.cost_usd
         decisions: list[ResearchDecision] = []
         results: list[ExecutionResult] = []
 
@@ -316,16 +346,32 @@ class DiscoveryCommandRunner:
         )
         decisions.append(decision)
         results.append(result)
-        context_ids = sorted(
-            {source for finding in scenario.landscape_findings for source in finding.source_ids}
+        context_ids = (
+            list(semantic_proposal.intuition.supporting_source_ids)
+            if semantic_proposal is not None
+            else sorted(
+                {source for finding in scenario.landscape_findings for source in finding.source_ids}
+            )
         )
         hypothesis_agent = HypothesisAgent()
         intuition = hypothesis_agent.form_intuition(
             intuition_id="intuition-01",
-            statement=scenario.intuition.statement,
-            source=scenario.intuition.source,
+            statement=(
+                semantic_proposal.intuition.statement
+                if semantic_proposal is not None
+                else scenario.intuition.statement
+            ),
+            source=(
+                "bounded-model-synthesis-of-registered-landscape"
+                if semantic_proposal is not None
+                else scenario.intuition.source
+            ),
             supporting_context_ids=context_ids,
-            confidence=scenario.intuition.confidence,
+            confidence=(
+                semantic_proposal.intuition.confidence
+                if semantic_proposal is not None
+                else scenario.intuition.confidence
+            ),
         )
         state.research_intuitions.append(intuition)
 
@@ -345,7 +391,11 @@ class DiscoveryCommandRunner:
         results.append(result)
         hypothesis = hypothesis_agent.form_working_hypothesis(
             hypothesis_id="working-hypothesis-01",
-            seed=scenario.initial_hypothesis,
+            seed=(
+                semantic_proposal.hypothesis
+                if semantic_proposal is not None
+                else scenario.initial_hypothesis
+            ),
             intuition_ids=[intuition.intuition_id],
         )
         state.working_hypotheses.append(hypothesis)
@@ -354,7 +404,24 @@ class DiscoveryCommandRunner:
             state=state,
             decisions=decisions,
             results=results,
-            details={"hypothesis_id": hypothesis.hypothesis_id},
+            details={
+                "hypothesis_id": hypothesis.hypothesis_id,
+                "content_origin": (
+                    "bounded-semantic-proposal"
+                    if semantic_proposal is not None
+                    else "registered-scenario-seed"
+                ),
+                "alternative_explanations": (
+                    list(semantic_proposal.alternative_explanations)
+                    if semantic_proposal is not None
+                    else []
+                ),
+                "uncertainty": (
+                    semantic_proposal.uncertainty
+                    if semantic_proposal is not None
+                    else None
+                ),
+            },
         )
 
     def _probe(
@@ -624,6 +691,7 @@ class DiscoveryCommandRunner:
         input_state_id: str | None,
         outcome: _CommandOutcome,
         receipt_paths: Literal["filesystem", "step-relative"],
+        semantic_reference: DiscoverySemanticReference | None,
     ) -> DiscoveryCommandReport:
         root.parent.mkdir(parents=True, exist_ok=True)
         temporary = Path(tempfile.mkdtemp(prefix=f".{root.name}.", dir=root.parent))
@@ -660,6 +728,7 @@ class DiscoveryCommandRunner:
                 active_problem_id=outcome.state.active_problem_id,
                 active_idea_id=outcome.state.active_idea_id,
                 details=outcome.details,
+                semantic_proposal=semantic_reference,
                 state=state_locator,
                 decision_log=decision_locator,
                 decision_log_sha256=decision_log_sha256,

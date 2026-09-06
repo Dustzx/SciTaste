@@ -1,0 +1,65 @@
+project_id: scitaste-self-development
+research_direction: Use SciTaste's own design, implementation, and validation decisions as an auditable self-iteration project without treating self-evidence as an effectiveness result.
+target_domain: autonomous-research-systems
+target_venue: software-artifact
+resource_budget:
+  gpu_hours: 0.2
+  max_experiments: 4
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+  compute_constraints: [deterministic registered diagnostics, bounded semantic fixture, no live model calls]
+landscape_findings:
+  - category: active_problem
+    statement: Project-owned Discovery now preserves command and state lineage, but its scientific intuition and hypothesis prose still come from fixed scenario fields.
+    source_ids: [project-owned-discovery-v2]
+  - category: methodological_bottleneck
+    statement: The durable model-node runtime has strong budget and recovery gates but its closed node registry prevents first-class domain extensions.
+    source_ids: [model-node-runtime-registry-audit]
+  - category: unexplained_failure
+    statement: Calling a semantic provider outside the project reservation would leave cost and content detached from the Discovery state after interruption.
+    source_ids: [semantic-resume-boundary-analysis]
+intuition:
+  statement: Typed semantic proposals may make Discovery content adaptive while deterministic policy retains all execution authority.
+  source: architecture-audit
+  confidence: 0.78
+initial_hypothesis:
+  statement: A project-bound semantic node can replace fixed hypothesis prose without changing deterministic action selection or weakening interruption recovery.
+  falsifiable_predictions:
+    - Accepted semantic content should be hash-bound to the state while selected actions remain controller-owned.
+    - A completed semantic invocation should not be called again when command execution resumes.
+  proposed_probe_types: [sanity-check, reproduction]
+  confidence: 0.82
+reformulations: []
+probe_signals:
+  - observation: The bounded proposal changed the intuition and hypothesis content, retained the three deterministic controller actions, rejected unregistered sources, and resumed after executor failure with one ledger entry and no second model call.
+    expected: true
+    reproducible: true
+    stability: 0.96
+    effect_size: 0.92
+    boundary_conditions: [scripted structured backend, project-owned Discovery run, proposal-only node]
+    alternative_explanations: [typed deterministic templates may provide part of the same integration benefit]
+problem:
+  explanation_gap: A scientific workflow needs adaptive semantic content, yet unconstrained model calls can silently acquire state, budget, or execution authority and lose reproducibility at interruption boundaries.
+  importance: Separating semantic proposals from deterministic authority is necessary for useful model autonomy that remains auditable and safe.
+idea_seeds:
+  - generator: bounded-semantic-node
+    hypothesis: A typed proposal-only node can improve content flexibility without weakening the project transaction boundary.
+    proposed_mechanism: Derive bounded input from registered landscape evidence, validate source and probe references, record the response before use, then bind its hashes into the Discovery state and manifest.
+    expected_validation: [schema rejection, source-scope rejection, controller action invariance, exact completed-call recovery]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.3}
+    expected_value: {problem_validity: 0.98, novelty: 0.82, feasibility: 0.92, evidence_tractability: 0.96, expected_empirical_signal: 0.92}
+    main_risk: Scientific quality remains unmeasured under a scripted integration condition.
+  - generator: free-form-agent
+    hypothesis: Giving the model direct state and tool access will produce more adaptive hypotheses.
+    proposed_mechanism: Let the provider edit ResearchState and launch probes in one unconstrained response.
+    expected_validation: [open-ended task success]
+    expected_cost: {gpu_hours: 0.1, experiments: 3, implementation_risk: 0.9}
+    expected_value: {problem_validity: 0.55, novelty: 0.45, feasibility: 0.5, evidence_tractability: 0.2, expected_empirical_signal: 0.6}
+    main_risk: State mutation, budget bypass, and ambiguous paid retries would be unauditable.
+  - generator: template-expansion
+    hypothesis: A larger deterministic scenario schema can provide enough content diversity.
+    proposed_mechanism: Add more caller-authored intuition and hypothesis variants without a semantic node.
+    expected_validation: [fixture coverage, template diversity]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.15}
+    expected_value: {problem_validity: 0.6, novelty: 0.25, feasibility: 0.98, evidence_tractability: 0.9, expected_empirical_signal: 0.45}
+    main_risk: The workflow remains unable to synthesize new content from registered evidence.

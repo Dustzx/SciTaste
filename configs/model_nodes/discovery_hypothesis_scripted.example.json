@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "request_id": null,
+  "policy": {
+    "policy_id": "discovery-hypothesis-scripted",
+    "enabled": true,
+    "allowed_node_names": ["discovery-hypothesis"],
+    "expected_backend": "scripted",
+    "expected_model": "scripted-v1",
+    "allowed_tool_names": [],
+    "allowed_action_types": [],
+    "max_request_bytes": 140000,
+    "max_input_tokens": 8000,
+    "max_output_tokens": 1800,
+    "max_total_tokens": 9800,
+    "max_api_cost_usd": 0.01,
+    "max_latency_ms": 60000,
+    "require_cost_telemetry": true,
+    "ambiguity_margin_max": 0.05
+  },
+  "backend": {
+    "kind": "scripted",
+    "provider": "scripted",
+    "model": "scripted-v1",
+    "reply": {
+      "output_payload": {
+        "schema_version": "1.0",
+        "intuition": {
+          "statement": "A project-owned semantic proposal can make hypothesis content adaptive without transferring control authority.",
+          "supporting_source_ids": [
+            "project-runtime-optimistic-revision-contract",
+            "project-discovery-interruption-recovery-test"
+          ],
+          "confidence": 0.82
+        },
+        "hypothesis": {
+          "statement": "Binding a typed model proposal to the revision-reserved Discovery run will preserve deterministic decisions while replacing fixed hypothesis prose.",
+          "falsifiable_predictions": [
+            "An accepted proposal should change intuition and hypothesis content while all selected actions remain SEARCH, FORM_INTUITION, and FORM_WORKING_HYPOTHESIS.",
+            "A rejected source or probe reference should create no Discovery state step."
+          ],
+          "proposed_probe_types": ["sanity-check", "reproduction"],
+          "confidence": 0.84
+        },
+        "alternative_explanations": [
+          "The same benefit may come from richer deterministic templates rather than semantic generation."
+        ],
+        "uncertainty": "The offline fixture validates integration and authority boundaries, not open-ended scientific quality."
+      },
+      "usage": {
+        "input_tokens": 96,
+        "output_tokens": 118,
+        "cost_usd": 0.0
+      },
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

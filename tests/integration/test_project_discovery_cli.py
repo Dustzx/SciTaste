@@ -8,6 +8,11 @@ from scitaste.discovery import load_discovery_scenario
 from scitaste.project import ProjectManifest, ProjectRuntime
 
 SCENARIO_PATH = Path("configs/experiments/discovery_strong.yaml")
+SEMANTIC_SCENARIO_PATH = Path("configs/cases/scitaste_project_owned_discovery_iteration.yaml")
+SEMANTIC_CONFIG_PATH = Path(
+    "configs/model_nodes/discovery_hypothesis_scripted.example.json"
+)
+SEMANTIC_PROFILE_SET = Path("configs/model_nodes/discovery_semantic_profiles.example.yaml")
 
 
 def _invoke(capsys, *arguments: str) -> dict[str, object]:
@@ -75,3 +80,56 @@ def test_project_discovery_cli_previews_executes_and_verifies(
     assert verified["status"] == "verified"
     assert verified["command_count"] == 1
     assert verified["project_revision"] == 3
+
+
+def test_project_discovery_cli_runs_bounded_semantic_hypothesis(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    outputs = tmp_path / "outputs"
+    scenario = load_discovery_scenario(SEMANTIC_SCENARIO_PATH)
+    runtime = ProjectRuntime(outputs)
+    runtime.create(
+        ProjectManifest(
+            project_id=scenario.project_id,
+            title="SciTaste semantic self iteration",
+            research_direction=scenario.research_direction,
+            target_domain=scenario.target_domain,
+            target_venue=scenario.target_venue,
+            status="active",
+        )
+    )
+    common = (
+        "--project-id",
+        scenario.project_id,
+        "--run-id",
+        "semantic-cli-discovery",
+        "--operation",
+        "hypothesize",
+        "--config",
+        str(SEMANTIC_SCENARIO_PATH),
+        "--seed",
+        "7",
+        "--expected-revision",
+        "0",
+        "--outputs-root",
+        str(outputs),
+        "--semantic-config",
+        str(SEMANTIC_CONFIG_PATH),
+        "--semantic-profile-set",
+        str(SEMANTIC_PROFILE_SET),
+        "--semantic-profile-id",
+        "discovery-hypothesis-scripted",
+    )
+
+    preview = _invoke(capsys, "project", "discovery", "advance", *common, "--dry-run")
+    assert preview["semantic_generation"] is True
+    assert runtime.open(scenario.project_id).revision == 0
+
+    advanced = _invoke(capsys, "project", "discovery", "advance", *common)
+    assert advanced["verification"]["semantic_proposal_count"] == 1
+    assert advanced["command_report"]["details"]["content_origin"] == (
+        "bounded-semantic-proposal"
+    )
+    assert advanced["command_report"]["semantic_proposal"]["advisory_only"] is True
+    assert advanced["command_report"]["semantic_proposal"]["executable"] is False

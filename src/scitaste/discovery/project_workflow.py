@@ -21,7 +21,23 @@ from scitaste.discovery.commands import (
     DiscoveryCommandRunner,
 )
 from scitaste.discovery.loop import DiscoveryScenario
+from scitaste.discovery.semantic import (
+    DISCOVERY_HYPOTHESIS_NODE,
+    DiscoveryHypothesisInput,
+    DiscoveryHypothesisProposal,
+    DiscoverySemanticBinding,
+    DiscoverySemanticReference,
+    discovery_node_types,
+    semantic_proposal_from_receipt,
+    semantic_reference_from_receipt,
+)
 from scitaste.executor.base import ResearchExecutor
+from scitaste.model_nodes.models import NodeContext
+from scitaste.model_nodes.runtime import (
+    ModelNodeRuntime,
+    ModelNodeTrigger,
+    RuntimeOutcome,
+)
 from scitaste.project.models import (
     ProjectRun,
     ProjectSnapshot,
@@ -65,6 +81,7 @@ class ProjectDiscoveryStep(BaseModel):
     report_sha256: _Digest
     state_sha256: _Digest
     decision_log_sha256: _Digest
+    semantic_proposal: DiscoverySemanticReference | None = None
 
     @field_validator("locator")
     @classmethod
@@ -76,6 +93,8 @@ class ProjectDiscoveryStep(BaseModel):
         expected = f"steps/{self.ordinal:03d}-{self.command.value}"
         if self.locator != expected:
             raise ValueError(f"discovery step locator must be {expected!r}")
+        if self.semantic_proposal is not None and self.command is not DiscoveryCommand.HYPOTHESIZE:
+            raise ValueError("only hypothesize can bind a discovery semantic proposal")
         return self
 
 
@@ -132,6 +151,8 @@ class ProjectDiscoveryManifest(BaseModel):
                     raise ValueError("the first discovery step cannot have an input state")
             elif step.input_state_id != self.steps[expected_ordinal - 2].output_state_id:
                 raise ValueError("project discovery state lineage is not contiguous")
+            if step.semantic_proposal is not None and expected_ordinal != 1:
+                raise ValueError("discovery semantic hypothesis must belong to the first step")
         portfolio_positions = [
             index
             for index, step in enumerate(self.steps)
@@ -168,6 +189,7 @@ class ProjectDiscoveryPreview(BaseModel):
     planned_actions: list[MetaAction] = Field(min_length=1)
     signal_number: int | None = Field(default=None, ge=1)
     reformulation_number: int | None = Field(default=None, ge=1)
+    semantic_generation: bool = False
 
 
 class ProjectDiscoveryVerification(BaseModel):
@@ -187,6 +209,7 @@ class ProjectDiscoveryVerification(BaseModel):
     latest_state_id: _StateId
     latest_state: str
     final_stage: ResearchStage
+    semantic_proposal_count: int = Field(default=0, ge=0, le=1)
 
 
 class ProjectDiscoveryAdvanceReport(BaseModel):
@@ -252,9 +275,11 @@ class ProjectDiscoveryWorkflow:
         signal_number: int | None = None,
         reformulation_number: int | None = None,
         resume: bool = False,
+        semantic: DiscoverySemanticBinding | None = None,
     ) -> ProjectDiscoveryPreview:
         """Validate project/run/state identity without creating or changing files."""
 
+        self._validate_semantic_request(scenario, command, semantic)
         admission = self._admit(
             scenario,
             project_id=project_id,
@@ -263,6 +288,7 @@ class ProjectDiscoveryWorkflow:
             expected_revision=expected_revision,
             resume=resume,
         )
+        self._require_semantic_identity(admission, command=command, semantic=semantic)
         if admission.recovers_completed_step:
             assert admission.manifest is not None
             completed = admission.manifest.steps[-1]
@@ -307,6 +333,7 @@ class ProjectDiscoveryWorkflow:
             planned_actions=planned_actions,
             signal_number=resolved_signal,
             reformulation_number=resolved_reformulation,
+            semantic_generation=semantic is not None,
         )
 
     def advance(
@@ -321,6 +348,7 @@ class ProjectDiscoveryWorkflow:
         signal_number: int | None = None,
         reformulation_number: int | None = None,
         resume: bool = False,
+        semantic: DiscoverySemanticBinding | None = None,
     ) -> ProjectDiscoveryAdvanceReport:
         """Reserve, execute, and commit exactly one project-owned discovery step."""
 
@@ -339,6 +367,7 @@ class ProjectDiscoveryWorkflow:
             signal_number=signal_number,
             reformulation_number=reformulation_number,
             resume=resume,
+            semantic=semantic,
         )
         lock_path = self._project_root(project_id) / f".discovery-{run_id}.lock"
         with _locked(lock_path):
@@ -350,6 +379,7 @@ class ProjectDiscoveryWorkflow:
                 expected_revision=expected_revision,
                 resume=resume,
             )
+            self._require_semantic_identity(admission, command=command, semantic=semantic)
             if admission.recovers_completed_step:
                 assert admission.manifest is not None
                 assert admission.pending_token is not None
@@ -369,6 +399,7 @@ class ProjectDiscoveryWorkflow:
                     run_id,
                     admission.manifest,
                     pending_token=admission.pending_token,
+                    recovered_without_execution=True,
                 )
                 return self._report(
                     snapshot,
@@ -397,6 +428,7 @@ class ProjectDiscoveryWorkflow:
                     snapshot_id(admission.state) if admission.state is not None else None
                 ),
                 resume_attempt=self._next_resume_attempt(admission),
+                semantic_binding_sha256=(semantic.fingerprint if semantic is not None else None),
             )
             try:
                 reserved = self._reserve(
@@ -407,12 +439,24 @@ class ProjectDiscoveryWorkflow:
                     command=command,
                     operation_token=operation_token,
                     evidence_scope=evidence_scope,
+                    semantic=semantic,
                 )
                 expected_reserved_revision = admission.snapshot.revision + (
                     2 if admission.creates_run else 1
                 )
                 if reserved.revision != expected_reserved_revision:
                     raise ValueError("project discovery reservation revision is inconsistent")
+                semantic_proposal: DiscoveryHypothesisProposal | None = None
+                semantic_reference: DiscoverySemanticReference | None = None
+                if semantic is not None:
+                    semantic_proposal, semantic_reference = self._generate_semantic_hypothesis(
+                        scenario,
+                        project_id=project_id,
+                        run_id=run_id,
+                        project_revision=reserved.revision,
+                        resume=admission.resumes_run,
+                        binding=semantic,
+                    )
                 step_root = self._step_root(
                     project_id,
                     run_id,
@@ -427,6 +471,8 @@ class ProjectDiscoveryWorkflow:
                     signal_number=signal_number,
                     reformulation_number=reformulation_number,
                     receipt_paths="step-relative",
+                    semantic_proposal=semantic_proposal,
+                    semantic_reference=semantic_reference,
                 )
                 command_report = self._make_report_portable(command_report, step_root)
                 step = self._build_step(
@@ -454,6 +500,7 @@ class ProjectDiscoveryWorkflow:
                     run_id,
                     manifest,
                     pending_token=operation_token,
+                    recovered_without_execution=False,
                 )
             except BaseException as exc:
                 self._mark_failed(
@@ -499,6 +546,9 @@ class ProjectDiscoveryWorkflow:
                 f"projects/{project_id}/runs/{run_id}/{_STAGE_PATH}/{manifest.latest_state}"
             ),
             final_stage=state.current_stage,
+            semantic_proposal_count=sum(
+                step.semantic_proposal is not None for step in manifest.steps
+            ),
         )
 
     def _admit(
@@ -690,6 +740,7 @@ class ProjectDiscoveryWorkflow:
         command: DiscoveryCommand,
         operation_token: str,
         evidence_scope: str,
+        semantic: DiscoverySemanticBinding | None,
     ) -> ProjectSnapshot:
         reserved_revision = admission.snapshot.revision + (2 if admission.creates_run else 1)
         pending = {
@@ -701,6 +752,9 @@ class ProjectDiscoveryWorkflow:
             "pending_operation_token": operation_token,
             "pending_project_revision_reserved": reserved_revision,
             "pending_resumed": admission.resumes_run,
+            "pending_semantic_binding_sha256": (
+                semantic.fingerprint if semantic is not None else None
+            ),
         }
         if admission.creates_run:
             snapshot = self.runtime.begin_run(
@@ -718,6 +772,9 @@ class ProjectDiscoveryWorkflow:
                     scenario_sha256=self._scenario_sha256(scenario),
                     resume_attempt=0,
                     effectiveness_claim=False,
+                    semantic_binding_sha256=(
+                        semantic.fingerprint if semantic is not None else None
+                    ),
                     **pending,
                 ),
                 expected_revision=admission.snapshot.revision,
@@ -745,6 +802,7 @@ class ProjectDiscoveryWorkflow:
         manifest: ProjectDiscoveryManifest,
         *,
         pending_token: str,
+        recovered_without_execution: bool,
     ) -> ProjectSnapshot:
         self._verify_manifest_tree(self._discovery_root(project_id, run_id), manifest)
         snapshot = self.runtime.open(project_id)
@@ -754,6 +812,19 @@ class ProjectDiscoveryWorkflow:
             raise ValueError("project run no longer owns the pending discovery operation")
         if extra.get("pending_command") != manifest.steps[-1].command.value:
             raise ValueError("pending command does not match the completed discovery step")
+        recovery_updates: dict[str, Any] = {}
+        if recovered_without_execution:
+            prior_count = extra.get("recovered_without_execution_count", 0)
+            if not isinstance(prior_count, int) or isinstance(prior_count, bool):
+                raise ValueError("registered discovery recovery count is invalid")
+            recovery_updates = {
+                "recovered_without_execution_count": prior_count + 1,
+                "last_recovery": {
+                    "command": manifest.steps[-1].command.value,
+                    "ordinal": manifest.steps[-1].ordinal,
+                    "mode": "completed-step-without-execution",
+                },
+            }
         return self.runtime.update_run(
             project_id,
             run_id,
@@ -767,14 +838,19 @@ class ProjectDiscoveryWorkflow:
             output_state_id=manifest.steps[-1].output_state_id,
             last_command=manifest.steps[-1].command.value,
             final_stage=manifest.steps[-1].final_stage.value,
+            semantic_proposal_count=sum(
+                step.semantic_proposal is not None for step in manifest.steps
+            ),
             pending_command=None,
             pending_ordinal=None,
             pending_input_state_id=None,
             pending_operation_token=None,
             pending_project_revision_reserved=None,
             pending_resumed=None,
+            pending_semantic_binding_sha256=None,
             failure=None,
             effectiveness_claim=False,
+            **recovery_updates,
         )
 
     def _mark_failed(
@@ -846,6 +922,7 @@ class ProjectDiscoveryWorkflow:
             raise ValueError("discovery step directories do not match the manifest")
         previous_output: str | None = None
         previous_decision_ids: list[str] = []
+        bound_semantic_reference: DiscoverySemanticReference | None = None
         for step in manifest.steps:
             step_root = root / step.locator
             if step_root.is_symlink() or not step_root.is_dir():
@@ -903,6 +980,26 @@ class ProjectDiscoveryWorkflow:
                 raise ValueError("discovery step stage mismatch")
             if report.selected_actions != step.selected_actions:
                 raise ValueError("discovery step selected actions mismatch")
+            if report.semantic_proposal != step.semantic_proposal:
+                raise ValueError("discovery semantic reference differs from its manifest step")
+            if report.semantic_proposal is not None:
+                if bound_semantic_reference is not None:
+                    raise ValueError("discovery lineage binds more than one semantic hypothesis")
+                bound_semantic_reference = report.semantic_proposal
+            semantic_context = state.executor_context.get("discovery_semantic")
+            expected_semantic_context = (
+                bound_semantic_reference.model_dump(mode="json")
+                if bound_semantic_reference is not None
+                else None
+            )
+            if semantic_context != expected_semantic_context:
+                raise ValueError("discovery state semantic binding is invalid")
+            if bound_semantic_reference is not None and state.resource_usage.api_cost_usd != (
+                bound_semantic_reference.cost_usd
+            ):
+                raise ValueError("discovery state semantic cost differs from its ledger reference")
+            if report.semantic_proposal is not None:
+                self._verify_semantic_reference(manifest, report.semantic_proposal)
             decisions = DecisionLogger(decisions_path).read_all()
             if [item.decision_id for item in decisions] != report.decision_ids:
                 raise ValueError("discovery decision identifiers do not match the receipt")
@@ -928,6 +1025,60 @@ class ProjectDiscoveryWorkflow:
             previous_output = step.output_state_id
             previous_decision_ids = current_decision_ids
 
+    def _verify_semantic_reference(
+        self,
+        manifest: ProjectDiscoveryManifest,
+        reference: DiscoverySemanticReference,
+    ) -> None:
+        runtime = ModelNodeRuntime(self.runtime, node_types=discovery_node_types())
+        entry = runtime.entry(
+            project_id=manifest.project_id,
+            run_id=manifest.run_id,
+            invocation_id=reference.invocation_id,
+        )
+        if entry.intent.node_name != DISCOVERY_HYPOTHESIS_NODE:
+            raise ValueError("discovery semantic reference points to another node type")
+        if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+            raise ValueError("discovery semantic reference is not an accepted ledger entry")
+        proposal = entry.result.get("proposal")
+        if not isinstance(proposal, dict):
+            raise ValueError("discovery semantic ledger entry has no typed proposal")
+        expected_recording = (
+            "projects/"
+            f"{manifest.project_id}/runs/{manifest.run_id}/model_nodes/recordings/"
+            f"{entry.intent.replay_source_invocation_id or entry.intent.invocation_id}.jsonl"
+        )
+        observed = (
+            entry.entry_sha256,
+            entry.request_fingerprint,
+            content_sha256(proposal),
+            expected_recording,
+            entry.input_tokens,
+            entry.output_tokens,
+            entry.cost_effect_usd,
+        )
+        expected = (
+            reference.ledger_entry_sha256,
+            reference.request_fingerprint,
+            reference.proposal_sha256,
+            reference.recording_locator,
+            reference.input_tokens,
+            reference.output_tokens,
+            reference.cost_usd,
+        )
+        if observed != expected:
+            raise ValueError("discovery semantic receipt differs from its runtime ledger")
+        registered = self._registered_run(
+            self.runtime.open(manifest.project_id),
+            manifest.run_id,
+        )
+        run_binding = (registered.model_extra or {}).get("semantic_binding_sha256")
+        if not isinstance(run_binding, str) or not _is_digest(run_binding):
+            raise ValueError("registered discovery semantic binding is missing or invalid")
+        intent_binding = entry.intent.context.metadata.get("semantic_binding_sha256")
+        if intent_binding is not None and intent_binding != run_binding:
+            raise ValueError("discovery semantic binding differs from the runtime intent")
+
     def _require_committed_metadata(
         self,
         run: ProjectRun,
@@ -941,6 +1092,9 @@ class ProjectDiscoveryWorkflow:
             "command_count": len(manifest.steps),
             "output_state_id": manifest.steps[-1].output_state_id,
         }
+        semantic_count = sum(step.semantic_proposal is not None for step in manifest.steps)
+        if semantic_count or "semantic_proposal_count" in extra:
+            expected["semantic_proposal_count"] = semantic_count
         mismatched = [name for name, value in expected.items() if extra.get(name) != value]
         if mismatched:
             raise ValueError(
@@ -949,6 +1103,101 @@ class ProjectDiscoveryWorkflow:
             )
         if run.artifact != self._project_manifest_locator(run.run_id):
             raise ValueError("registered discovery artifact does not match its manifest")
+
+    def _validate_semantic_request(
+        self,
+        scenario: DiscoveryScenario,
+        command: DiscoveryCommand,
+        semantic: DiscoverySemanticBinding | None,
+    ) -> None:
+        if semantic is None:
+            return
+        if command is not DiscoveryCommand.HYPOTHESIZE:
+            raise ValueError("bounded semantic generation is currently valid only for hypothesize")
+        api_budget = scenario.resource_budget.max_api_cost_usd
+        if api_budget is not None and semantic.profile.admission.max_response_cost_usd > api_budget:
+            raise ValueError(
+                "semantic response cost ceiling exceeds the discovery scenario API budget"
+            )
+
+    @staticmethod
+    def _require_semantic_identity(
+        admission: _Admission,
+        *,
+        command: DiscoveryCommand,
+        semantic: DiscoverySemanticBinding | None,
+    ) -> None:
+        if admission.registered_run is None or not admission.resumes_run:
+            return
+        extra = admission.registered_run.model_extra or {}
+        expected = semantic.fingerprint if semantic is not None else None
+        if extra.get("pending_semantic_binding_sha256") != expected:
+            raise ValueError("resume semantic binding differs from the reserved operation")
+        if command is DiscoveryCommand.HYPOTHESIZE and extra.get(
+            "semantic_binding_sha256"
+        ) != expected:
+            raise ValueError("registered discovery semantic identity is inconsistent")
+
+    def _generate_semantic_hypothesis(
+        self,
+        scenario: DiscoveryScenario,
+        *,
+        project_id: str,
+        run_id: str,
+        project_revision: int,
+        resume: bool,
+        binding: DiscoverySemanticBinding,
+    ) -> tuple[DiscoveryHypothesisProposal, DiscoverySemanticReference]:
+        node_input = DiscoveryHypothesisInput(
+            research_direction=scenario.research_direction,
+            target_domain=scenario.target_domain,
+            target_venue=scenario.target_venue,
+            landscape_findings=tuple(scenario.landscape_findings),
+        )
+        invocation_id = "discovery-hypothesis-001"
+        receipt = ModelNodeRuntime(
+            self.runtime,
+            node_types=discovery_node_types(),
+        ).execute(
+            backend=binding.backend,
+            resume=resume,
+            allow_live=binding.allow_live,
+            project_id=project_id,
+            run_id=run_id,
+            invocation_id=invocation_id,
+            expected_project_revision=project_revision,
+            state_revision=0,
+            node_name=DISCOVERY_HYPOTHESIS_NODE,
+            node_input=node_input,
+            context=NodeContext(
+                project_id=project_id,
+                stage=ResearchStage.DISCOVERY.value,
+                state_snapshot_id=f"scenario-{self._scenario_sha256(scenario)}",
+                cumulative_api_cost_usd=0.0,
+                evidence_ids=list(node_input.source_ids),
+                metadata={
+                    "run_id": run_id,
+                    "authority": "proposal-only",
+                    "semantic_binding_sha256": binding.fingerprint,
+                },
+            ),
+            trigger=ModelNodeTrigger(
+                trigger_id="project-discovery-hypothesize",
+                reason="A registered landscape requires bounded hypothesis semantics.",
+            ),
+            profile=binding.profile,
+            policy=binding.policy,
+            backend_mode=binding.backend_mode,
+            replay_source_invocation_id=binding.replay_source_invocation_id,
+            request_id=binding.request_id,
+            seed=self.seed,
+        )
+        proposal = semantic_proposal_from_receipt(receipt)
+        api_budget = scenario.resource_budget.max_api_cost_usd
+        observed_cost = receipt.telemetry.cost_usd
+        if observed_cost is None or (api_budget is not None and observed_cost > api_budget):
+            raise ValueError("semantic invocation exceeds the discovery scenario API budget")
+        return proposal, semantic_reference_from_receipt(receipt, proposal)
 
     def _require_project_identity(
         self,
@@ -1019,6 +1268,7 @@ class ProjectDiscoveryWorkflow:
             report_sha256=_file_sha256(step_root / "discovery_command.json"),
             state_sha256=_file_sha256(step_root / "research_state.json"),
             decision_log_sha256=report.decision_log_sha256,
+            semantic_proposal=report.semantic_proposal,
         )
 
     @staticmethod
@@ -1159,6 +1409,7 @@ class ProjectDiscoveryWorkflow:
         expected_revision: int,
         input_state_id: str | None,
         resume_attempt: int,
+        semantic_binding_sha256: str | None,
     ) -> str:
         return content_sha256(
             {
@@ -1169,6 +1420,7 @@ class ProjectDiscoveryWorkflow:
                 "expected_revision": expected_revision,
                 "input_state_id": input_state_id,
                 "resume_attempt": resume_attempt,
+                "semantic_binding_sha256": semantic_binding_sha256,
             }
         )
 
@@ -1220,6 +1472,7 @@ class ProjectDiscoveryWorkflow:
             "pending_operation_token",
             "pending_project_revision_reserved",
             "pending_resumed",
+            "pending_semantic_binding_sha256",
         )
 
     @staticmethod

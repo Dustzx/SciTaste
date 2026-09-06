@@ -12,14 +12,39 @@ from scitaste.discovery.evidence_to_idea import (
     EvidenceToIdeaEngine,
 )
 from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_discovery_scenario
-from scitaste.discovery.project_workflow import (
-    ProjectDiscoveryAdvanceReport,
-    ProjectDiscoveryManifest,
-    ProjectDiscoveryPreview,
-    ProjectDiscoveryStep,
-    ProjectDiscoveryVerification,
-    ProjectDiscoveryWorkflow,
+from scitaste.discovery.semantic_models import (
+    DiscoveryHypothesisInput,
+    DiscoveryHypothesisProposal,
+    DiscoveryIntuitionProposal,
+    DiscoverySemanticReference,
 )
+
+_PROJECT_WORKFLOW_EXPORTS = {
+    "ProjectDiscoveryAdvanceReport",
+    "ProjectDiscoveryManifest",
+    "ProjectDiscoveryPreview",
+    "ProjectDiscoveryStep",
+    "ProjectDiscoveryVerification",
+    "ProjectDiscoveryWorkflow",
+}
+_SEMANTIC_RUNTIME_EXPORTS = {
+    "DiscoveryHypothesisNode",
+    "DiscoverySemanticBinding",
+}
+
+
+def __getattr__(name: str):
+    """Load the project/model integration only when that public API is requested."""
+
+    if name in _PROJECT_WORKFLOW_EXPORTS:
+        from scitaste.discovery import project_workflow
+
+        return getattr(project_workflow, name)
+    if name in _SEMANTIC_RUNTIME_EXPORTS:
+        from scitaste.discovery import semantic
+
+        return getattr(semantic, name)
+    raise AttributeError(name)
 
 __all__ = [
     "ContradictoryPilotEvidence",
@@ -27,8 +52,14 @@ __all__ = [
     "DiscoveryCommandPreview",
     "DiscoveryCommandReport",
     "DiscoveryCommandRunner",
+    "DiscoveryHypothesisInput",
+    "DiscoveryHypothesisNode",
+    "DiscoveryHypothesisProposal",
+    "DiscoveryIntuitionProposal",
     "DiscoveryLoop",
     "DiscoveryScenario",
+    "DiscoverySemanticBinding",
+    "DiscoverySemanticReference",
     "EvidenceBackedIdeationResult",
     "EvidenceToIdeaEngine",
     "ProjectDiscoveryAdvanceReport",

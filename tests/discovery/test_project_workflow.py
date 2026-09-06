@@ -223,6 +223,13 @@ def test_completed_pending_step_recovers_without_reexecuting(
     assert recovered.recovered_without_execution is True
     assert executor.calls == calls_after_interruption
     assert recovered.verification.command_count == 1
+    registered = runtime.open("discovery-weak-intuition").manifest.runs[0]
+    assert registered.model_extra["recovered_without_execution_count"] == 1
+    assert registered.model_extra["last_recovery"] == {
+        "command": "hypothesize",
+        "ordinal": 1,
+        "mode": "completed-step-without-execution",
+    }
 
 
 def test_step_without_published_head_is_reconstructed_without_reexecution(

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "request_id": null,
+  "policy": {
+    "policy_id": "discovery-hypothesis-self-iteration-v1",
+    "enabled": true,
+    "allowed_node_names": ["discovery-hypothesis"],
+    "expected_backend": "scripted",
+    "expected_model": "scripted-v1",
+    "allowed_tool_names": [],
+    "allowed_action_types": [],
+    "max_request_bytes": 140000,
+    "max_input_tokens": 8000,
+    "max_output_tokens": 1800,
+    "max_total_tokens": 9800,
+    "max_api_cost_usd": 0.01,
+    "max_latency_ms": 60000,
+    "require_cost_telemetry": true,
+    "ambiguity_margin_max": 0.05
+  },
+  "backend": {
+    "kind": "scripted",
+    "provider": "scripted",
+    "model": "scripted-v1",
+    "reply": {
+      "output_payload": {
+        "schema_version": "1.0",
+        "intuition": {
+          "statement": "Adaptive scientific semantics can remain safe when model output is treated as evidence-bound content rather than execution authority.",
+          "supporting_source_ids": [
+            "project-owned-discovery-v2",
+            "model-node-runtime-registry-audit",
+            "semantic-resume-boundary-analysis"
+          ],
+          "confidence": 0.86
+        },
+        "hypothesis": {
+          "statement": "A revision-bound typed semantic node will replace fixed hypothesis prose while preserving deterministic action selection, budget accounting, and interruption-safe recovery.",
+          "falsifiable_predictions": [
+            "The generated content will differ from the scenario seed while the controller still selects exactly SEARCH, FORM_INTUITION, and FORM_WORKING_HYPOTHESIS.",
+            "Unknown source or probe identifiers will reject the proposal before any Discovery state step is published.",
+            "Resuming after a post-generation executor failure will reuse one recorded ledger entry without a second backend call."
+          ],
+          "proposed_probe_types": ["sanity-check", "reproduction"],
+          "confidence": 0.88
+        },
+        "alternative_explanations": [
+          "The observed integration gain may arise from strict typed contracts rather than model generation itself."
+        ],
+        "uncertainty": "This offline self-iteration establishes execution and recovery semantics, not comparative scientific-quality gains."
+      },
+      "usage": {
+        "input_tokens": 128,
+        "output_tokens": 164,
+        "cost_usd": 0.0
+      },
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

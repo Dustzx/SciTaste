@@ -48,6 +48,8 @@ from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.commands import DiscoveryCommand, DiscoveryCommandRunner
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.discovery.project_workflow import ProjectDiscoveryWorkflow
+from scitaste.discovery.semantic import DiscoverySemanticBinding
+from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_sandbox import (
@@ -60,6 +62,7 @@ from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
+from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.project_substrate_cli import register_project_substrate_cli
@@ -233,6 +236,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="native-discovery-engineering-evidence",
     )
     project_discovery_advance.add_argument("--resume", action="store_true")
+    project_discovery_advance.add_argument(
+        "--semantic-config",
+        type=Path,
+        default=None,
+        help="opt in to a bounded hypothesis model-node config",
+    )
+    project_discovery_advance.add_argument("--semantic-profile-set", type=Path, default=None)
+    project_discovery_advance.add_argument("--semantic-profile-id", default=None)
+    project_discovery_advance.add_argument("--semantic-allow-live", action="store_true")
     _add_project_options(project_discovery_advance)
     project_discovery_advance.set_defaults(handler=_handle_project_discovery_advance)
     project_discovery_verify = project_discovery_commands.add_parser(
@@ -641,6 +653,7 @@ def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
     scenario = load_discovery_scenario(args.config)
     workflow = ProjectDiscoveryWorkflow(args.outputs_root, seed=args.seed)
     operation = DiscoveryCommand(args.operation)
+    semantic = _load_project_discovery_semantic(args)
     arguments = {
         "project_id": args.project_id,
         "run_id": args.run_id,
@@ -649,6 +662,7 @@ def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
         "signal_number": args.signal_number,
         "reformulation_number": args.reformulation_number,
         "resume": args.resume,
+        "semantic": semantic,
     }
     if args.dry_run:
         print(workflow.preview(scenario, **arguments).model_dump_json(indent=2))
@@ -660,6 +674,39 @@ def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
     )
     print(report.model_dump_json(indent=2))
     return 0
+
+
+def _load_project_discovery_semantic(
+    args: argparse.Namespace,
+) -> DiscoverySemanticBinding | None:
+    values = (
+        args.semantic_config,
+        args.semantic_profile_set,
+        args.semantic_profile_id,
+    )
+    if not any(value is not None for value in values):
+        if args.semantic_allow_live:
+            raise ValueError("--semantic-allow-live requires semantic configuration")
+        return None
+    if not all(value is not None for value in values):
+        raise ValueError(
+            "--semantic-config, --semantic-profile-set, and --semantic-profile-id "
+            "must be supplied together"
+        )
+    loaded_config = load_discovery_semantic_runtime_config(args.semantic_config)
+    loaded_profiles = load_model_node_profile_set(args.semantic_profile_set)
+    try:
+        profile = loaded_profiles.profiles[args.semantic_profile_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown semantic profile {args.semantic_profile_id!r}") from exc
+    backend_is_live = loaded_config.config.backend.mode.value == "live"
+    if backend_is_live and not loaded_profiles.profile_set.live_enabled:
+        raise ValueError("semantic profile set does not enable live execution")
+    return loaded_config.config.binding(
+        profile,
+        invocation_id="discovery-hypothesis-001",
+        allow_live=args.semantic_allow_live,
+    )
 
 
 def _handle_project_discovery_verify(args: argparse.Namespace) -> int:
