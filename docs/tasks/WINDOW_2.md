@@ -1,141 +1,126 @@
-# Window 2 Dispatch: Project-Scoped Model-Node Runtime
+# Window 2 Dispatch: Tool Intelligence — Controlled Semantic Tools
 
-Assignment token: `W2-model-node-runtime-20260905-r2`
+Assignment token: `W2-tool-intelligence-20260906-r1`
 
-Status: `integrated into main; Epic and hardening complete`
+Status: `active`
 
-Integration review on 2026-09-05 accepted the Epic's scope and 124 passing
-focused tests but reproduced three blockers before merge: nested runtime
-directories could follow symbolic links outside the project, project revision
-could change across a model call without rejecting the proposal, and interrupted
-pending-marker cleanup could make a complete ledger permanently unverifiable.
-Window 2 closed all three in `45ce9c3`; main independently reran 134 focused
-tests and integrated the complete branch as merge commit `37ee0ba`. The merged
-repository then passed 544 tests. Further work requires a new assignment token.
+This dispatch is authorized directly by the project owner on 2026-09-06. It
+follows the integrated project-scoped model-node runtime and implements the next
+Tool Intelligence increment identified in `docs/INNOVATION_MAP.md`: more
+first-party semantic tools and controlled execution profiles. The prior runtime
+Epic was integrated into `main` as `37ee0ba` and must not be continued from its
+old feature-branch head.
 
 ## Workspace
 
-- worktree: `/home/good/zfx/papers/SciTaste-worktrees/model-nodes`
-- branch: `feat/model-node-runtime-v2`
-- base: `main` containing this assignment token
-- do not work in `/home/good/zfx/papers/SciTaste`
+- worktree: `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence`
+- branch: `feat/tool-intelligence-v1`
+- base: the latest clean `main` containing this assignment token
+- do not implement this Epic in `/home/good/zfx/papers/SciTaste`
 
-Create or switch to the named branch from the dispatch-bearing `main` before
-editing. The prior pilot-orchestration Epic is integrated history, not the base
-for an unrebased continuation.
+Create the branch and worktree from the dispatch-bearing `main`. Do not merge,
+push, or rebase; the main window owns integration.
 
 ## Objective
 
-Build the production, project-scoped runtime that turns the existing bounded
-node implementations into a reusable SciTaste subsystem outside the special
-self-development pilot. It must make provider generation capacity visibly
-different from deterministic proposal-admission budgets, persist every
-invocation and cumulative resource effect across restarts, support exact replay,
-and expose a narrow integration facade that main can later connect to the full
-workflow without giving a model controller or executor authority.
+Deliver a production-quality, proposal-only Tool Intelligence vertical slice.
+A bounded model node may propose an ordered plan over explicit first-party,
+read-only semantic capabilities, or propose a repair for a previously rejected
+structured payload. Deterministic code alone validates capability scope,
+arguments, dependencies, budgets, state identity, and the repaired target
+schema. No accepted model-node result may execute a tool, mutate canonical
+state, authorize spending, open network access, or become an accepted result of
+another node without that node's complete deterministic validation.
 
-This is one multi-package Epic. Continue from WP1 through WP4 without waiting for
-main-window approval between commits. Do not stop after adding only configuration
-models or a thin CLI.
+This Epic advances implementation substrate only. It does not establish an
+autonomy or effectiveness claim and does not by itself satisfy ADR-022's pilot
+acceptance gates.
 
 ## Owned paths
 
-- `src/scitaste/model_nodes/`;
-- one focused model-node CLI module and the smallest registrations required in
-  `src/scitaste/cli.py`;
-- `configs/model_nodes/` for non-secret runtime/profile examples;
-- `tests/model_nodes/` and focused `tests/integration/` coverage;
-- `docs/BOUNDED_MODEL_NODES.md`.
+- `src/scitaste/model_nodes/**`;
+- `tests/model_nodes/**`;
+- `configs/model_nodes/**` for non-secret, disabled examples;
+- `docs/TOOL_INTELLIGENCE.md`;
+- the smallest compatibility changes required in
+  `src/scitaste/model_node_runtime_cli.py` and focused integration tests.
 
-Do not edit generative UI, `full_workflow.py`, central roadmap/architecture/
-changelog/README/task documents, AutoResearchClaw, generated `outputs/`, or
-credentials.
+Do not edit `full_workflow.py`, generative UI, project-runtime ownership code,
+central roadmap/architecture/changelog/README documents, generated `outputs/`,
+credentials, model weights, or `third_party/autoresearchclaw/**`. If an exit
+gate genuinely requires one of those paths, stop and report the integration
+change to main rather than expanding ownership.
 
 ## Work packages
 
-### WP1 — Budget and capability profiles
+### WP1 — Controlled capability contracts
 
-1. Introduce a strict, versioned runtime/profile contract that distinguishes:
-   provider generation envelope (request/output/context capability), node
-   admission budget (input/output/total tokens, latency, tools and cost), and
-   cumulative project budget. Preserve backward compatibility with existing
-   backend and pilot configuration.
-2. Allow the selected node/case to bind an explicit profile instead of relying
-   on one backend-wide `max_output_tokens`. Validate incompatible ceilings and
-   surface both effective limits in plan/status output and fingerprints.
-3. Provide content-addressed examples for short structured semantic nodes and a
-   deeper semantic-analysis profile. Do not label either as unrestricted code
-   generation, guess provider pricing, or enable live calls by default.
-4. Add tests proving that the 2,048-token self-development probe limit is local
-   to that immutable configuration and cannot become a global SciTaste limit.
+1. Add strict, versioned, content-addressed contracts for a controlled semantic
+   tool profile, per-tool permissions, typed proposal arguments, and ordered
+   proposal steps. The initial catalog must contain only bounded read-only
+   capabilities over project-owned data: Knowledge query, Evidence inspection,
+   and registered-run comparison.
+2. Make side effects explicit and fixed off for this version: no filesystem
+   writes, process launch, network access, canonical-state mutation, or direct
+   execution authority.
+3. Bind permitted library/evidence/run identifiers and per-tool ceilings in the
+   profile. Reject duplicates, unknown identifiers, unbounded queries, invalid
+   dependencies, cycles, forward references, and profile/policy allowlist drift.
+4. Preserve all existing public model-node recordings and request fingerprints;
+   introduce additive models or explicit schema-version migration rather than
+   silently changing existing contracts.
 
-Commit WP1, run its focused tests, then continue automatically.
+### WP2 — First-party proposal nodes
 
-### WP2 — Durable `ModelNodeRuntime`
+1. Add `ToolPlanNode`: it receives an explicit objective and controlled tool
+   profile and returns an ordered, typed, proposal-only plan. It must reference
+   only identifiers present in the immutable context and the profile.
+2. Add `StructuredRepairNode`: it receives one bounded invalid JSON value,
+   sanitized validation diagnostics, and a pinned supported target-node/schema
+   identity. It may propose a repaired payload, but deterministic code must
+   validate the target schema and label the result only as a repair proposal.
+3. A repaired payload is never silently substituted into the failed invocation,
+   never hides the original failure/cost evidence, and must be submitted as a
+   new invocation through the original node to gain any normal proposal status.
+4. Provider-native function calls remain untrusted telemetry. They cannot be
+   conflated with accepted Tool Plan steps or executed by either node.
 
-1. Add a project/run-owned runtime for normal node invocations. A registered
-   invocation binds project and state revision, node/input/context, trigger
-   reason, profile, policy, provider/model, seed, request fingerprint, and
-   predecessor ledger hash before contacting a backend.
-2. Persist accepted, rejected, not-applicable, failed, and planned outcomes.
-   Accepted remains proposal-only and executable false. Known cost from every
-   non-cached response—including rejected output—must advance the cumulative
-   ledger; unknown cost blocks further acceptance under a priced policy.
-3. Make interruption/resume and concurrent writers fail closed. Reuse only a
-   verified contiguous ledger prefix. Archive incomplete paid attempts and bind
-   exact live/record/replay evidence without storing authorization headers.
-4. Support exact replay by request/profile/policy/state identity with no silent
-   live fallback, provider alias, or cache substitution.
+### WP3 — Runtime, facade, and exact replay
 
-Commit WP2, run its focused tests, then continue automatically.
+1. Register both nodes with the existing project-scoped runtime, facade, strict
+   config loader, plan/execute/resume/status/verify, and exact replay path.
+2. Ensure capability/profile fingerprints, target schema identity, state and
+   project revisions, provider/model identity, token/cost/latency effects, and
+   predecessor ledger hash are durable and replay-bound.
+3. Keep planning and scripted/replay execution network-free. No real provider
+   call is authorized by this dispatch; committed examples must be disabled and
+   contain neither credentials nor fabricated pricing.
+4. Machine-readable receipts must continue to expose `advisory_only=true` and
+   `executable=false`; they must not contain raw provider bodies or secrets.
 
-### WP3 — Narrow workflow facade and CLI
+### WP4 — Adversarial verification and documentation
 
-1. Expose an integration facade for the three implemented node types. It accepts
-   an explicit immutable state projection and trigger; it returns a typed
-   proposal/result plus ledger locator and never mutates `ResearchState`.
-2. Add project-scoped plan, execute/resume, status/verify, and replay CLI paths.
-   Planning/status/default execution are network-free. Live execution requires
-   profile permission, backend permission, and caller opt-in.
-3. Machine output must show the effective generation envelope separately from
-   admission/cumulative budgets, invocation counts, cache/replay state, token/
-   cost/latency telemetry, blockers, and project-owned evidence locators without
-   raw responses or secret values.
-4. Provide fixtures demonstrating review parsing, interpretation criticism, and
-   ambiguity routing across more than one process lifecycle.
-
-Commit WP3, run CLI/integration checks, then continue automatically.
-
-### WP4 — Hardening and exit evidence
-
-1. Cover corrupt ledger entries, stale project revision, changed profile/policy,
-   partial publication, replay miss, backend identity drift, unknown cost,
-   over-budget response, duplicate invocation ID, process restart, and concurrent
-   writers.
-2. Verify public-model compatibility or version/migration handling, deterministic
-   serialization, no secret reflection, no import-time provider dependency, and
-   no network access in tests.
-3. Update `docs/BOUNDED_MODEL_NODES.md`, run Ruff, the complete model-node suite,
-   integration tests, `make check`, and coverage for owned production modules.
+1. Cover valid plans and repairs plus schema failure, unknown tool, malformed or
+   over-limit arguments, scope escape, dependency cycle/forward reference,
+   provider-native tool-call confusion, target-schema mismatch, replay miss,
+   changed capability profile, stale revision, budget rejection, and restart.
+2. Prove that an accepted repair proposal is not an accepted target-node
+   proposal and that no test path invokes a tool, process, network service, or
+   state mutation.
+3. Document the authority/data flow, initial catalog, profile semantics,
+   extension rules, threat model, and remaining execution/effectiveness limits
+   in `docs/TOOL_INTELLIGENCE.md`.
+4. Run the focused model-node suite, Ruff, `git diff --check`, and `make check`.
 
 ## Epic exit gate
 
-The Epic is complete only when all four work packages are committed, a normal
-project (not the special pilot runner) can plan/execute/resume/verify/replay the
-three bounded nodes through the new runtime, budget layers are unambiguous in
-both schemas and CLI output, project evidence survives restart and tamper checks,
-and every proposal remains non-executable.
+The Epic is complete only when a normal registered project can plan, execute in
+scripted mode, resume, verify, and exactly replay both new nodes through the
+durable runtime; every tool-plan step is typed and deterministically admitted
+against a content-addressed read-only profile; invalid repairs fail closed; all
+receipts remain non-executable; the focused and repository-wide checks pass; and
+the worktree is clean with one or a small number of cohesive commits.
 
-No real provider call is authorized. Do not fabricate pricing, external review,
-or effectiveness evidence.
-
-## Autonomous handoff
-
-Do not request a new task token after WP1, WP2, or WP3. Continue unless a genuine
-cross-owned change or security/dependency decision blocks the Epic. At the final
-handoff report each WP commit SHA, exact tests and coverage, remaining limits,
-compatibility/dependency/security notes, and a clean worktree. Do not merge or
-push `main`.
-
-Previous integrated Epic: `W2-model-pilot-orchestration-20260905-r1`, branch
-handoff `b3a9dd3`, integrated and subsequently hardened on main.
+No live provider call, real tool execution, generated-code admission, or ADR-022
+status change is authorized. Report commit SHAs, changed files, exact tests,
+known limits, and recommended integration order to main.
