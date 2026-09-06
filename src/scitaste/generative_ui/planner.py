@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, mo
 
 from scitaste.generative_ui.intent import (
     FreeQuestionRequest,
+    IntentGoal,
     QuickIntentCatalog,
 )
 from scitaste.generative_ui.planning import (
@@ -227,9 +228,9 @@ class DeterministicWorkspacePlanner:
 
     def __init__(self) -> None:
         configuration = {
-            "algorithm": "goal-priority-then-candidate-id",
+            "algorithm": "intent-component-filter-priority-then-candidate-id",
             "max_entries": 12,
-            "version": "1.0",
+            "version": "1.1",
         }
         self.identity = PlannerIdentity(
             planner_id="deterministic-workspace-planner-v1",
@@ -251,7 +252,19 @@ class DeterministicWorkspacePlanner:
 
     def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome:
         trusted = SurfaceCandidateCatalog.model_validate(catalog.model_dump(mode="json"))
-        ordered = sorted(trusted.candidates, key=_deterministic_candidate_key)
+        included_components = _GOAL_SELECTED_COMPONENTS.get(trusted.intent.goal)
+        eligible = [
+            candidate
+            for candidate in trusted.candidates
+            if included_components is None or candidate.component.component in included_components
+        ]
+        ordered = sorted(
+            eligible,
+            key=lambda candidate: _deterministic_candidate_key(
+                candidate,
+                trusted.intent.goal,
+            ),
+        )
         entries = tuple(
             _deterministic_entry(candidate, index) for index, candidate in enumerate(ordered[:12])
         )
@@ -618,27 +631,26 @@ def _validate_question_catalog_binding(
         raise ValueError("free question and quick-intent catalog snapshots differ")
 
 
-def _deterministic_candidate_key(candidate: SurfaceCandidate) -> tuple[int, int, str]:
-    priority = {
-        TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
-        TrustedComponent.RUN_BLOCKER_PANEL: 1,
-        TrustedComponent.BLOCKER_LIST: 1,
-        TrustedComponent.DECISION_COMPARISON: 1,
-        TrustedComponent.PAPER_PREVIEW: 1,
-        TrustedComponent.STAGE_TIMELINE: 2,
-        TrustedComponent.PROJECT_SUMMARY_CARD: 3,
-    }.get(candidate.component.component, 4)
+def _deterministic_candidate_key(
+    candidate: SurfaceCandidate,
+    goal: IntentGoal,
+) -> tuple[int, int, str]:
+    priority = _GOAL_COMPONENT_PRIORITIES[goal].get(candidate.component.component, 50)
     action_priority = 0 if candidate.actions else 1
     return (priority, action_priority, candidate.candidate_id)
 
 
 def _deterministic_entry(candidate: SurfaceCandidate, index: int) -> SurfacePlanEntry:
     group = candidate.allowed_groups[0]
-    emphasis = (
-        PlanEmphasis.FEATURED
-        if index == 0 and PlanEmphasis.FEATURED in candidate.allowed_emphasis
-        else candidate.allowed_emphasis[0]
-    )
+    if index == 0 and PlanEmphasis.FEATURED in candidate.allowed_emphasis:
+        emphasis = PlanEmphasis.FEATURED
+    elif (
+        candidate.component.component == TrustedComponent.PROJECT_PROGRESS_BOARD
+        and PlanEmphasis.COMPACT in candidate.allowed_emphasis
+    ):
+        emphasis = PlanEmphasis.COMPACT
+    else:
+        emphasis = candidate.allowed_emphasis[0]
     focus = tuple(candidate.component.evidence_ref_ids[:1])
     return SurfacePlanEntry(
         candidate_id=candidate.candidate_id,
@@ -646,6 +658,87 @@ def _deterministic_entry(candidate: SurfaceCandidate, index: int) -> SurfacePlan
         emphasis=emphasis,
         focus_ref_ids=focus,
     )
+
+
+_GOAL_COMPONENT_PRIORITIES = {
+    IntentGoal.PROGRESS_REVIEW: {
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
+        TrustedComponent.RUN_STAGE_EXPLORER: 10,
+        TrustedComponent.STAGE_TIMELINE: 11,
+        TrustedComponent.RUN_BLOCKER_PANEL: 20,
+        TrustedComponent.BLOCKER_LIST: 20,
+        TrustedComponent.EVIDENCE_INVENTORY: 30,
+        TrustedComponent.PAPER_PREVIEW: 31,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 40,
+        TrustedComponent.RUN_HEALTH: 41,
+    },
+    IntentGoal.BLOCKER_DIAGNOSIS: {
+        TrustedComponent.RUN_BLOCKER_PANEL: 0,
+        TrustedComponent.BLOCKER_LIST: 0,
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 10,
+        TrustedComponent.RUN_HEALTH: 20,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 30,
+    },
+    IntentGoal.RUN_COMPARISON: {
+        TrustedComponent.RUN_COMPARISON_PANEL: 0,
+        TrustedComponent.DECISION_COMPARISON: 0,
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 10,
+        TrustedComponent.RUN_HEALTH: 20,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 30,
+    },
+    IntentGoal.PAPER_EVIDENCE_REVIEW: {
+        TrustedComponent.PAPER_PREVIEW: 0,
+        TrustedComponent.ARTIFACT_VIEWER: 1,
+        TrustedComponent.EVIDENCE_INVENTORY: 2,
+        TrustedComponent.CLAIM_MATRIX: 3,
+        TrustedComponent.REVIEWER_QUEUE: 4,
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 10,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 20,
+        TrustedComponent.RUN_HEALTH: 21,
+    },
+    IntentGoal.NEXT_STEP_REVIEW: {
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 10,
+        TrustedComponent.RUN_HEALTH: 11,
+    },
+}
+
+_GOAL_SELECTED_COMPONENTS = {
+    IntentGoal.BLOCKER_DIAGNOSIS: frozenset(
+        {
+            TrustedComponent.RUN_BLOCKER_PANEL,
+            TrustedComponent.BLOCKER_LIST,
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+        }
+    ),
+    IntentGoal.RUN_COMPARISON: frozenset(
+        {
+            TrustedComponent.RUN_COMPARISON_PANEL,
+            TrustedComponent.DECISION_COMPARISON,
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+        }
+    ),
+    IntentGoal.PAPER_EVIDENCE_REVIEW: frozenset(
+        {
+            TrustedComponent.PAPER_PREVIEW,
+            TrustedComponent.ARTIFACT_VIEWER,
+            TrustedComponent.EVIDENCE_INVENTORY,
+            TrustedComponent.CLAIM_MATRIX,
+            TrustedComponent.REVIEWER_QUEUE,
+            TrustedComponent.AVAILABILITY_NOTICE,
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+        }
+    ),
+    IntentGoal.NEXT_STEP_REVIEW: frozenset(
+        {
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+        }
+    ),
+}
 
 
 def _json_size(value: JsonValue | dict[str, object]) -> int:

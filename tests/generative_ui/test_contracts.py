@@ -14,6 +14,7 @@ from scitaste.generative_ui import (
     EvidenceRef,
     ProposalKind,
     ProposeTransitionPayload,
+    RunBlockerPanelData,
     SnapshotBinding,
     SurfacePurpose,
     SurfaceRevision,
@@ -165,6 +166,31 @@ def test_component_rejects_executable_keys_and_unregistered_types() -> None:
             title="Unsafe component",
             evidence_ref_ids=["paper-record"],
             data={"command": "render"},
+        )
+
+
+def test_blocker_detail_cannot_claim_missing_or_unavailable_reasons() -> None:
+    common = {
+        "run_ref_id": "run-evidence",
+        "run_id": "blocked-run",
+        "run_status": "blocked",
+        "classification": "blocked",
+        "reason_code": "registered-status-blocked",
+        "source_locator": "runs/blocked-run",
+    }
+    with pytest.raises(ValidationError, match="requires at least one reason"):
+        RunBlockerPanelData.model_validate({"blockers": [{**common, "detail_state": "recorded"}]})
+    with pytest.raises(ValidationError, match="cannot contain reasons"):
+        RunBlockerPanelData.model_validate(
+            {
+                "blockers": [
+                    {
+                        **common,
+                        "detail_state": "unavailable",
+                        "recorded_reasons": ["Unsupported reason"],
+                    }
+                ]
+            }
         )
 
 

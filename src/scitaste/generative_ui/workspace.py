@@ -870,6 +870,7 @@ class WorkspaceSurfaceFactory:
             if outcome not in {"blocked", "failed"}:
                 continue
             run_ref = _run_ref(snapshot, binding, run.run_id)
+            recorded_reasons = _recorded_blockers(run)
             refs.append(run_ref)
             rows.append(
                 {
@@ -879,6 +880,8 @@ class WorkspaceSurfaceFactory:
                     "classification": outcome,
                     "reason_code": f"registered-status-{outcome}",
                     "source_locator": run_ref.locator,
+                    "detail_state": "recorded" if recorded_reasons else "unavailable",
+                    "recorded_reasons": list(recorded_reasons),
                 }
             )
         if not rows:

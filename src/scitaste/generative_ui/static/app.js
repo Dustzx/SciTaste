@@ -93,6 +93,243 @@ function titledSection(title, content) {
   return section;
 }
 
+const progressStateLabels = Object.freeze({
+  observed_completed: "Observed complete",
+  current_work: "Current work",
+  blocked: "Blocked",
+  failed: "Failed",
+  candidate: "Candidate",
+  unavailable: "Unavailable",
+  unknown: "Unknown",
+});
+
+function readableCode(value) {
+  return formatValue(value).replaceAll("_", " ").replaceAll("-", " ");
+}
+
+function compactRunLabel(runId) {
+  const parts = String(runId).split("__");
+  if (parts.length >= 3) {
+    return `${readableCode(parts[2])} · ${parts[1]}`;
+  }
+  return readableCode(runId);
+}
+
+function progressPill(state, label = null) {
+  const pill = document.createElement("span");
+  pill.className = `progress-pill state-${state}`;
+  appendText(pill, label || progressStateLabels[state] || readableCode(state));
+  return pill;
+}
+
+function evidenceDisclosure(refIds, fields = null) {
+  const details = document.createElement("details");
+  details.className = "evidence-disclosure";
+  const summary = document.createElement("summary");
+  const references = Array.from(new Set(refIds || []));
+  appendText(summary, `${references.length} evidence ${references.length === 1 ? "record" : "records"}`);
+  details.appendChild(summary);
+  if (fields) {
+    details.appendChild(fixedFields(fields.data, fields.names));
+  }
+  if (references.length > 0) {
+    const list = document.createElement("ul");
+    list.className = "evidence-ref-list";
+    for (const reference of references) {
+      const item = document.createElement("li");
+      const code = document.createElement("code");
+      appendText(code, reference);
+      item.appendChild(code);
+      list.appendChild(item);
+    }
+    details.appendChild(list);
+  }
+  return details;
+}
+
+function progressMetric(label, value, note, tone = "neutral") {
+  const card = document.createElement("div");
+  card.className = `progress-metric tone-${tone}`;
+  const number = document.createElement("strong");
+  number.className = "progress-metric-value";
+  appendText(number, value);
+  const name = document.createElement("span");
+  name.className = "progress-metric-label";
+  appendText(name, label);
+  const context = document.createElement("small");
+  appendText(context, note);
+  card.append(number, name, context);
+  return card;
+}
+
+function progressSection(title, subtitle = null) {
+  const section = document.createElement("section");
+  section.className = "progress-section";
+  const header = document.createElement("div");
+  header.className = "progress-section-header";
+  const heading = document.createElement("h3");
+  appendText(heading, title);
+  header.appendChild(heading);
+  if (subtitle) {
+    const description = document.createElement("p");
+    appendText(description, subtitle);
+    header.appendChild(description);
+  }
+  section.appendChild(header);
+  return section;
+}
+
+function renderRunDistribution(counts) {
+  const section = progressSection(
+    "Registered run outcomes",
+    "Exact record distribution · this is not a project completion percentage.",
+  );
+  const definitions = [
+    ["observed_completed", "Completed", counts.runs_completed],
+    ["current_work", "Active", counts.runs_active],
+    ["candidate", "Candidate", counts.runs_candidates],
+    ["blocked", "Blocked", counts.runs_blocked],
+    ["failed", "Failed", counts.runs_failed],
+    ["unavailable", "Unavailable", counts.runs_unavailable],
+    ["unknown", "Unknown", counts.runs_unknown],
+  ];
+  const distribution = document.createElement("div");
+  distribution.className = "run-distribution";
+  distribution.setAttribute("role", "img");
+  distribution.setAttribute("aria-label", definitions
+    .filter(([, , count]) => count > 0)
+    .map(([, label, count]) => `${label}: ${count}`)
+    .join(", "));
+  const legend = document.createElement("ul");
+  legend.className = "run-distribution-legend";
+  for (const [state, label, count] of definitions) {
+    if (count <= 0) {
+      continue;
+    }
+    const segment = document.createElement("span");
+    segment.className = `distribution-segment state-${state}`;
+    segment.style.flexGrow = String(count);
+    distribution.appendChild(segment);
+    const item = document.createElement("li");
+    const marker = document.createElement("span");
+    marker.className = `distribution-marker state-${state}`;
+    marker.setAttribute("aria-hidden", "true");
+    const labelText = document.createElement("span");
+    appendText(labelText, label);
+    const value = document.createElement("strong");
+    appendText(value, count);
+    item.append(marker, labelText, value);
+    legend.appendChild(item);
+  }
+  section.append(distribution, legend);
+  return section;
+}
+
+function renderAttentionItem(item) {
+  const card = document.createElement("article");
+  card.className = "attention-item";
+  const header = document.createElement("div");
+  header.className = "compact-row-header";
+  const title = document.createElement("strong");
+  appendText(title, compactRunLabel(item.run_id));
+  header.append(title, progressPill(item.classification));
+  card.appendChild(header);
+  if (item.recorded_reasons.length > 0) {
+    const reasons = document.createElement("ul");
+    reasons.className = "reason-list";
+    for (const reason of item.recorded_reasons) {
+      const reasonItem = document.createElement("li");
+      appendText(reasonItem, reason);
+      reasons.appendChild(reasonItem);
+    }
+    card.appendChild(reasons);
+  } else {
+    const unavailable = document.createElement("p");
+    unavailable.className = "muted compact-copy";
+    appendText(unavailable, "No recorded reason is available for this run.");
+    card.appendChild(unavailable);
+  }
+  card.appendChild(evidenceDisclosure(item.support_ref_ids, {
+    data: {run_id: item.run_id, source_locator: item.source_locator},
+    names: ["run_id", "source_locator"],
+  }));
+  return card;
+}
+
+function renderMilestoneItem(item) {
+  const row = document.createElement("li");
+  row.className = "milestone-item";
+  const marker = document.createElement("span");
+  marker.className = `timeline-marker state-${item.observed_state}`;
+  marker.setAttribute("aria-hidden", "true");
+  const content = document.createElement("div");
+  const header = document.createElement("div");
+  header.className = "compact-row-header";
+  const date = document.createElement("time");
+  date.dateTime = item.recorded_on;
+  appendText(date, item.recorded_on);
+  header.append(date, progressPill(item.observed_state));
+  const decision = document.createElement("p");
+  decision.className = "milestone-decision";
+  appendText(decision, item.decision);
+  const identity = document.createElement("small");
+  identity.className = "muted identity-caption";
+  appendText(identity, readableCode(item.milestone_id));
+  content.append(header, decision, identity, evidenceDisclosure(item.support_ref_ids, {
+    data: {
+      evidence_binding: item.evidence_binding,
+      evidence_locator: item.evidence_locator,
+      reported_status: item.reported_status,
+    },
+    names: ["evidence_binding", "evidence_locator", "reported_status"],
+  }));
+  row.append(marker, content);
+  return row;
+}
+
+function renderActivityItem(item) {
+  const row = document.createElement("li");
+  row.className = "activity-item";
+  const header = document.createElement("div");
+  header.className = "compact-row-header";
+  const title = document.createElement("strong");
+  appendText(title, compactRunLabel(item.run_id));
+  header.append(title, progressPill(item.observed_state));
+  const metadata = document.createElement("p");
+  metadata.className = "activity-meta";
+  appendText(metadata, `${item.provider} · ${item.model_name}`);
+  row.append(header, metadata);
+  if (item.selected) {
+    const selected = document.createElement("span");
+    selected.className = "selection-badge";
+    appendText(selected, "Selected current run");
+    row.appendChild(selected);
+  }
+  row.appendChild(evidenceDisclosure(item.support_ref_ids, {
+    data: {run_id: item.run_id, evidence_scope: item.evidence_scope},
+    names: ["run_id", "evidence_scope"],
+  }));
+  return row;
+}
+
+function requestCandidateWorkspace(candidateId) {
+  const descriptor = quickIntentCatalog?.intents.find(
+    (item) => item.quick_intent_id === candidateId,
+  );
+  if (!descriptor) {
+    showError(intentResult, new Error("Reload this project's current intent catalog."));
+    return;
+  }
+  generateWithIntent({
+    schema_version: "1.0",
+    kind: "quick",
+    project_id: quickIntentCatalog.snapshot.project_id,
+    snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+    snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+    quick_intent_id: descriptor.quick_intent_id,
+  });
+}
+
 function renderRunStageExplorer(data) {
   const container = document.createElement("div");
   const runList = document.createElement("ul");
@@ -191,144 +428,321 @@ function renderArtifactViewer(data) {
   return container;
 }
 
+function renderProjectSummary(data) {
+  const container = document.createElement("div");
+  container.className = "project-summary-card";
+  const status = document.createElement("div");
+  status.className = "compact-row-header";
+  const statusLabel = document.createElement("span");
+  statusLabel.className = "card-label";
+  appendText(statusLabel, "Recorded project status");
+  status.append(statusLabel, progressPill(data.project_status, readableCode(data.project_status)));
+  const focus = document.createElement("p");
+  focus.className = "project-focus-copy";
+  appendText(focus, data.current_focus);
+  const publication = document.createElement("p");
+  publication.className = "availability-note";
+  appendText(publication, data.publication_ready
+    ? "A publication-ready paper is registered."
+    : "No publication-ready paper is registered.");
+  container.append(status, focus, publication, evidenceDisclosure([data.project_ref_id]));
+  return container;
+}
+
+function renderRunHealth(data) {
+  const container = document.createElement("div");
+  container.className = "run-health-summary";
+  const state = ["complete", "completed", "succeeded", "success"].includes(data.run_status)
+    ? "observed_completed"
+    : data.run_status;
+  container.appendChild(progressPill(state, readableCode(data.run_status)));
+  const facts = document.createElement("div");
+  facts.className = "health-facts";
+  const factValues = [
+    ["Failure stage", data.failure_stage],
+    ["Retry safe", data.retry_safe],
+    ["Schema valid", data.schema_valid],
+  ];
+  for (const [label, value] of factValues) {
+    const fact = document.createElement("div");
+    const factLabel = document.createElement("small");
+    appendText(factLabel, label);
+    const factValue = document.createElement("strong");
+    appendText(factValue, value);
+    fact.append(factLabel, factValue);
+    facts.appendChild(fact);
+  }
+  container.append(facts, evidenceDisclosure([data.run_ref_id]));
+  return container;
+}
+
+function renderRunBlockers(data) {
+  const container = document.createElement("div");
+  container.className = "generated-blocker-summary";
+  const summary = document.createElement("p");
+  summary.className = "component-lede";
+  appendText(summary, `${data.blockers.length} registered runs require attention.`);
+  const list = document.createElement("div");
+  list.className = "generated-blocker-list";
+  for (const blocker of data.blockers) {
+    const item = document.createElement("article");
+    item.className = "generated-blocker-item";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const title = document.createElement("strong");
+    appendText(title, compactRunLabel(blocker.run_id));
+    header.append(title, progressPill(blocker.classification));
+    const reason = document.createElement("p");
+    reason.className = "blocker-reason";
+    if (blocker.recorded_reasons.length > 0) {
+      appendText(reason, blocker.recorded_reasons[0]);
+    } else {
+      appendText(reason, "No recorded reason is available.");
+    }
+    item.append(header, reason);
+    if (blocker.recorded_reasons.length > 1) {
+      const moreReasons = document.createElement("ul");
+      moreReasons.className = "reason-list";
+      for (const recordedReason of blocker.recorded_reasons.slice(1)) {
+        const reasonItem = document.createElement("li");
+        appendText(reasonItem, recordedReason);
+        moreReasons.appendChild(reasonItem);
+      }
+      item.appendChild(moreReasons);
+    }
+    item.appendChild(evidenceDisclosure([blocker.run_ref_id], {
+      data: {run_id: blocker.run_id, source_locator: blocker.source_locator},
+      names: ["run_id", "source_locator"],
+    }));
+    list.appendChild(item);
+  }
+  container.append(summary, list);
+  return container;
+}
+
 function renderProjectProgress(data) {
   const container = document.createElement("div");
   container.className = "progress-board";
 
-  const status = document.createElement("div");
-  status.className = `progress-status state-${data.project_state}`;
-  const statusTitle = document.createElement("strong");
-  appendText(statusTitle, `Observed project state · ${data.project_state}`);
-  status.append(statusTitle, fixedFields(data, [
-    "project_status", "publication_ready", "summary_ref_ids",
-  ]));
+  const attentionCount = data.counts.runs_blocked + data.counts.runs_failed;
+  const hero = document.createElement("section");
+  hero.className = `progress-hero state-${data.project_state}`;
+  const heroTop = document.createElement("div");
+  heroTop.className = "progress-hero-top";
+  const heroLabel = document.createElement("p");
+  heroLabel.className = "eyebrow dark";
+  appendText(heroLabel, "Canonical evidence snapshot");
+  heroTop.append(heroLabel, progressPill(data.project_state));
+  const summary = document.createElement("p");
+  summary.className = "progress-summary";
+  const candidateClause = data.counts.runs_candidates === 1
+    ? "1 remains a candidate"
+    : `${data.counts.runs_candidates} remain candidates`;
+  const paperClause = data.counts.papers_registered === 1
+    ? "1 paper is registered"
+    : `${data.counts.papers_registered} papers are registered`;
+  appendText(
+    summary,
+    `${data.counts.runs_completed} of ${data.counts.runs_registered} registered run records have observed completion. `
+      + `${attentionCount} need attention; ${candidateClause}. ${paperClause}.`,
+  );
+  const generationHint = document.createElement("p");
+  generationHint.className = "generation-hint";
+  appendText(
+    generationHint,
+    "Use an evidence prompt or free question to recompose this workspace around a specific goal.",
+  );
+  hero.append(heroTop, summary, generationHint, evidenceDisclosure(data.summary_ref_ids, {
+    data: {
+      recorded_project_status: data.project_status,
+      publication_ready: data.publication_ready,
+    },
+    names: ["recorded_project_status", "publication_ready"],
+  }));
 
-  const counts = fixedFields(data.counts, [
-    "runs_registered",
-    "runs_completed",
-    "runs_active",
-    "runs_candidates",
-    "runs_blocked",
-    "runs_failed",
-    "runs_unavailable",
-    "runs_unknown",
-    "completed_stages",
-    "papers_registered",
-  ]);
-  counts.classList.add("progress-counts");
-  container.append(status, titledSection("Observed records · no inferred percentage", counts));
+  const metrics = document.createElement("div");
+  metrics.className = "progress-metrics";
+  metrics.append(
+    progressMetric("Registered runs", data.counts.runs_registered, "authoritative records"),
+    progressMetric("Observed complete", data.counts.runs_completed, "run records", "positive"),
+    progressMetric("Need attention", attentionCount, "blocked or failed", attentionCount ? "warning" : "positive"),
+    progressMetric("Candidates", data.counts.runs_candidates, "not yet accepted", "candidate"),
+    progressMetric("Completed stages", data.counts.completed_stages, "where stage semantics apply"),
+    progressMetric("Papers", data.counts.papers_registered, "registered artifacts"),
+  );
+  container.append(hero, metrics, renderRunDistribution(data.counts));
 
-  container.appendChild(titledSection("Declared focus and next gate", fixedFields(data, [
-    "focus",
-    "focus_status",
-    "next_gate",
-    "focus_ref_ids",
-  ])));
-
+  const direction = progressSection("Current direction", "Recorded focus, selection, and next gate.");
+  const directionGrid = document.createElement("div");
+  directionGrid.className = "direction-grid";
+  const focus = document.createElement("article");
+  const focusLabel = document.createElement("span");
+  focusLabel.className = "card-label";
+  appendText(focusLabel, "Current focus");
+  const focusValue = document.createElement("strong");
+  appendText(focusValue, readableCode(data.focus));
+  const focusStatus = document.createElement("small");
+  appendText(focusStatus, readableCode(data.focus_status));
+  focus.append(focusLabel, focusValue, focusStatus, evidenceDisclosure(data.focus_ref_ids));
+  const gate = document.createElement("article");
+  const gateLabel = document.createElement("span");
+  gateLabel.className = "card-label";
+  appendText(gateLabel, "Next evidence gate");
+  const gateValue = document.createElement("strong");
+  appendText(gateValue, data.next_gate || "No next gate is recorded.");
+  gate.append(gateLabel, gateValue);
+  directionGrid.append(focus, gate);
   if (data.current_run_id) {
-    container.appendChild(titledSection("Selected current run · selection is not execution", fixedFields(data, [
-      "current_run_id",
-      "current_run_status",
-      "current_run_state",
-      "current_run_ref_ids",
-    ])));
+    const currentRun = document.createElement("article");
+    currentRun.className = "current-run-card";
+    const runCopy = document.createElement("div");
+    const runLabel = document.createElement("span");
+    runLabel.className = "card-label";
+    appendText(runLabel, "Selected run · selection is not execution");
+    const runValue = document.createElement("strong");
+    appendText(runValue, compactRunLabel(data.current_run_id));
+    runCopy.append(runLabel, runValue, evidenceDisclosure(data.current_run_ref_ids, {
+      data: {run_id: data.current_run_id, recorded_status: data.current_run_status},
+      names: ["run_id", "recorded_status"],
+    }));
+    const openRun = document.createElement("button");
+    openRun.type = "button";
+    openRun.className = "secondary-button";
+    appendText(openRun, "Open run stages");
+    openRun.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: data.current_run_id,
+    }));
+    currentRun.append(runCopy, progressPill(data.current_run_state), openRun);
+    directionGrid.appendChild(currentRun);
   }
+  direction.appendChild(directionGrid);
+  container.appendChild(direction);
 
-  if (data.milestones.length > 0) {
-    container.appendChild(titledSection("Declared project milestones", fixedRows(data.milestones, [
-      "milestone_id",
-      "recorded_on",
-      "reported_status",
-      "observed_state",
-      "decision",
-      "evidence_locator",
-      "evidence_binding",
-      "support_ref_ids",
-    ])));
-  } else {
-    container.appendChild(titledSection("Declared project milestones", fixedFields(data, [
-      "milestone_state", "milestone_reason_code",
-    ])));
-  }
-
+  const standing = document.createElement("div");
+  standing.className = "progress-columns";
   if (data.attention.length > 0) {
-    container.appendChild(titledSection("Blocked and failed registered work", fixedRows(data.attention, [
-      "run_id",
-      "reported_status",
-      "classification",
-      "detail_state",
-      "recorded_reasons",
-      "source_locator",
-      "support_ref_ids",
-    ])));
+    const attention = progressSection("Needs attention", `${data.attention.length} registered runs are blocked or failed.`);
+    const attentionList = document.createElement("div");
+    attentionList.className = "attention-list";
+    for (const item of data.attention) {
+      attentionList.appendChild(renderAttentionItem(item));
+    }
+    attention.appendChild(attentionList);
+    standing.appendChild(attention);
   }
 
-  container.appendChild(titledSection("Latest registered activity · manifest order", fixedRows(
-    data.recent_activity,
-    [
-      "run_id",
-      "reported_status",
-      "observed_state",
-      "provider",
-      "model_name",
-      "condition",
-      "evidence_scope",
-      "selected",
-      "superseded",
-      "source_locator",
-      "support_ref_ids",
-    ],
-  )));
-
-  if (data.stages.length > 0) {
-    container.appendChild(titledSection("Observed AutoResearchClaw stages", fixedRows(data.stages, [
-      "stage",
-      "label_en",
-      "label_zh",
-      "observed_state",
-      "artifact_count",
-      "output_locator",
-      "support_ref_ids",
-    ])));
+  const milestones = progressSection(
+    "Decision timeline",
+    data.milestones.length > 0
+      ? `${data.milestones.length} declared milestones in recorded order.`
+      : "No project milestone is available.",
+  );
+  if (data.milestones.length > 0) {
+    const timeline = document.createElement("ol");
+    timeline.className = "milestone-timeline";
+    for (const item of data.milestones) {
+      timeline.appendChild(renderMilestoneItem(item));
+    }
+    milestones.appendChild(timeline);
   } else {
-    container.appendChild(titledSection("AutoResearchClaw stage evidence", fixedFields(data, [
-      "stage_semantics", "stage_state", "stage_reason_code",
-    ])));
+    milestones.appendChild(evidenceDisclosure([], {
+      data: {state: data.milestone_state, reason: data.milestone_reason_code},
+      names: ["state", "reason"],
+    }));
   }
+  standing.appendChild(milestones);
+  container.appendChild(standing);
 
+  const activityAndNext = document.createElement("div");
+  activityAndNext.className = "progress-columns lower-grid";
+  const activity = progressSection(
+    "Recent registered activity",
+    `${data.activity_total} run records · latest manifest entries shown first.`,
+  );
+  const visibleActivity = document.createElement("ul");
+  visibleActivity.className = "activity-list";
+  for (const item of data.recent_activity.slice(0, 4)) {
+    visibleActivity.appendChild(renderActivityItem(item));
+  }
+  activity.appendChild(visibleActivity);
+  if (data.recent_activity.length > 4) {
+    const more = document.createElement("details");
+    more.className = "more-activity";
+    const moreSummary = document.createElement("summary");
+    appendText(moreSummary, `Show ${data.recent_activity.length - 4} more registered runs`);
+    const remainder = document.createElement("ul");
+    remainder.className = "activity-list";
+    for (const item of data.recent_activity.slice(4)) {
+      remainder.appendChild(renderActivityItem(item));
+    }
+    more.append(moreSummary, remainder);
+    activity.appendChild(more);
+  }
+  if (data.activity_truncated) {
+    const truncated = document.createElement("p");
+    truncated.className = "muted compact-copy";
+    appendText(truncated, "The server bounded this activity list; open Runs & stages for the full catalog.");
+    activity.appendChild(truncated);
+  }
+  activityAndNext.appendChild(activity);
+
+  const nextSteps = progressSection(
+    "Explore next",
+    "These evidence-supported options generate another read-only workspace; they do not start work.",
+  );
+  const candidateLabels = {
+    review_progress: "Review this progress",
+    diagnose_blockers: "Diagnose blockers",
+    compare_runs: "Compare recent runs",
+    review_paper_evidence: "Review paper evidence",
+    review_next_gate: "Explore the next gate",
+  };
+  const candidateList = document.createElement("div");
+  candidateList.className = "candidate-list";
+  for (const candidate of data.next_step_candidates) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "candidate-button";
+    const label = document.createElement("strong");
+    appendText(label, candidateLabels[candidate.kind] || readableCode(candidate.label_code));
+    const note = document.createElement("small");
+    appendText(note, `${candidate.target_ids.length} bound targets · ${candidate.support_ref_ids.length} evidence records`);
+    button.append(label, note);
+    button.addEventListener("click", () => requestCandidateWorkspace(candidate.candidate_id));
+    candidateList.appendChild(button);
+  }
+  nextSteps.appendChild(candidateList);
+
+  const availability = document.createElement("div");
+  availability.className = "availability-note";
+  if (data.stages.length > 0) {
+    appendText(availability, `${data.stages.length} stage records are available in Runs & stages.`);
+  } else if (data.stage_semantics === "self-development-milestones-not-autoresearchclaw-stages") {
+    appendText(availability, "This self-development project uses decision milestones instead of AutoResearchClaw stage progress.");
+  } else {
+    appendText(availability, `Stage evidence is ${readableCode(data.stage_state)}.`);
+  }
   if (data.papers.length > 0) {
-    container.appendChild(titledSection("Registered papers", fixedRows(data.papers, [
-      "paper_id",
-      "title",
-      "reported_status",
-      "observed_state",
-      "publication_ready",
-      "selected",
-      "support_ref_ids",
-    ])));
+    appendText(availability, ` ${data.papers.length} registered papers are available in Papers & evidence.`);
+  } else {
+    appendText(availability, " No paper is currently registered.");
   }
-
-  container.appendChild(titledSection("Evidence-supported next-step candidates", fixedRows(
-    data.next_step_candidates,
-    ["kind", "label_code", "target_ids", "support_ref_ids"],
-  )));
+  nextSteps.appendChild(availability);
+  activityAndNext.appendChild(nextSteps);
+  container.appendChild(activityAndNext);
   return container;
 }
 
 const componentRenderers = Object.freeze({
-  ProjectSummaryCard: (data) => fixedFields(
-    data,
-    ["project_status", "publication_ready", "current_focus", "project_ref_id"],
-  ),
+  ProjectSummaryCard: renderProjectSummary,
   StageTimeline: (data) => fixedRows(data.stages, ["stage", "status", "stage_ref_id"]),
   BlockerList: (data) => fixedRows(
     data.blockers,
     ["blocker_id", "severity", "status", "summary", "blocker_ref_id"],
   ),
-  RunHealth: (data) => fixedFields(
-    data,
-    ["run_status", "failure_stage", "retry_safe", "schema_valid", "run_ref_id"],
-  ),
+  RunHealth: renderRunHealth,
   BudgetMeter: (data) => fixedRows(data.resources, ["resource", "used", "limit", "unit"]),
   DecisionComparison: (data) => fixedFields(data, Object.keys(data)),
   EvidenceGraph: (data) => {
@@ -354,10 +768,7 @@ const componentRenderers = Object.freeze({
   RunStageExplorer: renderRunStageExplorer,
   EvidenceInventory: renderEvidenceInventory,
   RunComparisonPanel: renderComparison,
-  RunBlockerPanel: (data) => fixedRows(
-    data.blockers,
-    ["run_id", "run_status", "classification", "reason_code", "source_locator"],
-  ),
+  RunBlockerPanel: renderRunBlockers,
   PendingProposalList: (data) => fixedRows(
     data.proposals,
     ["event_id", "action_id", "status", "next_boundary", "execution_authority"],
@@ -440,16 +851,31 @@ function renderGenerationSummary(documentValue) {
   const heading = document.createElement("h2");
   appendText(heading, documentValue.intent.goal.replaceAll("_", " "));
   const planner = documentValue.planning?.provenance;
-  summary.append(
-    eyebrow,
-    heading,
-    fixedFields({
-      planner_mode: planner?.mode,
-      reason_code: documentValue.reason_code,
-      snapshot_revision: documentValue.snapshot_revision,
-      execution_authority: documentValue.execution_authority,
-    }, ["planner_mode", "reason_code", "snapshot_revision", "execution_authority"]),
-  );
+  const metadata = document.createElement("div");
+  metadata.className = "generation-metadata";
+  const values = [
+    ["Planner", readableCode(planner?.mode)],
+    ["Evidence snapshot", `revision ${documentValue.snapshot_revision}`],
+    ["Authority", "read-only"],
+  ];
+  for (const [label, value] of values) {
+    const item = document.createElement("span");
+    const itemLabel = document.createElement("small");
+    appendText(itemLabel, label);
+    const itemValue = document.createElement("strong");
+    appendText(itemValue, value);
+    item.append(itemLabel, itemValue);
+    metadata.appendChild(item);
+  }
+  const provenance = document.createElement("details");
+  provenance.className = "generation-provenance";
+  const provenanceSummary = document.createElement("summary");
+  appendText(provenanceSummary, "Planning provenance");
+  provenance.append(provenanceSummary, fixedFields({
+    reason_code: documentValue.reason_code,
+    execution_authority: documentValue.execution_authority,
+  }, ["reason_code", "execution_authority"]));
+  summary.append(eyebrow, heading, metadata, provenance);
   return summary;
 }
 

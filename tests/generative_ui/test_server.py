@@ -213,6 +213,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "/api/v3/generative/projects/" in script.text
     assert "quick_catalog_fingerprint" in script.text
     assert "Generated from verified evidence" in script.text
+    assert "Canonical evidence snapshot" in script.text
+    assert "Exact record distribution" in script.text
+    assert "requestCandidateWorkspace" in script.text
+    assert "generation-metadata" in script.text
+    assert ".plan-emphasis-compact .progress-board" in stylesheet.text
+    assert ".generated-blocker-list" in stylesheet.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
     assert 'event_type: "artifact_inspection_requested"' in script.text

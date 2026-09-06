@@ -166,6 +166,58 @@ def test_deterministic_planner_is_stable_admitted_and_non_executable(tmp_path: P
     assert first.provenance.result_fingerprint == first.plan.fingerprint
     assert len(first.provenance.fingerprint) == 64
     assert len(first.plan.entries) <= 12
+    by_id = {item.candidate_id: item for item in catalog.candidates}
+    selected = [by_id[item.candidate_id] for item in first.plan.entries]
+    assert selected[0].component.component.value == "RunComparisonPanel"
+    assert [item.component.component.value for item in selected] == [
+        "RunComparisonPanel",
+        "ProjectProgressBoard",
+        "ProjectSummaryCard",
+    ]
+    progress_index = next(
+        index
+        for index, item in enumerate(selected)
+        if item.component.component.value == "ProjectProgressBoard"
+    )
+    assert first.plan.entries[progress_index].emphasis == "compact"
+
+
+def test_deterministic_planner_puts_blocker_diagnosis_before_compact_context(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    resolver = WorkspaceIntentResolver(runtime)
+    quick = resolver.quick_catalog("planner-project")
+    resolution = resolver.resolve(
+        FreeQuestionRequest(
+            project_id="planner-project",
+            snapshot_revision=quick.snapshot.snapshot_revision,
+            snapshot_sha256=quick.snapshot.snapshot_sha256,
+            question="为什么 candidate-run 失败",
+        )
+    )
+    assert resolution.intent is not None
+    assert resolution.intent.goal == "blocker_diagnosis"
+    catalog = SurfaceCandidateFactory(runtime).build(resolution.intent)
+
+    outcome = DeterministicWorkspacePlanner().compose(catalog)
+
+    assert outcome.plan is not None
+    by_id = {item.candidate_id: item for item in catalog.candidates}
+    selected = [by_id[item.candidate_id] for item in outcome.plan.entries]
+    assert selected[0].component.component.value == "RunBlockerPanel"
+    assert [item.component.component.value for item in selected] == [
+        "RunBlockerPanel",
+        "ProjectProgressBoard",
+        "ProjectSummaryCard",
+    ]
+    assert outcome.plan.entries[0].emphasis == "featured"
+    progress_index = next(
+        index
+        for index, item in enumerate(selected)
+        if item.component.component.value == "ProjectProgressBoard"
+    )
+    assert outcome.plan.entries[progress_index].emphasis == "compact"
 
 
 def test_model_classification_can_only_select_a_server_issued_intent(tmp_path: Path) -> None:

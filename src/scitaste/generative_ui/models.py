@@ -529,6 +529,16 @@ class RunBlockerItem(BaseModel):
     classification: Literal["blocked", "failed"]
     reason_code: SafeIdentifier
     source_locator: SafeLocator
+    detail_state: Literal["recorded", "unavailable"] = "unavailable"
+    recorded_reasons: tuple[SafeText, ...] = Field(default=(), max_length=20)
+
+    @model_validator(mode="after")
+    def detail_matches_recorded_reasons(self) -> RunBlockerItem:
+        if self.detail_state == "recorded" and not self.recorded_reasons:
+            raise ValueError("recorded blocker detail requires at least one reason")
+        if self.detail_state == "unavailable" and self.recorded_reasons:
+            raise ValueError("unavailable blocker detail cannot contain reasons")
+        return self
 
 
 class RunBlockerPanelData(BaseModel):

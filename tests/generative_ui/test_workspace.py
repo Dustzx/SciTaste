@@ -51,6 +51,9 @@ def _runtime(tmp_path: Path) -> ProjectRuntime:
                 status=status,
                 evidence_scope="engineering-only",
                 stage_path="upstream-run" if run_id == "successful-run" else None,
+                blockers=(
+                    ["Awaiting independently verified result"] if run_id == "blocked-run" else None
+                ),
             ),
             expected_revision=snapshot.revision,
         )
@@ -267,6 +270,13 @@ def test_comparison_and_blocker_views_never_invent_metrics_or_failure_details(
         "registered-status-failed",
         "registered-status-blocked",
     }
+    detail_by_status = {item["classification"]: item for item in blocker_panel.data["blockers"]}
+    assert detail_by_status["failed"]["detail_state"] == "unavailable"
+    assert detail_by_status["failed"]["recorded_reasons"] == []
+    assert detail_by_status["blocked"]["detail_state"] == "recorded"
+    assert detail_by_status["blocked"]["recorded_reasons"] == [
+        "Awaiting independently verified result"
+    ]
 
 
 def test_empty_states_and_forged_project_owned_selections_fail_closed(tmp_path: Path) -> None:

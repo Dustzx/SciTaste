@@ -52,6 +52,27 @@ declared focus and next gate, latest registered activity in manifest order,
 completed AutoResearchClaw stages where those semantics apply, paper state,
 blocked/failed run attention, and evidence-supported next-step candidates.
 
+The browser renders this baseline as an executive evidence summary rather than
+a serialized field inspector. It leads with one categorical status statement,
+six exact record-count tiles, and a run-outcome composition strip; follows with
+the current focus, selected run, next evidence gate, blockers and decision
+timeline; and bounds recent activity to four initially visible rows. Raw
+evidence IDs, full run IDs, locators and secondary status fields remain
+available through native collapsed disclosure controls. This changes only the
+receiver-owned presentation: all visible summary values are deterministic
+functions of the validated `ProjectProgressBoardData`, and no browser prose is
+fed back as research evidence.
+
+The canonical progress summary and a generated workspace have distinct roles.
+`project-progress` is the stable, reproducible landing view. The left-side quick
+prompts, free-question form, and the progress view's `Explore next` buttons all
+cross the same typed intent endpoint to request a goal-specific generated
+arrangement. Thus the user gets a useful synthesis before asking anything and a
+visibly recomposed component workspace after expressing an intent. The latter
+is generation-as-content; it remains a selection and arrangement of
+server-authored evidence components, not generated HTML or a model-written
+answer.
+
 Progress is categorical rather than numeric. The contract distinguishes
 `observed_completed`, `current_work`, `blocked`, `failed`, `candidate`,
 `unavailable`, and `unknown`; it deliberately has no percent, ratio, schedule,
@@ -60,6 +81,13 @@ selection and never upgraded to currently executing. A completed run also does
 not make the project complete. Status mapping uses a small exact allowlist so a
 novel or compound status remains `unknown` unless its meaning is explicitly
 registered.
+
+A manual receiver check against that revision at a 1720-pixel desktop viewport
+confirmed that the summary rendered without browser errors, reduced the initial
+document height from roughly 6606 to 2045 pixels, kept 19 evidence disclosures
+available, and let an `Explore next` choice reach the retained generated-view
+route. These dimensions are a visual-regression observation, not a product
+metric or progress claim.
 
 Every visible progress row carries supporting evidence references. Run and
 paper status rows cite both `PROJECT.json` and their content-addressed run or
@@ -142,8 +170,13 @@ transition, callback, fetch, or tool method. Deterministic intent recognition in
 `WorkspaceIntentResolver` remains the first path; the optional classifier is
 only useful after that path returns `long-tail-question-requires-planner`.
 
-`DeterministicWorkspacePlanner` orders trusted candidates by a versioned stable
-rule and works without a provider. `StructuredWorkspacePlanner` adapts the
+`DeterministicWorkspacePlanner` orders trusted candidates by a versioned,
+intent-aware stable rule and works without a provider. A progress request leads
+with the progress summary; blocker, comparison, and paper requests lead with
+their matching diagnostic component, retain progress only as compact context,
+and omit unrelated context such as current-run approval from a blocker
+diagnosis. Candidate ID remains the deterministic tie-breaker.
+`StructuredWorkspacePlanner` adapts the
 existing provider-neutral `StructuredModelBackend`; it does not import a vendor
 SDK or read credentials itself. Classification receives the bounded question
 and a list of closed quick-intent IDs/goals/registered target IDs. Composition
@@ -204,13 +237,16 @@ field. The buttons are not a universal prompt menu: each comes from the current
 catalog, project revision, snapshot hash, and request fingerprint.
 
 Successful generation visibly changes component order, grouping, emphasis, and
-the set of goal-relevant panels. The receiver shows the admitted intent goal,
-planner mode, snapshot revision, execution authority, and a short server-owned
-explanation for each component. Layout classes affect only the fixed CSS grid;
-the response still contains no markup or renderer code. A failed request leaves
-the current workspace visible and reports clarification candidates, missing
-evidence, provider unavailability, stale state, or rejected planning in the
-intent panel.
+the set of goal-relevant panels. Featured goal components span the workspace;
+a progress board used only for context collapses its timeline, activity, and
+next-step regions while preserving its categorical synopsis and exact record
+counts. The receiver shows the admitted intent goal, planner mode, snapshot
+revision, read-only authority, and a short server-owned explanation for each
+component; lower-level provenance remains available through disclosure.
+Layout classes affect only the fixed CSS grid; the response still contains no
+markup or renderer code. A failed request leaves the current workspace visible
+and reports clarification candidates, missing evidence, provider
+unavailability, stale state, or rejected planning in the intent panel.
 
 Generated surfaces are retained in memory by exact project and surface ID so
 browser back/forward and proposal-only actions resolve against the precise
