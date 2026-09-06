@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.persistence import DecisionLogger, StateStore, snapshot_id
@@ -17,6 +19,20 @@ def test_state_store_round_trip_and_content_addressing(
     assert store.load() == research_state
     assert store.load(first_id) == research_state
     assert store.list_snapshots() == [first_id]
+
+
+def test_state_store_rejects_snapshot_bytes_under_the_wrong_content_name(
+    tmp_path, research_state: ResearchState
+) -> None:
+    store = StateStore(tmp_path)
+    identifier = store.save(research_state)
+    changed = research_state.model_copy(update={"revision": research_state.revision + 1})
+    (store.snapshot_dir / f"{identifier}.json").write_text(
+        changed.model_dump_json(indent=2), encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="content-addressed name"):
+        store.load(identifier)
 
 
 def test_decision_log_round_trip(tmp_path, research_state: ResearchState) -> None:

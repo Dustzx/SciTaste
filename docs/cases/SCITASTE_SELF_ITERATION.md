@@ -157,6 +157,17 @@ and result; resume verifies those records against the stage decision log. This i
 evidence that the architectural choice can support a real capability without
 AutoResearchClaw, but it is still not open-web retrieval or outcome superiority.
 
+The optional project-owned AutoResearchClaw handoff has also been hardened using
+the same self-development criterion: a successful selected-action result is now
+a durable no-repeat boundary. A controlled interruption after result publication
+resumes by revalidating the pinned command, predecessor, terminal stage evidence,
+incremental cost, complete work tree, pre-call invocation, decision, state, and
+verification without a second executor call. The same lock and failure-validation
+boundary now covers the Stage 1–2 bootstrap. A hard-crashed `running` run can
+recover only from a verified success; changed, missing, or contradictory evidence
+remains blocked rather than spending again. This is a recovery/integrity result
+for the compatibility adapter, not a reason to make it SciTaste's default path.
+
 The following increment closes the registered offline experiment boundary. The
 default Full Workflow now copies one exact CPU source into its owning run,
 executes it through a shell-free Bubblewrap launcher without network, host-project,

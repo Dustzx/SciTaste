@@ -183,15 +183,20 @@ runs/<run-id>/
 ├── substrate_manifest.json
 ├── inputs/{autoresearchclaw/,autoresearchclaw-config.yaml}
 ├── work/autoresearchclaw/
-├── substrate_action/{decisions.jsonl,executor_result.json,research_state.json,
-│                    substrate_summary.json,verification.json}
+├── substrate_action/{invocation.json,decisions.jsonl,executor_result.json,
+│                    research_state.json,substrate_summary.json,verification.json}
 └── failed_attempts/attempt-NNN/  # only after a resumable failed attempt
 ```
 
 `inputs/` is immutable evidence; provider-backed mutation occurs only in
 `work/`. `substrate project bootstrap status` rehashes the bootstrap work and
 source, while `substrate project status` rehashes the selected-action input,
-working tree, and evidence before reporting either run as verified.
+working tree, and evidence before reporting either run as verified. A successful
+`invocation.json` is published before provider access and binds the exact state,
+action, decision intent, and project manifest. `executor_result.json` binds that
+invocation and the complete normalized work tree. Resume may finish missing
+deterministic files in place, while an unknown, changed, or contradictory outcome
+is retained and blocked rather than archived and called again.
 
 Normal bounded model-node calls belong to the selected project run:
 

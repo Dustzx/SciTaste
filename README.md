@@ -55,7 +55,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
   traceable object-level patches;
 - a pinned, unmodified AutoResearchClaw adapter with prerequisite checks,
   contract-validated artifact manifests, stable session identity, runtime
-  accounting, and a successful live Stage 1–3 vertical slice;
+  accounting, no-repeat recovery for durable successful actions, and a
+  successful live Stage 1–3 vertical slice;
 - an independent six-family SciTasteBench smoke suite with five isolated
   intrinsic/augmentation conditions, transfer and robustness diagnostics,
   paired comparisons, exact replay support, and content-hashed reports;

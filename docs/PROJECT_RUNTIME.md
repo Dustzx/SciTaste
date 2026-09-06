@@ -129,7 +129,14 @@ cell execution is not reacquired at finalization.
 Both live paths are double-gated by their versioned workflow configuration and
 explicit `--allow-live`. Failed attempts may resume only after immutable inputs
 and registered identity revalidate; an already persisted successful bootstrap
-executor result is finalized without paying for the same call again.
+or selected-action executor result is finalized without paying for the same call
+again. Selected-action recovery independently reconstructs and checks its
+controller decision, resource-charged state, summary, stage contract, and final
+verification. Both paths serialize live work with an owned run lock, accept a
+hard-crashed `running` run only when a successful result independently verifies,
+and validate a failed result before authorizing its archive and retry. If any
+invocation, result, or work-tree evidence is absent or contradictory, the outcome
+is ambiguous and resume blocks instead of risking a duplicate provider request.
 
 `model-node runtime plan|execute|replay|status|verify` provides the normal-project
 boundary for bounded semantic advice. Each invocation binds the project revision,

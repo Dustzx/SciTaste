@@ -477,6 +477,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result
   recovery; Stage 3 binds that receipt rather than an arbitrary historical path.
+  Selected-action recovery now also reuses an exact successful result after
+  downstream interruption, binds its pre-call state/action/decision intent,
+  revalidates the complete work tree and stage/cost evidence, verifies failures
+  before retry, and blocks ambiguous or concurrent calls.
   Full Stage 1–18 ownership and a priced, independently reviewed model-node
   effectiveness comparison remain pending; engineering evidence cannot be
   converted into an effectiveness claim.

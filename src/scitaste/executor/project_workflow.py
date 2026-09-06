@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import os
 import shutil
+import stat
 import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
@@ -18,11 +20,13 @@ from scitaste.executor.autoresearchclaw import (
     AutoResearchClawExecutor,
     CommandRunner,
 )
-from scitaste.executor.base import ExecutionStatus
-from scitaste.executor.workflow import SubstrateActionWorkflow
+from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.workflow import SubstrateActionInvocation, SubstrateActionWorkflow
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
-from scitaste.schema.actions import MetaAction
+from scitaste.schema.actions import MetaAction, ResearchAction
+from scitaste.state.persistence import StateStore
+from scitaste.state.research_state import ResearchState
 
 
 class ProjectSubstrateWorkflowConfig(BaseModel):
@@ -72,7 +76,7 @@ class ProjectSubstrateRunManifest(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     project_id: str
     run_id: str
     action_type: MetaAction
@@ -85,6 +89,8 @@ class ProjectSubstrateRunManifest(BaseModel):
     source_bytes: int = Field(ge=1)
     source_project_run_id: str | None = None
     source_receipt_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    pre_state_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    action_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     expected_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     actual_substrate_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -125,6 +131,8 @@ class ProjectSubstrateRunManifest(BaseModel):
             raise ValueError("project substrate manifest hash mismatch")
         if (self.source_project_run_id is None) != (self.source_receipt_sha256 is None):
             raise ValueError("project substrate source provenance fields disagree")
+        if (self.pre_state_sha256 is None) != (self.action_sha256 is None):
+            raise ValueError("project substrate pre-call identity fields disagree")
         return self
 
 
@@ -221,9 +229,11 @@ class ProjectSubstrateActionWorkflow:
         workflow_config_sha256 = _workflow_config_sha256(config)
         source_summary: _TreeSummary | None = None
         source_receipt_sha256: str | None = None
+        recovery_without_provider_available = False
         if resume:
             snapshot = runtime.open(config.project_id)
             registered = _registered_run(snapshot, run_id)
+            _require_owned_run_root(runtime, config.project_id, run_id)
             manifest = _load_manifest(_run_root(runtime, config.project_id, run_id))
             self._validate_resume_identity(
                 config,
@@ -250,6 +260,9 @@ class ProjectSubstrateActionWorkflow:
             revision = snapshot.revision
             source_project_run_id = manifest.source_project_run_id
             source_receipt_sha256 = manifest.source_receipt_sha256
+            recovery_without_provider_available = _recorded_success_available(
+                _run_root(runtime, config.project_id, run_id)
+            )
         else:
             if (source_run_dir is None) == (source_project_run_id is None):
                 raise ValueError(
@@ -291,7 +304,10 @@ class ProjectSubstrateActionWorkflow:
             "resume": resume,
             "live_config_enabled": config.live_enabled,
             "caller_live_authorized": allow_live,
-            "would_contact_provider": bool(config.live_enabled and allow_live),
+            "would_contact_provider": bool(
+                config.live_enabled and allow_live and not recovery_without_provider_available
+            ),
+            "recovery_without_provider_available": recovery_without_provider_available,
             "workflow_config_sha256": workflow_config_sha256,
             "executor_config_sha256": executor_config_sha256,
             "source_snapshot_sha256": source_summary.fingerprint,
@@ -330,9 +346,7 @@ class ProjectSubstrateActionWorkflow:
             raise ValueError("project substrate execution requires explicit caller live opt-in")
         runtime = ProjectRuntime(outputs_root)
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
-        if resume:
-            snapshot, resume_attempt = self._resume(runtime, snapshot, config, run_id, plan)
-        else:
+        if not resume:
             snapshot = runtime.begin_run(
                 config.project_id,
                 ProjectRun(
@@ -358,12 +372,44 @@ class ProjectSubstrateActionWorkflow:
                 run_id,
                 expected_revision=snapshot.revision,
             )
-            resume_attempt = 0
         run_root = _run_root(runtime, config.project_id, run_id)
+        _require_owned_run_root(runtime, config.project_id, run_id)
+        run_lock = _acquire_run_lock(run_root)
         try:
+            _require_owned_directory(
+                run_root,
+                run_root / "substrate_action",
+                label="substrate action",
+            )
+            snapshot = runtime.open(config.project_id)
             if resume:
+                for name in ("inputs", "work", "substrate_action"):
+                    _require_owned_directory(
+                        run_root,
+                        run_root / name,
+                        label=f"substrate {name}",
+                    )
+                snapshot, resume_attempt = self._resume(
+                    runtime,
+                    snapshot,
+                    config,
+                    run_id,
+                    plan,
+                )
+                recovered = self._recover_completed_action(
+                    runtime,
+                    snapshot,
+                    config,
+                    run_id,
+                    plan,
+                    resume_attempt=resume_attempt,
+                )
+                if recovered is not None:
+                    return recovered
+                self._require_retry_safe(runtime, snapshot, config, run_id)
                 archived_attempt = _archive_attempt(run_root)
             else:
+                resume_attempt = 0
                 if source_project_run_id is not None:
                     from scitaste.executor.project_bootstrap import (
                         ProjectSubstrateBootstrapWorkflow,
@@ -405,10 +451,36 @@ class ProjectSubstrateActionWorkflow:
                 dry_run=False,
                 config_path=run_root / "inputs/autoresearchclaw-config.yaml",
             )
+
+            def bind_invocation(invocation: SubstrateActionInvocation) -> None:
+                nonlocal snapshot
+                if (
+                    content_sha256(
+                        StateStore(run_root / "substrate_action")
+                        .load(invocation.state_snapshot_id)
+                        .model_dump(mode="json")
+                    )
+                    != manifest.pre_state_sha256
+                    or content_sha256(invocation.action.model_dump(mode="json"))
+                    != manifest.action_sha256
+                ):
+                    raise ValueError("substrate invocation differs from its pre-call manifest")
+                snapshot = runtime.update_run(
+                    config.project_id,
+                    run_id,
+                    expected_revision=snapshot.revision,
+                    manifest_sha256=manifest.manifest_sha256,
+                    pre_state_sha256=manifest.pre_state_sha256,
+                    action_sha256=manifest.action_sha256,
+                    invocation_sha256=invocation.invocation_sha256,
+                )
+
             action_summary = SubstrateActionWorkflow(executor=executor, seed=self.seed).run(
                 action_type=config.action_type,
                 run_dir=work_root,
                 output_dir=run_root / "substrate_action",
+                invocation_binding=manifest.manifest_sha256,
+                before_execute=bind_invocation,
                 project_id=config.project_id,
                 topic=config.research_direction,
                 target_domain=config.execution_target_domain,
@@ -436,16 +508,22 @@ class ProjectSubstrateActionWorkflow:
                 manifest_sha256=manifest.manifest_sha256,
                 verification_sha256=verification.verification_sha256,
                 execution_status=action_summary["execution_status"],
+                recovered_without_provider=False,
+                failure_type=None,
+                failure_message=None,
             )
         except BaseException as exc:
             self._mark_failed(runtime, config.project_id, run_id, exc)
             raise
+        finally:
+            _release_run_lock(run_lock)
         return {
             **plan,
             "status": final_status,
             "project_revision": snapshot.revision,
             "resume_attempt": resume_attempt,
             "archived_attempt": archived_attempt,
+            "recovered_without_provider": False,
             "manifest_sha256": manifest.manifest_sha256,
             "verification_sha256": verification.verification_sha256,
             "execution_status": action_summary["execution_status"],
@@ -457,6 +535,164 @@ class ProjectSubstrateActionWorkflow:
             ),
         }
 
+    def _recover_completed_action(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+        plan: dict[str, object],
+        *,
+        resume_attempt: int,
+    ) -> dict[str, object] | None:
+        run_root = _run_root(runtime, config.project_id, run_id)
+        action_root = run_root / "substrate_action"
+        _require_owned_directory(run_root, action_root, label="substrate action")
+        result_path = action_root / "executor_result.json"
+        if not result_path.is_file() or result_path.is_symlink():
+            return None
+        try:
+            recorded = ExecutionResult.model_validate_json(result_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            raise ValueError("invalid recorded substrate executor result") from exc
+        if recorded.status is not ExecutionStatus.SUCCEEDED:
+            return None
+        manifest = _load_manifest(run_root)
+        invocation = _load_action_invocation(action_root)
+        registered = _registered_run(snapshot, run_id)
+        predecessor = StateStore(action_root).load(invocation.state_snapshot_id)
+        _validate_recorded_pre_call_binding(
+            run_root,
+            registered,
+            manifest,
+            invocation,
+            predecessor,
+        )
+        if manifest.source_project_run_id is not None:
+            from scitaste.executor.project_bootstrap import ProjectSubstrateBootstrapWorkflow
+
+            _source, source_receipt = ProjectSubstrateBootstrapWorkflow().source_path(
+                outputs_root=runtime.outputs_root,
+                project_id=config.project_id,
+                run_id=manifest.source_project_run_id,
+            )
+            if (
+                source_receipt.receipt_sha256 != manifest.source_receipt_sha256
+                or source_receipt.source_snapshot_sha256 != manifest.source_snapshot_sha256
+            ):
+                raise ValueError("selected action source receipt provenance drift")
+        executor = self._executor(
+            config,
+            dry_run=False,
+            config_path=run_root / "inputs/autoresearchclaw-config.yaml",
+        )
+        action_summary = SubstrateActionWorkflow(
+            executor=executor, seed=self.seed
+        ).recover_recorded_success(
+            action_type=config.action_type,
+            run_dir=run_root / "work/autoresearchclaw",
+            predecessor_run_dir=run_root / "inputs/autoresearchclaw",
+            output_dir=action_root,
+            invocation_binding=manifest.manifest_sha256,
+            project_id=config.project_id,
+            topic=config.research_direction,
+            target_domain=config.execution_target_domain,
+        )
+        if action_summary is None:  # pragma: no cover - guarded by the parsed successful result
+            raise ValueError("recorded substrate success disappeared during recovery")
+        if _workflow_config_sha256(config) != plan["workflow_config_sha256"]:
+            raise ValueError("project substrate workflow configuration changed during recovery")
+        verification = _build_verification(
+            run_root,
+            manifest,
+            action_summary,
+            max_bytes=config.max_snapshot_bytes,
+        )
+        verification_path = action_root / "verification.json"
+        if verification_path.exists():
+            if verification_path.is_symlink():
+                raise ValueError("recorded substrate verification cannot be a symbolic link")
+            existing = ProjectSubstrateVerification.model_validate_json(
+                verification_path.read_text(encoding="utf-8")
+            )
+            if existing != verification:
+                raise ValueError("recorded substrate verification drift")
+        else:
+            _write_model_exclusive(verification_path, verification)
+        _verify_final_evidence(run_root, manifest, verification)
+        snapshot = runtime.update_run(
+            config.project_id,
+            run_id,
+            expected_revision=snapshot.revision,
+            status="complete",
+            artifact=f"runs/{run_id}/substrate_action/verification.json",
+            final_state=f"runs/{run_id}/substrate_action/research_state.json",
+            manifest_sha256=manifest.manifest_sha256,
+            verification_sha256=verification.verification_sha256,
+            execution_status=ExecutionStatus.SUCCEEDED.value,
+            recovered_without_provider=True,
+            failure_type=None,
+            failure_message=None,
+        )
+        return {
+            **plan,
+            "status": "complete",
+            "project_revision": snapshot.revision,
+            "resume_attempt": resume_attempt,
+            "archived_attempt": None,
+            "recovered_without_provider": True,
+            "manifest_sha256": manifest.manifest_sha256,
+            "verification_sha256": verification.verification_sha256,
+            "execution_status": action_summary["execution_status"],
+            "transition_applied": action_summary["transition_applied"],
+            "state_revision": action_summary["state_revision"],
+            "artifact_count": action_summary["artifact_count"],
+            "verification_locator": (
+                f"projects/{config.project_id}/runs/{run_id}/substrate_action/verification.json"
+            ),
+        }
+
+    def _require_retry_safe(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: ProjectSubstrateWorkflowConfig,
+        run_id: str,
+    ) -> None:
+        """Allow retry only after independently verifying an exact failed result."""
+
+        run_root = _run_root(runtime, config.project_id, run_id)
+        action_root = run_root / "substrate_action"
+        _require_owned_directory(run_root, action_root, label="substrate action")
+        result = _load_action_result(action_root)
+        if result is None:
+            raise ValueError("substrate result publication is ambiguous; refusing a repeated call")
+        if result.status is not ExecutionStatus.FAILED:
+            raise ValueError("a successful substrate result must be recovered, not retried")
+        manifest = _load_manifest(run_root)
+        invocation = _load_action_invocation(action_root)
+        predecessor = StateStore(action_root).load(invocation.state_snapshot_id)
+        _validate_recorded_pre_call_binding(
+            run_root,
+            _registered_run(snapshot, run_id),
+            manifest,
+            invocation,
+            predecessor,
+        )
+        if result.data.get("invocation_sha256") != invocation.invocation_sha256:
+            raise ValueError("recorded substrate failed result invocation binding drift")
+        executor = self._executor(
+            config,
+            dry_run=False,
+            config_path=run_root / "inputs/autoresearchclaw-config.yaml",
+        )
+        executor.verify_recorded_failure(
+            predecessor,
+            invocation.action,
+            result,
+            predecessor_run_dir=run_root / "inputs/autoresearchclaw",
+        )
+
     def status(
         self,
         *,
@@ -467,7 +703,13 @@ class ProjectSubstrateActionWorkflow:
         runtime = ProjectRuntime(outputs_root)
         snapshot = runtime.open(project_id)
         run = _registered_run(snapshot, run_id)
-        run_root = _run_root(runtime, project_id, run_id)
+        run_root = _require_owned_run_root(runtime, project_id, run_id)
+        for name in ("inputs", "work", "substrate_action"):
+            _require_owned_directory(
+                run_root,
+                run_root / name,
+                label=f"substrate {name}",
+            )
         manifest = _load_manifest(run_root)
         if manifest.source_project_run_id is not None:
             from scitaste.executor.project_bootstrap import (
@@ -595,8 +837,14 @@ class ProjectSubstrateActionWorkflow:
             workflow_config_sha256=str(plan["workflow_config_sha256"]),
             executor_config_sha256=str(plan["executor_config_sha256"]),
         )
-        if run.status != "failed":
-            raise ValueError("only a failed project substrate run can be resumed")
+        if run.status not in {"failed", "running"}:
+            raise ValueError("only a failed or recoverable running substrate run can be resumed")
+        if run.status == "running" and not _recorded_success_available(
+            _run_root(runtime, config.project_id, run_id)
+        ):
+            raise ValueError(
+                "running substrate result publication is ambiguous; refusing a repeated call"
+            )
         raw_attempt = (run.model_extra or {}).get("resume_attempt", 0)
         if not isinstance(raw_attempt, int) or isinstance(raw_attempt, bool) or raw_attempt < 0:
             raise ValueError("registered substrate run has an invalid resume_attempt")
@@ -626,6 +874,8 @@ class ProjectSubstrateActionWorkflow:
         workflow_config_sha256: str,
         executor_config_sha256: str,
     ) -> None:
+        if manifest.schema_version != "1.1":
+            raise ValueError("legacy substrate runs lack no-repeat evidence and are read-only")
         if run.seed != seed or manifest.seed != seed:
             raise ValueError("resume seed does not match owned substrate run")
         observed = (
@@ -671,6 +921,7 @@ class ProjectSubstrateActionWorkflow:
         source: _TreeSummary,
     ) -> ProjectSubstrateRunManifest:
         path = run_root / "substrate_manifest.json"
+        pre_state_sha256, action_sha256 = _substrate_pre_call_identity(config, run_root)
         if path.exists():
             manifest = _load_manifest(run_root)
             expected = (
@@ -686,6 +937,8 @@ class ProjectSubstrateActionWorkflow:
                 source.total_bytes,
                 plan["source_project_run_id"],
                 plan["source_receipt_sha256"],
+                pre_state_sha256,
+                action_sha256,
                 PINNED_COMMIT,
                 plan["actual_substrate_commit"],
             )
@@ -702,6 +955,8 @@ class ProjectSubstrateActionWorkflow:
                 manifest.source_bytes,
                 manifest.source_project_run_id,
                 manifest.source_receipt_sha256,
+                manifest.pre_state_sha256,
+                manifest.action_sha256,
                 manifest.expected_substrate_commit,
                 manifest.actual_substrate_commit,
             )
@@ -709,7 +964,7 @@ class ProjectSubstrateActionWorkflow:
                 raise ValueError("owned substrate manifest no longer matches execution plan")
             return manifest
         manifest = ProjectSubstrateRunManifest.create(
-            schema_version="1.0",
+            schema_version="1.1",
             project_id=config.project_id,
             run_id=run_root.name,
             action_type=config.action_type,
@@ -722,6 +977,8 @@ class ProjectSubstrateActionWorkflow:
             source_bytes=source.total_bytes,
             source_project_run_id=plan["source_project_run_id"],
             source_receipt_sha256=plan["source_receipt_sha256"],
+            pre_state_sha256=pre_state_sha256,
+            action_sha256=action_sha256,
             expected_substrate_commit=PINNED_COMMIT,
             actual_substrate_commit=plan["actual_substrate_commit"],
         )
@@ -781,10 +1038,150 @@ def _run_root(runtime: ProjectRuntime, project_id: str, run_id: str) -> Path:
     return runtime.projects_root / project_id / "runs" / run_id
 
 
-def _load_manifest(run_root: Path) -> ProjectSubstrateRunManifest:
-    return ProjectSubstrateRunManifest.model_validate_json(
-        (run_root / "substrate_manifest.json").read_text(encoding="utf-8")
+def _require_owned_run_root(
+    runtime: ProjectRuntime,
+    project_id: str,
+    run_id: str,
+) -> Path:
+    run_root = _run_root(runtime, project_id, run_id)
+    project_root = runtime.projects_root / project_id
+    for candidate in (
+        runtime.projects_root,
+        project_root,
+        project_root / "runs",
+        run_root,
+    ):
+        if candidate.is_symlink() or not candidate.is_dir():
+            raise ValueError("project substrate run hierarchy must contain regular directories")
+    try:
+        run_root.resolve(strict=True).relative_to(project_root.resolve(strict=True))
+    except ValueError as exc:
+        raise ValueError("project substrate run escapes its owning project") from exc
+    return run_root
+
+
+def _require_owned_directory(root: Path, path: Path, *, label: str) -> None:
+    if root.is_symlink() or path.is_symlink() or not root.is_dir() or not path.is_dir():
+        raise ValueError(f"{label} must be an owned regular directory")
+    try:
+        path.resolve(strict=True).relative_to(root.resolve(strict=True))
+    except ValueError as exc:
+        raise ValueError(f"{label} escapes its owned run") from exc
+
+
+def _acquire_run_lock(run_root: Path) -> int:
+    path = run_root / ".substrate-action.lock"
+    flags = os.O_RDWR | os.O_CREAT
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as exc:
+        raise ValueError("project substrate run lock is not a regular owned file") from exc
+    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        os.close(descriptor)
+        raise ValueError("project substrate run lock must be a regular file")
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        os.close(descriptor)
+        raise ValueError("project substrate run is already active") from exc
+    return descriptor
+
+
+def _release_run_lock(descriptor: int) -> None:
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        os.close(descriptor)
+
+
+def _substrate_pre_call_identity(
+    config: ProjectSubstrateWorkflowConfig,
+    run_root: Path,
+) -> tuple[str, str]:
+    state = ResearchState(
+        project_id=config.project_id,
+        research_direction=config.research_direction,
+        target_domain=config.execution_target_domain,
     )
+    state.executor_context["autoresearchclaw_run_dir"] = str(
+        (run_root / "work/autoresearchclaw").resolve()
+    )
+    action = ResearchAction(
+        action_id=f"substrate-{config.action_type.value.casefold().replace('_', '-')}",
+        type=config.action_type,
+        description=(
+            f"Execute {config.action_type.value} through the pinned AutoResearchClaw adapter"
+        ),
+        expected_value={"information_gain": 0.5},
+    )
+    return (
+        content_sha256(state.model_dump(mode="json")),
+        content_sha256(action.model_dump(mode="json")),
+    )
+
+
+def _load_manifest(run_root: Path) -> ProjectSubstrateRunManifest:
+    path = run_root / "substrate_manifest.json"
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("project substrate manifest must be a regular owned file")
+    return ProjectSubstrateRunManifest.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _load_action_invocation(action_root: Path) -> SubstrateActionInvocation:
+    path = action_root / "invocation.json"
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("project substrate invocation must be a regular owned file")
+    try:
+        return SubstrateActionInvocation.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError("invalid project substrate invocation") from exc
+
+
+def _load_action_result(action_root: Path) -> ExecutionResult | None:
+    path = action_root / "executor_result.json"
+    if not path.exists() and not path.is_symlink():
+        return None
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("project substrate executor result must be a regular owned file")
+    try:
+        return ExecutionResult.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError("invalid recorded substrate executor result") from exc
+
+
+def _recorded_success_available(run_root: Path) -> bool:
+    action_root = run_root / "substrate_action"
+    _require_owned_directory(run_root, action_root, label="substrate action")
+    result = _load_action_result(action_root)
+    return result is not None and result.status is ExecutionStatus.SUCCEEDED
+
+
+def _validate_recorded_pre_call_binding(
+    run_root: Path,
+    run: ProjectRun,
+    manifest: ProjectSubstrateRunManifest,
+    invocation: SubstrateActionInvocation,
+    predecessor: ResearchState,
+) -> None:
+    extra = run.model_extra or {}
+    expected_run_dir = str((run_root / "work/autoresearchclaw").resolve(strict=True))
+    if (
+        manifest.pre_state_sha256 is None
+        or manifest.action_sha256 is None
+        or extra.get("manifest_sha256") != manifest.manifest_sha256
+        or extra.get("pre_state_sha256") != manifest.pre_state_sha256
+        or extra.get("action_sha256") != manifest.action_sha256
+        or extra.get("invocation_sha256") != invocation.invocation_sha256
+        or invocation.project_id != manifest.project_id
+        or invocation.run_dir != expected_run_dir
+        or invocation.binding_sha256 != manifest.manifest_sha256
+        or invocation.state_snapshot_id != f"state-{manifest.pre_state_sha256}"
+        or content_sha256(invocation.action.model_dump(mode="json")) != manifest.action_sha256
+        or content_sha256(predecessor.model_dump(mode="json")) != manifest.pre_state_sha256
+    ):
+        raise ValueError("recorded substrate pre-call binding drift")
 
 
 def _workflow_config_sha256(config: ProjectSubstrateWorkflowConfig) -> str:
@@ -826,7 +1223,8 @@ def _copy_tree_exclusive(source: Path, destination: Path) -> None:
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(destination)
     source_summary = _tree_summary(source, max_bytes=2**63 - 1)
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    owned_root = destination.parent.parent
+    _prepare_owned_parent(owned_root, destination.parent)
     temporary = Path(tempfile.mkdtemp(prefix=f".{destination.name}.", dir=destination.parent))
     try:
         shutil.rmtree(temporary)
@@ -834,6 +1232,7 @@ def _copy_tree_exclusive(source: Path, destination: Path) -> None:
         copied = _tree_summary(temporary, max_bytes=2**63 - 1)
         if copied.fingerprint != source_summary.fingerprint:
             raise ValueError("AutoResearchClaw snapshot changed while it was copied")
+        _require_owned_directory(owned_root, destination.parent, label="copy destination parent")
         os.replace(temporary, destination)
     except BaseException:
         shutil.rmtree(temporary, ignore_errors=True)
@@ -843,7 +1242,8 @@ def _copy_tree_exclusive(source: Path, destination: Path) -> None:
 def _copy_file_exclusive(source: Path, destination: Path) -> None:
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    owned_root = destination.parent.parent
+    _prepare_owned_parent(owned_root, destination.parent)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
     )
@@ -853,10 +1253,24 @@ def _copy_file_exclusive(source: Path, destination: Path) -> None:
         shutil.copy2(source, temporary)
         if _file_sha256(temporary) != _file_sha256(source):
             raise ValueError("executor configuration changed while it was copied")
+        _require_owned_directory(owned_root, destination.parent, label="copy destination parent")
         os.replace(temporary, destination)
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def _prepare_owned_parent(root: Path, parent: Path) -> None:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("copy destination root must be an owned regular directory")
+    try:
+        parent.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("copy destination escapes its owned run") from exc
+    if parent.is_symlink():
+        raise ValueError("copy destination parent cannot be a symbolic link")
+    parent.mkdir(exist_ok=True)
+    _require_owned_directory(root, parent, label="copy destination parent")
 
 
 def _build_verification(
@@ -878,6 +1292,7 @@ def _build_verification(
     required = (
         "decisions.jsonl",
         "executor_result.json",
+        "invocation.json",
         "research_state.json",
         "substrate_summary.json",
     )
@@ -933,12 +1348,15 @@ def _archive_attempt(run_root: Path) -> str | None:
     if not existing:
         return None
     archive_root = run_root / "failed_attempts"
-    archive_root.mkdir(parents=True, exist_ok=True)
+    for source in existing:
+        _require_owned_directory(run_root, source, label="archived substrate attempt")
+    _prepare_owned_parent(run_root, archive_root)
     index = 1
     while (archive_root / f"attempt-{index:03d}").exists():
         index += 1
     destination = archive_root / f"attempt-{index:03d}"
     destination.mkdir()
+    _require_owned_directory(archive_root, destination, label="substrate attempt archive")
     for source in existing:
         os.replace(source, destination / source.name)
     return destination.relative_to(run_root).as_posix()

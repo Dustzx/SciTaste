@@ -949,3 +949,35 @@ This decision establishes deterministic local evidence acquisition for one
 registered corpus. It does not claim open-web retrieval, provider tool autonomy,
 automatic corpus curation, or improved scientific quality. Those remain
 separate capability and evaluation gates.
+
+### ADR-035: A durable selected-action result is a no-repeat recovery boundary
+
+Status: accepted for the project-owned AutoResearchClaw compatibility path.
+
+The selected-action wrapper already publishes an external executor result before
+appending the controller decision or updating canonical state. Re-running the
+provider after a crash in that interval would spend twice and could replace a
+known successful outcome with a different one. Treating any partially populated
+directory as reusable, however, would allow an unverified checkpoint or artifact
+to acquire completion authority.
+
+Each live run is serialized by an owned non-blocking run lock. Before a selected
+action call, SciTaste publishes a content-addressed state snapshot and immutable
+invocation that binds the action, original decision intent, project manifest,
+and run directory. The durable result binds that invocation. Both bootstrap and
+selected-action results record a versioned normalization of the complete work
+tree, not only the files named by the current stage contract.
+
+Explicit resume therefore distinguishes three cases. A recorded failed result
+may be archived only after its executor, action, command, pin, return code or
+timeout, failure reason, costs, and current normalized work tree all revalidate.
+A recorded successful result is never called again: the adapter verifies the
+same evidence plus the invocation and exact decision/state replay before final
+registration. A hard-crashed `running` run enters this path only when such a
+successful result exists. Missing, changed, malformed, or contradictory evidence
+is an ambiguous external outcome and blocks automatic retry.
+
+Recovery does not make AutoResearchClaw part of SciTaste's default runtime and
+does not convert Stage 1--3 engineering evidence into a scientific-effectiveness
+claim. It closes an accounting and provenance gap in the optional compatibility
+adapter while the first-party native path remains the product default.

@@ -50,16 +50,29 @@ class StateStore:
         identifier = snapshot_id(state)
         rendered = state.model_dump_json(indent=2)
         snapshot_path = self.snapshot_dir / f"{identifier}.json"
-        if not snapshot_path.exists():
+        if self.snapshot_dir.is_symlink() or snapshot_path.is_symlink():
+            raise ValueError("state snapshot storage cannot use symbolic links")
+        if snapshot_path.exists():
+            existing = ResearchState.model_validate_json(snapshot_path.read_text(encoding="utf-8"))
+            if snapshot_id(existing) != identifier or existing != state:
+                raise ValueError("existing state snapshot content-address binding drift")
+        else:
             _atomic_write(snapshot_path, rendered)
+        if self.latest_path.is_symlink():
+            raise ValueError("latest research state cannot be a symbolic link")
         _atomic_write(self.latest_path, rendered)
         return identifier
 
     def load(self, identifier: str | None = None) -> ResearchState:
         path = self.latest_path if identifier is None else self.snapshot_dir / f"{identifier}.json"
+        if self.snapshot_dir.is_symlink() or path.is_symlink():
+            raise ValueError("state snapshot storage cannot use symbolic links")
         if not path.is_file():
             raise FileNotFoundError(path)
-        return ResearchState.model_validate_json(path.read_text(encoding="utf-8"))
+        state = ResearchState.model_validate_json(path.read_text(encoding="utf-8"))
+        if identifier is not None and snapshot_id(state) != identifier:
+            raise ValueError("state snapshot content does not match its content-addressed name")
+        return state
 
     def list_snapshots(self) -> list[str]:
         if not self.snapshot_dir.exists():

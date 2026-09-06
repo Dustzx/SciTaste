@@ -19,6 +19,7 @@ from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 
 PINNED_COMMIT = "12d3fd809fa9658e91a0328c3280a0e462c78386"
+NORMALIZATION_SCHEMA = "autoresearchclaw-result-v2"
 
 ACTION_TO_STAGE: dict[MetaAction, str] = {
     MetaAction.SEARCH: "SEARCH_STRATEGY",
@@ -194,6 +195,183 @@ class AutoResearchClawExecutor:
 
     def generate_figure(self, state: ResearchState, action: ResearchAction) -> ExecutionResult:
         return self.execute(state, action)
+
+    def verify_recorded_success(
+        self,
+        state: ResearchState,
+        action: ResearchAction,
+        result: ExecutionResult,
+        *,
+        predecessor_run_dir: str | Path | None = None,
+    ) -> ExecutionResult:
+        """Revalidate a durable successful result without invoking the substrate.
+
+        This is intentionally narrower than execution.  It is used only after a
+        provider-backed action returned and its exact result was published, but
+        local decision/state bookkeeping was interrupted.  Current artifacts,
+        terminal checkpoint, summary, command identity, and incremental cost are
+        recomputed before the caller may reuse the result.
+        """
+
+        stage = ACTION_TO_STAGE.get(action.type)
+        if stage is None:
+            raise ValueError("recorded substrate recovery requires an executable action")
+        run_dir_value = state.executor_context.get("autoresearchclaw_run_dir")
+        if not run_dir_value:
+            raise ValueError("recorded substrate recovery requires its run directory")
+        run_dir = Path(str(run_dir_value)).resolve(strict=True)
+        predecessor = (
+            Path(predecessor_run_dir).resolve(strict=True)
+            if predecessor_run_dir is not None
+            else None
+        )
+        verification = self.verify_substrate()
+        if not verification["initialized"] or not verification["pinned"]:
+            raise ValueError("recorded substrate recovery does not match the audited pin")
+        if (
+            result.status is not ExecutionStatus.SUCCEEDED
+            or result.executor != "autoresearchclaw"
+            or result.action_id != action.action_id
+            or result.error is not None
+        ):
+            raise ValueError("recorded substrate result is not an exact successful action")
+        expected_command = self._base_command(topic=state.research_direction, output_dir=run_dir)
+        expected_command.extend(["--from-stage", stage, "--to-stage", stage])
+        prior_checkpoint = _load_json(predecessor / "checkpoint.json") if predecessor else {}
+        prior_cost = _read_cost_total(predecessor) if predecessor else None
+        normalized = self._normalize_run(
+            run_dir,
+            stage,
+            prior_checkpoint=prior_checkpoint,
+            prior_api_cost_usd=prior_cost,
+        )
+        if normalized.get("validation_error") is not None:
+            raise ValueError(
+                "recorded substrate completion no longer validates: "
+                + str(normalized["validation_error"])
+            )
+        if result.data.get("command") != expected_command or result.data.get("returncode") != 0:
+            raise ValueError("recorded substrate command identity drift")
+        if result.data.get("substrate") != verification:
+            raise ValueError("recorded substrate pin evidence drift")
+        for key, value in normalized.items():
+            if result.data.get(key) != value:
+                raise ValueError(f"recorded substrate normalized {key} drift")
+        expected_artifacts = [item["path"] for item in normalized["artifact_manifest"]]
+        if result.artifacts != expected_artifacts:
+            raise ValueError("recorded substrate artifact manifest drift")
+        expected_api_cost = normalized["cost"].get("api_cost_usd")
+        if result.cost.get("api_cost_usd") != expected_api_cost:
+            raise ValueError("recorded substrate incremental API cost drift")
+        wall_time = result.cost.get("wall_time_hours")
+        if wall_time is None or not math.isfinite(wall_time) or wall_time < 0:
+            raise ValueError("recorded substrate wall time is invalid")
+        if set(result.cost) != {"api_cost_usd", "wall_time_hours"} and set(result.cost) != {
+            "wall_time_hours"
+        }:
+            raise ValueError("recorded substrate cost fields are invalid")
+        return result
+
+    def verify_recorded_failure(
+        self,
+        state: ResearchState,
+        action: ResearchAction,
+        result: ExecutionResult,
+        *,
+        predecessor_run_dir: str | Path | None = None,
+    ) -> ExecutionResult:
+        """Prove that a failed result is safe to archive before any retry."""
+
+        stage = ACTION_TO_STAGE.get(action.type)
+        if stage is None:
+            raise ValueError("recorded substrate retry requires an executable action")
+        run_dir_value = state.executor_context.get("autoresearchclaw_run_dir")
+        if not run_dir_value:
+            raise ValueError("recorded substrate retry requires its run directory")
+        run_dir = Path(str(run_dir_value)).resolve(strict=True)
+        predecessor = (
+            Path(predecessor_run_dir).resolve(strict=True)
+            if predecessor_run_dir is not None
+            else None
+        )
+        if (
+            result.status is not ExecutionStatus.FAILED
+            or result.executor != "autoresearchclaw"
+            or result.action_id != action.action_id
+            or not result.error
+        ):
+            raise ValueError("recorded substrate result is not an exact failed action")
+
+        missing = self._missing_inputs(run_dir, stage)
+        expected_missing_error = (
+            f"AutoResearchClaw stage {stage} is missing prerequisite artifacts: "
+            + ", ".join(missing)
+            if missing
+            else None
+        )
+        if set(result.data) == {"run_dir", "stage", "invocation_sha256"}:
+            if (
+                expected_missing_error is None
+                or result.error != expected_missing_error
+                or result.data.get("run_dir") != str(run_dir)
+                or result.data.get("stage") != stage
+                or result.artifacts
+                or result.cost
+            ):
+                raise ValueError("recorded substrate precondition failure drift")
+            return result
+
+        verification = self.verify_substrate()
+        if not verification["initialized"] or not verification["pinned"]:
+            raise ValueError("recorded substrate retry does not match the audited pin")
+        expected_command = self._base_command(topic=state.research_direction, output_dir=run_dir)
+        expected_command.extend(["--from-stage", stage, "--to-stage", stage])
+        if result.data.get("command") != expected_command:
+            raise ValueError("recorded substrate failed command identity drift")
+        if result.data.get("substrate") != verification:
+            raise ValueError("recorded substrate failed pin evidence drift")
+
+        prior_checkpoint = _load_json(predecessor / "checkpoint.json") if predecessor else {}
+        prior_cost = _read_cost_total(predecessor) if predecessor else None
+        normalized = self._normalize_run(
+            run_dir,
+            stage,
+            prior_checkpoint=prior_checkpoint,
+            prior_api_cost_usd=prior_cost,
+        )
+        for key, value in normalized.items():
+            if result.data.get(key) != value:
+                raise ValueError(f"recorded substrate failed normalized {key} drift")
+        expected_artifacts = [item["path"] for item in normalized["artifact_manifest"]]
+        if result.artifacts != expected_artifacts:
+            raise ValueError("recorded substrate failed artifact manifest drift")
+        expected_api_cost = normalized["cost"].get("api_cost_usd")
+        if result.cost.get("api_cost_usd") != expected_api_cost:
+            raise ValueError("recorded substrate failed incremental API cost drift")
+        wall_time = result.cost.get("wall_time_hours")
+        if wall_time is None or not math.isfinite(wall_time) or wall_time < 0:
+            raise ValueError("recorded substrate failed wall time is invalid")
+        if set(result.cost) not in ({"wall_time_hours"}, {"api_cost_usd", "wall_time_hours"}):
+            raise ValueError("recorded substrate failed cost fields are invalid")
+
+        validation_error = normalized.get("validation_error")
+        if validation_error is None:
+            raise ValueError("recorded substrate failure contradicts successful terminal evidence")
+
+        if result.data.get("partial_after_timeout") is True:
+            if "returncode" in result.data or result.error != (
+                f"AutoResearchClaw command timed out after {self.timeout_seconds:g}s"
+            ):
+                raise ValueError("recorded substrate timeout evidence drift")
+            return result
+
+        returncode = result.data.get("returncode")
+        if not isinstance(returncode, int) or isinstance(returncode, bool):
+            raise ValueError("recorded substrate failure has no trusted process outcome")
+        expected_error = str(validation_error or "AutoResearchClaw command failed")
+        if result.error != expected_error:
+            raise ValueError("recorded substrate failure reason drift")
+        return result
 
     def _base_command(self, *, topic: str, output_dir: str | Path) -> list[str]:
         module = (
@@ -378,6 +556,11 @@ class AutoResearchClawExecutor:
         manifest: list[dict[str, Any]] = []
         missing: list[str] = []
         artifact_errors: list[str] = []
+        working_tree: dict[str, Any] = {}
+        try:
+            working_tree = _artifact_record(run_dir, run_dir)
+        except (OSError, ValueError) as exc:
+            artifact_errors.append(f"working tree: {exc}")
         if stage and stage in STAGE_CONTRACTS:
             stage_number, _, outputs = STAGE_CONTRACTS[stage]
             stage_dir = run_dir / f"stage-{stage_number:02d}"
@@ -456,12 +639,14 @@ class AutoResearchClawExecutor:
             else:
                 incremental_api_cost_usd = round(cumulative_api_cost_usd - prior, 8)
         return {
+            "normalization_schema": NORMALIZATION_SCHEMA,
             "run_dir": str(run_dir),
             "stage": stage,
             "checkpoint": checkpoint,
             "pipeline_summary": summary,
             "session": session,
             "artifact_manifest": manifest,
+            "working_tree": working_tree,
             "cost": (
                 {"api_cost_usd": incremental_api_cost_usd}
                 if incremental_api_cost_usd is not None

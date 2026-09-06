@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any, Literal
@@ -14,11 +15,16 @@ from scitaste.executor.base import ExecutionResult, ExecutionStatus
 from scitaste.executor.project_workflow import (
     ProjectSubstrateActionWorkflow,
     ProjectSubstrateWorkflowConfig,
+    _acquire_run_lock,
     _copy_file_exclusive,
     _copy_tree_exclusive,
     _file_sha256,
     _is_sha256,
+    _prepare_owned_parent,
     _registered_run,
+    _release_run_lock,
+    _require_owned_directory,
+    _require_owned_run_root,
     _run_root,
     _tree_summary,
     _TreeSummary,
@@ -44,7 +50,7 @@ class ProjectSubstrateBootstrapManifest(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     project_id: str
     run_id: str
     selected_action_type: Literal[MetaAction.SEARCH] = MetaAction.SEARCH
@@ -183,9 +189,11 @@ class ProjectSubstrateBootstrapWorkflow:
             raise ValueError("AutoResearchClaw does not match the audited substrate pin")
         workflow_hash = _workflow_config_sha256(config)
         executor_hash = _file_sha256(config.autoresearchclaw_config)
+        recovery_without_provider_available = False
         if resume:
             snapshot = runtime.open(config.project_id)
             run = _registered_run(snapshot, run_id)
+            _require_owned_run_root(runtime, config.project_id, run_id)
             manifest = _load_manifest(_run_root(runtime, config.project_id, run_id))
             self._validate_resume_identity(
                 config,
@@ -203,6 +211,9 @@ class ProjectSubstrateBootstrapWorkflow:
             ):
                 raise ValueError("owned bootstrap executor configuration hash drift")
             revision = snapshot.revision
+            recovery_without_provider_available = _bootstrap_success_available(
+                _run_root(runtime, config.project_id, run_id)
+            )
         else:
             try:
                 existing = runtime.open(config.project_id)
@@ -223,7 +234,10 @@ class ProjectSubstrateBootstrapWorkflow:
             "resume": resume,
             "live_config_enabled": config.live_enabled,
             "caller_live_authorized": allow_live,
-            "would_contact_provider": bool(config.live_enabled and allow_live),
+            "would_contact_provider": bool(
+                config.live_enabled and allow_live and not recovery_without_provider_available
+            ),
+            "recovery_without_provider_available": recovery_without_provider_available,
             "workflow_config_sha256": workflow_hash,
             "executor_config_sha256": executor_hash,
             "expected_substrate_commit": PINNED_COMMIT,
@@ -257,15 +271,7 @@ class ProjectSubstrateBootstrapWorkflow:
             config,
             resume=resume,
         )
-        if resume:
-            snapshot, resume_attempt = self._resume_run(
-                runtime,
-                snapshot,
-                config,
-                run_id,
-                workflow_hash=str(plan["workflow_config_sha256"]),
-            )
-        else:
+        if not resume:
             snapshot = runtime.begin_run(
                 config.project_id,
                 ProjectRun(
@@ -283,9 +289,32 @@ class ProjectSubstrateBootstrapWorkflow:
                 ),
                 expected_revision=snapshot.revision,
             )
-            resume_attempt = 0
         run_root = _run_root(runtime, config.project_id, run_id)
+        _require_owned_run_root(runtime, config.project_id, run_id)
+        run_lock = _acquire_run_lock(run_root)
         try:
+            _require_owned_directory(
+                run_root,
+                run_root / "substrate_bootstrap",
+                label="substrate bootstrap",
+            )
+            snapshot = runtime.open(config.project_id)
+            if resume:
+                for name in ("inputs", "work"):
+                    _require_owned_directory(
+                        run_root,
+                        run_root / name,
+                        label=f"bootstrap {name}",
+                    )
+                snapshot, resume_attempt = self._resume_run(
+                    runtime,
+                    snapshot,
+                    config,
+                    run_id,
+                    workflow_hash=str(plan["workflow_config_sha256"]),
+                )
+            else:
+                resume_attempt = 0
             if not resume:
                 _copy_file_exclusive(
                     config.autoresearchclaw_config,
@@ -297,6 +326,12 @@ class ProjectSubstrateBootstrapWorkflow:
                 ):
                     raise ValueError("executor configuration changed before bootstrap execution")
                 manifest = self._publish_manifest(run_root, config, plan)
+                snapshot = runtime.update_run(
+                    config.project_id,
+                    run_id,
+                    expected_revision=snapshot.revision,
+                    bootstrap_manifest_sha256=manifest.manifest_sha256,
+                )
                 snapshot = runtime.select_run(
                     config.project_id,
                     run_id,
@@ -305,10 +340,7 @@ class ProjectSubstrateBootstrapWorkflow:
                 archived_attempt = None
             else:
                 manifest = _load_manifest(run_root)
-                try:
-                    recovered = self._recover_paid_success(run_root, manifest, config)
-                except (FileNotFoundError, ValueError):
-                    recovered = None
+                recovered = self._recover_paid_success(run_root, manifest, config)
                 if recovered is not None:
                     return self._register_result(
                         runtime,
@@ -322,10 +354,12 @@ class ProjectSubstrateBootstrapWorkflow:
                         archived_attempt=None,
                         recovered_without_provider=True,
                     )
+                self._require_retry_safe(run_root, manifest, config)
                 archived_attempt = _archive_attempt(run_root)
                 (run_root / "substrate_bootstrap").mkdir(parents=True, exist_ok=False)
             work_root = run_root / "work/autoresearchclaw"
-            work_root.mkdir(parents=True, exist_ok=False)
+            _prepare_owned_parent(run_root, work_root.parent)
+            work_root.mkdir(exist_ok=False)
             result = self._executor(
                 config,
                 dry_run=False,
@@ -334,6 +368,14 @@ class ProjectSubstrateBootstrapWorkflow:
                 topic=config.research_direction,
                 output_dir=work_root,
                 to_stage=_BOOTSTRAP_TARGET,
+            )
+            result = result.model_copy(
+                update={
+                    "data": {
+                        **result.data,
+                        "bootstrap_manifest_sha256": manifest.manifest_sha256,
+                    }
+                }
             )
             result_path = run_root / "substrate_bootstrap/executor_result.json"
             _write_model_exclusive(result_path, result)
@@ -357,6 +399,8 @@ class ProjectSubstrateBootstrapWorkflow:
         except BaseException as exc:
             ProjectSubstrateActionWorkflow._mark_failed(runtime, config.project_id, run_id, exc)
             raise
+        finally:
+            _release_run_lock(run_lock)
 
     def status(
         self,
@@ -368,9 +412,21 @@ class ProjectSubstrateBootstrapWorkflow:
         runtime = ProjectRuntime(outputs_root)
         snapshot = runtime.open(project_id)
         run = _registered_run(snapshot, run_id)
-        run_root = _run_root(runtime, project_id, run_id)
+        run_root = _require_owned_run_root(runtime, project_id, run_id)
+        for name in ("inputs", "work", "substrate_bootstrap"):
+            _require_owned_directory(
+                run_root,
+                run_root / name,
+                label=f"bootstrap {name}",
+            )
         manifest = _load_manifest(run_root)
         receipt = _load_receipt(run_root)
+        if receipt.execution_status is ExecutionStatus.SUCCEEDED:
+            _require_owned_directory(
+                run_root,
+                run_root / "source",
+                label="bootstrap source",
+            )
         _verify_receipt(run_root, manifest, receipt)
         extra = run.model_extra or {}
         expected_status = (
@@ -452,7 +508,7 @@ class ProjectSubstrateBootstrapWorkflow:
         plan: dict[str, object],
     ) -> ProjectSubstrateBootstrapManifest:
         manifest = ProjectSubstrateBootstrapManifest.create(
-            schema_version="1.0",
+            schema_version="1.1",
             project_id=config.project_id,
             run_id=run_root.name,
             selected_action_type=MetaAction.SEARCH,
@@ -484,8 +540,14 @@ class ProjectSubstrateBootstrapWorkflow:
             workflow_hash=workflow_hash,
             executor_hash=_file_sha256(config.autoresearchclaw_config),
         )
-        if run.status != "failed":
-            raise ValueError("only a failed project substrate bootstrap can be resumed")
+        if run.status not in {"failed", "running"}:
+            raise ValueError("only a failed or recoverable running bootstrap can be resumed")
+        if run.status == "running" and not _bootstrap_success_available(
+            _run_root(runtime, config.project_id, run_id)
+        ):
+            raise ValueError(
+                "running bootstrap result publication is ambiguous; refusing a repeated call"
+            )
         attempt = (run.model_extra or {}).get("resume_attempt", 0)
         if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 0:
             raise ValueError("registered bootstrap run has an invalid resume_attempt")
@@ -513,6 +575,8 @@ class ProjectSubstrateBootstrapWorkflow:
         workflow_hash: str,
         executor_hash: str,
     ) -> None:
+        if manifest.schema_version != "1.1":
+            raise ValueError("legacy bootstrap runs lack no-repeat evidence and are read-only")
         expected = (
             config.project_id,
             run.run_id,
@@ -547,6 +611,13 @@ class ProjectSubstrateBootstrapWorkflow:
         )
         if run_observed != run_expected:
             raise ValueError("resume configuration does not match registered bootstrap run")
+        extra = run.model_extra or {}
+        if (
+            extra.get("workflow_config_sha256") != workflow_hash
+            or extra.get("bootstrap_target_stage") != manifest.target_stage
+            or extra.get("bootstrap_manifest_sha256") != manifest.manifest_sha256
+        ):
+            raise ValueError("registered bootstrap pre-call identity drift")
 
     def _recover_paid_success(
         self,
@@ -554,22 +625,110 @@ class ProjectSubstrateBootstrapWorkflow:
         manifest: ProjectSubstrateBootstrapManifest,
         config: ProjectSubstrateWorkflowConfig,
     ) -> ProjectSubstrateSourceReceipt | None:
-        receipt_path = run_root / "substrate_bootstrap/source_receipt.json"
-        if receipt_path.is_file():
+        action_root = run_root / "substrate_bootstrap"
+        _require_owned_directory(run_root, action_root, label="substrate bootstrap")
+        receipt_path = action_root / "source_receipt.json"
+        if receipt_path.exists() or receipt_path.is_symlink():
             receipt = _load_receipt(run_root)
+            result = _load_bootstrap_result(run_root)
+            if result is None:
+                raise ValueError("bootstrap receipt has no recorded executor result")
+            self._verify_recorded_result(run_root, manifest, config, result)
+            _verify_receipt(run_root, manifest, receipt)
             if receipt.execution_status is ExecutionStatus.SUCCEEDED:
-                _verify_receipt(run_root, manifest, receipt)
                 return receipt
             return None
-        result_path = run_root / "substrate_bootstrap/executor_result.json"
-        if not result_path.is_file():
+        result = _load_bootstrap_result(run_root)
+        if result is None:
             return None
-        result = ExecutionResult.model_validate_json(result_path.read_text(encoding="utf-8"))
+        self._verify_recorded_result(run_root, manifest, config, result)
         if result.status is not ExecutionStatus.SUCCEEDED:
             return None
         receipt = self._build_receipt(run_root, manifest, result, config)
         _write_model_exclusive(receipt_path, receipt)
         return receipt
+
+    def _require_retry_safe(
+        self,
+        run_root: Path,
+        manifest: ProjectSubstrateBootstrapManifest,
+        config: ProjectSubstrateWorkflowConfig,
+    ) -> None:
+        result = _load_bootstrap_result(run_root)
+        if result is None:
+            raise ValueError("bootstrap result publication is ambiguous; refusing a repeated call")
+        self._verify_recorded_result(run_root, manifest, config, result)
+        if result.status is not ExecutionStatus.FAILED:
+            raise ValueError("a successful bootstrap result must be recovered, not retried")
+
+    def _verify_recorded_result(
+        self,
+        run_root: Path,
+        manifest: ProjectSubstrateBootstrapManifest,
+        config: ProjectSubstrateWorkflowConfig,
+        result: ExecutionResult,
+    ) -> None:
+        work_root = run_root / "work/autoresearchclaw"
+        executor = self._executor(
+            config,
+            dry_run=False,
+            config_path=run_root / "inputs/autoresearchclaw-config.yaml",
+        )
+        substrate = executor.verify_substrate()
+        command = executor._base_command(
+            topic=config.research_direction,
+            output_dir=work_root,
+        )
+        command.extend(["--to-stage", _BOOTSTRAP_TARGET])
+        if (
+            result.action_id != "baseline-run"
+            or result.executor != "autoresearchclaw"
+            or result.data.get("command") != command
+            or result.data.get("substrate") != substrate
+            or result.data.get("bootstrap_manifest_sha256") != manifest.manifest_sha256
+        ):
+            raise ValueError("recorded bootstrap result identity drift")
+        normalized = executor._normalize_run(
+            work_root,
+            _BOOTSTRAP_TARGET,
+            prior_checkpoint={},
+            prior_api_cost_usd=None,
+        )
+        for key, value in normalized.items():
+            if result.data.get(key) != value:
+                raise ValueError(f"recorded bootstrap normalized {key} drift")
+        if result.artifacts != [item["path"] for item in normalized["artifact_manifest"]]:
+            raise ValueError("recorded bootstrap artifact manifest drift")
+        expected_api_cost = normalized["cost"].get("api_cost_usd")
+        if result.cost.get("api_cost_usd") != expected_api_cost:
+            raise ValueError("recorded bootstrap incremental API cost drift")
+        wall_time = result.cost.get("wall_time_hours")
+        if wall_time is None or not math.isfinite(wall_time) or wall_time < 0:
+            raise ValueError("recorded bootstrap wall time drift")
+        if set(result.cost) not in ({"wall_time_hours"}, {"api_cost_usd", "wall_time_hours"}):
+            raise ValueError("recorded bootstrap cost fields drift")
+        validation_error = normalized.get("validation_error")
+        if result.status is ExecutionStatus.FAILED and validation_error is None:
+            raise ValueError("recorded bootstrap failure contradicts successful terminal evidence")
+        if result.data.get("partial_after_timeout") is True:
+            expected_error = f"AutoResearchClaw command timed out after {config.timeout_seconds:g}s"
+            if (
+                result.status is not ExecutionStatus.FAILED
+                or "returncode" in result.data
+                or result.error != expected_error
+            ):
+                raise ValueError("recorded bootstrap timeout evidence drift")
+            return
+        returncode = result.data.get("returncode")
+        if not isinstance(returncode, int) or isinstance(returncode, bool):
+            raise ValueError("recorded bootstrap result has no trusted process outcome")
+        succeeded = returncode == 0 and validation_error is None
+        expected_status = ExecutionStatus.SUCCEEDED if succeeded else ExecutionStatus.FAILED
+        expected_error = (
+            None if succeeded else str(validation_error or "AutoResearchClaw command failed")
+        )
+        if result.status is not expected_status or result.error != expected_error:
+            raise ValueError("recorded bootstrap terminal outcome drift")
 
     def _build_receipt(
         self,
@@ -653,6 +812,9 @@ class ProjectSubstrateBootstrapWorkflow:
             source_receipt_sha256=receipt.receipt_sha256,
             source_snapshot_sha256=receipt.source_snapshot_sha256,
             execution_status=receipt.execution_status.value,
+            recovered_without_provider=recovered_without_provider,
+            failure_type=None,
+            failure_message=None,
         )
         return {
             **plan,
@@ -673,15 +835,39 @@ class ProjectSubstrateBootstrapWorkflow:
 
 
 def _load_manifest(run_root: Path) -> ProjectSubstrateBootstrapManifest:
-    return ProjectSubstrateBootstrapManifest.model_validate_json(
-        (run_root / "bootstrap_manifest.json").read_text(encoding="utf-8")
-    )
+    path = run_root / "bootstrap_manifest.json"
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("bootstrap manifest must be a regular owned file")
+    return ProjectSubstrateBootstrapManifest.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def _load_receipt(run_root: Path) -> ProjectSubstrateSourceReceipt:
-    return ProjectSubstrateSourceReceipt.model_validate_json(
-        (run_root / "substrate_bootstrap/source_receipt.json").read_text(encoding="utf-8")
-    )
+    path = run_root / "substrate_bootstrap/source_receipt.json"
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("bootstrap source receipt must be a regular owned file")
+    return ProjectSubstrateSourceReceipt.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def _load_bootstrap_result(run_root: Path) -> ExecutionResult | None:
+    path = run_root / "substrate_bootstrap/executor_result.json"
+    if not path.exists() and not path.is_symlink():
+        return None
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("bootstrap executor result must be a regular owned file")
+    try:
+        return ExecutionResult.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError("invalid recorded bootstrap executor result") from exc
+
+
+def _bootstrap_success_available(run_root: Path) -> bool:
+    action_root = run_root / "substrate_bootstrap"
+    _require_owned_directory(run_root, action_root, label="substrate bootstrap")
+    receipt_path = action_root / "source_receipt.json"
+    if receipt_path.exists() or receipt_path.is_symlink():
+        return _load_receipt(run_root).execution_status is ExecutionStatus.SUCCEEDED
+    result = _load_bootstrap_result(run_root)
+    return result is not None and result.status is ExecutionStatus.SUCCEEDED
 
 
 def _tree_summary_allow_empty(path: Path, *, max_bytes: int) -> _TreeSummary:
@@ -832,12 +1018,15 @@ def _archive_attempt(run_root: Path) -> str | None:
     if not existing:
         return None
     archive_root = run_root / "failed_attempts"
-    archive_root.mkdir(parents=True, exist_ok=True)
+    for source in existing:
+        _require_owned_directory(run_root, source, label="archived bootstrap attempt")
+    _prepare_owned_parent(run_root, archive_root)
     index = 1
     while (archive_root / f"attempt-{index:03d}").exists():
         index += 1
     destination = archive_root / f"attempt-{index:03d}"
     destination.mkdir()
+    _require_owned_directory(archive_root, destination, label="bootstrap attempt archive")
     for source in existing:
         os.replace(source, destination / source.name)
     return destination.relative_to(run_root).as_posix()

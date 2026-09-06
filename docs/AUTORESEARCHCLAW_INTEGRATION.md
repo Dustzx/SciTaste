@@ -140,6 +140,30 @@ environment inputs and are not copied into committed configuration.
 Generated upstream artifacts and exact execution logs stay under ignored
 `outputs/`. Aggregate hashes and acceptance facts may be committed.
 
+An interrupted selected action has the same no-repeat boundary as the bootstrap.
+An owned run lock prevents concurrent calls. Before provider access, an immutable
+invocation binds the exact state snapshot, selected action, original decision
+intent, and project manifest; the executor result then binds that invocation.
+On explicit resume, SciTaste revalidates the pinned command, immutable
+predecessor, complete work tree, terminal checkpoint, stage artifacts, summary,
+and incremental cost, then completes local bookkeeping without another call.
+Even a recorded `FAILED` result must reproduce its failure evidence before a
+retry. A hard-crashed `running` run is locally recoverable only from a verified
+success; all unknown or contradictory outcomes remain blocked.
+
+This contract is identified by project substrate manifest schema `1.1` and
+normalized executor evidence `autoresearchclaw-result-v2`. Earlier completed
+runs remain readable through their existing receipts, but interrupted or failed
+legacy runs are deliberately read-only and require a new run ID; SciTaste does
+not guess at missing pre-call evidence.
+
+The current filesystem guard rejects symlinked owned directories, rechecks copy
+destinations before publication, and requires a regular lock inode. It is not a
+hostile-writer sandbox: eliminating every path check/use race would require a
+future descriptor-relative (`openat`) storage layer. A crash with no durable
+result remains intentionally ambiguous, including the narrow interval after a
+verified failed attempt is archived but before the next result is published.
+
 ## Current limit
 
 The first-party project lifecycle has completed and independently revalidated a

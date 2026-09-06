@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Project-owned AutoResearchClaw actions now recover a successfully recorded
+  external result through deterministic decision/state/verification publication
+  without a second provider call. A pre-call invocation binds the exact state,
+  action, manifest, and decision intent; recovery revalidates the pinned command,
+  predecessor checkpoint, complete working tree, incremental cost, decision,
+  state, and summary. Bootstrap and selected-action runs use an exclusive run
+  lock, permit hard-crash recovery only for a verified success, verify failed
+  results before retry, and block every ambiguous unrecorded outcome.
 - Project-owned Discovery can now opt into an immutable native Knowledge
   context. The run copies a strict provenance-bearing corpus, records and
   independently reproduces its deterministic retrieval plan, exposes those

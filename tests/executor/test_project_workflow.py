@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -15,7 +16,9 @@ from scitaste.executor.project_workflow import (
     load_project_substrate_config,
 )
 from scitaste.project import ProjectRuntime
-from scitaste.state.persistence import StateStore
+from scitaste.schema.decisions import ResearchDecision
+from scitaste.state.persistence import DecisionLogger, StateStore
+from scitaste.state.research_state import ResearchState
 
 
 def _source_run(root: Path) -> Path:
@@ -248,6 +251,495 @@ def test_project_substrate_failure_resumes_from_immutable_input(tmp_path: Path) 
     assert not (run / "inputs/autoresearchclaw/partial-provider-response.txt").exists()
 
 
+def test_project_substrate_resume_recovers_recorded_success_without_second_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    original_append = DecisionLogger.append
+    fail_once = True
+
+    def interrupted_append(self: DecisionLogger, decision: ResearchDecision) -> None:
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("controlled post-result interruption")
+        original_append(self, decision)
+
+    monkeypatch.setattr(DecisionLogger, "append", interrupted_append)
+    with pytest.raises(OSError, match="post-result interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="recoverable-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 1
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="recoverable-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+    assert resumed["archived_attempt"] is None
+    run = outputs / "projects/project-substrate-test/runs/recoverable-search-01"
+    assert not (run / "failed_attempts").exists()
+    assert (run / "substrate_action/verification.json").is_file()
+    assert (
+        workflow.status(
+            outputs_root=outputs,
+            project_id=config.project_id,
+            run_id="recoverable-search-01",
+        )["status"]
+        == "verified"
+    )
+    registered = ProjectRuntime(outputs).open(config.project_id).manifest.runs[0]
+    assert registered.model_extra["recovered_without_provider"] is True
+
+
+def test_project_substrate_recovers_running_hard_crash_without_second_provider_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+    original_append = DecisionLogger.append
+    fail_once = True
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_append(self: DecisionLogger, decision: ResearchDecision) -> None:
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("simulated process death after result publication")
+        original_append(self, decision)
+
+    monkeypatch.setattr(DecisionLogger, "append", interrupted_append)
+    monkeypatch.setattr(
+        ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="simulated process death"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="hard-crash-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert ProjectRuntime(outputs).open(config.project_id).manifest.runs[0].status == "running"
+    plan = workflow.plan(
+        config,
+        outputs_root=outputs,
+        run_id="hard-crash-search-01",
+        resume=True,
+        allow_live=True,
+    )
+    assert plan["would_contact_provider"] is False
+    assert plan["recovery_without_provider_available"] is True
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="hard-crash-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+
+
+def test_project_substrate_retry_rejects_success_status_tamper(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    monkeypatch.setattr(
+        DecisionLogger,
+        "append",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("post-result stop")),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-result stop"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="status-tamper-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    result_path = (
+        outputs
+        / "projects/project-substrate-test/runs/status-tamper-search-01"
+        / "substrate_action/executor_result.json"
+    )
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    payload["status"] = "FAILED"
+    payload["error"] = "AutoResearchClaw command failed"
+    payload["data"]["returncode"] = 1
+    result_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="contradicts successful terminal evidence"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="status-tamper-search-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "contents"),
+    [
+        ("stage-02/problem_tree.md", "# changed inherited input\n"),
+        ("unexpected-provider-file.txt", "unbound addition\n"),
+    ],
+)
+def test_project_substrate_recovery_binds_the_complete_work_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    relative_path: str,
+    contents: str,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    monkeypatch.setattr(
+        DecisionLogger,
+        "append",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("post-result stop")),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-result stop"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="whole-tree-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    work = (
+        outputs / "projects/project-substrate-test/runs/whole-tree-search-01/work/autoresearchclaw"
+    )
+    (work / relative_path).write_text(contents, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="normalized working_tree drift"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="whole-tree-search-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
+def test_project_substrate_recovery_rejects_content_addressed_state_tamper(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    monkeypatch.setattr(
+        DecisionLogger,
+        "append",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("post-result stop")),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-result stop"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="state-tamper-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    action = (
+        outputs / "projects/project-substrate-test/runs/state-tamper-search-01/substrate_action"
+    )
+    invocation = json.loads((action / "invocation.json").read_text(encoding="utf-8"))
+    snapshot_path = action / "state_snapshots" / f"{invocation['state_snapshot_id']}.json"
+    state = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    state["research_direction"] = "tampered predecessor"
+    snapshot_path.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="content-addressed name"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="state-tamper-search-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
+def test_project_substrate_resume_rejects_an_active_run_lock(tmp_path: Path) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def failed_runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="failed")
+
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=failed_runner)
+    workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="locked-search-01",
+        source_run_dir=source,
+        allow_live=True,
+    )
+    run_root = outputs / "projects/project-substrate-test/runs/locked-search-01"
+    descriptor = project_workflow_module._acquire_run_lock(run_root)
+    try:
+        with pytest.raises(ValueError, match="already active"):
+            workflow.run(
+                config,
+                outputs_root=outputs,
+                run_id="locked-search-01",
+                resume=True,
+                allow_live=True,
+            )
+    finally:
+        project_workflow_module._release_run_lock(descriptor)
+    assert calls == 1
+
+
+def test_project_substrate_resume_blocks_ambiguous_unrecorded_external_work(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def interrupted_runner(
+        command: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        work = Path(command[command.index("--output") + 1])
+        (work / "provider-request-started.txt").write_text("unknown outcome\n", encoding="utf-8")
+        raise OSError("provider connection interrupted")
+
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=interrupted_runner)
+    with pytest.raises(OSError, match="provider connection interrupted"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="ambiguous-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 1
+
+    with pytest.raises(ValueError, match="publication is ambiguous"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="ambiguous-search-01",
+            resume=True,
+            allow_live=True,
+        )
+
+    assert calls == 1
+
+
+def test_project_substrate_running_without_result_remains_ambiguous(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def interrupted_runner(
+        _command: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        raise OSError("unknown provider outcome")
+
+    monkeypatch.setattr(
+        ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=interrupted_runner)
+    with pytest.raises(OSError, match="unknown provider outcome"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="running-ambiguous-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert ProjectRuntime(outputs).open(config.project_id).manifest.runs[0].status == "running"
+
+    with pytest.raises(ValueError, match="running substrate result publication is ambiguous"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="running-ambiguous-search-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
+def test_project_substrate_resume_replays_existing_decision_without_second_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    original_save = StateStore.save
+    fail_once = True
+
+    def interrupted_save(self: StateStore, state: ResearchState) -> str:
+        nonlocal fail_once
+        if fail_once and getattr(state, "revision", None) == 1:
+            fail_once = False
+            raise OSError("controlled post-decision interruption")
+        return original_save(self, state)
+
+    monkeypatch.setattr(StateStore, "save", interrupted_save)
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-decision interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="decision-recovery-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    assert calls == 1
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="decision-recovery-search-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+    run = outputs / "projects/project-substrate-test/runs/decision-recovery-search-01"
+    assert len(DecisionLogger(run / "substrate_action/decisions.jsonl").read_all()) == 1
+
+
+def test_project_substrate_recovery_rejects_changed_stage_evidence_without_second_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    source = _source_run(tmp_path)
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    def interrupted_append(*_args: object, **_kwargs: object) -> None:
+        raise OSError("controlled post-result interruption")
+
+    monkeypatch.setattr(DecisionLogger, "append", interrupted_append)
+    workflow = ProjectSubstrateActionWorkflow(seed=7, command_runner=counted_runner)
+    with pytest.raises(OSError, match="post-result interruption"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="tampered-recovery-search-01",
+            source_run_dir=source,
+            allow_live=True,
+        )
+    run = outputs / "projects/project-substrate-test/runs/tampered-recovery-search-01"
+    (run / "work/autoresearchclaw/stage-03/sources.json").write_text(
+        '["changed"]\n', encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="artifact_manifest drift"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="tampered-recovery-search-01",
+            resume=True,
+            allow_live=True,
+        )
+
+    assert calls == 1
+
+
 def test_project_substrate_plan_is_mutation_free_and_live_is_double_gated(
     tmp_path: Path,
 ) -> None:
@@ -347,6 +839,32 @@ def test_source_snapshot_rejects_symlinks(tmp_path: Path) -> None:
             run_id="unsafe-source-01",
             source_run_dir=source,
         )
+
+
+def test_owned_copy_rejects_a_nested_parent_symlink(tmp_path: Path) -> None:
+    source = _source_run(tmp_path)
+    run_root = tmp_path / "owned-run"
+    outside = tmp_path / "outside"
+    run_root.mkdir()
+    outside.mkdir()
+    (run_root / "inputs").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="parent cannot be a symbolic link"):
+        project_workflow_module._copy_tree_exclusive(
+            source,
+            run_root / "inputs/autoresearchclaw",
+        )
+
+    assert not (outside / "autoresearchclaw").exists()
+
+
+def test_run_lock_rejects_a_fifo(tmp_path: Path) -> None:
+    run_root = tmp_path / "owned-run"
+    run_root.mkdir()
+    os.mkfifo(run_root / ".substrate-action.lock")
+
+    with pytest.raises(ValueError, match="must be a regular file"):
+        project_workflow_module._acquire_run_lock(run_root)
 
 
 def test_project_substrate_cli_plan_is_read_only(tmp_path: Path, capsys) -> None:

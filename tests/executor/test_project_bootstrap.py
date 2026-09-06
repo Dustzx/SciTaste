@@ -196,6 +196,115 @@ def test_project_bootstrap_recovers_a_persisted_paid_success_without_recalling(
     assert resumed["resume_attempt"] == 1
 
 
+def test_project_bootstrap_recovers_running_hard_crash_without_recalling(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=counted_runner)
+    original = workflow._build_receipt
+    fail_once = True
+
+    def interrupted(*args: object, **kwargs: object):
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            raise OSError("simulated bootstrap process death")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(workflow, "_build_receipt", interrupted)
+    monkeypatch.setattr(
+        bootstrap_module.ProjectSubstrateActionWorkflow,
+        "_mark_failed",
+        staticmethod(lambda *_args: None),
+    )
+    with pytest.raises(OSError, match="simulated bootstrap process death"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="hard-crash-bootstrap-01",
+            allow_live=True,
+        )
+    assert ProjectRuntime(outputs).open(config.project_id).manifest.runs[0].status == "running"
+    plan = workflow.plan(
+        config,
+        outputs_root=outputs,
+        run_id="hard-crash-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+    assert plan["would_contact_provider"] is False
+
+    resumed = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="hard-crash-bootstrap-01",
+        resume=True,
+        allow_live=True,
+    )
+
+    assert calls == 1
+    assert resumed["status"] == "complete"
+    assert resumed["recovered_without_provider"] is True
+
+
+def test_project_bootstrap_retry_rejects_success_status_tamper(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = tmp_path / "outputs"
+    config = _config(tmp_path)
+    calls = 0
+
+    def counted_runner(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        return _successful_runner(command, **kwargs)
+
+    workflow = ProjectSubstrateBootstrapWorkflow(seed=7, command_runner=counted_runner)
+    monkeypatch.setattr(
+        workflow,
+        "_build_receipt",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("post-result stop")),
+    )
+    with pytest.raises(OSError, match="post-result stop"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="status-tamper-bootstrap-01",
+            allow_live=True,
+        )
+    result_path = (
+        outputs
+        / "projects/bootstrap-test-project/runs/status-tamper-bootstrap-01"
+        / "substrate_bootstrap/executor_result.json"
+    )
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    payload["status"] = "FAILED"
+    payload["error"] = f"AutoResearchClaw command timed out after {config.timeout_seconds:g}s"
+    payload["data"].pop("returncode")
+    payload["data"]["partial_after_timeout"] = True
+    result_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="contradicts successful terminal evidence"):
+        workflow.run(
+            config,
+            outputs_root=outputs,
+            run_id="status-tamper-bootstrap-01",
+            resume=True,
+            allow_live=True,
+        )
+    assert calls == 1
+
+
 def test_project_bootstrap_archives_failed_attempt_before_explicit_retry(
     tmp_path: Path,
 ) -> None:
