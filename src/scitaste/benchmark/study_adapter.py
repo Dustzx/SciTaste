@@ -21,7 +21,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -57,6 +57,7 @@ def run_study_cell(
     resume_from_stage: str = "RESULT_ANALYSIS",
     finalize_existing: bool = False,
     reuse_existing: bool = False,
+    api_cost_mode: Literal["task-pricing", "local-zero"] = "task-pricing",
 ) -> LauncherResult:
     request_file = Path(request_path).resolve()
     result_file = Path(result_path).resolve()
@@ -70,6 +71,15 @@ def run_study_cell(
     upstream_run = cell_dir / "upstream_run"
     upstream_run.mkdir(parents=True, exist_ok=True)
     telemetry_path = cell_dir / "llm_telemetry.jsonl"
+
+    def observed_usage(*, experiments: int) -> LauncherUsage:
+        return _usage(
+            telemetry_path,
+            task,
+            experiments=experiments,
+            api_cost_mode=api_cost_mode,
+        )
+
     if reuse_existing:
         if _stage_completed(upstream_run, to_stage):
             finalize_existing = True
@@ -152,7 +162,7 @@ def run_study_cell(
             result = LauncherResult(
                 status=CellStatus.FAILED,
                 evidence_class=EvidenceClass.REAL,
-                usage=_usage(telemetry_path, task, experiments=0),
+                usage=observed_usage(experiments=0),
                 error=f"experiment pre-paper audit failed: {exc}",
             )
             _write_result(result_file, result)
@@ -181,7 +191,7 @@ def run_study_cell(
                         result = LauncherResult(
                             status=CellStatus.FAILED,
                             evidence_class=EvidenceClass.REAL,
-                            usage=_usage(telemetry_path, task, experiments=1),
+                            usage=observed_usage(experiments=1),
                             error=f"analysis pre-paper audit failed: {exc}",
                         )
                         _write_result(result_file, result)
@@ -222,7 +232,7 @@ def run_study_cell(
                         result = LauncherResult(
                             status=CellStatus.FAILED,
                             evidence_class=EvidenceClass.REAL,
-                            usage=_usage(telemetry_path, task, experiments=1),
+                            usage=observed_usage(experiments=1),
                             error=f"outline pre-draft audit failed: {exc}",
                         )
                         _write_result(result_file, result)
@@ -258,7 +268,7 @@ def run_study_cell(
                         result = LauncherResult(
                             status=CellStatus.FAILED,
                             evidence_class=EvidenceClass.REAL,
-                            usage=_usage(telemetry_path, task, experiments=1),
+                            usage=observed_usage(experiments=1),
                             error=f"paper pre-review audit failed: {exc}",
                         )
                         _write_result(result_file, result)
@@ -281,7 +291,7 @@ def run_study_cell(
         result = LauncherResult(
             status=CellStatus.FAILED,
             evidence_class=EvidenceClass.REAL,
-            usage=_usage(telemetry_path, task, experiments=0),
+            usage=observed_usage(experiments=0),
             error=f"AutoResearchClaw exited with status {completed.returncode}",
         )
         _write_result(result_file, result)
@@ -314,7 +324,7 @@ def run_study_cell(
         result = LauncherResult(
             status=CellStatus.SUCCEEDED,
             evidence_class=EvidenceClass.REAL,
-            usage=_usage(telemetry_path, task, experiments=experiments),
+            usage=observed_usage(experiments=experiments),
             outcome=outcome,
             artifact_paths=artifact_paths,
         )
@@ -322,7 +332,7 @@ def run_study_cell(
         result = LauncherResult(
             status=CellStatus.FAILED,
             evidence_class=EvidenceClass.REAL,
-            usage=_usage(telemetry_path, task, experiments=0),
+            usage=observed_usage(experiments=0),
             error=f"upstream artifact audit failed: {exc}",
         )
     _write_result(result_file, result)
@@ -2913,7 +2923,13 @@ def _materialize_artifacts(
     return [path.relative_to(cell_dir).as_posix() for path in (*core_paths, *manuscript_paths)]
 
 
-def _usage(path: Path, task: dict[str, Any], *, experiments: int) -> LauncherUsage:
+def _usage(
+    path: Path,
+    task: dict[str, Any],
+    *,
+    experiments: int,
+    api_cost_mode: Literal["task-pricing", "local-zero"] = "task-pricing",
+) -> LauncherUsage:
     prompt = completion = 0
     if path.is_file():
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -2922,11 +2938,14 @@ def _usage(path: Path, task: dict[str, Any], *, experiments: int) -> LauncherUsa
             item = json.loads(line)
             prompt += int(item.get("prompt_tokens", 0))
             completion += int(item.get("completion_tokens", 0))
-    pricing = task.get("pricing", {})
-    input_cny = float(pricing.get("input_cny_per_million", 0.0))
-    output_cny = float(pricing.get("output_cny_per_million", 0.0))
-    cny_per_usd = float(pricing.get("cny_per_usd", 7.2))
-    cost = ((prompt * input_cny + completion * output_cny) / 1_000_000) / cny_per_usd
+    if api_cost_mode == "local-zero":
+        cost = 0.0
+    else:
+        pricing = task.get("pricing", {})
+        input_cny = float(pricing.get("input_cny_per_million", 0.0))
+        output_cny = float(pricing.get("output_cny_per_million", 0.0))
+        cny_per_usd = float(pricing.get("cny_per_usd", 7.2))
+        cost = ((prompt * input_cny + completion * output_cny) / 1_000_000) / cny_per_usd
     return LauncherUsage(
         experiments=experiments,
         api_cost_usd=round(cost, 8),

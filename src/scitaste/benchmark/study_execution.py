@@ -464,22 +464,40 @@ class MatchedStudyRunner:
             self._write_cell_checkpoint(cell, record, attempt=attempt)
             return record
         elapsed = prior_elapsed + max(0.0, self.clock() - started)
-        if process.returncode != 0:
+        if not result_path.is_file():
+            error = (
+                f"launcher exited with status {process.returncode}"
+                if process.returncode != 0
+                else "launcher did not write launcher_result.json"
+            )
             record = self._failed_record(
                 cell,
                 elapsed,
                 launcher.gpu_count,
-                f"launcher exited with status {process.returncode}",
-            )
-        elif not result_path.is_file():
-            record = self._failed_record(
-                cell, elapsed, launcher.gpu_count, "launcher did not write launcher_result.json"
+                error,
             )
         else:
             try:
                 launcher_result = LauncherResult.model_validate_json(
                     result_path.read_text(encoding="utf-8")
                 )
+                if process.returncode != 0:
+                    error = f"launcher exited with status {process.returncode}"
+                    if launcher_result.status == CellStatus.SUCCEEDED:
+                        launcher_result = LauncherResult(
+                            status=CellStatus.FAILED,
+                            evidence_class=launcher_result.evidence_class,
+                            usage=launcher_result.usage,
+                            error=f"{error}; non-zero launcher cannot report success",
+                        )
+                    else:
+                        reported_error = launcher_result.error or "launcher reported failure"
+                        launcher_result = LauncherResult(
+                            status=CellStatus.FAILED,
+                            evidence_class=launcher_result.evidence_class,
+                            usage=launcher_result.usage,
+                            error=f"{error}; {reported_error}",
+                        )
                 record = self._record_from_launcher(
                     cell, launcher_result, cell_dir, elapsed, launcher.gpu_count
                 )

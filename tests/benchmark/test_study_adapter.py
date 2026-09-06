@@ -676,6 +676,15 @@ def test_usage_sums_wire_tokens_and_prices_posted_rates(tmp_path) -> None:
 
     assert usage.llm_tokens == 4500
     assert usage.experiments == 2
+
+    local_usage = _usage(
+        telemetry,
+        load_task(),
+        experiments=2,
+        api_cost_mode="local-zero",
+    )
+    assert local_usage.llm_tokens == usage.llm_tokens
+    assert local_usage.api_cost_usd == 0.0
     assert usage.search_queries == 0
     assert usage.api_cost_usd == 0.0125
 

@@ -203,9 +203,23 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   rejected it. The report remains blocked on external intervention measurement,
   verified pricing/cost, an unsupported-action increase, and independent review;
   this validates enforcement, not effectiveness.
-- A 16-cell Qwen3-VL-4B local pilot protocol is execution-ready and permanently
-  non-headline; its four launcher commands remain explicit adapter work rather
-  than synthetic substitutes.
+- A 16-cell Qwen3-VL-4B local pilot remains permanently non-headline. Its four
+  conditions now have executable launchers backed by a loopback-only,
+  bearer-protected OpenAI-compatible bridge to the exact local Transformers
+  checkpoint; neither an API key nor a synthetic model response is substituted.
+- The first project-owned RTX 3090 diagnosis/base cell made seven real local
+  calls, completed AutoResearchClaw Stage 8 hypothesis generation and Stage 9
+  experiment design, then failed before the next Stage 10 request when the
+  cumulative 20,000-token pilot limit could no longer admit it. Exact nested
+  telemetry records 10,131 prompt and 8,448 completion tokens, 267.754 seconds
+  of model latency, zero API cost/searches/experiments, and 0.074909 allocated
+  GPU-hours. It is transport and early-stage execution evidence, not a complete
+  cell or an effectiveness result.
+- That failure exposed a runner evidence-loss defect: the historical parent
+  execution record contains unknown adapter counters although its child result
+  is exact. Future non-zero launches now preserve any schema-valid failed child
+  telemetry while still rejecting a child that claims success. The historical
+  record is not rewritten retroactively.
 - The formal protocol now pins `qwen3.8-max-2026-09-02`, a content-addressed
   no-live-search snapshot, and fixed-generator contracts for all four tasks.
 - A first-party adapter runs unmodified AutoResearchClaw Stage 8–18 for the four

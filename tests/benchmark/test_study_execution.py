@@ -124,6 +124,31 @@ class FailThenSucceedRunner(SuccessfulRunner):
         return super().run(command, **kwargs)
 
 
+class NonzeroResultRunner:
+    def __init__(self, *, claimed_status: CellStatus = CellStatus.FAILED) -> None:
+        self.claimed_status = claimed_status
+
+    def run(self, command, **kwargs):
+        del command
+        result = LauncherResult(
+            status=self.claimed_status,
+            evidence_class=EvidenceClass.REAL,
+            usage=LauncherUsage(
+                experiments=0 if self.claimed_status == CellStatus.FAILED else 1,
+                api_cost_usd=0.0,
+                search_queries=0,
+                llm_tokens=18579,
+            ),
+            outcome=outcome() if self.claimed_status == CellStatus.SUCCEEDED else None,
+            artifact_paths=["paper.md"] if self.claimed_status == CellStatus.SUCCEEDED else [],
+            error="child preserved its measured failure",
+        )
+        open(kwargs["environment"]["SCITASTE_STUDY_CELL_RESULT"], "w").write(
+            result.model_dump_json()
+        )
+        return ProcessResult(returncode=1)
+
+
 def clock(*values):
     readings = iter(values)
     return lambda: next(readings)
@@ -226,6 +251,51 @@ def test_timeout_is_an_honest_failed_record(tmp_path) -> None:
     assert results["records"][0]["status"] == "failed"
     assert "timed out" in results["records"][0]["error"]
     assert results["records"][0]["outcome"] is None
+
+
+def test_nonzero_launcher_retains_schema_valid_failed_usage(tmp_path) -> None:
+    protocol = load_study_protocol(PILOT_PROTOCOL)
+    runner = MatchedStudyRunner(
+        protocol,
+        launch_config(),
+        output_dir=tmp_path,
+        process_runner=NonzeroResultRunner(),
+        clock=clock(0, 360),
+    )
+
+    summary = runner.run(max_cells=1)
+
+    assert summary.failed_cells == 1
+    record = json.loads((tmp_path / "study_results.json").read_text())["records"][0]
+    assert record["usage"] == {
+        "gpu_hours": 0.1,
+        "experiments": 0,
+        "wall_time_hours": 0.1,
+        "api_cost_usd": 0.0,
+        "search_queries": 0,
+        "llm_tokens": 18579,
+    }
+    assert "launcher exited with status 1" in record["error"]
+    assert "child preserved its measured failure" in record["error"]
+
+
+def test_nonzero_launcher_cannot_promote_a_claimed_success(tmp_path) -> None:
+    protocol = load_study_protocol(PILOT_PROTOCOL)
+    summary = MatchedStudyRunner(
+        protocol,
+        launch_config(),
+        output_dir=tmp_path,
+        process_runner=NonzeroResultRunner(claimed_status=CellStatus.SUCCEEDED),
+        clock=clock(0, 1),
+    ).run(max_cells=1)
+
+    assert summary.failed_cells == 1
+    record = json.loads((tmp_path / "study_results.json").read_text())["records"][0]
+    assert record["status"] == "failed"
+    assert record["outcome"] is None
+    assert record["artifacts"] == []
+    assert record["usage"]["llm_tokens"] == 18579
+    assert "non-zero launcher cannot report success" in record["error"]
 
 
 def test_failed_retry_accumulates_runner_owned_time(tmp_path) -> None:

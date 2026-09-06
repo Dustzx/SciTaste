@@ -8,7 +8,7 @@ codebase_commit: b9a0147af2a61f737d270fc14abde9831e8c62f0
 search_access:
   policy_id: frozen-empty-search-pilot-v1
   provider: disabled-local-search
-  frozen_snapshot: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  frozen_snapshot: sha256:a0275a5312046080cf2de22faf0fb0a5e09780bc8ee3e0420dee43468fc2c043
 budget:
   gpu_hours: 0.5
   max_experiments: 2

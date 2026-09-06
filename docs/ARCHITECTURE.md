@@ -700,3 +700,33 @@ AutoResearchClaw and other pinned systems only after capability and budget
 contracts are aligned. SciTaste may claim architectural independence now, but
 may claim better research outcomes only after complete matched runs and blinded
 external review.
+
+### ADR-029: Local system studies use a bounded loopback model transport
+
+Status: accepted for transport and failure evidence; full-cell feasibility is
+not accepted.
+
+The Phase 9 local pilot keeps the registered system adapter intact and supplies
+its model dependency through a SciTaste-owned OpenAI-compatible bridge to one
+explicit local Transformers checkpoint. The bridge binds only to loopback,
+requires an ephemeral bearer, accepts a closed non-streaming message schema,
+pins model aliases, limits request bytes/context/output, serializes inference,
+and never logs request content. The wrapper verifies both the model
+configuration and a complete names/sizes/bytes checkpoint digest before loading
+weights, then reports local API cost as zero without discarding token usage.
+
+This boundary is model transport, not a new research-system condition and not
+an internalization of AutoResearchClaw. It allows the unchanged baseline stages
+to be measured locally while SciTaste Native continues to replace its own
+product-default capabilities under ADR-028.
+
+One real RTX 3090 diagnosis/base run completed hypothesis generation and
+experiment design but exhausted the 20,000-token pilot allowance before the
+next code-generation request. The failed child retained exact usage, revealing
+that the outer runner formerly discarded valid counters solely because the
+process exited non-zero. The runner now parses a present result on every exit:
+a schema-valid failed result preserves its evidence class and counters, whereas
+a non-zero result claiming success is forcibly failed and loses its claimed
+outcome/artifacts. Historical records are never rewritten. The local transport
+is therefore admitted, but budget revision and a complete Stage 8--18 run remain
+required before operational acceptance.

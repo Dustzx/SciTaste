@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- A loopback-only, bearer-protected OpenAI-compatible bridge for one explicitly
+  pinned local Transformers checkpoint, plus an executable Qwen3-VL-4B study
+  launcher that preserves the existing first-party Stage 8--18 adapter.
+- A project-owned RTX 3090 diagnosis/base execution that completed hypothesis
+  generation and experiment design before the registered 20,000-token pilot
+  ceiling blocked code generation, retaining exact real local token and timing
+  evidence without fabricating a complete cell.
+- Failed study launchers with a schema-valid result now retain their exact
+  counters and evidence class even when the child exits non-zero; a non-zero
+  child can never promote itself to success.
 - A progress-first Generation as Content workspace with evidence-derived quick
   intents, bounded free questions, closed server-owned component planning,
   deterministic fallback, dynamic native layouts, exact process-local surface

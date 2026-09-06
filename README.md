@@ -298,6 +298,32 @@ for a multi-case run so model weights load only once. The local backend is a
 model-decision backend, not a replacement for a complete Phase 9 system
 executor.
 
+Phase 9 can also route the real first-party study adapter to that checkpoint
+through a bounded loopback-only Chat Completions bridge. After creating a
+`matched-study-pilot` project, inspect the exact one-cell command before removing
+`--dry-run`:
+
+```bash
+export SCITASTE_LOCAL_MODEL_PATH=/absolute/path/to/Qwen3-VL-4B-Instruct
+.venv/bin/scitaste study project-run \
+  --config configs/experiments/matched_budget_local_pilot_v1.yaml \
+  --launch-config configs/experiments/study_launchers_qwen3vl4b_local_v1.yaml \
+  --project-id my-local-pilot --run-id diagnosis-base-seed-07 \
+  --provider local-transformers \
+  --model Qwen3-VL-4B-Instruct@ebb281ec \
+  --run-seed 7 --evidence-scope local-single-gpu-engineering-only \
+  --task diagnosis-friendly-v1 --condition autoresearchclaw \
+  --max-cells 1 --dry-run
+```
+
+The launcher pins both the model configuration and every checkpoint file by
+SHA-256, creates an ephemeral in-memory bearer token, binds only to loopback,
+serializes GPU inference, and reports local API cost as exactly zero while
+retaining token counts. The v1
+pilot's 20,000-token ceiling has been shown insufficient for a full Stage 8--18
+cell, so a successful dry-run or early-stage execution must not be reported as a
+completed matched-system result.
+
 Compare two same-suite, same-seed benchmark reports without making a causal
 capability claim:
 

@@ -4,6 +4,12 @@ An external system is a complete autonomous-research implementation used as a
 comparison condition, not a model API, retrieval source, Python dependency, or
 code copied into SciTaste. Sibyl and AI Scientist-v2 fall into this category.
 
+The local Qwen bridge is therefore not an external-system adapter. It is a
+SciTaste-owned, loopback-only model transport that lets the existing first-party
+study adapter call one content-bound local checkpoint through the narrow Chat
+Completions subset it already consumes. It does not change AutoResearchClaw,
+grant network access, or turn a local model response into a system outcome.
+
 ## Boundary
 
 SciTaste owns the comparison protocol and supplies every system with the same:

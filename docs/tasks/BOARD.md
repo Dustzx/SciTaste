@@ -1,11 +1,11 @@
 # Parallel Task Board
 
-Board revision: `2026-09-06.10`
+Board revision: `2026-09-06.11`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Phase 9/core workflow and normal-workflow model integration | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
-| 2 | Project-scoped model-node runtime and policy profiles | integrated; idle | `feat/model-node-runtime-v2` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | new assignment required |
+| Main | Phase 9 local-system execution and core workflow | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
+| 2 | Tool Intelligence bounded-autonomy iteration | ready for main review | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | feature commit `ac19886` |
 | 3 | Progress-first Generation as Content workspace | integrated; idle | `feat/generative-ui-intent-planner-v3` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
@@ -24,12 +24,13 @@ Board revision: `2026-09-06.10`
 
 ## Current non-overlap
 
-- Window 2 and Window 3 have no active owned paths. Window 2's model-node Epic
-  and Window 3's progress-first Generation as Content WP1--WP5 are integrated;
-  neither should continue until its assignment document receives a new token.
-- Main owns Phase 9/core workflow development, integration repairs, project
-  catalog refreshes, common architecture/roadmap/changelog edits, full-suite
-  checks, and GitHub synchronization.
+- Window 2 has completed the Tool Intelligence Epic at `ac19886`; its paths are
+  frozen pending main-window review and it must not continue from the completed
+  token. Window 3's progress-first Generation as Content WP1--WP5 is integrated
+  and remains idle.
+- Main owns Phase 9 local-system execution, core workflow development,
+  integration repairs, project catalog refreshes, common architecture/roadmap/
+  changelog edits, full-suite checks, and GitHub synchronization.
 - Main has connected the integrated model-node runtime to an opt-in offline
   evidence-stage `run full` hook. The actual immutable state, proposal, exact
   recording, ledger head, and stage checkpoint are bound, while state mutation

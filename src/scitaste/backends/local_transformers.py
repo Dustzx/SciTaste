@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.backends.base import PreferenceRequest, PreferenceResponse, Usage
 from scitaste.backends.openai_compatible import (
@@ -34,12 +34,20 @@ class LocalTransformersConfig(BaseModel):
     model_path: Path
     model_id: str
     model_revision: str = Field(min_length=7)
+    checkpoint_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     architecture: str = "Qwen3VLForConditionalGeneration"
     device: str = "cuda:0"
     dtype: str = "bfloat16"
-    max_new_tokens: int = Field(default=256, ge=32, le=2048)
+    max_new_tokens: int = Field(default=256, ge=32, le=8192)
+    max_context_tokens: int = Field(default=16_384, ge=128, le=1_000_000)
     max_retries: int = Field(default=1, ge=0, le=3)
     require_cuda: bool = True
+
+    @model_validator(mode="after")
+    def generation_fits_context(self) -> LocalTransformersConfig:
+        if self.max_new_tokens >= self.max_context_tokens:
+            raise ValueError("max_new_tokens must be below max_context_tokens")
+        return self
 
 
 @dataclass(frozen=True)
@@ -68,6 +76,7 @@ class TransformersTextRuntime:
         self._model: Any | None = None
         self._tokenizer: Any | None = None
         self._torch: Any | None = None
+        self._checkpoint_verified = False
 
     def generate(
         self,
@@ -77,16 +86,38 @@ class TransformersTextRuntime:
         seed: int,
         max_new_tokens: int,
     ) -> LocalGeneration:
+        return self.generate_messages(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            seed=seed,
+            max_new_tokens=max_new_tokens,
+            temperature=0.0,
+        )
+
+    def generate_messages(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        seed: int,
+        max_new_tokens: int,
+        temperature: float = 0.0,
+    ) -> LocalGeneration:
+        """Generate from a complete chat while retaining one resident checkpoint."""
+
+        if not messages:
+            raise ValueError("local generation requires at least one chat message")
+        if max_new_tokens < 1 or max_new_tokens > self.config.max_new_tokens:
+            raise ValueError("requested output tokens exceed the local generation ceiling")
+        if temperature < 0 or temperature > 2:
+            raise ValueError("temperature must be between 0 and 2")
         self._load()
         torch = self._torch
         model = self._model
         tokenizer = self._tokenizer
         assert torch is not None and model is not None and tokenizer is not None
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
         prompt = tokenizer.apply_chat_template(
             messages,
             tokenize=False,
@@ -95,15 +126,23 @@ class TransformersTextRuntime:
         inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {key: value.to(self.config.device) for key, value in inputs.items()}
         input_tokens = int(inputs["input_ids"].shape[-1])
+        if input_tokens + max_new_tokens > self.config.max_context_tokens:
+            raise ValueError("local generation request exceeds the configured context ceiling")
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
         with torch.inference_mode():
+            sampling = temperature > 0
+            generation_options: dict[str, object] = {
+                "do_sample": sampling,
+                "max_new_tokens": max_new_tokens,
+                "use_cache": True,
+            }
+            if sampling:
+                generation_options["temperature"] = temperature
             generated = model.generate(
                 **inputs,
-                do_sample=False,
-                max_new_tokens=max_new_tokens,
-                use_cache=True,
+                **generation_options,
             )
         new_tokens = generated[0, input_tokens:]
         text = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
@@ -119,6 +158,7 @@ class TransformersTextRuntime:
         model_path = self.config.model_path.expanduser().resolve()
         if not model_path.is_dir():
             raise RuntimeError(f"local model directory does not exist: {model_path}")
+        self.verify_checkpoint()
         try:
             import torch
             import transformers
@@ -156,6 +196,18 @@ class TransformersTextRuntime:
         self._model.generation_config.top_p = None
         self._model.generation_config.top_k = None
         self._torch = torch
+
+    def verify_checkpoint(self) -> None:
+        """Verify the complete local checkpoint once before model loading."""
+
+        if self._checkpoint_verified:
+            return
+        if self.config.checkpoint_sha256 is None:
+            return
+        observed = local_checkpoint_sha256(self.config.model_path)
+        if observed != self.config.checkpoint_sha256:
+            raise RuntimeError("local checkpoint content hash mismatch")
+        self._checkpoint_verified = True
 
 
 class LocalTransformersBackend:
@@ -214,8 +266,52 @@ class LocalTransformersBackend:
 
 
 def load_local_transformers_config(path: str | Path) -> LocalTransformersConfig:
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return parse_local_transformers_config(Path(path).read_text(encoding="utf-8"))
+
+
+def parse_local_transformers_config(raw: str) -> LocalTransformersConfig:
+    """Parse one already-read config so callers can bind the exact source bytes."""
+
+    raw = yaml.safe_load(raw)
     return LocalTransformersConfig.model_validate(_expand_environment(raw))
+
+
+def local_checkpoint_sha256(path: str | Path) -> str:
+    """Hash names, sizes, and bytes of every regular checkpoint file."""
+
+    unresolved = Path(path).expanduser()
+    if unresolved.is_symlink():
+        raise RuntimeError("local checkpoint directory cannot be a symbolic link")
+    root = unresolved.resolve(strict=True)
+    if not root.is_dir():
+        raise RuntimeError(f"local model directory does not exist: {root}")
+    files: list[Path] = []
+    for candidate in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        if candidate.is_symlink():
+            raise RuntimeError("local checkpoint cannot contain symbolic links")
+        if candidate.is_dir():
+            continue
+        if not candidate.is_file():
+            raise RuntimeError("local checkpoint contains a non-regular entry")
+        files.append(candidate)
+    if not files:
+        raise RuntimeError("local checkpoint directory contains no files")
+
+    digest = hashlib.sha256(b"SCITASTE_LOCAL_CHECKPOINT_V1\0")
+    for candidate in files:
+        relative = candidate.relative_to(root).as_posix().encode("utf-8")
+        size = candidate.stat().st_size
+        digest.update(len(relative).to_bytes(8, "big"))
+        digest.update(relative)
+        digest.update(size.to_bytes(8, "big"))
+        observed_size = 0
+        with candidate.open("rb") as handle:
+            while block := handle.read(8 * 1024 * 1024):
+                observed_size += len(block)
+                digest.update(block)
+        if observed_size != size:
+            raise RuntimeError("local checkpoint changed while it was being hashed")
+    return digest.hexdigest()
 
 
 _FORMAT_REPAIR_REMINDER = (

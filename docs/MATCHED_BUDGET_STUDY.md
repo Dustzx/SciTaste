@@ -151,6 +151,37 @@ Protocols declare either `formal` or `pilot` scope. A pilot remains
 `acceptance_only` even if every execution and external review is otherwise
 complete, preventing engineering trials from becoming headline evidence.
 
+## Local RTX 3090 execution path
+
+`configs/experiments/study_launchers_qwen3vl4b_local_v1.yaml` replaces the old
+launcher placeholders for all four core conditions. It invokes
+`scitaste.benchmark.local_study_adapter`, which verifies the content hash of
+`configs/backends/local_transformers_qwen3vl4b_study.yaml` and the names, sizes,
+and bytes of every checkpoint file, loads that checkpoint once per cell, and
+serves only the narrow non-streaming Chat Completions subset on loopback. The
+ephemeral bearer is held in process
+memory and the child receives only its environment-variable name and loopback
+URL. Requests have byte, context, output, schema, model-identity, and serialized
+inference bounds. No network model or fake completion is used.
+
+A real project-owned run is retained under
+`outputs/projects/phase9-local-qwen3vl4b-pilot`. For the diagnosis/base/seed-7
+cell, Qwen3-VL-4B made seven calls and completed Stage 8 and Stage 9. Stage 10
+failed before its next request because admitting that request would exceed the
+20,000-token protocol ceiling. The child result reports 18,579 total tokens
+(10,131 prompt and 8,448 completion), 267.754 seconds of model latency, zero API
+cost, zero searches, zero experiments, and 0.074909 runner-allocated GPU-hours.
+There is intentionally no experiment, manuscript, score, or success record.
+
+This run accepts the local transport and early-stage adapter integration only.
+It demonstrates that the v1 token allocation is not completion-ready and does
+not justify running the remaining 15 cells unchanged. It also exposed a now
+fixed parent-runner defect: a non-zero launcher exit previously replaced a valid
+failed child result with unknown counters. Future executions preserve exact
+schema-valid failure telemetry while forcing any non-zero child success claim
+back to failure; the original record stays immutable and its exact counters
+remain in `launcher_result.json` and `llm_telemetry.jsonl`.
+
 ## Current execution state
 
 The formal protocol pins Bailian `qwen3.8-max-2026-09-02` and a

@@ -15,6 +15,8 @@ from scitaste.backends.local_transformers import (
     TransformersTextRuntime,
     _expand_environment,
     load_local_transformers_config,
+    local_checkpoint_sha256,
+    parse_local_transformers_config,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
 
@@ -126,6 +128,28 @@ def test_local_config_expands_model_path(monkeypatch, tmp_path) -> None:
 
     assert config.model_path == model_dir
 
+    parsed = parse_local_transformers_config(config_path.read_text(encoding="utf-8"))
+    assert parsed == config
+
+
+def test_local_checkpoint_hash_binds_names_sizes_and_bytes(tmp_path) -> None:
+    checkpoint = tmp_path / "checkpoint"
+    checkpoint.mkdir()
+    (checkpoint / "config.json").write_text("first\n", encoding="utf-8")
+    nested = checkpoint / "tokenizer"
+    nested.mkdir()
+    (nested / "vocab.json").write_text("second\n", encoding="utf-8")
+
+    first = local_checkpoint_sha256(checkpoint)
+    assert local_checkpoint_sha256(checkpoint) == first
+    (nested / "vocab.json").write_text("changed\n", encoding="utf-8")
+    assert local_checkpoint_sha256(checkpoint) != first
+
+    (nested / "vocab.json").unlink()
+    (nested / "vocab.json").symlink_to(checkpoint / "config.json")
+    with pytest.raises(RuntimeError, match="symbolic links"):
+        local_checkpoint_sha256(checkpoint)
+
 
 class FakeTensor:
     def __init__(self, shape: tuple[int, ...]) -> None:
@@ -221,6 +245,48 @@ def test_transformers_runtime_generates_from_one_resident_model() -> None:
     assert runtime._torch.cuda.seeds == [31]
     assert runtime._model.generate_kwargs["do_sample"] is False
     assert runtime._model.generate_kwargs["max_new_tokens"] == 64
+
+
+def test_transformers_runtime_preserves_chat_and_bounds_context() -> None:
+    runtime = TransformersTextRuntime(_config().model_copy(update={"max_context_tokens": 68}))
+    runtime._model = FakeModel()
+    runtime._tokenizer = FakeTokenizer()
+    runtime._torch = FakeTorch()
+
+    generated = runtime.generate_messages(
+        messages=[
+            {"role": "system", "content": "system"},
+            {"role": "user", "content": "user"},
+        ],
+        seed=4,
+        max_new_tokens=63,
+        temperature=0.3,
+    )
+
+    assert generated.output_tokens == 3
+    assert runtime._model.generate_kwargs["do_sample"] is True
+    assert runtime._model.generate_kwargs["temperature"] == 0.3
+
+    with pytest.raises(ValueError, match="context ceiling"):
+        runtime.generate_messages(
+            messages=[
+                {"role": "system", "content": "system"},
+                {"role": "user", "content": "oversized"},
+            ],
+            seed=4,
+            max_new_tokens=64,
+        )
+
+
+def test_local_config_rejects_output_ceiling_at_or_above_context() -> None:
+    with pytest.raises(ValueError, match="below max_context_tokens"):
+        LocalTransformersConfig.model_validate(
+            {
+                **_config().model_dump(mode="python"),
+                "max_new_tokens": 256,
+                "max_context_tokens": 256,
+            }
+        )
 
 
 def test_transformers_runtime_rejects_missing_checkpoint(tmp_path) -> None:
