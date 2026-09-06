@@ -289,6 +289,37 @@ The reformulation proposal digest is
 `2b134a32dd427db187f591320514707b84821bfd40f61cebee00c4c3da677929`.
 This remains implementation/recovery evidence, not a model-quality result.
 
+## Evidence-bound semantic ideation case
+
+The next self-iteration removes the remaining fixed problem/idea prose from the
+adaptive Discovery path without giving the model portfolio or execution
+authority. `discovery-ideation` receives the active hypothesis, exact registered
+observations, research identity, and resource ceilings. It returns one problem
+and three divergent idea seeds; deterministic validation rejects invented
+evidence, a different active hypothesis, duplicate mechanisms, malformed value
+scores, and per-idea estimates beyond the project budget.
+
+The completed run is
+`2026-09-07__scitaste-native__semantic-ideation-v1__seed-07`. It reached `PILOT`
+through six commands and ten controller decisions. Its ordered three-entry
+semantic ledger contains 1,110 scripted tokens, zero cost, no rejected or
+unknown-cost entry, and chain head
+`95fd9f9f56a4e54335f41fa9fc66ccb13801eaae42e301ab4871318beb135037`.
+The final controller-selected idea is `idea-01-semantic-continuity`; the other
+two model-proposed candidates remain explicit backups rather than silently
+discarded output.
+
+The final state is
+`state-f9e348873e3a0fb62b276151f79a49fa208409dda01126a0202557fa55e3214f`,
+the verified Discovery head is
+`daf55d5925c5360169e0c3ec933a589f58309aa6489683b00bafcf4f94154707`,
+and the ideation proposal digest is
+`2eee560118d638f962bac6b90caaa9922e236ea23394ddbf651c2f536bbc3ba8`.
+Independent tests also cover unknown observation/hypothesis rejection,
+per-idea budget rejection, mutation-free preview, and no-second-call recovery.
+This is implementation and lineage evidence only; the scripted content does not
+establish live-model creativity or scientific effectiveness.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

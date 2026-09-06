@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Evidence-supported Discovery can now opt into a typed `discovery-ideation`
+  node. It proposes one problem and three to eight divergent idea seeds from the
+  active hypothesis and registered observations, but cannot rank/select an
+  idea, assign actual resources, call tools, mutate state, or execute work.
+  Unknown evidence, mismatched hypothesis identity, duplicate mechanisms,
+  unsupported or over-budget cost estimates, and unbounded values reject before
+  state publication; accepted content joins the same cumulative semantic ledger
+  and exact-resume path as hypothesis and reformulation proposals.
 - Contradiction-triggered Discovery reformulation can now opt into a second
   typed semantic node. It receives only the predecessor hypothesis and bounded
   registered observations, must cite an actual parent contradiction, cannot

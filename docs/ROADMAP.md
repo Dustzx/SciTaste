@@ -167,8 +167,10 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   non-executable, fail-closed, and reusable across command recovery. A second
   handler now reformulates from a registered parent contradiction, appends an
   ordered semantic history, and enforces cumulative scenario cost without
-  changing controller authority. Semantic problem/idea formation, open-ended
-  retrieval, and comparative scientific-quality evidence remain pending.
+  changing controller authority. A third bounded handler now proposes a problem
+  and three to eight evidence-bound divergent idea seeds while leaving all
+  actions and portfolio selection to the controller. Open-ended retrieval and
+  comparative scientific-quality evidence remain pending.
 - A registered CPU experiment now runs through a shell-free Bubblewrap launcher
   with no network and a read-only filesystem, resource ceilings, exact source/stdout/
   stderr retention, strict replicate records, and independently derived metrics.
@@ -456,11 +458,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   authority. Live interruption recovery consumes an already recorded response
   without a second provider call and refuses ambiguous repeats.
 - Project-owned Discovery is the second normal model-node consumer. Its typed
-  hypothesis and reformulation nodes can replace scenario prose but cannot
-  choose actions, call tools, mutate state, or bypass project reservation.
-  Offline self-iteration covers accepted content, invalid source/observation
-  rejection, cumulative budget admission, ordered history, and no-second-call
-  resume; live scientific-quality gain is not yet claimed.
+  hypothesis, reformulation, and ideation nodes can replace scenario prose but
+  cannot choose actions, rank/select ideas, call tools, mutate state, allocate
+  actual budgets, or bypass project reservation. Offline self-iteration covers
+  accepted content, invalid source/observation/hypothesis rejection, divergent
+  proposal and cost bounds, cumulative budget admission, ordered history, and
+  no-second-call resume; live scientific-quality gain is not yet claimed.
 - The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result

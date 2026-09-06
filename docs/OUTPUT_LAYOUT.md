@@ -117,6 +117,11 @@ manifest step may introduce at most its command-compatible reference, invocation
 IDs cannot repeat, and every successor state must retain the complete ordered
 history and its cumulative known API cost.
 
+The `discovery-ideation` entry is introduced only by an `ideate` step after a
+supported active hypothesis. Its typed ledger proposal owns the problem and
+divergent idea-seed content; the subsequent `portfolio-select` step owns the
+controller's selection and never appears inside the semantic response.
+
 For a native measured run, `stages/communication/evidence_projection.json`
 binds the manuscript measurement to its predecessor state, interpretation,
 native execution record, and raw replicate-derived metric artifact. `paper.md`

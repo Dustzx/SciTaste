@@ -517,10 +517,15 @@ domain consumers. Extensions must register a node class and its exact input and
 output models under the class's own name; they cannot replace built-ins. A
 runtime reopening a ledger must supply the same extension registry, otherwise
 typed verification fails closed. Project-owned Discovery uses this boundary for
-`discovery-hypothesis` and `discovery-reformulation`, while retaining the shared
-cumulative ledger, recording, revision gate, and interruption recovery
-semantics. The second node is scoped to a predecessor hypothesis and registered
-observations and must cite a contradiction already linked to that hypothesis.
+`discovery-hypothesis`, `discovery-reformulation`, and `discovery-ideation`,
+while retaining the shared cumulative ledger, recording, revision gate, and
+interruption recovery semantics. Reformulation is scoped to a predecessor
+hypothesis and registered contradictions. Ideation is scoped to the active
+hypothesis and registered reproducible observations, returns only one problem
+plus three to eight divergent idea seeds, and cannot rank, select, execute, or
+allocate actual resources. Its larger offline profile permits 4,096 output
+tokens per response; all three nodes still share one 50,000-token cumulative
+project ceiling.
 
 Application bindings hash the complete non-secret backend configuration, not
 only provider/model labels. Invocation-aware construction lets a single strict

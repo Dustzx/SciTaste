@@ -459,6 +459,16 @@ adds a second reference to `executor_context.discovery_semantics`. The
 `REFORMULATE_HYPOTHESIS` decision is still made before content is applied by the
 normal controller/executor path.
 
+After the revised hypothesis has reproducible support, `ideate` can use
+`configs/model_nodes/discovery_ideation_self_iteration_v1.json` and profile
+`discovery-ideation-scripted`. Its typed response contains one problem and
+three to eight divergent idea seeds, each with validation, cost, value, and risk
+fields bound to the active hypothesis and registered observations. The node does
+not rank or select ideas: `FORMULATE_PROBLEM`, `IDEATE`, and the later
+`portfolio-select` decision remain in the normal controller/executor path. The
+offline profile allows up to 4,096 output tokens for this larger structured
+response while retaining the shared 50,000-token project ledger ceiling.
+
 ## Offline Evidence Loop
 
 Run a supported claim or a stable contradictory result:

@@ -87,6 +87,17 @@ is appended to the state semantic history. Scenario budget admission uses prior
 semantic cost plus the new response ceiling, and observed telemetry is checked
 again before the proposal enters state.
 
+After the revised active hypothesis receives reproducible support, `ideate` may
+opt into `discovery-ideation`. The model sees the exact active hypothesis,
+registered observations, research identity, and resource ceilings and returns
+only typed problem/idea content. Each proposal must cite registered
+reproducible evidence, target the active hypothesis, contain three to eight
+distinct mechanisms, and keep every cost estimate within the project budget.
+The normal controller/executor still owns problem formation and ideation
+actions, and `portfolio-select` remains a separate deterministic operation. A
+failure after semantic generation resumes from the accepted ledger entry
+without a second provider call.
+
 The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
 the study as one project run, exposes the run's `study/` directory through the
 normal current-stage alias, and binds its protocol, plan, launcher configuration,

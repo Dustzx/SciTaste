@@ -860,7 +860,7 @@ open-ended autonomy, model quality, or scientific effectiveness.
 
 ### ADR-033: Adaptive Discovery content is proposal-only and project-ledgered
 
-Status: accepted for bounded hypothesis formation.
+Status: accepted for bounded hypothesis, reformulation, and ideation content.
 
 Fixed scenario seeds make the native loop reproducible, but they do not let the
 system synthesize a new intuition or hypothesis from a registered landscape.
@@ -898,6 +898,18 @@ command-derived invocation identity, appends the accepted reference to state,
 and checks cumulative scenario cost before reservation and after telemetry. The
 controller still selects `REFORMULATE_HYPOTHESIS`; the provider cannot discard
 the parent, erase its contradictory observation, or advance state.
+
+After a reproducible observation supports the active hypothesis,
+`discovery-ideation` may propose one problem and three to eight divergent idea
+seeds. The input is the exact active hypothesis, registered observations,
+research identity, and project resource ceilings. Deterministic admission
+rejects unknown evidence or hypothesis identities, duplicate generators,
+hypotheses, mechanisms, or validation steps, unsupported/negative/unbounded
+cost and value fields, and any per-idea estimate above the project budget. The
+response deliberately has no preferred idea, ranking, actual budget assignment,
+action, tool, state, or execution field. Problem formation and idea generation
+therefore consume bounded semantic content, while the TasteController remains
+the sole portfolio selector.
 
 Semantic configuration is also part of identity. Non-secret backend
 configuration—including scripted response fixtures—is hashed into the binding,
