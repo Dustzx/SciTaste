@@ -18,6 +18,7 @@ const candidateRun = document.getElementById("candidate-run");
 const compareRunsButton = document.getElementById("compare-runs");
 
 const workspaceViews = Object.freeze(new Set([
+  "project-progress",
   "project-overview",
   "run-stage-explorer",
   "paper-evidence",
@@ -183,6 +184,130 @@ function renderArtifactViewer(data) {
   return container;
 }
 
+function renderProjectProgress(data) {
+  const container = document.createElement("div");
+  container.className = "progress-board";
+
+  const status = document.createElement("div");
+  status.className = `progress-status state-${data.project_state}`;
+  const statusTitle = document.createElement("strong");
+  appendText(statusTitle, `Observed project state · ${data.project_state}`);
+  status.append(statusTitle, fixedFields(data, [
+    "project_status", "publication_ready", "summary_ref_ids",
+  ]));
+
+  const counts = fixedFields(data.counts, [
+    "runs_registered",
+    "runs_completed",
+    "runs_active",
+    "runs_candidates",
+    "runs_blocked",
+    "runs_failed",
+    "runs_unavailable",
+    "runs_unknown",
+    "completed_stages",
+    "papers_registered",
+  ]);
+  counts.classList.add("progress-counts");
+  container.append(status, titledSection("Observed records · no inferred percentage", counts));
+
+  container.appendChild(titledSection("Declared focus and next gate", fixedFields(data, [
+    "focus",
+    "focus_status",
+    "next_gate",
+    "focus_ref_ids",
+  ])));
+
+  if (data.current_run_id) {
+    container.appendChild(titledSection("Selected current run · selection is not execution", fixedFields(data, [
+      "current_run_id",
+      "current_run_status",
+      "current_run_state",
+      "current_run_ref_ids",
+    ])));
+  }
+
+  if (data.milestones.length > 0) {
+    container.appendChild(titledSection("Declared project milestones", fixedRows(data.milestones, [
+      "milestone_id",
+      "recorded_on",
+      "reported_status",
+      "observed_state",
+      "decision",
+      "evidence_locator",
+      "evidence_binding",
+      "support_ref_ids",
+    ])));
+  } else {
+    container.appendChild(titledSection("Declared project milestones", fixedFields(data, [
+      "milestone_state", "milestone_reason_code",
+    ])));
+  }
+
+  if (data.attention.length > 0) {
+    container.appendChild(titledSection("Blocked and failed registered work", fixedRows(data.attention, [
+      "run_id",
+      "reported_status",
+      "classification",
+      "detail_state",
+      "recorded_reasons",
+      "source_locator",
+      "support_ref_ids",
+    ])));
+  }
+
+  container.appendChild(titledSection("Latest registered activity · manifest order", fixedRows(
+    data.recent_activity,
+    [
+      "run_id",
+      "reported_status",
+      "observed_state",
+      "provider",
+      "model_name",
+      "condition",
+      "evidence_scope",
+      "selected",
+      "superseded",
+      "source_locator",
+      "support_ref_ids",
+    ],
+  )));
+
+  if (data.stages.length > 0) {
+    container.appendChild(titledSection("Observed AutoResearchClaw stages", fixedRows(data.stages, [
+      "stage",
+      "label_en",
+      "label_zh",
+      "observed_state",
+      "artifact_count",
+      "output_locator",
+      "support_ref_ids",
+    ])));
+  } else {
+    container.appendChild(titledSection("AutoResearchClaw stage evidence", fixedFields(data, [
+      "stage_semantics", "stage_state", "stage_reason_code",
+    ])));
+  }
+
+  if (data.papers.length > 0) {
+    container.appendChild(titledSection("Registered papers", fixedRows(data.papers, [
+      "paper_id",
+      "title",
+      "reported_status",
+      "observed_state",
+      "publication_ready",
+      "selected",
+      "support_ref_ids",
+    ])));
+  }
+
+  container.appendChild(titledSection("Evidence-supported next-step candidates", fixedRows(
+    data.next_step_candidates,
+    ["kind", "label_code", "target_ids", "support_ref_ids"],
+  )));
+  return container;
+}
+
 const componentRenderers = Object.freeze({
   ProjectSummaryCard: (data) => fixedFields(
     data,
@@ -230,6 +355,7 @@ const componentRenderers = Object.freeze({
     data.proposals,
     ["event_id", "action_id", "status", "next_boundary", "execution_authority"],
   ),
+  ProjectProgressBoard: renderProjectProgress,
 });
 
 function renderWorkspace(documentValue) {
@@ -571,7 +697,7 @@ function currentProjectId() {
 }
 
 function defaultQuery(projectId) {
-  return {view: "project-overview", project_id: projectId};
+  return {view: "project-progress", project_id: projectId};
 }
 
 function validateIdentityQuery(query) {

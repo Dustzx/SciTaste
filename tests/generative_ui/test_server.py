@@ -197,6 +197,10 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "sessionStorage" not in script.text
     assert all(f"{item.value}:" in script.text for item in TrustedComponent)
     assert "/api/v2/workspace/projects" in script.text
+    assert '"project-progress"' in script.text
+    assert "ProjectProgressBoard: renderProjectProgress" in script.text
+    assert 'return {view: "project-progress"' in script.text
+    assert 'data-view="project-progress"' in index.text
     assert "history.pushState" in script.text
     assert 'window.addEventListener("popstate"' in script.text
     assert 'headers["If-None-Match"]' in script.text
@@ -270,6 +274,10 @@ def test_workspace_api_discovers_projects_and_conditionally_refreshes_views(
             origin + "/api/v2/workspace/projects/http-project/project-overview",
             headers=_headers(),
         )
+        progress = httpx.get(
+            origin + "/api/v2/workspace/projects/http-project/project-progress",
+            headers=_headers(),
+        )
         unchanged = httpx.get(
             origin + "/api/v2/workspace/projects/http-project/project-overview",
             headers={**_headers(), "If-None-Match": surface.headers["etag"]},
@@ -287,6 +295,10 @@ def test_workspace_api_discovers_projects_and_conditionally_refreshes_views(
         "view": "project-overview",
     }
     assert surface.json()["renderer"]["execution_authority"] == "none"
+    assert progress.status_code == 200
+    assert progress.json()["query"]["view"] == "project-progress"
+    assert progress.json()["renderer"]["catalog_version"] == ("scitaste-trusted-components-v2")
+    assert progress.json()["renderer"]["components"][0]["renderer"] == ("ProjectProgressBoard")
     assert unchanged.status_code == 304
     assert unchanged.content == b""
     assert unchanged.headers["etag"] == surface.headers["etag"]

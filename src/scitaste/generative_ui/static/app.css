@@ -301,6 +301,46 @@ fieldset {
   margin-top: 1rem;
 }
 
+.progress-board {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.progress-status {
+  border-left: 0.35rem solid #617269;
+  border-radius: 0.45rem;
+  padding: 0.8rem;
+}
+
+.progress-status.state-observed_completed {
+  background: #e3f2e8;
+  border-left-color: #247549;
+}
+
+.progress-status.state-current_work,
+.progress-status.state-candidate {
+  background: #eef3dd;
+  border-left-color: #748b24;
+}
+
+.progress-status.state-blocked,
+.progress-status.state-failed {
+  background: #f7e7e3;
+  border-left-color: var(--warning);
+}
+
+.progress-status.state-unavailable,
+.progress-status.state-unknown {
+  background: #eceeea;
+}
+
+.progress-counts {
+  background: #f5f7f2;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.7rem;
+}
+
 .comparison-grid {
   display: grid;
   gap: 1rem;

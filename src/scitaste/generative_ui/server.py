@@ -34,6 +34,7 @@ from scitaste.generative_ui.workspace import (
     PaperEvidenceQuery,
     PendingProposalsQuery,
     ProjectOverviewQuery,
+    ProjectProgressQuery,
     RunComparisonQuery,
     RunStageQuery,
     UnknownWorkspaceSelectionError,
@@ -534,6 +535,8 @@ def _workspace_query(project_id: str, raw_view: str, tail: list[str]):
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "view_not_found", "workspace view not found")
     if view is WorkspaceView.PROJECT_OVERVIEW and not tail:
         return ProjectOverviewQuery(project_id=project_id)
+    if view is WorkspaceView.PROJECT_PROGRESS and not tail:
+        return ProjectProgressQuery(project_id=project_id)
     if view is WorkspaceView.RUN_STAGE_EXPLORER and (
         not tail or (len(tail) == 2 and tail[0] == "runs")
     ):

@@ -14,9 +14,9 @@ model call, controller approval, or task executor.
 
 ## Evidence-native project workspace
 
-`WorkspaceSurfaceFactory` is the server-owned composer for seven closed views:
-project list, project overview, run/stage explorer, paper/evidence, run
-comparison, blockers, and pending proposals. A browser may select only the
+`WorkspaceSurfaceFactory` is the server-owned composer for eight closed views:
+project list, project progress, project overview, run/stage explorer,
+paper/evidence, run comparison, blockers, and pending proposals. A browser may select only the
 view and canonical project-owned run or paper identities defined by the
 corresponding discriminated query model. It cannot submit components, fields,
 layout, evidence, filters, prose, or renderer code.
@@ -28,7 +28,7 @@ closed. Empty projects, absent papers, unavailable stages, and missing
 comparable metrics use explicit typed availability states; the composer does not
 invent research progress or substitute model-authored explanations.
 
-The fixed receiver provides a project switcher, the six project-scoped view
+The fixed receiver provides a project switcher, the seven project-scoped view
 controls, run and paper selection, comparison controls, freshness/provenance,
 and browser back/forward deep links. Conditional GET uses the workspace
 fingerprint as an ETag. The responsive shell and all navigation remain receiver
@@ -36,6 +36,50 @@ code shipped in the package; only validated component data changes. Every
 workspace render and project-selector change clears the prior run and paper
 catalogs before admitting identities from the newly validated view, so browser
 history cannot retain another project's selection controls.
+
+### Progress-first self-hosting view
+
+`project-progress` is the default view after selecting a project. Its
+`ProjectProgressBoard` is a receiver-owned component built from the current
+`PROJECT.json`, registered run records, current stage binding, and registered
+paper manifests. It reports observed record counts, the selected current run,
+declared focus and next gate, latest registered activity in manifest order,
+completed AutoResearchClaw stages where those semantics apply, paper state,
+blocked/failed run attention, and evidence-supported next-step candidates.
+
+Progress is categorical rather than numeric. The contract distinguishes
+`observed_completed`, `current_work`, `blocked`, `failed`, `candidate`,
+`unavailable`, and `unknown`; it deliberately has no percent, ratio, schedule,
+or estimated-completion field. A selected `current_run` is described as a
+selection and never upgraded to currently executing. A completed run also does
+not make the project complete. Status mapping uses a small exact allowlist so a
+novel or compound status remains `unknown` unless its meaning is explicitly
+registered.
+
+Every visible progress row carries supporting evidence references. Run and
+paper status rows cite both `PROJECT.json` and their content-addressed run or
+paper record because selection and status come from the project manifest.
+Optional `current_focus`, run `blockers`, and `iterations` extensions are parsed
+through strict local schemas. Invalid extensions degrade to an explicit
+unavailable/fallback state rather than becoming display data. A milestone
+locator covered by a bound evidence directory is marked `content_addressed`;
+otherwise it remains only `manifest_declared` and is never exposed as an
+inspection target.
+
+Next-step entries are capabilities for later intent planning, not controller
+decisions. They can offer progress review, blocker diagnosis, comparison of the
+latest two registered runs, paper-evidence review, or review of a declared next
+gate only when their required project records exist. They contain no command or
+execution authority.
+
+The existing `scitaste-self-development` project is a read-only self-hosting
+acceptance case. At revision 21 it truthfully yields nine registered runs, four
+observed completions, two blocked records, one failed record, one candidate,
+one unknown reference, four manifest-declared milestones, no registered paper,
+and a blocked overall project status. That project record predates some later
+repository work, so the UI must not infer newer progress from Git or docs. Main
+must register later milestones through the normal `ProjectRuntime` workflow if
+they should appear in this view.
 
 ## Trusted project surface factory
 
@@ -255,6 +299,7 @@ of their content-addressed artifact evidence.
 | `RunComparisonPanel` | `RunComparisonPanelData` |
 | `RunBlockerPanel` | `RunBlockerPanelData` |
 | `PendingProposalList` | `PendingProposalListData` |
+| `ProjectProgressBoard` | `ProjectProgressBoardData` |
 
 Adapters and receivers can obtain the exact JSON Schema for any registry member
 with `component_data_json_schema`; every object in those schemas forbids extra
@@ -365,7 +410,8 @@ The registry contains `ProjectSummaryCard`, `StageTimeline`,
 `BlockerList`, `RunHealth`, `BudgetMeter`, `DecisionComparison`, `EvidenceGraph`,
 `ClaimMatrix`, `ReviewerQueue`, `ArtifactViewer`, `PaperPreview`,
 `AvailabilityNotice`, `RunStageExplorer`, `EvidenceInventory`,
-`RunComparisonPanel`, `RunBlockerPanel`, and `PendingProposalList`. A renderer
+`RunComparisonPanel`, `RunBlockerPanel`, `PendingProposalList`, and
+`ProjectProgressBoard`. A renderer
 must map these identifiers to code shipped with and trusted by the application.
 An unknown component is invalid rather than a request to generate new UI code.
 
