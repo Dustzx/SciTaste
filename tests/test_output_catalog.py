@@ -72,7 +72,7 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
         json.dumps(
             {
                 "surface_id": "project-overview",
-                "fingerprint": "a" * 64,
+                "surface_fingerprint": "a" * 64,
             }
         ),
         encoding="utf-8",

@@ -324,6 +324,9 @@ semantic versioning.
 
 ### Fixed
 
+- Output catalog discovery now reads the canonical `surface_fingerprint` field
+  emitted by generated project surfaces while retaining legacy `fingerprint`
+  compatibility, so current project interfaces no longer appear as `unknown`.
 - Generic `model-node runtime status|verify` now loads the shipped additive
   Discovery node registry, so a valid hypothesis/reformulation/ideation ledger
   is independently readable outside `project discovery verify`.

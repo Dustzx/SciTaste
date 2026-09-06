@@ -146,7 +146,12 @@ def _discover_project_surfaces(
             surfaces.append(
                 {
                     "surface_id": str(surface.get("surface_id", bundle.name)),
-                    "fingerprint": str(surface.get("fingerprint", "unknown")),
+                    "fingerprint": str(
+                        surface.get(
+                            "surface_fingerprint",
+                            surface.get("fingerprint", "unknown"),
+                        )
+                    ),
                     "directory": _relative(bundle, outputs_root),
                     **files,
                 }
