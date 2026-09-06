@@ -10,3 +10,6 @@ profiles:
   - path: profile_discovery_reformulation_scripted_v1.yaml
     sha256: 8e46f3884a95040525926835b58ccd2a9b71f4ad86c53e48e031d7096b97f226
     profile_sha256: ebece62a5089a474f647e3e286539e4ae4f9ab76b6a4c8262b16cef366a95a13
+  - path: profile_discovery_ideation_scripted_v1.yaml
+    sha256: 483616d86152c78318e118b061b9e3113d88d1e4eb2ce3d9033d92330ad3e4c3
+    profile_sha256: dc2800931e8bdd6052fab38a6113eb57de79bd5c3720ff68980fba46fb6e847a

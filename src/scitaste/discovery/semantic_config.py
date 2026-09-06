@@ -49,9 +49,7 @@ class DiscoverySemanticRuntimeConfig(BaseModel):
     ) -> DiscoverySemanticBinding:
         return DiscoverySemanticBinding(
             backend=self.backend.build(self.request_id or invocation_id),
-            backend_factory=(
-                None if self.request_id is not None else self.backend.build
-            ),
+            backend_factory=(None if self.request_id is not None else self.backend.build),
             backend_configuration=self.backend.model_dump(mode="json"),
             profile=profile,
             policy=self.policy,

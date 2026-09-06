@@ -9,16 +9,13 @@ from scitaste.project import ProjectManifest, ProjectRuntime
 
 SCENARIO_PATH = Path("configs/experiments/discovery_strong.yaml")
 SEMANTIC_SCENARIO_PATH = Path("configs/cases/scitaste_project_owned_discovery_iteration.yaml")
-SEMANTIC_CONFIG_PATH = Path(
-    "configs/model_nodes/discovery_hypothesis_scripted.example.json"
-)
+SEMANTIC_CONFIG_PATH = Path("configs/model_nodes/discovery_hypothesis_scripted.example.json")
 SEMANTIC_PROFILE_SET = Path("configs/model_nodes/discovery_semantic_profiles.example.yaml")
-REFORMULATION_SCENARIO_PATH = Path(
-    "configs/cases/scitaste_semantic_reformulation_iteration.yaml"
-)
+REFORMULATION_SCENARIO_PATH = Path("configs/cases/scitaste_semantic_reformulation_iteration.yaml")
 REFORMULATION_CONFIG_PATH = Path(
     "configs/model_nodes/discovery_reformulation_self_iteration_v1.json"
 )
+IDEATION_CONFIG_PATH = Path("configs/model_nodes/discovery_ideation_self_iteration_v1.json")
 
 
 def _invoke(capsys, *arguments: str) -> dict[str, object]:
@@ -134,9 +131,7 @@ def test_project_discovery_cli_runs_bounded_semantic_hypothesis(
 
     advanced = _invoke(capsys, "project", "discovery", "advance", *common)
     assert advanced["verification"]["semantic_proposal_count"] == 1
-    assert advanced["command_report"]["details"]["content_origin"] == (
-        "bounded-semantic-proposal"
-    )
+    assert advanced["command_report"]["details"]["content_origin"] == ("bounded-semantic-proposal")
     assert advanced["command_report"]["semantic_proposal"]["advisory_only"] is True
     assert advanced["command_report"]["semantic_proposal"]["executable"] is False
 
@@ -227,3 +222,39 @@ def test_project_discovery_cli_runs_state_bound_semantic_reformulation(
     assert reformulated["command_report"]["semantic_proposal"]["node_name"] == (
         "discovery-reformulation"
     )
+
+    reprobed = _invoke(
+        capsys,
+        "project",
+        "discovery",
+        "advance",
+        *common,
+        "--operation",
+        "probe",
+        "--signal-number",
+        "2",
+        "--expected-revision",
+        str(reformulated["project_revision"]),
+    )
+    ideated = _invoke(
+        capsys,
+        "project",
+        "discovery",
+        "advance",
+        *common,
+        "--operation",
+        "ideate",
+        "--expected-revision",
+        str(reprobed["project_revision"]),
+        "--semantic-config",
+        str(IDEATION_CONFIG_PATH),
+        "--semantic-profile-set",
+        str(SEMANTIC_PROFILE_SET),
+        "--semantic-profile-id",
+        "discovery-ideation-scripted",
+    )
+
+    assert ideated["verification"]["semantic_proposal_count"] == 3
+    assert ideated["command_report"]["details"]["content_origin"] == ("bounded-semantic-ideation")
+    assert ideated["command_report"]["details"]["active_hypothesis_id"] == ("working-hypothesis-02")
+    assert ideated["command_report"]["semantic_proposal"]["node_name"] == ("discovery-ideation")

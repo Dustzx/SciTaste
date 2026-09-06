@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0",
+  "request_id": null,
+  "policy": {
+    "policy_id": "discovery-ideation-self-iteration-v1",
+    "enabled": true,
+    "allowed_node_names": ["discovery-ideation"],
+    "expected_backend": "scripted",
+    "expected_model": "scripted-v1",
+    "allowed_tool_names": [],
+    "allowed_action_types": [],
+    "max_request_bytes": 180000,
+    "max_input_tokens": 10000,
+    "max_output_tokens": 4096,
+    "max_total_tokens": 14096,
+    "max_api_cost_usd": 0.01,
+    "max_latency_ms": 60000,
+    "require_cost_telemetry": true,
+    "ambiguity_margin_max": 0.05
+  },
+  "backend": {
+    "kind": "scripted",
+    "provider": "scripted",
+    "model": "scripted-v1",
+    "reply": {
+      "output_payload": {
+        "schema_version": "1.0",
+        "active_hypothesis_id": "working-hypothesis-02",
+        "supporting_observation_ids": [
+          "obs-probe-02-working-hypothesis-02"
+        ],
+        "problem": {
+          "explanation_gap": "Discovery content can now adapt at hypothesis and reformulation time, but problem framing and divergent idea generation still fall back to scenario-authored prose after the evidence state changes.",
+          "importance": "Evidence-bound problem and idea semantics are needed for useful research autonomy while deterministic taste policy retains selection, transition, budget, and execution authority."
+        },
+        "idea_seeds": [
+          {
+            "generator": "semantic-continuity",
+            "hypothesis": "A command-specific ideation node can preserve evidence continuity from active hypothesis through problem formation and divergent idea generation.",
+            "proposed_mechanism": "Bind one typed problem and three divergent idea seeds to the exact predecessor state, active hypothesis, registered observations, runtime ledger, and cumulative budget.",
+            "expected_validation": [
+              "reject unknown observation and hypothesis identifiers",
+              "verify semantic history and cumulative cost",
+              "resume after post-generation execution failure"
+            ],
+            "expected_cost": {
+              "gpu_hours": 0.0,
+              "experiments": 1.0,
+              "implementation_risk": 0.3
+            },
+            "expected_value": {
+              "problem_validity": 0.98,
+              "novelty": 0.86,
+              "feasibility": 0.94,
+              "evidence_tractability": 0.98,
+              "expected_empirical_signal": 0.93
+            },
+            "main_risk": "The scripted run proves lineage and authority boundaries but not open-ended scientific creativity."
+          },
+          {
+            "generator": "deterministic-scenario-library",
+            "hypothesis": "A larger library of scenario-authored problems and idea seeds can approximate enough adaptive behavior without an ideation model call.",
+            "proposed_mechanism": "Select fixed problem and idea templates using deterministic observation and hypothesis tags.",
+            "expected_validation": [
+              "measure template coverage",
+              "replay matched evidence states"
+            ],
+            "expected_cost": {
+              "gpu_hours": 0.0,
+              "experiments": 1.0,
+              "implementation_risk": 0.15
+            },
+            "expected_value": {
+              "problem_validity": 0.6,
+              "novelty": 0.25,
+              "feasibility": 0.98,
+              "evidence_tractability": 0.9,
+              "expected_empirical_signal": 0.45
+            },
+            "main_risk": "The caller must anticipate the useful problem framing and mechanisms before observing evidence."
+          },
+          {
+            "generator": "free-form-research-agent",
+            "hypothesis": "An unconstrained research agent can generate and select stronger ideas by controlling the entire post-probe workflow.",
+            "proposed_mechanism": "Delegate problem framing, idea ranking, state mutation, and execution to one free-form provider response.",
+            "expected_validation": [
+              "compare open-ended task outcomes",
+              "audit invalid transition frequency"
+            ],
+            "expected_cost": {
+              "gpu_hours": 0.1,
+              "experiments": 3.0,
+              "implementation_risk": 0.95
+            },
+            "expected_value": {
+              "problem_validity": 0.55,
+              "novelty": 0.5,
+              "feasibility": 0.35,
+              "evidence_tractability": 0.15,
+              "expected_empirical_signal": 0.6
+            },
+            "main_risk": "Evidence, resource, selection, and transition authority become difficult to audit or reproduce."
+          }
+        ],
+        "alternative_problem_formulations": [
+          "Frame the remaining gap as semantic continuity across nonlinear Discovery stages.",
+          "Frame the remaining gap as divergent idea generation under evidence and resource constraints."
+        ],
+        "uncertainty": "This bounded scripted self-iteration validates contracts and project ownership; live-model scientific-quality gains remain unmeasured."
+      },
+      "usage": {
+        "input_tokens": 196,
+        "output_tokens": 284,
+        "cost_usd": 0.0
+      },
+      "latency_ms": 1.0,
+      "tool_calls": [],
+      "response_backend": null,
+      "response_model": null
+    }
+  }
+}

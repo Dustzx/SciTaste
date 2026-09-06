@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scitaste.discovery.hypothesis import HypothesisSeed
+from scitaste.discovery.ideas import IdeaSeed
 from scitaste.discovery.landscape import LandscapeFinding
-from scitaste.state.research_state import ResearchObservation, WorkingHypothesis
+from scitaste.discovery.problem import ProblemSeed
+from scitaste.state.research_state import (
+    ResearchObservation,
+    ResourceBudget,
+    WorkingHypothesis,
+)
 
 DISCOVERY_HYPOTHESIS_NODE = "discovery-hypothesis"
 DISCOVERY_REFORMULATION_NODE = "discovery-reformulation"
+DISCOVERY_IDEATION_NODE = "discovery-ideation"
 DISCOVERY_SEMANTIC_NODES = (
     DISCOVERY_HYPOTHESIS_NODE,
     DISCOVERY_REFORMULATION_NODE,
+    DISCOVERY_IDEATION_NODE,
 )
 DEFAULT_PROBE_TYPES = (
     "ablation",
@@ -179,11 +188,95 @@ class DiscoveryReformulationProposal(DiscoverySemanticModel):
         return stripped
 
 
+class DiscoveryIdeationInput(DiscoverySemanticModel):
+    """Bounded predecessor state used to propose problem and idea content."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    research_direction: str = Field(min_length=1, max_length=4_000)
+    target_domain: str = Field(min_length=1, max_length=500)
+    target_venue: str | None = Field(default=None, max_length=500)
+    resource_budget: ResourceBudget
+    active_hypothesis: WorkingHypothesis
+    observations: tuple[ResearchObservation, ...] = Field(min_length=1, max_length=40)
+
+    @field_validator("observations")
+    @classmethod
+    def observations_are_unique(
+        cls,
+        values: tuple[ResearchObservation, ...],
+    ) -> tuple[ResearchObservation, ...]:
+        identifiers = [item.observation_id for item in values]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("ideation observation identifiers must be unique")
+        return values
+
+    @model_validator(mode="after")
+    def contains_reproducible_evidence(self) -> DiscoveryIdeationInput:
+        if not any(item.reproducible for item in self.observations):
+            raise ValueError("semantic ideation requires a reproducible observation")
+        return self
+
+    @property
+    def observation_ids(self) -> tuple[str, ...]:
+        return tuple(sorted(item.observation_id for item in self.observations))
+
+
+class DiscoveryIdeationProposal(DiscoverySemanticModel):
+    """Problem and divergent idea content with no selection or execution field."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    active_hypothesis_id: str = Field(min_length=1, max_length=200)
+    supporting_observation_ids: tuple[str, ...] = Field(min_length=1, max_length=40)
+    problem: ProblemSeed
+    idea_seeds: tuple[IdeaSeed, ...] = Field(min_length=3, max_length=8)
+    alternative_problem_formulations: tuple[str, ...] = Field(min_length=1, max_length=5)
+    uncertainty: str = Field(min_length=1, max_length=2_000)
+
+    @field_validator("supporting_observation_ids")
+    @classmethod
+    def observation_ids_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if len(values) != len(set(values)):
+            raise ValueError("supporting observation identifiers must be unique")
+        return tuple(sorted(values))
+
+    @field_validator("alternative_problem_formulations")
+    @classmethod
+    def alternatives_are_distinct(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        stripped = tuple(item.strip() for item in values)
+        if any(not item or len(item) > 2_000 for item in stripped):
+            raise ValueError("alternative problem formulations must be non-blank and bounded")
+        if len({item.casefold() for item in stripped}) != len(stripped):
+            raise ValueError("alternative problem formulations must be distinct")
+        return stripped
+
+    @model_validator(mode="after")
+    def ideas_are_bounded_and_divergent(self) -> DiscoveryIdeationProposal:
+        generators = [item.generator for item in self.idea_seeds]
+        if any(
+            len(item) > 80 or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", item) is None
+            for item in generators
+        ):
+            raise ValueError("idea generators must be bounded lowercase kebab-case identifiers")
+        if len(generators) != len(set(generators)):
+            raise ValueError("semantic idea generators must be unique")
+        hypotheses = [item.hypothesis.strip().casefold() for item in self.idea_seeds]
+        mechanisms = [item.proposed_mechanism.strip().casefold() for item in self.idea_seeds]
+        if len(hypotheses) != len(set(hypotheses)):
+            raise ValueError("semantic idea hypotheses must be distinct")
+        if len(mechanisms) != len(set(mechanisms)):
+            raise ValueError("semantic idea mechanisms must be distinct")
+        return self
+
+
 class DiscoverySemanticReference(DiscoverySemanticModel):
     """Content binding from a discovery state to one accepted runtime proposal."""
 
     schema_version: Literal["1.0"] = "1.0"
-    node_name: Literal["discovery-hypothesis", "discovery-reformulation"]
+    node_name: Literal[
+        "discovery-hypothesis",
+        "discovery-reformulation",
+        "discovery-ideation",
+    ]
     invocation_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     ledger_entry_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -200,10 +293,13 @@ class DiscoverySemanticReference(DiscoverySemanticModel):
 __all__ = [
     "DEFAULT_PROBE_TYPES",
     "DISCOVERY_HYPOTHESIS_NODE",
+    "DISCOVERY_IDEATION_NODE",
     "DISCOVERY_REFORMULATION_NODE",
     "DISCOVERY_SEMANTIC_NODES",
     "DiscoveryHypothesisInput",
     "DiscoveryHypothesisProposal",
+    "DiscoveryIdeationInput",
+    "DiscoveryIdeationProposal",
     "DiscoveryIntuitionProposal",
     "DiscoveryReformulationInput",
     "DiscoveryReformulationProposal",

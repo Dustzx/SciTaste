@@ -15,6 +15,8 @@ from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_disco
 from scitaste.discovery.semantic_models import (
     DiscoveryHypothesisInput,
     DiscoveryHypothesisProposal,
+    DiscoveryIdeationInput,
+    DiscoveryIdeationProposal,
     DiscoveryIntuitionProposal,
     DiscoveryReformulationInput,
     DiscoveryReformulationProposal,
@@ -31,6 +33,7 @@ _PROJECT_WORKFLOW_EXPORTS = {
 }
 _SEMANTIC_RUNTIME_EXPORTS = {
     "DiscoveryHypothesisNode",
+    "DiscoveryIdeationNode",
     "DiscoveryReformulationNode",
     "DiscoverySemanticBinding",
 }
@@ -49,6 +52,7 @@ def __getattr__(name: str):
         return getattr(semantic, name)
     raise AttributeError(name)
 
+
 __all__ = [
     "ContradictoryPilotEvidence",
     "DiscoveryCommand",
@@ -58,6 +62,9 @@ __all__ = [
     "DiscoveryHypothesisInput",
     "DiscoveryHypothesisNode",
     "DiscoveryHypothesisProposal",
+    "DiscoveryIdeationInput",
+    "DiscoveryIdeationNode",
+    "DiscoveryIdeationProposal",
     "DiscoveryIntuitionProposal",
     "DiscoveryLoop",
     "DiscoveryReformulationInput",

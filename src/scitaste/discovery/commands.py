@@ -24,8 +24,10 @@ from scitaste.discovery.probe_agent import (
 from scitaste.discovery.problem import ProblemFormationAgent
 from scitaste.discovery.semantic_models import (
     DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_IDEATION_NODE,
     DISCOVERY_REFORMULATION_NODE,
     DiscoveryHypothesisProposal,
+    DiscoveryIdeationProposal,
     DiscoveryReformulationProposal,
     DiscoverySemanticReference,
 )
@@ -43,7 +45,9 @@ from scitaste.state.research_state import (
 from scitaste.state.transitions import apply_transition
 from scitaste.taste.controller import TasteController
 
-_SemanticProposal = DiscoveryHypothesisProposal | DiscoveryReformulationProposal
+_SemanticProposal = (
+    DiscoveryHypothesisProposal | DiscoveryReformulationProposal | DiscoveryIdeationProposal
+)
 
 if TYPE_CHECKING:
     from scitaste.discovery.loop import DiscoveryScenario
@@ -253,6 +257,10 @@ class DiscoveryCommandRunner:
                     DiscoveryReformulationProposal,
                     DISCOVERY_REFORMULATION_NODE,
                 ),
+                DiscoveryCommand.IDEATE: (
+                    DiscoveryIdeationProposal,
+                    DISCOVERY_IDEATION_NODE,
+                ),
             }.get(command)
             if (
                 expected is None
@@ -293,7 +301,16 @@ class DiscoveryCommandRunner:
             )
         elif command == DiscoveryCommand.IDEATE:
             assert state is not None
-            outcome = self._ideate(scenario, state)
+            outcome = self._ideate(
+                scenario,
+                state,
+                semantic_proposal=(
+                    semantic_proposal
+                    if isinstance(semantic_proposal, DiscoveryIdeationProposal)
+                    else None
+                ),
+                semantic_reference=semantic_reference,
+            )
         else:
             assert command == DiscoveryCommand.PORTFOLIO_SELECT and state is not None
             outcome = self._select_portfolio(state)
@@ -315,9 +332,7 @@ class DiscoveryCommandRunner:
         semantic_reference: DiscoverySemanticReference | None = None,
     ) -> _CommandOutcome:
         semantic_context = (
-            semantic_reference.model_dump(mode="json")
-            if semantic_reference is not None
-            else None
+            semantic_reference.model_dump(mode="json") if semantic_reference is not None else None
         )
         executor_context: dict[str, Any] = {
             "discovery_command": {
@@ -447,9 +462,7 @@ class DiscoveryCommandRunner:
                     else []
                 ),
                 "uncertainty": (
-                    semantic_proposal.uncertainty
-                    if semantic_proposal is not None
-                    else None
+                    semantic_proposal.uncertainty if semantic_proposal is not None else None
                 ),
             },
         )
@@ -603,9 +616,7 @@ class DiscoveryCommandRunner:
                         semantic_proposal.supporting_observation_ids
                     ),
                     "retained_constraints": list(semantic_proposal.retained_constraints),
-                    "alternative_explanations": list(
-                        semantic_proposal.alternative_explanations
-                    ),
+                    "alternative_explanations": list(semantic_proposal.alternative_explanations),
                     "uncertainty": semantic_proposal.uncertainty,
                 }
             )
@@ -620,8 +631,13 @@ class DiscoveryCommandRunner:
         self,
         scenario: DiscoveryScenario,
         source_state: ResearchState,
+        *,
+        semantic_proposal: DiscoveryIdeationProposal | None = None,
+        semantic_reference: DiscoverySemanticReference | None = None,
     ) -> _CommandOutcome:
         state = source_state.model_copy(deep=True)
+        if semantic_reference is not None:
+            self._bind_semantic_reference(state, semantic_reference)
         decisions: list[ResearchDecision] = []
         results: list[ExecutionResult] = []
         if state.active_problem_id is None:
@@ -644,11 +660,15 @@ class DiscoveryCommandRunner:
             problem = ProblemFormationAgent().form(
                 problem_id=self._next_problem_id(state),
                 observations=state.observations,
-                seed=scenario.problem,
+                seed=(
+                    semantic_proposal.problem if semantic_proposal is not None else scenario.problem
+                ),
             )
             state.problem_candidates.append(problem)
             state.active_problem_id = problem.problem_id
         else:
+            if semantic_proposal is not None:
+                raise ValueError("semantic ideation requires problem formation in the same command")
             problem = next(
                 item
                 for item in state.problem_candidates
@@ -671,17 +691,36 @@ class DiscoveryCommandRunner:
         ideas = MatureIdeaGenerator().generate(
             problem=problem,
             observations=state.observations,
-            seeds=scenario.idea_seeds,
+            seeds=(
+                list(semantic_proposal.idea_seeds)
+                if semantic_proposal is not None
+                else scenario.idea_seeds
+            ),
         )
         state.candidate_ideas.extend(ideas)
+        details: dict[str, Any] = {
+            "problem_id": problem.problem_id,
+            "candidate_idea_ids": [item.idea_id for item in ideas],
+        }
+        if semantic_proposal is not None:
+            details.update(
+                {
+                    "content_origin": "bounded-semantic-ideation",
+                    "active_hypothesis_id": semantic_proposal.active_hypothesis_id,
+                    "supporting_observation_ids": list(
+                        semantic_proposal.supporting_observation_ids
+                    ),
+                    "alternative_problem_formulations": list(
+                        semantic_proposal.alternative_problem_formulations
+                    ),
+                    "uncertainty": semantic_proposal.uncertainty,
+                }
+            )
         return _CommandOutcome(
             state=state,
             decisions=decisions,
             results=results,
-            details={
-                "problem_id": problem.problem_id,
-                "candidate_idea_ids": [item.idea_id for item in ideas],
-            },
+            details=details,
         )
 
     def _select_portfolio(self, source_state: ResearchState) -> _CommandOutcome:
@@ -744,9 +783,7 @@ class DiscoveryCommandRunner:
         if raw_history is None:
             legacy = state.executor_context.get("discovery_semantic")
             history = [] if legacy is None else [legacy]
-        elif isinstance(raw_history, list) and all(
-            isinstance(item, dict) for item in raw_history
-        ):
+        elif isinstance(raw_history, list) and all(isinstance(item, dict) for item in raw_history):
             history = list(raw_history)
         else:
             raise ValueError("discovery semantic history is malformed")

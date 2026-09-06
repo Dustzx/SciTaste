@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from pydantic import JsonValue
 
+from scitaste.discovery.ideas import IdeaSeed
 from scitaste.discovery.semantic_models import (
     DEFAULT_PROBE_TYPES,
     DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_IDEATION_NODE,
     DISCOVERY_REFORMULATION_NODE,
     DISCOVERY_SEMANTIC_NODES,
     DiscoveryHypothesisInput,
     DiscoveryHypothesisProposal,
+    DiscoveryIdeationInput,
+    DiscoveryIdeationProposal,
     DiscoveryIntuitionProposal,
     DiscoveryReformulationInput,
     DiscoveryReformulationProposal,
@@ -31,11 +36,11 @@ from scitaste.model_nodes.runtime import (
     RuntimeInvocationReceipt,
     RuntimeOutcome,
 )
+from scitaste.state.research_state import ResourceBudget
+from scitaste.taste.utility import DEFAULT_VALUE_WEIGHTS
 
 
-class DiscoveryHypothesisNode(
-    ModelNode[DiscoveryHypothesisInput, DiscoveryHypothesisProposal]
-):
+class DiscoveryHypothesisNode(ModelNode[DiscoveryHypothesisInput, DiscoveryHypothesisProposal]):
     """Propose grounded semantics while leaving all actions to SciTaste policy."""
 
     node_name = DISCOVERY_HYPOTHESIS_NODE
@@ -69,8 +74,7 @@ class DiscoveryHypothesisNode(
         if set(proposal.hypothesis.proposed_probe_types) - set(input_data.permitted_probe_types):
             reasons.append("hypothesis proposes a probe type outside the deterministic allowlist")
         predictions = [
-            item.strip().casefold()
-            for item in proposal.hypothesis.falsifiable_predictions
+            item.strip().casefold() for item in proposal.hypothesis.falsifiable_predictions
         ]
         if len(predictions) != len(set(predictions)):
             reasons.append("falsifiable predictions must be distinct")
@@ -123,13 +127,10 @@ class DiscoveryReformulationNode(
             input_data.parent_hypothesis.statement.strip().casefold()
         ):
             reasons.append("reformulation must differ from the parent hypothesis")
-        if set(proposal.hypothesis.proposed_probe_types) - set(
-            input_data.permitted_probe_types
-        ):
+        if set(proposal.hypothesis.proposed_probe_types) - set(input_data.permitted_probe_types):
             reasons.append("reformulation proposes a probe type outside the allowlist")
         predictions = [
-            item.strip().casefold()
-            for item in proposal.hypothesis.falsifiable_predictions
+            item.strip().casefold() for item in proposal.hypothesis.falsifiable_predictions
         ]
         if len(predictions) != len(set(predictions)):
             reasons.append("falsifiable predictions must be distinct")
@@ -139,6 +140,102 @@ class DiscoveryReformulationNode(
             reasons.append("reformulation exceeds the prediction count limit")
         if len(proposal.hypothesis.proposed_probe_types) > 5:
             reasons.append("reformulation exceeds the probe type count limit")
+        return reasons
+
+
+class DiscoveryIdeationNode(ModelNode[DiscoveryIdeationInput, DiscoveryIdeationProposal]):
+    """Propose evidence-bound problem and idea content without selecting an idea."""
+
+    node_name = DISCOVERY_IDEATION_NODE
+    prompt_version = "discovery-ideation-v1"
+    system_instruction = (
+        "Propose one research problem and three to eight genuinely different idea seeds from "
+        "only the supplied active hypothesis, registered observations, research identity, and "
+        "resource ceilings. Cite only supplied observation identifiers. Return content and "
+        "estimates only: do not choose a preferred idea, rank candidates, call tools, execute "
+        "work, mutate state, assign actual budgets, or claim evidence not supplied."
+    )
+    input_model = DiscoveryIdeationInput
+    output_model = DiscoveryIdeationProposal
+
+    def _proposal_rejections(
+        self,
+        proposal: DiscoveryIdeationProposal,
+        *,
+        input_data: DiscoveryIdeationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons: list[str] = []
+        supplied_observations = set(input_data.observation_ids)
+        cited_observations = set(proposal.supporting_observation_ids)
+        reproducible_observations = {
+            item.observation_id for item in input_data.observations if item.reproducible
+        }
+        if cited_observations - supplied_observations:
+            reasons.append("ideation references an observation outside the supplied state")
+        if not cited_observations.intersection(reproducible_observations):
+            reasons.append("ideation does not cite a reproducible registered observation")
+        if set(context.evidence_ids) != supplied_observations:
+            reasons.append("node context observation scope differs from the supplied state")
+        if proposal.active_hypothesis_id != input_data.active_hypothesis.hypothesis_id:
+            reasons.append("ideation proposal targets a different active hypothesis")
+        for idea in proposal.idea_seeds:
+            reasons.extend(self._idea_rejections(idea, input_data.resource_budget))
+        problem_text = (proposal.problem.explanation_gap, proposal.problem.importance)
+        if any(not item.strip() or len(item) > 4_000 for item in problem_text):
+            reasons.append("ideation problem content exceeds the semantic limit")
+        return sorted(set(reasons))
+
+    @staticmethod
+    def _idea_rejections(idea: IdeaSeed, budget: ResourceBudget) -> list[str]:
+        reasons: list[str] = []
+        text_fields = (
+            idea.hypothesis,
+            idea.proposed_mechanism,
+            idea.main_risk,
+            *idea.expected_validation,
+        )
+        if any(not item.strip() or len(item) > 4_000 for item in text_fields):
+            reasons.append("semantic idea content exceeds the per-field limit")
+        validations = [item.strip().casefold() for item in idea.expected_validation]
+        if len(validations) > 8 or len(validations) != len(set(validations)):
+            reasons.append("semantic idea validation steps must be bounded and distinct")
+        allowed_costs = {
+            "gpu_hours",
+            "experiments",
+            "wall_time_hours",
+            "api_cost_usd",
+            "implementation_risk",
+        }
+        if len(idea.expected_cost) > len(allowed_costs) or set(idea.expected_cost) - allowed_costs:
+            reasons.append("semantic idea uses an unsupported expected-cost field")
+        if any(not math.isfinite(value) or value < 0 for value in idea.expected_cost.values()):
+            reasons.append("semantic idea expected costs must be finite and nonnegative")
+        experiments = idea.expected_cost.get("experiments")
+        if experiments is not None and not experiments.is_integer():
+            reasons.append("semantic idea experiment cost must be an integer count")
+        ceilings = {
+            "gpu_hours": budget.gpu_hours,
+            "experiments": budget.max_experiments,
+            "wall_time_hours": budget.max_wall_time_hours,
+            "api_cost_usd": budget.max_api_cost_usd,
+        }
+        if any(
+            ceiling is not None and idea.expected_cost.get(name, 0.0) > ceiling
+            for name, ceiling in ceilings.items()
+        ):
+            reasons.append("semantic idea expected cost exceeds the project resource budget")
+        if idea.expected_cost.get("implementation_risk", 0.0) > 1.0:
+            reasons.append("semantic idea implementation risk must be normalized")
+        if not idea.expected_value or set(idea.expected_value) - set(DEFAULT_VALUE_WEIGHTS):
+            reasons.append("semantic idea uses an unsupported expected-value field")
+        if len(idea.expected_value) > 12 or any(
+            not math.isfinite(value) or not 0.0 <= value <= 1.0
+            for value in idea.expected_value.values()
+        ):
+            reasons.append("semantic idea expected values must be bounded normalized scores")
         return reasons
 
 
@@ -155,6 +252,11 @@ def discovery_node_types() -> dict[str, ModelNodeRegistration]:
             DiscoveryReformulationNode,
             DiscoveryReformulationInput,
             DiscoveryReformulationProposal,
+        ),
+        DISCOVERY_IDEATION_NODE: ModelNodeRegistration(
+            DiscoveryIdeationNode,
+            DiscoveryIdeationInput,
+            DiscoveryIdeationProposal,
         ),
     }
 
@@ -262,7 +364,9 @@ class DiscoverySemanticBinding:
 
 def semantic_reference_from_receipt(
     receipt: RuntimeInvocationReceipt,
-    proposal: DiscoveryHypothesisProposal | DiscoveryReformulationProposal,
+    proposal: (
+        DiscoveryHypothesisProposal | DiscoveryReformulationProposal | DiscoveryIdeationProposal
+    ),
 ) -> DiscoverySemanticReference:
     if receipt.outcome is not RuntimeOutcome.ACCEPTED:
         raise ValueError("only an accepted semantic proposal can enter discovery state")
@@ -320,6 +424,21 @@ def semantic_reformulation_from_receipt(
     )
 
 
+def semantic_ideation_from_receipt(
+    receipt: RuntimeInvocationReceipt,
+) -> DiscoveryIdeationProposal:
+    if receipt.outcome is not RuntimeOutcome.ACCEPTED or receipt.result is None:
+        blockers = "; ".join(receipt.blockers) or receipt.outcome.value
+        raise ValueError(f"discovery semantic ideation was not accepted: {blockers}")
+    proposal = receipt.result.get("proposal")
+    if not isinstance(proposal, dict):
+        raise ValueError("accepted discovery ideation receipt has no typed proposal")
+    return DiscoveryIdeationProposal.model_validate_json(
+        json.dumps(proposal, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+
+
 def _canonical_sha256(payload: dict[str, JsonValue]) -> str:
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -328,10 +447,14 @@ def _canonical_sha256(payload: dict[str, JsonValue]) -> str:
 __all__ = [
     "DEFAULT_PROBE_TYPES",
     "DISCOVERY_HYPOTHESIS_NODE",
+    "DISCOVERY_IDEATION_NODE",
     "DISCOVERY_REFORMULATION_NODE",
     "DiscoveryHypothesisInput",
     "DiscoveryHypothesisNode",
     "DiscoveryHypothesisProposal",
+    "DiscoveryIdeationInput",
+    "DiscoveryIdeationNode",
+    "DiscoveryIdeationProposal",
     "DiscoveryIntuitionProposal",
     "DiscoveryReformulationInput",
     "DiscoveryReformulationNode",
@@ -339,6 +462,7 @@ __all__ = [
     "DiscoverySemanticBinding",
     "DiscoverySemanticReference",
     "discovery_node_types",
+    "semantic_ideation_from_receipt",
     "semantic_proposal_from_receipt",
     "semantic_reference_from_receipt",
     "semantic_reformulation_from_receipt",

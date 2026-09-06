@@ -24,14 +24,18 @@ from scitaste.discovery.commands import (
 from scitaste.discovery.loop import DiscoveryScenario
 from scitaste.discovery.semantic import (
     DISCOVERY_HYPOTHESIS_NODE,
+    DISCOVERY_IDEATION_NODE,
     DISCOVERY_REFORMULATION_NODE,
     DiscoveryHypothesisInput,
     DiscoveryHypothesisProposal,
+    DiscoveryIdeationInput,
+    DiscoveryIdeationProposal,
     DiscoveryReformulationInput,
     DiscoveryReformulationProposal,
     DiscoverySemanticBinding,
     DiscoverySemanticReference,
     discovery_node_types,
+    semantic_ideation_from_receipt,
     semantic_proposal_from_receipt,
     semantic_reference_from_receipt,
     semantic_reformulation_from_receipt,
@@ -68,8 +72,11 @@ _MANIFEST_NAME = "DISCOVERY.json"
 _SEMANTIC_COMMAND_NODES = {
     DiscoveryCommand.HYPOTHESIZE: DISCOVERY_HYPOTHESIS_NODE,
     DiscoveryCommand.REFORMULATE: DISCOVERY_REFORMULATION_NODE,
+    DiscoveryCommand.IDEATE: DISCOVERY_IDEATION_NODE,
 }
-_SemanticProposal = DiscoveryHypothesisProposal | DiscoveryReformulationProposal
+_SemanticProposal = (
+    DiscoveryHypothesisProposal | DiscoveryReformulationProposal | DiscoveryIdeationProposal
+)
 
 
 class ProjectDiscoveryStep(BaseModel):
@@ -310,6 +317,7 @@ class ProjectDiscoveryWorkflow:
             expected_revision=expected_revision,
             resume=resume,
         )
+        self._validate_semantic_state(command, admission.state, semantic)
         self._validate_semantic_budget(scenario, admission.state, semantic)
         self._require_semantic_identity(admission, command=command, semantic=semantic)
         if admission.recovers_completed_step:
@@ -402,6 +410,7 @@ class ProjectDiscoveryWorkflow:
                 expected_revision=expected_revision,
                 resume=resume,
             )
+            self._validate_semantic_state(command, admission.state, semantic)
             self._validate_semantic_budget(scenario, admission.state, semantic)
             self._require_semantic_identity(admission, command=command, semantic=semantic)
             if admission.recovers_completed_step:
@@ -1168,6 +1177,19 @@ class ProjectDiscoveryWorkflow:
             )
 
     @staticmethod
+    def _validate_semantic_state(
+        command: DiscoveryCommand,
+        state: ResearchState | None,
+        semantic: DiscoverySemanticBinding | None,
+    ) -> None:
+        if semantic is None:
+            return
+        if command is DiscoveryCommand.IDEATE and (
+            state is None or state.active_problem_id is not None
+        ):
+            raise ValueError("semantic ideation requires problem formation in the same command")
+
+    @staticmethod
     def _validate_semantic_budget(
         scenario: DiscoveryScenario,
         state: ResearchState | None,
@@ -1200,9 +1222,7 @@ class ProjectDiscoveryWorkflow:
             command,
             admission.ordinal,
         )
-        bindings = ProjectDiscoveryWorkflow._registered_semantic_bindings(
-            admission.registered_run
-        )
+        bindings = ProjectDiscoveryWorkflow._registered_semantic_bindings(admission.registered_run)
         if bindings.get(invocation_id) != expected:
             raise ValueError("registered discovery semantic identity is inconsistent")
 
@@ -1221,13 +1241,13 @@ class ProjectDiscoveryWorkflow:
     ) -> tuple[_SemanticProposal, DiscoverySemanticReference]:
         invocation_id = self._semantic_invocation_id(command, ordinal)
         if command is DiscoveryCommand.HYPOTHESIZE:
-            node_input: DiscoveryHypothesisInput | DiscoveryReformulationInput = (
-                DiscoveryHypothesisInput(
-                    research_direction=scenario.research_direction,
-                    target_domain=scenario.target_domain,
-                    target_venue=scenario.target_venue,
-                    landscape_findings=tuple(scenario.landscape_findings),
-                )
+            node_input: (
+                DiscoveryHypothesisInput | DiscoveryReformulationInput | DiscoveryIdeationInput
+            ) = DiscoveryHypothesisInput(
+                research_direction=scenario.research_direction,
+                target_domain=scenario.target_domain,
+                target_venue=scenario.target_venue,
+                landscape_findings=tuple(scenario.landscape_findings),
             )
             state_snapshot = f"scenario-{self._scenario_sha256(scenario)}"
             evidence_ids = list(node_input.source_ids)
@@ -1240,6 +1260,20 @@ class ProjectDiscoveryWorkflow:
                 target_domain=state.target_domain,
                 target_venue=state.target_venue,
                 parent_hypothesis=self.runner._active_hypothesis(state),
+                observations=tuple(state.observations),
+            )
+            state_snapshot = snapshot_id(state)
+            evidence_ids = list(node_input.observation_ids)
+            state_cost = state.resource_usage.api_cost_usd
+        elif command is DiscoveryCommand.IDEATE:
+            if state is None:
+                raise ValueError("semantic ideation requires a predecessor state")
+            node_input = DiscoveryIdeationInput(
+                research_direction=state.research_direction,
+                target_domain=state.target_domain,
+                target_venue=state.target_venue,
+                resource_budget=state.resource_budget,
+                active_hypothesis=self.runner._active_hypothesis(state),
                 observations=tuple(state.observations),
             )
             state_snapshot = snapshot_id(state)
@@ -1279,7 +1313,11 @@ class ProjectDiscoveryWorkflow:
                 reason=(
                     "A registered landscape requires bounded hypothesis semantics."
                     if command is DiscoveryCommand.HYPOTHESIZE
-                    else "A registered contradiction requires bounded reformulation semantics."
+                    else (
+                        "A registered contradiction requires bounded reformulation semantics."
+                        if command is DiscoveryCommand.REFORMULATE
+                        else "Registered observations require bounded problem and idea semantics."
+                    )
                 ),
             ),
             profile=binding.profile,
@@ -1289,11 +1327,12 @@ class ProjectDiscoveryWorkflow:
             request_id=binding.request_id,
             seed=self.seed,
         )
-        proposal = (
-            semantic_proposal_from_receipt(receipt)
-            if command is DiscoveryCommand.HYPOTHESIZE
-            else semantic_reformulation_from_receipt(receipt)
-        )
+        if command is DiscoveryCommand.HYPOTHESIZE:
+            proposal = semantic_proposal_from_receipt(receipt)
+        elif command is DiscoveryCommand.REFORMULATE:
+            proposal = semantic_reformulation_from_receipt(receipt)
+        else:
+            proposal = semantic_ideation_from_receipt(receipt)
         api_budget = scenario.resource_budget.max_api_cost_usd
         observed_cost = receipt.telemetry.cost_usd
         if observed_cost is None or (
@@ -1310,6 +1349,8 @@ class ProjectDiscoveryWorkflow:
             return "discovery-hypothesis-001"
         if command is DiscoveryCommand.REFORMULATE:
             return f"discovery-reformulation-{ordinal:03d}"
+        if command is DiscoveryCommand.IDEATE:
+            return f"discovery-ideation-{ordinal:03d}"
         raise ValueError("discovery command has no semantic invocation identity")
 
     @staticmethod
@@ -1321,9 +1362,7 @@ class ProjectDiscoveryWorkflow:
         if raw is None:
             bindings: dict[str, str] = {}
         elif isinstance(raw, dict) and all(
-            isinstance(key, str)
-            and isinstance(value, str)
-            and _is_digest(value)
+            isinstance(key, str) and isinstance(value, str) and _is_digest(value)
             for key, value in raw.items()
         ):
             bindings = dict(raw)
@@ -1354,8 +1393,7 @@ class ProjectDiscoveryWorkflow:
             references = [] if legacy is None else [legacy]
         elif isinstance(history_raw, list):
             references = [
-                DiscoverySemanticReference.model_validate(item, strict=True)
-                for item in history_raw
+                DiscoverySemanticReference.model_validate(item, strict=True) for item in history_raw
             ]
         else:
             raise ValueError("discovery state semantic history is malformed")
