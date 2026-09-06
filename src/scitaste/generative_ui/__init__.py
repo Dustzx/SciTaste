@@ -127,6 +127,7 @@ from scitaste.generative_ui.planner import (
     SurfacePlannerOutcome,
     WorkspacePlanner,
 )
+from scitaste.generative_ui.planner_transport import BoundedPlannerHTTPTransport
 from scitaste.generative_ui.planning import (
     MaterializedSurfacePlan,
     PlanEmphasis,
@@ -205,6 +206,7 @@ __all__ = [
     "BearerCredential",
     "BlockerListData",
     "BlockerQuery",
+    "BoundedPlannerHTTPTransport",
     "BudgetMeterData",
     "ClaimMatrixData",
     "CompareRunsPayload",

@@ -9,6 +9,7 @@ from shutil import copyfile
 import pytest
 from pydantic import ValidationError
 
+import scitaste.generative_ui.application as application_module
 from scitaste.generative_ui import (
     ArtifactInspectedAudit,
     AuditIntegrityError,
@@ -512,3 +513,50 @@ def test_generated_workspace_is_retained_for_exact_actions_and_fails_stale(
     runtime.update("app-project", expected_revision=snapshot.revision, status="paused")
     with pytest.raises(StaleSurfaceError, match="evidence is stale"):
         app.current_generated_workspace("app-project", generation_id)
+
+
+def test_generated_workspace_cache_is_bounded_and_evicts_oldest_exact_surface(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(application_module, "_MAX_RETAINED_GENERATIONS", 2)
+    runtime = _runtime_with_action(tmp_path)
+    snapshot = runtime.open("app-project")
+    for index, status in enumerate(("failed", "blocked"), start=1):
+        snapshot = runtime.begin_run(
+            "app-project",
+            ProjectRun(
+                run_id=f"retention-run-{index}",
+                provider="scripted",
+                model="retention-fixture",
+                condition="cache-bound",
+                seed=index,
+                status=status,
+                evidence_scope="engineering-only",
+            ),
+            expected_revision=snapshot.revision,
+        )
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    assert len(catalog.intents) >= 3
+    generation_ids: list[str] = []
+    for descriptor in catalog.intents[:3]:
+        document = app.generate_workspace(
+            "app-project",
+            WorkspaceGenerationRequest(
+                quick_catalog_fingerprint=catalog.fingerprint,
+                intent_request=QuickIntentRequest(
+                    project_id="app-project",
+                    snapshot_revision=catalog.snapshot.snapshot_revision,
+                    snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                    quick_intent_id=descriptor.quick_intent_id,
+                ),
+            ),
+        )
+        assert document.renderer is not None
+        generation_ids.append(document.renderer.surface_id)
+
+    assert len(set(generation_ids)) == 3
+    with pytest.raises(StaleSurfaceError, match="server process"):
+        app.current_generated_workspace("app-project", generation_ids[0])
+    assert app.current_generated_workspace("app-project", generation_ids[-1]).status == "generated"

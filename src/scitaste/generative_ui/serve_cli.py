@@ -18,6 +18,7 @@ from scitaste.generative_ui.planner import (
     StructuredWorkspacePlanner,
     WorkspacePlanner,
 )
+from scitaste.generative_ui.planner_transport import BoundedPlannerHTTPTransport
 from scitaste.generative_ui.server import (
     BearerCredential,
     LocalServerConfig,
@@ -181,7 +182,12 @@ def _load_planner(
     latency_ms = config.timeout_seconds * (config.max_retries + 1) * 1000
     response_bytes = min(max(24_000, config.max_output_tokens * 16), 1_000_000)
     planner = StructuredWorkspacePlanner(
-        StructuredOpenAICompatibleBackend(config),
+        StructuredOpenAICompatibleBackend(
+            config,
+            transport=BoundedPlannerHTTPTransport(
+                max_response_bytes=response_bytes,
+            ),
+        ),
         ModelPlannerPolicy(
             expected_backend=config.provider,
             expected_model=config.model,

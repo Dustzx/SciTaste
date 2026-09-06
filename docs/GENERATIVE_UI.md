@@ -170,6 +170,12 @@ transport timeout and server-side environment-variable credential lookup; the
 UI adapter additionally rejects provider configurations whose retry-adjusted
 timeout exceeds its policy bound.
 
+The CLI injects `BoundedPlannerHTTPTransport` into the compatible backend. It
+streams decoded response bytes under the planner limit before building a
+response string, checks any declared length, requires UTF-8, rejects duplicate
+JSON keys and non-finite values, and requires an object root. The planner then
+repeats a canonical post-read size check before schema admission.
+
 ```text
 question ──> deterministic resolver ──resolved──┐
    │                                            │
@@ -214,7 +220,36 @@ this cache; an old generated deep link then fails stale rather than attempting
 to recreate a non-deterministic result. Opening a generated surface starts the
 same project-owned audit epoch used by fixed views. Generated actions and
 artifact inspections still stop at their existing proposal/read-only
-boundaries.
+boundaries. The process retains at most 128 generated surfaces using
+least-recently-used eviction; an evicted link likewise fails stale.
+
+### Self-hosting verification
+
+On 2026-09-06 the offline receiver was exercised against a temporary copy of
+the existing `scitaste-self-development` project, leaving the repository's
+`outputs/` untouched. The progress endpoint opened revision 21 as `blocked` and
+reported exactly nine registered runs: four observed completed, two blocked,
+one failed, one candidate, and one unknown; it reported no registered paper or
+AutoResearchClaw stage completion. The quick catalog offered progress review,
+blocker diagnosis, run comparison, and next-step review, but correctly omitted
+paper review.
+
+Selecting progress review produced an admitted deterministic generation with
+five native components grouped as primary, attention, and context. The response
+and renderer both reported `execution_authority: none`. This verifies current
+project-management usefulness and the offline generation path; it is not an
+effectiveness result, a live-provider result, or evidence that unregistered
+repository work is complete.
+
+Final offline verification for this branch passed 223 Generative UI and focused
+CLI tests with 86.03% branch-aware coverage of `scitaste.generative_ui` (the
+configured 85% floor), followed by all 626 repository tests through
+`PYTHONPATH=src make check` and `node --check` for the receiver. An isolated
+wheel contained all seven required generation/planner/static assets among 135
+entries and contained no `outputs/`, tests, `third_party/`, key, or environment
+files. The first no-build-isolation wheel attempt did not start because the
+shared virtual environment lacks Hatchling; the standard isolated build then
+completed successfully.
 
 ## Trusted project surface factory
 
@@ -597,11 +632,15 @@ Together, the Pydantic contracts and closed schemas reject:
 - absolute paths, backslashes, encoded traversal, repeated separators, and dot
   segments;
 - unknown components and unknown evidence IDs;
+- forged quick-intent or surface-candidate IDs and stale catalog fingerprints;
 - duplicate component, action, metric, or evidence IDs;
+- duplicate plan entries and cross-candidate focus evidence;
 - action evidence that is outside the component to which the action is bound;
 - proposal targets with the wrong evidence kind;
 - status or paper fields without suitable content-addressed evidence;
 - executable authority or undeclared fields;
+- oversized/control-bearing questions, oversized provider responses, provider
+  tool calls, backend/model mismatches, and resource telemetry overruns;
 - stale/cross-project events, repeated event IDs, and unknown action IDs;
 - surface revisions based on stale fingerprints or inconsistent snapshot hashes;
 - changed, truncated, reordered, or semantically inconsistent audit histories;
@@ -621,6 +660,27 @@ Project-runtime identity is canonical lowercase kebab-case. Existing
 reject or explicitly migrate a non-canonical ID before snapshot construction. It
 must not silently lowercase, trim, or replace characters because that could merge
 two project identities.
+
+## Known limitations
+
+- Generated deep links survive browser history only while the same server
+  process retains the admitted surface. Restart and least-recently-used eviction
+  intentionally return stale rather than regenerating it.
+- The first deterministic free-question resolver is a bounded Chinese/English
+  keyword classifier. Unknown phrasing needs the optional model selector; the
+  model can still choose only a currently offered quick intent and cannot answer
+  an arbitrary research question.
+- The browser credential remains only in the page's password input. This is a
+  loopback-first engineering receiver, not a multi-user identity or remote
+  authorization system.
+- UI audit chains detect mutation relative to the inspected chain but are not
+  signatures and are not yet anchored into the project event log.
+- Automated tests use fake structured backends. The GLM-5.3-Flash configuration
+  and double gate are validated offline in this Epic; no new live response or
+  cost claim is recorded here.
+- The self-development project manifest at revision 21 predates later native
+  executor and UI work. Updating that visible progress belongs to the normal
+  main-window `ProjectRuntime` workflow, not UI inference.
 
 ## Deterministic fixtures
 
@@ -653,6 +713,10 @@ on an A2UI package in this phase:
 | `RendererDocument` | receiver-owned shell plus declarative workspace update |
 | `SurfaceEvent` | identity-only user event returned to the agent boundary |
 | `WorkspaceQuery` | closed client-selectable view identity |
+| `WorkspaceIntent` | snapshot-bound semantic goal and evidence entities |
+| `SurfaceCandidateDescriptor` | data-free receiver catalog projection |
+| `SurfacePlan` | ID-only ordered/grouped declarative layout |
+| `GeneratedWorkspaceDocument` | validated generated surface plus provenance |
 | `ArtifactInspectionEvent` | identity-only request for a visible evidence preview |
 | `SurfaceAuditRecord` | receiver-side append-only interaction history |
 
