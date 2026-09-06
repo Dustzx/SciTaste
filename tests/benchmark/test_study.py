@@ -175,6 +175,7 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
         "configs/experiments/matched_budget_local_preacceptance_v2.yaml",
         "configs/experiments/matched_budget_local_preacceptance_v3.yaml",
         "configs/experiments/matched_budget_local_preacceptance_v4.yaml",
+        "configs/experiments/matched_budget_local_preacceptance_v5.yaml",
     ],
 )
 def test_pilot_scope_cannot_become_headline_evidence(protocol_path: str) -> None:
@@ -250,6 +251,19 @@ def test_local_preacceptance_v4_binds_executable_diagnosis_task() -> None:
         protocol.budget
         == load_study_protocol(
             "configs/experiments/matched_budget_local_preacceptance_v3.yaml"
+        ).budget
+    )
+
+
+def test_local_preacceptance_v5_binds_review_visible_kernel_fix() -> None:
+    protocol = load_study_protocol("configs/experiments/matched_budget_local_preacceptance_v5.yaml")
+
+    assert protocol.scope.value == "pilot"
+    assert protocol.codebase_commit == "938056bca6a93730688a8bee56ebf0ba10a3e4db"
+    assert (
+        protocol.budget
+        == load_study_protocol(
+            "configs/experiments/matched_budget_local_preacceptance_v4.yaml"
         ).budget
     )
 
