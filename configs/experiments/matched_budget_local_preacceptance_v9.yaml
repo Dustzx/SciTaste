@@ -1,0 +1,92 @@
+study_id: scitaste-local-3090-preacceptance-v9
+version: "9.0"
+scope: pilot
+description: Non-headline single-GPU preacceptance with every Stage 14 debate role bound to the authoritative diagnostic projection.
+base_model: Qwen/Qwen3-VL-4B-Instruct
+base_model_revision: ebb281ec70b05090aa6165b016eac8ec08e71b17
+codebase_commit: 0e124153831614939acc938aa4fc86eaee57501a
+search_access:
+  policy_id: frozen-empty-search-local-preacceptance-v9
+  provider: disabled-local-search
+  frozen_snapshot: sha256:a0275a5312046080cf2de22faf0fb0a5e09780bc8ee3e0420dee43468fc2c043
+budget:
+  gpu_hours: 3.0
+  max_experiments: 8
+  max_wall_time_hours: 3.0
+  max_api_cost_usd: 0.01
+  max_search_queries: 0
+  max_llm_tokens: 200000
+seeds: [7]
+repetitions_per_seed: 1
+tasks:
+  - task_id: diagnosis-friendly-v3
+    category: diagnosis_friendly
+    research_direction: Characterize reproducible failure boundaries in a synthetic long-context scientific claim-verification benchmark.
+    domain: scientific-language-modeling
+    asset_path: configs/experiments/tasks/diagnosis_friendly_v3.yaml
+    asset_sha256: 9ace6c22c91471e57e80c50caab930ba5f24ee2f9205153c5a77d9827ee763a0
+    expected_discovery_behavior: Probe-heavy diagnosis followed by the registered cross-seed failure-boundary criterion.
+  - task_id: clear-hypothesis-v1
+    category: clear_hypothesis
+    research_direction: Test uncertainty-weighted evidence aggregation for contradictory-claim verification.
+    domain: scientific-language-modeling
+    asset_path: configs/experiments/tasks/clear_hypothesis_v1.yaml
+    asset_sha256: bc3aa052bfe7bbdd157aad7ea3ae8ffc6ed69cbfda487b092cf9b9bc8f3a69ef
+    expected_discovery_behavior: One bounded sanity probe before pilot execution.
+  - task_id: new-formulation-v1
+    category: new_formulation
+    research_direction: Define a diagnostic benchmark for evidence-grounded scientific-agent pivots.
+    domain: autonomous-science-evaluation
+    asset_path: configs/experiments/tasks/new_formulation_v1.yaml
+    asset_sha256: 7b32da232f8a759ec8bedd445d27910f1ef9527ef801000ce3f60ad83da21e31
+    expected_discovery_behavior: Literature and evaluation design dominate early work.
+  - task_id: ambiguous-direction-v1
+    category: ambiguous_direction
+    research_direction: Investigate when retrieval augmentation harms scientific decision quality.
+    domain: retrieval-augmented-reasoning
+    asset_path: configs/experiments/tasks/ambiguous_direction_v1.yaml
+    asset_sha256: f3ffaf892de1da8e757e41f4cd6514b9efeae6e4b58bd1bb1b59363790eabe0d
+    expected_discovery_behavior: Adaptive probes precede expensive method development.
+conditions:
+  - condition: autoresearchclaw
+    enabled: true
+    implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
+  - condition: knowledge_rag
+    enabled: true
+    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:knowledge-rag
+  - condition: taste_library
+    enabled: true
+    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:taste-library
+  - condition: full_scitaste
+    enabled: true
+    implementation_ref: scitaste@0e124153831614939acc938aa4fc86eaee57501a:full
+  - condition: sibyl
+    enabled: false
+    unavailable_reason: External Sibyl adapter has not passed isolation, version, license, artifact, and telemetry gates.
+  - condition: ai_scientist_v2
+    enabled: false
+    unavailable_reason: External AI Scientist-v2 adapter has not passed sandbox, version, license, artifact, and telemetry gates.
+expert_panel:
+  rubric_version: scitaste-system-rubric-v1
+  min_reviewers_per_cell: 2
+  condition_blinded: true
+  adjudication_required_on_conflict: true
+  dimensions:
+    - problem_quality
+    - idea_quality
+    - evidence_quality
+    - story_quality
+    - writing_quality
+    - figure_quality
+    - final_preference_score
+preregistered_outcomes:
+  - research_yield_per_gpu_hour
+  - idea_yield
+  - invalid_idea_rate
+  - unproductive_experiment_rate
+  - gpu_hours_before_useful_signal
+  - evidence_sufficiency
+  - reviewer_concern_closure_rate
+  - unsupported_claim_rate
+  - correct_pivot_rate
+  - final_expert_preference
