@@ -1111,7 +1111,9 @@ def _write_analysis_synthesis_override(
         "system": (
             "You synthesize scientific analyses under a strict evidence contract. The "
             "authoritative selected-experiment evidence in the user prompt overrides every "
-            "conflicting perspective, legacy run, inferred failure, or flattened summary."
+            "conflicting perspective, legacy run, inferred failure, or flattened summary. "
+            "Omit rejected statements completely instead of quoting or carrying them into a "
+            "limitations section."
         ),
         "user": (
             "Synthesize the perspectives into Metrics Summary, Consensus Findings, Contested "
@@ -1121,6 +1123,9 @@ def _write_analysis_synthesis_override(
             "cross-method primary aggregate. A summary count of one denotes one selected run, "
             "not one seed and not zero variance. Preserve the three-seed measurements and "
             "descriptive dispersion; never emit an N=1 or Min=Max=Mean statistical summary. "
+            "The registered factorial grid is an executed variation, so never claim that factor "
+            "cells were fixed, absent, unmeasured, or not grid-searched. Distinguish the tested "
+            "registered levels from additional levels that future work could study. "
             "Do not expose any internal identifier.\n\n"
             "Perspectives:\n{perspectives}\n\n"
             f"{publication}"
@@ -1334,7 +1339,9 @@ def _publication_diagnostic_evidence(evidence: dict[str, Any], task: dict[str, A
             f"{float(boundaries['balanced_accuracy_threshold']):.2f} on at least "
             f"{int(boundaries['minimum_reproducing_seeds'])} registered seeds. Nonzero counts "
             "below are observed boundaries; do not describe the factors as unmeasured or "
-            "unvaried, and do not claim that no boundary was observed."
+            "unvaried, do not claim that the registered grid was absent, and do not claim that "
+            "no boundary was observed. Untested levels may be proposed only after explicitly "
+            "preserving the levels that were executed."
         ),
         "factor effect range by method | relevant-item position | packet length | "
         "contradiction density | citation topology",
@@ -1357,7 +1364,9 @@ def _publication_diagnostic_evidence(evidence: dict[str, Any], task: dict[str, A
     for condition in task["benchmark"]["conditions"]:
         name = str(condition)
         summary = boundaries["by_condition"][name]
-        lines.append(f"- {_public_term(name)}: {int(summary['count'])}")
+        lines.append(
+            f"- {_public_term(name)} failure boundaries: {int(summary['count'])} observed cells"
+        )
         for cell in summary["worst_cells"][:3]:
             reproduced = ", ".join(map(str, cell["reproducing_seeds"]))
             lines.append(
@@ -2874,6 +2883,12 @@ def _diagnostic_claim_violations(text: str, diagnostics: dict[str, Any]) -> list
         "contradiction-density-unvaried": (
             r"(?i)(?:\bno contradiction density (?:variation|was (?:measured|varied|defined))\b|"
             r"\bcontradiction density.{0,40}\b(?:not|never) (?:measured|varied|defined)\b)"
+        ),
+        "registered-factor-grid-denied": (
+            r"(?i)(?:\bno factor (?:cell )?variation\b|"
+            r"\black(?:s|ed|ing)? (?:a )?grid search over contradiction density\b|"
+            r"\bno (?:experiment )?variant.{0,50}\bcontradiction density\b|"
+            r"\bno variation (?:of|in) contradiction density across\b)"
         ),
     }
     boundary_pattern = (

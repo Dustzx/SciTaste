@@ -16,6 +16,7 @@ from scitaste.benchmark.study_adapter import (
     _compact_refinement_log,
     _condition_context,
     _contract_matches,
+    _diagnostic_evidence_reporting_violations,
     _extract_declared_contract,
     _guidance,
     _manuscript_structure_violations,
@@ -1153,10 +1154,11 @@ def test_registered_factorial_diagnostics_are_validated_and_published() -> None:
     rendered = _publication_diagnostic_evidence({"registered_diagnostics": diagnostics}, task)
 
     assert "contradiction density across 0.0, 0.25, 0.5" in rendered
-    assert "majority vote: 16" in rendered
-    assert "confidence weighted vote: 0" in rendered
-    assert "position aware probe: 3" in rendered
+    assert "majority vote failure boundaries: 16" in rendered
+    assert "confidence weighted vote failure boundaries: 0" in rendered
+    assert "position aware probe failure boundaries: 3" in rendered
     assert "mean balanced accuracy=0.420000" in rendered
+    assert _diagnostic_evidence_reporting_violations(rendered, diagnostics) == []
 
     invalid = json.loads(json.dumps(record))
     invalid["diagnostics"]["generated_packets"] = 1943
@@ -1198,6 +1200,24 @@ def test_analysis_gate_rejects_negated_registered_factorial_diagnostics() -> Non
             selected_run=selected,
             task=task,
         )
+    with pytest.raises(ValueError, match="registered-factor-grid-denied"):
+        _analysis_consistency_audit(
+            analysis=(
+                "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). There was no "
+                f"factor cell variation. {boundary_counts}"
+            ),
+            selected_run=selected,
+            task=task,
+        )
+    with pytest.raises(ValueError, match="registered-factor-grid-denied"):
+        _analysis_consistency_audit(
+            analysis=(
+                "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). The experiment "
+                f"lacks a grid search over contradiction density. {boundary_counts}"
+            ),
+            selected_run=selected,
+            task=task,
+        )
 
     accepted = _analysis_consistency_audit(
         analysis=(
@@ -1208,6 +1228,18 @@ def test_analysis_gate_rejects_negated_registered_factorial_diagnostics() -> Non
         task=task,
     )
     assert accepted["diagnostic_evidence_reporting_violations"] == []
+
+    scoped_zero = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). The registered grid "
+            "varied contradiction density.\nMajority vote has 16 failure boundaries.\nConfidence "
+            "weighted vote has no failure boundaries (0 observed).\nPosition aware probe has 3 "
+            "failure boundaries."
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert scoped_zero["diagnostic_claim_violations"] == []
 
 
 def test_outline_checkpoint_materializes_registered_factorial_diagnostics() -> None:
@@ -1236,7 +1268,9 @@ def test_outline_checkpoint_materializes_registered_factorial_diagnostics() -> N
 
     assert changed is True
     assert "REGISTERED FACTORIAL DIAGNOSTICS" in repaired
-    assert "majority vote: 16" in repaired
+    assert "majority vote failure boundaries: 16" in repaired
+    diagnostics = _validated_registered_diagnostics(record, task)
+    assert _diagnostic_evidence_reporting_violations(repaired, diagnostics) == []
 
 
 def test_selected_experiment_evidence_preserves_successful_stdout(tmp_path) -> None:
