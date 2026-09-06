@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -37,6 +39,10 @@ from scitaste.taste.retriever import TasteRetriever
 from scitaste.writing.contracts import retrieve_contract_taste
 from scitaste.writing.critics import WritingCriticSuite
 from scitaste.writing.drafter import ContractDrafter
+from scitaste.writing.evidence_projection import (
+    WritingEvidenceProjection,
+    write_writing_evidence_projection,
+)
 from scitaste.writing.narrative import review_narrative
 
 
@@ -81,7 +87,10 @@ class CommunicationWorkflow:
         *,
         output_dir: str | Path,
         state_path: str | Path | None = None,
+        evidence_projection: WritingEvidenceProjection | None = None,
     ) -> dict[str, object]:
+        if evidence_projection is not None and state_path is None:
+            raise ValueError("writing evidence projection requires a predecessor state")
         root = Path(output_dir)
         logger = DecisionLogger(root / "decisions.jsonl")
         if logger.path.exists():
@@ -111,11 +120,21 @@ class CommunicationWorkflow:
                 current_stage="COMMUNICATION",
             )
         else:
-            state = ResearchState.model_validate_json(Path(state_path).read_text(encoding="utf-8"))
+            source_state = Path(state_path)
+            state = ResearchState.model_validate_json(source_state.read_text(encoding="utf-8"))
             if state.project_id != scenario.project_id:
                 raise ValueError("communication scenario belongs to another project")
             if state.current_stage.value != "COMMUNICATION":
                 raise ValueError("communication workflow requires a COMMUNICATION state")
+            if evidence_projection is not None:
+                if evidence_projection.project_id != state.project_id:
+                    raise ValueError("writing evidence projection belongs to another project")
+                if evidence_projection.source_state_sha256 != _file_sha256(source_state):
+                    raise ValueError("writing evidence projection does not bind the input state")
+                scenario = _bind_scenario_to_projection(scenario, evidence_projection)
+                write_writing_evidence_projection(
+                    evidence_projection, root / "evidence_projection.json"
+                )
             _merge_communication_evidence(state, scenario)
         store.save(state)
 
@@ -261,6 +280,7 @@ class CommunicationWorkflow:
         state.writing_state.critic_findings = critics.review(state)
         _require_no_critic_errors(state.writing_state)
         _write_paper(root / "paper.md", state.writing_state.section_drafts)
+        _write_publication_paper(root / "paper.publication.md", state.writing_state.section_drafts)
         store.save(state)
 
         summary: dict[str, object] = {
@@ -279,11 +299,24 @@ class CommunicationWorkflow:
                 decision.selected_action.type.value for decision in state.decision_history
             ],
             "paper": str(root / "paper.md"),
+            "publication_paper": str(root / "paper.publication.md"),
             "decision_log": str(logger.path),
             "evidence_decision_log": str(root / "review_evidence" / "decisions.jsonl")
             if scenario.review_resolution
             else None,
             "latest_state": str(store.latest_path),
+            "evidence_projection": (
+                str(root / "evidence_projection.json") if evidence_projection is not None else None
+            ),
+            "measured_result_id": (
+                evidence_projection.result_id if evidence_projection is not None else None
+            ),
+            "measured_primary_metric": (
+                evidence_projection.primary_metric if evidence_projection is not None else None
+            ),
+            "measured_primary_value": (
+                evidence_projection.primary_value if evidence_projection is not None else None
+            ),
         }
         (root / "communication_summary.json").write_text(
             json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -306,6 +339,23 @@ def _write_paper(path: Path, drafts: dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     rendered = "\n\n".join(f"# {name}\n\n{text}" for name, text in drafts.items())
     path.write_text(rendered + "\n", encoding="utf-8")
+
+
+def _write_publication_paper(path: Path, drafts: dict[str, str]) -> None:
+    """Render a reader-facing manuscript while retaining traces in canonical state."""
+
+    rendered = "\n\n".join(f"# {name}\n\n{text}" for name, text in drafts.items())
+    rendered = re.sub(
+        r"(?m)^Review resolution obligation-[^:\n]+:.*$",
+        (
+            "Reviewer concern resolution: The requested change was completed and "
+            "retained in the auditable research state."
+        ),
+        rendered,
+    )
+    rendered = re.sub(r"\s*\[(?:claim|evidence):[^\]\n]+\]", "", rendered)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(rendered.rstrip() + "\n", encoding="utf-8")
 
 
 def _merge_communication_evidence(state: ResearchState, scenario: CommunicationScenario) -> None:
@@ -333,3 +383,98 @@ def _merge_communication_evidence(state: ResearchState, scenario: CommunicationS
         else:
             evidence[item.evidence_id] = len(state.evidence_graph.items)
             state.evidence_graph.items.append(copied)
+
+
+def _bind_scenario_to_projection(
+    scenario: CommunicationScenario,
+    projection: WritingEvidenceProjection,
+) -> CommunicationScenario:
+    """Replace demo writing references with one verified measured result."""
+
+    claim_id = projection.claim.claim_id
+    evidence_id = projection.evidence.evidence_id
+    claim_mapping = {item.claim_id: claim_id for item in scenario.claims}
+    evidence_mapping = {item.evidence_id: evidence_id for item in scenario.evidence}
+
+    narrative = scenario.narrative.model_copy(
+        update={
+            "key_observation": projection.observation,
+            "evidence_chain": _mapped_ids(scenario.narrative.evidence_chain, evidence_mapping),
+            "contribution_order": _mapped_ids(scenario.narrative.contribution_order, claim_mapping),
+        }
+    )
+    sections = [
+        item.model_copy(
+            update={
+                "required_claim_ids": _mapped_ids(item.required_claim_ids, claim_mapping),
+                "required_evidence_ids": _mapped_ids(item.required_evidence_ids, evidence_mapping),
+            }
+        )
+        for item in scenario.section_contracts
+    ]
+    results_takeaway = _measured_results_takeaway(projection)
+    paragraphs = [
+        item.model_copy(
+            update={
+                "intended_takeaway": (
+                    results_takeaway
+                    if item.section_name.casefold() == "results"
+                    else item.intended_takeaway
+                ),
+                "claim_ids": _mapped_ids(item.claim_ids, claim_mapping),
+                "evidence_ids": _mapped_ids(item.evidence_ids, evidence_mapping),
+            }
+        )
+        for item in scenario.paragraph_contracts
+    ]
+    feedback = [
+        item.model_copy(
+            update={
+                "category": type(item.category)("limitation"),
+                "target_claim_ids": _mapped_ids(item.target_claim_ids, claim_mapping),
+                "text": (
+                    "The isolated synthetic experiment does not establish effectiveness "
+                    "outside the registered offline setting."
+                ),
+                "requires_new_evidence": False,
+                "requires_new_experiment": False,
+                "required_evidence_types": [],
+            }
+        )
+        for item in scenario.review_feedback
+    ]
+    bound = scenario.model_copy(
+        update={
+            "claims": [projection.claim.model_copy(deep=True)],
+            "evidence": [projection.evidence.model_copy(deep=True)],
+            "narrative": narrative,
+            "section_contracts": sections,
+            "paragraph_contracts": paragraphs,
+            "review_feedback": feedback,
+            "review_resolution": None,
+        }
+    )
+    return CommunicationScenario.model_validate(bound.model_dump(mode="json"))
+
+
+def _mapped_ids(values: list[str], mapping: dict[str, str]) -> list[str]:
+    return list(dict.fromkeys(mapping.get(item, item) for item in values))
+
+
+def _measured_results_takeaway(projection: WritingEvidenceProjection) -> str:
+    metric = projection.primary_metric.replace("_", " ")
+    values = ", ".join(f"{item:.6f}" for item in projection.primary_values)
+    return (
+        f"The registered isolated experiment measured a mean {metric} of "
+        f"{projection.primary_value:.6f} across {len(projection.primary_values)} replicates "
+        f"(replicate values: {values}; population SD {projection.primary_dispersion:.6f}). "
+        "This result supports the claim only within the tested synthetic offline setting."
+    )
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

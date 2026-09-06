@@ -131,6 +131,11 @@ returns observations and artifacts but cannot select the next global action.
     available isolation primitive, retain bounded raw output, and derive metrics
     from validated replicate rows; a declared scenario result cannot substitute
     for failed, unavailable, or malformed execution.
+44. Communication may cite a native measurement only through a self-hashed
+    projection that agrees with canonical state, its interpretation review, the
+    decision-bound native record, and the independently parsed replicate artifact.
+    Audit drafts retain internal trace markers; publication projections remove
+    those identifiers without adding scientific content.
 
 ## Architecture decision records
 

@@ -111,9 +111,12 @@ Evidence Workflow recognizes this result basis explicitly. It replaces the
 scenario fixture's result ID, metrics, cost, observation, relation, stability,
 and uncertainty with the measured values before interpretation. Other
 scenario-bound workflow components remain clearly labeled as such.
-The current deterministic Communication fixture does not yet render this measured
-metric into manuscript prose; evidence-to-writing projection is the next
-cross-stage truthfulness gap.
+Communication now renders the measured metric only through a self-hashed
+evidence projection that revalidates canonical state, interpretation, the native
+record, and the parsed replicate artifact. The audit draft retains internal trace
+markers, while the registered project paper uses a clean reader-facing view. Rich
+open-ended scientific writing remains pending; this closes the earlier
+cross-stage truthfulness gap for registered native measurements.
 
 If Bubblewrap is missing or its namespace probe fails, the configured experiment
 returns `FAILED` with an execution artifact; SciTaste does not run it directly or

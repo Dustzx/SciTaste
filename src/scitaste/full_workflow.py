@@ -50,6 +50,7 @@ from scitaste.project import (
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 from scitaste.state.research_state import ResearchState
 from scitaste.visual.workflow import FigureScenario, FigureWorkflow, load_figure_scenario
+from scitaste.writing.evidence_projection import build_writing_evidence_projection
 from scitaste.writing.workflow import (
     CommunicationScenario,
     CommunicationWorkflow,
@@ -643,6 +644,12 @@ class FullWorkflow:
         previous_state = evidence_state
 
         communication_root = stages / "communication"
+        communication_artifacts = (
+            ("evidence_projection.json",)
+            if config.execution_backend == "scitaste-native"
+            and config.native_experiment_config is not None
+            else ()
+        )
         communication_record = (
             _load_stage_record(
                 communication_root,
@@ -650,6 +657,7 @@ class FullWorkflow:
                 run_root=run_root,
                 project_id=config.project_id,
                 expected_input_sha256=_file_sha256(previous_state),
+                extra_artifacts=communication_artifacts,
             )
             if reuse_allowed
             else None
@@ -664,10 +672,21 @@ class FullWorkflow:
                     _archive_stage(communication_root, run_root, "communication")
                 )
             reuse_allowed = False
+            communication_scenario = _communication_for_project(config)
+            evidence_projection = None
+            if communication_artifacts:
+                evidence_scenario = _evidence_for_project(config)
+                evidence_projection = build_writing_evidence_projection(
+                    state_path=previous_state,
+                    run_root=run_root,
+                    expected_claim_id=evidence_scenario.claim.claim_id,
+                    expected_experiment_id=evidence_scenario.result.experiment_id,
+                )
             communication_raw = CommunicationWorkflow(seed=self.seed, executor=executor).run(
-                _communication_for_project(config),
+                communication_scenario,
                 output_dir=communication_root,
                 state_path=previous_state,
+                evidence_projection=evidence_projection,
             )
             communication_state = Path(str(communication_raw["latest_state"]))
             communication = _portable_summary_dict(communication_raw, run_root)
@@ -677,6 +696,7 @@ class FullWorkflow:
                 communication,
                 run_root=run_root,
                 input_state=previous_state,
+                extra_artifacts=communication_artifacts,
             )
         summaries["communication"] = communication
         previous_state = communication_state
@@ -732,7 +752,7 @@ class FullWorkflow:
         )
         if paper_root.exists():
             raise FileExistsError(f"paper directory already exists: {paper_root}")
-        communication_paper = run_root / "stages" / "communication" / "paper.md"
+        communication_paper = run_root / "stages" / "communication" / "paper.publication.md"
         source = run_root / "stages" / "communication" / "paper_with_title.md"
         source.write_text(
             f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(encoding="utf-8"),
@@ -1097,7 +1117,11 @@ def _required_stage_artifacts(
     names: dict[StageName, tuple[str, ...]] = {
         "discovery": ("discovery_summary.json",),
         "evidence": ("evidence_summary.json",),
-        "communication": ("communication_summary.json", "paper.md"),
+        "communication": (
+            "communication_summary.json",
+            "paper.md",
+            "paper.publication.md",
+        ),
         "figure": (
             "figure_summary.json",
             "figure.initial.svg",

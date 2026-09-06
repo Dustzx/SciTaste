@@ -40,6 +40,11 @@ def test_review_triggers_evidence_and_returns_to_paper_revision(tmp_path) -> Non
     assert (
         "Review resolution obligation-review-matched-baseline" in (output / "paper.md").read_text()
     )
+    publication = (output / "paper.publication.md").read_text(encoding="utf-8")
+    assert "Reviewer concern resolution:" in publication
+    assert "[claim:" not in publication
+    assert "[evidence:" not in publication
+    assert "obligation-review" not in publication
     assert not [
         finding for finding in state.writing_state.critic_findings if finding.severity == "error"
     ]

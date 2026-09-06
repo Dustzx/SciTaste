@@ -85,6 +85,13 @@ owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
 
+For a native measured run, `stages/communication/evidence_projection.json`
+binds the manuscript measurement to its predecessor state, interpretation,
+native execution record, and raw replicate-derived metric artifact. `paper.md`
+is the trace-rich audit draft; `paper.publication.md` removes internal
+claim/evidence/obligation identifiers and is the source of the project-owned
+`papers/<paper-directory>/main.md`, TeX, and optional PDF bundle.
+
 The default native executor keeps cross-stage action evidence beside that stage
 tree:
 

@@ -76,6 +76,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - evidence-bound generative UI contracts with a fixed trusted shell,
   proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
   project artifacts exposed to a surface;
+- a three-part innovation model spanning Scientific Taste, Generation as Content,
+  and bounded Tool Intelligence (see `docs/INNOVATION_MAP.md`);
 - a loopback-first authenticated local UI/API that renders the closed component
   registry as a navigable evidence workspace, restricts inspection to visible
   hashed artifacts, revalidates identity-only events, and persists project-bound

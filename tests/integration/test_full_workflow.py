@@ -14,6 +14,7 @@ from scitaste.project import ProjectRuntime
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.persistence import StateStore
 from scitaste.state.research_state import ResearchState
+from scitaste.writing.evidence_projection import WritingEvidenceProjection
 
 
 def test_full_cli_preserves_one_state_and_registers_a_project_paper(
@@ -81,6 +82,30 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     evidence_summary = payload["stages"]["evidence"]
     assert evidence_summary["result_basis"] == "sandbox-measured-replicates"
     assert evidence_summary["measured_metrics"]["correct_pivot_delta"] == pytest.approx(0.1)
+    communication_summary = payload["stages"]["communication"]
+    assert communication_summary["measured_primary_metric"] == "correct_pivot_delta"
+    assert communication_summary["measured_primary_value"] == pytest.approx(0.1)
+    projection_path = run / "stages/communication/evidence_projection.json"
+    projection = WritingEvidenceProjection.model_validate_json(
+        projection_path.read_text(encoding="utf-8")
+    )
+    assert projection.result_id == measured_experiment.result_ref
+    assert projection.primary_values == pytest.approx([0.1, 0.1, 0.1])
+    assert projection.primary_dispersion == pytest.approx(0.0)
+    communication_paper = (run / "stages/communication/paper.md").read_text(encoding="utf-8")
+    assert "mean correct pivot delta of 0.100000" in communication_paper
+    assert "replicate values: 0.100000, 0.100000, 0.100000" in communication_paper
+    assert "result-support" not in communication_paper
+    assert "result-matched-baseline" not in communication_paper
+    assert "0.110000" not in communication_paper
+    assert "0.080000 across" not in communication_paper
+    publication_paper = (run / "stages/communication/paper.publication.md").read_text(
+        encoding="utf-8"
+    )
+    assert "mean correct pivot delta of 0.100000" in publication_paper
+    assert "[claim:" not in publication_paper
+    assert "[evidence:" not in publication_paper
+    assert "obligation-review" not in publication_paper
     retrieval_locator = search_decision.actual_outcome["artifacts"][0]
     assert (run / retrieval_locator).is_file()
     context = json.loads((run / "native_execution/context/CONTEXT.json").read_text())
@@ -103,6 +128,10 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert (paper / "figures/figure.svg").is_file()
     assert (paper / "figures/figure.drawio").is_file()
     assert (paper / "MANIFEST.json").is_file()
+    published_markdown = (paper / "main.md").read_text(encoding="utf-8")
+    assert "mean correct pivot delta of 0.100000" in published_markdown
+    assert "[claim:" not in published_markdown
+    assert "[evidence:" not in published_markdown
     assert (project / "papers/current").resolve() == paper.resolve()
     assert Path(payload["snapshot_binding"]).is_file()
 
@@ -380,8 +409,8 @@ def test_full_workflow_rejects_tampered_completed_stage_on_resume(
             resume=True,
         )
 
-    paper = run_root / "stages/communication/paper.md"
-    paper.write_text(paper.read_text(encoding="utf-8") + "\nchanged\n", encoding="utf-8")
+    projection = run_root / "stages/communication/evidence_projection.json"
+    projection.write_text(projection.read_text(encoding="utf-8") + "\nchanged\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="stage artifact hash mismatch"):
         workflow.run(

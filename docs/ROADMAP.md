@@ -151,8 +151,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stderr retention, strict replicate records, and independently derived metrics.
   Evidence consumes those measured values instead of the configured result
   fixture. This is executable integration evidence, not scientific effectiveness.
-- The measured result is present in canonical state and the evidence summary;
-  projecting it into the manuscript's claim/evidence contracts remains pending.
+- The measured result is now projected from canonical state and the original
+  native execution/metrics records into Communication claim/evidence contracts.
+  The audit draft retains trace markers, while the project paper is built from a
+  clean reader-facing projection containing the measured mean, replicates,
+  dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
   code generation and admission, dataset/GPU experiment profiles, generative
   analysis, writing, and figures. Existing scenario-bound receipts are integration

@@ -38,8 +38,13 @@ observations; its Discovery `SEARCH` action now performs real local retrieval
 against a content-bound project copy of the configured Knowledge Library. Its
 registered Evidence experiment executes real CPU code through Bubblewrap and
 independently derives metrics from the emitted replicate rows; Evidence then uses
-those measured values rather than the scenario's result fixture. The remaining
-deterministic workflow components perform bounded scenario operations.
+those measured values rather than the scenario's result fixture. Communication
+admits that result only through a self-hashed projection that revalidates the
+canonical state, interpretation, decision-bound native record, and parsed metric
+artifact. Its measured writing path replaces the demo claim/evidence references
+and turns the review into an explicit limitation acknowledgement rather than
+executing the scenario's second prefilled experiment. The remaining deterministic
+workflow components perform bounded scenario operations.
 `--backend mock` is an explicit compatibility/test mode. The native run validates
 one registered offline experiment, but does not prove autonomous code generation,
 broad experiment compatibility, model-generation quality, or effectiveness.
@@ -97,7 +102,7 @@ outputs/projects/<project-id>/
 │       ├── discovery/
 │       ├── evidence/model_advisory_input.json # pre-call, when opted in
 │       ├── evidence/model_advisory.json  # result bridge, when opted in
-│       ├── communication/
+│       ├── communication/{evidence_projection.json,paper.md,paper.publication.md}
 │       └── figure/
 ├── stages/current -> ../runs/<run-id>/stages
 ├── papers/<paper-directory>/
@@ -117,7 +122,12 @@ state, decision log, and required stage artifacts. Paths recorded by the
 full-run summary are run-relative rather than machine-specific absolute paths.
 
 The paper is a registered, reviewed draft with `publication_ready: false`.
-Markdown-to-TeX packaging is deterministic and performs no extra model call. If
+`communication/paper.md` is the audit view and retains machine-readable
+claim/evidence trace markers. `paper.publication.md` is the deterministic
+reader-facing view: it removes internal trace and obligation identifiers but
+cannot add prose, measurements, or claims. The registered `main.md`, `main.tex`,
+and optional PDF are built from that reader-facing view. Markdown-to-TeX
+packaging is deterministic and performs no extra model call. If
 `latexmk` with XeLaTeX is installed, compilation must succeed and `main.pdf` is
 registered; otherwise `build.json` records `unavailable` and the Markdown/TeX
 bundle remains complete.
@@ -175,6 +185,13 @@ hash/action/result identity embedded in each reusable stage decision. Tampering
 with the local Knowledge copy, registered experiment source, retrieval output, raw
 process output, or derived metrics therefore blocks reuse before a stage can
 advance. See `docs/NATIVE_EXECUTION.md` for the record contract.
+
+The Communication stage independently repeats the relevant binding checks before
+writing: exactly one successful registered experiment must resolve to one
+interpretation review, one supporting evidence item, one supported claim, and one
+hashed metrics artifact whose replicate rows reproduce the reported mean and
+population dispersion. `evidence_projection.json` and both paper views are part
+of the stage artifact manifest, so deleting or changing any of them blocks resume.
 
 After completion, `ProjectSnapshotAdapter` hashes the authoritative manifest,
 run tree, current stage, paper manifest, and every declared paper artifact into

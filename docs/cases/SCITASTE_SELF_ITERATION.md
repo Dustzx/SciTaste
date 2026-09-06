@@ -168,9 +168,24 @@ network, write, timeout, malformed-record, missing-isolation, and output-ceiling
 tests are retained. This demonstrates project-owned execution mechanics only:
 the experiment is a small committed synthetic CPU case, so the self-development
 case remains excluded from effectiveness evidence and from Taste promotion.
-The acceptance paper still follows the deterministic Communication scenario and
-does not quote the new metric. That visible gap is retained as the next
-evidence-to-writing integration task rather than patched with generated prose.
+The next increment closes that visible evidence-to-writing gap. Communication now
+accepts a self-hashed projection only after the canonical state, interpretation,
+decision-bound native record, and parsed replicate artifact agree. Its Results
+contract reports the actual mean, replicate values, population dispersion, and
+synthetic-offline limitation; the old configured `0.11` result cannot enter this
+path. The stage retains a trace-rich audit draft, while the project paper is built
+from a reader-facing projection that removes internal claim, evidence, and
+obligation identifiers without adding scientific content. This strengthens
+integration provenance but remains excluded from effectiveness evidence.
+
+The local acceptance run is registered under the existing project boundary at
+`outputs/projects/scitaste-offline-full/runs/2026-09-06__native__evidence-writing__seed-07/`;
+its paper is the sibling project artifact
+`papers/2026-09-06__native__evidence-writing__reviewed-draft/`. It completed 18
+first-party action records, projected three measured replicates with a mean
+correct-pivot delta of `0.100000` and population SD `0.000000`, and produced
+Markdown, TeX, and a compiled PDF. These ignored local outputs are inspectable
+engineering evidence; the committed tests reproduce and verify their contracts.
 
 ## Anti-self-confirmation rules
 
