@@ -9,7 +9,7 @@ import os
 import stat
 import tempfile
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -31,6 +31,7 @@ from scitaste.model_nodes.models import (
 from scitaste.model_nodes.nodes import (
     AmbiguousActionNode,
     InterpretationThreatNode,
+    ModelNode,
     NodeNotApplicableError,
     ReviewSemanticNode,
     StructuredRepairNode,
@@ -98,13 +99,7 @@ class RuntimeInvocationIntent(RuntimeModel):
     run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     project_revision: int = Field(ge=0)
     state_revision: int = Field(ge=0)
-    node_name: Literal[
-        "review-semantic",
-        "interpretation-threat",
-        "ambiguous-action",
-        "tool-plan",
-        "structured-repair",
-    ]
+    node_name: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*$")
     node_input: dict[str, JsonValue]
     context: NodeContext
     trigger: ModelNodeTrigger
@@ -277,16 +272,29 @@ class _PendingResume:
     backend: RecordedResponseRecoveryBackend | None
 
 
+@dataclass(frozen=True)
+class ModelNodeRegistration:
+    """One typed node extension understood by the durable runtime."""
+
+    node_type: type[ModelNode[Any, Any]]
+    input_type: type[BaseModel]
+    output_type: type[BaseModel]
+
+
 _NODE_TYPES = {
-    "review-semantic": (ReviewSemanticNode, ReviewSemanticInput, ReviewSemanticOutput),
-    "interpretation-threat": (
+    "review-semantic": ModelNodeRegistration(
+        ReviewSemanticNode, ReviewSemanticInput, ReviewSemanticOutput
+    ),
+    "interpretation-threat": ModelNodeRegistration(
         InterpretationThreatNode,
         InterpretationThreatInput,
         InterpretationThreatOutput,
     ),
-    "ambiguous-action": (AmbiguousActionNode, AmbiguousActionInput, AmbiguousActionOutput),
-    "tool-plan": (ToolPlanNode, ToolPlanInput, ToolPlanOutput),
-    "structured-repair": (
+    "ambiguous-action": ModelNodeRegistration(
+        AmbiguousActionNode, AmbiguousActionInput, AmbiguousActionOutput
+    ),
+    "tool-plan": ModelNodeRegistration(ToolPlanNode, ToolPlanInput, ToolPlanOutput),
+    "structured-repair": ModelNodeRegistration(
         StructuredRepairNode,
         StructuredRepairInput,
         StructuredRepairOutput,
@@ -320,9 +328,23 @@ class ModelNodeRuntime:
         project_runtime: ProjectRuntime,
         *,
         before_backend: BeforeBackendHook | None = None,
+        node_types: Mapping[str, ModelNodeRegistration] | None = None,
     ) -> None:
         self.project_runtime = project_runtime
         self.before_backend = before_backend
+        self.node_types = dict(_NODE_TYPES)
+        for name, registration in (node_types or {}).items():
+            if name in self.node_types:
+                raise ValueError(f"model-node extension cannot replace built-in node {name!r}")
+            instance = registration.node_type()
+            if name != instance.node_name:
+                raise ValueError("model-node extension name does not match its node type")
+            if (
+                instance.input_model is not registration.input_type
+                or instance.output_model is not registration.output_type
+            ):
+                raise ValueError("model-node extension registration types do not match its node")
+            self.node_types[name] = registration
 
     def plan(
         self,
@@ -465,6 +487,30 @@ class ModelNodeRuntime:
             attempt_count=len(_archived_attempt_paths(stage)),
             pending_count=len(self._pending_directories(stage)),
         )
+
+    def entry(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        invocation_id: str,
+    ) -> RuntimeLedgerEntry:
+        """Read one entry only after validating the complete chained ledger."""
+
+        validate_entry_id(invocation_id, field_name="invocation_id")
+        stage, _ = self._validate_project_run(
+            project_id,
+            run_id,
+            expected_revision=None,
+            create_stage=False,
+        )
+        entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
+        matches = [item for item in entries if item.intent.invocation_id == invocation_id]
+        if len(matches) != 1:
+            raise ModelNodeRuntimeError(
+                f"model-node invocation is not a unique committed entry: {invocation_id!r}"
+            )
+        return matches[0]
 
     def _execute_locked(
         self,
@@ -725,12 +771,12 @@ class ModelNodeRuntime:
                 if pending_resume is not None and pending_resume.backend is not None
                 else _PreCallValidatedBackend(backend, before_call)
             )
-            node_type, input_type, _ = _NODE_TYPES[intent.node_name]
-            typed_input = input_type.model_validate_json(
+            registration = self.node_types[intent.node_name]
+            typed_input = registration.input_type.model_validate_json(
                 json.dumps(intent.node_input, ensure_ascii=False, allow_nan=False),
                 strict=True,
             )
-            result = node_type().run(
+            result = registration.node_type().run(
                 typed_input,
                 context=intent.context,
                 backend=guarded_backend,
@@ -927,14 +973,14 @@ class ModelNodeRuntime:
         request_id: str | None,
         **values: Any,
     ) -> RuntimeInvocationIntent:
-        if node_name not in _NODE_TYPES:
+        if node_name not in self.node_types:
             raise ModelNodeRuntimeError(f"unsupported model-node type {node_name!r}")
         validate_profile_binding(profile, policy, node_name=node_name)
-        input_type = _NODE_TYPES[node_name][1]
+        registration = self.node_types[node_name]
         input_payload = (
             node_input.model_dump(mode="json") if isinstance(node_input, BaseModel) else node_input
         )
-        typed_input = input_type.model_validate_json(
+        typed_input = registration.input_type.model_validate_json(
             json.dumps(input_payload, ensure_ascii=False, allow_nan=False),
             strict=True,
         )
@@ -954,8 +1000,7 @@ class ModelNodeRuntime:
             },
             strict=True,
         )
-        node_type = _NODE_TYPES[node_name][0]
-        expected_request = node_type()._build_request(
+        expected_request = registration.node_type()._build_request(
             typed_input,
             context=effective_context,
             policy=policy,
@@ -1204,7 +1249,12 @@ class ModelNodeRuntime:
     def _validate_typed_result(self, entry: RuntimeLedgerEntry) -> None:
         if entry.result is None:
             return
-        output_type = _NODE_TYPES[entry.intent.node_name][2]
+        try:
+            output_type = self.node_types[entry.intent.node_name].output_type
+        except KeyError as exc:
+            raise ModelNodeRuntimeError(
+                f"runtime is missing model-node extension {entry.intent.node_name!r}"
+            ) from exc
         result_type = NodeResult[output_type]
         result = result_type.model_validate_json(
             json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
@@ -1815,6 +1865,7 @@ def _fsync_directory(path: Path) -> None:
 
 __all__ = [
     "MODEL_NODE_STAGE_PATH",
+    "ModelNodeRegistration",
     "ModelNodeRuntime",
     "ModelNodeRuntimeConflictError",
     "ModelNodeRuntimeError",

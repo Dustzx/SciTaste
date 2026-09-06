@@ -113,6 +113,7 @@ from scitaste.model_nodes.replay import (
 )
 from scitaste.model_nodes.runtime import (
     MODEL_NODE_STAGE_PATH,
+    ModelNodeRegistration,
     ModelNodeRuntime,
     ModelNodeRuntimeConflictError,
     ModelNodeRuntimeError,
@@ -228,6 +229,7 @@ __all__ = [
     "ModelNodeProfile",
     "ModelNodeProfileReference",
     "ModelNodeProfileSet",
+    "ModelNodeRegistration",
     "ModelNodeRuntime",
     "ModelNodeRuntimeConfig",
     "ModelNodeRuntimeConflictError",
