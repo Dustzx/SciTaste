@@ -24,6 +24,7 @@ from scitaste.benchmark.study_adapter import (
     _prepare_stage_seven,
     _publication_asset_violations,
     _publication_resume_stage,
+    _reader_facing_research_topic,
     _remove_missing_publication_images,
     _sanitize_publication_artifacts,
     _selected_experiment,
@@ -149,6 +150,15 @@ def test_stage_completed_requires_done_health_record(tmp_path) -> None:
     citation.mkdir()
     (citation / "stage_health.json").write_text(json.dumps({"status": "done"}), encoding="utf-8")
     assert _stage_completed(tmp_path, "CITATION_VERIFY")
+
+
+def test_reader_facing_topic_describes_task_without_internal_contract_id() -> None:
+    topic = _reader_facing_research_topic(load_task())
+
+    assert "Diagnose a reproducible failure boundary" in topic
+    assert "all registered conditions, factor cells, samples, metrics, and seeds" in topic
+    assert "learned neural model is neither required nor claimed" in topic
+    assert "diagnosis-factorial-v1" not in topic
 
 
 def test_publication_resume_stage_rewinds_to_earliest_missing_prerequisite(tmp_path) -> None:

@@ -631,10 +631,7 @@ def _write_upstream_config(
             "profile": "ml_generic",
         },
         "research": {
-            "topic": (
-                "Execute the frozen synthetic benchmark contract "
-                f"{benchmark['contract']['generator']}"
-            ),
+            "topic": _reader_facing_research_topic(task),
             "domains": [task["domain"]],
             "daily_paper_count": 0,
             "quality_threshold": 3.5,
@@ -740,6 +737,17 @@ def _write_upstream_config(
     path = run_dir / "config.yaml"
     path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     return path
+
+
+def _reader_facing_research_topic(task: dict[str, Any]) -> str:
+    """Describe the scientific task without exposing an internal contract ID."""
+
+    direction = " ".join(str(task["research_direction"]).split())
+    return (
+        f"{direction} Execute the supplied deterministic synthetic benchmark over all "
+        "registered conditions, factor cells, samples, metrics, and seeds using transparent "
+        "CPU-executable methods; a learned neural model is neither required nor claimed."
+    )
 
 
 def _write_prompt_overrides(run_dir: Path, task: dict[str, Any]) -> Path:
