@@ -33,6 +33,8 @@ from scitaste.model_nodes.nodes import (
     InterpretationThreatNode,
     NodeNotApplicableError,
     ReviewSemanticNode,
+    StructuredRepairNode,
+    ToolPlanNode,
 )
 from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
 from scitaste.model_nodes.replay import (
@@ -48,6 +50,12 @@ from scitaste.model_nodes.schemas import (
     InterpretationThreatOutput,
     ReviewSemanticInput,
     ReviewSemanticOutput,
+)
+from scitaste.model_nodes.tool_intelligence import (
+    StructuredRepairInput,
+    StructuredRepairOutput,
+    ToolPlanInput,
+    ToolPlanOutput,
 )
 from scitaste.project import ProjectRun, ProjectRuntime
 from scitaste.project.models import validate_entry_id, validate_project_id
@@ -90,7 +98,13 @@ class RuntimeInvocationIntent(RuntimeModel):
     run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     project_revision: int = Field(ge=0)
     state_revision: int = Field(ge=0)
-    node_name: Literal["review-semantic", "interpretation-threat", "ambiguous-action"]
+    node_name: Literal[
+        "review-semantic",
+        "interpretation-threat",
+        "ambiguous-action",
+        "tool-plan",
+        "structured-repair",
+    ]
     node_input: dict[str, JsonValue]
     context: NodeContext
     trigger: ModelNodeTrigger
@@ -271,6 +285,12 @@ _NODE_TYPES = {
         InterpretationThreatOutput,
     ),
     "ambiguous-action": (AmbiguousActionNode, AmbiguousActionInput, AmbiguousActionOutput),
+    "tool-plan": (ToolPlanNode, ToolPlanInput, ToolPlanOutput),
+    "structured-repair": (
+        StructuredRepairNode,
+        StructuredRepairInput,
+        StructuredRepairOutput,
+    ),
 }
 
 
@@ -918,6 +938,15 @@ class ModelNodeRuntime:
             json.dumps(input_payload, ensure_ascii=False, allow_nan=False),
             strict=True,
         )
+        if isinstance(typed_input, ToolPlanInput):
+            registered_runs = {
+                item.run_id
+                for item in self.project_runtime.open(values["project_id"]).manifest.runs
+            }
+            if set(typed_input.scope.run_ids) - registered_runs:
+                raise ModelNodeRuntimeError(
+                    "controlled tool scope contains a run not registered to the project"
+                )
         effective_context = NodeContext.model_validate(
             {
                 **context.model_dump(mode="python"),

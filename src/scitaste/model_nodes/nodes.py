@@ -31,6 +31,19 @@ from scitaste.model_nodes.schemas import (
     ReviewSemanticInput,
     ReviewSemanticOutput,
 )
+from scitaste.model_nodes.tool_intelligence import (
+    EvidenceInspectPermission,
+    EvidenceInspectStep,
+    KnowledgeQueryPermission,
+    KnowledgeQueryStep,
+    RegisteredRunComparePermission,
+    RegisteredRunCompareStep,
+    StructuredRepairInput,
+    StructuredRepairOutput,
+    ToolPlanInput,
+    ToolPlanOutput,
+    output_schema_sha256,
+)
 from scitaste.schema.actions import MetaAction
 
 
@@ -480,6 +493,254 @@ class AmbiguousActionNode(ModelNode[AmbiguousActionInput, AmbiguousActionOutput]
             for action in input_data.candidate_actions
             if action.type not in allowed
         ]
+
+
+class ToolPlanNode(ModelNode[ToolPlanInput, ToolPlanOutput]):
+    """Propose a bounded plan over explicit read-only first-party tools."""
+
+    node_name = "tool-plan"
+    prompt_version = "tool-plan-v1"
+    system_instruction = (
+        "Propose an ordered plan using only the supplied read-only tool profile and scope. "
+        "Return data-only steps; do not call a provider tool, execute any step, mutate state, "
+        "open network access, launch a process, or expand an identifier scope."
+    )
+    input_model = ToolPlanInput
+    output_model = ToolPlanOutput
+
+    def _preflight(
+        self,
+        input_data: ToolPlanInput,
+        *,
+        context: NodeContext,
+        backend: StructuredModelBackend,
+        policy: NodePolicy,
+    ) -> None:
+        super()._preflight(input_data, context=context, backend=backend, policy=policy)
+        if input_data.scope.project_id != context.project_id:
+            raise NodePolicyViolationError("tool scope belongs to another project")
+        if input_data.scope.state_snapshot_id != context.state_snapshot_id:
+            raise NodePolicyViolationError("tool scope belongs to another state snapshot")
+        profile_tools = set(input_data.tool_profile.allowed_tool_names)
+        if profile_tools != set(policy.allowed_tool_names):
+            raise NodePolicyViolationError("controlled tool profile and policy allowlists differ")
+        self._validate_profile_scope(input_data, context=context)
+
+    def _response_rejections(
+        self,
+        request: StructuredModelRequest,
+        response: StructuredModelResponse,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        profile: ModelNodeProfile | None = None,
+    ) -> list[str]:
+        reasons = super()._response_rejections(
+            request,
+            response,
+            context=context,
+            policy=policy,
+            profile=profile,
+        )
+        if response.tool_calls:
+            reasons.append("provider-native tool calls cannot substitute for typed tool-plan steps")
+        return reasons
+
+    def _proposal_rejections(
+        self,
+        proposal: ToolPlanOutput,
+        *,
+        input_data: ToolPlanInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del context, policy
+        controlled = input_data.tool_profile
+        reasons: list[str] = []
+        if proposal.tool_profile_id != controlled.profile_id:
+            reasons.append("tool plan names a different controlled profile")
+        if proposal.tool_profile_fingerprint != controlled.fingerprint:
+            reasons.append("tool plan fingerprint differs from the controlled profile")
+        if len(proposal.steps) > controlled.max_plan_steps:
+            reasons.append("tool plan step budget exceeded")
+        dependency_edges = sum(len(step.depends_on) for step in proposal.steps)
+        if dependency_edges > controlled.max_dependency_edges:
+            reasons.append("tool plan dependency-edge budget exceeded")
+
+        prior_steps: set[str] = set()
+        for step in proposal.steps:
+            unknown_dependencies = sorted(set(step.depends_on) - prior_steps)
+            if unknown_dependencies:
+                reasons.append(f"step {step.step_id!r} has an unknown or forward dependency")
+            reasons.extend(self._step_rejections(step, input_data=input_data))
+            prior_steps.add(step.step_id)
+        return reasons
+
+    @staticmethod
+    def _validate_profile_scope(input_data: ToolPlanInput, *, context: NodeContext) -> None:
+        scope = input_data.scope
+        for permission in input_data.tool_profile.permissions:
+            if isinstance(permission, KnowledgeQueryPermission):
+                if set(permission.allowed_library_ids) - set(scope.library_ids):
+                    raise NodePolicyViolationError(
+                        "knowledge-query permission escapes the supplied library scope"
+                    )
+            elif isinstance(permission, EvidenceInspectPermission):
+                allowed = set(permission.allowed_evidence_ids)
+                if allowed - set(scope.evidence_ids):
+                    raise NodePolicyViolationError(
+                        "evidence-inspect permission escapes the supplied evidence scope"
+                    )
+                if allowed - set(context.evidence_ids):
+                    raise NodePolicyViolationError(
+                        "evidence-inspect permission escapes the immutable node context"
+                    )
+            elif isinstance(permission, RegisteredRunComparePermission):
+                if set(permission.allowed_run_ids) - set(scope.run_ids):
+                    raise NodePolicyViolationError(
+                        "run-comparison permission escapes the supplied run scope"
+                    )
+                if set(permission.allowed_metric_names) - set(scope.metric_names):
+                    raise NodePolicyViolationError(
+                        "run-comparison permission escapes the supplied metric scope"
+                    )
+
+    @staticmethod
+    def _step_rejections(
+        step: KnowledgeQueryStep | EvidenceInspectStep | RegisteredRunCompareStep,
+        *,
+        input_data: ToolPlanInput,
+    ) -> list[str]:
+        controlled = input_data.tool_profile
+        scope = input_data.scope
+        permission = controlled.permission_for(step.tool_name)
+        if permission is None:
+            return [f"step {step.step_id!r} proposes an unavailable tool"]
+        reasons: list[str] = []
+        if isinstance(step, KnowledgeQueryStep):
+            assert isinstance(permission, KnowledgeQueryPermission)
+            if set(step.arguments.library_ids) - set(permission.allowed_library_ids):
+                reasons.append(f"step {step.step_id!r} escapes the allowed library scope")
+            if set(step.arguments.library_ids) - set(scope.library_ids):
+                reasons.append(f"step {step.step_id!r} references an unknown library")
+            if len(step.arguments.library_ids) > permission.max_library_ids:
+                reasons.append(f"step {step.step_id!r} exceeds the library-count limit")
+            if len(step.arguments.query) > permission.max_query_chars:
+                reasons.append(f"step {step.step_id!r} exceeds the query-length limit")
+            if step.arguments.top_k > permission.max_top_k:
+                reasons.append(f"step {step.step_id!r} exceeds the retrieval limit")
+        elif isinstance(step, EvidenceInspectStep):
+            assert isinstance(permission, EvidenceInspectPermission)
+            if set(step.arguments.evidence_ids) - set(permission.allowed_evidence_ids):
+                reasons.append(f"step {step.step_id!r} escapes the allowed evidence scope")
+            if set(step.arguments.evidence_ids) - set(scope.evidence_ids):
+                reasons.append(f"step {step.step_id!r} references unknown evidence")
+            if len(step.arguments.evidence_ids) > permission.max_evidence_items:
+                reasons.append(f"step {step.step_id!r} exceeds the evidence-item limit")
+        else:
+            assert isinstance(step, RegisteredRunCompareStep)
+            assert isinstance(permission, RegisteredRunComparePermission)
+            if set(step.arguments.run_ids) - set(permission.allowed_run_ids):
+                reasons.append(f"step {step.step_id!r} escapes the allowed run scope")
+            if set(step.arguments.run_ids) - set(scope.run_ids):
+                reasons.append(f"step {step.step_id!r} references an unknown run")
+            if set(step.arguments.metric_names) - set(permission.allowed_metric_names):
+                reasons.append(f"step {step.step_id!r} escapes the allowed metric scope")
+            if set(step.arguments.metric_names) - set(scope.metric_names):
+                reasons.append(f"step {step.step_id!r} references an unknown metric")
+            if len(step.arguments.run_ids) > permission.max_runs:
+                reasons.append(f"step {step.step_id!r} exceeds the run-count limit")
+            if len(step.arguments.metric_names) > permission.max_metrics:
+                reasons.append(f"step {step.step_id!r} exceeds the metric-count limit")
+        return reasons
+
+
+_REPAIR_TARGET_TYPES: dict[str, type[BaseModel]] = {
+    "review-semantic": ReviewSemanticOutput,
+    "interpretation-threat": InterpretationThreatOutput,
+    "ambiguous-action": AmbiguousActionOutput,
+    "tool-plan": ToolPlanOutput,
+}
+
+
+class StructuredRepairNode(ModelNode[StructuredRepairInput, StructuredRepairOutput]):
+    """Propose a schema-valid replacement without accepting it for the target node."""
+
+    node_name = "structured-repair"
+    prompt_version = "structured-repair-v1"
+    system_instruction = (
+        "Propose a repaired JSON payload for the pinned supported target schema. Preserve the "
+        "target identity and return only a repair proposal. Do not execute tools, retry or alter "
+        "the failed invocation, hide its evidence, or claim target-node acceptance."
+    )
+    input_model = StructuredRepairInput
+    output_model = StructuredRepairOutput
+
+    def _preflight(
+        self,
+        input_data: StructuredRepairInput,
+        *,
+        context: NodeContext,
+        backend: StructuredModelBackend,
+        policy: NodePolicy,
+    ) -> None:
+        super()._preflight(input_data, context=context, backend=backend, policy=policy)
+        if policy.allowed_tool_names:
+            raise NodePolicyViolationError("structured repair cannot receive a tool allowlist")
+        expected = output_schema_sha256(_REPAIR_TARGET_TYPES[input_data.target_node_name])
+        if input_data.target_schema_sha256 != expected:
+            raise NodePolicyViolationError("repair target schema fingerprint does not match")
+
+    def _response_rejections(
+        self,
+        request: StructuredModelRequest,
+        response: StructuredModelResponse,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        profile: ModelNodeProfile | None = None,
+    ) -> list[str]:
+        reasons = super()._response_rejections(
+            request,
+            response,
+            context=context,
+            policy=policy,
+            profile=profile,
+        )
+        if response.tool_calls:
+            reasons.append("structured repair cannot contain provider-native tool calls")
+        return reasons
+
+    def _proposal_rejections(
+        self,
+        proposal: StructuredRepairOutput,
+        *,
+        input_data: StructuredRepairInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del context, policy
+        reasons: list[str] = []
+        if proposal.target_node_name != input_data.target_node_name:
+            reasons.append("repair proposal names a different target node")
+        if proposal.target_schema_sha256 != input_data.target_schema_sha256:
+            reasons.append("repair proposal names a different target schema")
+        target_type = _REPAIR_TARGET_TYPES[input_data.target_node_name]
+        try:
+            target_type.model_validate_json(
+                json.dumps(
+                    proposal.repaired_payload,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    separators=(",", ":"),
+                ),
+                strict=True,
+            )
+        except ValidationError as exc:
+            reasons.append("repaired payload violates target schema: " + _validation_summary(exc))
+        except ValueError as exc:
+            reasons.append(f"repaired payload is not strict JSON: {exc}")
+        return reasons
 
 
 def _validation_summary(exc: ValidationError) -> str:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -8,12 +9,22 @@ from pathlib import Path
 from typing import Any
 
 from scitaste.cli import main
-from scitaste.model_nodes import load_model_node_profile_set
+from scitaste.model_nodes import (
+    ControlledToolProfile,
+    EvidenceInspectPermission,
+    KnowledgeQueryPermission,
+    RegisteredRunComparePermission,
+    ReviewSemanticOutput,
+    canonical_json,
+    load_model_node_profile_set,
+    output_schema_sha256,
+)
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE_SET = ROOT / "configs/model_nodes/runtime_profiles.example.yaml"
 PROFILE_ID = "short-structured-semantic"
+TOOL_PROFILE_SET = ROOT / "configs/model_nodes/tool_intelligence_profiles.example.yaml"
 PROJECT_ID = "runtime-cli-project"
 RUN_ID = "normal-run"
 
@@ -323,3 +334,258 @@ def test_three_nodes_execute_verify_and_replay_across_processes(
     )
     in_process_status = json.loads(capsys.readouterr().out)
     assert in_process_status["status"] == "verified"
+
+
+def test_tool_intelligence_nodes_execute_and_replay_through_cli_across_processes(
+    tmp_path: Path,
+) -> None:
+    outputs = tmp_path / "outputs"
+    project = ProjectRuntime(outputs)
+    project.create(
+        ProjectManifest(
+            project_id=PROJECT_ID,
+            title="Tool Intelligence CLI project",
+            research_direction="Exercise controlled proposal-only semantic tools.",
+            status="active",
+        )
+    )
+    revision = 0
+    for run_id in ("run-a", "run-b", RUN_ID):
+        snapshot = project.begin_run(
+            PROJECT_ID,
+            ProjectRun(
+                run_id=run_id,
+                provider="workflow",
+                model="deterministic-controller",
+                condition="tool-intelligence-scripted",
+                seed=0,
+                status="running",
+                evidence_scope="controlled-semantic-tools",
+            ),
+            expected_revision=revision,
+        )
+        revision = snapshot.revision
+    controlled = ControlledToolProfile(
+        profile_id="readonly-project-analysis",
+        profile_version="1.0.0",
+        permissions=(
+            KnowledgeQueryPermission(
+                allowed_library_ids=("knowledge-main",),
+                max_library_ids=1,
+                max_query_chars=160,
+                max_top_k=5,
+            ),
+            EvidenceInspectPermission(
+                allowed_evidence_ids=("evidence-1",),
+                max_evidence_items=1,
+            ),
+            RegisteredRunComparePermission(
+                allowed_run_ids=("run-a", "run-b"),
+                allowed_metric_names=("accuracy",),
+                max_runs=2,
+                max_metrics=1,
+            ),
+        ),
+        max_plan_steps=3,
+        max_dependency_edges=2,
+    )
+    tool_input = {
+        "objective": "Inspect the registered evidence before choosing another action.",
+        "scope": {
+            "project_id": PROJECT_ID,
+            "state_snapshot_id": "state-snapshot-7",
+            "library_ids": ["knowledge-main"],
+            "evidence_ids": ["evidence-1"],
+            "run_ids": ["run-a", "run-b"],
+            "metric_names": ["accuracy"],
+        },
+        "tool_profile": controlled.model_dump(mode="json"),
+    }
+    tool_reply = {
+        "tool_profile_id": controlled.profile_id,
+        "tool_profile_fingerprint": controlled.fingerprint,
+        "steps": [
+            {
+                "step_id": "inspect-evidence",
+                "depends_on": [],
+                "purpose": "Read one project-owned evidence record.",
+                "tool_name": "evidence.inspect",
+                "arguments": {
+                    "evidence_ids": ["evidence-1"],
+                    "include_provenance": True,
+                },
+            }
+        ],
+        "rationale": "The read-only evidence view can resolve the immediate uncertainty.",
+        "confidence": 0.8,
+    }
+    invalid = {"summary": "missing concerns"}
+    repair_input = {
+        "target_node_name": "review-semantic",
+        "target_schema_sha256": output_schema_sha256(ReviewSemanticOutput),
+        "invalid_payload": invalid,
+        "invalid_payload_sha256": hashlib.sha256(canonical_json(invalid)).hexdigest(),
+        "validation_issues": [{"location": "concerns", "error_type": "missing"}],
+    }
+    repair_reply = {
+        "target_node_name": "review-semantic",
+        "target_schema_sha256": repair_input["target_schema_sha256"],
+        "repaired_payload": {
+            "concerns": [
+                {
+                    "concern_id": "concern-1",
+                    "category": "clarity",
+                    "severity": "low",
+                    "target_claim_ids": [],
+                    "target_section": None,
+                    "text": "Clarify the registered comparison.",
+                    "requires_new_evidence": False,
+                    "requires_new_experiment": False,
+                    "required_evidence_types": [],
+                    "proposed_action_type": "CLARIFY_EXISTING_TEXT",
+                }
+            ],
+            "summary": "One clarity concern.",
+            "confidence": 0.7,
+        },
+        "change_summary": ["Added the required concern list."],
+        "confidence": 0.8,
+    }
+
+    def write_config(
+        path: Path,
+        *,
+        node_name: str,
+        request_id: str,
+        profile_id: str,
+        node_input: dict[str, Any],
+        reply: dict[str, Any],
+    ) -> Path:
+        profile = load_model_node_profile_set(TOOL_PROFILE_SET).profiles[profile_id]
+        payload = {
+            "schema_version": "1.0",
+            "node_name": node_name,
+            "request_id": request_id,
+            "node_input": node_input,
+            "state_projection": {
+                "schema_version": "1.0",
+                "project_id": PROJECT_ID,
+                "state_snapshot_id": "state-snapshot-7",
+                "state_revision": 7,
+                "stage": "EVIDENCE",
+                "evidence_ids": ["evidence-1"],
+            },
+            "trigger": {
+                "trigger_id": f"trigger-{node_name}",
+                "reason": "A deterministic controller requested bounded semantic advice.",
+            },
+            "policy": {
+                "policy_id": f"policy-{node_name}",
+                "enabled": True,
+                "allowed_node_names": [node_name],
+                "expected_backend": profile.provider,
+                "expected_model": profile.model,
+                "allowed_tool_names": list(profile.admission.allowed_tool_names),
+                "allowed_action_types": [],
+                "max_request_bytes": profile.admission.max_request_bytes,
+                "max_input_tokens": profile.admission.max_input_tokens,
+                "max_output_tokens": profile.admission.max_output_tokens,
+                "max_total_tokens": profile.admission.max_total_tokens,
+                "max_api_cost_usd": profile.cumulative_project.max_api_cost_usd,
+                "max_latency_ms": profile.admission.max_latency_ms,
+            },
+            "backend": {
+                "kind": "scripted",
+                "provider": "scripted",
+                "model": "scripted-v1",
+                "reply": {
+                    "output_payload": reply,
+                    "usage": {"input_tokens": 10, "output_tokens": 5, "cost_usd": 0},
+                    "latency_ms": 1,
+                },
+            },
+            "seed": 11,
+        }
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return path
+
+    cases = (
+        (
+            "tool-plan",
+            "controlled-tool-plan",
+            tool_input,
+            tool_reply,
+        ),
+        (
+            "structured-repair",
+            "structured-response-repair",
+            repair_input,
+            repair_reply,
+        ),
+    )
+    for node_name, profile_id, node_input, reply in cases:
+        request_id = f"{node_name}-stable-request"
+        config = write_config(
+            tmp_path / f"{node_name}.json",
+            node_name=node_name,
+            request_id=request_id,
+            profile_id=profile_id,
+            node_input=node_input,
+            reply=reply,
+        )
+        identity = [
+            "--project-id",
+            PROJECT_ID,
+            "--run-id",
+            RUN_ID,
+            "--expected-revision",
+            str(snapshot.revision),
+            "--config",
+            str(config),
+            "--profile-set",
+            str(TOOL_PROFILE_SET),
+            "--profile-id",
+            profile_id,
+            "--outputs-root",
+            str(outputs),
+        ]
+        source_id = f"{node_name}-source"
+        executed = _run(
+            "model-node",
+            "runtime",
+            "execute",
+            "--invocation-id",
+            source_id,
+            *identity,
+        )
+        assert executed["status"] == "accepted"
+        assert executed["proposal"]["advisory_only"] is True
+        assert executed["proposal"]["executable"] is False
+        replayed = _run(
+            "model-node",
+            "runtime",
+            "replay",
+            "--invocation-id",
+            f"{node_name}-replay",
+            *identity,
+            "--source-invocation",
+            source_id,
+        )
+        assert replayed["status"] == "accepted"
+        assert replayed["replay_state"]["replayed"] is True
+        assert replayed["cache_state"]["cached"] is True
+
+    verified = _run(
+        "model-node",
+        "runtime",
+        "verify",
+        "--project-id",
+        PROJECT_ID,
+        "--run-id",
+        RUN_ID,
+        "--outputs-root",
+        str(outputs),
+    )
+    assert verified["status"] == "verified"
+    assert verified["cumulative_telemetry"]["entry_count"] == 4
+    assert verified["cumulative_telemetry"]["replay_count"] == 2

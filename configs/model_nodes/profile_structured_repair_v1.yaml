@@ -1,0 +1,32 @@
+schema_version: "1.0"
+profile_id: structured-response-repair
+profile_version: 1.0.0
+provider: scripted
+model: scripted-v1
+allowed_node_names:
+  - structured-repair
+live_execution_permitted: false
+unrestricted_code_generation: false
+generation:
+  schema_version: "1.0"
+  max_request_bytes: 100000
+  max_output_tokens: 2048
+  context_window_tokens: 32768
+  structured_json: true
+  deterministic_seed_supported: true
+admission:
+  schema_version: "1.0"
+  max_request_bytes: 100000
+  max_input_tokens: 4000
+  max_output_tokens: 1024
+  max_total_tokens: 5024
+  max_latency_ms: 30000
+  max_response_cost_usd: 0.05
+  allowed_tool_names: []
+  max_tool_call_proposals: 0
+cumulative_project:
+  schema_version: "1.0"
+  max_invocations: 20
+  max_total_tokens: 100000
+  max_api_cost_usd: 1.0
+  unknown_cost_blocks_acceptance: true

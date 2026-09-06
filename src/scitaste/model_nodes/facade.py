@@ -26,6 +26,12 @@ from scitaste.model_nodes.schemas import (
     ReviewSemanticInput,
     ReviewSemanticOutput,
 )
+from scitaste.model_nodes.tool_intelligence import (
+    StructuredRepairInput,
+    StructuredRepairOutput,
+    ToolPlanInput,
+    ToolPlanOutput,
+)
 from scitaste.schema.actions import ResearchAction
 
 
@@ -76,11 +82,15 @@ _INPUT_TYPES = {
     "review-semantic": ReviewSemanticInput,
     "interpretation-threat": InterpretationThreatInput,
     "ambiguous-action": AmbiguousActionInput,
+    "tool-plan": ToolPlanInput,
+    "structured-repair": StructuredRepairInput,
 }
 _OUTPUT_TYPES = {
     "review-semantic": ReviewSemanticOutput,
     "interpretation-threat": InterpretationThreatOutput,
     "ambiguous-action": AmbiguousActionOutput,
+    "tool-plan": ToolPlanOutput,
+    "structured-repair": StructuredRepairOutput,
 }
 
 
@@ -93,7 +103,13 @@ class ModelNodeFacadeRequest(FacadeModel):
     invocation_id: str = Field(min_length=1)
     request_id: str | None = Field(default=None, min_length=1)
     expected_project_revision: int = Field(ge=0)
-    node_name: Literal["review-semantic", "interpretation-threat", "ambiguous-action"]
+    node_name: Literal[
+        "review-semantic",
+        "interpretation-threat",
+        "ambiguous-action",
+        "tool-plan",
+        "structured-repair",
+    ]
     node_input: dict[str, JsonValue]
     state_projection: ImmutableStateProjection
     trigger: ModelNodeTrigger

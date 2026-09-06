@@ -1,0 +1,13 @@
+# Content-addressed, offline-only profiles for Tool Intelligence proposals.
+# They authorize neither provider-native tool calls nor real tool execution.
+schema_version: "1.0"
+profile_set_id: tool-intelligence-offline-examples
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: profile_tool_plan_v1.yaml
+    sha256: 80fc09000926b0f18c14e09ec3152485764dfbfac4ea82264f97b43a7de6fa3d
+    profile_sha256: 61f2aec0c09323a149695e97d5c7ffdfd3c0a727d4140e57137502fde32475b2
+  - path: profile_structured_repair_v1.yaml
+    sha256: 59fc3c84f71e80347cc4186009af181353d9361b0ad767f4acfc173ed33204de
+    profile_sha256: 05aee949e96b7811d4013bb5271dc9275bc7b399902f24a06edef7a46822b5ba
