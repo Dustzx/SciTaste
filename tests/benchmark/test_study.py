@@ -173,6 +173,7 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
     [
         "configs/experiments/matched_budget_local_pilot_v1.yaml",
         "configs/experiments/matched_budget_local_preacceptance_v2.yaml",
+        "configs/experiments/matched_budget_local_preacceptance_v3.yaml",
     ],
 )
 def test_pilot_scope_cannot_become_headline_evidence(protocol_path: str) -> None:
@@ -219,6 +220,19 @@ def test_local_preacceptance_v2_has_completion_calibrated_finite_budgets() -> No
     assert protocol.budget.max_wall_time_hours == 3.0
     assert protocol.budget.max_search_queries == 0
     assert len(MatchedStudyPlanner().plan(protocol).cells) == 16
+
+
+def test_local_preacceptance_v3_binds_reader_facing_topic_fix() -> None:
+    protocol = load_study_protocol("configs/experiments/matched_budget_local_preacceptance_v3.yaml")
+
+    assert protocol.scope.value == "pilot"
+    assert protocol.codebase_commit == "c772383a2e2aaee294198f534a328386ef8e1df4"
+    assert (
+        protocol.budget
+        == load_study_protocol(
+            "configs/experiments/matched_budget_local_preacceptance_v2.yaml"
+        ).budget
+    )
 
 
 def test_budget_or_telemetry_violation_blocks_study() -> None:
