@@ -174,6 +174,7 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
         "configs/experiments/matched_budget_local_pilot_v1.yaml",
         "configs/experiments/matched_budget_local_preacceptance_v2.yaml",
         "configs/experiments/matched_budget_local_preacceptance_v3.yaml",
+        "configs/experiments/matched_budget_local_preacceptance_v4.yaml",
     ],
 )
 def test_pilot_scope_cannot_become_headline_evidence(protocol_path: str) -> None:
@@ -231,6 +232,24 @@ def test_local_preacceptance_v3_binds_reader_facing_topic_fix() -> None:
         protocol.budget
         == load_study_protocol(
             "configs/experiments/matched_budget_local_preacceptance_v2.yaml"
+        ).budget
+    )
+
+
+def test_local_preacceptance_v4_binds_executable_diagnosis_task() -> None:
+    protocol = load_study_protocol("configs/experiments/matched_budget_local_preacceptance_v4.yaml")
+
+    diagnosis = next(task for task in protocol.tasks if task.category.value == "diagnosis_friendly")
+    assert protocol.scope.value == "pilot"
+    assert protocol.codebase_commit == "cced14c98c8f0ad9064913b053ec4b74fe1695cb"
+    assert diagnosis.task_id == "diagnosis-friendly-v2"
+    assert diagnosis.asset_sha256 == (
+        "84cfa0b75713cef3a559959eee4f40e42a27efd0ae36468a3473dda0ae6e0983"
+    )
+    assert (
+        protocol.budget
+        == load_study_protocol(
+            "configs/experiments/matched_budget_local_preacceptance_v3.yaml"
         ).budget
     )
 
