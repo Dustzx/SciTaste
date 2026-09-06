@@ -1,11 +1,11 @@
 # Parallel Task Board
 
-Board revision: `2026-09-06.12`
+Board revision: `2026-09-07.13`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Phase 9 local-system execution and core workflow | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
-| 2 | Tool Intelligence bounded-autonomy iteration | integrated; idle | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | main commit `3013bc4` |
+| 2 | Tool Intelligence follow-on from `INNOVATION_MAP.md` | in progress; owner assigned | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | integrated v1 foundation |
 | 3 | Progress-first Generation as Content workspace | integrated; idle | `feat/generative-ui-intent-planner-v3` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
@@ -24,10 +24,11 @@ Board revision: `2026-09-06.12`
 
 ## Current non-overlap
 
-- Window 2's Tool Intelligence Epic is integrated at `3013bc4` after main-window
-  review and focused verification; it must not continue from the completed
-  token. Window 3's progress-first Generation as Content WP1--WP5 is integrated
-  and remains idle.
+- Window 2's Tool Intelligence v1 Epic is integrated at `3013bc4`; the project
+  owner has assigned Window 2 a follow-on iteration from the Tool Intelligence
+  section of `docs/INNOVATION_MAP.md`. Main does not edit that subsystem while
+  the follow-on is active. Window 3's progress-first Generation as Content
+  WP1--WP5 is integrated and remains idle.
 - Main owns Phase 9 local-system execution, core workflow development,
   integration repairs, project catalog refreshes, common architecture/roadmap/
   changelog edits, full-suite checks, and GitHub synchronization.

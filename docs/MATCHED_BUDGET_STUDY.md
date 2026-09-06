@@ -153,13 +153,14 @@ complete, preventing engineering trials from becoming headline evidence.
 
 ## Local RTX 3090 execution path
 
-`configs/experiments/study_launchers_qwen3vl4b_local_v1.yaml` replaces the old
-launcher placeholders for all four core conditions. It invokes
+`configs/experiments/study_launchers_qwen3vl4b_local_v2.yaml` is the current
+launcher set for all four core conditions. It invokes
 `scitaste.benchmark.local_study_adapter`, which verifies the content hash of
-`configs/backends/local_transformers_qwen3vl4b_study.yaml` and the names, sizes,
-and bytes of every checkpoint file, loads that checkpoint once per cell, and
-serves only the narrow non-streaming Chat Completions subset on loopback. The
-ephemeral bearer is held in process
+`configs/backends/local_transformers_qwen3vl4b_study_v2.yaml` and the names,
+sizes, and bytes of every checkpoint file, loads that checkpoint once per cell,
+and serves only the narrow non-streaming Chat Completions subset on loopback.
+The historical v1 launcher remains pinned to its original 20,000-token pilot.
+The ephemeral bearer is held in process
 memory and the child receives only its environment-variable name and loopback
 URL. Requests have byte, context, output, schema, model-identity, and serialized
 inference bounds. No network model or fake completion is used.
@@ -181,6 +182,42 @@ failed child result with unknown counters. Future executions preserve exact
 schema-valid failure telemetry while forcing any non-zero child success claim
 back to failure; the original record stays immutable and its exact counters
 remain in `launcher_result.json` and `llm_telemetry.jsonl`.
+
+The completion-calibrated local preacceptance retains the same checkpoint and
+transport but raises the cell budget to 200,000 tokens and three wall/GPU hours.
+Its diagnosis task declares a repository-relative executable asset by SHA-256,
+module, and entrypoint. SciTaste copies the exact kernel plus a canonical wrapper
+into Stage 7, injects those bytes at code extraction and sandbox execution, and
+requires one source-verified call from a Python main guard. The selected run is
+rejected if the contract, kernel, wrapper, sandbox trace, registered seed matrix,
+dispersion, or sole machine-evidence record disagrees.
+
+The current kernel executes all 1,944 registered packets. Its observed method
+means are 0.855453, 0.975309, and 0.938786; their cross-method balanced-accuracy
+aggregate is 0.923182. Across seeds 7, 19, and 31 it finds 16 reproducible
+majority-vote failure cells, no confidence-weighted failure cell, and 3
+position-aware failure cells under the registered below-0.75/on-at-least-two-seeds
+criterion. Factor effects and boundary cells are first-class evidence rather
+than optional text hidden in stdout.
+
+Local v6--v8 are retained failures, not retries rewritten in place. They reached
+real experiment execution and progressively exposed that generic analysis could
+discard diagnostics, deterministic outline evidence could use labels its own
+auditor did not recognize, and small-model debate roles could negate an executed
+grid or repeat prohibited audit shorthand. The adapter now passes the
+publication-safe diagnostic projection to every analysis role and synthesis,
+omits the raw machine record from prose prompts, and rejects contradictory or
+incomplete diagnostic reporting before spending later-stage tokens. A fresh
+versioned cell is required to establish complete Stage 8--18 feasibility.
+
+Local v9 pins that evidence-bound implementation and passed its offline and
+focused checks, but its real attempt produced zero model tokens and zero
+experiments after the RTX 3090 reported NVIDIA Xid 79 (GPU fallen off the bus).
+The immutable failed attempt records 0.023591 allocated GPU-hours before exit.
+It does not test the repaired Stage 14 path and must not be interpreted as a
+software regression or feasibility result. After host-level GPU recovery, v9
+can resume through the registered runner, which will archive the failed attempt
+instead of overwriting it.
 
 ## Current execution state
 

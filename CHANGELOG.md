@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- A content-addressed executable diagnosis benchmark with an exact canonical
+  entrypoint, 1,944 generated packets, three registered seeds, independently
+  derived factor effects, and a cross-seed failure-boundary criterion.
+- Source-verified factorial diagnostics now remain authoritative through every
+  analysis debate role, synthesis, outline, draft, and audit. Publication
+  projections retain the complete seed matrix and boundary counts while
+  excluding machine-record and internal task identifiers.
 - Proposal-only Tool Intelligence contracts and durable runtime support for
   bounded plans over Knowledge query, Evidence inspection, and registered-run
   comparison, plus schema-pinned structured-repair proposals. Provider-native
@@ -22,6 +29,14 @@ semantic versioning.
 - Failed study launchers with a schema-valid result now retain their exact
   counters and evidence class even when the child exits non-zero; a non-zero
   child can never promote itself to success.
+- Local preacceptance failures that reached real experiment execution, analysis,
+  figures, research decision, and outline are retained as immutable evidence;
+  missing diagnostic counts, negated factorial observations, and contaminating
+  statistical shorthand now fail before additional paper tokens are spent.
+- The next clean local attempt is also retained as a zero-token hardware failure:
+  the RTX 3090 reported NVIDIA Xid 79 (GPU fallen off the bus) before an admitted
+  model request. It is resumable evidence of an operational blocker, not a
+  framework failure, completed cell, or effectiveness result.
 - A progress-first Generation as Content workspace with evidence-derived quick
   intents, bounded free questions, closed server-owned component planning,
   deterministic fallback, dynamic native layouts, exact process-local surface

@@ -227,6 +227,29 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   is exact. Future non-zero launches now preserve any schema-valid failed child
   telemetry while still rejecting a child that claims success. The historical
   record is not rewritten retroactively.
+- Completion-calibrated local runs now use a 200,000-token, three-hour pilot
+  envelope and a content-addressed executable diagnosis kernel rather than
+  relying on small-model code invention. Its canonical runner executes 1,944
+  packets over the complete registered grid and reports source-verified method
+  means, three-seed dispersion, factor effects, and reproducible failure
+  boundaries. The observed boundary counts are 16 for majority vote, 0 for
+  confidence weighted vote, and 3 for the position aware probe; the registered
+  cross-method balanced accuracy is 0.923182.
+- Clean v6--v8 cells all completed the real experiment and retained exact local
+  usage, but were deliberately rejected before or at drafting. They exposed,
+  in order, loss of factorial diagnostics in the generic analysis summary, an
+  outline-checkpoint labeling mismatch, negation of an executed factor grid,
+  and leakage of statistical shorthand/internal machine identifiers into prose.
+  Diagnostics are now validated from the sole machine record, projected into
+  every Stage 14 debate role, and checked again at analysis, outline, and draft.
+  These are adapter integrity results, not a completed cell or effectiveness
+  evidence; each historical run remains immutable.
+- The evidence-bound v9 protocol passed offline/focused verification but its real
+  attempt stopped before any admitted model token or experiment when the local
+  RTX 3090 reported NVIDIA Xid 79 (GPU fallen off the bus). The zero-token
+  attempt and 0.023591 allocated GPU-hours remain immutable. Resume is deferred
+  until host-level GPU recovery; this operational failure neither establishes
+  nor refutes complete Stage 8--18 feasibility.
 - The formal protocol now pins `qwen3.8-max-2026-09-02`, a content-addressed
   no-live-search snapshot, and fixed-generator contracts for all four tasks.
 - A first-party adapter runs unmodified AutoResearchClaw Stage 8–18 for the four
