@@ -4,27 +4,42 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
   contents: read
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    name: Quality / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out SciTaste and pinned substrate
+        uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: actions/setup-python@v5
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: sudo apt-get update && sudo apt-get install -y bubblewrap
-      - run: python -m pip install -e '.[dev]'
-      - run: python -m ruff format --check .
-      - run: python -m ruff check .
-      - run: python -m pytest --cov=scitaste --cov-report=term-missing
-      - run: scitaste run demo --output /tmp/scitaste-demo --seed 7
+      - name: Install native isolation dependency
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - name: Install SciTaste test environment
+        run: python -m pip install -e '.[dev]'
+      - name: Check formatting
+        run: python -m ruff format --check .
+      - name: Lint
+        run: python -m ruff check .
+      - name: Run test suite with coverage
+        run: python -m pytest --cov=scitaste --cov-report=term-missing
+      - name: Run installed CLI smoke test
+        run: scitaste run demo --output /tmp/scitaste-demo --seed 7
