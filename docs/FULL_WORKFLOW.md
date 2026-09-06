@@ -10,6 +10,7 @@ generation each load and extend that same state history.
 Run the committed acceptance case with:
 
 ```bash
+sudo apt-get install bubblewrap  # once on Debian/Ubuntu hosts
 .venv/bin/scitaste run full \
   --config configs/workflows/full_offline_v1.yaml \
   --project-id my-full-project \
@@ -34,13 +35,16 @@ The committed default is `scitaste-native`. One first-party executor instance is
 shared across Discovery, Evidence, Communication, nested reviewer evidence, and
 Figure actions. It emits typed action receipts without inventing mock
 observations; its Discovery `SEARCH` action now performs real local retrieval
-against a content-bound project copy of the configured Knowledge Library. The
-existing deterministic workflow components perform the other bounded scenario
-operations and remain dependency-free. `--backend mock` is an explicit
-compatibility/test mode. Neither mode proves open-ended experiment, code-sandbox,
-or model-generation quality, and neither supports an effectiveness claim.
+against a content-bound project copy of the configured Knowledge Library. Its
+registered Evidence experiment executes real CPU code through Bubblewrap and
+independently derives metrics from the emitted replicate rows; Evidence then uses
+those measured values rather than the scenario's result fixture. The remaining
+deterministic workflow components perform bounded scenario operations.
+`--backend mock` is an explicit compatibility/test mode. The native run validates
+one registered offline experiment, but does not prove autonomous code generation,
+broad experiment compatibility, model-generation quality, or effectiveness.
 `--dry-run` validates the configuration and prints the planned executor and
-project/run/paper identity without writing files.
+project/run/paper identity plus Bubblewrap availability without writing files.
 
 An opt-in offline acceptance config also exercises a bounded semantic node in
 the real evidence-stage path:
@@ -166,9 +170,10 @@ finalization recovery refuses to overwrite it and requires manual inspection.
 Completed runs cannot be resumed.
 
 Native execution resume first validates its contiguous predecessor chain, every
-bound Knowledge input and action artifact, and the record hash/action/result
-identity embedded in each reusable stage decision. Tampering with the local
-Knowledge copy or retrieval output therefore blocks reuse before a stage can
+bound Knowledge or experiment-source input, every action artifact, and the record
+hash/action/result identity embedded in each reusable stage decision. Tampering
+with the local Knowledge copy, registered experiment source, retrieval output, raw
+process output, or derived metrics therefore blocks reuse before a stage can
 advance. See `docs/NATIVE_EXECUTION.md` for the record contract.
 
 After completion, `ProjectSnapshotAdapter` hashes the authoritative manifest,
@@ -178,8 +183,8 @@ Generative UI surface but has no execution authority.
 
 ## Configuration boundary
 
-`configs/workflows/full_offline_v1.yaml` chooses the four typed scenario files
-and a versioned native Knowledge seed, and owns the canonical
+`configs/workflows/full_offline_v1.yaml` chooses the four typed scenario files,
+a versioned native Knowledge seed, and one registered native experiment, and owns the canonical
 project/publication identity. Scenario files contribute
 phase-specific claims, evidence, narrative contracts, review feedback, and
 figure contracts; their standalone demo project IDs are replaced and revalidated
@@ -196,7 +201,9 @@ gates, and whether a real execution would contact a provider without creating a
 project or accessing the network.
 
 AutoResearchClaw is not modified or invoked by this acceptance case. It remains
-an optional baseline/compatibility adapter. Native open-ended retrieval, code
-generation, sandbox execution, metric extraction, and long-form generation are
-still capability-parity work; they must preserve the same ProjectRuntime
-ownership, state-continuity, evidence-binding, and failure-retention contracts.
+an optional baseline/compatibility adapter. The native path now owns local
+retrieval plus one registered isolated CPU experiment and its metric extraction.
+Open-web retrieval, generated-code admission, dataset/GPU profiles, and long-form
+generation remain capability-parity work; they must preserve the same
+ProjectRuntime ownership, state-continuity, evidence-binding, and
+failure-retention contracts.

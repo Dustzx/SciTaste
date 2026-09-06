@@ -92,10 +92,12 @@ tree:
 runs/<run-id>/native_execution/{context,artifacts,records}/
 ```
 
-`context/` contains the content-bound local Knowledge copy, `artifacts/`
-contains exact handler outputs such as ranked retrieval results, and `records/`
-is the contiguous predecessor-hashed action chain. Stage decision logs bind the
-record identities. See [`NATIVE_EXECUTION.md`](NATIVE_EXECUTION.md).
+`context/` contains the content-bound local Knowledge copy plus the registered
+experiment definition/source. `artifacts/` contains exact handler outputs such as
+ranked retrieval results and bounded experiment stdout, stderr, independently
+derived metrics, and execution metadata. `records/` is the contiguous
+predecessor-hashed action chain. Stage decision logs bind the record identities.
+See [`NATIVE_EXECUTION.md`](NATIVE_EXECUTION.md).
 
 A project-owned AutoResearchClaw source bootstrap has its own explicit boundary:
 

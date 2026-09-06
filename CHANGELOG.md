@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- A first-party Bubblewrap experiment runner for registered Python source, with
+  a shell-free launcher and no network/host-project/GPU/writable-filesystem
+  access, process and resource ceilings, bounded exact stdout/stderr, and
+  fail-closed availability.
+- Strict replicate measurement records with independent metric aggregation,
+  dispersion/stability derivation, source/artifact hashing, and Evidence Workflow
+  consumption in place of the configured result fixture.
 - Project-owned native execution records with contiguous predecessor hashes,
   state/action/input/artifact binding, exclusive publication, resume-time
   decision reconciliation, and tamper rejection.

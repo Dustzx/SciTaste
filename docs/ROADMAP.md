@@ -146,9 +146,16 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   pre-state, inputs, artifacts, result and predecessor. Full Workflow performs
   real local Knowledge Library retrieval and revalidates action/result bindings
   on resume.
+- A registered CPU experiment now runs through a shell-free Bubblewrap launcher
+  with no network and a read-only filesystem, resource ceilings, exact source/stdout/
+  stderr retention, strict replicate records, and independently derived metrics.
+  Evidence consumes those measured values instead of the configured result
+  fixture. This is executable integration evidence, not scientific effectiveness.
+- The measured result is present in canonical state and the evidence summary;
+  projecting it into the manuscript's claim/evidence contracts remains pending.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  code generation, isolated experiments, metric extraction, generative analysis,
-  writing, and figures. Existing scenario-bound receipts are integration
+  code generation and admission, dataset/GPU experiment profiles, generative
+  analysis, writing, and figures. Existing scenario-bound receipts are integration
   evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution
   base from independent-system comparison of SciTaste Native against pinned

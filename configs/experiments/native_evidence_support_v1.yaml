@@ -1,0 +1,13 @@
+schema_version: "1.0"
+experiment_id: experiment-support
+source_path: ../../examples/native_experiments/conflict_pivot_measurement.py
+primary_metric: correct_pivot_delta
+metric_direction: maximize
+support_threshold: 0.0
+limits:
+  timeout_seconds: 15.0
+  cpu_seconds: 10
+  max_memory_mb: 256
+  max_output_bytes: 65536
+  max_open_files: 32
+  max_processes: 16

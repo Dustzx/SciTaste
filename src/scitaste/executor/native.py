@@ -12,6 +12,7 @@ from uuid import uuid4
 from scitaste.data.retrieval import KnowledgeRetriever
 from scitaste.data.store import KnowledgeLibrary
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.native_sandbox import NativeExperimentRunner
 from scitaste.executor.native_store import NativeExecutionStore
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -75,6 +76,7 @@ class SciTasteNativeExecutor:
         workspace: str | Path | None = None,
         artifact_root: str | Path | None = None,
         knowledge_library: KnowledgeLibrary | None = None,
+        experiment_runner: NativeExperimentRunner | None = None,
     ) -> None:
         self.handlers = handlers or {}
         if workspace is None and artifact_root is not None:
@@ -87,6 +89,9 @@ class SciTasteNativeExecutor:
             else None
         )
         self.knowledge_library = knowledge_library
+        if experiment_runner is not None and self.store is None:
+            raise ValueError("native experiment runner requires a project-owned workspace")
+        self.experiment_runner = experiment_runner
         self.calls: list[str] = []
 
     def execute(self, state: ResearchState, action: ResearchAction) -> ExecutionResult:
@@ -146,6 +151,21 @@ class SciTasteNativeExecutor:
             input_paths = (
                 (self.knowledge_library.path,) if self.knowledge_library.path.is_file() else ()
             )
+        elif (
+            capability == NativeCapability.EXPERIMENT
+            and self.experiment_runner is not None
+            and action.parameters.get("experiment_id")
+            == self.experiment_runner.definition.experiment_id
+        ):
+            if self.store is None:
+                result = self._failed(
+                    action,
+                    NativeCapability.EXPERIMENT,
+                    "native experiment isolation is not configured",
+                )
+            else:
+                result = self.experiment_runner.run(state, action, store=self.store)
+                input_paths = self.experiment_runner.input_paths
         else:
             result = self._complete(state, action, capability=capability)
         if self.store is None:
@@ -314,6 +334,7 @@ def build_builtin_executor(
     workspace: str | Path | None = None,
     artifact_root: str | Path | None = None,
     knowledge_library: KnowledgeLibrary | None = None,
+    experiment_runner: NativeExperimentRunner | None = None,
 ):
     """Build a dependency-free executor used by the integrated workflow."""
 
@@ -322,6 +343,7 @@ def build_builtin_executor(
             workspace=workspace,
             artifact_root=artifact_root,
             knowledge_library=knowledge_library,
+            experiment_runner=experiment_runner,
         )
     if name == "mock":
         from scitaste.executor.mock import MockExecutor

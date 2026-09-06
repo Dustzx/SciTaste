@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import yaml
@@ -16,6 +17,7 @@ from scitaste.discovery.ideas import IdeaSeed
 from scitaste.evidence.claim_graph import ClaimGraph
 from scitaste.evidence.claim_graph import ScientificClaim as GraphClaim
 from scitaste.evidence.interpretation import (
+    ClaimRelation,
     InterpretationContext,
     InterpretationCritic,
     ResultRecord,
@@ -132,7 +134,6 @@ class EvidenceWorkflow:
                     type=MetaAction.PILOT,
                     description="Execute the selected idea's bounded pilot",
                     parameters={"observation": scenario.interpretation.observed},
-                    expected_cost=scenario.result.cost,
                     expected_value={"information_gain": 0.9, "claim_relevance": 0.9},
                 )
             )
@@ -168,28 +169,33 @@ class EvidenceWorkflow:
         )
         store.save(state)
 
-        execution_cost = {} if resumed_from_pilot else scenario.result.cost
+        execution_cost = scenario.result.cost
         _, execution = act(
             plan.action.model_copy(
                 update={
                     "parameters": {
                         **plan.action.parameters,
                         "observation": scenario.interpretation.observed,
+                        "experiment_id": scenario.result.experiment_id,
                     },
                     "expected_cost": execution_cost,
                 }
             )
         )
+        result_record, interpretation, result_basis = _resolve_result_evidence(
+            scenario,
+            execution,
+        )
         state.experiment_history.append(
             ExperimentRecord(
-                experiment_id=scenario.result.experiment_id,
+                experiment_id=result_record.experiment_id,
                 action_id=plan.action.action_id,
                 status=execution.status.value,
-                result_ref=scenario.result.result_id,
-                cost=scenario.result.cost,
+                result_ref=result_record.result_id,
+                cost=result_record.cost,
             )
         )
-        review = InterpretationCritic().review(scenario.result, scenario.interpretation)
+        review = InterpretationCritic().review(result_record, interpretation)
         outcome = loop.add_review(review)
         graph_evidence = loop.evidence.items[-1]
         state.evidence_graph.items.append(
@@ -245,6 +251,9 @@ class EvidenceWorkflow:
             "route": outcome.route.action.type.value,
             "final_stage": state.current_stage.value,
             "evidence_count": len(state.evidence_graph.items),
+            "result_basis": result_basis,
+            "result_id": result_record.result_id,
+            "measured_metrics": result_record.metrics,
             "resource_usage": state.resource_usage.model_dump(mode="json"),
             "decision_log": str(logger.path),
             "latest_state": str(store.latest_path),
@@ -268,3 +277,86 @@ def _upsert_state_claim(state: ResearchState, claim: GraphClaim) -> None:
             state.claims[index] = converted
             return
     state.claims.append(converted)
+
+
+def _resolve_result_evidence(
+    scenario: EvidenceWorkflowScenario,
+    execution: ExecutionResult,
+) -> tuple[ResultRecord, InterpretationContext, str]:
+    """Prefer independently measured sandbox evidence over scenario fixtures."""
+
+    if execution.data.get("result_basis") != "sandbox-measured-replicates":
+        return scenario.result, scenario.interpretation, "scenario-declared-result"
+    experiment_id = execution.data.get("experiment_id")
+    metrics = execution.data.get("metrics")
+    relation = execution.data.get("metric_assessment")
+    reproducible = execution.data.get("reproducible")
+    stability = execution.data.get("stability")
+    uncertainty = execution.data.get("statistical_uncertainty")
+    primary_metric = execution.data.get("primary_metric")
+    primary_value = execution.data.get("primary_value")
+    metrics_artifact = execution.data.get("metrics_artifact")
+    if (
+        execution.executor != "scitaste-native"
+        or execution.data.get("execution_mode") != "bubblewrap-isolated-python"
+    ):
+        raise ValueError("measured experiment does not come from the native isolation boundary")
+    if experiment_id != scenario.result.experiment_id:
+        raise ValueError("measured experiment identity does not match the evidence scenario")
+    if not isinstance(metrics, dict) or not metrics:
+        raise ValueError("measured experiment did not provide a metric mapping")
+    measured_metrics: dict[str, float] = {}
+    for name, value in metrics.items():
+        if (
+            not isinstance(name, str)
+            or isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+        ):
+            raise ValueError("measured experiment metrics must be finite numeric values")
+        measured_metrics[name] = float(value)
+    if (
+        not isinstance(primary_metric, str)
+        or primary_metric not in scenario.result.metrics
+        or primary_metric not in measured_metrics
+        or isinstance(primary_value, bool)
+        or not isinstance(primary_value, (int, float))
+        or not math.isclose(
+            float(primary_value), measured_metrics[primary_metric], rel_tol=1e-12, abs_tol=1e-12
+        )
+    ):
+        raise ValueError("measured experiment primary metric does not match its evidence contract")
+    if not isinstance(metrics_artifact, str) or metrics_artifact not in execution.artifacts:
+        raise ValueError("measured experiment is missing its parsed metric artifact")
+    if relation not in {ClaimRelation.SUPPORTS.value, ClaimRelation.CONTRADICTS.value}:
+        raise ValueError("measured experiment did not provide a valid metric assessment")
+    if not isinstance(reproducible, bool):
+        raise ValueError("measured experiment did not provide reproducibility status")
+    if (
+        isinstance(stability, bool)
+        or not isinstance(stability, (int, float))
+        or not 0.0 <= float(stability) <= 1.0
+        or isinstance(uncertainty, bool)
+        or not isinstance(uncertainty, (int, float))
+        or not 0.0 <= float(uncertainty) <= 1.0
+    ):
+        raise ValueError("measured experiment stability and uncertainty must be normalized")
+    if len(execution.observations) != 1:
+        raise ValueError("measured experiment must provide one derived observation")
+    result = ResultRecord(
+        result_id=execution.result_id,
+        experiment_id=experiment_id,
+        summary="Isolated execution completed with independently parsed replicate metrics.",
+        metrics=measured_metrics,
+        cost=execution.cost,
+    )
+    context = scenario.interpretation.model_copy(
+        update={
+            "observed": execution.observations[0],
+            "relation": ClaimRelation(relation),
+            "reproducible": reproducible,
+            "stability": float(stability),
+            "statistical_uncertainty": float(uncertainty),
+        }
+    )
+    return result, context, "sandbox-measured-replicates"

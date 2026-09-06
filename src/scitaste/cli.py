@@ -48,6 +48,10 @@ from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
+from scitaste.executor.native_sandbox import (
+    NativeExperimentRunner,
+    load_native_experiment_definition,
+)
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
 from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.generative_ui import ProjectSurfaceFactory
@@ -924,6 +928,16 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
+        native_experiment = (
+            load_native_experiment_definition(config.native_experiment_config)
+            if config.native_experiment_config is not None
+            else None
+        )
+        isolation = (
+            NativeExperimentRunner(native_experiment).availability().model_dump(mode="json")
+            if native_experiment is not None
+            else None
+        )
         model_advisory = (
             load_full_workflow_model_advisory(config.model_node_advisory)
             if config.model_node_advisory is not None
@@ -946,6 +960,17 @@ def _handle_full(args: argparse.Namespace) -> int:
                             if config.native_knowledge_config is not None
                             else None
                         ),
+                        "experiment_configured": native_experiment is not None,
+                        "experiment_id": (
+                            native_experiment.experiment_id
+                            if native_experiment is not None
+                            else None
+                        ),
+                        "isolation_required": (
+                            config.execution_backend == "scitaste-native"
+                            and native_experiment is not None
+                        ),
+                        "isolation": isolation,
                     },
                     "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],

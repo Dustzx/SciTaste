@@ -27,7 +27,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - framework-neutral executor protocol, default first-party native executor,
   explicit deterministic mock, and an optional pinned AutoResearchClaw adapter;
 - project-owned native action records with predecessor/state/action/input/output
-  hashes, plus real local Knowledge Library retrieval in the integrated path;
+  hashes, real local Knowledge Library retrieval, and a Bubblewrap-isolated
+  registered CPU experiment with independently derived replicate metrics;
 - runnable nonlinear demo and tests;
 - fixed-candidate intrinsic taste calibration with accuracy, confidence, Brier,
   and calibration metrics;
@@ -173,10 +174,12 @@ Completed stage checkpoints are reused only after their state chain and declared
 artifact hashes validate; partial stage directories are retained under that
 run's `failed_attempts/` tree.
 
-This validates end-to-end framework behavior with SciTaste's first-party,
-in-process executor and typed workflow components; it is not yet an open-ended
-research run or an effectiveness result. Pass `--backend mock` only for explicit
-test compatibility. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
+This validates end-to-end framework behavior with SciTaste's first-party
+executor, including real local retrieval and one content-bound, no-network CPU
+experiment. It is not yet autonomous code generation, a general experiment
+platform, or an effectiveness result. A working Bubblewrap installation is
+required; pass `--backend mock` only for explicit test compatibility. See
+[`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 The native action evidence and current capability boundary are documented in
 [`docs/NATIVE_EXECUTION.md`](docs/NATIVE_EXECUTION.md).
 

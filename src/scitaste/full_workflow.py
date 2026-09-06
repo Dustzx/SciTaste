@@ -24,6 +24,11 @@ from scitaste.evidence.workflow import (
 )
 from scitaste.executor.base import ResearchExecutor
 from scitaste.executor.native import SciTasteNativeExecutor, build_builtin_executor
+from scitaste.executor.native_sandbox import (
+    NativeExperimentDefinition,
+    NativeExperimentRunner,
+    load_native_experiment_definition,
+)
 from scitaste.executor.native_store import NativeExecutionRecord
 from scitaste.generative_ui import ProjectSnapshotAdapter
 from scitaste.model_nodes.workflow_bridge import (
@@ -73,6 +78,7 @@ class FullWorkflowConfig(BaseModel):
     communication_scenario: Path
     figure_scenario: Path
     native_knowledge_config: Path | None = None
+    native_experiment_config: Path | None = None
     model_node_advisory: Path | None = None
     paper_id: str
     paper_directory: str
@@ -774,12 +780,22 @@ def _build_full_workflow_executor(
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
     knowledge = _prepare_native_knowledge(config, run_root=run_root)
+    experiment = _prepare_native_experiment(config, run_root=run_root)
+    if experiment is not None:
+        evidence_experiment_id = load_evidence_scenario(
+            config.evidence_scenario
+        ).result.experiment_id
+        if experiment.experiment_id != evidence_experiment_id:
+            raise ValueError(
+                "native experiment identity does not match the primary evidence scenario"
+            )
     return build_builtin_executor(
         config.execution_backend,
         seed=seed,
         workspace=run_root / "native_execution",
         artifact_root=run_root,
         knowledge_library=knowledge,
+        experiment_runner=(NativeExperimentRunner(experiment) if experiment is not None else None),
     )
 
 
@@ -854,11 +870,74 @@ def _prepare_native_knowledge(
     return KnowledgeLibrary(knowledge_path)
 
 
+def _prepare_native_experiment(
+    config: FullWorkflowConfig,
+    *,
+    run_root: Path,
+) -> NativeExperimentDefinition | None:
+    source_config = config.native_experiment_config
+    if source_config is None:
+        return None
+    definition = load_native_experiment_definition(source_config)
+    config_sha256 = _file_sha256(source_config)
+    source_sha256 = _file_sha256(definition.source_path)
+    context_root = run_root / "native_execution" / "context" / "experiment"
+    receipt_path = context_root / "EXPERIMENT.json"
+    if receipt_path.exists():
+        receipt = _load_json_mapping(
+            _owned_regular_file(run_root, _owned_locator(run_root, receipt_path))
+        )
+        record_sha256 = receipt.pop("record_sha256", None)
+        if not isinstance(record_sha256, str) or record_sha256 != content_sha256(receipt):
+            raise ValueError("native experiment context record hash mismatch")
+        if receipt.get("source_config_sha256") != config_sha256:
+            raise ValueError("native experiment config changed since the run was created")
+        if receipt.get("source_file_sha256") != source_sha256:
+            raise ValueError("native experiment source changed since the run was created")
+        locator = receipt.get("source_locator")
+        registered_definition = receipt.get("definition")
+        if not isinstance(locator, str) or not isinstance(registered_definition, dict):
+            raise ValueError("native experiment context record is incomplete")
+        copied_source = _verified_file(run_root, locator, source_sha256)
+        return NativeExperimentDefinition.model_validate(
+            {**registered_definition, "source_path": copied_source}
+        )
+    if context_root.exists():
+        raise ValueError("incomplete native experiment context requires manual inspection")
+    context_root.mkdir(parents=True)
+    copied_source = context_root / "experiment.py"
+    with definition.source_path.open("rb") as source, copied_source.open("xb") as target:
+        shutil.copyfileobj(source, target)
+        target.flush()
+        os.fsync(target.fileno())
+    if _file_sha256(copied_source) != source_sha256:
+        raise ValueError("native experiment source changed while it was materialized")
+    registered_definition = definition.model_dump(mode="json", exclude={"source_path"})
+    payload = {
+        "schema_version": "1.0",
+        "source_config_sha256": config_sha256,
+        "source_file_sha256": source_sha256,
+        "source_locator": _owned_locator(run_root, copied_source),
+        "definition": registered_definition,
+    }
+    _write_json(receipt_path, {**payload, "record_sha256": content_sha256(payload)})
+    return definition.model_copy(update={"source_path": copied_source})
+
+
 def _native_execution_summary(executor: ResearchExecutor) -> dict[str, object] | None:
     if not isinstance(executor, SciTasteNativeExecutor) or executor.store is None:
         return None
     verification = executor.store.verify()
-    return verification.model_dump(mode="json")
+    payload = verification.model_dump(mode="json")
+    payload["experiment"] = (
+        None
+        if executor.experiment_runner is None
+        else {
+            "experiment_id": executor.experiment_runner.definition.experiment_id,
+            "availability": executor.experiment_runner.availability().model_dump(mode="json"),
+        }
+    )
+    return payload
 
 
 def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
@@ -870,6 +949,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "communication_scenario",
         "figure_scenario",
         "native_knowledge_config",
+        "native_experiment_config",
         "model_node_advisory",
     ):
         if payload.get(field) is None:
@@ -1224,6 +1304,14 @@ def _workflow_config_sha256(
     else:
         payload["native_knowledge_config"] = {
             "content_sha256": _file_sha256(config.native_knowledge_config)
+        }
+    if config.native_experiment_config is None:
+        payload.pop("native_experiment_config", None)
+    else:
+        experiment = load_native_experiment_definition(config.native_experiment_config)
+        payload["native_experiment_config"] = {
+            "content_sha256": _file_sha256(config.native_experiment_config),
+            "source_sha256": _file_sha256(experiment.source_path),
         }
     if config.model_node_advisory is None:
         # Preserve hashes registered by pre-advisory v1.0 offline runs.

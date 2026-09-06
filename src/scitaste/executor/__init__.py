@@ -12,6 +12,17 @@ from scitaste.executor.native import (
     SciTasteNativeExecutor,
     build_builtin_executor,
 )
+from scitaste.executor.native_sandbox import (
+    MetricDirection,
+    NativeExperimentAvailability,
+    NativeExperimentDefinition,
+    NativeExperimentLimits,
+    NativeExperimentRunner,
+    NativeMeasurement,
+    NativeMeasurementEnvelope,
+    load_native_experiment_definition,
+    parse_measurements,
+)
 from scitaste.executor.native_store import (
     NativeExecutionRecord,
     NativeExecutionStore,
@@ -33,11 +44,18 @@ from scitaste.executor.project_workflow import (
 __all__ = [
     "ExecutionResult",
     "ExecutionStatus",
+    "MetricDirection",
     "MockExecutor",
     "NativeCapability",
     "NativeExecutionRecord",
     "NativeExecutionStore",
     "NativeExecutionVerification",
+    "NativeExperimentAvailability",
+    "NativeExperimentDefinition",
+    "NativeExperimentLimits",
+    "NativeExperimentRunner",
+    "NativeMeasurement",
+    "NativeMeasurementEnvelope",
     "ProjectSubstrateActionWorkflow",
     "ProjectSubstrateBootstrapManifest",
     "ProjectSubstrateBootstrapWorkflow",
@@ -48,6 +66,8 @@ __all__ = [
     "ResearchExecutor",
     "SciTasteNativeExecutor",
     "build_builtin_executor",
+    "load_native_experiment_definition",
     "load_project_substrate_config",
+    "parse_measurements",
     "require_execution_success",
 ]

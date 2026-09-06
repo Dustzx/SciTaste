@@ -95,7 +95,9 @@ class NativeExecutionStore:
     def artifact_directory(self, result_id: str) -> Path:
         token = hashlib.sha256(result_id.encode()).hexdigest()[:16]
         target = self.artifacts_root / token
-        target.mkdir(mode=0o700)
+        target.mkdir(mode=0o700, exist_ok=True)
+        if target.is_symlink() or not target.is_dir():
+            raise ValueError("native execution artifact directory is not an owned directory")
         return target
 
     def write_artifact_json(self, result_id: str, name: str, payload: object) -> Path:

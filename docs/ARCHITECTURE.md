@@ -127,6 +127,10 @@ returns observations and artifacts but cannot select the next global action.
 42. A native action record binds its predecessor, pre-execution state, selected
     action, declared inputs, produced artifacts, and result; reusable stage
     decisions must resolve to the same record identity.
+43. A native measured experiment must run from content-bound source in an
+    available isolation primitive, retain bounded raw output, and derive metrics
+    from validated replicate rows; a declared scenario result cannot substitute
+    for failed, unavailable, or malformed execution.
 
 ## Architecture decision records
 
@@ -652,8 +656,21 @@ Reusable stage decisions revalidate the corresponding action and result record.
 This closes local retrieval provenance, not open-web search or experimental
 execution.
 
+The second non-receipt capability is registered CPU experiment execution.
+Bubblewrap supplies separate mount, user, PID, network, IPC, UTS, and cgroup
+namespaces; the fixed Python invocation is not routed through a shell and has no
+host-project mount, GPU, or writable working filesystem and receives hard resource
+ceilings. Exact source,
+stdout, stderr, limits, return status, and independently parsed replicate metrics
+are retained beneath the owning run and bound by the same action chain. Evidence
+Workflow consumes this measured result instead of its scenario fixture. Missing
+isolation, non-zero exit, timeout, output overflow, malformed records, and absent
+primary metrics fail closed. This accepts a registered offline CPU execution
+boundary, not autonomous code generation, arbitrary dependencies, GPU workloads,
+or an effectiveness claim.
+
 Native capability parity will replace scenario-bound operations incrementally:
-rights-aware retrieval, code generation, isolated execution, metric extraction,
+rights-aware retrieval, code generation/admission, broader execution profiles,
 evidence analysis, manuscript generation, and figure production. Each handler
 must emit content-addressed artifacts and measured resource telemetry under the
 existing project/state contracts. Whole-source copying from AutoResearchClaw is

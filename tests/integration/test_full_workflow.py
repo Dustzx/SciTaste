@@ -60,6 +60,16 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     } == {"scitaste-native"}
     assert payload["native_execution"]["record_count"] == len(final_state.decision_history)
     assert payload["native_execution"]["head_record_sha256"]
+    assert payload["native_execution"]["experiment"]["experiment_id"] == "experiment-support"
+    assert payload["native_execution"]["experiment"]["availability"]["available"] is True
+    measured_experiment = next(
+        item
+        for item in final_state.experiment_history
+        if item.experiment_id == "experiment-support"
+    )
+    assert measured_experiment.result_ref.startswith("res-")
+    assert measured_experiment.result_ref != "result-support"
+    assert measured_experiment.cost["experiments"] == 1.0
     search_decision = next(
         decision
         for decision in final_state.decision_history
@@ -68,6 +78,9 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert search_decision.actual_outcome is not None
     assert search_decision.actual_outcome["data"]["result_basis"] == ("knowledge-library-retrieval")
     assert search_decision.actual_outcome["data"]["retrieved_document_ids"]
+    evidence_summary = payload["stages"]["evidence"]
+    assert evidence_summary["result_basis"] == "sandbox-measured-replicates"
+    assert evidence_summary["measured_metrics"]["correct_pivot_delta"] == pytest.approx(0.1)
     retrieval_locator = search_decision.actual_outcome["artifacts"][0]
     assert (run / retrieval_locator).is_file()
     context = json.loads((run / "native_execution/context/CONTEXT.json").read_text())
@@ -129,6 +142,10 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert payload["execution_backend"] == "scitaste-native"
     assert payload["native_execution"]["project_owned_records"] is True
     assert payload["native_execution"]["knowledge_configured"] is True
+    assert payload["native_execution"]["experiment_configured"] is True
+    assert payload["native_execution"]["experiment_id"] == "experiment-support"
+    assert payload["native_execution"]["isolation_required"] is True
+    assert payload["native_execution"]["isolation"]["available"] is True
     assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert not outputs.exists()

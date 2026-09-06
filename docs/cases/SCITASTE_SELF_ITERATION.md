@@ -157,6 +157,21 @@ and result; resume verifies those records against the stage decision log. This i
 evidence that the architectural choice can support a real capability without
 AutoResearchClaw, but it is still not open-web retrieval or outcome superiority.
 
+The following increment closes the registered offline experiment boundary. The
+default Full Workflow now copies one exact CPU source into its owning run,
+executes it through a shell-free Bubblewrap launcher without network, host-project,
+GPU, or writable-filesystem access, and retains bounded stdout/stderr and resource
+telemetry. Its strict machine record contains three replicate rows; SciTaste
+independently recomputes their metrics and Evidence replaces the old configured
+result fixture with that measured result before interpretation. Host-file,
+network, write, timeout, malformed-record, missing-isolation, and output-ceiling
+tests are retained. This demonstrates project-owned execution mechanics only:
+the experiment is a small committed synthetic CPU case, so the self-development
+case remains excluded from effectiveness evidence and from Taste promotion.
+The acceptance paper still follows the deterministic Communication scenario and
+does not quote the new metric. That visible gap is retained as the next
+evidence-to-writing integration task rather than patched with generated prose.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.
