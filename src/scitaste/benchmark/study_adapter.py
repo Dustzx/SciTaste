@@ -1260,6 +1260,7 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
     )
     stdout_summary = _publication_safe_text(str(evidence.get("stdout_summary", "")), task)
     evidence_matrix = _publication_evidence_matrix(evidence)
+    diagnostic_evidence = _publication_diagnostic_evidence(evidence, task)
     seed_ids = [int(item) for item in evidence.get("seed_ids", [])]
     seed_text = ", ".join(str(item) for item in seed_ids)
     return (
@@ -1279,6 +1280,8 @@ def _publication_guidance(task: dict[str, Any], *, evidence: dict[str, Any] | No
         "REGISTERED PER-SEED MATRIX below is canonical; any differently scoped spread in the "
         "additional stdout summary must not be relabeled as cross-seed uncertainty.\n"
         + evidence_matrix
+        + "\n"
+        + diagnostic_evidence
         + "\nADDITIONAL SOURCE-VERIFIED STDOUT SUMMARY:\n"
         + stdout_summary
     )
@@ -1304,6 +1307,66 @@ def _publication_evidence_matrix(evidence: dict[str, Any]) -> str:
             f"{float(summary['std']):.6f}",
         ]
         lines.append(" | ".join(fields))
+    return "\n".join(lines)
+
+
+def _publication_diagnostic_evidence(evidence: dict[str, Any], task: dict[str, Any]) -> str:
+    """Render registered factorial diagnostics without leaking internal identifiers."""
+
+    diagnostics = evidence.get("registered_diagnostics") or {}
+    effects = diagnostics.get("factor_effects")
+    boundaries = diagnostics.get("failure_boundaries")
+    if not isinstance(effects, dict) or not isinstance(boundaries, dict):
+        return "REGISTERED FACTORIAL DIAGNOSTICS:\nUnavailable for this task."
+
+    contract = task["benchmark"]["contract"]
+    lines = [
+        "REGISTERED FACTORIAL DIAGNOSTICS:",
+        (
+            "The executed grid varied relevant-item position across "
+            f"{', '.join(map(str, contract['target_positions']))}; packet length across "
+            f"{', '.join(map(str, contract['packet_lengths']))}; contradiction density across "
+            f"{', '.join(map(str, contract['contradiction_densities']))}; and citation topology "
+            f"across {', '.join(map(str, contract['citation_topologies']))}."
+        ),
+        (
+            "A reproducible failure boundary is a factor cell below balanced accuracy "
+            f"{float(boundaries['balanced_accuracy_threshold']):.2f} on at least "
+            f"{int(boundaries['minimum_reproducing_seeds'])} registered seeds. Nonzero counts "
+            "below are observed boundaries; do not describe the factors as unmeasured or "
+            "unvaried, and do not claim that no boundary was observed."
+        ),
+        "factor effect range by method | relevant-item position | packet length | "
+        "contradiction density | citation topology",
+    ]
+    for condition in task["benchmark"]["conditions"]:
+        name = str(condition)
+        values = effects[name]
+        lines.append(
+            " | ".join(
+                (
+                    _public_term(name),
+                    f"{float(values['target_position']):.6f}",
+                    f"{float(values['packet_length']):.6f}",
+                    f"{float(values['contradiction_density']):.6f}",
+                    f"{float(values['citation_topology']):.6f}",
+                )
+            )
+        )
+    lines.append("failure boundary count by method:")
+    for condition in task["benchmark"]["conditions"]:
+        name = str(condition)
+        summary = boundaries["by_condition"][name]
+        lines.append(f"- {_public_term(name)}: {int(summary['count'])}")
+        for cell in summary["worst_cells"][:3]:
+            reproduced = ", ".join(map(str, cell["reproducing_seeds"]))
+            lines.append(
+                "  - observed cell: position="
+                f"{cell['target_position']}, packet length={int(cell['packet_length'])}, "
+                f"contradiction density={float(cell['contradiction_density']):.2f}, "
+                f"citation topology={cell['citation_topology']}, mean balanced accuracy="
+                f"{float(cell['mean_balanced_accuracy']):.6f}, reproducing seeds={reproduced}"
+            )
     return "\n".join(lines)
 
 
@@ -1576,6 +1639,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         execution_trace_summary = None
     stdout_seed_ids = _stdout_seed_ids(stdout)
     per_seed_metrics, dispersion_metrics = _parse_seed_evidence(stdout, primary_metric)
+    machine_evidence = _parse_machine_evidence_record(stdout, primary_metric)
     metric_sources = {str(name): "sandbox-structured-metric" for name in metrics}
     normalization = selected.get("metric_normalization") or {}
     if normalization.get("method") == "machine-evidence-condition-mean-v1":
@@ -1622,6 +1686,7 @@ def _selected_experiment(run_dir: Path, primary_metric: str) -> tuple[list[Path]
         "stdout_observed_seed_ids": stdout_seed_ids,
         "per_seed_metrics": per_seed_metrics,
         "dispersion_metrics": dispersion_metrics,
+        "machine_evidence": machine_evidence,
         "metric_normalization": selected.get("metric_normalization"),
         "metric_sources": metric_sources,
         "source_sha256": source_sha256,
@@ -2017,25 +2082,9 @@ def _parse_machine_seed_evidence(
 ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]] | None:
     """Load and internally verify the canonical stdout evidence record when present."""
 
-    records = [
-        line.strip()[len(MACHINE_EVIDENCE_PREFIX) :]
-        for line in stdout.splitlines()
-        if line.strip().startswith(MACHINE_EVIDENCE_PREFIX)
-    ]
-    if not records:
+    record = _parse_machine_evidence_record(stdout, primary_metric)
+    if record is None:
         return None
-    if len(records) != 1:
-        raise ValueError("selected execution emitted multiple machine evidence records")
-    try:
-        record = json.loads(records[0])
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"selected machine evidence is invalid JSON: {exc}") from exc
-    if not isinstance(record, dict) or record.get("schema_version") != "1.0":
-        raise ValueError("selected machine evidence has an unsupported schema")
-    primary = record.get("primary_metric")
-    if not isinstance(primary, dict) or primary.get("name") != primary_metric:
-        raise ValueError("selected machine evidence names the wrong primary metric")
-    _machine_number(primary.get("value"), "primary metric")
     conditions = record.get("conditions")
     if not isinstance(conditions, dict) or not conditions:
         raise ValueError("selected machine evidence has no condition records")
@@ -2069,6 +2118,145 @@ def _parse_machine_seed_evidence(
     return per_seed, dispersion
 
 
+def _parse_machine_evidence_record(stdout: str, primary_metric: str) -> dict[str, Any] | None:
+    """Return the sole schema-checked machine record without dropping diagnostics."""
+
+    records = [
+        line.strip()[len(MACHINE_EVIDENCE_PREFIX) :]
+        for line in stdout.splitlines()
+        if line.strip().startswith(MACHINE_EVIDENCE_PREFIX)
+    ]
+    if not records:
+        return None
+    if len(records) != 1:
+        raise ValueError("selected execution emitted multiple machine evidence records")
+    try:
+        record = json.loads(records[0])
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"selected machine evidence is invalid JSON: {exc}") from exc
+    if not isinstance(record, dict) or record.get("schema_version") != "1.0":
+        raise ValueError("selected machine evidence has an unsupported schema")
+    primary = record.get("primary_metric")
+    if not isinstance(primary, dict) or primary.get("name") != primary_metric:
+        raise ValueError("selected machine evidence names the wrong primary metric")
+    _machine_number(primary.get("value"), "primary metric")
+    return record
+
+
+def _validated_registered_diagnostics(
+    record: dict[str, Any] | None, task: dict[str, Any]
+) -> dict[str, Any]:
+    """Validate optional registered diagnostics before they enter publication prompts."""
+
+    if not task["benchmark"].get("executable_asset"):
+        return {}
+    required_metrics = set(task["benchmark"]["contract"].get("metrics", []))
+    required_diagnostics = required_metrics & {"factor_effects", "failure_boundaries"}
+    if not required_diagnostics:
+        return {}
+    diagnostics = record.get("diagnostics") if isinstance(record, dict) else None
+    if not isinstance(diagnostics, dict):
+        raise ValueError("selected machine evidence lacks registered diagnostics")
+
+    contract = task["benchmark"]["contract"]
+    conditions = [str(item) for item in task["benchmark"]["conditions"]]
+    factor_names = (
+        "target_position",
+        "packet_length",
+        "contradiction_density",
+        "citation_topology",
+    )
+    expected_packets_per_seed = int(contract["examples_per_cell"])
+    for name in (
+        "target_positions",
+        "packet_lengths",
+        "contradiction_densities",
+        "citation_topologies",
+    ):
+        expected_packets_per_seed *= len(contract[name])
+    if diagnostics.get("kernel_id") != contract.get("generator"):
+        raise ValueError("selected diagnostics name the wrong executable kernel")
+    if diagnostics.get("packets_per_seed") != expected_packets_per_seed:
+        raise ValueError("selected diagnostics report the wrong per-seed packet count")
+    if diagnostics.get("generated_packets") != expected_packets_per_seed * len(contract["seeds"]):
+        raise ValueError("selected diagnostics report the wrong generated-packet count")
+
+    if "factor_effects" in required_diagnostics:
+        effects = diagnostics.get("factor_effects")
+        if not isinstance(effects, dict) or set(effects) != set(conditions):
+            raise ValueError("selected diagnostics do not preserve registered factor effects")
+        for condition in conditions:
+            values = effects.get(condition)
+            if not isinstance(values, dict) or set(values) != set(factor_names):
+                raise ValueError(f"selected diagnostics have invalid factor effects: {condition}")
+            for factor, value in values.items():
+                numeric = _machine_number(value, f"factor effect {condition}:{factor}")
+                if not 0.0 <= numeric <= 1.0:
+                    raise ValueError(
+                        f"selected factor effect is outside [0, 1]: {condition}:{factor}"
+                    )
+
+    if "failure_boundaries" in required_diagnostics:
+        boundaries = diagnostics.get("failure_boundaries")
+        if not isinstance(boundaries, dict):
+            raise ValueError("selected diagnostics lack registered failure boundaries")
+        threshold = _machine_number(
+            boundaries.get("balanced_accuracy_threshold"), "failure-boundary threshold"
+        )
+        if abs(threshold - float(contract["failure_threshold"])) > 1e-12:
+            raise ValueError("selected diagnostics use the wrong failure-boundary threshold")
+        minimum = boundaries.get("minimum_reproducing_seeds")
+        if minimum != contract["minimum_reproducing_seeds"]:
+            raise ValueError("selected diagnostics use the wrong failure-boundary seed minimum")
+        by_condition = boundaries.get("by_condition")
+        if not isinstance(by_condition, dict) or set(by_condition) != set(conditions):
+            raise ValueError("selected diagnostics do not preserve boundary conditions")
+        allowed_levels = {
+            "target_position": set(contract["target_positions"]),
+            "packet_length": set(contract["packet_lengths"]),
+            "contradiction_density": set(contract["contradiction_densities"]),
+            "citation_topology": set(contract["citation_topologies"]),
+        }
+        allowed_seeds = set(contract["seeds"])
+        for condition in conditions:
+            summary = by_condition.get(condition)
+            if not isinstance(summary, dict):
+                raise ValueError(f"selected boundary summary is invalid: {condition}")
+            count = summary.get("count")
+            worst_cells = summary.get("worst_cells")
+            if (
+                isinstance(count, bool)
+                or not isinstance(count, int)
+                or count < 0
+                or not isinstance(worst_cells, list)
+                or count < len(worst_cells)
+                or (count == 0 and worst_cells)
+            ):
+                raise ValueError(f"selected boundary count is invalid: {condition}")
+            for cell in worst_cells:
+                if not isinstance(cell, dict):
+                    raise ValueError(f"selected boundary cell is invalid: {condition}")
+                for factor, allowed in allowed_levels.items():
+                    if cell.get(factor) not in allowed:
+                        raise ValueError(
+                            "selected boundary cell has an unregistered factor: "
+                            f"{condition}:{factor}"
+                        )
+                score = _machine_number(
+                    cell.get("mean_balanced_accuracy"), f"boundary score {condition}"
+                )
+                if not 0.0 <= score <= 1.0:
+                    raise ValueError(f"selected boundary score is outside [0, 1]: {condition}")
+                seeds = cell.get("reproducing_seeds")
+                if (
+                    not isinstance(seeds, list)
+                    or len(seeds) < int(minimum)
+                    or not set(seeds).issubset(allowed_seeds)
+                ):
+                    raise ValueError(f"selected boundary seeds are invalid: {condition}")
+    return diagnostics
+
+
 def _machine_number(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"selected machine evidence is non-numeric: {label}")
@@ -2094,6 +2282,9 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
     primary = str(task["benchmark"]["primary_metric"])
     if primary not in registered_metrics:
         raise ValueError(f"selected evidence lacks registered primary metric {primary}")
+    registered_diagnostics = _validated_registered_diagnostics(
+        selected.get("machine_evidence"), task
+    )
     evidence = {
         "schema_version": "1.0",
         "method": "selected-successful-refinement-evidence-v1",
@@ -2122,6 +2313,7 @@ def _write_selected_experiment_evidence(run_dir: Path, task: dict[str, Any]) -> 
         "stdout_observed_seed_ids": selected["stdout_observed_seed_ids"],
         "per_seed_metrics": selected["per_seed_metrics"],
         "dispersion_metrics": selected["dispersion_metrics"],
+        "registered_diagnostics": registered_diagnostics,
         "source_sha256": selected["source_sha256"],
         "execution_trace": selected["execution_trace"],
     }
@@ -2661,6 +2853,82 @@ def _seed_claim_violations(text: str, seed_ids: list[int]) -> list[str]:
     return sorted(violations)
 
 
+def _diagnostic_claim_violations(text: str, diagnostics: dict[str, Any]) -> list[str]:
+    """Reject prose that negates source-verified factorial observations."""
+
+    if not diagnostics:
+        return []
+    boundaries = diagnostics.get("failure_boundaries") or {}
+    by_condition = boundaries.get("by_condition") or {}
+    nonzero_methods = [
+        _public_term(str(name)).casefold()
+        for name, summary in by_condition.items()
+        if isinstance(summary, dict) and int(summary.get("count", 0)) > 0
+    ]
+    zero_methods = [
+        _public_term(str(name)).casefold()
+        for name, summary in by_condition.items()
+        if isinstance(summary, dict) and int(summary.get("count", 0)) == 0
+    ]
+    factor_patterns = {
+        "contradiction-density-unvaried": (
+            r"(?i)(?:\bno contradiction density (?:variation|was (?:measured|varied|defined))\b|"
+            r"\bcontradiction density.{0,40}\b(?:not|never) (?:measured|varied|defined)\b)"
+        ),
+    }
+    boundary_pattern = (
+        r"(?i)(?:\bno (?:evidence of (?:a )?)?(?:reproducible )?failure boundar(?:y|ies)\b|"
+        r"\bfailure boundar(?:y|ies).{0,50}\b(?:not|never) "
+        r"(?:observed|measured|defined|identified)\b)"
+    )
+    corrective = re.compile(
+        r"(?i)\b(?:incorrect(?:ly)?|false(?:ly)?|erroneous(?:ly)?|rejected|contradicted|"
+        r"must not|do not|cannot claim|would be wrong|rather than)\b"
+    )
+    violations: set[str] = set()
+    for line in text.splitlines():
+        if corrective.search(line):
+            continue
+        violations.update(
+            name for name, pattern in factor_patterns.items() if re.search(pattern, line)
+        )
+        folded = _public_term(line).casefold()
+        scoped_only_to_zero_boundary_method = any(
+            name in folded for name in zero_methods
+        ) and not any(name in folded for name in nonzero_methods)
+        if (
+            nonzero_methods
+            and not scoped_only_to_zero_boundary_method
+            and re.search(boundary_pattern, line)
+        ):
+            violations.add("observed-boundary-denied")
+    return sorted(violations)
+
+
+def _diagnostic_evidence_reporting_violations(text: str, diagnostics: dict[str, Any]) -> list[str]:
+    """Require publication text to retain each registered boundary count."""
+
+    boundaries = diagnostics.get("failure_boundaries") if diagnostics else None
+    by_condition = boundaries.get("by_condition") if isinstance(boundaries, dict) else None
+    if not isinstance(by_condition, dict):
+        return []
+    violations: list[str] = []
+    for condition, summary in by_condition.items():
+        if not isinstance(summary, dict) or not isinstance(summary.get("count"), int):
+            continue
+        label = re.escape(_public_term(str(condition))).replace(r"\ ", r"[\s_-]+")
+        count = int(summary["count"])
+        reported = any(
+            re.search(label, _public_term(line), re.IGNORECASE)
+            and re.search(r"(?i)\bboundar(?:y|ies|ies'|y's)\b", line)
+            and re.search(rf"(?<!\d){count}(?!\d)", line)
+            for line in text.splitlines()
+        )
+        if not reported:
+            violations.append(f"boundary-count-omitted:{condition}")
+    return sorted(violations)
+
+
 _REQUIRED_MANUSCRIPT_SECTIONS = (
     "title",
     "abstract",
@@ -2812,6 +3080,8 @@ def _analysis_consistency_audit(
     contradictions.extend(_seed_claim_violations(analysis, seed_ids))
     contradictions = sorted(set(contradictions))
     contradictions.extend(_synthetic_claim_violations(analysis))
+    diagnostics = _validated_registered_diagnostics(selected_run.get("machine_evidence"), task)
+    contradictions.extend(_diagnostic_claim_violations(analysis, diagnostics))
     contradictions = sorted(set(contradictions))
     if contradictions:
         raise ValueError(
@@ -2825,6 +3095,11 @@ def _analysis_consistency_audit(
         raise ValueError(
             "analysis exposes internal-only identifiers: " + ", ".join(identifier_violations)
         )
+    diagnostic_reporting = _diagnostic_evidence_reporting_violations(analysis, diagnostics)
+    if diagnostic_reporting:
+        raise ValueError(
+            "analysis omits registered factorial diagnostics: " + ", ".join(diagnostic_reporting)
+        )
     return {
         "selected_execution_completed": True,
         "primary_metric": primary,
@@ -2833,6 +3108,8 @@ def _analysis_consistency_audit(
         "seed_ids": seed_ids,
         "failure_claim_contradictions": [],
         "analysis_identifier_violations": [],
+        "diagnostic_claim_violations": [],
+        "diagnostic_evidence_reporting_violations": [],
     }
 
 
@@ -2913,7 +3190,9 @@ def _outline_with_evidence_checkpoint(
         outline, primary, float(primary_value)
     )
     evidence_missing = _seed_evidence_reporting_violations(outline, selected_run, task)
-    if not metric_missing and not evidence_missing:
+    diagnostics = _validated_registered_diagnostics(selected_run.get("machine_evidence"), task)
+    diagnostic_missing = _diagnostic_evidence_reporting_violations(outline, diagnostics)
+    if not metric_missing and not evidence_missing and not diagnostic_missing:
         return outline, False
 
     checkpoint = [
@@ -2929,6 +3208,10 @@ def _outline_with_evidence_checkpoint(
             ["", f"Primary metric — {_public_term(primary)}: {float(primary_value):.6f}."]
         )
     checkpoint.extend(["", _publication_evidence_matrix(selected_run)])
+    if diagnostics:
+        diagnostic_projection = dict(selected_run)
+        diagnostic_projection["registered_diagnostics"] = diagnostics
+        checkpoint.extend(["", _publication_diagnostic_evidence(diagnostic_projection, task)])
     return outline.rstrip() + "\n\n" + "\n".join(checkpoint) + "\n", True
 
 
@@ -2943,6 +3226,8 @@ def _artifact_consistency_audit(
     contradictions = _failure_claim_violations(paper)
     contradictions.extend(_synthetic_claim_violations(paper))
     contradictions.extend(_seed_claim_violations(paper, analysis_audit["seed_ids"]))
+    diagnostics = _validated_registered_diagnostics(selected_run.get("machine_evidence"), task)
+    contradictions.extend(_diagnostic_claim_violations(paper, diagnostics))
     contradictions = sorted(set(contradictions))
     if contradictions:
         raise ValueError(
@@ -2963,6 +3248,11 @@ def _artifact_consistency_audit(
         raise ValueError(
             "paper omits selected seed evidence: " + ", ".join(seed_evidence_violations)
         )
+    diagnostic_reporting = _diagnostic_evidence_reporting_violations(paper, diagnostics)
+    if diagnostic_reporting:
+        raise ValueError(
+            "paper omits registered factorial diagnostics: " + ", ".join(diagnostic_reporting)
+        )
     return {
         "schema_version": "1.0",
         "method": "selected-evidence-publication-consistency-v1",
@@ -2976,6 +3266,8 @@ def _artifact_consistency_audit(
         "analysis_identifier_violations": [],
         "publication_identifier_violations": [],
         "seed_evidence_reporting_violations": [],
+        "diagnostic_claim_violations": [],
+        "diagnostic_evidence_reporting_violations": [],
     }
 
 

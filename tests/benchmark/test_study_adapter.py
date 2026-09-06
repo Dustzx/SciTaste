@@ -24,6 +24,7 @@ from scitaste.benchmark.study_adapter import (
     _parse_seed_evidence,
     _prepare_stage_seven,
     _publication_asset_violations,
+    _publication_diagnostic_evidence,
     _publication_resume_stage,
     _reader_facing_research_topic,
     _remove_missing_publication_images,
@@ -36,6 +37,7 @@ from scitaste.benchmark.study_adapter import (
     _validate_outline_artifact,
     _validate_paper_draft_artifact,
     _validate_selected_experiment,
+    _validated_registered_diagnostics,
     _write_analysis_synthesis_override,
     _write_prompt_overrides,
     _write_selected_experiment_evidence,
@@ -64,6 +66,66 @@ def request(condition: SystemCondition):
                 "max_experiments": 8,
                 "max_wall_time_hours": 1.0,
                 "max_api_cost_usd": 10.0,
+            },
+        },
+    }
+
+
+def v3_machine_evidence() -> dict:
+    factors = {
+        "target_position": 0.1,
+        "packet_length": 0.2,
+        "contradiction_density": 0.3,
+        "citation_topology": 0.05,
+    }
+    return {
+        "schema_version": "1.0",
+        "primary_metric": {"name": "balanced_accuracy", "value": 0.8},
+        "conditions": {
+            name: {
+                "per_seed": {"7": 0.8, "19": 0.8, "31": 0.8},
+                "mean": 0.8,
+                "std": 0.0,
+            }
+            for name in (
+                "majority_vote",
+                "confidence_weighted_vote",
+                "position_aware_probe",
+            )
+        },
+        "diagnostics": {
+            "kernel_id": "diagnosis-factorial-v3",
+            "generated_packets": 1944,
+            "packets_per_seed": 648,
+            "factor_effects": {
+                name: dict(factors)
+                for name in (
+                    "majority_vote",
+                    "confidence_weighted_vote",
+                    "position_aware_probe",
+                )
+            },
+            "failure_boundaries": {
+                "balanced_accuracy_threshold": 0.75,
+                "minimum_reproducing_seeds": 2,
+                "criterion": "cell balanced accuracy below threshold on the minimum seed count",
+                "by_condition": {
+                    "majority_vote": {
+                        "count": 16,
+                        "worst_cells": [
+                            {
+                                "target_position": "middle",
+                                "packet_length": 128,
+                                "contradiction_density": 0.5,
+                                "citation_topology": "chain",
+                                "mean_balanced_accuracy": 0.42,
+                                "reproducing_seeds": [7, 19, 31],
+                            }
+                        ],
+                    },
+                    "confidence_weighted_vote": {"count": 0, "worst_cells": []},
+                    "position_aware_probe": {"count": 3, "worst_cells": []},
+                },
             },
         },
     }
@@ -1081,6 +1143,100 @@ def test_analysis_gate_rejects_flattened_single_run_as_single_seed() -> None:
             selected_run=selected,
             task=task,
         )
+
+
+def test_registered_factorial_diagnostics_are_validated_and_published() -> None:
+    task = load_task("diagnosis_friendly_v3.yaml")
+    record = v3_machine_evidence()
+
+    diagnostics = _validated_registered_diagnostics(record, task)
+    rendered = _publication_diagnostic_evidence({"registered_diagnostics": diagnostics}, task)
+
+    assert "contradiction density across 0.0, 0.25, 0.5" in rendered
+    assert "majority vote: 16" in rendered
+    assert "confidence weighted vote: 0" in rendered
+    assert "position aware probe: 3" in rendered
+    assert "mean balanced accuracy=0.420000" in rendered
+
+    invalid = json.loads(json.dumps(record))
+    invalid["diagnostics"]["generated_packets"] = 1943
+    with pytest.raises(ValueError, match="wrong generated-packet count"):
+        _validated_registered_diagnostics(invalid, task)
+
+
+def test_analysis_gate_rejects_negated_registered_factorial_diagnostics() -> None:
+    task = load_task("diagnosis_friendly_v3.yaml")
+    selected = {
+        "returncode": 0,
+        "timed_out": False,
+        "metric": 0.8,
+        "metrics": {"balanced_accuracy": 0.8},
+        "seed_ids": [7, 19, 31],
+        "machine_evidence": v3_machine_evidence(),
+    }
+    boundary_counts = (
+        "Majority vote has 16 failure boundaries. Confidence weighted vote has 0 failure "
+        "boundaries. Position aware probe has 3 failure boundaries."
+    )
+
+    with pytest.raises(ValueError, match="contradiction-density-unvaried"):
+        _analysis_consistency_audit(
+            analysis=(
+                "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). No "
+                f"contradiction density variation was measured. {boundary_counts}"
+            ),
+            selected_run=selected,
+            task=task,
+        )
+    with pytest.raises(ValueError, match="observed-boundary-denied"):
+        _analysis_consistency_audit(
+            analysis=(
+                "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). The grid "
+                f"varied contradiction density, but no failure boundary was observed. "
+                f"{boundary_counts}"
+            ),
+            selected_run=selected,
+            task=task,
+        )
+
+    accepted = _analysis_consistency_audit(
+        analysis=(
+            "Balanced accuracy was 0.8 across three seeds (7, 19, and 31). Contradiction "
+            f"density varied across three levels. {boundary_counts}"
+        ),
+        selected_run=selected,
+        task=task,
+    )
+    assert accepted["diagnostic_evidence_reporting_violations"] == []
+
+
+def test_outline_checkpoint_materializes_registered_factorial_diagnostics() -> None:
+    task = load_task("diagnosis_friendly_v3.yaml")
+    record = v3_machine_evidence()
+    selected = {
+        "metrics": {
+            "balanced_accuracy": 0.8,
+            "majority_vote": 0.8,
+            "confidence_weighted_vote": 0.8,
+            "position_aware_probe": 0.8,
+        },
+        "seed_ids": [7, 19, 31],
+        "per_seed_metrics": {
+            seed: {name: 0.8 for name in record["conditions"]} for seed in ("7", "19", "31")
+        },
+        "dispersion_metrics": {name: {"mean": 0.8, "std": 0.0} for name in record["conditions"]},
+        "machine_evidence": record,
+    }
+
+    repaired, changed = _outline_with_evidence_checkpoint(
+        "# Outline\n\nBalanced accuracy was 0.800000 across seeds 7, 19, and 31.\n",
+        selected,
+        task,
+    )
+
+    assert changed is True
+    assert "REGISTERED FACTORIAL DIAGNOSTICS" in repaired
+    assert "majority vote: 16" in repaired
 
 
 def test_selected_experiment_evidence_preserves_successful_stdout(tmp_path) -> None:
