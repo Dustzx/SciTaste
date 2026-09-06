@@ -1,146 +1,166 @@
-# Window 3 Dispatch: Evidence-Native Generative Project Workspace
+# Window 3 Dispatch: Progress-First Generative Research Workspace
 
-Assignment token: `W3-evidence-workspace-20260905-r2`
+Assignment token: `W3-generative-progress-20260906-r3`
 
-Status: `integrated into main; Epic and hardening complete`
+Status: `active; autonomous execution authorized`
 
-Integration review on 2026-09-05 accepted the four-work-package implementation
-and its 480-test branch result but reproduced two blockers before merge: a valid
-audit chain copied from project B could appear in project A, and the audit writer
-did not bind the checked parent directory through lock/temp/replace operations.
-Stale browser catalogs on project switch are also part of the required fix.
-Window 3 closed these issues in `c319e3e`; main independently reran 163 focused
-tests plus the JavaScript syntax check and integrated the complete branch as
-merge commit `50062ae`. The merged repository then passed 544 tests. Further
-work requires a new assignment token.
+The user authorized Window 3 to self-dispatch this follow-on Epic. The previous
+evidence-native workspace and its audit hardening were integrated into `main` as
+merge commit `50062ae`. This Epic starts from current `main`; it must not
+continue from the already-integrated feature-branch tip.
 
 ## Workspace
 
 - worktree: `/home/good/zfx/papers/SciTaste-worktrees/generative-ui`
-- branch: `feat/generative-ui-workspace-v2`
-- base: `main` containing this assignment token
-- do not work in `/home/good/zfx/papers/SciTaste`
+- branch: `feat/generative-ui-intent-planner-v3`
+- base: current `main` containing this assignment token
+- do not implement product changes in `/home/good/zfx/papers/SciTaste`
 
-Create or switch to the named branch from the dispatch-bearing `main` before
-editing. The prior application-boundary Epic is integrated history, not the base
-for an unrebased continuation.
+Window 3 proceeds through every work package without waiting for approval
+between commits. Main remains responsible for final review, merge, roadmap and
+release records.
 
-## Objective
+## Product order and objective
 
-Turn the secure local UI boundary into an evidence-native research workspace
-that demonstrates “generation as content”: the server composes the most useful
-trusted view from current project evidence, while the receiver lets a user move
-fluidly among projects, runs, stages, blockers, papers, artifacts, comparisons,
-and pending proposals. Generated content remains typed data inside fixed native
-components; neither the browser nor generated layout receives execution,
-filesystem, renderer-code, or controller authority.
+Implement project progress before open-ended generation. A user must first be
+able to see what a real SciTaste project has completed, what evidence supports
+that status, what is blocked or unavailable, where its current run and paper
+live, and which next steps are merely candidates. Use
+`scitaste-self-development` as the primary self-hosting acceptance case without
+writing generated outputs or special-casing its ID.
 
-This is one multi-package product Epic. Continue from WP1 through WP4 without
-waiting for main-window approval between commits. Do not stop after one new page,
-component, or API route.
+Then add a visible generation-as-content interaction: evidence-derived quick
+intents and a bounded free-question input both resolve to the same typed
+`WorkspaceIntent`; a planner may select, order and group only server-owned
+component candidates and may cite only evidence in the current project
+snapshot. The generated result is a declarative `SurfacePlan`, never HTML,
+JavaScript, commands, URLs, filesystem paths, controller decisions or research
+state mutations.
+
+The target experience is a fixed trusted shell whose project workspace changes
+meaningfully with the user's research goal while remaining reproducible,
+evidence-grounded, auditable and useful when no model provider is configured.
 
 ## Owned paths
 
-- `src/scitaste/generative_ui/` including fixed packaged assets;
-- one focused UI CLI module and the smallest registrations required in
-  `src/scitaste/cli.py`;
-- `tests/generative_ui/` and focused `tests/integration/` coverage;
+- `src/scitaste/generative_ui/`, including packaged fixed receiver assets;
+- the smallest UI CLI registration/configuration changes required in
+  `src/scitaste/cli.py` and `src/scitaste/generative_ui/serve_cli.py`;
+- `tests/generative_ui/` and focused `tests/integration/` UI/CLI coverage;
 - `docs/GENERATIVE_UI.md`.
 
-Do not edit model nodes, `full_workflow.py`, central roadmap/architecture/
-changelog/README/task documents, AutoResearchClaw, generated `outputs/`, or
-credentials.
+Do not edit `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `CHANGELOG.md`, README,
+other task documents, model-node internals, `full_workflow.py`, project runtime,
+AutoResearchClaw, credentials or generated `outputs/`. If a required behavior
+cannot be implemented within these boundaries, fail closed and report the
+integration seam to main.
 
-## Work packages
+## WP1 — Evidence-grounded project progress
 
-### WP1 — Authoritative workspace/query model
+1. Add a closed, versioned project-progress query and trusted component model.
+   Progress must distinguish observed completion, current work, blocked/failed,
+   unavailable and unknown; it must not turn absent evidence into completion or
+   invent a numeric percentage.
+2. Derive milestones, current run/stage, paper state, blockers, recent verified
+   activity and next-step candidates from fresh `ProjectRuntime` records and
+   content-addressed project evidence. Every visible progress claim cites its
+   supporting evidence IDs.
+3. Make project progress a first-class receiver view and the useful default
+   after project selection. Preserve existing deep links and compatibility.
+4. Test empty, legacy, partial, successful, failed, blocked, paper-bearing and
+   self-development-shaped projects. No fixture may masquerade as real research
+   evidence.
 
-1. Add closed, versioned server-owned view/query contracts for project list,
-   overview, run/stage explorer, paper/evidence view, run comparison, blocker
-   view, and pending-proposal history. Client input may select only validated
-   project-owned IDs and predefined view purposes; it cannot submit components,
-   fields, layout, evidence, filters, or renderer definitions.
-2. Compose each view from a fresh `ProjectRuntime` snapshot and content-addressed
-   evidence. Return explicit empty/unavailable states rather than inventing
-   stages, metrics, paper content, or project health.
-3. Add deterministic presentation summaries that explain what a stage produced,
-   why a run is blocked/failed, and where the current paper/evidence lives using
-   typed source fields—not model-authored prose.
-4. Bind workspace/view identity, project revision, query selection, and every
-   displayed evidence hash into the surface fingerprint.
+Commit WP1 and run focused model/workspace/receiver tests before continuing.
 
-Commit WP1, run its focused tests, then continue automatically.
+## WP2 — Unified quick and free-form intent contract
 
-### WP2 — Navigable generation-as-content receiver
+1. Define strict request/result contracts for evidence-derived quick intents
+   and bounded free questions. Both paths produce the same canonical
+   `WorkspaceIntent`, project/snapshot binding and deterministic fingerprint.
+2. Quick intents must be generated from current project capabilities and state,
+   not from a static universal menu. They remain usable without a provider and
+   cover progress review, blocker diagnosis, run comparison, paper evidence and
+   next-step review only when the required authoritative identities exist.
+3. Free questions may express flexible goals, but untrusted text must never
+   become renderer content, a query path, a command, a URL, or an execution
+   payload. Ambiguous project-owned entities produce a typed clarification or
+   bounded candidate set rather than a guessed binding.
+4. Define a closed `SurfacePlan` that can select, order, group and emphasize
+   only server-provided candidate component IDs. It cannot author component
+   data, evidence, actions or authority. Validate and fingerprint the plan
+   against the exact project snapshot and candidate catalog.
 
-1. Expand the fixed receiver into an accessible, responsive workspace with
-   project switcher, view navigation, stage/run selection, evidence detail,
-   blocker drill-down, comparison controls, and visible freshness/provenance.
-   Use only receiver-owned DOM construction and the closed component registry.
-2. Preserve browser navigation/back-forward state using validated identity-only
-   URLs or history state. Reload and deep-link resolution must revalidate server
-   evidence and fail closed on stale or unknown identity.
-3. Add conditional refresh with ETag or an equivalent content fingerprint so
-   unchanged views are cheap and changed project revisions invalidate stale
-   actions. Do not add a model-generated renderer or arbitrary client query.
-4. Make proposal state understandable: pending means recorded advice awaiting a
-   later deterministic controller boundary, never “approved” or “executed.”
+Commit WP2 and run contract, determinism and malicious-payload tests before
+continuing.
 
-Commit WP2, run application/receiver tests, then continue automatically.
+## WP3 — Planner boundary and deterministic fallback
 
-### WP3 — Safe evidence and artifact inspection
+1. Add a narrow planner protocol with a deterministic implementation and an
+   optional existing-provider integration seam. Provider output is untrusted
+   `SurfacePlan` input and must pass the same closed validation. Do not couple UI
+   safety to prompt instructions.
+2. Prefer deterministic resolution for recognized intents. A configured model
+   may classify long-tail free questions and compose allowed candidates; it may
+   not create facts or component values. Provider outage, malformed output,
+   timeout or refusal must return a useful typed fallback or explicit
+   unavailable state.
+3. Keep credentials server-side, lazy-load provider dependencies, impose input,
+   output, token and timeout bounds, and avoid logging questions, credentials or
+   unpublished evidence content. Tests use fakes; an explicitly configured GLM
+   5.3 Flash smoke may be recorded separately without committing responses.
+4. Bind planner identity/configuration class, normalized intent, candidate
+   catalog, snapshot and resulting plan into provenance and fingerprints. Do
+   not claim deterministic reproducibility for model generations.
 
-1. Add a narrow content-addressed inspection path only for artifacts already
-   present in the authoritative selected view. Rehash on access, enforce project
-   containment, regular-file/no-symlink semantics, media allowlists, and byte
-   limits; changed or missing artifacts invalidate the view.
-2. Render text, JSON, Markdown source, images, and PDF metadata/preview through
-   fixed receiver behavior. Treat HTML/script-like bytes as inert text; never
-   execute artifact scripts, serve active HTML, or expose a general download or
-   filesystem endpoint.
-3. Record proposal/inspection events in the existing project-owned hash chain,
-   preserve restart duplicate protection and concurrency ordering, and expose a
-   read-only verified pending-proposal history.
-4. Ensure project switching cannot leak an artifact, event, or audit locator
-   from another project.
+Commit WP3 and run planner boundary/fallback tests before continuing.
 
-Commit WP3, run security/integration tests, then continue automatically.
+## WP4 — Visible generation-as-content receiver
 
-### WP4 — Product hardening and exit evidence
+1. Add one accessible intent control with both an editable free-question input
+   and evidence-derived quick-intent buttons. Clicking a quick intent and
+   submitting equivalent text must traverse the same server-owned planning
+   boundary.
+2. Render the validated plan as a visibly generated/revised workspace using
+   only registered native components. Show intent, planner mode, snapshot
+   freshness, cited evidence and a concise server-owned explanation of why each
+   component is present.
+3. Preserve default deterministic navigation, browser history, project switch
+   isolation and stale-tab rejection. Clear prior intent, entity candidates and
+   generated layouts before admitting a newly selected project.
+4. Make failure modes legible: clarification required, no matching evidence,
+   provider unavailable, stale snapshot and rejected plan must never degrade
+   into a blank page or fabricated answer.
 
-1. Test realistic projects containing successful, failed, blocked, legacy,
-   no-paper, paper-bearing, multi-run, and changed-artifact states. Include
-   hostile identifiers/content, stale tabs, forged selection, oversized files,
-   MIME confusion, symlink/race attempts, corrupted audit, restart, and
-   concurrent events.
-2. Verify keyboard navigation, focus/error states, readable bilingual stage
-   labels where the repository already defines them, narrow/mobile layout, CSP,
-   no remote resources, and absence of unsafe DOM sinks.
-3. Verify unauthenticated requests reveal no project metadata; non-loopback bind
-   remains explicit; errors/logs never expose bearer tokens, unpublished content,
-   or arbitrary filesystem paths.
-4. Update `docs/GENERATIVE_UI.md`, run Ruff, all generative-UI and CLI integration
-   tests, `make check`, coverage for owned production modules, and a wheel
-   package-data inspection.
+Commit WP4 and run application, static receiver, accessibility and integration
+tests before continuing.
 
-## Epic exit gate
+## WP5 — Self-hosting proof, hardening and handoff
 
-The Epic is complete only when a user can securely navigate at least the seven
-registered workspace views against real `ProjectRuntime` fixtures, inspect only
-content-addressed visible artifacts, understand run/stage/paper/proposal state,
-survive restart/concurrency/tamper tests, and never cross the proposal-only trust
-boundary. Static mockups or synthetic fixture screenshots alone do not pass.
+1. Exercise the progress and intent paths against the existing
+   `scitaste-self-development` project read-only. Record only test/verification
+   facts in documentation; do not edit `outputs/` or commit runtime responses.
+2. Add adversarial tests for prompt/markup injection, forged component and
+   evidence IDs, cross-project entities, duplicate plan entries, stale
+   snapshots, oversized questions/provider responses, provider errors and
+   attempts to smuggle commands, URLs, actions or executable authority.
+3. Update `docs/GENERATIVE_UI.md` with the exact current/future boundary,
+   progress semantics, intent lifecycle, model/fallback behavior, API examples,
+   trust diagram, operator configuration and known limitations.
+4. Run focused UI/CLI tests, Ruff, `node --check`, `make check`, owned-module
+   coverage, `git diff --check` and wheel package-data inspection. Return a clean
+   feature branch with logical WP commits.
 
-No real provider call, controller approval, tool execution, or external network
-service is authorized.
+## Exit gate
 
-## Autonomous handoff
+The Epic is complete only when the running local application visibly shows an
+evidence-grounded progress view for real projects and lets a user either click
+an applicable quick intent or ask a bounded free question to obtain a different
+validated component arrangement. The same evidence and permission boundaries
+must apply to deterministic and model-assisted planning. No path may execute a
+proposal, tool, command, model-authored renderer or research-state change.
 
-Do not request a new task token after WP1, WP2, or WP3. Continue unless a genuine
-cross-owned change or security/dependency decision blocks the Epic. At the final
-handoff report each WP commit SHA, exact tests and coverage, package verification,
-remaining browser/security limits, compatibility/dependency notes, and a clean
-worktree. Do not merge or push `main`.
-
-Previous integrated Epic: `W3-generative-ui-app-20260905-r1`, branch handoff
-`03573f5`, integrated and subsequently hardened on main.
+The final handoff reports every commit SHA, exact tests and coverage, package
+verification, self-hosting observations, provider configuration status, known
+browser/security limits and main-window integration seams. Do not merge, push
+or rebase `main` after starting the feature branch.
