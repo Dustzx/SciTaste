@@ -677,7 +677,10 @@ two project identities.
   signatures and are not yet anchored into the project event log.
 - Automated tests use fake structured backends. The GLM-5.3-Flash configuration
   and double gate are validated offline in this Epic; no new live response or
-  cost claim is recorded here.
+  cost claim is recorded here. An unpriced engineering probe can validate the
+  provider transport, but its output is rejected from workspace admission because
+  accepted model-assisted plans require measured cost telemetry under the finite
+  per-response policy ceiling.
 - The self-development project manifest at revision 21 predates later native
   executor and UI work. Updating that visible progress belongs to the normal
   main-window `ProjectRuntime` workflow, not UI inference.

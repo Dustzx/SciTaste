@@ -37,11 +37,13 @@ class FakeStructuredBackend:
         latency_ms: float = 2,
         tool_calls: list[ToolCallProposal] | None = None,
         response_bytes: int | None = None,
+        cost_usd: float | None = 0,
     ) -> None:
         self.responder = responder
         self.latency_ms = latency_ms
         self.tool_calls = tool_calls or []
         self.response_bytes = response_bytes
+        self.cost_usd = cost_usd
         self.calls: list[StructuredModelRequest] = []
 
     def complete(self, request: StructuredModelRequest) -> StructuredModelResponse:
@@ -59,7 +61,7 @@ class FakeStructuredBackend:
             raw_response=raw,
             raw_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
             latency_ms=self.latency_ms,
-            usage=Usage(input_tokens=100, output_tokens=50, cost_usd=0),
+            usage=Usage(input_tokens=100, output_tokens=50, cost_usd=self.cost_usd),
             tool_calls=self.tool_calls,
         )
 
@@ -290,6 +292,32 @@ def test_provider_error_tool_call_and_resource_overruns_fail_closed(tmp_path: Pa
     large_backend = FakeStructuredBackend(_model_plan, response_bytes=501)
     large = StructuredWorkspacePlanner(large_backend, _policy(max_response_bytes=500))
     assert FallbackWorkspacePlanner(large).compose(catalog).status == "fallback"
+
+    unknown_cost = StructuredWorkspacePlanner(
+        FakeStructuredBackend(_model_plan, cost_usd=None),
+        _policy(),
+    )
+    assert FallbackWorkspacePlanner(unknown_cost).compose(catalog).status == "fallback"
+
+    expensive = StructuredWorkspacePlanner(
+        FakeStructuredBackend(_model_plan, cost_usd=0.16),
+        _policy(max_response_cost_usd=0.15),
+    )
+    assert FallbackWorkspacePlanner(expensive).compose(catalog).status == "fallback"
+
+
+def test_structured_request_carries_the_exact_finite_cost_ceiling(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    backend = FakeStructuredBackend(_model_plan, cost_usd=0.02)
+    planner = StructuredWorkspacePlanner(
+        backend,
+        _policy(max_response_cost_usd=0.03),
+    )
+
+    assert planner.compose(catalog).status == "planned"
+    request = backend.calls[0]
+    assert request.admission_budget.max_response_cost_usd == 0.03
+    assert request.cumulative_project_budget.max_api_cost_usd == 0.03
 
 
 def test_backend_identity_and_cross_snapshot_classification_are_rejected(

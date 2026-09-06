@@ -2,7 +2,12 @@
 
 Assignment token: `W3-generative-progress-20260906-r3`
 
-Status: `active; autonomous execution authorized`
+Status: `integrated; idle`
+
+Integration record: WP1--WP5 were delivered as `4a83d36`, `15bd30b`,
+`0900ecb`, `55c9ba8`, and `72803f5`, reviewed on main, and merged by
+`ea6a921`. Main added fail-closed finite-cost admission before final
+verification. Window 3 must not continue without a new assignment token.
 
 The user authorized Window 3 to self-dispatch this follow-on Epic. The previous
 evidence-native workspace and its audit hardening were integrated into `main` as

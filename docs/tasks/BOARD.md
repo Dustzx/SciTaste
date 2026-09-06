@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-05.9`
+Board revision: `2026-09-06.10`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Phase 9/core workflow and normal-workflow model integration | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
 | 2 | Project-scoped model-node runtime and policy profiles | integrated; idle | `feat/model-node-runtime-v2` | `/home/good/zfx/papers/SciTaste-worktrees/model-nodes` | new assignment required |
-| 3 | Evidence-native generative project workspace | integrated; idle | `feat/generative-ui-workspace-v2` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
+| 3 | Progress-first Generation as Content workspace | integrated; idle | `feat/generative-ui-intent-planner-v3` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
 
@@ -24,9 +24,9 @@ Board revision: `2026-09-05.9`
 
 ## Current non-overlap
 
-- Window 2 and Window 3 have no active owned paths. Their r2 Epics and hardening
-  fixes are integrated; neither should continue until its assignment document
-  receives a new token and scope.
+- Window 2 and Window 3 have no active owned paths. Window 2's model-node Epic
+  and Window 3's progress-first Generation as Content WP1--WP5 are integrated;
+  neither should continue until its assignment document receives a new token.
 - Main owns Phase 9/core workflow development, integration repairs, project
   catalog refreshes, common architecture/roadmap/changelog edits, full-suite
   checks, and GitHub synchronization.
@@ -41,3 +41,7 @@ Board revision: `2026-09-05.9`
 - The real seven-case GLM-5.3-Flash engineering probe remains intentionally
   blocked rather than promoted. Priced external measurement, independent review,
   and a registered effectiveness comparison remain later model-node gates.
+- Main has integrated evidence-derived project progress, quick intents, bounded
+  free questions, closed `SurfacePlan` composition, deterministic fallback, and
+  the generated workspace receiver. Model-assisted plans require finite token,
+  byte, latency, and measured-cost admission and never gain execution authority.

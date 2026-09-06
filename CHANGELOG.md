@@ -7,6 +7,10 @@ semantic versioning.
 
 ### Added
 
+- A progress-first Generation as Content workspace with evidence-derived quick
+  intents, bounded free questions, closed server-owned component planning,
+  deterministic fallback, dynamic native layouts, exact process-local surface
+  retention, and fail-closed finite model-response budgets.
 - A first-party Bubblewrap experiment runner for registered Python source, with
   a shell-free launcher and no network/host-project/GPU/writable-filesystem
   access, process and resource ceilings, bounded exact stdout/stderr, and

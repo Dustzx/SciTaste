@@ -91,6 +91,7 @@ class ModelPlannerPolicy(BaseModel):
     max_input_tokens: int = Field(default=12_000, ge=1, le=1_000_000)
     max_output_tokens: int = Field(default=1_024, ge=1, le=32_000)
     max_latency_ms: float = Field(default=60_000, gt=0, le=300_000, allow_inf_nan=False)
+    max_response_cost_usd: float = Field(default=0.15, ge=0, le=100, allow_inf_nan=False)
 
     @computed_field
     @property
@@ -452,12 +453,12 @@ class StructuredWorkspacePlanner:
                 max_output_tokens=self.policy.max_output_tokens,
                 max_total_tokens=self.policy.max_input_tokens + self.policy.max_output_tokens,
                 max_latency_ms=self.policy.max_latency_ms,
-                max_response_cost_usd=1_000_000,
+                max_response_cost_usd=self.policy.max_response_cost_usd,
             ),
             cumulative_project_budget=CumulativeProjectBudget(
                 max_invocations=1,
                 max_total_tokens=self.policy.max_input_tokens + self.policy.max_output_tokens,
-                max_api_cost_usd=1_000_000,
+                max_api_cost_usd=self.policy.max_response_cost_usd,
             ),
         )
         if _json_size(request.model_dump(mode="json")) > self.policy.max_request_bytes:
@@ -494,6 +495,10 @@ class StructuredWorkspacePlanner:
             > self.policy.max_input_tokens + self.policy.max_output_tokens
         ):
             raise ValueError("structured planner total usage exceeds policy")
+        if parsed.usage.cost_usd is None:
+            raise ValueError("structured planner requires API cost telemetry")
+        if parsed.usage.cost_usd > self.policy.max_response_cost_usd:
+            raise ValueError("structured planner response cost exceeds policy")
         return parsed
 
 

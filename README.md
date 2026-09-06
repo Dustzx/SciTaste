@@ -73,9 +73,10 @@ review remain pending, so no effectiveness claim is made from that pilot.
   to the stage checkpoint, grants it no mutation or execution power, and exposes
   live GLM-5.3-Flash only behind configuration plus caller authorization with
   no-repeat paid-response recovery;
-- evidence-bound generative UI contracts with a fixed trusted shell,
-  proposal-only interactions, and a ProjectRuntime adapter that hashes the exact
-  project artifacts exposed to a surface;
+- a progress-first Generation as Content workspace with a fixed trusted shell,
+  evidence-derived quick intents, bounded free questions, closed native layout
+  planning, deterministic fallback, proposal-only interactions, and exact
+  ProjectRuntime evidence binding;
 - a three-part innovation model spanning Scientific Taste, Generation as Content,
   and bounded Tool Intelligence (see `docs/INNOVATION_MAP.md`);
 - a loopback-first authenticated local UI/API that renders the closed component

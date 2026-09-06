@@ -420,6 +420,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   inspection is limited to content-addressed evidence already visible in the
   current view; project switching clears stale catalogs, and audit storage binds
   every record plus lock/temp/replace operations to one project-owned directory.
+- Project progress is now a first-class evidence view: observed completion,
+  current work, blockers/failures, unavailable capabilities, paper state, and
+  next-step candidates remain distinct and cite their project snapshot evidence.
+- Evidence-derived quick intents and bounded free questions now resolve through
+  one typed intent contract. A planner may only select, order, group, emphasize,
+  and focus server-issued candidates; it cannot author data, HTML, actions, URLs,
+  commands, or authority. Deterministic behavior remains the offline default.
+- The `/api/v3/generative` receiver renders admitted plans as different native
+  evidence workspaces, preserves deep links within an exact bounded process
+  cache, and clears stale project state on project switches. Optional structured
+  model assistance is double-gated and requires finite byte, token, time, and
+  measured-cost admission; invalid or unavailable output falls back safely.
 - Pending product integration: deterministic controller endpoints and explicit
   approval policy for turning a pending proposal into an authorized action. The
   local UI deliberately cannot execute proposals.

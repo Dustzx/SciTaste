@@ -555,6 +555,17 @@ operations prevent a checked audit path from being redirected during mutation.
 Browser project/view changes clear stale selection catalogs before fetching the
 new authoritative view.
 
+Generation as Content extends this same accepted boundary rather than adding a
+second renderer. Evidence-derived quick intents and bounded free questions
+produce one snapshot-bound `WorkspaceIntent`; a deterministic or optional
+structured planner returns only a closed `SurfacePlan` over server-issued
+candidate IDs. The fixed receiver materializes the plan from authoritative
+components. Model output cannot author visible facts, code, paths, URLs, tools,
+or mutations, and it is rejected on identity, schema, evidence, byte, token,
+latency, tool-call, or measured-cost failure. Generated deep links name exact
+admitted surfaces retained in a bounded process-local cache and fail stale after
+restart or eviction rather than silently regenerating different content.
+
 ### ADR-025: Full workflow stages extend one project-owned state
 
 Status: accepted. The offline Phase 4--7 acceptance path is composed through one
