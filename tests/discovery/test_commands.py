@@ -297,3 +297,19 @@ def test_failed_executor_cannot_publish_a_discovery_state(tmp_path: Path) -> Non
         )
     assert executor.calls == ["discovery-search"]
     assert not destination.exists()
+
+
+def test_invalid_receipt_path_mode_is_rejected_before_execution(tmp_path: Path) -> None:
+    executor = MockExecutor(seed=7)
+    destination = tmp_path / "invalid-receipt-mode"
+
+    with pytest.raises(ValueError, match="receipt path mode"):
+        DiscoveryCommandRunner(executor=executor, seed=7).run(
+            DiscoveryCommand.HYPOTHESIZE,
+            load_discovery_scenario(SCENARIO),
+            output_dir=destination,
+            receipt_paths="absolute",  # type: ignore[arg-type]
+        )
+
+    assert executor.calls == []
+    assert not destination.exists()

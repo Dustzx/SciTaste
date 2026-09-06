@@ -47,6 +47,7 @@ from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.commands import DiscoveryCommand, DiscoveryCommandRunner
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
+from scitaste.discovery.project_workflow import ProjectDiscoveryWorkflow
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_sandbox import (
@@ -205,6 +206,43 @@ def build_parser() -> argparse.ArgumentParser:
     project_surface_build.add_argument("--destination", type=Path, required=True)
     _add_project_options(project_surface_build)
     project_surface_build.set_defaults(handler=_handle_project_surface_build)
+
+    project_discovery = project_commands.add_parser(
+        "discovery", help="Advance project-owned native discovery operations"
+    )
+    project_discovery_commands = project_discovery.add_subparsers(
+        dest="project_discovery_command", required=True
+    )
+    project_discovery_advance = project_discovery_commands.add_parser(
+        "advance", help="Reserve and execute one immutable discovery operation"
+    )
+    project_discovery_advance.add_argument("--project-id", required=True)
+    project_discovery_advance.add_argument("--run-id", required=True)
+    project_discovery_advance.add_argument(
+        "--operation",
+        choices=[item.value for item in DiscoveryCommand],
+        required=True,
+    )
+    project_discovery_advance.add_argument("--config", type=Path, required=True)
+    project_discovery_advance.add_argument("--seed", type=int, default=0)
+    project_discovery_advance.add_argument("--expected-revision", type=int, required=True)
+    project_discovery_advance.add_argument("--signal-number", type=int, default=None)
+    project_discovery_advance.add_argument("--reformulation-number", type=int, default=None)
+    project_discovery_advance.add_argument(
+        "--evidence-scope",
+        default="native-discovery-engineering-evidence",
+    )
+    project_discovery_advance.add_argument("--resume", action="store_true")
+    _add_project_options(project_discovery_advance)
+    project_discovery_advance.set_defaults(handler=_handle_project_discovery_advance)
+    project_discovery_verify = project_discovery_commands.add_parser(
+        "verify", help="Verify a committed project discovery lineage"
+    )
+    project_discovery_verify.add_argument("--project-id", required=True)
+    project_discovery_verify.add_argument("--run-id", required=True)
+    project_discovery_verify.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_discovery_verify)
+    project_discovery_verify.set_defaults(handler=_handle_project_discovery_verify)
 
     project_run = project_commands.add_parser("run", help="Register and select project runs")
     project_run_commands = project_run.add_subparsers(dest="project_run_command", required=True)
@@ -596,6 +634,40 @@ def _handle_project_surface_build(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_project_discovery_advance(args: argparse.Namespace) -> int:
+    scenario = load_discovery_scenario(args.config)
+    workflow = ProjectDiscoveryWorkflow(args.outputs_root, seed=args.seed)
+    operation = DiscoveryCommand(args.operation)
+    arguments = {
+        "project_id": args.project_id,
+        "run_id": args.run_id,
+        "command": operation,
+        "expected_revision": args.expected_revision,
+        "signal_number": args.signal_number,
+        "reformulation_number": args.reformulation_number,
+        "resume": args.resume,
+    }
+    if args.dry_run:
+        print(workflow.preview(scenario, **arguments).model_dump_json(indent=2))
+        return 0
+    report = workflow.advance(
+        scenario,
+        evidence_scope=args.evidence_scope,
+        **arguments,
+    )
+    print(report.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_discovery_verify(args: argparse.Namespace) -> int:
+    report = ProjectDiscoveryWorkflow(args.outputs_root).verify(
+        args.project_id,
+        args.run_id,
+    )
+    print(report.model_dump_json(indent=2))
     return 0
 
 

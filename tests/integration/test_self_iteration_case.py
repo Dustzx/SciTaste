@@ -11,3 +11,18 @@ def test_self_iteration_selects_external_adapter_without_forking(tmp_path) -> No
     assert summary["primary_idea_id"] == "idea-01-system-level"
     assert summary["probe_count"] == 1
     assert summary["final_stage"] == "PILOT"
+
+
+def test_self_iteration_selects_project_owned_composable_discovery(tmp_path) -> None:
+    scenario = load_discovery_scenario(
+        "configs/cases/scitaste_project_owned_discovery_iteration.yaml"
+    )
+
+    summary = DiscoveryLoop(seed=7).run(
+        scenario,
+        output_dir=tmp_path / "project-owned-discovery-iteration",
+    )
+
+    assert summary["primary_idea_id"] == "idea-01-system-level"
+    assert summary["probe_count"] == 1
+    assert summary["final_stage"] == "PILOT"

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -217,9 +220,12 @@ class DiscoveryCommandRunner:
         state: ResearchState | None = None,
         signal_number: int | None = None,
         reformulation_number: int | None = None,
+        receipt_paths: Literal["filesystem", "step-relative"] = "filesystem",
     ) -> DiscoveryCommandReport:
         """Execute and exclusively own a new discovery-step directory."""
 
+        if receipt_paths not in {"filesystem", "step-relative"}:
+            raise ValueError(f"unsupported discovery receipt path mode {receipt_paths!r}")
         root = Path(output_dir)
         if root.exists():
             raise FileExistsError(f"refusing to replace discovery command output: {root}")
@@ -255,6 +261,7 @@ class DiscoveryCommandRunner:
             root=root,
             input_state_id=input_state_id,
             outcome=outcome,
+            receipt_paths=receipt_paths,
         )
 
     def _hypothesize(self, scenario: DiscoveryScenario) -> _CommandOutcome:
@@ -616,42 +623,57 @@ class DiscoveryCommandRunner:
         root: Path,
         input_state_id: str | None,
         outcome: _CommandOutcome,
+        receipt_paths: Literal["filesystem", "step-relative"],
     ) -> DiscoveryCommandReport:
-        root.mkdir(parents=True)
-        store = StateStore(root)
-        output_state_id = store.save(outcome.state)
-        logger = DecisionLogger(root / "decisions.jsonl")
-        for decision in outcome.decisions:
-            logger.append(decision)
-        decision_log_sha256 = hashlib.sha256(logger.path.read_bytes()).hexdigest()
-        report_path = root / "discovery_command.json"
-        report = DiscoveryCommandReport(
-            command=command,
-            project_id=outcome.state.project_id,
-            backend=type(self.executor).__name__,
-            seed=self.seed,
-            scenario_sha256=self._scenario_sha256(scenario),
-            input_state_id=input_state_id,
-            output_state_id=output_state_id,
-            output_revision=outcome.state.revision,
-            final_stage=outcome.state.current_stage,
-            selected_actions=[item.selected_action.type for item in outcome.decisions],
-            decision_ids=[item.decision_id for item in outcome.decisions],
-            executor_result_ids=[item.result_id for item in outcome.results],
-            active_working_hypothesis_id=outcome.state.active_working_hypothesis_id,
-            active_problem_id=outcome.state.active_problem_id,
-            active_idea_id=outcome.state.active_idea_id,
-            details=outcome.details,
-            state=str(store.latest_path),
-            decision_log=str(logger.path),
-            decision_log_sha256=decision_log_sha256,
-            report=str(report_path),
-        )
-        report_path.write_text(
-            json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
-        return report
+        root.parent.mkdir(parents=True, exist_ok=True)
+        temporary = Path(tempfile.mkdtemp(prefix=f".{root.name}.", dir=root.parent))
+        try:
+            store = StateStore(temporary)
+            output_state_id = store.save(outcome.state)
+            logger = DecisionLogger(temporary / "decisions.jsonl")
+            for decision in outcome.decisions:
+                logger.append(decision)
+            decision_log_sha256 = hashlib.sha256(logger.path.read_bytes()).hexdigest()
+            temporary_report = temporary / "discovery_command.json"
+            if receipt_paths == "step-relative":
+                state_locator = "research_state.json"
+                decision_locator = "decisions.jsonl"
+                report_locator = "discovery_command.json"
+            else:
+                state_locator = str(root / "research_state.json")
+                decision_locator = str(root / "decisions.jsonl")
+                report_locator = str(root / "discovery_command.json")
+            report = DiscoveryCommandReport(
+                command=command,
+                project_id=outcome.state.project_id,
+                backend=type(self.executor).__name__,
+                seed=self.seed,
+                scenario_sha256=self._scenario_sha256(scenario),
+                input_state_id=input_state_id,
+                output_state_id=output_state_id,
+                output_revision=outcome.state.revision,
+                final_stage=outcome.state.current_stage,
+                selected_actions=[item.selected_action.type for item in outcome.decisions],
+                decision_ids=[item.decision_id for item in outcome.decisions],
+                executor_result_ids=[item.result_id for item in outcome.results],
+                active_working_hypothesis_id=outcome.state.active_working_hypothesis_id,
+                active_problem_id=outcome.state.active_problem_id,
+                active_idea_id=outcome.state.active_idea_id,
+                details=outcome.details,
+                state=state_locator,
+                decision_log=decision_locator,
+                decision_log_sha256=decision_log_sha256,
+                report=report_locator,
+            )
+            temporary_report.write_text(
+                json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            os.replace(temporary, root)
+            return report
+        except BaseException:
+            shutil.rmtree(temporary, ignore_errors=True)
+            raise
 
     @staticmethod
     def _require_scenario_match(

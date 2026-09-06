@@ -1,0 +1,66 @@
+project_id: scitaste-self-development
+research_direction: Use SciTaste's own design, implementation, and validation decisions as an auditable self-iteration project without treating self-evidence as an effectiveness result.
+target_domain: autonomous-research-systems
+target_venue: software-artifact
+resource_budget:
+  gpu_hours: 0.2
+  max_experiments: 4
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+  compute_constraints: [deterministic registered diagnostics, no live model calls]
+landscape_findings:
+  - category: active_problem
+    statement: Public discovery commands produced valid immutable states but still relied on caller-selected output directories outside a canonical project run.
+    source_ids: [adr-031-composable-discovery-commands]
+  - category: methodological_bottleneck
+    statement: Registering only a final artifact cannot prove which project revision reserved each command or prevent concurrent callers from advancing the same run.
+    source_ids: [project-runtime-optimistic-revision-contract]
+  - category: unexplained_failure
+    statement: An interruption after a completed command but before project metadata finalization could otherwise cause a repeated executor call.
+    source_ids: [project-discovery-interruption-recovery-test]
+intuition:
+  statement: A ProjectRuntime-owned transaction wrapper can retain command composability while making discovery one resumable, content-bound project run.
+  source: architecture-and-failure-mode-audit
+  confidence: 0.86
+initial_hypothesis:
+  statement: Reserving every discovery command against a project revision before execution and committing a self-hashed lineage afterward prevents ambiguous advancement and duplicate recovery execution.
+  falsifiable_predictions:
+    - The weak discovery trajectory should reach PILOT inside one registered run with contiguous input/output state identities.
+    - Stale revisions and invalid command preconditions should create no step or project mutation.
+    - A fully persisted pending step should finalize on resume without another executor call.
+  proposed_probe_types: [project-owned-interruption-and-lineage-test]
+  confidence: 0.88
+reformulations: []
+probe_signals:
+  - observation: The managed weak trajectory completed six immutable commands in one ProjectRuntime run; stale and invalid admissions caused no side effects, and two post-execution interruption boundaries recovered without repeating executor calls.
+    expected: true
+    reproducible: true
+    stability: 0.95
+    effect_size: 0.9
+    boundary_conditions: [registered deterministic scenarios, local mock executor, one project filesystem]
+    alternative_explanations: [integration correctness does not establish open-ended research quality or scientific effectiveness]
+problem:
+  explanation_gap: Immutable command receipts alone do not define run ownership, optimistic concurrency, current-project navigation, or interruption-safe metadata finalization.
+  importance: Project-level ownership is required for users and concurrent API workers to locate, resume, verify, and compare discovery work without a fragmented outputs directory.
+idea_seeds:
+  - generator: system-level
+    hypothesis: A revision-reserved project workflow can compose existing native commands without weakening their state and decision boundaries.
+    proposed_mechanism: Register one ProjectRuntime run, reserve each command with a deterministic operation token, publish an immutable step, and atomically advance a self-hashed discovery head.
+    expected_validation: [six-command weak trajectory, independent tree verification, stale revision rejection, zero-repeat interruption recovery]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.25}
+    expected_value: {problem_validity: 0.98, novelty: 0.72, feasibility: 0.95, evidence_tractability: 0.98, expected_empirical_signal: 0.95}
+    main_risk: Long-running external executors will need the same reservation semantics plus provider-specific ambiguity accounting.
+  - generator: integration-change
+    hypothesis: Routing all discovery through the monolithic full workflow would provide sufficient project ownership.
+    proposed_mechanism: Remove independent command advancement and require users to execute Discovery through Communication and Figures as one fixed run.
+    expected_validation: [full workflow completion, final project manifest]
+    expected_cost: {gpu_hours: 0.0, experiments: 2, implementation_risk: 0.65}
+    expected_value: {problem_validity: 0.55, novelty: 0.25, feasibility: 0.7, evidence_tractability: 0.65, expected_empirical_signal: 0.45}
+    main_risk: This would erase interactive nonlinear control and force unnecessary downstream stages.
+  - generator: bookkeeping-only
+    hypothesis: A refreshed output catalog is enough to make standalone discovery directories project-readable.
+    proposed_mechanism: Keep arbitrary command destinations and infer project membership later from state project_id fields.
+    expected_validation: [catalog refresh, manual artifact lookup]
+    expected_cost: {gpu_hours: 0.0, experiments: 1, implementation_risk: 0.35}
+    expected_value: {problem_validity: 0.35, novelty: 0.15, feasibility: 0.9, evidence_tractability: 0.4, expected_empirical_signal: 0.3}
+    main_risk: Inferred ownership cannot provide transaction order, resume authority, or concurrent-write rejection.
