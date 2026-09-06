@@ -5,6 +5,7 @@ research_direction: Test recoverable bounded semantic advice inside the SciTaste
 target_domain: autonomous-research
 target_venue: general-ml
 condition: full_scitaste_glm53_unpriced_advisory
+execution_backend: scitaste-native
 provider: mock
 model: deterministic-controller
 evidence_scope: engineering-only-unpriced-live-semantic-advice

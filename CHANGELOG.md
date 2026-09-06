@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- A dependency-free `SciTasteNativeExecutor` is now the committed Full Workflow
+  default, with typed capability receipts, explicit mock compatibility mode,
+  shared execution across all four stages, and fail-closed state advancement.
+- ADR-028 defines SciTaste as the independent product, retains unmodified
+  AutoResearchClaw only as an optional baseline/compatibility adapter, and
+  separates common-executor ablations from future independent-system evidence.
+- A root MIT license for SciTaste's own package and repository artifacts.
+
 - Double-gated live GLM-5.3-Flash advice in `run full`, with a content-addressed
   profile/config, pre-provider evidence checkpoint, exact already-paid response
   recovery, single-count usage accounting, stale-revision rejection, and

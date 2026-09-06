@@ -151,6 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo.set_defaults(handler=_handle_demo)
     full = run_commands.add_parser("full", help="Run the Phase 4-7 project workflow")
     _add_common_options(full, default_output="outputs")
+    full.set_defaults(backend=None)
     full.add_argument("--project-id", default=None)
     full.add_argument("--run-id", default=None)
     full.add_argument("--paper-directory", default=None)
@@ -908,18 +909,18 @@ def _handle_discover(args: argparse.Namespace) -> int:
 
 
 def _handle_full(args: argparse.Namespace) -> int:
-    if args.backend != "mock":
-        raise ValueError(
-            "the integrated workflow controller currently supports only --backend mock"
-        )
     config_path = args.config or Path("configs/workflows/full_offline_v1.yaml")
     config = load_full_workflow_config(config_path)
-    if args.project_id is not None or args.paper_directory is not None:
+    if args.backend is not None and args.backend not in {"scitaste-native", "mock"}:
+        raise ValueError("run full supports --backend scitaste-native or mock")
+    if args.project_id is not None or args.paper_directory is not None or args.backend is not None:
         payload = config.model_dump(mode="python")
         if args.project_id is not None:
             payload["project_id"] = args.project_id
         if args.paper_directory is not None:
             payload["paper_directory"] = args.paper_directory
+        if args.backend is not None:
+            payload["execution_backend"] = args.backend
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
@@ -936,6 +937,7 @@ def _handle_full(args: argparse.Namespace) -> int:
                     "run_id": run_id,
                     "provider": config.provider,
                     "model": config.model,
+                    "execution_backend": config.execution_backend,
                     "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],
                     "model_advisory": (

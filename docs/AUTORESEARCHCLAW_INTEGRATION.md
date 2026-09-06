@@ -1,8 +1,10 @@
 # AutoResearchClaw integration
 
-SciTaste treats AutoResearchClaw as an immutable execution substrate. The pinned
-`v0.5.0` submodule is not patched; all compatibility and control behavior lives
-in `src/scitaste/executor/`.
+SciTaste treats AutoResearchClaw as an immutable optional baseline and
+compatibility substrate. The pinned `v0.5.0` submodule is not patched; all
+compatibility and control behavior lives in `src/scitaste/executor/`. The
+default `scitaste run full` path uses `scitaste-native` and neither imports nor
+invokes this submodule.
 
 ## Boundary
 

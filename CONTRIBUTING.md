@@ -23,10 +23,12 @@
 
 ## Dependency policy
 
-AutoResearchClaw is a Git submodule pinned to an audited release commit. Update it
-only in a dedicated pull request containing upstream release notes, adapter
-compatibility results, and a rollback commit. Do not edit its internals from a
-SciTaste feature branch.
+SciTaste's default development and test path is first-party and does not require
+AutoResearchClaw. AutoResearchClaw is an optional Git submodule pinned to an
+audited release commit for baseline and compatibility work. Update it only in a
+dedicated pull request containing upstream release notes, adapter compatibility
+results, and a rollback commit. Do not edit its internals from a SciTaste feature
+branch.
 
 ## Releases
 

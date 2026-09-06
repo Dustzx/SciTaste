@@ -30,10 +30,14 @@ registered run and publication identity with:
   --seed 7 --output outputs --resume
 ```
 
-The default backend is `mock`. It executes the full controller, state,
-criticism, revision, packaging, and project-management code without a model API.
-Its output is integration evidence, not evidence that SciTaste improves research
-effectiveness. `--dry-run` validates the configuration and prints the planned
+The committed default is `scitaste-native`. One first-party executor instance is
+shared across Discovery, Evidence, Communication, nested reviewer evidence, and
+Figure actions. It emits typed action receipts without inventing mock
+observations; the existing deterministic workflow components perform the bounded
+scenario operation and remain dependency-free. `--backend mock` is an explicit
+compatibility/test mode. Neither mode proves open-ended retrieval, code-sandbox,
+or model-generation quality, and neither supports an effectiveness claim.
+`--dry-run` validates the configuration and prints the planned executor and
 project/run/paper identity without writing files.
 
 An opt-in offline acceptance config also exercises a bounded semantic node in
@@ -181,6 +185,8 @@ backend identity drift. `--dry-run` reports the backend mode, both authorization
 gates, and whether a real execution would contact a provider without creating a
 project or accessing the network.
 
-AutoResearchClaw is not modified or invoked by this offline acceptance case. A
-later live/full executor mode must preserve the same ProjectRuntime ownership,
-state-continuity, evidence-binding, and failure-retention contracts.
+AutoResearchClaw is not modified or invoked by this acceptance case. It remains
+an optional baseline/compatibility adapter. Native open-ended retrieval, code
+generation, sandbox execution, metric extraction, and long-form generation are
+still capability-parity work; they must preserve the same ProjectRuntime
+ownership, state-continuity, evidence-binding, and failure-retention contracts.

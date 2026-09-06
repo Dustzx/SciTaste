@@ -124,6 +124,31 @@ retains the same engineering-only classification. The receipt and manifest
 ledger is
 `docs/experiments/zhipu_glm53_project_owned_stage13_2026-09-05.md`.
 
+## Native execution ownership case
+
+The later product-positioning decision compares three different relationships
+with AutoResearchClaw:
+
+1. keep AutoResearchClaw as SciTaste's mandatory default runtime;
+2. copy or fork the complete upstream implementation into SciTaste;
+3. make a first-party SciTaste executor the default while retaining the pinned,
+   unmodified upstream only as an optional baseline and compatibility adapter.
+
+The third alternative is selected in ADR-028. It gives SciTaste one public
+product boundary and permits independent system comparison without hiding an
+upstream framework inside the claimed system. Wholesale copying is rejected
+because it would preserve fixed-pipeline coupling while making license,
+provenance, maintenance, and causal attribution harder.
+
+The first implementation result is deliberately narrow: the Phase 4--7 Full
+Workflow now shares one `SciTasteNativeExecutor`, explicit `--backend mock`
+remains available, non-successful execution cannot advance state, and the wheel
+build/import succeeds without packaging AutoResearchClaw. These results establish
+architectural ownership only. Native open-ended retrieval, code generation,
+sandbox execution, metric extraction, analysis, and generative writing remain
+registered work, and no superiority claim follows from this self-development
+case.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

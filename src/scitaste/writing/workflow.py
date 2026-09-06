@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.data.store import TasteLibrary, build_libraries
 from scitaste.evidence.workflow import EvidenceWorkflow, EvidenceWorkflowScenario
-from scitaste.executor.base import ExecutionResult, ResearchExecutor
+from scitaste.executor.base import ExecutionResult, ResearchExecutor, require_execution_success
 from scitaste.executor.mock import MockExecutor
 from scitaste.review.closure import EVIDENCE_ACTIONS, close_satisfied_obligations
 from scitaste.review.obligations import create_obligation
@@ -126,6 +126,7 @@ class CommunicationWorkflow:
             decision.executor_result_id = result.result_id
             decision.actual_outcome = result.model_dump(mode="json")
             logger.append(decision)
+            require_execution_success(result)
             state = apply_transition(state, decision)
             state = record_resource_usage(state, result.cost)
             return decision, result

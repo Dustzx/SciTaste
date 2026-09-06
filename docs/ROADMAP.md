@@ -138,6 +138,19 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 
 ## Phase 9 progress
 
+- Architecture direction is now explicit: `scitaste-native` is the independent
+  product default, while AutoResearchClaw is an optional baseline/compatibility
+  adapter. The dependency-free native Phase 4--7 path is wired through one
+  shared executor and failed execution cannot advance state.
+- Native open-ended capability parity remains pending for retrieval, code
+  generation, isolated experiments, metric extraction, analysis, writing, and
+  figures. Existing scenario-bound native receipts are integration evidence,
+  not a claim that these open-ended handlers are complete.
+- Phase 9 evidence will distinguish component ablation on a common execution
+  base from independent-system comparison of SciTaste Native against pinned
+  external systems. Neither the current AutoResearchClaw-based cells nor native
+  integration tests alone establish that SciTaste is better.
+
 - A content-hashed protocol covers diagnosis-friendly, clear-hypothesis,
   new-formulation, and ambiguous-direction tasks.
 - AutoResearchClaw, Knowledge RAG, Taste Library, and Full SciTaste are enabled;

@@ -2,11 +2,12 @@
 
 Scientific-taste-guided control for autonomous research.
 
-SciTaste separates high-level research decisions from execution. The controller
-observes a persistent research state, ranks candidate actions, records why an
-action was selected, and delegates only that action to an execution substrate.
-AutoResearchClaw is pinned as the first substrate; its fixed pipeline does not
-own SciTaste's global trajectory.
+SciTaste is an independent, first-party autonomous-research project. Its
+controller observes persistent research state, ranks candidate actions, records
+why an action was selected, and executes only that action through a replaceable
+boundary. `scitaste-native` is the default integrated executor;
+AutoResearchClaw is retained unmodified as an optional compatibility adapter and
+fixed external baseline, never as a required runtime or owner of the trajectory.
 
 ## Current milestone
 
@@ -23,8 +24,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - nonlinear, decision-driven transitions including `PROBE` and `PIVOT`;
 - deterministic training-free taste controller;
 - atomic JSON persistence;
-- framework-neutral executor protocol, deterministic mock, and a pinned
-  AutoResearchClaw adapter;
+- framework-neutral executor protocol, default first-party native executor,
+  explicit deterministic mock, and an optional pinned AutoResearchClaw adapter;
 - runnable nonlinear demo and tests;
 - fixed-candidate intrinsic taste calibration with accuracy, confidence, Brier,
   and calibration metrics;
@@ -83,10 +84,10 @@ by [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
 
 ## Quick start
 
-Prerequisite: Python 3.11 or newer and Git submodules.
+Prerequisite: Python 3.11 or newer. The AutoResearchClaw submodule is optional
+and needed only for its compatibility/baseline commands.
 
 ```bash
-git submodule update --init --recursive
 python3.11 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/scitaste run demo --output outputs/demo --seed 7
@@ -170,8 +171,10 @@ Completed stage checkpoints are reused only after their state chain and declared
 artifact hashes validate; partial stage directories are retained under that
 run's `failed_attempts/` tree.
 
-This validates end-to-end framework behavior with the deterministic mock; it is
-not an effectiveness result. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
+This validates end-to-end framework behavior with SciTaste's first-party,
+in-process executor and typed workflow components; it is not yet an open-ended
+research run or an effectiveness result. Pass `--backend mock` only for explicit
+test compatibility. See [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 
 To exercise the same full path with a network-free, project-ledger-backed
 semantic advisory, use

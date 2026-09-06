@@ -33,7 +33,8 @@ returns observations and artifacts but cannot select the next global action.
   routing, and evidence-aware closure.
 - `visual`: figure-need detection, claim-linked contracts, semantic object
   reconstruction, editable vector export, split visual criticism, and patches.
-- `executor`: substrate-neutral protocol plus mock and AutoResearchClaw adapters.
+- `executor`: substrate-neutral protocol, first-party native executor, explicit
+  mock, and optional AutoResearchClaw compatibility/baseline adapter.
 - `benchmark`: evaluation-only fixed-pair suites, isolated augmentation
   conditions, robustness/transfer metrics, paired Base comparisons, and the
   matched-budget system-study planner/auditor.
@@ -119,6 +120,10 @@ returns observations and artifacts but cannot select the next global action.
 39. A model-node pilot may resume only a content-validated contiguous case chain;
     the selected ProjectRuntime run and its final metadata must agree with the
     manifest, report, recording, and verification hashes.
+40. A non-successful executor result is logged but cannot advance canonical
+    `ResearchState`.
+41. Installing, importing, and running SciTaste's default integrated workflow
+    cannot require an external research-framework package or submodule.
 
 ## Architecture decision records
 
@@ -137,6 +142,10 @@ input, making replay and rollback predictable.
 Status: accepted. AutoResearchClaw is pinned at v0.5.0 (`12d3fd8`) and loaded
 lazily through an adapter. SciTaste remains importable and testable without
 installing the substrate package.
+
+ADR-028 supersedes only its product-default interpretation: the pin remains the
+audited optional baseline/compatibility dependency, not SciTaste's native
+execution path.
 
 ### ADR-004: Deterministic controller before LLM controller
 
@@ -613,3 +622,37 @@ input hash, and substrate pin; prior mutable attempts are archived. This accepts
 an online engineering lifecycle for the Stage 1–2 prerequisite and one selected
 Stage 3 action. It is not yet a full Stage 1–18 orchestration path or evidence of
 research-effectiveness gain.
+
+### ADR-028: SciTaste native execution is the product default
+
+Status: accepted for the execution boundary; capability parity is in progress.
+
+SciTaste is an independent system, not an AutoResearchClaw plugin or wrapper.
+The default integrated path uses the first-party `SciTasteNativeExecutor` and
+must install, import, test, and run without the AutoResearchClaw package or Git
+submodule. The pinned upstream remains unmodified and available only through
+explicit `baseline` and `substrate` commands for reproducible comparison,
+compatibility, and controlled ablations.
+
+The first native slice covers the existing deterministic Phase 4--7 workflow
+components behind one shared typed execution boundary. It preserves declared
+scenario observations, emits no synthetic mock observation, records its
+capability and result basis, and prevents failed/planned/skipped execution from
+advancing state. This is an architectural independence gate, not an assertion of
+open-ended autonomy or superiority.
+
+Native capability parity will replace scenario-bound operations incrementally:
+rights-aware retrieval, code generation, isolated execution, metric extraction,
+evidence analysis, manuscript generation, and figure production. Each handler
+must emit content-addressed artifacts and measured resource telemetry under the
+existing project/state contracts. Whole-source copying from AutoResearchClaw is
+rejected: it would obscure provenance, preserve the fixed-pipeline coupling, and
+make SciTaste's own execution semantics harder to audit.
+
+Phase 9 therefore separates two questions. Component ablations may keep one
+fixed execution base to estimate the contribution of Knowledge RAG and Taste;
+independent-system comparison evaluates SciTaste Native against
+AutoResearchClaw and other pinned systems only after capability and budget
+contracts are aligned. SciTaste may claim architectural independence now, but
+may claim better research outcomes only after complete matched runs and blinded
+external review.

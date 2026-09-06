@@ -5,6 +5,7 @@ research_direction: Test conflict-aware scientific control with bounded semantic
 target_domain: autonomous-research
 target_venue: general-ml
 condition: full_scitaste_model_advisory
+execution_backend: scitaste-native
 provider: mock
 model: deterministic-controller
 evidence_scope: offline-integration-with-scripted-semantic-advice

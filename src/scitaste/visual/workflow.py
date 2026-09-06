@@ -9,7 +9,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from scitaste.data.store import TasteLibrary, build_libraries
-from scitaste.executor.base import ResearchExecutor
+from scitaste.executor.base import ResearchExecutor, require_execution_success
 from scitaste.executor.mock import MockExecutor
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.persistence import DecisionLogger, StateStore
@@ -139,6 +139,7 @@ class FigureWorkflow:
         decision.executor_result_id = result.result_id
         decision.actual_outcome = result.model_dump(mode="json")
         logger.append(decision)
+        require_execution_success(result)
         state = apply_transition(state, decision)
         state = record_resource_usage(state, result.cost)
 

@@ -21,7 +21,7 @@ from scitaste.evidence.interpretation import (
     ResultRecord,
 )
 from scitaste.evidence.loop import EvidenceLoop
-from scitaste.executor.base import ExecutionResult, ResearchExecutor
+from scitaste.executor.base import ExecutionResult, ResearchExecutor, require_execution_success
 from scitaste.executor.mock import MockExecutor
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
@@ -119,6 +119,7 @@ class EvidenceWorkflow:
             decision.executor_result_id = result.result_id
             decision.actual_outcome = result.model_dump(mode="json")
             logger.append(decision)
+            require_execution_success(result)
             state = apply_transition(state, decision)
             state = record_resource_usage(state, result.cost)
             return decision, result

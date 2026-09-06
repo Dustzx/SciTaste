@@ -20,7 +20,7 @@ from scitaste.discovery.probe_agent import (
     ProbeSignal,
 )
 from scitaste.discovery.problem import ProblemFormationAgent, ProblemSeed
-from scitaste.executor.base import ExecutionResult, ResearchExecutor
+from scitaste.executor.base import ExecutionResult, ResearchExecutor, require_execution_success
 from scitaste.executor.mock import MockExecutor
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
@@ -100,6 +100,7 @@ class DiscoveryLoop:
             decision.executor_result_id = result.result_id
             decision.actual_outcome = result.model_dump(mode="json")
             logger.append(decision)
+            require_execution_success(result)
             state = apply_transition(state, decision)
             return decision, result
 

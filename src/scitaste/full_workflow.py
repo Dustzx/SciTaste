@@ -21,6 +21,8 @@ from scitaste.evidence.workflow import (
     EvidenceWorkflowScenario,
     load_evidence_scenario,
 )
+from scitaste.executor.base import ResearchExecutor
+from scitaste.executor.native import build_builtin_executor
 from scitaste.generative_ui import ProjectSnapshotAdapter
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryRecord,
@@ -60,6 +62,7 @@ class FullWorkflowConfig(BaseModel):
     target_domain: str = Field(min_length=1)
     target_venue: str | None = None
     condition: str = "full_scitaste"
+    execution_backend: Literal["scitaste-native", "mock"] = "scitaste-native"
     provider: Literal["mock"] = "mock"
     model: str = "deterministic-controller"
     evidence_scope: str = "offline-integration-only"
@@ -140,8 +143,14 @@ class FullStageRecord(BaseModel):
 class FullWorkflow:
     """Run Discovery through Figure generation inside one managed project run."""
 
-    def __init__(self, *, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        seed: int = 0,
+        executor: ResearchExecutor | None = None,
+    ) -> None:
         self.seed = seed
+        self.executor = executor
 
     def run(
         self,
@@ -166,6 +175,10 @@ class FullWorkflow:
         ):
             raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
         workflow_config_sha256 = _workflow_config_sha256(config, model_advisory)
+        executor = self.executor or build_builtin_executor(
+            config.execution_backend,
+            seed=self.seed,
+        )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
             snapshot, resume_attempt = self._resume_run(
@@ -187,6 +200,7 @@ class FullWorkflow:
                     status="running",
                     evidence_scope=config.evidence_scope,
                     stage_path="stages",
+                    execution_backend=config.execution_backend,
                     workflow_config_sha256=workflow_config_sha256,
                 ),
                 expected_revision=snapshot.revision,
@@ -209,6 +223,7 @@ class FullWorkflow:
                 project_revision=snapshot.revision,
                 model_advisory=model_advisory,
                 allow_live_model_nodes=allow_live_model_nodes,
+                executor=executor,
             )
             reloaded_advisory = (
                 load_full_workflow_model_advisory(config.model_node_advisory)
@@ -239,7 +254,7 @@ class FullWorkflow:
                 publication_ready=False,
                 source_run=run_id,
                 files=paper_files,
-                stage_semantics="offline-phase-4-to-7-integration",
+                stage_semantics=f"{config.execution_backend}-phase-4-to-7-integration",
             )
             snapshot = runtime.register_paper(
                 config.project_id,
@@ -271,6 +286,7 @@ class FullWorkflow:
                 "reused_stages": reused_stages,
                 "archived_attempts": archived_attempts,
                 "scope": config.evidence_scope,
+                "execution_backend": config.execution_backend,
                 "effectiveness_claim": False,
                 "project_revision": snapshot.revision + 1,
                 "current_paper": snapshot.current_paper_locator,
@@ -412,6 +428,7 @@ class FullWorkflow:
         project_revision: int,
         model_advisory: LoadedFullWorkflowModelAdvisory | None,
         allow_live_model_nodes: bool,
+        executor: ResearchExecutor,
     ) -> tuple[dict[str, object], Path, list[str], list[str]]:
         stages = run_root / "stages"
         summaries: dict[str, object] = {}
@@ -440,7 +457,7 @@ class FullWorkflow:
             if resume and discovery_root.exists():
                 archived_attempts.append(_archive_stage(discovery_root, run_root, "discovery"))
             reuse_allowed = False
-            discovery_raw = DiscoveryLoop(seed=self.seed).run(
+            discovery_raw = DiscoveryLoop(seed=self.seed, executor=executor).run(
                 _discovery_for_project(config),
                 output_dir=discovery_root,
             )
@@ -563,7 +580,7 @@ class FullWorkflow:
                 if resume and evidence_root.exists():
                     archived_attempts.append(_archive_stage(evidence_root, run_root, "evidence"))
                 reuse_allowed = False
-                evidence_raw = EvidenceWorkflow(seed=self.seed).run(
+                evidence_raw = EvidenceWorkflow(seed=self.seed, executor=executor).run(
                     _evidence_for_project(config),
                     output_dir=evidence_root,
                     state_path=previous_state,
@@ -636,7 +653,7 @@ class FullWorkflow:
                     _archive_stage(communication_root, run_root, "communication")
                 )
             reuse_allowed = False
-            communication_raw = CommunicationWorkflow(seed=self.seed).run(
+            communication_raw = CommunicationWorkflow(seed=self.seed, executor=executor).run(
                 _communication_for_project(config),
                 output_dir=communication_root,
                 state_path=previous_state,
@@ -672,7 +689,7 @@ class FullWorkflow:
         else:
             if resume and figure_root.exists():
                 archived_attempts.append(_archive_stage(figure_root, run_root, "figure"))
-            figure_raw = FigureWorkflow(seed=self.seed).run(
+            figure_raw = FigureWorkflow(seed=self.seed, executor=executor).run(
                 _figure_for_project(config),
                 output_dir=figure_root,
                 state_path=previous_state,

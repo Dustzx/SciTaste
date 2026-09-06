@@ -23,4 +23,4 @@ from that source:
 
 Specification version: `v1.1`
 
-Implementation baseline: `v0.1.0 / Phase 0–6 complete; Phase 7 next`
+Implementation baseline: `v0.1.0 / Phase 0–8 complete; Phase 9 in progress`

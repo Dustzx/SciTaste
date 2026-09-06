@@ -55,3 +55,14 @@ class ResearchExecutor(Protocol):
     def write(self, state: ResearchState, action: ResearchAction) -> ExecutionResult: ...
 
     def generate_figure(self, state: ResearchState, action: ResearchAction) -> ExecutionResult: ...
+
+
+def require_execution_success(result: ExecutionResult) -> None:
+    """Prevent a failed/planned executor result from advancing canonical state."""
+
+    if result.status != ExecutionStatus.SUCCEEDED:
+        detail = f": {result.error}" if result.error else ""
+        raise RuntimeError(
+            f"executor {result.executor!r} returned {result.status.value} "
+            f"for action {result.action_id!r}{detail}"
+        )

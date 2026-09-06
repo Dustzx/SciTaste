@@ -8,9 +8,12 @@ import pytest
 import scitaste.benchmark.manuscript as manuscript
 import scitaste.full_workflow as full_workflow
 from scitaste.cli import main
+from scitaste.executor import ExecutionResult, ExecutionStatus, SciTasteNativeExecutor
 from scitaste.full_workflow import FullStageRecord, FullWorkflow, load_full_workflow_config
 from scitaste.project import ProjectRuntime
+from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.persistence import StateStore
+from scitaste.state.research_state import ResearchState
 
 
 def test_full_cli_preserves_one_state_and_registers_a_project_paper(
@@ -40,6 +43,7 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert exit_code == 0
     assert payload["status"] == "complete"
     assert payload["effectiveness_claim"] is False
+    assert payload["execution_backend"] == "scitaste-native"
     project = outputs / "projects/full-integration-test"
     run = project / "runs/offline-seed-07"
     final_state = StateStore(run / "stages/figure").load()
@@ -49,6 +53,11 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert final_state.writing_state is not None
     assert final_state.figure_state is not None
     assert len(final_state.decision_history) >= 15
+    assert {
+        decision.actual_outcome["executor"]
+        for decision in final_state.decision_history
+        if decision.actual_outcome is not None
+    } == {"scitaste-native"}
     assert payload["resumed"] is False
     assert payload["reused_stages"] == []
     for stage in payload["stages"]:
@@ -89,9 +98,32 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     assert payload["status"] == "planned"
+    assert payload["execution_backend"] == "scitaste-native"
     assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert not outputs.exists()
+
+
+def test_full_cli_can_explicitly_select_mock_compatibility_backend(tmp_path: Path, capsys) -> None:
+    exit_code = main(
+        [
+            "run",
+            "full",
+            "--config",
+            "configs/workflows/full_offline_v1.yaml",
+            "--project-id",
+            "mock-compatibility-project",
+            "--backend",
+            "mock",
+            "--output",
+            str(tmp_path / "outputs"),
+            "--dry-run",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["execution_backend"] == "mock"
 
 
 def test_full_workflow_retains_a_failed_run_for_audit(tmp_path: Path, monkeypatch) -> None:
@@ -116,6 +148,41 @@ def test_full_workflow_retains_a_failed_run_for_audit(tmp_path: Path, monkeypatc
     assert run.model_extra["failure_message"] == "controlled figure failure"
     assert len(run.model_extra["workflow_config_sha256"]) == 64
     assert (outputs / "projects/failed-full-project/runs/failed-seed-07/stages").is_dir()
+
+
+def test_failed_native_execution_is_logged_without_advancing_state(tmp_path: Path) -> None:
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {**config.model_dump(mode="python"), "project_id": "failed-native-execution"}
+    )
+
+    def fail(_state: ResearchState, action: ResearchAction) -> ExecutionResult:
+        return ExecutionResult(
+            action_id=action.action_id,
+            status=ExecutionStatus.FAILED,
+            executor="scitaste-native",
+            error="controlled native failure",
+        )
+
+    executor = SciTasteNativeExecutor(handlers={MetaAction.SEARCH: fail})
+    outputs = tmp_path / "outputs"
+    with pytest.raises(RuntimeError, match="controlled native failure"):
+        FullWorkflow(seed=7, executor=executor).run(
+            config,
+            outputs_root=outputs,
+            run_id="failed-native-seed-07",
+        )
+
+    run_root = outputs / "projects/failed-native-execution/runs/failed-native-seed-07"
+    state = StateStore(run_root / "stages/discovery").load()
+    decision = json.loads(
+        (run_root / "stages/discovery/decisions.jsonl").read_text(encoding="utf-8")
+    )
+    registered = ProjectRuntime(outputs).open("failed-native-execution").manifest.runs[0]
+    assert state.revision == 0
+    assert state.decision_history == []
+    assert decision["actual_outcome"]["status"] == "FAILED"
+    assert registered.status == "failed"
 
 
 def test_full_workflow_does_not_register_completion_before_summary_exists(
