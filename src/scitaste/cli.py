@@ -45,6 +45,7 @@ from scitaste.data.curation import CurationFormat, curate_snapshot
 from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
 from scitaste.data.store import build_libraries
 from scitaste.demo import run_nonlinear_demo
+from scitaste.discovery.commands import DiscoveryCommand, DiscoveryCommandRunner
 from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
@@ -312,11 +313,78 @@ def build_parser() -> argparse.ArgumentParser:
     discover = commands.add_parser("discover", help="Run the unified discovery loop")
     _add_common_options(discover, default_output="outputs/discovery")
     discover.set_defaults(handler=_handle_discover)
-    _add_single_planned(commands, "hypothesize", "Phase 4")
-    _add_single_planned(commands, "probe", "Phase 4")
-    _add_single_planned(commands, "reformulate", "Phase 4")
-    _add_single_planned(commands, "ideate", "Phase 4")
-    _add_nested_planned(commands, "portfolio", "select", "Phase 4")
+    hypothesize = commands.add_parser(
+        "hypothesize",
+        help="Initialize a discovery state and form a falsifiable working hypothesis",
+    )
+    _add_common_options(hypothesize, default_output="outputs/hypothesize")
+    hypothesize.set_defaults(
+        handler=_handle_discovery_command,
+        discovery_command=DiscoveryCommand.HYPOTHESIZE,
+        state=None,
+        signal_number=None,
+        reformulation_number=None,
+    )
+    probe = commands.add_parser(
+        "probe",
+        help="Run one diagnostic probe against a persisted working hypothesis",
+    )
+    _add_common_options(probe, default_output="outputs/probe")
+    probe.add_argument("--state", type=Path, required=True)
+    probe.add_argument(
+        "--signal-number",
+        type=int,
+        default=None,
+        help="1-based registered signal; defaults to the next unconsumed probe signal",
+    )
+    probe.set_defaults(
+        handler=_handle_discovery_command,
+        discovery_command=DiscoveryCommand.PROBE,
+        reformulation_number=None,
+    )
+    reformulate = commands.add_parser(
+        "reformulate",
+        help="Retain a contradiction and form a new working hypothesis",
+    )
+    _add_common_options(reformulate, default_output="outputs/reformulate")
+    reformulate.add_argument("--state", type=Path, required=True)
+    reformulate.add_argument(
+        "--reformulation-number",
+        type=int,
+        default=None,
+        help="1-based registered reformulation; defaults to the next candidate",
+    )
+    reformulate.set_defaults(
+        handler=_handle_discovery_command,
+        discovery_command=DiscoveryCommand.REFORMULATE,
+        signal_number=None,
+    )
+    ideate = commands.add_parser(
+        "ideate",
+        help="Form a research problem and generate normalized mature ideas",
+    )
+    _add_common_options(ideate, default_output="outputs/ideate")
+    ideate.add_argument("--state", type=Path, required=True)
+    ideate.set_defaults(
+        handler=_handle_discovery_command,
+        discovery_command=DiscoveryCommand.IDEATE,
+        signal_number=None,
+        reformulation_number=None,
+    )
+    portfolio = commands.add_parser("portfolio", help="Research idea portfolio operations")
+    portfolio_commands = portfolio.add_subparsers(dest="portfolio_command", required=True)
+    portfolio_select = portfolio_commands.add_parser(
+        "select",
+        help="Select a primary idea and construct a multi-slot portfolio",
+    )
+    _add_common_options(portfolio_select, default_output="outputs/portfolio-select")
+    portfolio_select.add_argument("--state", type=Path, required=True)
+    portfolio_select.set_defaults(
+        handler=_handle_discovery_command,
+        discovery_command=DiscoveryCommand.PORTFOLIO_SELECT,
+        signal_number=None,
+        reformulation_number=None,
+    )
     evidence = commands.add_parser("evidence", help="Evidence-loop workflows")
     evidence_commands = evidence.add_subparsers(dest="evidence_command", required=True)
     evidence_plan = evidence_commands.add_parser("plan", help="Plan and evaluate one evidence gap")
@@ -441,29 +509,6 @@ def build_parser() -> argparse.ArgumentParser:
     study_evaluate.add_argument("--results", type=Path, required=True)
     study_evaluate.set_defaults(handler=_handle_study_evaluate)
     return parser
-
-
-def _add_single_planned(
-    commands: argparse._SubParsersAction[argparse.ArgumentParser],
-    name: str,
-    milestone: str,
-) -> None:
-    command = commands.add_parser(name)
-    _add_common_options(command, default_output=f"outputs/{name}")
-    command.set_defaults(handler=_handle_planned, milestone=milestone)
-
-
-def _add_nested_planned(
-    commands: argparse._SubParsersAction[argparse.ArgumentParser],
-    name: str,
-    operation: str,
-    milestone: str,
-) -> None:
-    command = commands.add_parser(name)
-    operations = command.add_subparsers(dest=f"{name}_command", required=True)
-    leaf = operations.add_parser(operation)
-    _add_common_options(leaf, default_output=f"outputs/{name}-{operation}")
-    leaf.set_defaults(handler=_handle_planned, milestone=milestone)
 
 
 def _load_config(path: Path | None) -> dict[str, Any]:
@@ -912,6 +957,50 @@ def _handle_discover(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_discovery_command(args: argparse.Namespace) -> int:
+    if args.backend != "mock":
+        raise ValueError("offline discovery commands currently support only --backend mock")
+    config_path = args.config or Path("configs/experiments/discovery_weak.yaml")
+    scenario = load_discovery_scenario(config_path)
+    state = (
+        None
+        if args.state is None
+        else ResearchState.model_validate_json(args.state.read_text(encoding="utf-8"))
+    )
+    runner = DiscoveryCommandRunner(seed=args.seed)
+    preview = runner.preview(
+        args.discovery_command,
+        scenario,
+        state=state,
+        signal_number=args.signal_number,
+        reformulation_number=args.reformulation_number,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    **preview.model_dump(mode="json"),
+                    "backend": args.backend,
+                    "output": str(args.output),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    report = runner.run(
+        args.discovery_command,
+        scenario,
+        output_dir=args.output,
+        state=state,
+        signal_number=args.signal_number,
+        reformulation_number=args.reformulation_number,
+    )
+    print(report.model_dump_json(indent=2))
+    return 0
+
+
 def _handle_full(args: argparse.Namespace) -> int:
     config_path = args.config or Path("configs/workflows/full_offline_v1.yaml")
     config = load_full_workflow_config(config_path)
@@ -1274,16 +1363,6 @@ def _handle_study_evaluate(args: argparse.Namespace) -> int:
     path = save_study_report(report, args.output)
     print(json.dumps({**payload, "report": str(path)}, indent=2))
     return 0 if not report.blockers else 1
-
-
-def _handle_planned(args: argparse.Namespace) -> int:
-    payload = {
-        "status": "planned",
-        "milestone": args.milestone,
-        "message": "Command contract is reserved; implementation has not passed its roadmap gate.",
-    }
-    print(json.dumps(payload, indent=2))
-    return 0 if args.dry_run else 2
 
 
 def main(argv: list[str] | None = None) -> int:

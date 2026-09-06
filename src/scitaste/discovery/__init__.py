@@ -1,5 +1,11 @@
 """Unified Hypothesis-Probe-Reformulate discovery loop."""
 
+from scitaste.discovery.commands import (
+    DiscoveryCommand,
+    DiscoveryCommandPreview,
+    DiscoveryCommandReport,
+    DiscoveryCommandRunner,
+)
 from scitaste.discovery.evidence_to_idea import (
     ContradictoryPilotEvidence,
     EvidenceBackedIdeationResult,
@@ -9,6 +15,10 @@ from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_disco
 
 __all__ = [
     "ContradictoryPilotEvidence",
+    "DiscoveryCommand",
+    "DiscoveryCommandPreview",
+    "DiscoveryCommandReport",
+    "DiscoveryCommandRunner",
     "DiscoveryLoop",
     "DiscoveryScenario",
     "EvidenceBackedIdeationResult",
