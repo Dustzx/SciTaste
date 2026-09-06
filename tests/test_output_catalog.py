@@ -72,12 +72,14 @@ def test_catalog_surfaces_paper_bundle_and_successful_run(tmp_path) -> None:
         json.dumps(
             {
                 "surface_id": "project-overview",
-                "surface_fingerprint": "a" * 64,
             }
         ),
         encoding="utf-8",
     )
-    (surface / "renderer.json").write_text("{}\n", encoding="utf-8")
+    (surface / "renderer.json").write_text(
+        json.dumps({"surface_fingerprint": "a" * 64}) + "\n",
+        encoding="utf-8",
+    )
     (surface / "surface-audit.jsonl").write_text("{}\n", encoding="utf-8")
 
     index_path, catalog_path = refresh_catalog(outputs)

@@ -134,11 +134,20 @@ def _discover_project_surfaces(
         try:
             surface = _read_json(surface_path)
             bundle = surface_path.parent
+            renderer_path = bundle / "renderer.json"
+            renderer = _read_json(renderer_path) if renderer_path.is_file() else {}
+            fingerprint = surface.get(
+                "surface_fingerprint",
+                surface.get(
+                    "fingerprint",
+                    renderer.get("surface_fingerprint", "unknown"),
+                ),
+            )
             files = {
                 label: _relative(path, outputs_root)
                 for label, path in (
                     ("surface", surface_path),
-                    ("renderer", bundle / "renderer.json"),
+                    ("renderer", renderer_path),
                     ("audit", bundle / "surface-audit.jsonl"),
                 )
                 if path.is_file()
@@ -146,12 +155,7 @@ def _discover_project_surfaces(
             surfaces.append(
                 {
                     "surface_id": str(surface.get("surface_id", bundle.name)),
-                    "fingerprint": str(
-                        surface.get(
-                            "surface_fingerprint",
-                            surface.get("fingerprint", "unknown"),
-                        )
-                    ),
+                    "fingerprint": str(fingerprint),
                     "directory": _relative(bundle, outputs_root),
                     **files,
                 }
