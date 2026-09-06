@@ -57,6 +57,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stage preconditions, retain controller decisions/executor outcomes, and bind
   every new-step decision log by SHA-256. The monolithic `discover` command is a
   convenience orchestration path, not a separate discovery strategy.
+- The same operations now have a ProjectRuntime-owned advancement API and CLI.
+  One registered run owns immutable command steps, a self-hashed lineage head,
+  optimistic revision reservations, current-run navigation, independent
+  verification, and interruption recovery that never repeats a fully persisted
+  pending step. Standalone output directories remain useful for fixtures, not
+  the preferred durable project layout.
 - Stable contradictory pilot evidence can produce a new problem and idea.
 - Integration acceptance: weak intuition takes two probes and reformulates;
   strong prior evidence takes one sanity probe. Both finish at `PILOT` through
@@ -152,6 +158,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   pre-state, inputs, artifacts, result and predecessor. Full Workflow performs
   real local Knowledge Library retrieval and revalidates action/result bindings
   on resume.
+- Explicit Discovery advancement now shares the project ownership boundary:
+  callers supply project/run identity and current revision while the workflow
+  derives state and destination. This closes fragmented command output and
+  concurrent-advance ambiguity for registered deterministic scenarios; it does
+  not yet provide open-ended model-generated hypotheses or retrieval.
 - A registered CPU experiment now runs through a shell-free Bubblewrap launcher
   with no network and a read-only filesystem, resource ceilings, exact source/stdout/
   stderr retention, strict replicate records, and independently derived metrics.

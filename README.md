@@ -403,6 +403,32 @@ the decision-log digest. `--dry-run` performs admission checks without creating
 the destination. These offline commands use the deterministic mock executor and
 do not claim open-ended model autonomy or research effectiveness.
 
+For durable work, the same operations can advance inside one canonical project
+run instead of creating caller-managed top-level directories. The project
+identity must match the scenario, and each mutation requires the current project
+revision:
+
+```bash
+.venv/bin/scitaste project discovery advance \
+  --project-id discovery-weak-intuition \
+  --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
+  --operation hypothesize \
+  --config configs/experiments/discovery_weak.yaml \
+  --seed 7 --expected-revision 0 --outputs-root outputs --dry-run
+
+.venv/bin/scitaste project discovery verify \
+  --project-id discovery-weak-intuition \
+  --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
+  --outputs-root outputs
+```
+
+Remove `--dry-run` to execute, then use the returned `project_revision` for the
+next `probe`, `reformulate`, `ideate`, or `portfolio-select` operation. The
+workflow derives the predecessor state and destination from the registered run;
+it does not accept an unrelated `--state` or `--output`. A failed or interrupted
+operation requires `--resume`. If its complete immutable step already exists,
+resume verifies and commits it without executing the command again.
+
 ## Offline Evidence Loop
 
 Run a supported claim or a stable contradictory result:

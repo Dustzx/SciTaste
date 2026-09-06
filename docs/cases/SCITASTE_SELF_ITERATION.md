@@ -187,6 +187,40 @@ correct-pivot delta of `0.100000` and population SD `0.000000`, and produced
 Markdown, TeX, and a compiled PDF. These ignored local outputs are inspectable
 engineering evidence; the committed tests reproduce and verify their contracts.
 
+## Project-owned composable Discovery case
+
+The public Phase 4 commands exposed a new dogfooding problem: each command had a
+valid immutable state and receipt, but a caller still chose unrelated output
+directories and manually threaded state paths. Three alternatives were recorded:
+
+1. wrap the commands in a revision-reserved ProjectRuntime transaction while
+   retaining explicit nonlinear advancement;
+2. remove independent advancement and force Discovery through the monolithic
+   Phase 4--7 Full Workflow;
+3. leave outputs caller-managed and infer ownership later through the catalog.
+
+The first option is the registered high-value choice. Its deterministic probe
+runs the weak trajectory as six project-owned steps, verifies state and decision
+lineage, rejects stale/invalid admission without mutation, and interrupts both
+after step persistence and before head publication. In both post-execution
+cases, explicit resume commits the existing result without another executor
+call. The scenario is
+`configs/cases/scitaste_project_owned_discovery_iteration.yaml`.
+
+This is evidence that the project lifecycle can own an interactively composed
+Discovery run. The scenario, executor, and observations are deterministic; it
+does not show that model-generated hypotheses are good, that open-ended research
+is autonomous, or that SciTaste outperforms another system.
+
+The first self-project attempt is retained as a failed admission: its scenario
+declared zero GPU budget while the registered diagnostic probe costs `0.1`
+GPU-hours, so TasteController refused to bypass the budget. After correcting the
+declared budget, the successor run
+`2026-09-07__scitaste-native__project-owned-discovery-v2__seed-07` completed four
+commands and eight decisions at `PILOT`; independent verification bound the
+final state and `DISCOVERY.json` head. This is exactly the kind of project
+configuration defect that self-iteration should preserve rather than conceal.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

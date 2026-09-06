@@ -40,6 +40,24 @@ operation cannot change run identity and uses the same expected-revision guard;
 the full workflow uses it to record completion/failure, the final-state locator,
 and readable per-stage records.
 
+Composable native Discovery is also a first-class project consumer. A new
+`ProjectDiscoveryWorkflow` registers and selects one run, then reserves every
+command against the current project revision before the executor is called.
+Every successful command publishes an immutable step directory and advances a
+self-hashed `DISCOVERY.json` head. The head binds command order, operation token,
+reservation revision, input/output state identities, selected actions, state,
+decision-log, and receipt hashes. Verification replays those bindings against
+the canonical state decision/transition histories and rejects extra or linked
+artifacts.
+
+The pending reservation is intentionally durable. If execution fails before a
+complete step is published, the run becomes `failed` and an explicit `--resume`
+retries from the last verified state. If the complete step exists but the
+project metadata commit was interrupted, resume reconstructs or verifies the
+head and finalizes it without a second executor call. Invalid stage
+preconditions and stale revisions fail before reservation and therefore create
+no project mutation.
+
 The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
 the study as one project run, exposes the run's `study/` directory through the
 normal current-stage alias, and binds its protocol, plan, launcher configuration,
@@ -146,6 +164,33 @@ The command derives its output directory from the project and run IDs rather
 than accepting an unrelated `--output`. Resume is explicit with `--resume` and
 requires an integrity-checked registered run whose status is `partial` or
 `failed`.
+
+Advance the explicit native discovery commands under the same ownership rule:
+
+```bash
+.venv/bin/scitaste project discovery advance \
+  --project-id my-research-project \
+  --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
+  --operation hypothesize --config path/to/discovery.yaml --seed 7 \
+  --expected-revision 0 --outputs-root outputs
+
+# Supply the revision returned above for each later operation.
+.venv/bin/scitaste project discovery advance \
+  --project-id my-research-project \
+  --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
+  --operation probe --config path/to/discovery.yaml --seed 7 \
+  --expected-revision 3 --outputs-root outputs
+
+.venv/bin/scitaste project discovery verify \
+  --project-id my-research-project \
+  --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
+  --outputs-root outputs
+```
+
+The initial operation registers, selects, and finalizes the new run, so it
+normally advances three project revisions. A later operation reserves and
+finalizes against two revisions. Clients must consume the returned revision
+rather than predicting it when other project writers may be active.
 
 ## Snapshot boundary
 

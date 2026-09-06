@@ -85,6 +85,24 @@ owned by the same project and contains `main.md`, `main.tex`, `build.json`, an
 optional compiled `main.pdf`, and editable SVG/draw.io figure files. See
 [`FULL_WORKFLOW.md`](FULL_WORKFLOW.md).
 
+An interactively advanced native Discovery run uses immutable command steps
+under one mutable, self-hashed head:
+
+```text
+runs/<run-id>/discovery/
+├── DISCOVERY.json
+└── steps/
+    ├── 001-hypothesize/
+    ├── 002-probe/
+    └── .../{research_state.json,state_snapshots/,decisions.jsonl,
+            discovery_command.json}
+```
+
+`PROJECT.json` records the head hash, latest state, command count, final stage,
+and any pending operation. `project discovery verify` rehashes the complete tree.
+The command derives every path from project/run identity; it never creates an
+unowned top-level stage directory.
+
 For a native measured run, `stages/communication/evidence_projection.json`
 binds the manuscript measurement to its predecessor state, interpretation,
 native execution record, and raw replicate-derived metric artifact. `paper.md`

@@ -146,6 +146,11 @@ returns observations and artifacts but cannot select the next global action.
     new state plus the hash of its command-local decision log. Direct CLI use
     cannot bypass TasteController selection, executor success, or stage
     preconditions.
+47. A durable discovery operation reserves one project/run/command/input-state
+    identity before execution, publishes one immutable project-relative step,
+    and advances a self-hashed run head only after full verification. A stale or
+    invalid admission has no side effect; recovery never re-executes an already
+    complete pending step.
 
 ## Architecture decision records
 
@@ -817,3 +822,31 @@ and the mock executor. It removes public CLI placeholders and establishes a
 composable provenance contract; open-ended retrieval, model-generated
 hypotheses, and independently evaluated research quality remain later native
 capability gates under ADR-028.
+
+### ADR-032: Composable Discovery is owned by one recoverable project run
+
+Status: accepted for deterministic native Discovery integration.
+
+Standalone immutable command directories prove local state transformation but
+do not establish durable project ownership: callers can scatter outputs, supply
+the wrong predecessor, or race while registering the result afterward. Making
+the monolithic Full Workflow the only owner would instead remove the explicit,
+nonlinear interaction required by the Discovery Loop.
+
+`ProjectDiscoveryWorkflow` therefore derives both predecessor and destination
+from one `ProjectRuntime` run. Before execution, it validates scenario/project/
+run/seed identity and reserves the command, ordinal, input state, operation
+token, and project revision. After execution, it admits a step only when the
+portable receipt, immutable snapshot, command-local decisions, executor-result
+references, and complete state decision/transition prefix agree. A self-hashed
+`DISCOVERY.json` provides the current head while historical step directories
+remain immutable. The registered run stores that head hash and only becomes
+complete after `portfolio-select` reaches `PILOT`.
+
+Failure before step publication keeps the prior state and requires explicit
+resume. Failure after a complete atomic step publication is distinguishable: a
+resume reconstructs or verifies the pending head and commits project metadata
+without another executor call. Per-run locking and optimistic project revisions
+prevent two API workers from silently advancing the same run. This decision is
+an ownership and recovery result for deterministic scenarios, not evidence of
+open-ended autonomy, model quality, or scientific effectiveness.
