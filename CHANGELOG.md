@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Project-owned Discovery can now opt into an immutable native Knowledge
+  context. The run copies a strict provenance-bearing corpus, records and
+  independently reproduces its deterministic retrieval plan, exposes those
+  findings to bounded hypothesis semantics, and requires the native `SEARCH`
+  result, scores, input hash, execution record, decision, state reference, and
+  project metadata to agree. Binding drift and artifact tampering fail closed;
+  completed-step recovery performs no second retrieval.
 - Evidence-supported Discovery can now opt into a typed `discovery-ideation`
   node. It proposes one problem and three to eight divergent idea seeds from the
   active hypothesis and registered observations, but cannot rank/select an
@@ -309,6 +316,9 @@ semantic versioning.
 
 ### Fixed
 
+- Generic `model-node runtime status|verify` now loads the shipped additive
+  Discovery node registry, so a valid hypothesis/reformulation/ideation ledger
+  is independently readable outside `project discovery verify`.
 - Semantic runtime files now bind their complete non-secret backend fixture
   configuration and construct scripted backends for the actual command-derived
   invocation ID. This prevents a later semantic command from accidentally using

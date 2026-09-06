@@ -98,6 +98,23 @@ actions, and `portfolio-select` remains a separate deterministic operation. A
 failure after semantic generation resumes from the accepted ledger entry
 without a second provider call.
 
+The initial operation may also bind `--native-knowledge-config`. Before semantic
+generation, the project computes a deterministic query plan from that strict
+provenance-bearing config; after reservation it copies the complete corpus and
+plan into the owning run. The hypothesis node sees the scenario findings plus
+the retrieved projections, but it cannot issue or alter `SEARCH`. The native
+executor must reproduce the planned document IDs and scores before any step can
+be committed. Every successor command must present the same config fingerprint,
+so callers cannot swap evidence midway through a trajectory.
+
+Independent verification reads only project-owned files. It rehashes the copied
+Knowledge records and plan, reruns ranking, verifies the native record chain,
+and reconciles each decision's pre-state, selected action, result, record hash,
+and retrieval input. A completed step interrupted before metadata finalization
+is committed without a second search. Partial attempt records remain truthful in
+the append-only native chain while committed metadata identifies its verified
+prefix/head.
+
 The Phase 9 matched-study consumer uses `ProjectMatchedStudyRunner`. It registers
 the study as one project run, exposes the run's `study/` directory through the
 normal current-stage alias, and binds its protocol, plan, launcher configuration,
@@ -226,6 +243,11 @@ Advance the explicit native discovery commands under the same ownership rule:
   --run-id 2026-09-07__scitaste-native__discovery__seed-07 \
   --outputs-root outputs
 ```
+
+Add `--native-knowledge-config path/to/discovery-knowledge.yaml` to the first
+and every later `advance` call to keep one exact corpus binding for the run. It
+can be combined with the command-compatible semantic flags; retrieval remains a
+native executor action rather than a provider tool call.
 
 The initial operation registers, selects, and finalizes the new run, so it
 normally advances three project revisions. A later operation reserves and

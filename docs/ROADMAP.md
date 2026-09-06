@@ -63,6 +63,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   verification, and interruption recovery that never repeats a fully persisted
   pending step. Standalone output directories remain useful for fixtures, not
   the preferred durable project layout.
+- The first operation may bind a strict local Knowledge corpus. Admission plans
+  retrieval before bounded semantic generation; native execution must reproduce
+  the planned IDs and scores, successor commands retain one binding, and
+  independent verification replays corpus, plan, decision, state, and execution
+  evidence without trusting an external source path.
 - Stable contradictory pilot evidence can produce a new problem and idea.
 - Integration acceptance: weak intuition takes two probes and reformulates;
   strong prior evidence takes one sanity probe. Both finish at `PILOT` through
@@ -169,8 +174,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   ordered semantic history, and enforces cumulative scenario cost without
   changing controller authority. A third bounded handler now proposes a problem
   and three to eight evidence-bound divergent idea seeds while leaving all
-  actions and portfolio selection to the controller. Open-ended retrieval and
-  comparative scientific-quality evidence remain pending.
+  actions and portfolio selection to the controller. A project-owned native
+  Knowledge context now supplies reproducible retrieved findings to the first
+  semantic node while `SEARCH` remains controller-selected and independently
+  verifiable. Open-web retrieval and comparative scientific-quality evidence
+  remain pending.
 - A registered CPU experiment now runs through a shell-free Bubblewrap launcher
   with no network and a read-only filesystem, resource ceilings, exact source/stdout/
   stderr retention, strict replicate records, and independently derived metrics.
@@ -462,8 +470,9 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   cannot choose actions, rank/select ideas, call tools, mutate state, allocate
   actual budgets, or bypass project reservation. Offline self-iteration covers
   accepted content, invalid source/observation/hypothesis rejection, divergent
-  proposal and cost bounds, cumulative budget admission, ordered history, and
-  no-second-call resume; live scientific-quality gain is not yet claimed.
+  proposal and cost bounds, cumulative budget admission, ordered history,
+  project-owned native Knowledge retrieval, and no-second-call/no-second-search
+  resume; live scientific-quality gain is not yet claimed.
 - The AutoResearchClaw Stage 1–2 prerequisite and selected Stage 3 action now use
   the same project ownership/state contract. The bootstrap publishes a pre-call
   manifest, verified immutable source receipt, and interruption-safe paid-result

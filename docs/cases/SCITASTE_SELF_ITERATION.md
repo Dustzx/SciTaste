@@ -320,6 +320,42 @@ per-idea budget rejection, mutation-free preview, and no-second-call recovery.
 This is implementation and lineage evidence only; the scripted content does not
 establish live-model creativity or scientific effectiveness.
 
+## Project-owned native Knowledge Discovery case
+
+The next self-iteration replaces caller-only initial landscape evidence with a
+real native retrieval while preserving the authority boundary established by
+the semantic cases. Its strict corpus is
+`configs/cases/scitaste_discovery_knowledge_v1.yaml`; the initial scripted
+proposal is
+`configs/model_nodes/discovery_hypothesis_native_retrieval_self_iteration_v1.json`.
+Admission computes a deterministic plan, the project then copies the corpus and
+plan, and the normal controller-selected `SEARCH` must reproduce the same three
+document identities and scores before semantic content can enter state.
+
+The completed run is
+`2026-09-07__scitaste-native__native-knowledge-discovery-v1__seed-07`. It reached
+`PILOT` through six commands, ten controller decisions, and ten content-bound
+native execution records. The three-entry semantic ledger used 1,162 scripted
+tokens at zero cost; its hypothesis cited
+`knowledge-native-retrieval-gap` and
+`knowledge-controller-authority-boundary`, both present in the exact retrieval
+artifact. The selected idea remained `idea-01-semantic-continuity`.
+
+The Knowledge binding is
+`65f3e2ebd9173a21dccc275de914d81a8916dc082834ad74ceacb5b798357744`,
+the independently reproducible plan is
+`8636766408b33ce0051101465b57748211160b404d0f087b30c8aec349bc3e23`,
+and its state reference is
+`3b8ebe52434f72389dc050ff27888335d8b170b3bcbd6c160a8c8c0aff04f0d9`.
+The final state is
+`state-30ebbccf8a191a035673b85277c2bcb7ad9730c8c73e47fc59d6c7b20e398615`,
+the verified Discovery head is
+`5b0b961693dcaaa22a207bd8245192a63443793c3bbf5498633458c9cced078e`,
+and the native chain head is
+`7b448bb5e35ebc488f5fb0985401cc8ff35fbbbc0108406d78b0f0eec425adff`.
+This is evidence-acquisition, integration, and recovery evidence; it does not
+show that lexical retrieval or scripted semantics improve research quality.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.

@@ -916,3 +916,36 @@ configuration—including scripted response fixtures—is hashed into the bindin
 while a backend factory maps that bound configuration to the actual
 command-derived invocation ID. This avoids treating provider/model names alone
 as sufficient replay identity.
+
+### ADR-034: Discovery retrieval is planned before semantics and executed under controller authority
+
+Status: accepted for bounded project-owned Knowledge retrieval.
+
+Scenario-authored findings make a Discovery run deterministic, but they do not
+prove that the first hypothesis was grounded in an executed retrieval. Letting a
+model search directly would invert SciTaste's authority boundary: provider tool
+behavior could change the evidence set, spend resources, or make a different
+request during resume before the controller had selected an action.
+
+An opted-in `DiscoveryKnowledgeBinding` therefore loads a strict local corpus
+and deterministically ranks it during admission. After the project reserves the
+operation, SciTaste copies the complete corpus and a self-hashed retrieval plan
+into the run. A bounded hypothesis node may see the resulting landscape
+projections, but only as content evidence. The normal TasteController still
+selects `SEARCH`; `SciTasteNativeExecutor` performs it against the copied
+KnowledgeLibrary and must reproduce the plan's document identities and scores.
+The provider cannot change the query, call the executor, or advance state.
+
+The reference persists in every successor state, and its source-config
+fingerprint is required for every command and resume. Independent verification
+rehashes the copied records and plan, reruns ranking, checks the native
+predecessor chain, and reconciles each decision with its pre-state, action,
+result, and execution record. A fully published pending step is finalized
+without another retrieval. Records from a truthful partial attempt stay in the
+append-only chain; registered metadata identifies the committed prefix rather
+than erasing failure evidence.
+
+This decision establishes deterministic local evidence acquisition for one
+registered corpus. It does not claim open-web retrieval, provider tool autonomy,
+automatic corpus curation, or improved scientific quality. Those remain
+separate capability and evaluation gates.

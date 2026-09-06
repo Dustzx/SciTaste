@@ -27,8 +27,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - framework-neutral executor protocol, default first-party native executor,
   explicit deterministic mock, and an optional pinned AutoResearchClaw adapter;
 - project-owned native action records with predecessor/state/action/input/output
-  hashes, real local Knowledge Library retrieval, and a Bubblewrap-isolated
-  registered CPU experiment with independently derived replicate metrics;
+  hashes, real local Knowledge Library retrieval in both Full Workflow and
+  composable Discovery, and a Bubblewrap-isolated registered CPU experiment
+  with independently derived replicate metrics;
 - runnable nonlinear demo and tests;
 - fixed-candidate intrinsic taste calibration with accuracy, confidence, Brier,
   and calibration metrics;
@@ -444,6 +445,28 @@ runtime:
   --semantic-profile-id discovery-hypothesis-scripted \
   --seed 7 --expected-revision 0 --outputs-root outputs
 ```
+
+To derive that semantic landscape from real project-owned retrieval, bind the
+same local Knowledge config on the first command and every later command in the
+run:
+
+```bash
+.venv/bin/scitaste project discovery advance \
+  --project-id scitaste-self-development \
+  --run-id 2026-09-07__scitaste-native__native-knowledge-discovery__seed-07 \
+  --operation hypothesize \
+  --config configs/cases/scitaste_semantic_reformulation_iteration.yaml \
+  --native-knowledge-config configs/cases/scitaste_discovery_knowledge_v1.yaml \
+  --semantic-config configs/model_nodes/discovery_hypothesis_native_retrieval_self_iteration_v1.json \
+  --semantic-profile-set configs/model_nodes/discovery_semantic_profiles.example.yaml \
+  --semantic-profile-id discovery-hypothesis-scripted \
+  --seed 7 --expected-revision <current-revision> --outputs-root outputs
+```
+
+Dry-run computes the retrieval plan without creating a run. Execution copies
+the admitted corpus beneath that run, and `project discovery verify` recomputes
+the ranking and checks every native decision/record binding. The model receives
+only the combined registered findings and cannot issue the search itself.
 
 This shipped condition is an executable offline fixture, not a quality claim.
 For a live backend, the profile, profile-set, backend configuration, and explicit

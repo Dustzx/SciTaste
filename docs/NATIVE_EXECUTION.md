@@ -19,11 +19,11 @@ and compatibility commands.
 
 This distinction is intentional. A workflow-component receipt is not described
 as an open-ended experiment or model generation. The first real handler is local
-Knowledge retrieval consumes the configured library, executes the query, writes
-the exact ranked result, measures wall time, and returns the retrieved document
-identities and scores. The registered experiment handler executes exact source
-bytes and returns independently derived measurements; it never copies the
-scenario's declared metric into the result.
+Knowledge retrieval: it consumes the configured library, executes the query,
+writes the exact ranked result, measures wall time, and returns the retrieved
+document identities and scores. The registered experiment handler executes
+exact source bytes and returns independently derived measurements; it never
+copies the scenario's declared metric into the result.
 
 ## Project-owned action evidence
 
@@ -66,6 +66,36 @@ The decision log stores the action-record locator and semantic record hash.
 Stage resume verifies the record chain, current input/output bytes, and the exact
 action/result identity bound by each reused decision. Missing, reordered,
 cross-project, symlinked, or modified evidence fails closed.
+
+## Composable Discovery Knowledge context
+
+An opted-in project Discovery run owns a narrower context alongside its normal
+immutable command steps:
+
+```text
+runs/<run-id>/native_execution/
+├── context/
+│   ├── DISCOVERY_KNOWLEDGE.json
+│   ├── discovery_knowledge_plan.json
+│   └── libraries/knowledge/records.jsonl
+├── artifacts/<result-token>/retrieval.json
+└── records/000001-<action-token>.json
+```
+
+The source config is strict, bounded, provenance-bearing, and hashed into the
+run binding. Preview ranks the in-memory admitted records but writes nothing.
+After project reservation, the complete corpus and deterministic plan are
+materialized once. The semantic hypothesis input may include the retrieved
+landscape projections, but the provider receives no tool authority; the normal
+controller selects `SEARCH` and the native executor must return exactly the
+planned identifiers and scores.
+
+`project discovery verify` rehashes the context, reruns the ranker from the
+copied records, validates the complete native record chain, and reconciles every
+decision with its pre-state, selected action, result, record locator, and hash.
+The same knowledge fingerprint is required on all successor commands. Exact
+completed-step recovery reuses the published step and cannot issue a second
+retrieval.
 
 ## Full Workflow configuration
 

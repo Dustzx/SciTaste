@@ -122,6 +122,22 @@ supported active hypothesis. Its typed ledger proposal owns the problem and
 divergent idea-seed content; the subsequent `portfolio-select` step owns the
 controller's selection and never appears inside the semantic response.
 
+When that run opts into native Knowledge retrieval, it also owns:
+
+```text
+runs/<run-id>/native_execution/
+├── context/{DISCOVERY_KNOWLEDGE.json,discovery_knowledge_plan.json}
+├── context/libraries/knowledge/records.jsonl
+├── artifacts/<result-token>/retrieval.json
+└── records/000001-<action-token>.json
+```
+
+The context receipt binds the original config hash, copied library hash,
+deterministic plan, retrieved document IDs, and scores. Every Discovery state
+inherits the same reference. Native records form an append-only action chain;
+the run metadata records the committed head while preserving any truthful
+partial-attempt records for later recovery and inspection.
+
 For a native measured run, `stages/communication/evidence_projection.json`
 binds the manuscript measurement to its predecessor state, interpretation,
 native execution record, and raw replicate-derived metric artifact. `paper.md`
