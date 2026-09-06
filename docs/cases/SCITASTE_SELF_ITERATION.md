@@ -367,6 +367,33 @@ and the native chain head is
 This is evidence-acquisition, integration, and recovery evidence; it does not
 show that lexical retrieval or scripted semantics improve research quality.
 
+## External-call phase-protocol case
+
+The earlier durable-result boundary still could not distinguish a crash before
+the provider boundary from a crash after the call began. The selected
+intervention adds three write-once receipts to each project-owned
+AutoResearchClaw bootstrap or selected action: `prepared`, `call_started`, and
+`result_published`. They bind the request, exact non-secret call specification,
+external-attempt number, pre/post work trees, result file, result identity, and
+terminal status. `resume_attempt` remains a separate bookkeeping counter.
+
+The completed self-run is
+`2026-09-07__scitaste-native__external-call-phase-protocol-v1__seed-07`, bound
+to commit `b33b17dcd3faa5cdcea389c970963ca9d1d62127`. Its controlled interruptions
+cover prepared continuation with no prior call, started/no-result refusal,
+result-before-final-marker recovery, verified failure rollover, hard-crashed
+running records, schema 1.1 success/failure compatibility, and schema 1.0
+read-only behavior. The full suite completed 781 tests at 83% coverage; the
+executor/project slice completed 98 tests. An independent review found no
+high-risk duplicate-call path and its compatibility/durability findings were
+closed before the commit. No external call was made for this iteration.
+
+The project record is now revision 139 and its evidence is
+`outputs/projects/scitaste-self-development/runs/2026-09-07__scitaste-native__external-call-phase-protocol-v1__seed-07/mainline/evidence.json`.
+This remains compatibility-adapter integrity evidence. A started call without a
+durable result is deliberately blocked until a provider can supply a trustworthy
+idempotency or query key; the case makes no scientific-effectiveness claim.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.
