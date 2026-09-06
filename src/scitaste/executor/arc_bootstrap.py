@@ -97,6 +97,7 @@ def _install_frozen_benchmark_asset() -> None:
     """Inject one content-addressed task kernel into each upstream sandbox project."""
 
     from researchclaw.experiment.sandbox import ExperimentSandbox
+    from researchclaw.pipeline.stage_impls import _code_generation
 
     source = Path(os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_PATH"])
     expected_sha256 = os.environ["SCITASTE_ARC_FROZEN_BENCHMARK_SHA256"]
@@ -110,6 +111,19 @@ def _install_frozen_benchmark_asset() -> None:
     payload = source.read_bytes()
     if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise ValueError("frozen benchmark source hash does not match")
+    source_text = payload.decode("utf-8")
+
+    upstream_extract = _code_generation._extract_multi_file_blocks
+    if not getattr(upstream_extract, "_scitaste_frozen_benchmark", False):
+
+        def frozen_extract(content):
+            files = upstream_extract(content)
+            if "main.py" in files:
+                files[f"{module}.py"] = source_text
+            return files
+
+        frozen_extract._scitaste_frozen_benchmark = True
+        _code_generation._extract_multi_file_blocks = frozen_extract
 
     upstream_run_project = ExperimentSandbox.run_project
     if getattr(upstream_run_project, "_scitaste_frozen_benchmark", False):

@@ -188,11 +188,29 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
     experiment = ModuleType("researchclaw.experiment")
     sandbox = ModuleType("researchclaw.experiment.sandbox")
     sandbox.ExperimentSandbox = FakeExperimentSandbox
+    pipeline = ModuleType("researchclaw.pipeline")
+    stage_impls = ModuleType("researchclaw.pipeline.stage_impls")
+    code_generation = ModuleType("researchclaw.pipeline.stage_impls._code_generation")
+    code_generation._extract_multi_file_blocks = lambda _content: {"main.py": "print('main')\n"}
+    stage_impls._code_generation = code_generation
     cli = ModuleType("researchclaw.cli")
-    cli.main = upstream_main
+
+    def checked_upstream_main(argv):
+        files = code_generation._extract_multi_file_blocks("generated")
+        observed["generated_sha256"] = hashlib.sha256(
+            files["frozen_benchmark.py"].encode()
+        ).hexdigest()
+        return upstream_main(argv)
+
+    cli.main = checked_upstream_main
     monkeypatch.setitem(sys.modules, "researchclaw", researchclaw)
     monkeypatch.setitem(sys.modules, "researchclaw.experiment", experiment)
     monkeypatch.setitem(sys.modules, "researchclaw.experiment.sandbox", sandbox)
+    monkeypatch.setitem(sys.modules, "researchclaw.pipeline", pipeline)
+    monkeypatch.setitem(sys.modules, "researchclaw.pipeline.stage_impls", stage_impls)
+    monkeypatch.setitem(
+        sys.modules, "researchclaw.pipeline.stage_impls._code_generation", code_generation
+    )
     monkeypatch.setitem(sys.modules, "researchclaw.cli", cli)
     monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_PATH", str(source))
     monkeypatch.setenv("SCITASTE_ARC_FROZEN_BENCHMARK_SHA256", hashlib.sha256(payload).hexdigest())
@@ -200,3 +218,4 @@ def test_bootstrap_injects_exact_frozen_benchmark_before_execution(monkeypatch, 
 
     assert main(["run"]) == 0
     assert observed["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert observed["generated_sha256"] == hashlib.sha256(payload).hexdigest()
