@@ -2,9 +2,10 @@
 
 Tool Intelligence is SciTaste's bounded execution-intelligence layer. It makes
 semantic judgment available at selected rigid-tool boundaries without making a
-model the controller or executor. This first production vertical slice adds
-typed tool-plan advice and structured-repair advice on top of the durable model
-node runtime described in `BOUNDED_MODEL_NODES.md`.
+model the controller or executor. The v1 vertical slice added typed tool-plan
+and structured-repair advice on top of the durable model-node runtime described
+in `BOUNDED_MODEL_NODES.md`. The v2 slice adds a deterministic, single-step,
+read-only execution boundary for fresh accepted tool-plan advice.
 
 It is implementation infrastructure, not evidence that additional model calls
 improve scientific outcomes. ADR-022 remains proposed until its registered
@@ -34,13 +35,28 @@ deterministic scope, argument, dependency, budget and identity checks
 accepted or rejected advice + project-owned hash-chained receipt
         |
         v
-no execution; a separate deterministic controller must decide the next action
+named semantic-hotspot trigger + fresh ProjectRuntime/ResearchState check
+        |
+        v
+single-use, short-lived, profile/request/step/handler-bound action lease
+        |
+        v
+registered deterministic read-only handler
+        |
+        v
+typed observation + post-call revision check
+        |
+        v
+no automatic evidence admission or state transition; controller decides next
 ```
 
-An accepted Tool Intelligence result always has `advisory_only=true` and
-`executable=false`. The same fields are repeated on Tool Plan steps. Acceptance
-does not authorize filesystem access, a process, a network request, a state
-transition, API spending, or any real tool invocation.
+An accepted model-node result always has `advisory_only=true` and
+`executable=false`. The same fields are repeated on Tool Plan steps. Model-node
+acceptance does not authorize filesystem access, a process, a network request,
+a state transition, API spending, or a tool invocation. Only deterministic v2
+admission can issue an `ActionLease`, and that lease authorizes exactly one
+registered read-only handler call. It explicitly does not authorize canonical
+evidence admission or a state transition.
 
 Provider-native function calls are not Tool Plan steps. They remain untrusted
 response telemetry and both new nodes reject them even when a name appears in a
@@ -58,11 +74,22 @@ contracts:
 | `evidence.inspect` | evidence IDs, provenance flag | permitted evidence IDs, immutable context IDs, item count |
 | `registered-run.compare` | run IDs, metric names | permitted registered runs and metrics, run count, metric count |
 
-These are capability descriptions and typed proposal schemas. This increment
-does not add an executor for them. In particular, `knowledge.query` describes a
-future invocation over project-owned Knowledge storage; it does not silently
-open web search. `registered-run.compare` names already registered runs and
-does not launch experiments.
+The v1 types remain capability descriptions and proposal schemas. V2 supplies
+three deterministic in-process handlers:
+
+- `KnowledgeQueryHandler` performs the existing deterministic lexical ranking
+  over caller-verified, handler-bound `KnowledgeDocument` records. It returns
+  document identities, scores, and hashes; it does not silently open web search.
+- `EvidenceInspectionHandler` returns bounded, content-addressed evidence and
+  optional provenance from a caller-verified registry. Inspection never changes
+  evidence status.
+- `RegisteredRunComparisonHandler` returns finite metrics from a bound metric
+  registry. Lease admission additionally verifies that requested run IDs still
+  exist in the current ProjectRuntime manifest. It does not launch experiments.
+
+The complete bound handler data/configuration contributes to the handler
+fingerprint. Changing the records between lease issue and execution therefore
+requires a different handler identity and fails closed.
 
 The catalog is intentionally closed. Adding a tool requires a new typed
 permission model, typed arguments, a discriminated Tool Plan step, deterministic
@@ -126,9 +153,53 @@ admission requires:
   forward references, self-dependencies, and cycles;
 - total steps and dependency edges remain within the profile.
 
-The node does not schedule or execute the resulting list. A future controlled
-executor must consume only a fresh, revision-checked deterministic admission
-record, not model output or a `NodeResult` directly.
+The node does not schedule or execute the resulting list. The v2 executor
+revalidates a serialized `NodeResult`, reconstructs its request input and
+context, binds the accepted proposal back to the provider output, and then
+admits only one dependency-free step. A dependent step requires a new planning
+turn after the preceding observation; the executor never consumes a complete
+model-authored DAG in one call.
+
+## Semantic hotspots and controlled execution
+
+`SemanticHotspotTrigger` records why deterministic code needs semantic help,
+the exact project and state snapshots, the controlled profile, visible evidence,
+and the maximum set of candidate tools. It asserts that the deterministic fast
+path was exhausted; it does not assert that a model answer is correct.
+
+`ControlledToolExecutor.issue_lease()` verifies all of the following before
+granting one tool invocation:
+
+- the source is a structurally valid, accepted `tool-plan` result;
+- no provider-native function call exists;
+- the response fingerprint matches the source request and its parsed proposal
+  equals the response payload;
+- the request context, Tool Plan input, semantic hotspot, controlled profile,
+  objective, project, state and evidence scopes agree;
+- the selected step is unique, dependency-free, inside the hotspot tool ceiling,
+  and within the handler result limit;
+- the registered handler's code/configuration identity is content-addressed;
+- ProjectRuntime revision and snapshot hash plus the ResearchState snapshot are
+  still current; and
+- registered-run comparisons name runs in the current project manifest.
+
+An `ActionLease` lasts at most five minutes and binds the source model request,
+raw-response hash, model usage/cost, model latency, controlled profile, exact
+step, handler identity, project snapshot, state snapshot, and output-byte
+ceiling. It can be consumed once by one executor instance.
+
+Immediately before the handler call, execution rechecks ProjectRuntime and
+ResearchState. It checks both again immediately after the call. A concurrent
+change rejects the observation even if the handler returned successfully. A
+bounded returned value is retained only as `untrusted_output_payload`; its hash,
+byte count, handler latency, and the source model token/cost/latency evidence
+remain available. Oversized output is hashed but not retained. Handler errors
+record only a sanitized exception type, not the exception message.
+
+`ToolObservation` is always `advisory_only=true`, `executable=false`,
+`canonical_evidence=false`, and `state_transition_authorized=false`. A
+successful observation is therefore input to a later deterministic decision,
+not proof of a claim and not permission to modify ResearchState.
 
 ## Structured Repair node
 
@@ -205,33 +276,48 @@ The current gates address these failures:
 - controlled-profile, target-schema, state, project, provider, or model drift;
 - provider-native tool calls masquerading as admitted steps;
 - a repair proposal masquerading as target-node acceptance;
+- tampering between the provider output, accepted proposal, action lease, and
+  registered handler;
+- expired, reused, stale, dependent, or over-broad action leases;
+- pre-call and concurrent post-call project/state changes;
+- invalid, oversized, or failing deterministic handler output;
 - replay misses with silent live fallback;
 - process restart, incomplete publication, and ledger tampering through the
   shared runtime.
 
-The deterministic caller that constructs a scope or permission profile remains
-part of the trusted computing base. It must derive library and evidence
-identifiers from verified Knowledge and evidence records. A caller-provided
-profile is not proof that those identifiers exist outside the bounded node
-context; run identifiers are the exception because the runtime resolves them
-against the project manifest.
+The deterministic caller that constructs a scope, permission profile, and bound
+handler registry remains part of the trusted computing base. It must derive
+library, evidence, and metric records from verified project-owned sources. A
+caller-provided identifier is not proof that a record exists; the content-bound
+handler closes that gap for one execution, while run identifiers are also
+resolved against the project manifest.
 
-Before adding real execution, a later Epic must define handler identities,
-input/output evidence receipts, per-handler sandbox and resource profiles,
-revision checks immediately before and after each tool call, interruption and
-unknown-cost semantics, idempotency, output-schema validation, and a separate
-deterministic accept/reject transition. Mutable, networked, generated-code, and
-GPU tools require distinct profiles and threat reviews; none may inherit v1
-read-only status by name similarity.
+The handler interface is a trust boundary, not a Python sandbox. First-party v2
+handlers are deterministic and use only already-bound in-memory data. A new
+handler requires code review and adversarial tests; merely declaring
+`read_only=true` cannot make untrusted handler code safe. Mutable, networked,
+generated-code, GPU, and filesystem-reading tools require distinct profiles,
+sandboxing, durable receipts, and threat reviews. None may inherit v2 read-only
+status by name similarity.
 
 ## Current limitations
 
-- No tool is executed by this subsystem.
-- No workflow automatically requests either node.
+- No workflow automatically detects a semantic hotspot, requests a Tool Plan,
+  or accepts a Tool Observation. The v2 API is an explicit controller-facing
+  substrate.
+- Lease consumption is atomic only inside one executor process. Durable
+  cross-process claim/receipt storage and crash recovery remain a later
+  integration gate, so leases must not be serialized and resumed as if they
+  were globally single-use.
+- Knowledge, evidence, and metric registries are caller-bound in memory. A main
+  integration must build them from verified project-owned locators without
+  weakening path/symlink containment.
+- Handler observations are not persisted by this slice and cannot become
+  canonical evidence without a separate deterministic admission record.
 - No live provider profile or live call is included.
 - Repair supports four pinned output schemas and performs structural validation;
   target-specific semantic gates require a new target invocation.
-- The initial catalog cannot write files, run experiments, launch code, access
-  the open web, or mutate ResearchState.
+- The catalog cannot write files, run experiments, launch code, access the open
+  web, or mutate ResearchState.
 - Implementation and replay tests do not establish intervention reduction,
   scientific benefit, or the ADR-022 acceptance claim.

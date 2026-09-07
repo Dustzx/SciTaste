@@ -1,149 +1,116 @@
-# Window 2 Dispatch: Tool Intelligence — Controlled Semantic Tools
+# Window 2 Dispatch: Tool Intelligence — Semantic Hotspot Execution
 
-Assignment token: `W2-tool-intelligence-20260906-r1`
+Assignment token: `W2-tool-intelligence-20260907-r2`
 
-Status: `ready for main-window integration`
+Status: `ready for main-window review`
 
 ## Handoff evidence
 
-- feature commit: `ac19886914633a69a166c0ad88632fc4586f98f6`
-- branch: `feat/tool-intelligence-v1`
-- focused Tool Intelligence and cross-process CLI tests: `19 passed`
-- complete model-node plus focused CLI tests: `155 passed`
-- focused coverage across contracts, nodes, facade, runtime and config: `85%`;
-  new `tool_intelligence.py`: `88%`
-- repository check: `654 passed`; Ruff format/check passed
-- `git diff --check`: passed; feature worktree clean
+- new controlled-execution tests: `13 passed`
+- focused branch coverage for `tool_execution.py`: `81%`
+- complete model-node tests: `166 passed`
+- repository check after initializing the already pinned AutoResearchClaw
+  submodule: `830 passed`; Ruff format/check passed
+- `git diff --check`: passed
+- live model/provider calls: `0`
+- external process/network/filesystem-write authority granted to handlers: `0`
 
-The repository check used the shared main-worktree virtual environment through
-`PYTHONPATH=src make check PYTHON=/home/good/zfx/papers/SciTaste/.venv/bin/python`.
-The feature worktree's pinned AutoResearchClaw submodule was initialized at
-`12d3fd809fa9658e91a0328c3280a0e462c78386` before the final run; neither the
-submodule content nor its pin changed.
+The first repository run reached `782 passed, 48 failed` because a new worktree
+had an empty submodule directory. After `git submodule update --init --recursive`
+checked out the repository's existing `12d3fd8` pin, the unchanged full suite
+passed. Neither AutoResearchClaw content nor the submodule pin changed.
 
-Known limits remain intentional: this Epic does not execute a real tool, add a
-live provider profile, automatically trigger either node from Full Workflow, or
-change ADR-022's proposed status. Registered-run scope is resolved against the
-project manifest; the deterministic caller remains responsible for deriving
-library and evidence scope from verified project-owned records.
+Known limits are intentional and documented in `docs/TOOL_INTELLIGENCE.md`:
+there is no automatic full-workflow trigger, lease consumption is process-local,
+handler observations are not durably published or automatically admitted as
+evidence, and project-owned locator adapters remain a main-window integration
+task. This increment is engineering evidence, not an effectiveness result.
 
-This dispatch is authorized directly by the project owner on 2026-09-06. It
-follows the integrated project-scoped model-node runtime and implements the next
-Tool Intelligence increment identified in `docs/INNOVATION_MAP.md`: more
-first-party semantic tools and controlled execution profiles. The prior runtime
-Epic was integrated into `main` as `37ee0ba` and must not be continued from its
-old feature-branch head.
+This assignment supersedes the completed proposal-only v1 dispatch. Tool
+Intelligence v1 was integrated into `main` as `3013bc4`; its feature commit was
+`ac19886914633a69a166c0ad88632fc4586f98f6`. Do not continue development from
+that old feature head.
 
 ## Workspace
 
-- worktree: `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence`
-- branch: `feat/tool-intelligence-v1`
-- base: the latest clean `main` containing this assignment token
-- do not implement this Epic in `/home/good/zfx/papers/SciTaste`
+- worktree: `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v2`
+- branch: `feat/tool-intelligence-v2`
+- base: `8f8e8fd6d2f7182ab88ac824945b3d1c1377cdc2`
 
-Create the branch and worktree from the dispatch-bearing `main`. Do not merge,
-push, or rebase; the main window owns integration.
+Do not merge, push, or rebase. The main window owns integration. The primary
+worktree contains unrelated uncommitted work and must not be cleaned, reset, or
+overwritten.
 
 ## Objective
 
-Deliver a production-quality, proposal-only Tool Intelligence vertical slice.
-A bounded model node may propose an ordered plan over explicit first-party,
-read-only semantic capabilities, or propose a repair for a previously rejected
-structured payload. Deterministic code alone validates capability scope,
-arguments, dependencies, budgets, state identity, and the repaired target
-schema. No accepted model-node result may execute a tool, mutate canonical
-state, authorize spending, open network access, or become an accepted result of
-another node without that node's complete deterministic validation.
+Advance Tool Intelligence from proposal-only plans to the smallest real,
+policy-controlled execution loop. An accepted `ToolPlanNode` proposal may be
+converted by deterministic code into one short-lived lease for one read-only
+step. A registered deterministic handler may return a typed observation, but it
+cannot mutate canonical state or turn its output into accepted scientific
+evidence automatically.
 
-This Epic advances implementation substrate only. It does not establish an
-autonomy or effectiveness claim and does not by itself satisfy ADR-022's pilot
-acceptance gates.
+The architectural unit is a **semantic hotspot**, not a general autonomous
+planner: deterministic code follows its normal path, invokes a bounded model
+node only for named semantic ambiguity, admits at most one fresh action, records
+the observation and returns control to deterministic workflow code.
 
 ## Owned paths
 
-- `src/scitaste/model_nodes/**`;
-- `tests/model_nodes/**`;
-- `configs/model_nodes/**` for non-secret, disabled examples;
-- `docs/TOOL_INTELLIGENCE.md`;
-- the smallest compatibility changes required in
-  `src/scitaste/model_node_runtime_cli.py` and focused integration tests.
+- `src/scitaste/model_nodes/**`
+- `tests/model_nodes/**`
+- `docs/TOOL_INTELLIGENCE.md`
+- this dispatch document
 
-Do not edit `full_workflow.py`, generative UI, project-runtime ownership code,
-central roadmap/architecture/changelog/README documents, generated `outputs/`,
-credentials, model weights, or `third_party/autoresearchclaw/**`. If an exit
-gate genuinely requires one of those paths, stop and report the integration
-change to main rather than expanding ownership.
+Do not edit CLI, full workflow, project-runtime ownership code, generative UI,
+central roadmap/architecture/changelog/README, generated `outputs/`, credentials,
+model weights, or `third_party/autoresearchclaw/**`. If integration needs one of
+those paths, report the requirement to the main window rather than expanding
+scope.
 
 ## Work packages
 
-### WP1 — Controlled capability contracts
+### WP1 — Semantic-hotspot and action-lease contracts
 
-1. Add strict, versioned, content-addressed contracts for a controlled semantic
-   tool profile, per-tool permissions, typed proposal arguments, and ordered
-   proposal steps. The initial catalog must contain only bounded read-only
-   capabilities over project-owned data: Knowledge query, Evidence inspection,
-   and registered-run comparison.
-2. Make side effects explicit and fixed off for this version: no filesystem
-   writes, process launch, network access, canonical-state mutation, or direct
-   execution authority.
-3. Bind permitted library/evidence/run identifiers and per-tool ceilings in the
-   profile. Reject duplicates, unknown identifiers, unbounded queries, invalid
-   dependencies, cycles, forward references, and profile/policy allowlist drift.
-4. Preserve all existing public model-node recordings and request fingerprints;
-   introduce additive models or explicit schema-version migration rather than
-   silently changing existing contracts.
+1. Define a strict semantic-hotspot trigger that records why deterministic code
+   needs semantic help and the admissible tool scope.
+2. Define a content-addressed, project/revision/state/profile/request/step-bound
+   action lease. It authorizes exactly one use, expires, and cannot grant more
+   authority than the v1 read-only profile.
+3. Define typed tool observations and execution receipts with handler identity,
+   input/output hashes, latency, status, and post-call project revision.
 
-### WP2 — First-party proposal nodes
+### WP2 — Deterministic single-step executor
 
-1. Add `ToolPlanNode`: it receives an explicit objective and controlled tool
-   profile and returns an ordered, typed, proposal-only plan. It must reference
-   only identifiers present in the immutable context and the profile.
-2. Add `StructuredRepairNode`: it receives one bounded invalid JSON value,
-   sanitized validation diagnostics, and a pinned supported target-node/schema
-   identity. It may propose a repaired payload, but deterministic code must
-   validate the target schema and label the result only as a repair proposal.
-3. A repaired payload is never silently substituted into the failed invocation,
-   never hides the original failure/cost evidence, and must be submitted as a
-   new invocation through the original node to gain any normal proposal status.
-4. Provider-native function calls remain untrusted telemetry. They cannot be
-   conflated with accepted Tool Plan steps or executed by either node.
+1. Admit only an accepted `ToolPlanNode` result with no provider-native tool
+   calls and an exact fresh project snapshot.
+2. Permit only the next dependency-free step; do not execute a model-authored
+   multi-step DAG in one call.
+3. Resolve tools only through a closed deterministic handler registry. Enforce
+   handler name/version/fingerprint, read-only declaration, output byte limits,
+   lease expiry, one-use nonce, and project revision immediately before and
+   after the handler call.
+4. Preserve a rejected observation and resource/latency evidence when the
+   project changes during execution. Never accept a stale observation.
+5. Do not make a provider call, launch a process, access the network, write
+   project artifacts, or mutate ResearchState.
 
-### WP3 — Runtime, facade, and exact replay
+### WP3 — Adversarial tests and documentation
 
-1. Register both nodes with the existing project-scoped runtime, facade, strict
-   config loader, plan/execute/resume/status/verify, and exact replay path.
-2. Ensure capability/profile fingerprints, target schema identity, state and
-   project revisions, provider/model identity, token/cost/latency effects, and
-   predecessor ledger hash are durable and replay-bound.
-3. Keep planning and scripted/replay execution network-free. No real provider
-   call is authorized by this dispatch; committed examples must be disabled and
-   contain neither credentials nor fabricated pricing.
-4. Machine-readable receipts must continue to expose `advisory_only=true` and
-   `executable=false`; they must not contain raw provider bodies or secrets.
+Cover valid single-step execution plus rejected node result, mismatched project,
+state, profile, request or step, stale pre-call revision, concurrent post-call
+revision change, expired/reused lease, unregistered or mutable handler, handler
+identity drift, handler exception, oversized/non-JSON output, and provider tool
+call confusion. Prove rejected results never invoke handlers and observations
+remain non-authoritative.
 
-### WP4 — Adversarial verification and documentation
+Document the semantic-hotspot architecture, authority flow, expected high-value
+research scenarios, and remaining integration/effectiveness limits.
 
-1. Cover valid plans and repairs plus schema failure, unknown tool, malformed or
-   over-limit arguments, scope escape, dependency cycle/forward reference,
-   provider-native tool-call confusion, target-schema mismatch, replay miss,
-   changed capability profile, stale revision, budget rejection, and restart.
-2. Prove that an accepted repair proposal is not an accepted target-node
-   proposal and that no test path invokes a tool, process, network service, or
-   state mutation.
-3. Document the authority/data flow, initial catalog, profile semantics,
-   extension rules, threat model, and remaining execution/effectiveness limits
-   in `docs/TOOL_INTELLIGENCE.md`.
-4. Run the focused model-node suite, Ruff, `git diff --check`, and `make check`.
+## Exit gate
 
-## Epic exit gate
-
-The Epic is complete only when a normal registered project can plan, execute in
-scripted mode, resume, verify, and exactly replay both new nodes through the
-durable runtime; every tool-plan step is typed and deterministically admitted
-against a content-addressed read-only profile; invalid repairs fail closed; all
-receipts remain non-executable; the focused and repository-wide checks pass; and
-the worktree is clean with one or a small number of cohesive commits.
-
-No live provider call, real tool execution, generated-code admission, or ADR-022
-status change is authorized. Report commit SHAs, changed files, exact tests,
-known limits, and recommended integration order to main.
+The increment is complete only when the new focused tests and all existing
+model-node tests pass, `make check` and `git diff --check` pass, documentation
+matches behavior, and the branch contains one or a small number of cohesive
+commits. This increment is engineering evidence only; it does not establish
+scientific effectiveness or satisfy ADR-022.
