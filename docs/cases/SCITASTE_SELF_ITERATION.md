@@ -456,7 +456,7 @@ inspection also found invalid Python. No live source was admitted, executed, or
 used to create a paper. This negative result and an earlier ambiguous started
 call are retained rather than assigned zero cost or silently retried.
 
-The self-development project is now revision 147. Its current run is
+The self-development project is now revision 150. Its current run is
 `2026-09-07__scitaste-native__provider-code-generation-v1__seed-07`; full hashes,
 alternatives, external-call scope, and limitations are retained in
 `outputs/projects/scitaste-self-development/runs/2026-09-07__scitaste-native__provider-code-generation-v1__seed-07/mainline/evidence.json`.
@@ -477,6 +477,11 @@ while explicitly withholding an effectiveness claim until the registered
 matched-budget matrix and blinded expert review are complete.
 The registered bundle is
 `outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
+It contains 4,321 assessed words across 18 headings and a compiled 10-page PDF;
+its source is bound to commit `4ccee2edad6a61c8a86866bae732a134b95625be`.
+The self-development project selected it at revision 150. The corrected short
+fixture is selected by `scitaste-native-codegen-acceptance` at revision 9, while
+the earlier misclassified directory remains visible as historical evidence.
 
 ## Anti-self-confirmation rules
 

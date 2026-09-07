@@ -201,7 +201,7 @@ to register a structurally incomplete manuscript as a `research-working-draft`.
 The substantive framework manuscript uses the specification title
 **SciTaste: Learning Scientific Taste for Autonomous Research Decision Making**;
 its tracked source is [`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md),
-with its compiled Markdown/TeX/PDF bundle at
+with its assessed 4,321-word, 10-page Markdown/TeX/PDF bundle at
 `outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
 
 To exercise the same full path with a network-free, project-ledger-backed

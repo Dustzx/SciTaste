@@ -13,7 +13,7 @@ semantic versioning.
   attempts to promote a short, structurally incomplete, or placeholder-bearing
   artifact to a research draft fail closed. The substantive SciTaste framework
   manuscript restores the specification title and has tracked Markdown and
-  bibliography sources plus a project-owned TeX/PDF package.
+  bibliography sources plus a project-owned 4,321-word, 10-page TeX/PDF package.
 
 - Full Workflow can now request bounded native experiment source through a
   project-owned `native-code-proposal` model-node extension. A pre-call checkpoint
