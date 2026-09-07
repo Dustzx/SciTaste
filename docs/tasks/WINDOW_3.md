@@ -7,10 +7,12 @@ Status: `complete; delivered for main-window review`
 ## r4 delivery record
 
 - feature branch: `feat/generative-ui-i18n-v4`
-- delivery commit: `06dd3c7` (`feat(ui): add multilingual evidence workspace`)
+- delivery commits:
+  - `06dd3c7` (`feat(ui): add multilingual evidence workspace`)
+  - `3e3f9a2` (`fix(ui): localize unknown receiver failures`)
 - branch state after commit: clean
-- integration: main should review and cherry-pick `06dd3c7`; Window 3 did not
-  merge, push, or rebase
+- integration: main should review and cherry-pick `06dd3c7`, then `3e3f9a2`;
+  Window 3 did not merge, push, or rebase
 
 The receiver now treats English and Simplified Chinese as first-class
 presentation modes over the same evidence-bound surface. The fixed shell,
