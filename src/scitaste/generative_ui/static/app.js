@@ -1775,8 +1775,8 @@ async function api(path, options = {}) {
     const errorKey = code && hasTranslation(`error.${code}`)
       ? `error.${code}`
       : "error.receiver_rejected";
-    const error = new Error(payload.error?.message || t(errorKey));
-    error.translationKey = code && hasTranslation(`error.${code}`) ? errorKey : null;
+    const error = new Error(t(errorKey));
+    error.translationKey = errorKey;
     throw error;
   }
   const etag = response.headers.get("ETag");

@@ -49,6 +49,8 @@ def test_every_static_and_literal_runtime_translation_key_is_registered() -> Non
     assert "localStorage" not in app
     assert "sessionStorage" not in app
     assert "innerHTML" not in app
+    assert "payload.error?.message" not in app
+    assert '"error.receiver_rejected"' in app
 
 
 def test_closed_runtime_registries_have_receiver_translations() -> None:
