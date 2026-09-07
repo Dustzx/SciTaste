@@ -54,6 +54,7 @@ from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_c
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
+from scitaste.executor.native_code_generation import load_native_code_generation_config
 from scitaste.executor.native_sandbox import (
     NativeExperimentRunner,
     load_native_experiment_definition,
@@ -1150,6 +1151,11 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
+        code_generation = (
+            load_native_code_generation_config(config.native_code_generation_config)
+            if config.native_code_generation_config is not None
+            else None
+        )
         code_inspection = (
             inspect_native_code_proposal(config.native_code_proposal_config)
             if config.native_code_proposal_config is not None
@@ -1193,7 +1199,9 @@ def _handle_full(args: argparse.Namespace) -> int:
                             else None
                         ),
                         "experiment_configured": (
-                            registered_experiment is not None or code_inspection is not None
+                            registered_experiment is not None
+                            or code_inspection is not None
+                            or code_generation is not None
                         ),
                         "experiment_id": (
                             native_experiment.experiment_id
@@ -1201,12 +1209,16 @@ def _handle_full(args: argparse.Namespace) -> int:
                             else (
                                 code_inspection.config.experiment.experiment_id
                                 if code_inspection is not None
-                                else None
+                                else (
+                                    code_generation.config.experiment.experiment_id
+                                    if code_generation is not None
+                                    else None
+                                )
                             )
                         ),
                         "isolation_required": (
                             config.execution_backend == "scitaste-native"
-                            and native_experiment is not None
+                            and (native_experiment is not None or code_generation is not None)
                         ),
                         "isolation": isolation,
                         "code_admission": (
@@ -1223,6 +1235,31 @@ def _handle_full(args: argparse.Namespace) -> int:
                                     for item in code_inspection.admission.violations
                                 ],
                                 "proposal_only": True,
+                                "would_materialize_on_run": True,
+                            }
+                        ),
+                        "code_generation": (
+                            None
+                            if code_generation is None
+                            else {
+                                "generation_id": code_generation.config.generation_id,
+                                "proposal_id": code_generation.config.proposal_id,
+                                "provider": code_generation.profile.provider,
+                                "model": code_generation.profile.model,
+                                "backend_mode": code_generation.config.backend.mode.value,
+                                "max_output_tokens": (
+                                    code_generation.profile.generation.max_output_tokens
+                                ),
+                                "live_configured": code_generation.config.live_enabled,
+                                "caller_authorized": args.allow_live_model_nodes,
+                                "would_contact_provider": (
+                                    code_generation.config.live_enabled
+                                    and args.allow_live_model_nodes
+                                ),
+                                "network_access": code_generation.config.live_enabled,
+                                "proposal_only": True,
+                                "deterministic_admission_required": True,
+                                "runtime_isolation_required": True,
                                 "would_materialize_on_run": True,
                             }
                         ),

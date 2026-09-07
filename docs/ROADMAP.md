@@ -195,13 +195,22 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   source, and byte-identical admitted source are project-owned and hash-bound;
   rejected source remains auditable but cannot reach the runner. Static
   admission is defense in depth and does not replace Bubblewrap.
+- Full Workflow can now obtain that source from a bounded provider-backed
+  `native-code-proposal` node. The run checkpoints the exact trusted brief before
+  access, records request/raw response/usage in the existing hash-chained model
+  ledger, atomically projects only accepted output into a proposal, and still
+  requires the independent AST gate plus Bubblewrap. Scripted end-to-end
+  acceptance and no-second-call recovery are complete. A real GLM-5.3-Flash
+  response was retained but rejected before materialization for unavailable
+  price evidence; its candidate also failed syntax inspection, so no online code
+  was executed.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a
   clean reader-facing projection containing the measured mean, replicates,
   dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  provider-backed code generation, dataset/GPU experiment profiles, generative
+  iterative provider-backed code repair, dataset/GPU experiment profiles, generative
   analysis, writing, and figures. Existing scenario-bound receipts are integration
   evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution
@@ -437,6 +446,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stages, compiled its PDF and passed ledger verification. Its single advisory
   used 1,936 tokens and was rejected for unavailable cost plus an out-of-policy
   action, so it remains non-promotable evidence.
+- A separate GLM-5.3-Flash source-generation probe reached the real endpoint and
+  returned a structured response in 15.8 seconds using 1,260 input and 935 output
+  tokens. Missing price provenance correctly rejected the node before file
+  materialization; the retained candidate began with an invalid empty import and
+  would also have failed deterministic code admission. The transport path is
+  verified, but online source generation remains non-promotable and unexecuted.
 - The versioned self-development pilot protocol and runner isolate
   deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,
@@ -476,6 +491,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and stage artifacts are hash-bound; it has no state-transition or execution
   authority. Live interruption recovery consumes an already recorded response
   without a second provider call and refuses ambiguous repeats.
+- A second opt-in Full Workflow hook generates proposal-only native experiment
+  source through an additive typed runtime extension. Its pre-call brief,
+  request, raw response, usage, extracted source, derived proposal, admission,
+  and isolated execution are separately hash-bound. An accepted offline source
+  runs only from `context/code/admitted/experiment.py`; interrupted downstream
+  publication reuses the generation ledger instead of calling the backend again.
 - Project-owned Discovery is the second normal model-node consumer. Its typed
   hypothesis, reformulation, and ideation nodes can replace scenario prose but
   cannot choose actions, rank/select ideas, call tools, mutate state, allocate

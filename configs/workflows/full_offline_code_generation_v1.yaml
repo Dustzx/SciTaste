@@ -1,0 +1,21 @@
+schema_version: "1.0"
+project_id: scitaste-offline-code-generation-full
+title: SciTaste Offline Full Workflow with Model-Produced Native Code
+research_direction: Test conflict-aware scientific control from generated experiment code
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste_model_code_generation
+execution_backend: scitaste-native
+provider: mock
+model: deterministic-controller
+evidence_scope: offline-integration-with-scripted-code-generation
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+native_knowledge_config: ../taste/library_seed_v1.yaml
+native_code_generation_config: ../experiments/native_code_generation_scripted_support_v1.yaml
+paper_id: conflict-aware-generated-code-paper
+paper_directory: offline-code-generation-reviewed-draft
+paper_title: Conflict-Aware Control with Admitted Model-Produced Experiments
+paper_date: 2026-09-07

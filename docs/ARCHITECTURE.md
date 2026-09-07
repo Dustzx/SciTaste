@@ -1026,7 +1026,7 @@ rollover remain separate hardening work.
 
 ### ADR-037: Native source is proposal-only until deterministic admission
 
-Status: accepted for offline CPU source; provider-backed generation is pending.
+Status: accepted for registered and bounded provider-produced CPU source.
 
 The isolation runner previously accepted only a registered source definition.
 That kept execution real and bounded, but it offered no explicit boundary for
@@ -1062,6 +1062,54 @@ Static admission is defense in depth, not containment and not evidence that an
 experiment is scientifically meaningful. Accepted source must still pass the
 Bubblewrap availability probe, namespace/resource limits, exact output capture,
 replicate schema, and independently derived metric checks. A provider-backed
-proposer must later add durable request/raw-response/extraction/telemetry and
-no-repeat recovery evidence without receiving shell, filesystem, controller, or
-execution authority.
+proposer supplies that missing evidence through ADR-038 while remaining outside
+the admission and execution authority described here.
+
+### ADR-038: Provider-produced source crosses two independent gates
+
+Status: accepted for one bounded Full Workflow CPU-experiment hook.
+
+Model-produced code is materially different from ordinary semantic advice: even
+a schema-valid response can contain invalid Python or an unsafe program. It also
+creates an expensive recovery boundary before a source file exists. Treating the
+model-node acceptance result as execution permission would collapse generation,
+policy, filesystem publication, and process authority into a single model
+decision.
+
+SciTaste therefore registers `native-code-proposal` as an additive project-owned
+model-node type without changing the built-in model-node registry. Its trusted
+input fixes the objective, constraints, experiment identity, expected metric
+set, runtime limits, and non-expandable admission policy. Its output contains
+only UTF-8 source, a bounded rationale, and bounded assumptions. It has no path,
+command, dependency, tool, action, budget, policy, metric, experiment identity,
+state transition, or execution field. The provider profile and node policy both
+deny tools and actions; a separate caller switch is required for live access.
+
+Before provider access, the owning run writes a self-hashed generation-input
+checkpoint containing the original project revision, stable invocation ID,
+workflow/config/profile/policy bindings, and exact typed generation brief. The
+existing model runtime then retains the fingerprinted request, exact decoded raw
+response and hash, provider-returned model identity, token/latency/cost evidence,
+recording hash, and chained ledger result. An interruption after a complete live
+recording consumes that recording during resume; a possibly started call without
+a complete response records unknown cost and is not repeated automatically.
+
+Only an accepted, cost-admitted model result may be deterministically projected
+into `generated.py` and a model-attributed proposal config. That projection binds
+the request fingerprint and raw-response hash and is atomically published below
+`native_execution/context/code_generation/result/`. It remains
+`proposal_only=true` and `executable=false`. The independent ADR-037 AST gate
+then retains the exact proposed bytes and creates an admitted path only on
+acceptance. The ADR-019 Bubblewrap runner executes only that byte-identical
+admitted path. Full Workflow rechecks the generation configuration at
+finalization and reports generation telemetry separately from code admission and
+native execution.
+
+Offline scripted acceptance proves orchestration, evidence closure, rejection,
+recovery, and isolation—not model quality. A real GLM-5.3-Flash engineering probe
+returned a structured proposal and exact usage, but the provider's public pricing
+evidence did not yet cover that model. The runtime consequently rejected the
+response for unknown cost before source materialization; independent inspection
+also found invalid Python. This negative result is retained rather than repaired
+or executed. Priced provider acceptance, automatic source repair, dataset/GPU
+profiles, and scientific-effectiveness comparison remain separate gates.

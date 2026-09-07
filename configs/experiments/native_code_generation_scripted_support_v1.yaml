@@ -1,0 +1,145 @@
+schema_version: "1.0"
+generation_id: conflict-pivot-codegen-v1
+proposal_id: conflict-pivot-model-proposal-v1
+trigger_reason: >-
+  The registered evidence scenario requires an executable measurement implementation,
+  while only proposal generation—not execution authority—is delegated to the model.
+objective: >-
+  Implement a deterministic three-replicate Python experiment comparing matched-baseline
+  and conflict-aware pivot decisions. Emit the three registered metrics using the exact
+  SciTaste measurement envelope.
+constraints:
+  - Use only Python standard-library modules allowed by admission_policy.
+  - Use exactly three named replicates with deterministic in-module data.
+  - Emit no prose and exactly one SCITASTE_MEASUREMENTS_JSON line.
+  - Report every expected metric for every replicate.
+expected_metrics:
+  - baseline_correct_pivot_rate
+  - conflict_aware_correct_pivot_rate
+  - correct_pivot_delta
+experiment:
+  experiment_id: experiment-support
+  primary_metric: correct_pivot_delta
+  metric_direction: maximize
+  support_threshold: 0.0
+  limits:
+    timeout_seconds: 15.0
+    cpu_seconds: 10
+    max_memory_mb: 256
+    max_output_bytes: 65536
+    max_open_files: 32
+    max_processes: 16
+admission_policy:
+  schema_version: "1.0"
+  policy_id: scitaste-native-python-v1
+  max_source_bytes: 65536
+  max_ast_nodes: 5000
+  max_literal_bytes: 32768
+  allowed_imports:
+    - collections
+    - decimal
+    - fractions
+    - functools
+    - hashlib
+    - itertools
+    - json
+    - math
+    - random
+    - re
+    - statistics
+    - string
+profile_set: native_code_generation_profiles_scripted_v1.yaml
+profile_id: scitaste-native-code-scripted
+policy:
+  policy_id: scitaste-native-code-scripted-v1
+  enabled: true
+  allowed_node_names:
+    - native-code-proposal
+  expected_backend: scitaste-scripted
+  expected_model: bounded-python-generator-v1
+  allowed_tool_names: []
+  allowed_action_types: []
+  max_request_bytes: 160000
+  max_input_tokens: 12000
+  max_output_tokens: 8192
+  max_total_tokens: 20192
+  max_api_cost_usd: 1.0
+  max_latency_ms: 180000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.0
+backend:
+  kind: scripted
+  provider: scitaste-scripted
+  model: bounded-python-generator-v1
+  reply:
+    output_payload:
+      schema_version: "1.0"
+      source_code: |
+        from __future__ import annotations
+
+        import json
+
+        CASES = {
+            "seed-7": {
+                "truth": [1, 0, 1, 1, 0, 1, 0, 0, 1, 0],
+                "matched_baseline": [1, 0, 0, 1, 0, 1, 1, 0, 1, 1],
+                "conflict_aware": [1, 0, 1, 1, 0, 1, 1, 0, 1, 1],
+            },
+            "seed-19": {
+                "truth": [0, 1, 1, 0, 1, 0, 1, 0, 0, 1],
+                "matched_baseline": [0, 1, 1, 1, 1, 0, 0, 0, 1, 1],
+                "conflict_aware": [0, 1, 1, 0, 1, 0, 0, 0, 1, 1],
+            },
+            "seed-31": {
+                "truth": [1, 1, 0, 0, 1, 0, 0, 1, 1, 0],
+                "matched_baseline": [1, 0, 0, 0, 1, 1, 0, 1, 0, 0],
+                "conflict_aware": [1, 1, 0, 0, 1, 1, 0, 1, 0, 0],
+            },
+        }
+
+        def accuracy(truth: list[int], predictions: list[int]) -> float:
+            if len(truth) != len(predictions):
+                raise ValueError("truth and predictions must have equal length")
+            return sum(
+                truth[index] == predictions[index] for index in range(len(truth))
+            ) / len(truth)
+
+        measurements = []
+        for replicate_id, case in CASES.items():
+            baseline = accuracy(case["truth"], case["matched_baseline"])
+            candidate = accuracy(case["truth"], case["conflict_aware"])
+            measurements.append(
+                {
+                    "replicate_id": replicate_id,
+                    "metrics": {
+                        "baseline_correct_pivot_rate": baseline,
+                        "conflict_aware_correct_pivot_rate": candidate,
+                        "correct_pivot_delta": candidate - baseline,
+                    },
+                }
+            )
+
+        print(
+            "SCITASTE_MEASUREMENTS_JSON="
+            + json.dumps(
+                {"schema_version": "1.0", "measurements": measurements},
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+      rationale: >-
+        A fixed three-replicate comparison exposes both condition rates and their delta
+        without filesystem, network, subprocess, dependency, or clock access.
+      assumptions:
+        - The registered synthetic cases are sufficient for this engineering acceptance run.
+    usage:
+      input_tokens: 900
+      output_tokens: 1250
+      cost_usd: 0.0
+    latency_ms: 5.0
+    tool_calls: []
+live_enabled: false
+proposal_only: true
+deterministic_admission_required: true
+runtime_isolation_required: true
+effectiveness_claim: false

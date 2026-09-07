@@ -30,6 +30,13 @@ from scitaste.executor.native_code import (
     load_native_code_context_record,
     prepare_native_code_experiment,
 )
+from scitaste.executor.native_code_generation import (
+    GeneratedNativeCodeProposal,
+    LoadedNativeCodeGeneration,
+    generate_native_code_proposal,
+    load_native_code_generation_config,
+    load_native_code_generation_record,
+)
 from scitaste.executor.native_sandbox import (
     NativeExperimentDefinition,
     NativeExperimentRunner,
@@ -87,6 +94,7 @@ class FullWorkflowConfig(BaseModel):
     native_knowledge_config: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
+    native_code_generation_config: Path | None = None
     model_node_advisory: Path | None = None
     paper_id: str
     paper_directory: str
@@ -106,12 +114,28 @@ class FullWorkflowConfig(BaseModel):
 
     @model_validator(mode="after")
     def native_experiment_source_is_unambiguous(self) -> FullWorkflowConfig:
-        if (
-            self.native_experiment_config is not None
-            and self.native_code_proposal_config is not None
-        ):
+        configured = tuple(
+            item
+            for item in (
+                self.native_experiment_config,
+                self.native_code_proposal_config,
+                self.native_code_generation_config,
+            )
+            if item is not None
+        )
+        if len(configured) > 1:
             raise ValueError(
-                "native_experiment_config and native_code_proposal_config are mutually exclusive"
+                "native experiment, code proposal, and code generation configs are mutually "
+                "exclusive"
+            )
+        if self.native_code_generation_config is not None and (
+            self.execution_backend != "scitaste-native"
+        ):
+            raise ValueError("native code generation requires the scitaste-native executor")
+        if self.native_code_generation_config is not None and self.model_node_advisory is not None:
+            raise ValueError(
+                "native code generation and evidence advisory require a shared extension "
+                "registry before they can use one model ledger"
             )
         return self
 
@@ -124,6 +148,7 @@ _STAGE_ORDER: tuple[StageName, ...] = (
     "communication",
     "figure",
 )
+_GENERATION_RECOVERY_CONTRACT = "1.0"
 _STAGE_PURPOSES: dict[StageName, str] = {
     "discovery": "Form and probe hypotheses, then select a bounded idea.",
     "evidence": "Test a registered claim and route the interpreted result.",
@@ -196,12 +221,23 @@ class FullWorkflow:
             if config.model_node_advisory is not None
             else None
         )
+        code_generation = (
+            load_native_code_generation_config(config.native_code_generation_config)
+            if config.native_code_generation_config is not None
+            else None
+        )
         if (
             model_advisory is not None
             and model_advisory.config.live_enabled
             and not allow_live_model_nodes
         ):
             raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
+        if (
+            code_generation is not None
+            and code_generation.config.live_enabled
+            and not allow_live_model_nodes
+        ):
+            raise ValueError("live native source generation requires --allow-live-model-nodes")
         code_inspection = (
             inspect_native_code_proposal(config.native_code_proposal_config)
             if config.native_code_proposal_config is not None
@@ -211,6 +247,7 @@ class FullWorkflow:
             config,
             model_advisory,
             code_inspection=code_inspection,
+            code_generation=code_generation,
         )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
@@ -247,11 +284,30 @@ class FullWorkflow:
         run_root = runtime.outputs_root / "projects" / config.project_id / "runs" / run_id
 
         try:
+            generated_code = (
+                generate_native_code_proposal(
+                    code_generation,
+                    project_runtime=runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    run_root=run_root,
+                    expected_project_revision=snapshot.revision,
+                    workflow_config_sha256=workflow_config_sha256,
+                    seed=self.seed,
+                    resume=resume,
+                    allow_live=allow_live_model_nodes,
+                )
+                if code_generation is not None
+                else None
+            )
+            if generated_code is not None:
+                code_inspection = generated_code.inspection
             executor = self.executor or _build_full_workflow_executor(
                 config,
                 run_root=run_root,
                 seed=self.seed,
                 code_inspection=code_inspection,
+                generated_code=generated_code,
             )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
@@ -269,7 +325,33 @@ class FullWorkflow:
                 if config.model_node_advisory is not None
                 else None
             )
-            if _workflow_config_sha256(config, reloaded_advisory) != workflow_config_sha256:
+            reloaded_generation = (
+                load_native_code_generation_config(config.native_code_generation_config)
+                if config.native_code_generation_config is not None
+                else None
+            )
+            if reloaded_generation is not None:
+                generated_code = generate_native_code_proposal(
+                    reloaded_generation,
+                    project_runtime=runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    run_root=run_root,
+                    expected_project_revision=snapshot.revision,
+                    workflow_config_sha256=workflow_config_sha256,
+                    seed=self.seed,
+                    resume=True,
+                    allow_live=allow_live_model_nodes,
+                )
+            if (
+                _workflow_config_sha256(
+                    config,
+                    reloaded_advisory,
+                    code_inspection=(None if generated_code is not None else code_inspection),
+                    code_generation=reloaded_generation,
+                )
+                != workflow_config_sha256
+            ):
                 raise ValueError("workflow configuration changed during execution")
             if resume and reused_stages == list(_STAGE_ORDER):
                 raise ValueError(
@@ -825,6 +907,7 @@ def _build_full_workflow_executor(
     run_root: Path,
     seed: int,
     code_inspection: NativeCodeInspection | None = None,
+    generated_code: GeneratedNativeCodeProposal | None = None,
 ) -> ResearchExecutor:
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
@@ -833,6 +916,7 @@ def _build_full_workflow_executor(
         config,
         run_root=run_root,
         code_inspection=code_inspection,
+        generated_code=generated_code,
     )
     if experiment is not None:
         evidence_experiment_id = load_evidence_scenario(
@@ -892,7 +976,7 @@ def _prepare_native_knowledge(
         _verified_file(run_root, taste_locator, taste_sha256)
         _verified_file(run_root, manifest_locator, manifest_sha256)
         return KnowledgeLibrary(knowledge_path)
-    if context_root.exists():
+    if (context_root / "libraries").exists():
         raise ValueError("incomplete native knowledge context requires manual inspection")
     libraries_root = context_root / "libraries"
     manifest = build_libraries(source, libraries_root)
@@ -928,10 +1012,16 @@ def _prepare_native_experiment(
     *,
     run_root: Path,
     code_inspection: NativeCodeInspection | None = None,
+    generated_code: GeneratedNativeCodeProposal | None = None,
 ) -> NativeExperimentDefinition | None:
-    if config.native_code_proposal_config is not None:
+    code_proposal_path = (
+        generated_code.proposal_config_path
+        if generated_code is not None
+        else config.native_code_proposal_config
+    )
+    if code_proposal_path is not None:
         return prepare_native_code_experiment(
-            config.native_code_proposal_config,
+            code_proposal_path,
             run_root=run_root,
             inspection=code_inspection,
         )
@@ -1002,6 +1092,26 @@ def _native_execution_summary(
         }
     )
     code_context = load_native_code_context_record(run_root)
+    code_generation = load_native_code_generation_record(run_root)
+    code_generation_result = code_generation.typed_result if code_generation is not None else None
+    payload["code_generation"] = (
+        None
+        if code_generation is None
+        else {
+            "generation_id": code_generation.generation_id,
+            "proposal_id": code_generation.proposal_id,
+            "provider": code_generation_result.response.backend,
+            "model": code_generation_result.response.model,
+            "outcome": code_generation.receipt.outcome.value,
+            "input_tokens": code_generation.receipt.telemetry.input_tokens,
+            "output_tokens": code_generation.receipt.telemetry.output_tokens,
+            "cost_usd": code_generation.receipt.telemetry.cost_usd,
+            "recovered_without_provider": (code_generation.receipt.recovered_without_provider),
+            "record_sha256": code_generation.record_sha256,
+            "proposal_only": True,
+            "deterministic_admission_required": True,
+        }
+    )
     payload["code_admission"] = (
         None
         if code_context is None
@@ -1028,6 +1138,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "native_knowledge_config",
         "native_experiment_config",
         "native_code_proposal_config",
+        "native_code_generation_config",
         "model_node_advisory",
     ):
         if payload.get(field) is None:
@@ -1374,6 +1485,7 @@ def _workflow_config_sha256(
     model_advisory: LoadedFullWorkflowModelAdvisory | None = None,
     *,
     code_inspection: NativeCodeInspection | None = None,
+    code_generation: LoadedNativeCodeGeneration | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
     for field in (
@@ -1414,6 +1526,16 @@ def _workflow_config_sha256(
             "admission_sha256": inspection.admission.record_sha256,
             "decision": inspection.admission.decision,
         }
+    if config.native_code_generation_config is None:
+        payload.pop("native_code_generation_config", None)
+    else:
+        binding = code_generation or load_native_code_generation_config(
+            config.native_code_generation_config
+        )
+        payload["native_code_generation_config"] = {
+            "binding_sha256": binding.fingerprint,
+            "generation_recovery_contract": _GENERATION_RECOVERY_CONTRACT,
+        }
     if config.model_node_advisory is None:
         # Preserve hashes registered by pre-advisory v1.0 offline runs.
         payload.pop("model_node_advisory", None)
@@ -1430,6 +1552,7 @@ def _native_experiment_is_configured(config: FullWorkflowConfig) -> bool:
     return (
         config.native_experiment_config is not None
         or config.native_code_proposal_config is not None
+        or config.native_code_generation_config is not None
     )
 
 

@@ -79,6 +79,25 @@ gates without reading the key or contacting the endpoint. The 2,048-token value
 in this engineering backend is a ceiling for that bounded semantic request, not
 a global limit on SciTaste coding, experiment or manuscript workloads.
 
+The native-source generation condition uses the same double gate but a separate
+8,192-token request envelope:
+
+```bash
+scitaste run full \
+  --config configs/workflows/full_zhipu_glm53_flash_code_generation_probe_v1.yaml \
+  --run-id glm53-codegen-seed-07 \
+  --output /tmp/scitaste-glm53-codegen \
+  --allow-live-model-nodes
+```
+
+The authenticated model list exposed `glm-5.3-flash` on 2026-09-07, and a real
+request returned a structured response with measured tokens and latency. The
+public price pages did not yet expose a rate for that exact model, so the runtime
+correctly rejected it as unknown-cost before writing or executing source. The
+candidate was also syntactically invalid. This is retained negative engineering
+evidence, not a reason to invent a zero price, silently repair code, or bypass
+admission.
+
 An existing local Qwen checkpoint can instead run without a server or API key:
 
 ```bash

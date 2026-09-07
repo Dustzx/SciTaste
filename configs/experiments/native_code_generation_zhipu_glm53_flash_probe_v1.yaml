@@ -1,0 +1,93 @@
+schema_version: "1.0"
+generation_id: conflict-pivot-glm53-flash-codegen-v1
+proposal_id: conflict-pivot-glm53-flash-proposal-v1
+trigger_reason: >-
+  A live engineering probe must establish that the provider can return a bounded native
+  experiment proposal before formal costed acceptance is attempted.
+objective: >-
+  Implement a deterministic three-replicate Python experiment comparing matched-baseline
+  and conflict-aware pivot decisions. Emit the three registered metrics using the exact
+  SciTaste measurement envelope.
+constraints:
+  - Use only Python standard-library modules allowed by admission_policy.
+  - Use exactly three named replicates with deterministic in-module data.
+  - Emit no prose and exactly one SCITASTE_MEASUREMENTS_JSON line.
+  - Report every expected metric for every replicate.
+  - Do not read files, environment variables, clocks, network resources, or subprocesses.
+expected_metrics:
+  - baseline_correct_pivot_rate
+  - conflict_aware_correct_pivot_rate
+  - correct_pivot_delta
+experiment:
+  experiment_id: experiment-support
+  primary_metric: correct_pivot_delta
+  metric_direction: maximize
+  support_threshold: 0.0
+  limits:
+    timeout_seconds: 15.0
+    cpu_seconds: 10
+    max_memory_mb: 256
+    max_output_bytes: 65536
+    max_open_files: 32
+    max_processes: 16
+admission_policy:
+  schema_version: "1.0"
+  policy_id: scitaste-native-python-v1
+  max_source_bytes: 65536
+  max_ast_nodes: 5000
+  max_literal_bytes: 32768
+  allowed_imports:
+    - collections
+    - decimal
+    - fractions
+    - functools
+    - hashlib
+    - itertools
+    - json
+    - math
+    - random
+    - re
+    - statistics
+    - string
+profile_set: native_code_generation_profiles_zhipu_glm53_flash_v1.yaml
+profile_id: zhipu-glm53-flash-native-code
+policy:
+  policy_id: zhipu-glm53-flash-native-code-probe-v1
+  enabled: true
+  allowed_node_names:
+    - native-code-proposal
+  expected_backend: zhipu-direct
+  expected_model: glm-5.3-flash
+  allowed_tool_names: []
+  allowed_action_types: []
+  max_request_bytes: 180000
+  max_input_tokens: 16000
+  max_output_tokens: 8192
+  max_total_tokens: 24192
+  max_api_cost_usd: 1.0
+  max_latency_ms: 240000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.0
+backend:
+  kind: openai-compatible
+  config:
+    provider: zhipu-direct
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-5.3-flash
+    api_key_env: ZAI_API_KEY
+    live_enabled: true
+    timeout_seconds: 240.0
+    max_retries: 0
+    max_output_tokens: 8192
+    pricing_confirmed: false
+    unpriced_engineering_probe: true
+    extra_headers: {}
+    extra_body:
+      thinking:
+        type: enabled
+      reasoning_effort: low
+live_enabled: true
+proposal_only: true
+deterministic_admission_required: true
+runtime_isolation_required: true
+effectiveness_claim: false

@@ -2,7 +2,8 @@
 
 `scitaste run full` is the first-party composition of SciTaste's Phase 4--7
 workflows. Its core path is deterministic and offline; an explicitly configured
-evidence advisory may additionally use a bounded live model node. It is not a
+evidence advisory or native-source proposer may additionally use a bounded live
+model node. It is not a
 reserved CLI or four disconnected demos. Discovery creates the initial `ResearchState`;
 Evidence, Communication, reviewer-driven evidence collection, and Figure
 generation each load and extend that same state history.
@@ -36,7 +37,7 @@ shared across Discovery, Evidence, Communication, nested reviewer evidence, and
 Figure actions. It emits typed action receipts without inventing mock
 observations; its Discovery `SEARCH` action now performs real local retrieval
 against a content-bound project copy of the configured Knowledge Library. Its
-registered Evidence experiment executes real CPU code through Bubblewrap and
+admitted Evidence experiment executes real CPU code through Bubblewrap and
 independently derives metrics from the emitted replicate rows; Evidence then uses
 those measured values rather than the scenario's result fixture. Communication
 admits that result only through a self-hashed projection that revalidates the
@@ -46,8 +47,8 @@ and turns the review into an explicit limitation acknowledgement rather than
 executing the scenario's second prefilled experiment. The remaining deterministic
 workflow components perform bounded scenario operations.
 `--backend mock` is an explicit compatibility/test mode. The native run validates
-one registered offline experiment, but does not prove autonomous code generation,
-broad experiment compatibility, model-generation quality, or effectiveness.
+one bounded offline experiment, but does not prove broad experiment compatibility,
+model-generation quality, or effectiveness.
 `--dry-run` validates the configuration and prints the planned executor and
 project/run/paper identity plus Bubblewrap availability without writing files.
 
@@ -86,6 +87,25 @@ so it is an engineering probe: usage and the raw response are retained, cost is
 unknown, and the proposal is deterministically rejected. It cannot support an
 effectiveness claim.
 
+Native experiment source has a separate optional generation hook:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_code_generation_v1.yaml \
+  --project-id my-code-generation-project \
+  --run-id generated-code-seed-07 \
+  --seed 7 --output outputs
+```
+
+The scripted condition traverses the real model-node ledger, source extraction,
+static admission, Bubblewrap experiment, measured-evidence projection, and paper
+publication path without network access. The model controls only source,
+rationale, and assumptions; the project controls experiment identity, metrics,
+imports, limits, backend, and budget. The live engineering configuration uses
+`full_zhipu_glm53_flash_code_generation_probe_v1.yaml`, requires
+`--allow-live-model-nodes`, and is deliberately non-promotable until an auditable
+price for that exact model is available. See `docs/NATIVE_CODE_GENERATION.md`.
+
 ## Project layout
 
 One execution owns this tree:
@@ -98,6 +118,8 @@ outputs/projects/<project-id>/
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
 │   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
 │   ├── native_execution/{context,artifacts,records}/ # native action evidence
+│   │   ├── context/code_generation/ # generated-source evidence when opted in
+│   │   └── context/code/            # deterministic admission and admitted source
 │   └── stages/
 │       ├── discovery/
 │       ├── evidence/model_advisory_input.json # pre-call, when opted in
@@ -147,8 +169,8 @@ marked `failed` with the exception type and bounded message for diagnosis.
 
 `--resume` accepts only a previously registered failed run with the same
 provider, model, condition, seed, evidence scope, stage path, and content-hashed
-workflow configuration (including all four scenario files and the optional
-advisory/profile binding). It reuses only
+workflow configuration (including all four scenario files and optional
+advisory or source-generation profile bindings). It reuses only
 the contiguous completed prefix whose record, state continuity, project
 identity, lifecycle position, and every declared file hash still validate. A
 missing completion record means that stage is incomplete: its existing directory
@@ -180,11 +202,12 @@ finalization recovery refuses to overwrite it and requires manual inspection.
 Completed runs cannot be resumed.
 
 Native execution resume first validates its contiguous predecessor chain, every
-bound Knowledge or experiment-source input, every action artifact, and the record
-hash/action/result identity embedded in each reusable stage decision. Tampering
-with the local Knowledge copy, registered experiment source, retrieval output, raw
-process output, or derived metrics therefore blocks reuse before a stage can
-advance. See `docs/NATIVE_EXECUTION.md` for the record contract.
+bound Knowledge or experiment-source input, every generation/ledger/admission
+binding, every action artifact, and the record hash/action/result identity
+embedded in each reusable stage decision. Tampering with the local Knowledge
+copy, generated or registered source, retrieval output, raw process output, or
+derived metrics therefore blocks reuse before a stage can advance. See
+`docs/NATIVE_EXECUTION.md` for the record contract.
 
 The Communication stage independently repeats the relevant binding checks before
 writing: exactly one successful registered experiment must resolve to one
@@ -220,12 +243,21 @@ backend identity drift. `--dry-run` reports the backend mode, both authorization
 gates, and whether a real execution would contact a provider without creating a
 project or accessing the network.
 
+`configs/workflows/full_offline_code_generation_v1.yaml` replaces the registered
+source proposal with a content-bound generation configuration and 8,192-token
+provider envelope. Dry-run reports the generation/provider/admission/isolation
+plan without creating a project. Execution checkpoints its complete trusted
+brief before any backend access; only a cost-admitted ledger result is projected
+into a model-attributed proposal, and that proposal still requires the same
+deterministic admission and isolated runner. The GLM-5.3-Flash variant reads only
+the `ZAI_API_KEY` environment variable and never stores credentials in YAML.
+
 AutoResearchClaw is not modified or invoked by this acceptance case. It remains
 an optional baseline/compatibility adapter. The native path now owns local
 retrieval plus one admitted isolated CPU experiment and its metric extraction.
-The code may carry model-attributed content hashes, but no first-party
-provider-backed code proposer exists yet. Open-web retrieval, provider-backed
-code generation, dataset/GPU profiles, and long-form generation remain
-capability-parity work; they must preserve the same
+The same experiment can now originate from a first-party bounded provider-backed
+proposer while remaining behind independent admission and isolation. Open-web
+retrieval, iterative code repair, dataset/GPU profiles, and long-form generation
+remain capability-parity work; they must preserve the same
 ProjectRuntime ownership, state-continuity, evidence-binding, and
 failure-retention contracts.

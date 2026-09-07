@@ -14,8 +14,8 @@ and compatibility commands.
 | Replicate metric extraction | Strict final machine record; means, dispersion, stability, and relation independently derived | implemented |
 | Controller/state actions | First-party typed workflow operation plus action receipt | implemented, scenario-bound |
 | Evidence/writing/figure components | Existing deterministic SciTaste components plus action receipt | implemented, scenario-bound |
-| Model-attributed code proposal | Provider/model plus request/response hashes can be registered, but this boundary does not perform or verify the provider call | contract implemented |
-| Provider-backed code generation | No first-party generator yet produces and binds the request, raw response, and extracted source | pending |
+| Model-attributed code proposal | Provider/model plus request fingerprint/raw-response hash are derived from the verified model ledger | implemented |
+| Provider-backed code generation | Bounded typed source generation, durable raw exchange, extraction, no-repeat recovery, then independent admission | implemented, scripted acceptance; priced live acceptance pending |
 | Model-generated long-form content | Bounded proposal nodes exist, but no native generative handler has execution authority | pending |
 
 This distinction is intentional. A workflow-component receipt is not described
@@ -39,6 +39,9 @@ runs/<run-id>/native_execution/
 │       ├── knowledge/records.jsonl
 │       └── taste/records.jsonl
 │   ├── experiment/{EXPERIMENT.json,experiment.py} # legacy registered path
+│   ├── code_generation/
+│       ├── GENERATION_INPUT.json
+│       └── result/{generated.py,proposal.json,GENERATION.json}
 │   └── code/
 │       ├── CODE.json
 │       ├── {POLICY,PROPOSAL,ADMISSION}.json
@@ -58,6 +61,15 @@ machine-specific absolute paths.
 the run-local source locator, primary metric, direction, support threshold, and
 limits. Resume rejects drift in either the registered external source or its
 run-local copy.
+
+When model production is enabled, `code_generation/GENERATION_INPUT.json` is
+published before backend access and binds the trusted brief plus project,
+workflow, profile, and policy identity. The separate model-node ledger owns the
+exact request/raw response/usage. `result/GENERATION.json` then binds only an
+accepted typed result to `generated.py` and a model-attributed `proposal.json`;
+it confers no execution authority. Resume verifies the complete ledger and these
+bytes rather than calling the backend again. Unknown-cost or semantically
+rejected responses never create the result directory.
 
 The default Full Workflow now uses `code/` instead. `PROPOSAL.json` binds exact
 source bytes, experiment identity, expected metrics, runtime limits, rationale,
@@ -190,10 +202,11 @@ fallback when native execution fails.
 
 ## Next capability gate
 
-This closes the typed proposal/static-admission gate for offline CPU source, not
-autonomous code generation or broad scientific execution. The next milestone is
-a first-party provider-backed proposer that durably binds its exact request, raw
-response, extracted source, telemetry, and retry state before using this gate;
+This closes the typed proposal/static-admission gate and one bounded
+provider-backed source-generation path, not broad scientific execution. The next
+milestone is priced live acceptance plus an explicit repair protocol that binds
+each failed source and exact repair request, raw response, extracted source,
+telemetry, and retry state before using this gate;
 the model still must not receive shell, filesystem, controller, or execution
 authority. Dataset mounts, package environments, GPU access, and multi-process
 workloads need separate explicit profiles and resource accounting; none is

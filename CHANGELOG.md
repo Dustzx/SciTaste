@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Full Workflow can now request bounded native experiment source through a
+  project-owned `native-code-proposal` model-node extension. A pre-call checkpoint
+  binds the trusted experiment/metric/policy brief; the existing durable runtime
+  retains exact request, raw response, provider identity, tokens, latency, cost,
+  and no-repeat recovery evidence. Accepted output is atomically projected into a
+  model-attributed proposal but remains non-executable until the independent AST
+  admission gate and Bubblewrap runner accept it. Offline and double-gated
+  GLM-5.3-Flash profiles use 8,192 output tokens, dry-run remains mutation-free,
+  and rejected or unknown-cost live responses never reach a source file.
 - Native CPU experiments now have a typed proposal and deterministic static
   admission boundary before Bubblewrap execution. Project-owned, self-hashed
   policy/proposal/admission/context records bind the exact proposed and admitted
@@ -16,7 +25,7 @@ semantic versioning.
   source can reach the existing no-network sandbox, whose definition `1.1` also
   enforces the proposal's complete metric set at runtime. Full Workflow dry-run
   is mutation-free and exposes the verdict, and its default configurations now
-  exercise this boundary. Provider-backed code generation remains a later gate.
+  exercise this boundary.
 - Provider-facing bootstrap and selected-action attempts now publish a durable
   `prepared → call_started → result_published` evidence chain. Each phase is
   write-once, self-hashed, predecessor-bound, and tied to the exact request,

@@ -28,8 +28,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   explicit deterministic mock, and an optional pinned AutoResearchClaw adapter;
 - project-owned native action records with predecessor/state/action/input/output
   hashes, real local Knowledge Library retrieval in both Full Workflow and
-  composable Discovery, and a Bubblewrap-isolated registered CPU experiment
-  with independently derived replicate metrics;
+  composable Discovery, plus a proposal-only registered or model-produced CPU
+  experiment that requires deterministic admission before Bubblewrap execution
+  and independently derived replicate metrics;
 - runnable nonlinear demo and tests;
 - fixed-candidate intrinsic taste calibration with accuracy, confidence, Brier,
   and calibration metrics;
@@ -186,9 +187,9 @@ This validates end-to-end framework behavior with SciTaste's first-party
 executor, including real local retrieval and one content-bound CPU proposal
 that must pass deterministic static admission before no-network execution. The
 run owns the proposed source, verdict, admitted source, and exact hashes. It is
-not yet provider-backed autonomous code generation, a general experiment
-platform, or an effectiveness result. A working Bubblewrap installation is
-required; pass `--backend mock` only for explicit test compatibility. See
+not a general experiment platform or an effectiveness result. A working
+Bubblewrap installation is required; pass `--backend mock` only for explicit
+test compatibility. See
 [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 The native action evidence and current capability boundary are documented in
 [`docs/NATIVE_EXECUTION.md`](docs/NATIVE_EXECUTION.md).
@@ -198,6 +199,15 @@ semantic advisory, use
 `configs/workflows/full_offline_model_advisory_v1.yaml`. The generated
 `stages/evidence/model_advisory.json` is proposal-only and proves that the
 evidence `ResearchState` was unchanged.
+
+To exercise provider-produced experiment source through the same safety
+boundary without network access, use
+`configs/workflows/full_offline_code_generation_v1.yaml`. The model runtime
+records the typed exchange first; only an accepted response becomes a proposal,
+and only separate AST admission creates the source consumed by Bubblewrap. A
+double-gated GLM-5.3-Flash engineering config is also included, but remains
+non-promotable while exact provider pricing is unavailable. See
+[`docs/NATIVE_CODE_GENERATION.md`](docs/NATIVE_CODE_GENERATION.md).
 
 For Phase 9 executions, `scitaste study project-run` registers the matrix or
 selected cells beneath an existing project instead of producing another

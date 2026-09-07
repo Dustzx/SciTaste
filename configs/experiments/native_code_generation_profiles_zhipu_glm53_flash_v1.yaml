@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: zhipu-glm53-flash-native-code
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: native_code_generation_profile_zhipu_glm53_flash_v1.yaml
+    sha256: 4d2ce219862c0d5d4318e747723ab5b10c4984aa280aac375782e5ab4291bf44
+    profile_sha256: aab3392e466f7f6cbffa5db5b39b9bdfb13761723452b00755d9d5d0a05bdc3b

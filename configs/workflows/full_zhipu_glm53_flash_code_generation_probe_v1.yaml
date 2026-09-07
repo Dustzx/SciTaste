@@ -1,0 +1,21 @@
+schema_version: "1.0"
+project_id: scitaste-glm53-flash-code-generation-probe
+title: SciTaste GLM-5.3-Flash Native Code Generation Probe
+research_direction: Test bounded provider-produced experiment code before deterministic admission
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste_glm53_flash_unpriced_code_generation
+execution_backend: scitaste-native
+provider: mock
+model: deterministic-controller
+evidence_scope: engineering-only-unpriced-live-code-generation
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+native_knowledge_config: ../taste/library_seed_v1.yaml
+native_code_generation_config: ../experiments/native_code_generation_zhipu_glm53_flash_probe_v1.yaml
+paper_id: glm53-flash-code-generation-probe-paper
+paper_directory: glm53-flash-code-generation-probe-draft
+paper_title: Bounded Provider-Produced Experiments in SciTaste
+paper_date: 2026-09-07

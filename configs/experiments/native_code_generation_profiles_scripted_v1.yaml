@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: scitaste-native-code-scripted
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: native_code_generation_profile_scripted_v1.yaml
+    sha256: 1712570d28398eb09fb71014dee9ad7ee985adefcb735200cd940176c5389fe4
+    profile_sha256: 3782d280a7df85a16e1fd18994261132daa587c5777f2063e7ded3db48fe27e5
