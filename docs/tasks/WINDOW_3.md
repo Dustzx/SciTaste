@@ -1,13 +1,81 @@
-# Window 3 Dispatch: Progress-First Generative Research Workspace
+# Window 3 Dispatch: Complete Multilingual Generative UI
 
-Assignment token: `W3-generative-progress-20260906-r3`
+Assignment token: `W3-generative-i18n-20260907-r4`
 
-Status: `integrated; idle`
+Status: `active; autonomous execution authorized by user`
+
+This r4 assignment supersedes the idle marker below. The user explicitly
+authorized Window 3 to resume without waiting for main-window dispatch and to
+maintain this coordination document directly. Work must start from current
+`main`, where the progress synthesis was integrated as `cd21d0f`, rather than
+from the old r3 feature tip.
+
+## Current workspace
+
+- worktree: `/home/good/zfx/papers/SciTaste-worktrees/generative-ui`
+- branch: `feat/generative-ui-i18n-v4`
+- base: current `main` containing `cd21d0f`
+- do not edit generated `outputs/` or `third_party/`
+
+## Objective and order
+
+Complete the receiver-side multilingual foundation before further interaction
+or visual-style iteration. English and Simplified Chinese must be first-class,
+accessible presentation modes over the same trusted evidence and declarative
+surface. Locale changes are presentation-only: they cannot alter fingerprints,
+planner inputs, evidence, audit meaning, proposals, permissions or runtime
+state.
+
+1. Add one receiver-owned locale catalog and an English/Simplified-Chinese
+   selector. The selected locale must survive refresh and deep links without
+   credentials or unpublished evidence entering browser storage.
+2. Translate the complete fixed shell and receiver-authored dynamic vocabulary:
+   navigation, fields, status categories, progress synthesis, generated
+   workspace metadata, quick intents, standard actions, empty/error states,
+   evidence disclosures, hints, accessibility labels and placeholders.
+3. Preserve project titles, research directions, blocker reasons, paper titles,
+   excerpts and other authoritative evidence in their recorded language. Do not
+   silently machine-translate or feed translations back into evidence.
+4. Switch language in place without an API/model call and without losing the
+   selected project, fixed/generated route, quick-intent catalog, proposal
+   receipt or verified artifact preview. Browser back/forward and project
+   isolation must remain intact.
+5. Fail safely for unsupported locale parameters, missing translation keys and
+   unknown server codes. English is the deterministic fallback; no string may
+   become HTML or executable content.
+6. Test catalog parity, interpolation escaping, query/deep-link behavior,
+   runtime rerendering, malicious locale input, accessibility state, project
+   switching, and English/Chinese desktop/mobile rendering. Package every
+   receiver asset in the wheel.
+7. Update `docs/GENERATIVE_UI.md`, run focused UI/CLI tests with owned-module
+   coverage, Ruff, `node --check`, `make check`, `git diff --check`, visual
+   inspection and wheel-content verification. Return clean logical commits.
+
+Owned implementation paths remain `src/scitaste/generative_ui/**`,
+`tests/generative_ui/**`, focused
+`tests/integration/test_generative_ui_cli.py`, and
+`docs/GENERATIVE_UI.md`. This task may update this dispatch document only for
+coordination status. Do not modify README, CHANGELOG, ROADMAP, ARCHITECTURE,
+model-node internals, project runtime, workflow code or credentials.
+
+## Exit gate
+
+The r4 Epic is complete only when both languages cover every receiver-authored
+string reachable in the fixed and generated workspace, locale survives a
+refreshable deep link, in-place switching preserves current UI evidence and
+interaction state, both desktop and mobile modes are visually checked, all
+offline checks pass, and no translation changes trusted content or authority.
+
+## Prior r3 integration record
 
 Integration record: WP1--WP5 were delivered as `4a83d36`, `15bd30b`,
 `0900ecb`, `55c9ba8`, and `72803f5`, reviewed on main, and merged by
 `ea6a921`. Main added fail-closed finite-cost admission before final
-verification. Window 3 must not continue without a new assignment token.
+verification. Progress synthesis follow-up `54d1fb0` was integrated on main as
+`cd21d0f`.
+
+The remaining sections document the completed r3 scope and are retained for
+audit history; they do not override the r4 assignment above.
 
 The user authorized Window 3 to self-dispatch this follow-on Epic. The previous
 evidence-native workspace and its audit hardening were integrated into `main` as
