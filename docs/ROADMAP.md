@@ -452,6 +452,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   materialization; the retained candidate began with an invalid empty import and
   would also have failed deterministic code admission. The transport path is
   verified, but online source generation remains non-promotable and unexecuted.
+- The provider-generation self-iteration is registered at self-development
+  revision 147, while its complete offline Full Workflow acceptance is a
+  separate canonical project, `scitaste-native-codegen-acceptance`. That project
+  owns the verified ledger, generated/proposed/admitted source, three-replicate
+  Bubblewrap result, and Markdown/TeX/PDF/SVG/draw.io paper bundle rather than
+  scattering those artifacts across top-level stage directories.
 - The versioned self-development pilot protocol and runner isolate
   deterministic, scripted, exact-replay, and Zhipu `GLM-5.3-Flash` live
   conditions. Canonical reports evaluate schema, gate-bypass, planned-case,

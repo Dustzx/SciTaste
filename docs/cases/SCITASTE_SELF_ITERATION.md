@@ -422,6 +422,44 @@ hashes, alternatives, negative-path checks, and limitations are retained in
 This accepts the proposal/admission/execution binding, not provider-backed code
 generation, broad dataset/GPU execution, or scientific effectiveness.
 
+## Provider-backed native code generation case
+
+The follow-on intervention connects that admission boundary to the durable
+model-node runtime without granting the model execution authority. A trusted
+pre-call record fixes the experiment, metrics, limits, policy, provider profile,
+and budget. The model can return only source, rationale, and assumptions. An
+accepted result is projected into a proposal; the independent AST gate and
+Bubblewrap remain mandatory. Resume consumes committed ledger or recording
+evidence and refuses to repeat a call that may have started without a complete
+response. Full Workflow also revalidates the generation evidence before paper
+publication.
+
+The implementation is commit
+`c9d2f758c2984e4c63e28fee7562e2500f2f5fcf`. The final full-suite run completed
+817 tests at 83% total coverage; the new generation module reached 77%, and its
+focused executor/Full Workflow slice completed 13 tests. The canonical offline
+acceptance is project `scitaste-native-codegen-acceptance`. Its one verified
+generation entry used 900 input and 1,250 output tokens, the generated, proposed,
+and admitted source bytes were identical, and Bubblewrap measured three
+replicates with `correct_pivot_delta` approximately 0.1. Its reviewed-draft
+Markdown, TeX, PDF, SVG, and draw.io bundle is under
+`outputs/projects/scitaste-native-codegen-acceptance/papers/provider-code-generation-reviewed-draft/`.
+
+A separately authorized real GLM-5.3-Flash probe returned HTTP 200 with 1,260
+input and 935 output tokens in 15.8 seconds. It was rejected before source
+materialization because an exact public price could not be bound; independent
+inspection also found invalid Python. No live source was admitted, executed, or
+used to create a paper. This negative result and an earlier ambiguous started
+call are retained rather than assigned zero cost or silently retried.
+
+The self-development project is now revision 147. Its current run is
+`2026-09-07__scitaste-native__provider-code-generation-v1__seed-07`; full hashes,
+alternatives, external-call scope, and limitations are retained in
+`outputs/projects/scitaste-self-development/runs/2026-09-07__scitaste-native__provider-code-generation-v1__seed-07/mainline/evidence.json`.
+This accepts provider transport and the complete generation/admission/isolation
+pipeline, not priced live acceptance, automatic repair, broad dataset/GPU
+execution, model-quality gain, or scientific effectiveness.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.
