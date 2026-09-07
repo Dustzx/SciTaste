@@ -2,7 +2,60 @@
 
 Assignment token: `W3-generative-i18n-20260907-r4`
 
-Status: `active; autonomous execution authorized by user`
+Status: `complete; delivered for main-window review`
+
+## r4 delivery record
+
+- feature branch: `feat/generative-ui-i18n-v4`
+- delivery commit: `06dd3c7` (`feat(ui): add multilingual evidence workspace`)
+- branch state after commit: clean
+- integration: main should review and cherry-pick `06dd3c7`; Window 3 did not
+  merge, push, or rebase
+
+The receiver now treats English and Simplified Chinese as first-class
+presentation modes over the same evidence-bound surface. The fixed shell,
+dynamic progress and generated-workspace vocabulary, quick intents, fields,
+closed statuses/actions/errors, empty states, hints, placeholders, and
+accessibility labels use exact-parity packaged catalogs. Project titles,
+research directions, blocker reasons, paper content, artifact source, and other
+authoritative values remain in their recorded language and never enter the
+translation layer.
+
+Locale is stored only in the URL fragment (`?lang=en` or `?lang=zh-CN` after
+the hash route), so refreshable deep links preserve it while the server still
+rejects HTTP query strings and the browser stores neither credentials nor
+evidence. Unsupported and duplicate locale values fall back to English.
+Switching rerenders the current validated document without an API/planner call
+and preserves project/route identity, quick intents, proposal receipts, and
+verified artifact previews. Back/forward restores the locale bound to each
+route; the skip link does not destroy the deep link.
+
+Verification completed on 2026-09-07:
+
+- focused Generative UI and CLI: `232 passed`;
+- owned-module branch coverage: `86.12%` (required floor: 85%);
+- complete repository `make check`: Ruff format/lint passed and `823 passed`;
+- `node --check` passed for `app.js` and `locale.js`;
+- `git diff --check` passed;
+- catalog parity, placeholder parity, registry/error coverage, malicious locale,
+  raw-markup interpolation, inert rendering, and local asset serving are
+  automated tests;
+- scripted Chromium at 1440-pixel desktop and 390-pixel mobile widths showed no
+  runtime errors against a temporary copy of real project outputs;
+- Chinese/English in-place switching issued zero network requests, preserved a
+  retained generated workspace, and separately retained a proposal receipt and
+  verified Markdown preview;
+- browser back/forward restored a Chinese fixed progress route and English
+  generated route; refresh restored locale and intentionally cleared the
+  credential input;
+- isolated wheel: 152 entries, all six receiver/locale assets present, no
+  `outputs/`, tests, `third_party/`, key, or environment files.
+
+Known product boundaries are intentional: only `en` and `zh-CN` are registered;
+authoritative project content is not machine-translated; credentials must be
+re-entered after refresh; retained generated surfaces remain process-local and
+become stale after server restart. These do not leave any r4 exit-gate item
+unfinished.
 
 This r4 assignment supersedes the idle marker below. The user explicitly
 authorized Window 3 to resume without waiting for main-window dispatch and to
