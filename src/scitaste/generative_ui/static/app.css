@@ -117,6 +117,22 @@ fieldset:disabled {
   grid-template-columns: minmax(12rem, 20rem) auto;
 }
 
+.header-controls {
+  align-items: end;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.locale-panel {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 8rem;
+}
+
+.locale-panel label {
+  font-size: 0.75rem;
+}
+
 .credential-panel label {
   font-size: 0.75rem;
   grid-column: 1 / -1;
@@ -1064,6 +1080,11 @@ code {
 
 @media (max-width: 720px) {
   .app-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-controls {
     align-items: stretch;
     flex-direction: column;
   }

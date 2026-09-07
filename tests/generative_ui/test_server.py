@@ -179,11 +179,20 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     with _running_server(runtime) as origin:
         index = httpx.get(origin + "/")
         script = httpx.get(origin + "/assets/app.js")
+        locale_script = httpx.get(origin + "/assets/locale.js")
+        english = httpx.get(origin + "/assets/locales/en.json")
+        chinese = httpx.get(origin + "/assets/locales/zh-CN.json")
         stylesheet = httpx.get(origin + "/assets/app.css")
 
     assert index.status_code == 200
     assert script.status_code == 200
+    assert locale_script.status_code == 200
+    assert english.status_code == 200
+    assert chinese.status_code == 200
     assert stylesheet.status_code == 200
+    assert locale_script.headers["content-type"].startswith("text/javascript")
+    assert english.headers["content-type"].startswith("application/json")
+    assert chinese.headers["content-type"].startswith("application/json")
     assert "default-src 'self'" in index.headers["content-security-policy"]
     assert "img-src 'self' blob:" in index.headers["content-security-policy"]
     assert "https://" not in index.text
@@ -212,9 +221,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'id="intent-form"' in index.text
     assert "/api/v3/generative/projects/" in script.text
     assert "quick_catalog_fingerprint" in script.text
-    assert "Generated from verified evidence" in script.text
-    assert "Canonical evidence snapshot" in script.text
-    assert "Exact record distribution" in script.text
+    assert english.json()["generation.accepted"].startswith("Generated from verified evidence")
+    assert english.json()["progress.canonical"] == "Canonical evidence snapshot"
+    assert english.json()["progress.distribution.subtitle"].startswith("Exact record distribution")
+    assert chinese.json()["progress.canonical"] == "权威证据快照"
+    assert 'from "/assets/locale.js"' in script.text
+    assert "translateMessage" in locale_script.text
     assert "requestCandidateWorkspace" in script.text
     assert "generation-metadata" in script.text
     assert ".plan-emphasis-compact .progress-board" in stylesheet.text

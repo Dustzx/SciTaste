@@ -61,6 +61,12 @@ _PUBLIC_ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/assets/app.css": ("app.css", "text/css; charset=utf-8"),
     "/assets/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/assets/locale.js": ("locale.js", "text/javascript; charset=utf-8"),
+    "/assets/locales/en.json": ("locales/en.json", "application/json; charset=utf-8"),
+    "/assets/locales/zh-CN.json": (
+        "locales/zh-CN.json",
+        "application/json; charset=utf-8",
+    ),
 }
 
 

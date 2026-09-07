@@ -259,6 +259,46 @@ artifact inspections still stop at their existing proposal/read-only
 boundaries. The process retains at most 128 generated surfaces using
 least-recently-used eviction; an evicted link likewise fails stale.
 
+### Receiver-owned multilingual presentation
+
+The fixed shell and all receiver-authored vocabulary are available in English
+and Simplified Chinese. The packaged `en.json` and `zh-CN.json` catalogs have an
+exact key contract covering navigation, accessibility labels, placeholders,
+progress synthesis, fixed and generated component names, standard proposal
+labels, field names, status categories, freshness, empty states, and closed
+server error codes. A small side-effect-free `locale.js` module validates both
+catalogs before enabling the receiver, applies deterministic English fallback,
+and treats interpolation values only as text. The renderer continues to use
+`createTextNode` and `textContent`; translations cannot become markup, URLs,
+callbacks, or executable values.
+
+Language is presentation state, not research state. The selector rewrites only
+the fragment suffix, for example
+`#/projects/my-project/project-progress?lang=zh-CN`. The server never receives a
+fragment, and its prohibition on HTTP query strings remains unchanged. A
+refresh or copied deep link can therefore restore the locale and route without
+putting the bearer credential, project evidence, or question in local/session
+storage. An unsupported or hostile `lang` value becomes English. The skip link
+focuses the workspace without replacing the evidence route or losing this
+locale binding.
+
+Switching locale re-renders the already validated document in place. It does
+not call an API or planner and preserves the selected project, fixed or retained
+generated route, quick-intent catalog, proposal receipt, and verified artifact
+preview. Browser back/forward restores the locale recorded with each history
+entry before revalidating that entry's normal project route. Project switching
+still performs the stronger isolation reset described above.
+
+Project titles, current research directions, blocker reasons, milestone
+decisions, paper titles, excerpts, model/provider identities, artifact source,
+and other authoritative values remain byte-for-byte presentation of their
+recorded language. Only receiver-owned labels surrounding those values change.
+Stage records already carry authoritative `label_en` and `label_zh` fields, so
+the receiver selects the matching recorded label rather than translating one.
+No translated string participates in a snapshot hash, surface fingerprint,
+planner input, evidence record, proposal, audit record, permission, or
+controller decision.
+
 ### Self-hosting verification
 
 On 2026-09-06 the offline receiver was exercised against a temporary copy of
@@ -277,15 +317,40 @@ project-management usefulness and the offline generation path; it is not an
 effectiveness result, a live-provider result, or evidence that unregistered
 repository work is complete.
 
-Final offline verification for this branch passed 223 Generative UI and focused
-CLI tests with 86.03% branch-aware coverage of `scitaste.generative_ui` (the
-configured 85% floor), followed by all 626 repository tests through
-`PYTHONPATH=src make check` and `node --check` for the receiver. An isolated
-wheel contained all seven required generation/planner/static assets among 135
-entries and contained no `outputs/`, tests, `third_party/`, key, or environment
-files. The first no-build-isolation wheel attempt did not start because the
-shared virtual environment lacks Hatchling; the standard isolated build then
-completed successfully.
+On 2026-09-07 the multilingual receiver was exercised against a temporary copy
+of the then-current outputs, leaving repository `outputs/` untouched. The
+`scitaste-self-development` progress view opened revision 147 in Simplified
+Chinese with 28 registered runs, 19 observed-complete records, seven requiring
+attention, one candidate, no paper, and 21 evidence disclosures. These are only
+the facts recorded by that copied project snapshot. A blocker-diagnosis quick
+intent produced a deterministic retained workspace whose blocker, progress,
+project-context, placement, planner, and read-only authority labels all changed
+language while project-authored English evidence remained unchanged.
+
+Scripted Chromium checks at 1440-pixel desktop and 390-pixel mobile widths
+found no runtime exceptions. An in-place Chinese/English switch issued zero
+network requests, preserved the project and generated-surface IDs, and retained
+both a proposal receipt and a verified Markdown preview in a separate
+paper-bearing project check. Back/forward restored a Chinese fixed progress
+entry and an English retained generation with their original routes. Refresh
+restored the fragment locale while the password input correctly returned
+empty. The screenshots were temporary visual-inspection artifacts and were not
+added to the repository.
+
+The prior generation-planner branch verification passed 223 Generative UI and
+focused CLI tests with 86.03% branch-aware coverage of
+`scitaste.generative_ui`, followed by all 626 then-current repository tests.
+Those counts are retained as historical verification, not the multilingual
+branch's final result.
+
+Final multilingual verification passed 232 Generative UI and focused CLI tests
+with 86.12% branch-aware coverage of `scitaste.generative_ui` (above the 85%
+gate), followed by all 823 current repository tests through
+`PYTHONPATH=src make check`. Ruff formatting/lint, `node --check` for both
+receiver modules, and `git diff --check` passed. An isolated wheel contained 152
+entries, including `index.html`, `app.css`, `app.js`, `locale.js`, `en.json`,
+and `zh-CN.json`; it contained no `outputs/`, tests, `third_party/`, key, or
+environment files.
 
 ## Trusted project surface factory
 

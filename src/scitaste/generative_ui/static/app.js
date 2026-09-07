@@ -1,3 +1,13 @@
+import {
+  localeFromHash,
+  normalizeLocale,
+  routeFromHash,
+  supportedLocales,
+  translateMessage,
+  validateCatalogs,
+  withLocale,
+} from "/assets/locale.js";
+
 const tokenInput = document.getElementById("bearer-token");
 const connectButton = document.getElementById("connect");
 const projectSelect = document.getElementById("project-select");
@@ -21,6 +31,22 @@ const intentForm = document.getElementById("intent-form");
 const intentQuestion = document.getElementById("intent-question");
 const generateWorkspaceButton = document.getElementById("generate-workspace");
 const intentResult = document.getElementById("intent-result");
+const localeSelect = document.getElementById("locale-select");
+const skipLink = document.querySelector(".skip-link");
+
+const localeAssetPaths = Object.freeze({
+  en: "/assets/locales/en.json",
+  "zh-CN": "/assets/locales/zh-CN.json",
+});
+const localeCatalogs = {en: Object.freeze({}), "zh-CN": Object.freeze({})};
+const quickIntentLabelKeys = Object.freeze({
+  "review-observed-project-progress": "quick.progress",
+  "diagnose-blocked-and-failed-runs": "quick.blockers",
+  "compare-latest-registered-run-records": "quick.comparison",
+  "review-registered-paper-evidence": "quick.paper",
+  "review-manifest-declared-next-gate": "quick.next_gate",
+});
+let activeLocale = localeFromFragment() || browserLocale();
 
 const workspaceViews = Object.freeze(new Set([
   "project-progress",
@@ -39,6 +65,110 @@ let quickIntentCatalog = null;
 let activeProjectId = "";
 let eventCounter = 0;
 let artifactObjectUrl = null;
+let lastProposalReceipt = null;
+let lastArtifactPreview = null;
+let intentResultState = {kind: "empty"};
+let connectionStatusKey = "connection.credential_required";
+let freshnessStatusKey = "freshness.none";
+let connectionStatusError = null;
+
+function browserLocale() {
+  return String(navigator.language || "en").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+}
+
+function fragmentParts(hash = location.hash) {
+  return {route: routeFromHash(hash)};
+}
+
+function localeFromFragment(hash = location.hash) {
+  return localeFromHash(hash);
+}
+
+function localizedHash(route) {
+  return withLocale(route, activeLocale);
+}
+
+function replaceHashLocale() {
+  const route = localizedHash(location.hash || "#/");
+  history.replaceState({...history.state, route}, "", route);
+}
+
+function hasTranslation(key, locale = activeLocale) {
+  return typeof localeCatalogs[locale]?.[key] === "string"
+    || typeof localeCatalogs.en[key] === "string";
+}
+
+function t(key, values = {}) {
+  return translateMessage(localeCatalogs, activeLocale, key, values);
+}
+
+function countMessage(base, count) {
+  return t(`${base}.${count === 1 ? "one" : "many"}`, {count});
+}
+
+function fieldLabel(name) {
+  const key = `field.${name}`;
+  return hasTranslation(key) ? t(key) : name.replaceAll("_", " ");
+}
+
+function localizedCode(value) {
+  const normalized = String(value ?? "none");
+  const key = `code.${normalized}`;
+  return hasTranslation(key) ? t(key) : readableCode(normalized);
+}
+
+function uiError(key) {
+  const error = new Error(t(key));
+  error.translationKey = key;
+  return error;
+}
+
+function localizeStaticShell() {
+  document.documentElement.lang = activeLocale;
+  document.title = t("document.title");
+  localeSelect.value = activeLocale;
+  for (const element of document.querySelectorAll("[data-i18n]")) {
+    element.textContent = t(element.dataset.i18n);
+  }
+  for (const element of document.querySelectorAll("[data-i18n-aria]")) {
+    element.setAttribute("aria-label", t(element.dataset.i18nAria));
+  }
+  for (const element of document.querySelectorAll("[data-i18n-placeholder]")) {
+    element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder));
+  }
+  for (const element of document.querySelectorAll("[data-error-key]")) {
+    element.textContent = t(element.dataset.errorKey);
+  }
+}
+
+function setConnectionStatus(key) {
+  connectionStatusKey = key;
+  connectionStatusError = null;
+  connectionStatus.textContent = t(key);
+}
+
+function setFreshnessStatus(key) {
+  freshnessStatusKey = key;
+  freshness.textContent = t(key);
+}
+
+async function loadLocaleCatalogs() {
+  const entries = await Promise.all(Object.entries(localeAssetPaths).map(async ([locale, path]) => {
+    const response = await fetch(path, {cache: "no-store"});
+    if (!response.ok) {
+      throw new Error(`Locale catalog ${locale} could not be loaded.`);
+    }
+    const catalog = await response.json();
+    if (!catalog || Array.isArray(catalog) || typeof catalog !== "object") {
+      throw new Error(`Locale catalog ${locale} is invalid.`);
+    }
+    return [locale, Object.freeze(catalog)];
+  }));
+  for (const [locale, catalog] of entries) {
+    localeCatalogs[locale] = catalog;
+  }
+  validateCatalogs(localeCatalogs);
+}
 
 function appendText(parent, value) {
   parent.appendChild(document.createTextNode(formatValue(value)));
@@ -46,10 +176,10 @@ function appendText(parent, value) {
 
 function formatValue(value) {
   if (value === null || value === undefined) {
-    return "—";
+    return t("common.missing");
   }
   if (typeof value === "boolean") {
-    return value ? "yes" : "no";
+    return value ? t("common.yes") : t("common.no");
   }
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -65,9 +195,9 @@ function fixedFields(data, names) {
       continue;
     }
     const term = document.createElement("dt");
-    appendText(term, name.replaceAll("_", " "));
+    appendText(term, fieldLabel(name));
     const description = document.createElement("dd");
-    appendText(description, data[name]);
+    appendText(description, localizeFieldValue(name, data[name]));
     list.append(term, description);
   }
   return list;
@@ -93,15 +223,28 @@ function titledSection(title, content) {
   return section;
 }
 
-const progressStateLabels = Object.freeze({
-  observed_completed: "Observed complete",
-  current_work: "Current work",
-  blocked: "Blocked",
-  failed: "Failed",
-  candidate: "Candidate",
-  unavailable: "Unavailable",
-  unknown: "Unknown",
-});
+const localizableValueFields = Object.freeze(new Set([
+  "execution_authority",
+  "metrics_state",
+  "next_boundary",
+  "observed_state",
+  "paper_status",
+  "planner_mode",
+  "preview_kind",
+  "recorded_status",
+  "reported_status",
+  "run_status",
+  "stage_state",
+  "state",
+  "status",
+]));
+
+function localizeFieldValue(name, value) {
+  if (localizableValueFields.has(name) && typeof value === "string") {
+    return localizedCode(value);
+  }
+  return value;
+}
 
 function readableCode(value) {
   return formatValue(value).replaceAll("_", " ").replaceAll("-", " ");
@@ -118,7 +261,7 @@ function compactRunLabel(runId) {
 function progressPill(state, label = null) {
   const pill = document.createElement("span");
   pill.className = `progress-pill state-${state}`;
-  appendText(pill, label || progressStateLabels[state] || readableCode(state));
+  appendText(pill, label || t(`progress.state.${state}`));
   return pill;
 }
 
@@ -127,7 +270,7 @@ function evidenceDisclosure(refIds, fields = null) {
   details.className = "evidence-disclosure";
   const summary = document.createElement("summary");
   const references = Array.from(new Set(refIds || []));
-  appendText(summary, `${references.length} evidence ${references.length === 1 ? "record" : "records"}`);
+  appendText(summary, countMessage("common.records", references.length));
   details.appendChild(summary);
   if (fields) {
     details.appendChild(fixedFields(fields.data, fields.names));
@@ -181,17 +324,17 @@ function progressSection(title, subtitle = null) {
 
 function renderRunDistribution(counts) {
   const section = progressSection(
-    "Registered run outcomes",
-    "Exact record distribution · this is not a project completion percentage.",
+    t("progress.distribution.title"),
+    t("progress.distribution.subtitle"),
   );
   const definitions = [
-    ["observed_completed", "Completed", counts.runs_completed],
-    ["current_work", "Active", counts.runs_active],
-    ["candidate", "Candidate", counts.runs_candidates],
-    ["blocked", "Blocked", counts.runs_blocked],
-    ["failed", "Failed", counts.runs_failed],
-    ["unavailable", "Unavailable", counts.runs_unavailable],
-    ["unknown", "Unknown", counts.runs_unknown],
+    ["observed_completed", t("progress.distribution.completed"), counts.runs_completed],
+    ["current_work", t("progress.distribution.active"), counts.runs_active],
+    ["candidate", t("progress.distribution.candidate"), counts.runs_candidates],
+    ["blocked", t("progress.distribution.blocked"), counts.runs_blocked],
+    ["failed", t("progress.distribution.failed"), counts.runs_failed],
+    ["unavailable", t("progress.distribution.unavailable"), counts.runs_unavailable],
+    ["unknown", t("progress.distribution.unknown"), counts.runs_unknown],
   ];
   const distribution = document.createElement("div");
   distribution.className = "run-distribution";
@@ -199,7 +342,7 @@ function renderRunDistribution(counts) {
   distribution.setAttribute("aria-label", definitions
     .filter(([, , count]) => count > 0)
     .map(([, label, count]) => `${label}: ${count}`)
-    .join(", "));
+    .join(activeLocale === "zh-CN" ? "，" : ", ") || t("progress.distribution.aria_empty"));
   const legend = document.createElement("ul");
   legend.className = "run-distribution-legend";
   for (const [state, label, count] of definitions) {
@@ -246,7 +389,7 @@ function renderAttentionItem(item) {
   } else {
     const unavailable = document.createElement("p");
     unavailable.className = "muted compact-copy";
-    appendText(unavailable, "No recorded reason is available for this run.");
+    appendText(unavailable, t("progress.no_reason_run"));
     card.appendChild(unavailable);
   }
   card.appendChild(evidenceDisclosure(item.support_ref_ids, {
@@ -302,7 +445,7 @@ function renderActivityItem(item) {
   if (item.selected) {
     const selected = document.createElement("span");
     selected.className = "selection-badge";
-    appendText(selected, "Selected current run");
+    appendText(selected, t("progress.selected_run"));
     row.appendChild(selected);
   }
   row.appendChild(evidenceDisclosure(item.support_ref_ids, {
@@ -317,7 +460,7 @@ function requestCandidateWorkspace(candidateId) {
     (item) => item.quick_intent_id === candidateId,
   );
   if (!descriptor) {
-    showError(intentResult, new Error("Reload this project's current intent catalog."));
+    showError(intentResult, uiError("error.reload_catalog"));
     return;
   }
   generateWithIntent({
@@ -339,7 +482,7 @@ function renderRunStageExplorer(data) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = run.selected ? "identity-button selected" : "identity-button";
-    appendText(button, `${run.run_id} · ${run.outcome}`);
+    appendText(button, `${run.run_id} · ${localizedCode(run.outcome)}`);
     button.addEventListener("click", () => {
       loadWorkspace({
         view: "run-stage-explorer",
@@ -358,7 +501,7 @@ function renderRunStageExplorer(data) {
     ]));
     runList.appendChild(item);
   }
-  container.appendChild(titledSection("Registered runs", runList));
+  container.appendChild(titledSection(t("run.registered"), runList));
 
   if (data.stages.length > 0) {
     const stages = document.createElement("ol");
@@ -366,7 +509,10 @@ function renderRunStageExplorer(data) {
     for (const stage of data.stages) {
       const item = document.createElement("li");
       const heading = document.createElement("strong");
-      appendText(heading, `Stage ${stage.stage} · ${stage.label_en} · ${stage.label_zh}`);
+      appendText(heading, t("run.stage_heading", {
+        stage: stage.stage,
+        label: activeLocale === "zh-CN" ? stage.label_zh : stage.label_en,
+      }));
       item.append(heading, fixedFields(stage, [
         "status",
         "artifact_count",
@@ -375,7 +521,7 @@ function renderRunStageExplorer(data) {
       ]));
       stages.appendChild(item);
     }
-    container.appendChild(titledSection("Authoritative stage outputs", stages));
+    container.appendChild(titledSection(t("run.stage_outputs"), stages));
   } else {
     container.appendChild(fixedFields(data, ["stage_state"]));
   }
@@ -401,13 +547,13 @@ function renderComparison(data) {
   const container = document.createElement("div");
   container.className = "comparison-grid";
   container.append(
-    titledSection("Baseline", fixedFields(data.baseline, [
+    titledSection(t("selection.baseline"), fixedFields(data.baseline, [
       "run_id", "status", "provider", "model_name", "condition", "seed", "evidence_scope",
     ])),
-    titledSection("Candidate", fixedFields(data.candidate, [
+    titledSection(t("selection.candidate"), fixedFields(data.candidate, [
       "run_id", "status", "provider", "model_name", "condition", "seed", "evidence_scope",
     ])),
-    titledSection("Comparable metrics", fixedFields(data, [
+    titledSection(t("comparison.metrics"), fixedFields(data, [
       "metrics_state", "metrics_reason_code", "metrics",
     ])),
   );
@@ -419,7 +565,7 @@ function renderArtifactViewer(data) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "inspect-button";
-  appendText(button, "Inspect verified preview");
+  appendText(button, t("artifact.inspect"));
   button.addEventListener("click", () => inspectArtifact(data.artifact_ref_id));
   container.append(
     fixedFields(data, ["artifact_path", "media_type", "artifact_ref_id"]),
@@ -435,16 +581,16 @@ function renderProjectSummary(data) {
   status.className = "compact-row-header";
   const statusLabel = document.createElement("span");
   statusLabel.className = "card-label";
-  appendText(statusLabel, "Recorded project status");
-  status.append(statusLabel, progressPill(data.project_status, readableCode(data.project_status)));
+  appendText(statusLabel, t("project.recorded_status"));
+  status.append(statusLabel, progressPill(data.project_status, localizedCode(data.project_status)));
   const focus = document.createElement("p");
   focus.className = "project-focus-copy";
   appendText(focus, data.current_focus);
   const publication = document.createElement("p");
   publication.className = "availability-note";
   appendText(publication, data.publication_ready
-    ? "A publication-ready paper is registered."
-    : "No publication-ready paper is registered.");
+    ? t("project.publication_ready")
+    : t("project.publication_unready"));
   container.append(status, focus, publication, evidenceDisclosure([data.project_ref_id]));
   return container;
 }
@@ -455,13 +601,13 @@ function renderRunHealth(data) {
   const state = ["complete", "completed", "succeeded", "success"].includes(data.run_status)
     ? "observed_completed"
     : data.run_status;
-  container.appendChild(progressPill(state, readableCode(data.run_status)));
+  container.appendChild(progressPill(state, localizedCode(data.run_status)));
   const facts = document.createElement("div");
   facts.className = "health-facts";
   const factValues = [
-    ["Failure stage", data.failure_stage],
-    ["Retry safe", data.retry_safe],
-    ["Schema valid", data.schema_valid],
+    [t("health.failure_stage"), data.failure_stage],
+    [t("health.retry_safe"), data.retry_safe],
+    [t("health.schema_valid"), data.schema_valid],
   ];
   for (const [label, value] of factValues) {
     const fact = document.createElement("div");
@@ -481,7 +627,7 @@ function renderRunBlockers(data) {
   container.className = "generated-blocker-summary";
   const summary = document.createElement("p");
   summary.className = "component-lede";
-  appendText(summary, `${data.blockers.length} registered runs require attention.`);
+  appendText(summary, t("blocker.summary", {count: data.blockers.length}));
   const list = document.createElement("div");
   list.className = "generated-blocker-list";
   for (const blocker of data.blockers) {
@@ -497,7 +643,7 @@ function renderRunBlockers(data) {
     if (blocker.recorded_reasons.length > 0) {
       appendText(reason, blocker.recorded_reasons[0]);
     } else {
-      appendText(reason, "No recorded reason is available.");
+      appendText(reason, t("blocker.no_reason"));
     }
     item.append(header, reason);
     if (blocker.recorded_reasons.length > 1) {
@@ -531,26 +677,27 @@ function renderProjectProgress(data) {
   heroTop.className = "progress-hero-top";
   const heroLabel = document.createElement("p");
   heroLabel.className = "eyebrow dark";
-  appendText(heroLabel, "Canonical evidence snapshot");
+  appendText(heroLabel, t("progress.canonical"));
   heroTop.append(heroLabel, progressPill(data.project_state));
   const summary = document.createElement("p");
   summary.className = "progress-summary";
-  const candidateClause = data.counts.runs_candidates === 1
-    ? "1 remains a candidate"
-    : `${data.counts.runs_candidates} remain candidates`;
-  const paperClause = data.counts.papers_registered === 1
-    ? "1 paper is registered"
-    : `${data.counts.papers_registered} papers are registered`;
+  const candidateClause = countMessage("progress.candidates", data.counts.runs_candidates);
+  const paperClause = countMessage("progress.papers", data.counts.papers_registered);
   appendText(
     summary,
-    `${data.counts.runs_completed} of ${data.counts.runs_registered} registered run records have observed completion. `
-      + `${attentionCount} need attention; ${candidateClause}. ${paperClause}.`,
+    t("progress.summary", {
+      completed: data.counts.runs_completed,
+      registered: data.counts.runs_registered,
+      attention: attentionCount,
+      candidates: candidateClause,
+      papers: paperClause,
+    }),
   );
   const generationHint = document.createElement("p");
   generationHint.className = "generation-hint";
   appendText(
     generationHint,
-    "Use an evidence prompt or free question to recompose this workspace around a specific goal.",
+    t("progress.generation_hint"),
   );
   hero.append(heroTop, summary, generationHint, evidenceDisclosure(data.summary_ref_ids, {
     data: {
@@ -563,33 +710,33 @@ function renderProjectProgress(data) {
   const metrics = document.createElement("div");
   metrics.className = "progress-metrics";
   metrics.append(
-    progressMetric("Registered runs", data.counts.runs_registered, "authoritative records"),
-    progressMetric("Observed complete", data.counts.runs_completed, "run records", "positive"),
-    progressMetric("Need attention", attentionCount, "blocked or failed", attentionCount ? "warning" : "positive"),
-    progressMetric("Candidates", data.counts.runs_candidates, "not yet accepted", "candidate"),
-    progressMetric("Completed stages", data.counts.completed_stages, "where stage semantics apply"),
-    progressMetric("Papers", data.counts.papers_registered, "registered artifacts"),
+    progressMetric(t("progress.metric.registered"), data.counts.runs_registered, t("progress.metric.registered_note")),
+    progressMetric(t("progress.metric.completed"), data.counts.runs_completed, t("progress.metric.completed_note"), "positive"),
+    progressMetric(t("progress.metric.attention"), attentionCount, t("progress.metric.attention_note"), attentionCount ? "warning" : "positive"),
+    progressMetric(t("progress.metric.candidates"), data.counts.runs_candidates, t("progress.metric.candidates_note"), "candidate"),
+    progressMetric(t("progress.metric.stages"), data.counts.completed_stages, t("progress.metric.stages_note")),
+    progressMetric(t("progress.metric.papers"), data.counts.papers_registered, t("progress.metric.papers_note")),
   );
   container.append(hero, metrics, renderRunDistribution(data.counts));
 
-  const direction = progressSection("Current direction", "Recorded focus, selection, and next gate.");
+  const direction = progressSection(t("progress.direction.title"), t("progress.direction.subtitle"));
   const directionGrid = document.createElement("div");
   directionGrid.className = "direction-grid";
   const focus = document.createElement("article");
   const focusLabel = document.createElement("span");
   focusLabel.className = "card-label";
-  appendText(focusLabel, "Current focus");
+  appendText(focusLabel, t("progress.current_focus"));
   const focusValue = document.createElement("strong");
-  appendText(focusValue, readableCode(data.focus));
+  appendText(focusValue, data.focus);
   const focusStatus = document.createElement("small");
-  appendText(focusStatus, readableCode(data.focus_status));
+  appendText(focusStatus, localizedCode(data.focus_status));
   focus.append(focusLabel, focusValue, focusStatus, evidenceDisclosure(data.focus_ref_ids));
   const gate = document.createElement("article");
   const gateLabel = document.createElement("span");
   gateLabel.className = "card-label";
-  appendText(gateLabel, "Next evidence gate");
+  appendText(gateLabel, t("progress.next_gate"));
   const gateValue = document.createElement("strong");
-  appendText(gateValue, data.next_gate || "No next gate is recorded.");
+  appendText(gateValue, data.next_gate || t("progress.no_next_gate"));
   gate.append(gateLabel, gateValue);
   directionGrid.append(focus, gate);
   if (data.current_run_id) {
@@ -598,7 +745,7 @@ function renderProjectProgress(data) {
     const runCopy = document.createElement("div");
     const runLabel = document.createElement("span");
     runLabel.className = "card-label";
-    appendText(runLabel, "Selected run · selection is not execution");
+    appendText(runLabel, t("progress.selected_not_execution"));
     const runValue = document.createElement("strong");
     appendText(runValue, compactRunLabel(data.current_run_id));
     runCopy.append(runLabel, runValue, evidenceDisclosure(data.current_run_ref_ids, {
@@ -608,7 +755,7 @@ function renderProjectProgress(data) {
     const openRun = document.createElement("button");
     openRun.type = "button";
     openRun.className = "secondary-button";
-    appendText(openRun, "Open run stages");
+    appendText(openRun, t("progress.open_run"));
     openRun.addEventListener("click", () => loadWorkspace({
       view: "run-stage-explorer",
       project_id: currentProjectId(),
@@ -623,7 +770,10 @@ function renderProjectProgress(data) {
   const standing = document.createElement("div");
   standing.className = "progress-columns";
   if (data.attention.length > 0) {
-    const attention = progressSection("Needs attention", `${data.attention.length} registered runs are blocked or failed.`);
+    const attention = progressSection(
+      t("progress.attention.title"),
+      t("progress.attention.subtitle", {count: data.attention.length}),
+    );
     const attentionList = document.createElement("div");
     attentionList.className = "attention-list";
     for (const item of data.attention) {
@@ -634,10 +784,10 @@ function renderProjectProgress(data) {
   }
 
   const milestones = progressSection(
-    "Decision timeline",
+    t("progress.timeline.title"),
     data.milestones.length > 0
-      ? `${data.milestones.length} declared milestones in recorded order.`
-      : "No project milestone is available.",
+      ? t("progress.timeline.subtitle", {count: data.milestones.length})
+      : t("progress.timeline.empty"),
   );
   if (data.milestones.length > 0) {
     const timeline = document.createElement("ol");
@@ -658,8 +808,8 @@ function renderProjectProgress(data) {
   const activityAndNext = document.createElement("div");
   activityAndNext.className = "progress-columns lower-grid";
   const activity = progressSection(
-    "Recent registered activity",
-    `${data.activity_total} run records · latest manifest entries shown first.`,
+    t("progress.activity.title"),
+    t("progress.activity.subtitle", {count: data.activity_total}),
   );
   const visibleActivity = document.createElement("ul");
   visibleActivity.className = "activity-list";
@@ -671,7 +821,9 @@ function renderProjectProgress(data) {
     const more = document.createElement("details");
     more.className = "more-activity";
     const moreSummary = document.createElement("summary");
-    appendText(moreSummary, `Show ${data.recent_activity.length - 4} more registered runs`);
+    appendText(moreSummary, t("progress.activity.more", {
+      count: data.recent_activity.length - 4,
+    }));
     const remainder = document.createElement("ul");
     remainder.className = "activity-list";
     for (const item of data.recent_activity.slice(4)) {
@@ -683,21 +835,21 @@ function renderProjectProgress(data) {
   if (data.activity_truncated) {
     const truncated = document.createElement("p");
     truncated.className = "muted compact-copy";
-    appendText(truncated, "The server bounded this activity list; open Runs & stages for the full catalog.");
+    appendText(truncated, t("progress.activity.truncated"));
     activity.appendChild(truncated);
   }
   activityAndNext.appendChild(activity);
 
   const nextSteps = progressSection(
-    "Explore next",
-    "These evidence-supported options generate another read-only workspace; they do not start work.",
+    t("progress.next.title"),
+    t("progress.next.subtitle"),
   );
   const candidateLabels = {
-    review_progress: "Review this progress",
-    diagnose_blockers: "Diagnose blockers",
-    compare_runs: "Compare recent runs",
-    review_paper_evidence: "Review paper evidence",
-    review_next_gate: "Explore the next gate",
+    review_progress: t("progress.next.review"),
+    diagnose_blockers: t("progress.next.blockers"),
+    compare_runs: t("progress.next.compare"),
+    review_paper_evidence: t("progress.next.paper"),
+    review_next_gate: t("progress.next.gate"),
   };
   const candidateList = document.createElement("div");
   candidateList.className = "candidate-list";
@@ -708,7 +860,10 @@ function renderProjectProgress(data) {
     const label = document.createElement("strong");
     appendText(label, candidateLabels[candidate.kind] || readableCode(candidate.label_code));
     const note = document.createElement("small");
-    appendText(note, `${candidate.target_ids.length} bound targets · ${candidate.support_ref_ids.length} evidence records`);
+    appendText(note, t("progress.next.meta", {
+      targets: countMessage("common.targets", candidate.target_ids.length),
+      evidence: countMessage("common.records", candidate.support_ref_ids.length),
+    }));
     button.append(label, note);
     button.addEventListener("click", () => requestCandidateWorkspace(candidate.candidate_id));
     candidateList.appendChild(button);
@@ -718,16 +873,18 @@ function renderProjectProgress(data) {
   const availability = document.createElement("div");
   availability.className = "availability-note";
   if (data.stages.length > 0) {
-    appendText(availability, `${data.stages.length} stage records are available in Runs & stages.`);
+    appendText(availability, t("progress.availability.stages", {count: data.stages.length}));
   } else if (data.stage_semantics === "self-development-milestones-not-autoresearchclaw-stages") {
-    appendText(availability, "This self-development project uses decision milestones instead of AutoResearchClaw stage progress.");
+    appendText(availability, t("progress.availability.self_development"));
   } else {
-    appendText(availability, `Stage evidence is ${readableCode(data.stage_state)}.`);
+    appendText(availability, t("progress.availability.stage_state", {
+      state: localizedCode(data.stage_state),
+    }));
   }
   if (data.papers.length > 0) {
-    appendText(availability, ` ${data.papers.length} registered papers are available in Papers & evidence.`);
+    appendText(availability, t("progress.availability.papers", {count: data.papers.length}));
   } else {
-    appendText(availability, " No paper is currently registered.");
+    appendText(availability, t("progress.availability.no_paper"));
   }
   nextSteps.appendChild(availability);
   activityAndNext.appendChild(nextSteps);
@@ -776,7 +933,32 @@ const componentRenderers = Object.freeze({
   ProjectProgressBoard: renderProjectProgress,
 });
 
-function renderWorkspace(documentValue) {
+function workspaceTitle(documentValue) {
+  if (documentValue.status === "generated") {
+    return t(`title.generated.${documentValue.intent.goal}`);
+  }
+  return t(`title.${documentValue.query.view}`);
+}
+
+function componentTitle(component) {
+  if (component.renderer === "ProjectSummaryCard") {
+    return component.title;
+  }
+  const key = `component.${component.renderer}`;
+  return hasTranslation(key) ? t(key) : component.title;
+}
+
+function placementExplanation(placement) {
+  const key = `placement.${placement.reason_code}`;
+  return hasTranslation(key) ? t(key) : placement.explanation;
+}
+
+function actionLabel(action) {
+  const key = `action.${action.proposal?.payload?.kind}`;
+  return hasTranslation(key) ? t(key) : action.label;
+}
+
+function renderWorkspace(documentValue, {preserveTransient = false, focus = true} = {}) {
   const renderer = documentValue.renderer;
   const generated = documentValue.status === "generated";
   const placements = new Map((documentValue.placements || []).map(
@@ -784,20 +966,24 @@ function renderWorkspace(documentValue) {
   ));
   workspace.classList.toggle("generated-workspace", generated);
   workspace.replaceChildren();
-  proposalResult.replaceChildren();
-  clearArtifactPreview();
+  if (!preserveTransient) {
+    lastProposalReceipt = null;
+    lastArtifactPreview = null;
+  }
+  renderProposalResult();
+  renderArtifactResult();
   if (generated) {
     workspace.appendChild(renderGenerationSummary(documentValue));
   }
   const title = document.createElement("h2");
   title.className = "workspace-title";
-  appendText(title, renderer.title);
+  appendText(title, workspaceTitle(documentValue));
   workspace.appendChild(title);
   const cards = new Map();
   for (const component of renderer.components) {
     const renderComponent = componentRenderers[component.renderer];
     if (typeof renderComponent !== "function") {
-      throw new Error("The server selected an unknown receiver component.");
+      throw uiError("workspace.unknown_component");
     }
     const card = document.createElement("section");
     card.className = "component-card";
@@ -807,12 +993,12 @@ function renderWorkspace(documentValue) {
       card.classList.add(`plan-emphasis-${placement.emphasis}`);
     }
     const heading = document.createElement("h2");
-    appendText(heading, component.title);
+    appendText(heading, componentTitle(component));
     card.append(heading, renderComponent(component.data));
     if (placement) {
       const explanation = document.createElement("p");
       explanation.className = "placement-explanation";
-      appendText(explanation, placement.explanation);
+      appendText(explanation, placementExplanation(placement));
       card.appendChild(explanation);
     }
     workspace.appendChild(card);
@@ -821,7 +1007,7 @@ function renderWorkspace(documentValue) {
   for (const action of renderer.actions) {
     const card = cards.get(action.component_id);
     if (!card) {
-      throw new Error("The server returned an action without a receiver component.");
+      throw uiError("workspace.orphan_action");
     }
     let actions = card.querySelector(".component-actions");
     if (!actions) {
@@ -831,7 +1017,7 @@ function renderWorkspace(documentValue) {
     }
     const button = document.createElement("button");
     button.type = "button";
-    appendText(button, action.label);
+    appendText(button, actionLabel(action));
     button.addEventListener("click", () => submitAction(action));
     actions.appendChild(button);
   }
@@ -839,7 +1025,9 @@ function renderWorkspace(documentValue) {
   updateFreshness(documentValue);
   updateActiveView(generated ? null : documentValue.query.view);
   workspace.setAttribute("aria-busy", "false");
-  workspace.focus({preventScroll: true});
+  if (focus) {
+    workspace.focus({preventScroll: true});
+  }
 }
 
 function renderGenerationSummary(documentValue) {
@@ -847,16 +1035,18 @@ function renderGenerationSummary(documentValue) {
   summary.className = "generation-summary";
   const eyebrow = document.createElement("p");
   eyebrow.className = "eyebrow dark";
-  appendText(eyebrow, "Validated generated workspace");
+  appendText(eyebrow, t("generation.validated"));
   const heading = document.createElement("h2");
-  appendText(heading, documentValue.intent.goal.replaceAll("_", " "));
+  appendText(heading, t(`title.generated.${documentValue.intent.goal}`));
   const planner = documentValue.planning?.provenance;
   const metadata = document.createElement("div");
   metadata.className = "generation-metadata";
   const values = [
-    ["Planner", readableCode(planner?.mode)],
-    ["Evidence snapshot", `revision ${documentValue.snapshot_revision}`],
-    ["Authority", "read-only"],
+    [t("generation.planner"), localizedCode(planner?.mode)],
+    [t("generation.snapshot"), t("generation.revision", {
+      revision: documentValue.snapshot_revision,
+    })],
+    [t("generation.authority"), t("generation.read_only")],
   ];
   for (const [label, value] of values) {
     const item = document.createElement("span");
@@ -870,7 +1060,7 @@ function renderGenerationSummary(documentValue) {
   const provenance = document.createElement("details");
   provenance.className = "generation-provenance";
   const provenanceSummary = document.createElement("summary");
-  appendText(provenanceSummary, "Planning provenance");
+  appendText(provenanceSummary, t("generation.provenance"));
   provenance.append(provenanceSummary, fixedFields({
     reason_code: documentValue.reason_code,
     execution_authority: documentValue.execution_authority,
@@ -881,12 +1071,13 @@ function renderGenerationSummary(documentValue) {
 
 function updateFreshness(documentValue) {
   const state = documentValue.freshness;
-  freshness.textContent = [
-    `Project revision ${state.project_revision}`,
-    `evidence ${state.evidence_count}`,
-    `snapshot ${state.snapshot_sha256.slice(0, 12)}`,
-    `surface ${state.surface_fingerprint.slice(0, 12)}`,
-  ].join(" · ");
+  freshnessStatusKey = null;
+  freshness.textContent = t("freshness.summary", {
+    revision: state.project_revision,
+    evidence: state.evidence_count,
+    snapshot: state.snapshot_sha256.slice(0, 12),
+    surface: state.surface_fingerprint.slice(0, 12),
+  });
 }
 
 function updateActiveView(view) {
@@ -975,19 +1166,8 @@ async function submitAction(action) {
       method: "POST",
       body: JSON.stringify(event),
     });
-    const explanation = document.createElement("p");
-    explanation.className = "proposal-explanation";
-    explanation.textContent = "Advice recorded. Awaiting a deterministic controller; not approved or executed.";
-    proposalResult.replaceChildren(
-      explanation,
-      fixedFields(receipt, [
-        "status",
-        "execution_authority",
-        "next_boundary",
-        "event_id",
-        "action_id",
-      ]),
-    );
+    lastProposalReceipt = receipt;
+    renderProposalResult();
   } catch (error) {
     showError(proposalResult, error);
   }
@@ -1025,17 +1205,44 @@ async function inspectArtifact(artifactRefId) {
   }
 }
 
-function clearArtifactPreview() {
+function renderProposalResult() {
+  proposalResult.replaceChildren();
+  if (!lastProposalReceipt) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    appendText(empty, t("inspector.proposal_none"));
+    proposalResult.appendChild(empty);
+    return;
+  }
+  const explanation = document.createElement("p");
+  explanation.className = "proposal-explanation";
+  explanation.textContent = t("inspector.proposal_recorded");
+  proposalResult.append(
+    explanation,
+    fixedFields(lastProposalReceipt, [
+      "status",
+      "execution_authority",
+      "next_boundary",
+      "event_id",
+      "action_id",
+    ]),
+  );
+}
+
+function clearArtifactPreview({forget = true} = {}) {
   if (artifactObjectUrl !== null) {
     URL.revokeObjectURL(artifactObjectUrl);
     artifactObjectUrl = null;
+  }
+  if (forget) {
+    lastArtifactPreview = null;
   }
   artifactResult.replaceChildren();
 }
 
 function interactionPath(operation) {
   if (!currentDocument || !["events", "inspections"].includes(operation)) {
-    throw new Error("No current trusted interaction surface is available.");
+    throw uiError("error.no_interaction_surface");
   }
   if (currentDocument.status === "generated") {
     const renderer = currentDocument.renderer;
@@ -1045,8 +1252,23 @@ function interactionPath(operation) {
   return `${workspacePath(currentDocument.query)}/${operation}`;
 }
 
-function renderArtifactPreview(preview) {
-  clearArtifactPreview();
+function renderArtifactResult() {
+  if (lastArtifactPreview) {
+    renderArtifactPreview(lastArtifactPreview, {remember: false});
+    return;
+  }
+  clearArtifactPreview({forget: false});
+  const empty = document.createElement("p");
+  empty.className = "muted";
+  appendText(empty, t("inspector.evidence_none"));
+  artifactResult.appendChild(empty);
+}
+
+function renderArtifactPreview(preview, {remember = true} = {}) {
+  clearArtifactPreview({forget: false});
+  if (remember) {
+    lastArtifactPreview = preview;
+  }
   const metadata = fixedFields(preview.receipt, [
     "media_type",
     "byte_length",
@@ -1065,7 +1287,7 @@ function renderArtifactPreview(preview) {
     }));
     const image = document.createElement("img");
     image.className = "artifact-image";
-    image.alt = "Verified project artifact preview";
+    image.alt = t("inspector.image_alt");
     image.src = artifactObjectUrl;
     artifactResult.appendChild(image);
     return;
@@ -1092,6 +1314,9 @@ function clearProjectContext(projectId = "") {
   activeProjectId = projectId;
   currentDocument = null;
   quickIntentCatalog = null;
+  lastProposalReceipt = null;
+  lastArtifactPreview = null;
+  intentResultState = {kind: "empty"};
   responseCache.clear();
   resetCatalogs();
   intentQuestion.value = "";
@@ -1099,26 +1324,57 @@ function clearProjectContext(projectId = "") {
   const quickMessage = document.createElement("p");
   quickMessage.className = "muted";
   appendText(quickMessage, projectId
-    ? "Loading prompts grounded in this project..."
-    : "Open a project to load applicable prompts.");
+    ? t("connection.loading_prompts")
+    : t("quick.open_project"));
   quickIntents.appendChild(quickMessage);
   intentResult.replaceChildren();
   const intentMessage = document.createElement("p");
   intentMessage.className = "muted";
-  appendText(intentMessage, "No generated workspace requested.");
+  appendText(intentMessage, t("generation.none"));
   intentResult.appendChild(intentMessage);
-  proposalResult.replaceChildren();
+  renderProposalResult();
   clearArtifactPreview();
-  freshness.textContent = "No authoritative project view loaded.";
+  renderArtifactResult();
+  setFreshnessStatus("freshness.none");
   workspace.replaceChildren();
   workspace.classList.remove("generated-workspace");
   const empty = document.createElement("p");
   empty.className = "empty-state";
   appendText(empty, projectId
-    ? "Open the selected project to load its evidence."
-    : "No trusted project workspace is loaded.");
+    ? t("workspace.open_selected")
+    : t("workspace.empty"));
   workspace.appendChild(empty);
   setIntentEnabled(false);
+}
+
+function renderQuickIntents() {
+  quickIntents.replaceChildren();
+  if (!quickIntentCatalog) {
+    const message = document.createElement("p");
+    message.className = "muted";
+    appendText(message, activeProjectId
+      ? t("connection.loading_prompts")
+      : t("quick.open_project"));
+    quickIntents.appendChild(message);
+    return;
+  }
+  for (const descriptor of quickIntentCatalog.intents) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "quick-intent-button";
+    button.dataset.quickIntentId = descriptor.quick_intent_id;
+    const labelKey = quickIntentLabelKeys[descriptor.label_code];
+    appendText(button, labelKey ? t(labelKey) : descriptor.label);
+    button.addEventListener("click", () => generateWithIntent({
+      schema_version: "1.0",
+      kind: "quick",
+      project_id: quickIntentCatalog.snapshot.project_id,
+      snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+      snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+      quick_intent_id: descriptor.quick_intent_id,
+    }));
+    quickIntents.appendChild(button);
+  }
 }
 
 async function loadQuickIntents(projectId) {
@@ -1131,44 +1387,27 @@ async function loadQuickIntents(projectId) {
       return;
     }
     quickIntentCatalog = catalog;
-    quickIntents.replaceChildren();
-    for (const descriptor of catalog.intents) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "quick-intent-button";
-      button.dataset.quickIntentId = descriptor.quick_intent_id;
-      appendText(button, descriptor.label);
-      button.addEventListener("click", () => generateWithIntent({
-        schema_version: "1.0",
-        kind: "quick",
-        project_id: catalog.snapshot.project_id,
-        snapshot_revision: catalog.snapshot.snapshot_revision,
-        snapshot_sha256: catalog.snapshot.snapshot_sha256,
-        quick_intent_id: descriptor.quick_intent_id,
-      }));
-      quickIntents.appendChild(button);
-    }
+    renderQuickIntents();
     setIntentEnabled(true);
   } catch (error) {
     quickIntentCatalog = null;
     setIntentEnabled(false);
-    showError(intentResult, error);
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
   }
 }
 
 async function generateWithIntent(intentRequest) {
   if (!quickIntentCatalog || intentRequest.project_id !== activeProjectId) {
-    showError(intentResult, new Error("Reload this project's current intent catalog."));
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
     return;
   }
   const requestedProject = activeProjectId;
   const requestedCatalog = quickIntentCatalog.fingerprint;
   setIntentEnabled(false);
-  intentResult.replaceChildren();
-  const planning = document.createElement("p");
-  planning.className = "muted";
-  appendText(planning, "Resolving intent and validating a component plan...");
-  intentResult.appendChild(planning);
+  intentResultState = {kind: "resolving"};
+  renderIntentResult();
   try {
     const documentValue = await api(
       `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}/workspace`,
@@ -1190,16 +1429,16 @@ async function generateWithIntent(intentRequest) {
     }
     currentDocument = documentValue;
     renderWorkspace(documentValue);
-    const mode = documentValue.planning.provenance.mode.replaceAll("_", " ");
-    intentResult.replaceChildren();
-    const accepted = document.createElement("p");
-    accepted.className = "generation-accepted";
-    appendText(accepted, `Generated from verified evidence · ${mode} · no execution authority.`);
-    intentResult.appendChild(accepted);
+    intentResultState = {
+      kind: "accepted",
+      mode: documentValue.planning.provenance.mode,
+    };
+    renderIntentResult();
     const route = generatedWorkspaceHash(documentValue);
     history.pushState({route}, "", route);
   } catch (error) {
-    showError(intentResult, error);
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
     if (error instanceof Error && error.message.includes("current trusted surface")) {
       quickIntentCatalog = null;
     }
@@ -1211,16 +1450,49 @@ async function generateWithIntent(intentRequest) {
 }
 
 function renderGenerationFailure(documentValue) {
+  intentResultState = {kind: "failure", documentValue};
+  renderIntentResult();
+}
+
+function renderIntentResult() {
   intentResult.replaceChildren();
+  if (intentResultState.kind === "empty") {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    appendText(empty, t("generation.none"));
+    intentResult.appendChild(empty);
+    return;
+  }
+  if (intentResultState.kind === "resolving") {
+    const planning = document.createElement("p");
+    planning.className = "muted";
+    appendText(planning, t("generation.resolving"));
+    intentResult.appendChild(planning);
+    return;
+  }
+  if (intentResultState.kind === "accepted") {
+    const accepted = document.createElement("p");
+    accepted.className = "generation-accepted";
+    appendText(accepted, t("generation.accepted", {
+      mode: localizedCode(intentResultState.mode),
+    }));
+    intentResult.appendChild(accepted);
+    return;
+  }
+  if (intentResultState.kind === "error") {
+    showError(intentResult, intentResultState.error);
+    return;
+  }
+  const documentValue = intentResultState.documentValue;
   const alert = document.createElement("div");
   alert.className = "generation-failure";
   alert.setAttribute("role", "alert");
   const heading = document.createElement("strong");
-  appendText(heading, documentValue.status.replaceAll("_", " "));
+  appendText(heading, localizedCode(documentValue.status));
   alert.append(heading, fixedFields(documentValue, ["reason_code", "snapshot_revision"]));
   if ((documentValue.entity_candidates || []).length > 0) {
     alert.appendChild(titledSection(
-      "Choose a registered identity and ask again",
+      t("generation.choose_identity"),
       fixedRows(documentValue.entity_candidates, ["entity_id", "entity_kind"]),
     ));
   }
@@ -1245,9 +1517,7 @@ async function loadProjects() {
     for (const button of viewButtons) {
       button.disabled = !available;
     }
-    connectionStatus.textContent = available
-      ? "Authenticated. Every view will revalidate current project evidence."
-      : "Authenticated. No authoritative projects were found.";
+    setConnectionStatus(available ? "connection.authenticated" : "connection.no_projects");
     if (!available) {
       setBusy(false);
       return;
@@ -1296,7 +1566,7 @@ async function loadWorkspace(query, historyMode = "push") {
         history.pushState({route}, "", route);
       }
     }
-    connectionStatus.textContent = "Current content-addressed workspace loaded.";
+    setConnectionStatus("connection.workspace_loaded");
     if (!quickIntentCatalog
         || quickIntentCatalog.snapshot.snapshot_sha256 !== documentValue.freshness.snapshot_sha256) {
       await loadQuickIntents(documentValue.query.project_id);
@@ -1304,7 +1574,7 @@ async function loadWorkspace(query, historyMode = "push") {
   } catch (error) {
     currentDocument = null;
     setBusy(false);
-    freshness.textContent = "Workspace freshness could not be verified.";
+    setFreshnessStatus("freshness.unverified");
     showError(workspace, error);
     workspace.focus({preventScroll: true});
   }
@@ -1312,7 +1582,7 @@ async function loadWorkspace(query, historyMode = "push") {
 
 async function loadGeneratedWorkspace(route, historyMode = "push") {
   if (!validProjectId(route.project_id) || !validEntryId(route.generation_id)) {
-    throw new Error("Generated workspace identity is invalid.");
+    throw uiError("error.generated_identity");
   }
   if (activeProjectId !== route.project_id) {
     clearProjectContext(route.project_id);
@@ -1324,7 +1594,7 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
       + `/generations/${encodeURIComponent(route.generation_id)}`,
     );
     if (documentValue.status !== "generated") {
-      throw new Error("The retained generation is not renderable.");
+      throw uiError("error.generation_unrenderable");
     }
     currentDocument = documentValue;
     projectSelect.value = documentValue.project_id;
@@ -1337,14 +1607,14 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
         history.pushState({route: hash}, "", hash);
       }
     }
-    connectionStatus.textContent = "Retained generated workspace revalidated.";
+    setConnectionStatus("connection.generated_loaded");
     if (!quickIntentCatalog) {
       await loadQuickIntents(documentValue.project_id);
     }
   } catch (error) {
     currentDocument = null;
     setBusy(false);
-    freshness.textContent = "Generated workspace freshness could not be verified.";
+    setFreshnessStatus("freshness.generated_unverified");
     showError(workspace, error);
     workspace.focus({preventScroll: true});
   }
@@ -1364,7 +1634,7 @@ async function activateView(view) {
   }
   if (view === "run-comparison") {
     if (runCatalog.length < 2) {
-      showError(workspace, new Error("Two registered runs are required for comparison."));
+      showError(workspace, uiError("error.two_runs"));
       return;
     }
     await loadWorkspace({
@@ -1389,13 +1659,13 @@ function defaultQuery(projectId) {
 
 function validateIdentityQuery(query) {
   if (!query || !workspaceViews.has(query.view) || !validProjectId(query.project_id)) {
-    throw new Error("Workspace navigation identity is invalid.");
+    throw uiError("error.navigation_identity");
   }
   const result = {view: query.view, project_id: query.project_id};
   for (const key of ["run_id", "paper_id", "baseline_run_id", "candidate_run_id"]) {
     if (query[key] !== undefined) {
       if (!validEntryId(query[key])) {
-        throw new Error("Workspace selection identity is invalid.");
+        throw uiError("error.selection_identity");
       }
       result[key] = query[key];
     }
@@ -1403,7 +1673,7 @@ function validateIdentityQuery(query) {
   if (result.view === "run-comparison"
       && (!result.baseline_run_id || !result.candidate_run_id
           || result.baseline_run_id === result.candidate_run_id)) {
-    throw new Error("Run comparison requires two distinct registered identities.");
+    throw uiError("error.distinct_runs");
   }
   return result;
 }
@@ -1435,22 +1705,25 @@ function workspacePath(query) {
 }
 
 function workspaceHash(query) {
-  return `#${workspacePath(query).replace("/api/v2/workspace", "")}`;
+  return localizedHash(`#${workspacePath(query).replace("/api/v2/workspace", "")}`);
 }
 
 function generatedWorkspaceHash(documentValue) {
-  return `#/projects/${encodeURIComponent(documentValue.project_id)}`
-    + `/generated/${encodeURIComponent(documentValue.renderer.surface_id)}`;
+  return localizedHash(
+    `#/projects/${encodeURIComponent(documentValue.project_id)}`
+      + `/generated/${encodeURIComponent(documentValue.renderer.surface_id)}`,
+  );
 }
 
 function parseWorkspaceHash() {
   const prefix = "#/projects/";
-  if (!location.hash.startsWith(prefix)) {
+  const route = fragmentParts().route;
+  if (!route.startsWith(prefix)) {
     return null;
   }
   let parts;
   try {
-    parts = location.hash.slice(prefix.length).split("/").map(decodeURIComponent);
+    parts = route.slice(prefix.length).split("/").map(decodeURIComponent);
   } catch {
     return null;
   }
@@ -1498,7 +1771,13 @@ async function api(path, options = {}) {
   }
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload.error?.message || "The trusted receiver rejected the request.");
+    const code = payload.error?.code;
+    const errorKey = code && hasTranslation(`error.${code}`)
+      ? `error.${code}`
+      : "error.receiver_rejected";
+    const error = new Error(payload.error?.message || t(errorKey));
+    error.translationKey = code && hasTranslation(`error.${code}`) ? errorKey : null;
+    throw error;
   }
   const etag = response.headers.get("ETag");
   if (etag && (options.method === undefined || options.method === "GET")) {
@@ -1517,11 +1796,71 @@ function showError(container, error) {
   const message = document.createElement("p");
   message.className = "error-text";
   message.setAttribute("role", "alert");
-  appendText(message, error instanceof Error ? error.message : "Request failed.");
+  if (container === connectionStatus) {
+    connectionStatusError = error;
+  }
+  const errorKey = error instanceof Error ? error.translationKey : null;
+  if (errorKey) {
+    message.dataset.errorKey = errorKey;
+  }
+  appendText(message, errorKey
+    ? t(errorKey)
+    : error instanceof Error
+      ? error.message
+      : t("error.request_failed"));
   container.appendChild(message);
 }
 
+function rerenderForLocale() {
+  localizeStaticShell();
+  if (connectionStatusError) {
+    showError(connectionStatus, connectionStatusError);
+  } else {
+    setConnectionStatus(connectionStatusKey);
+  }
+  if (currentDocument) {
+    renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+  } else {
+    setFreshnessStatus(freshnessStatusKey || "freshness.none");
+    renderProposalResult();
+    renderArtifactResult();
+  }
+  renderQuickIntents();
+  renderIntentResult();
+  setIntentEnabled(Boolean(quickIntentCatalog) && intentResultState.kind !== "resolving");
+}
+
+async function initializeLocalization() {
+  connectButton.disabled = true;
+  localeSelect.disabled = true;
+  try {
+    await loadLocaleCatalogs();
+    rerenderForLocale();
+    replaceHashLocale();
+    localeSelect.disabled = false;
+    connectButton.disabled = false;
+  } catch (error) {
+    activeLocale = "en";
+    document.documentElement.lang = "en";
+    localeSelect.value = "en";
+    localeSelect.disabled = true;
+    connectButton.disabled = true;
+    connectionStatus.textContent = error instanceof Error
+      ? error.message
+      : "Interface language resources could not be verified.";
+  }
+}
+
 connectButton.addEventListener("click", loadProjects);
+skipLink.addEventListener("click", (event) => {
+  event.preventDefault();
+  workspace.focus({preventScroll: false});
+});
+localeSelect.addEventListener("change", () => {
+  activeLocale = normalizeLocale(localeSelect.value);
+  replaceHashLocale();
+  rerenderForLocale();
+});
 tokenInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     loadProjects();
@@ -1538,7 +1877,8 @@ intentForm.addEventListener("submit", (event) => {
   }
   const question = intentQuestion.value.trim();
   if (!question) {
-    showError(intentResult, new Error("Enter a question before generating a workspace."));
+    intentResultState = {kind: "error", error: uiError("error.enter_question")};
+    renderIntentResult();
     return;
   }
   intentQuestion.value = "";
@@ -1571,6 +1911,11 @@ compareRunsButton.addEventListener("click", () => loadWorkspace({
   candidate_run_id: candidateRun.value,
 }));
 window.addEventListener("popstate", () => {
+  const routeLocale = localeFromFragment();
+  if (routeLocale && routeLocale !== activeLocale) {
+    activeLocale = routeLocale;
+    rerenderForLocale();
+  }
   const route = parseWorkspaceHash();
   if (route && tokenInput.value) {
     if (route.generation_id) {
@@ -1580,3 +1925,5 @@ window.addEventListener("popstate", () => {
     }
   }
 });
+
+initializeLocalization();
