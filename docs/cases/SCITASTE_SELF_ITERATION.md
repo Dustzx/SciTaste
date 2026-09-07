@@ -394,6 +394,34 @@ This remains compatibility-adapter integrity evidence. A started call without a
 durable result is deliberately blocked until a provider can supply a trustworthy
 idempotency or query key; the case makes no scientific-effectiveness claim.
 
+## Native code proposal/admission case
+
+The next mainline intervention closes the trust gap between semantic source
+content and the existing CPU sandbox. The selected design separates a strict
+proposal-only source contract, a non-expandable deterministic AST/import gate,
+atomic project-owned evidence, and Bubblewrap execution. Rejected source keeps
+its policy, proposal, verdict, root receipt, and proposed bytes, but never gains
+an admitted path. Accepted source must be byte-identical to the proposal, and
+runner definition `1.1` requires the emitted metric set to match the proposal
+exactly.
+
+The implementation is commit
+`53920ee4e77acfb4e3594476d670073143ad2329`. Its final full-suite coverage run
+completed 804 tests at 83% total coverage; the new native-code module reached
+84%, and the focused executor/Full Workflow slice completed 46 tests. A separate
+final Full Workflow acceptance created 18 native records, executed only
+`native_execution/context/code/admitted/experiment.py`, measured three
+replicates with `correct_pivot_delta` approximately 0.1, and produced Markdown,
+TeX, PDF, SVG, and draw.io artifacts. No provider or other external call was
+made.
+
+The self-development project is now revision 143. Its run is
+`2026-09-07__scitaste-native__native-code-admission-v1__seed-07`; detailed
+hashes, alternatives, negative-path checks, and limitations are retained in
+`outputs/projects/scitaste-self-development/runs/2026-09-07__scitaste-native__native-code-admission-v1__seed-07/mainline/evidence.json`.
+This accepts the proposal/admission/execution binding, not provider-backed code
+generation, broad dataset/GPU execution, or scientific effectiveness.
+
 ## Anti-self-confirmation rules
 
 - Self-iteration cases are excluded from headline Phase 8 effectiveness scores.
