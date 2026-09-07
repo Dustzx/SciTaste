@@ -441,9 +441,13 @@ focused executor/Full Workflow slice completed 13 tests. The canonical offline
 acceptance is project `scitaste-native-codegen-acceptance`. Its one verified
 generation entry used 900 input and 1,250 output tokens, the generated, proposed,
 and admitted source bytes were identical, and Bubblewrap measured three
-replicates with `correct_pivot_delta` approximately 0.1. Its reviewed-draft
-Markdown, TeX, PDF, SVG, and draw.io bundle is under
+replicates with `correct_pivot_delta` approximately 0.1. Its 77-word
+Markdown/TeX/PDF/SVG/draw.io bundle was originally misclassified as a
+`reviewed-draft`; it is a publication-pipeline integration fixture and is
+retained at the historical path for audit under
 `outputs/projects/scitaste-native-codegen-acceptance/papers/provider-code-generation-reviewed-draft/`.
+The defect exposed by this self-use case led to an explicit manuscript-role
+contract and a fail-closed research-draft completeness assessment.
 
 A separately authorized real GLM-5.3-Flash probe returned HTTP 200 with 1,260
 input and 935 output tokens in 15.8 seconds. It was rejected before source
@@ -459,6 +463,20 @@ alternatives, external-call scope, and limitations are retained in
 This accepts provider transport and the complete generation/admission/isolation
 pipeline, not priced live acceptance, automatic repair, broad dataset/GPU
 execution, model-quality gain, or scientific effectiveness.
+
+## Main SciTaste manuscript correction
+
+The framework paper is now a separate, substantive artifact rather than the
+short Full Workflow fixture. Its title is restored from the authoritative
+project specification: **SciTaste: Learning Scientific Taste for Autonomous
+Research Decision Making**. The tracked Markdown and bibliography live in
+`manuscripts/scitaste/`; the project-owned package contains Markdown, TeX, PDF,
+bibliography, build evidence, and a self-hashed completeness assessment. The
+working draft describes the complete framework and current engineering evidence
+while explicitly withholding an effectiveness claim until the registered
+matched-budget matrix and blinded expert review are complete.
+The registered bundle is
+`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
 
 ## Anti-self-confirmation rules
 

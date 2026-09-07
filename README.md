@@ -174,7 +174,7 @@ one managed project and produce a registered Markdown/TeX/PDF paper bundle:
 .venv/bin/scitaste run full \
   --config configs/workflows/full_offline_v1.yaml \
   --project-id my-full-project --run-id offline-full-seed-07 \
-  --paper-directory offline-full-seed-07-reviewed-draft \
+  --paper-directory offline-full-seed-07-integration-fixture \
   --seed 7 --output outputs
 ```
 
@@ -193,6 +193,16 @@ test compatibility. See
 [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).
 The native action evidence and current capability boundary are documented in
 [`docs/NATIVE_EXECUTION.md`](docs/NATIVE_EXECUTION.md).
+
+The short paper emitted by this acceptance workflow is deliberately classified
+as an `integration-fixture`: it validates the publication machinery but is not a
+research paper. Full Workflow writes a self-hashed `ASSESSMENT.json` and refuses
+to register a structurally incomplete manuscript as a `research-working-draft`.
+The substantive framework manuscript uses the specification title
+**SciTaste: Learning Scientific Taste for Autonomous Research Decision Making**;
+its tracked source is [`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md),
+with its compiled Markdown/TeX/PDF bundle at
+`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
 
 To exercise the same full path with a network-free, project-ledger-backed
 semantic advisory, use

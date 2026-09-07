@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -142,18 +143,30 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
         record = FullStageRecord.model_validate_json(record_path.read_text(encoding="utf-8"))
         assert record.stage == stage
 
-    paper = project / "papers/offline-full-reviewed-draft"
+    paper = project / "papers/offline-full-integration-fixture"
     assert (paper / "main.md").is_file()
     assert (paper / "main.tex").is_file()
     assert (paper / "build.json").is_file()
     assert (paper / "figures/figure.svg").is_file()
     assert (paper / "figures/figure.drawio").is_file()
     assert (paper / "MANIFEST.json").is_file()
+    assert (paper / "ASSESSMENT.json").is_file()
     published_markdown = (paper / "main.md").read_text(encoding="utf-8")
     assert "mean correct pivot delta of 0.100000" in published_markdown
     assert "[claim:" not in published_markdown
     assert "[evidence:" not in published_markdown
     assert (project / "papers/current").resolve() == paper.resolve()
+    paper_manifest = json.loads((paper / "MANIFEST.json").read_text(encoding="utf-8"))
+    assessment = json.loads((paper / "ASSESSMENT.json").read_text(encoding="utf-8"))
+    assert paper_manifest["status"] == "integration-fixture"
+    assert paper_manifest["manuscript_role"] == "integration-fixture"
+    assert (
+        assessment["manuscript_sha256"]
+        == hashlib.sha256((paper / "main.md").read_bytes()).hexdigest()
+    )
+    assert assessment["substantive_research_draft"] is False
+    assert assessment["paper_status"] == "integration-fixture"
+    assert payload["manuscript_assessment"] == assessment
     assert Path(payload["snapshot_binding"]).is_file()
 
     decision_log = run / "stages/discovery/decisions.jsonl"
@@ -201,7 +214,40 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert payload["native_execution"]["code_admission"]["would_materialize_on_run"] is True
     assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
+    assert payload["paper"]["role"] == "integration-fixture"
+    assert payload["paper"]["publication_ready"] is False
     assert not outputs.exists()
+
+
+def test_full_workflow_refuses_to_label_short_fixture_as_research_draft(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    base = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(base).model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "project_id": "short-research-manuscript",
+            "paper_id": "short-research-manuscript-paper",
+            "paper_directory": "short-research-manuscript-draft",
+            "paper_role": "research-working-draft",
+        }
+    )
+
+    with pytest.raises(ValueError, match="research manuscript completeness gate failed"):
+        FullWorkflow(seed=7).run(
+            config,
+            outputs_root=tmp_path / "outputs",
+            run_id="short-research-manuscript-run",
+        )
+
+    project = ProjectRuntime(tmp_path / "outputs").open(config.project_id)
+    run = next(
+        item for item in project.manifest.runs if item.run_id == "short-research-manuscript-run"
+    )
+    assert run.status == "failed"
+    assert not any((tmp_path / "outputs/projects/short-research-manuscript/papers").iterdir())
 
 
 def test_full_workflow_retains_rejected_code_proposal_without_executing_it(

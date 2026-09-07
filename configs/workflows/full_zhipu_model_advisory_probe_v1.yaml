@@ -17,6 +17,7 @@ native_knowledge_config: ../taste/library_seed_v1.yaml
 native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
 model_node_advisory: full_model_advisory_zhipu_glm53_unpriced_v1.yaml
 paper_id: glm53-recoverable-advisory-probe-paper
-paper_directory: glm53-recoverable-advisory-probe-draft
-paper_title: Recoverable Evidence-Bounded Semantic Advice in SciTaste
+paper_directory: glm53-recoverable-advisory-integration-fixture
+paper_title: "SciTaste Integration Fixture: Recoverable Semantic Advice"
 paper_date: 2026-09-05
+paper_role: integration-fixture

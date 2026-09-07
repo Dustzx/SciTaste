@@ -16,7 +16,7 @@ sudo apt-get install bubblewrap  # once on Debian/Ubuntu hosts
   --config configs/workflows/full_offline_v1.yaml \
   --project-id my-full-project \
   --run-id offline-full-seed-07 \
-  --paper-directory offline-full-seed-07-reviewed-draft \
+  --paper-directory offline-full-seed-07-integration-fixture \
   --seed 7 --output outputs
 ```
 
@@ -28,7 +28,7 @@ registered run and publication identity with:
   --config configs/workflows/full_offline_v1.yaml \
   --project-id my-full-project \
   --run-id offline-full-seed-07 \
-  --paper-directory offline-full-seed-07-reviewed-draft \
+  --paper-directory offline-full-seed-07-integration-fixture \
   --seed 7 --output outputs --resume
 ```
 
@@ -133,6 +133,7 @@ outputs/projects/<project-id>/
 │   ├── main.tex
 │   ├── main.pdf              # when XeLaTeX is available
 │   ├── build.json
+│   ├── ASSESSMENT.json
 │   └── figures/{figure.svg,figure.drawio}
 ├── papers/current -> <paper-directory>
 └── surfaces/<run-id>-snapshot-binding.json
@@ -143,7 +144,12 @@ records run-relative locators plus SHA-256 hashes for the input state, output
 state, decision log, and required stage artifacts. Paths recorded by the
 full-run summary are run-relative rather than machine-specific absolute paths.
 
-The paper is a registered, reviewed draft with `publication_ready: false`.
+The default paper is a registered `integration-fixture` with
+`publication_ready: false`; it proves that evidence projection, reader-facing
+sanitization, Markdown-to-TeX conversion, PDF compilation, figures, manifests,
+and project registration compose correctly. It is not a reviewed research
+manuscript and must not be presented as one.
+
 `communication/paper.md` is the audit view and retains machine-readable
 claim/evidence trace markers. `paper.publication.md` is the deterministic
 reader-facing view: it removes internal trace and obligation identifiers but
@@ -153,6 +159,16 @@ packaging is deterministic and performs no extra model call. If
 `latexmk` with XeLaTeX is installed, compilation must succeed and `main.pdf` is
 registered; otherwise `build.json` records `unavailable` and the Markdown/TeX
 bundle remains complete.
+
+Every bundle includes `ASSESSMENT.json`, a self-hashed deterministic role and
+completeness record. A configuration may request `research-working-draft`, but
+publication then fails closed unless the manuscript has at least 2,500 counted
+words, all required Abstract/Introduction/Method/Evaluation/Results/Limitations/
+Conclusion sections, and no known placeholder marker. This is a minimum
+classification gate, not a scientific-quality or peer-review judgment. The
+substantive SciTaste framework manuscript is maintained separately at
+`manuscripts/scitaste/main.md` and registered under the `scitaste-self-development`
+project when its source and compiled bundle pass acceptance.
 
 ## Revision and failure behavior
 

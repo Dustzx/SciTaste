@@ -64,6 +64,12 @@ from scitaste.project.models import content_sha256, validate_entry_id, validate_
 from scitaste.state.research_state import ResearchState
 from scitaste.visual.workflow import FigureScenario, FigureWorkflow, load_figure_scenario
 from scitaste.writing.evidence_projection import build_writing_evidence_projection
+from scitaste.writing.manuscript_quality import (
+    ManuscriptAssessment,
+    ManuscriptRole,
+    assess_manuscript,
+    require_requested_manuscript_role,
+)
 from scitaste.writing.workflow import (
     CommunicationScenario,
     CommunicationWorkflow,
@@ -100,6 +106,7 @@ class FullWorkflowConfig(BaseModel):
     paper_directory: str
     paper_title: str = Field(min_length=1)
     paper_date: date
+    paper_role: ManuscriptRole = "integration-fixture"
 
     @field_validator("project_id")
     @classmethod
@@ -358,7 +365,11 @@ class FullWorkflow:
                     "all workflow stages are already complete; finalization recovery "
                     "requires manual inspection"
                 )
-            paper_files = self._materialize_paper(config, runtime, run_root)
+            paper_files, manuscript_assessment = self._materialize_paper(
+                config,
+                runtime,
+                run_root,
+            )
             paper = PaperManifest(
                 paper_id=config.paper_id,
                 project_id=config.project_id,
@@ -370,12 +381,16 @@ class FullWorkflow:
                 task="conflict-aware-research-control",
                 seed=self.seed,
                 stage=18,
-                status="reviewed-draft",
+                status=manuscript_assessment.paper_status,
                 evidence_scope=config.evidence_scope,
                 publication_ready=False,
                 source_run=run_id,
                 files=paper_files,
                 stage_semantics=f"{config.execution_backend}-phase-4-to-7-integration",
+                manuscript_role=config.paper_role,
+                manuscript_assessment="ASSESSMENT.json",
+                manuscript_assessment_sha256=manuscript_assessment.record_sha256,
+                manuscript_word_count=manuscript_assessment.word_count,
             )
             snapshot = runtime.register_paper(
                 config.project_id,
@@ -391,7 +406,11 @@ class FullWorkflow:
             snapshot = runtime.update(
                 config.project_id,
                 expected_revision=snapshot.revision,
-                status="reviewed-draft",
+                status=(
+                    "research-working-draft"
+                    if config.paper_role == "research-working-draft"
+                    else "complete"
+                ),
             )
 
             # The summary must exist before the registered run can claim it as its
@@ -415,6 +434,7 @@ class FullWorkflow:
                 "stages": summaries,
                 "final_state": f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
                 "paper_files": paper_files,
+                "manuscript_assessment": manuscript_assessment.model_dump(mode="json"),
             }
             summary_path = run_root / "full_run_summary.json"
             _write_json(summary_path, summary)
@@ -852,7 +872,7 @@ class FullWorkflow:
         config: FullWorkflowConfig,
         runtime: ProjectRuntime,
         run_root: Path,
-    ) -> dict[str, str]:
+    ) -> tuple[dict[str, str], ManuscriptAssessment]:
         paper_root = (
             runtime.outputs_root
             / "projects"
@@ -864,21 +884,29 @@ class FullWorkflow:
             raise FileExistsError(f"paper directory already exists: {paper_root}")
         communication_paper = run_root / "stages" / "communication" / "paper.publication.md"
         source = run_root / "stages" / "communication" / "paper_with_title.md"
-        source.write_text(
-            f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(encoding="utf-8"),
-            encoding="utf-8",
+        source_text = f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(
+            encoding="utf-8"
         )
+        assessment = assess_manuscript(source_text, requested_role=config.paper_role)
+        require_requested_manuscript_role(assessment)
+        source.write_text(source_text, encoding="utf-8")
         paths = materialize_manuscript(markdown_path=source, target_dir=paper_root)
+        assessment_path = paper_root / "ASSESSMENT.json"
+        _write_json(assessment_path, assessment.model_dump(mode="json"))
+        paths.append(assessment_path)
         figures = paper_root / "figures"
         figures.mkdir(parents=True, exist_ok=True)
         for name in ("figure.svg", "figure.drawio"):
             source_figure = run_root / "stages" / "figure" / name
             shutil.copy2(source_figure, figures / name)
             paths.append(figures / name)
-        return {
-            _paper_file_label(path, paper_root): path.relative_to(paper_root).as_posix()
-            for path in sorted(paths)
-        }
+        return (
+            {
+                _paper_file_label(path, paper_root): path.relative_to(paper_root).as_posix()
+                for path in sorted(paths)
+            },
+            assessment,
+        )
 
     @staticmethod
     def _mark_failed(
@@ -1407,6 +1435,7 @@ def _paper_file_label(path: Path, root: Path) -> str:
         "main.md": "Markdown manuscript",
         "main.tex": "LaTeX manuscript",
         "main.pdf": "PDF manuscript",
+        "ASSESSMENT.json": "Manuscript assessment",
         "build.json": "Build record",
         "README.md": "Bundle README",
         "figures/figure.svg": "Editable SVG figure",

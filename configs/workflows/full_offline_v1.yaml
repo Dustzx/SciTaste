@@ -16,6 +16,7 @@ figure_scenario: ../visual/mechanism_demo.yaml
 native_knowledge_config: ../taste/library_seed_v1.yaml
 native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
 paper_id: conflict-aware-control-paper
-paper_directory: offline-full-reviewed-draft
-paper_title: Conflict-Aware Control for Evidence-Bounded Autonomous Research
+paper_directory: offline-full-integration-fixture
+paper_title: "SciTaste Integration Fixture: Conflict-Aware Control"
 paper_date: 2026-09-04
+paper_role: integration-fixture

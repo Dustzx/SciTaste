@@ -486,8 +486,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   artifact evidence. It rejects missing paths and nested symlinks.
 - `scitaste run full` now advances one state through the Phase 4--7 offline
   workflows inside one managed project run, retains readable per-stage records,
-  registers a deterministic Markdown/TeX/PDF reviewed-draft bundle, and records
-  an evidence-bound UI snapshot. Failed stage attempts remain auditable, while
+  registers a deterministic Markdown/TeX/PDF integration-fixture bundle, and
+  records an evidence-bound UI snapshot. The bundle now carries a self-hashed
+  manuscript assessment; requesting research-working-draft status fails closed
+  on insufficient length, missing core sections, or known placeholders. Failed
+  stage attempts remain auditable, while
   `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
   and required artifacts still validate; incomplete downstream work is archived
   before rerun and tampered completion records fail closed.

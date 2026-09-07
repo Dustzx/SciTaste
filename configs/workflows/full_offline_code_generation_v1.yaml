@@ -16,6 +16,7 @@ figure_scenario: ../visual/mechanism_demo.yaml
 native_knowledge_config: ../taste/library_seed_v1.yaml
 native_code_generation_config: ../experiments/native_code_generation_scripted_support_v1.yaml
 paper_id: conflict-aware-generated-code-paper
-paper_directory: offline-code-generation-reviewed-draft
-paper_title: Conflict-Aware Control with Admitted Model-Produced Experiments
+paper_directory: offline-code-generation-integration-fixture
+paper_title: "SciTaste Integration Fixture: Admitted Model-Produced Experiment"
 paper_date: 2026-09-07
+paper_role: integration-fixture

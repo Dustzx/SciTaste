@@ -17,6 +17,7 @@ native_knowledge_config: ../taste/library_seed_v1.yaml
 native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
 model_node_advisory: full_model_advisory_scripted_v1.yaml
 paper_id: conflict-aware-control-advisory-paper
-paper_directory: offline-advisory-reviewed-draft
-paper_title: Conflict-Aware Control with Evidence-Bounded Semantic Advice
+paper_directory: offline-advisory-integration-fixture
+paper_title: "SciTaste Integration Fixture: Evidence-Bounded Semantic Advice"
 paper_date: 2026-09-05
+paper_role: integration-fixture

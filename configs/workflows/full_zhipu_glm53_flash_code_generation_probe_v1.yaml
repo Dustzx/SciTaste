@@ -16,6 +16,7 @@ figure_scenario: ../visual/mechanism_demo.yaml
 native_knowledge_config: ../taste/library_seed_v1.yaml
 native_code_generation_config: ../experiments/native_code_generation_zhipu_glm53_flash_probe_v1.yaml
 paper_id: glm53-flash-code-generation-probe-paper
-paper_directory: glm53-flash-code-generation-probe-draft
-paper_title: Bounded Provider-Produced Experiments in SciTaste
+paper_directory: glm53-flash-code-generation-integration-fixture
+paper_title: "SciTaste Integration Fixture: Bounded Provider-Produced Experiment"
 paper_date: 2026-09-07
+paper_role: integration-fixture

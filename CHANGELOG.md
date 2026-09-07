@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Manuscript outputs now carry an explicit `integration-fixture` or
+  `research-working-draft` role and a self-hashed `ASSESSMENT.json`. The default
+  Full Workflow paper is correctly treated as a publication-pipeline fixture;
+  attempts to promote a short, structurally incomplete, or placeholder-bearing
+  artifact to a research draft fail closed. The substantive SciTaste framework
+  manuscript restores the specification title and has tracked Markdown and
+  bibliography sources plus a project-owned TeX/PDF package.
+
 - Full Workflow can now request bounded native experiment source through a
   project-owned `native-code-proposal` model-node extension. A pre-call checkpoint
   binds the trusted experiment/metric/policy brief; the existing durable runtime

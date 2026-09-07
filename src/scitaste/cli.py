@@ -77,6 +77,7 @@ from scitaste.taste.intrinsic import (
     save_calibration_report,
 )
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
+from scitaste.writing.manuscript_quality import RESEARCH_WORKING_DRAFT_MINIMUM_WORDS
 from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
 
@@ -1284,6 +1285,14 @@ def _handle_full(args: argparse.Namespace) -> int:
                         }
                     ),
                     "paper_directory": config.paper_directory,
+                    "paper": {
+                        "title": config.paper_title,
+                        "role": config.paper_role,
+                        "publication_ready": False,
+                        "research_working_draft_minimum_words": (
+                            RESEARCH_WORKING_DRAFT_MINIMUM_WORDS
+                        ),
+                    },
                     "outputs_root": str(args.output),
                     "effectiveness_claim": False,
                 },

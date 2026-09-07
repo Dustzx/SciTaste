@@ -23,7 +23,7 @@ def _config(project_id: str):
     payload.update(
         project_id=project_id,
         paper_id=f"{project_id}-paper",
-        paper_directory=f"{project_id}-draft",
+        paper_directory=f"{project_id}-integration-fixture",
     )
     return type(config).model_validate(payload)
 
@@ -68,11 +68,15 @@ def test_full_workflow_runs_generated_code_only_after_admission(
     assert list(experiment_record["input_sha256"]) == [
         "native_execution/context/code/admitted/experiment.py"
     ]
-    paper = (
-        outputs / "projects/full-generated-code-project/papers/full-generated-code-project-draft"
+    paper = outputs / (
+        "projects/full-generated-code-project/papers/"
+        "full-generated-code-project-integration-fixture"
     )
     assert (paper / "main.md").is_file()
     assert (paper / "main.tex").is_file()
+    assessment = json.loads((paper / "ASSESSMENT.json").read_text(encoding="utf-8"))
+    assert assessment["paper_status"] == "integration-fixture"
+    assert assessment["substantive_research_draft"] is False
     verification = verify_native_code_generation_ledger(
         ProjectRuntime(outputs),
         project_id=config.project_id,
