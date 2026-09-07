@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 
 import scitaste.benchmark.manuscript as manuscript
 import scitaste.full_workflow as full_workflow
@@ -63,6 +64,8 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assert payload["native_execution"]["head_record_sha256"]
     assert payload["native_execution"]["experiment"]["experiment_id"] == "experiment-support"
     assert payload["native_execution"]["experiment"]["availability"]["available"] is True
+    assert payload["native_execution"]["code_admission"]["decision"] == "accepted"
+    assert payload["native_execution"]["code_admission"]["runtime_isolation_required"] is True
     measured_experiment = next(
         item
         for item in final_state.experiment_history
@@ -113,6 +116,24 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     manifest = json.loads(library_manifest.read_text(encoding="utf-8"))
     assert manifest["knowledge_path"] == "knowledge/records.jsonl"
     assert not Path(manifest["knowledge_path"]).is_absolute()
+    code_context = run / "native_execution/context/code"
+    code_receipt = json.loads((code_context / "CODE.json").read_text(encoding="utf-8"))
+    assert code_receipt["decision"] == "accepted"
+    assert (code_context / "proposed.py").read_bytes() == (
+        code_context / "admitted/experiment.py"
+    ).read_bytes()
+    native_records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((run / "native_execution/records").glob("*.json"))
+    ]
+    experiment_record = next(
+        item
+        for item in native_records
+        if item["result"]["data"].get("result_basis") == "sandbox-measured-replicates"
+    )
+    assert list(experiment_record["input_sha256"]) == [
+        "native_execution/context/code/admitted/experiment.py"
+    ]
     assert payload["resumed"] is False
     assert payload["reused_stages"] == []
     for stage in payload["stages"]:
@@ -175,9 +196,114 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert payload["native_execution"]["experiment_id"] == "experiment-support"
     assert payload["native_execution"]["isolation_required"] is True
     assert payload["native_execution"]["isolation"]["available"] is True
+    assert payload["native_execution"]["code_admission"]["decision"] == "accepted"
+    assert payload["native_execution"]["code_admission"]["proposal_only"] is True
+    assert payload["native_execution"]["code_admission"]["would_materialize_on_run"] is True
     assert payload["resume"] is True
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert not outputs.exists()
+
+
+def test_full_workflow_retains_rejected_code_proposal_without_executing_it(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    candidate = tmp_path / "unsafe.py"
+    candidate.write_text(
+        "import json\n"
+        "import socket\n"
+        "payload={'schema_version':'1.0','measurements':["
+        "{'replicate_id':'one','metrics':{'correct_pivot_delta':0.1}}]}\n"
+        "print('SCITASTE_MEASUREMENTS_JSON='+json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+    proposal = tmp_path / "unsafe-proposal.yaml"
+    proposal.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "1.0",
+                "proposal_id": "unsafe-network-proposal",
+                "source_path": str(candidate),
+                "rationale": "Deliberately exercise deterministic rejection.",
+                "expected_metrics": ["correct_pivot_delta"],
+                "producer": {
+                    "schema_version": "1.0",
+                    "mode": "registered",
+                    "producer_id": "integration-fixture",
+                },
+                "experiment": {
+                    "experiment_id": "experiment-support",
+                    "primary_metric": "correct_pivot_delta",
+                    "metric_direction": "maximize",
+                    "support_threshold": 0.0,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    base = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(base).model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "project_id": "rejected-code-project",
+            "paper_directory": "rejected-code-paper",
+            "native_code_proposal_config": proposal,
+        }
+    )
+    dry_config_path = tmp_path / "full-rejected.yaml"
+    dry_config_path.write_text(
+        yaml.safe_dump(config.model_dump(mode="json"), sort_keys=False),
+        encoding="utf-8",
+    )
+    dry_outputs = tmp_path / "dry-outputs"
+
+    assert (
+        main(
+            [
+                "run",
+                "full",
+                "--config",
+                str(dry_config_path),
+                "--run-id",
+                "rejected-code-dry-run",
+                "--output",
+                str(dry_outputs),
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["native_execution"]["code_admission"]["decision"] == "rejected"
+    assert preview["native_execution"]["code_admission"]["violation_count"] == 1
+    assert preview["native_execution"]["isolation_required"] is False
+    assert preview["native_execution"]["isolation"] is None
+    assert not dry_outputs.exists()
+
+    outputs = tmp_path / "outputs"
+
+    with pytest.raises(ValueError, match="import-not-allowed"):
+        FullWorkflow(seed=7).run(
+            config,
+            outputs_root=outputs,
+            run_id="rejected-code-run",
+        )
+
+    run_root = outputs / "projects/rejected-code-project/runs/rejected-code-run"
+    receipt = json.loads(
+        (run_root / "native_execution/context/code/CODE.json").read_text(encoding="utf-8")
+    )
+    admission = json.loads(
+        (run_root / "native_execution/context/code/ADMISSION.json").read_text(encoding="utf-8")
+    )
+    registered = ProjectRuntime(outputs).open("rejected-code-project").manifest.runs[0]
+    assert receipt["decision"] == "rejected"
+    assert {item["code"] for item in admission["violations"]} == {"import-not-allowed"}
+    assert not (run_root / "native_execution/context/code/admitted").exists()
+    assert not any((run_root / "stages").iterdir())
+    assert registered.status == "failed"
+    assert (registered.model_extra or {})["failure_type"] == "NativeCodeAdmissionError"
 
 
 def test_full_cli_can_explicitly_select_mock_compatibility_backend(tmp_path: Path, capsys) -> None:
@@ -200,6 +326,42 @@ def test_full_cli_can_explicitly_select_mock_compatibility_backend(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["execution_backend"] == "mock"
+
+
+def test_full_config_rejects_ambiguous_registered_and_proposed_source() -> None:
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        type(config).model_validate(
+            {
+                **config.model_dump(mode="python"),
+                "native_experiment_config": Path(
+                    "configs/experiments/native_evidence_support_v1.yaml"
+                ).resolve(),
+            }
+        )
+
+
+def test_full_workflow_preserves_legacy_registered_experiment_context(tmp_path: Path) -> None:
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    legacy = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "native_code_proposal_config": None,
+            "native_experiment_config": Path(
+                "configs/experiments/native_evidence_support_v1.yaml"
+            ).resolve(),
+        }
+    )
+    run_root = tmp_path / "legacy-run"
+    run_root.mkdir()
+
+    definition = full_workflow._prepare_native_experiment(legacy, run_root=run_root)
+
+    assert definition is not None
+    assert definition.experiment_id == "experiment-support"
+    assert definition.source_path == run_root / "native_execution/context/experiment/experiment.py"
+    assert (run_root / "native_execution/context/experiment/EXPERIMENT.json").is_file()
 
 
 def test_full_workflow_retains_a_failed_run_for_audit(tmp_path: Path, monkeypatch) -> None:

@@ -57,12 +57,13 @@ class NativeExperimentDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "1.1"]
     experiment_id: str = Field(min_length=1, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     source_path: Path
     primary_metric: str = Field(pattern=_METRIC_NAME)
     metric_direction: MetricDirection
     support_threshold: float
+    required_metrics: tuple[str, ...] = ()
     limits: NativeExperimentLimits = Field(default_factory=NativeExperimentLimits)
 
     @field_validator("support_threshold", mode="before")
@@ -75,6 +76,23 @@ class NativeExperimentDefinition(BaseModel):
         ):
             raise ValueError("native experiment support_threshold must be finite")
         return value
+
+    @field_validator("required_metrics")
+    @classmethod
+    def required_metrics_are_canonical(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) > 64 or len(set(value)) != len(value):
+            raise ValueError("required native experiment metrics must be unique and bounded")
+        if any(re.fullmatch(_METRIC_NAME, name) is None for name in value):
+            raise ValueError("required native experiment metrics require safe names")
+        return value
+
+    @model_validator(mode="after")
+    def schema_matches_metric_contract(self) -> NativeExperimentDefinition:
+        if self.schema_version == "1.0" and self.required_metrics:
+            raise ValueError("native experiment schema 1.0 cannot declare required_metrics")
+        if self.required_metrics and self.primary_metric not in self.required_metrics:
+            raise ValueError("the primary metric must appear in required_metrics")
+        return self
 
 
 class NativeMeasurement(BaseModel):
@@ -526,6 +544,13 @@ def _derive_metrics(
     if definition.primary_metric not in names:
         raise ValueError(
             f"measurements do not contain registered primary metric {definition.primary_metric!r}"
+        )
+    if definition.required_metrics and set(names) != set(definition.required_metrics):
+        missing = sorted(set(definition.required_metrics) - set(names))
+        unexpected = sorted(set(names) - set(definition.required_metrics))
+        raise ValueError(
+            "measurements do not match the admitted metric contract: "
+            f"missing={missing}, unexpected={unexpected}"
         )
     columns = {
         name: [float(item.metrics[name]) for item in envelope.measurements] for name in names

@@ -234,6 +234,45 @@ def test_native_sandbox_recognizes_stable_measured_contradiction(tmp_path) -> No
     assert result.data["reproducible"] is True
 
 
+def test_native_sandbox_enforces_the_admitted_complete_metric_set(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    root.mkdir()
+    source = root / "experiment.py"
+    source.write_text(
+        "import json\n"
+        "payload={'schema_version':'1.0','measurements':["
+        "{'replicate_id':'one','metrics':{'score_delta':0.1}}]}\n"
+        "print('SCITASTE_MEASUREMENTS_JSON='+json.dumps(payload))\n",
+        encoding="utf-8",
+    )
+    base = _definition(source)
+    definition = NativeExperimentDefinition.model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "schema_version": "1.1",
+            "required_metrics": ["score_delta", "secondary_score"],
+        }
+    )
+    runner = NativeExperimentRunner(definition)
+    if not runner.availability().available:
+        pytest.skip("bubblewrap isolation is unavailable on this host")
+    executor = SciTasteNativeExecutor(
+        workspace=root / "native_execution",
+        artifact_root=root,
+        experiment_runner=runner,
+    )
+
+    result = executor.execute(_state(), _action())
+
+    assert result.status == ExecutionStatus.FAILED
+    assert "admitted metric contract" in (result.error or "")
+    execution_path = next(
+        root / item for item in result.artifacts if item.endswith("execution.json")
+    )
+    execution = json.loads(execution_path.read_text(encoding="utf-8"))
+    assert "missing=['secondary_score']" in execution["parse_error"]
+
+
 def test_measurement_parser_rejects_aggregate_only_or_inconsistent_evidence() -> None:
     with pytest.raises(ValueError, match="exactly one"):
         parse_measurements(b'{"metrics":{"score_delta":1}}\n')

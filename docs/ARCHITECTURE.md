@@ -1023,3 +1023,45 @@ not claim distributed exactly-once execution: the interval after `call_started`
 and before a durable result is inherently unknowable without a provider-side
 idempotency key. Descriptor-relative storage and crash-safe failed-attempt
 rollover remain separate hardening work.
+
+### ADR-037: Native source is proposal-only until deterministic admission
+
+Status: accepted for offline CPU source; provider-backed generation is pending.
+
+The isolation runner previously accepted only a registered source definition.
+That kept execution real and bounded, but it offered no explicit boundary for
+source proposed by a future semantic node. Allowing a model response to become a
+file or command directly would merge content generation, policy, filesystem
+mutation, and execution authority into one unauditable step.
+
+SciTaste now separates those roles. A strict external proposal declares exact
+source, experiment identity, expected metrics, rationale, runtime limits, and
+registered or model-attributed provenance. Model attribution requires provider,
+model, request hash, and response hash, but this component neither performs nor
+independently verifies that provider call. A versioned deterministic policy may
+restrict—but cannot expand—the platform import ceiling. AST admission rejects
+unbounded or malformed source, disallowed/private imports and attributes,
+dynamic execution/file builtins, dunder access, authority-expanding syntax, and
+missing measurement literals.
+
+One actual run publishes policy, proposal, admission, and root context records
+atomically beneath `native_execution/context/code/`. Both semantic record hashes
+and exact serialized bytes are bound. The original proposal is always retained;
+only acceptance creates a byte-identical `admitted/experiment.py`. Rejection
+fails the run before workflow stages while remaining inspectable. Resume
+revalidates the external binding and every owned byte rather than re-admitting a
+different source.
+
+Acceptance upgrades the runner definition to schema `1.1` and carries the
+proposal's complete expected metric set into runtime parsing. Replicates must
+report exactly that set, closing the gap between a statically mentioned metric
+and the values actually emitted by the isolated process. Legacy registered
+definition `1.0` remains readable without this additive contract.
+
+Static admission is defense in depth, not containment and not evidence that an
+experiment is scientifically meaningful. Accepted source must still pass the
+Bubblewrap availability probe, namespace/resource limits, exact output capture,
+replicate schema, and independently derived metric checks. A provider-backed
+proposer must later add durable request/raw-response/extraction/telemetry and
+no-repeat recovery evidence without receiving shell, filesystem, controller, or
+execution authority.

@@ -1,0 +1,46 @@
+schema_version: "1.0"
+proposal_id: conflict-pivot-measurement-v1
+source_path: ../../examples/native_experiments/conflict_pivot_measurement.py
+rationale: >-
+  Measure conflict-aware and matched-baseline pivot accuracy over three fixed
+  replicates, then expose their delta through the strict SciTaste measurement
+  envelope.
+expected_metrics:
+  - baseline_correct_pivot_rate
+  - conflict_aware_correct_pivot_rate
+  - correct_pivot_delta
+producer:
+  schema_version: "1.0"
+  mode: registered
+  producer_id: scitaste-offline-reference
+experiment:
+  experiment_id: experiment-support
+  primary_metric: correct_pivot_delta
+  metric_direction: maximize
+  support_threshold: 0.0
+  limits:
+    timeout_seconds: 15.0
+    cpu_seconds: 10
+    max_memory_mb: 256
+    max_output_bytes: 65536
+    max_open_files: 32
+    max_processes: 16
+policy:
+  schema_version: "1.0"
+  policy_id: scitaste-native-python-v1
+  max_source_bytes: 65536
+  max_ast_nodes: 5000
+  max_literal_bytes: 32768
+  allowed_imports:
+    - collections
+    - decimal
+    - fractions
+    - functools
+    - hashlib
+    - itertools
+    - json
+    - math
+    - random
+    - re
+    - statistics
+    - string

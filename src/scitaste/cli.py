@@ -53,6 +53,7 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
+from scitaste.executor.native_code import inspect_native_code_proposal
 from scitaste.executor.native_sandbox import (
     NativeExperimentRunner,
     load_native_experiment_definition,
@@ -1149,14 +1150,24 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
-        native_experiment = (
+        code_inspection = (
+            inspect_native_code_proposal(config.native_code_proposal_config)
+            if config.native_code_proposal_config is not None
+            else None
+        )
+        registered_experiment = (
             load_native_experiment_definition(config.native_experiment_config)
             if config.native_experiment_config is not None
             else None
         )
+        native_experiment = registered_experiment
+        if code_inspection is not None and code_inspection.admission.decision == "accepted":
+            native_experiment = code_inspection.experiment_definition(
+                code_inspection.config.source_path
+            )
         isolation = (
             NativeExperimentRunner(native_experiment).availability().model_dump(mode="json")
-            if native_experiment is not None
+            if native_experiment is not None and config.execution_backend == "scitaste-native"
             else None
         )
         model_advisory = (
@@ -1181,17 +1192,40 @@ def _handle_full(args: argparse.Namespace) -> int:
                             if config.native_knowledge_config is not None
                             else None
                         ),
-                        "experiment_configured": native_experiment is not None,
+                        "experiment_configured": (
+                            registered_experiment is not None or code_inspection is not None
+                        ),
                         "experiment_id": (
                             native_experiment.experiment_id
                             if native_experiment is not None
-                            else None
+                            else (
+                                code_inspection.config.experiment.experiment_id
+                                if code_inspection is not None
+                                else None
+                            )
                         ),
                         "isolation_required": (
                             config.execution_backend == "scitaste-native"
                             and native_experiment is not None
                         ),
                         "isolation": isolation,
+                        "code_admission": (
+                            None
+                            if code_inspection is None
+                            else {
+                                "proposal_id": code_inspection.config.proposal_id,
+                                "producer_mode": code_inspection.config.producer.mode,
+                                "decision": code_inspection.admission.decision,
+                                "binding_sha256": code_inspection.binding_sha256,
+                                "violation_count": len(code_inspection.admission.violations),
+                                "violations": [
+                                    item.model_dump(mode="json")
+                                    for item in code_inspection.admission.violations
+                                ],
+                                "proposal_only": True,
+                                "would_materialize_on_run": True,
+                            }
+                        ),
                     },
                     "resume": args.resume,
                     "stages": ["discovery", "evidence", "communication", "figure"],

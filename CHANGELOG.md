@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- Native CPU experiments now have a typed proposal and deterministic static
+  admission boundary before Bubblewrap execution. Project-owned, self-hashed
+  policy/proposal/admission/context records bind the exact proposed and admitted
+  source, producer provenance, expected metrics, AST/import/literal statistics,
+  runtime limits, and verdict. Unsafe or malformed proposals fail before stage
+  execution while retaining rejection evidence; only byte-identical admitted
+  source can reach the existing no-network sandbox, whose definition `1.1` also
+  enforces the proposal's complete metric set at runtime. Full Workflow dry-run
+  is mutation-free and exposes the verdict, and its default configurations now
+  exercise this boundary. Provider-backed code generation remains a later gate.
 - Provider-facing bootstrap and selected-action attempts now publish a durable
   `prepared → call_started → result_published` evidence chain. Each phase is
   write-once, self-hashed, predecessor-bound, and tied to the exact request,

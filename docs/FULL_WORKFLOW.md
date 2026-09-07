@@ -201,8 +201,11 @@ Generative UI surface but has no execution authority.
 ## Configuration boundary
 
 `configs/workflows/full_offline_v1.yaml` chooses the four typed scenario files,
-a versioned native Knowledge seed, and one registered native experiment, and owns the canonical
-project/publication identity. Scenario files contribute
+a versioned native Knowledge seed, and one typed native code proposal, and owns
+the canonical project/publication identity. The proposal is inspected without
+mutation during `--dry-run`; an actual run durably publishes its policy,
+proposal, verdict, proposed source, and accepted source before constructing the
+Bubblewrap runner. Scenario files contribute
 phase-specific claims, evidence, narrative contracts, review feedback, and
 figure contracts; their standalone demo project IDs are replaced and revalidated
 against the full-workflow project. This permits reusable phase fixtures without
@@ -219,8 +222,10 @@ project or accessing the network.
 
 AutoResearchClaw is not modified or invoked by this acceptance case. It remains
 an optional baseline/compatibility adapter. The native path now owns local
-retrieval plus one registered isolated CPU experiment and its metric extraction.
-Open-web retrieval, generated-code admission, dataset/GPU profiles, and long-form
-generation remain capability-parity work; they must preserve the same
+retrieval plus one admitted isolated CPU experiment and its metric extraction.
+The code may carry model-attributed content hashes, but no first-party
+provider-backed code proposer exists yet. Open-web retrieval, provider-backed
+code generation, dataset/GPU profiles, and long-form generation remain
+capability-parity work; they must preserve the same
 ProjectRuntime ownership, state-continuity, evidence-binding, and
 failure-retention contracts.

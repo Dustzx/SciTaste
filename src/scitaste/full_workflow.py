@@ -24,6 +24,12 @@ from scitaste.evidence.workflow import (
 )
 from scitaste.executor.base import ResearchExecutor
 from scitaste.executor.native import SciTasteNativeExecutor, build_builtin_executor
+from scitaste.executor.native_code import (
+    NativeCodeInspection,
+    inspect_native_code_proposal,
+    load_native_code_context_record,
+    prepare_native_code_experiment,
+)
 from scitaste.executor.native_sandbox import (
     NativeExperimentDefinition,
     NativeExperimentRunner,
@@ -80,6 +86,7 @@ class FullWorkflowConfig(BaseModel):
     figure_scenario: Path
     native_knowledge_config: Path | None = None
     native_experiment_config: Path | None = None
+    native_code_proposal_config: Path | None = None
     model_node_advisory: Path | None = None
     paper_id: str
     paper_directory: str
@@ -96,6 +103,17 @@ class FullWorkflowConfig(BaseModel):
     def safe_entry_id(cls, value: str, info: object) -> str:
         field_name = getattr(info, "field_name", "entry")
         return validate_entry_id(value, field_name=field_name)
+
+    @model_validator(mode="after")
+    def native_experiment_source_is_unambiguous(self) -> FullWorkflowConfig:
+        if (
+            self.native_experiment_config is not None
+            and self.native_code_proposal_config is not None
+        ):
+            raise ValueError(
+                "native_experiment_config and native_code_proposal_config are mutually exclusive"
+            )
+        return self
 
 
 StageName = Literal["discovery", "evidence", "communication", "figure"]
@@ -184,7 +202,16 @@ class FullWorkflow:
             and not allow_live_model_nodes
         ):
             raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
-        workflow_config_sha256 = _workflow_config_sha256(config, model_advisory)
+        code_inspection = (
+            inspect_native_code_proposal(config.native_code_proposal_config)
+            if config.native_code_proposal_config is not None
+            else None
+        )
+        workflow_config_sha256 = _workflow_config_sha256(
+            config,
+            model_advisory,
+            code_inspection=code_inspection,
+        )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
             snapshot, resume_attempt = self._resume_run(
@@ -224,6 +251,7 @@ class FullWorkflow:
                 config,
                 run_root=run_root,
                 seed=self.seed,
+                code_inspection=code_inspection,
             )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
@@ -298,7 +326,7 @@ class FullWorkflow:
                 "archived_attempts": archived_attempts,
                 "scope": config.evidence_scope,
                 "execution_backend": config.execution_backend,
-                "native_execution": _native_execution_summary(executor),
+                "native_execution": _native_execution_summary(executor, run_root=run_root),
                 "effectiveness_claim": False,
                 "project_revision": snapshot.revision + 1,
                 "current_paper": snapshot.current_paper_locator,
@@ -647,7 +675,7 @@ class FullWorkflow:
         communication_artifacts = (
             ("evidence_projection.json",)
             if config.execution_backend == "scitaste-native"
-            and config.native_experiment_config is not None
+            and _native_experiment_is_configured(config)
             else ()
         )
         communication_record = (
@@ -796,11 +824,16 @@ def _build_full_workflow_executor(
     *,
     run_root: Path,
     seed: int,
+    code_inspection: NativeCodeInspection | None = None,
 ) -> ResearchExecutor:
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
     knowledge = _prepare_native_knowledge(config, run_root=run_root)
-    experiment = _prepare_native_experiment(config, run_root=run_root)
+    experiment = _prepare_native_experiment(
+        config,
+        run_root=run_root,
+        code_inspection=code_inspection,
+    )
     if experiment is not None:
         evidence_experiment_id = load_evidence_scenario(
             config.evidence_scenario
@@ -894,7 +927,14 @@ def _prepare_native_experiment(
     config: FullWorkflowConfig,
     *,
     run_root: Path,
+    code_inspection: NativeCodeInspection | None = None,
 ) -> NativeExperimentDefinition | None:
+    if config.native_code_proposal_config is not None:
+        return prepare_native_code_experiment(
+            config.native_code_proposal_config,
+            run_root=run_root,
+            inspection=code_inspection,
+        )
     source_config = config.native_experiment_config
     if source_config is None:
         return None
@@ -944,7 +984,11 @@ def _prepare_native_experiment(
     return definition.model_copy(update={"source_path": copied_source})
 
 
-def _native_execution_summary(executor: ResearchExecutor) -> dict[str, object] | None:
+def _native_execution_summary(
+    executor: ResearchExecutor,
+    *,
+    run_root: Path,
+) -> dict[str, object] | None:
     if not isinstance(executor, SciTasteNativeExecutor) or executor.store is None:
         return None
     verification = executor.store.verify()
@@ -955,6 +999,19 @@ def _native_execution_summary(executor: ResearchExecutor) -> dict[str, object] |
         else {
             "experiment_id": executor.experiment_runner.definition.experiment_id,
             "availability": executor.experiment_runner.availability().model_dump(mode="json"),
+        }
+    )
+    code_context = load_native_code_context_record(run_root)
+    payload["code_admission"] = (
+        None
+        if code_context is None
+        else {
+            "decision": code_context.decision,
+            "binding_sha256": code_context.binding_sha256,
+            "record_sha256": code_context.record_sha256,
+            "proposal": code_context.proposal_locator,
+            "admission": code_context.admission_locator,
+            "runtime_isolation_required": True,
         }
     )
     return payload
@@ -970,6 +1027,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "figure_scenario",
         "native_knowledge_config",
         "native_experiment_config",
+        "native_code_proposal_config",
         "model_node_advisory",
     ):
         if payload.get(field) is None:
@@ -1314,6 +1372,8 @@ def _file_sha256(path: Path) -> str:
 def _workflow_config_sha256(
     config: FullWorkflowConfig,
     model_advisory: LoadedFullWorkflowModelAdvisory | None = None,
+    *,
+    code_inspection: NativeCodeInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
     for field in (
@@ -1337,6 +1397,23 @@ def _workflow_config_sha256(
             "content_sha256": _file_sha256(config.native_experiment_config),
             "source_sha256": _file_sha256(experiment.source_path),
         }
+    if config.native_code_proposal_config is None:
+        payload.pop("native_code_proposal_config", None)
+    else:
+        inspection = code_inspection or inspect_native_code_proposal(
+            config.native_code_proposal_config
+        )
+        if inspection.config_path != config.native_code_proposal_config.absolute():
+            raise ValueError("native code inspection belongs to another full-workflow config")
+        payload["native_code_proposal_config"] = {
+            "binding_sha256": inspection.binding_sha256,
+            "config_sha256": inspection.config_sha256,
+            "source_sha256": inspection.proposal.source_sha256,
+            "proposal_sha256": inspection.proposal.record_sha256,
+            "policy_sha256": inspection.policy.record_sha256,
+            "admission_sha256": inspection.admission.record_sha256,
+            "decision": inspection.admission.decision,
+        }
     if config.model_node_advisory is None:
         # Preserve hashes registered by pre-advisory v1.0 offline runs.
         payload.pop("model_node_advisory", None)
@@ -1347,6 +1424,13 @@ def _workflow_config_sha256(
             "stage_recovery_contract": "2.0",
         }
     return content_sha256(payload)
+
+
+def _native_experiment_is_configured(config: FullWorkflowConfig) -> bool:
+    return (
+        config.native_experiment_config is not None
+        or config.native_code_proposal_config is not None
+    )
 
 
 def _write_json(path: Path, payload: object) -> None:

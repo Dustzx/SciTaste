@@ -183,8 +183,10 @@ artifact hashes validate; partial stage directories are retained under that
 run's `failed_attempts/` tree.
 
 This validates end-to-end framework behavior with SciTaste's first-party
-executor, including real local retrieval and one content-bound, no-network CPU
-experiment. It is not yet autonomous code generation, a general experiment
+executor, including real local retrieval and one content-bound CPU proposal
+that must pass deterministic static admission before no-network execution. The
+run owns the proposed source, verdict, admitted source, and exact hashes. It is
+not yet provider-backed autonomous code generation, a general experiment
 platform, or an effectiveness result. A working Bubblewrap installation is
 required; pass `--backend mock` only for explicit test compatibility. See
 [`docs/FULL_WORKFLOW.md`](docs/FULL_WORKFLOW.md).

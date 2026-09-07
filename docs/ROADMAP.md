@@ -190,13 +190,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stderr retention, strict replicate records, and independently derived metrics.
   Evidence consumes those measured values instead of the configured result
   fixture. This is executable integration evidence, not scientific effectiveness.
+- The default Full Workflow now passes that CPU source through a typed
+  proposal/static-admission boundary. Exact proposal, policy, verdict, proposed
+  source, and byte-identical admitted source are project-owned and hash-bound;
+  rejected source remains auditable but cannot reach the runner. Static
+  admission is defense in depth and does not replace Bubblewrap.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a
   clean reader-facing projection containing the measured mean, replicates,
   dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  code generation and admission, dataset/GPU experiment profiles, generative
+  provider-backed code generation, dataset/GPU experiment profiles, generative
   analysis, writing, and figures. Existing scenario-bound receipts are integration
   evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution

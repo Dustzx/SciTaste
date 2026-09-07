@@ -10,11 +10,12 @@ and compatibility commands.
 | Capability | Current implementation | Evidence level |
 |---|---|---|
 | Local knowledge retrieval | Real lexical retrieval from a content-bound `KnowledgeLibrary` | implemented |
-| Registered Python experiment | Bubblewrap-isolated execution of one content-bound source with hard limits | implemented, CPU/offline |
+| Admitted Python experiment | Typed proposal, deterministic static admission, then Bubblewrap-isolated execution of one content-bound source | implemented, CPU/offline |
 | Replicate metric extraction | Strict final machine record; means, dispersion, stability, and relation independently derived | implemented |
 | Controller/state actions | First-party typed workflow operation plus action receipt | implemented, scenario-bound |
 | Evidence/writing/figure components | Existing deterministic SciTaste components plus action receipt | implemented, scenario-bound |
-| Generated code execution | The isolation gate exists, but no model-generated source is admitted yet | pending |
+| Model-attributed code proposal | Provider/model plus request/response hashes can be registered, but this boundary does not perform or verify the provider call | contract implemented |
+| Provider-backed code generation | No first-party generator yet produces and binds the request, raw response, and extracted source | pending |
 | Model-generated long-form content | Bounded proposal nodes exist, but no native generative handler has execution authority | pending |
 
 This distinction is intentional. A workflow-component receipt is not described
@@ -37,7 +38,12 @@ runs/<run-id>/native_execution/
 │       ├── library_manifest.json
 │       ├── knowledge/records.jsonl
 │       └── taste/records.jsonl
-│   └── experiment/{EXPERIMENT.json,experiment.py}
+│   ├── experiment/{EXPERIMENT.json,experiment.py} # legacy registered path
+│   └── code/
+│       ├── CODE.json
+│       ├── {POLICY,PROPOSAL,ADMISSION}.json
+│       ├── proposed.py
+│       └── admitted/experiment.py                 # accepted proposals only
 ├── artifacts/<result-token>/
 │   ├── retrieval.json              # retrieval actions
 │   └── {stdout.txt,stderr.txt,metrics.json,execution.json} # experiment action
@@ -52,6 +58,29 @@ machine-specific absolute paths.
 the run-local source locator, primary metric, direction, support threshold, and
 limits. Resume rejects drift in either the registered external source or its
 run-local copy.
+
+The default Full Workflow now uses `code/` instead. `PROPOSAL.json` binds exact
+source bytes, experiment identity, expected metrics, runtime limits, rationale,
+producer provenance, and a proposal-only authority label. `POLICY.json` records
+the platform-bounded import allowlist and syntax/size ceilings.
+`ADMISSION.json` records the AST statistics, imports, every deterministic
+violation, and the accepted/rejected verdict. `CODE.json` binds both semantic
+record hashes and exact serialized-file hashes. Only an accepted proposal gets
+an `admitted/experiment.py`, and that file must be byte-identical to
+`proposed.py`. Rejected proposals retain all four evidence records and the
+proposed bytes, fail the run before any stage executes, and never create an
+executable source.
+
+Admission rejects source/config symlinks, invalid UTF-8 or syntax, oversized
+source/AST/literals, imports outside a non-expandable platform ceiling, private
+imports/attributes, dynamic evaluation and file-opening builtins, dunder access,
+async/class/yield/global syntax, a missing measurement marker, and missing
+declared metric literals. This static analysis is deterministic defense in
+depth, not a security sandbox or a proof of scientific validity; Bubblewrap and
+strict runtime measurement parsing remain mandatory after acceptance.
+Accepted proposals construct native experiment definition `1.1`, which requires
+the runtime metric set to match `expected_metrics` exactly; a source cannot pass
+admission by mentioning a metric and then omit or add it in its output.
 
 Every native action record contains:
 
@@ -104,13 +133,15 @@ The committed Full Workflow configurations declare:
 ```yaml
 execution_backend: scitaste-native
 native_knowledge_config: ../taste/library_seed_v1.yaml
-native_experiment_config: ../experiments/native_evidence_support_v1.yaml
+native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
 ```
 
 The workflow-config hash includes the bytes of `native_knowledge_config`, the
-native experiment definition, and the exact experiment source—not only their
-paths. At run creation each source is materialized once beneath the owning run.
-Resume reuses the immutable copies and refuses source or copied-record drift.
+native code proposal, exact source, policy, proposal, and admission records—not
+only their paths. At run creation each source is materialized once beneath the
+owning run. Resume reuses the immutable copies and refuses source or
+copied-record drift. The legacy `native_experiment_config` remains readable but
+is mutually exclusive with `native_code_proposal_config`.
 
 ## Isolation and measurement contract
 
@@ -159,9 +190,11 @@ fallback when native execution fails.
 
 ## Next capability gate
 
-This closes the registered CPU experiment gate, not autonomous code generation
-or broad scientific execution. The next milestone is a typed code-proposal and
-static-admission boundary that can send approved source into this runner without
-granting the model shell or filesystem authority. Dataset mounts, package
-environments, GPU access, and multi-process workloads need separate explicit
-profiles and resource accounting; none is silently enabled by the current gate.
+This closes the typed proposal/static-admission gate for offline CPU source, not
+autonomous code generation or broad scientific execution. The next milestone is
+a first-party provider-backed proposer that durably binds its exact request, raw
+response, extracted source, telemetry, and retry state before using this gate;
+the model still must not receive shell, filesystem, controller, or execution
+authority. Dataset mounts, package environments, GPU access, and multi-process
+workloads need separate explicit profiles and resource accounting; none is
+silently enabled by the current gate.
