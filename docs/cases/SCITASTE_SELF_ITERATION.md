@@ -494,7 +494,8 @@ CUDA kernel, local-Qwen inference, training, reproducibility, or effectiveness
 result. A content-bound Python/package/model environment and a real CUDA workload
 are therefore the next native-execution gate.
 
-The self-development project is revision 156. Its current run and exact evidence
+After registering the updated framework manuscript, the self-development project
+is revision 159. Its current run and exact execution evidence
 are under
 `outputs/projects/scitaste-self-development/runs/2026-09-08__scitaste-native__dataset-gpu-profiles-v1__seed-07/`.
 
@@ -509,11 +510,15 @@ bibliography, build evidence, and a self-hashed completeness assessment. The
 working draft describes the complete framework and current engineering evidence
 while explicitly withholding an effectiveness claim until the registered
 matched-budget matrix and blinded expert review are complete.
-The registered bundle is
-`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
-It contains 4,321 assessed words across 18 headings and a compiled 10-page PDF;
-its source is bound to commit `4ccee2edad6a61c8a86866bae732a134b95625be`.
-The self-development project selected it at revision 150. The corrected short
+The original registered bundle at
+`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`
+remains immutable. Revision 159 selects
+`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v2/`,
+which contains 4,467 assessed words across 18 headings and a compiled 10-page
+PDF. Its source is bound to commit
+`12a4e31a09b5404daa1ab741a4cd11402881c4df`, reports the current 850-test
+snapshot, and documents the leased Tool Intelligence executor plus dataset/GPU
+resource-profile boundary. The corrected short
 fixture is selected by `scitaste-native-codegen-acceptance` at revision 9, while
 the earlier misclassified directory remains visible as historical evidence.
 
