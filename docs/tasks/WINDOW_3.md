@@ -1,5 +1,71 @@
 # Window 3 Dispatch: Complete Multilingual Generative UI
 
+## r5 delivery: evaluation and responsive acceptance
+
+Assignment token: `W3-generative-ux-evaluation-20260908-r5`
+
+Status: `complete; delivered for main-window review`
+
+- feature branch: `feat/generative-ui-ux-evaluation-v5`
+- base: `efae9d5`
+- delivery commit: `0393f4d` (`feat(ui): add evidence workspace evaluation harness`)
+- branch state after delivery: clean
+- integration: main should review and cherry-pick the feature branch through
+  this r5 coordination record; `0393f4d` is the implementation commit and must
+  precede it. Window 3 did not merge, push, or rebase
+
+The r5 follow-up adds a read-only, fingerprinted structural/latency evaluator,
+a dependency-free Chromium receiver probe, a research-grounded paper evaluation
+protocol, and evaluation-driven tablet/mobile repairs. Automated results carry an
+explicit `not-human-usability-or-scientific-effectiveness` boundary. No model,
+external participant, project mutation, generated output, or manuscript claim
+was introduced.
+
+The self-hosted pre-experiment read `scitaste-self-development` revision 180 and
+snapshot `ef370d7bb6eb...d5dc48`. Across four applicable intents, one generated
+workspace represented a mean 3.25 fixed source views, or 65.83-percent structural
+view reduction; focused content ranked first in 4/4 cases and all 30 components
+remained evidence grounded. Mean component count was 7.5, and progress/paper
+review each reached the 12-component cap. Twenty local samples placed fixed
+progress at 132.748 ms median/152.052 ms p95 and deterministic generated
+progress at 1,657.035 ms median/1,720.975 ms p95. This is a navigation proxy gain
+paired with latency and information-load costs, not a human-usability gain.
+
+The current probe was also compared with the exact `efae9d5` baseline using the
+same copied project and 12-component generated progress document. At 390 pixels,
+the baseline left the focused workspace 2,036 pixels below the viewport; the
+repair places its start at zero and visibly focuses it. At 768 pixels,
+single-column tablet composition reduced document height from 134,812 to 28,134
+pixels (79.13 percent). The final 1440/768/390/320 checks had no document
+horizontal overflow, enabled visible target below 24 CSS pixels, locale-switch
+request, or runtime error.
+
+Verification:
+
+- focused Generative UI and CLI: `237 passed`;
+- branch-aware owned-module coverage: `86.49%`, above the 85-percent gate;
+- complete repository `make check`: Ruff format/lint passed and `859 passed`;
+- `node --check` passed for `app.js`, `locale.js`, and
+  `browser_response_probe.mjs`;
+- `git diff --check` passed;
+- isolated wheel: 156 entries, evaluator and all six receiver/locale assets
+  present, with no `outputs/`, tests, `third_party/`, key, or environment files.
+
+The complete metric definitions, source links, human-study design, statistical
+boundary, reproduction commands, exact fingerprints, and result tables are in
+`docs/GENERATION_AS_CONTENT_EVALUATION.md`. The recommended manuscript seam is a
+separate fourth interface-evaluation layer: evidence-grounded task completion is
+primary, time is the main efficiency endpoint, and proposal/execution
+comprehension is a non-inferiority safety gate. It must remain separate from
+SciTasteBench and matched-budget scientific-effectiveness metrics.
+
+Known limitations remain material: no external participant has supplied task
+time, SUS, task-ease, NASA-TLX, preference, or authority-comprehension data;
+end-to-end browser completion is not INP; generation is slower than a fixed
+surface; and 12-component progress/paper surfaces need a later bounded-disclosure
+study. Main should not edit the manuscript's effectiveness claim until a powered,
+counterbalanced human study supports it.
+
 Assignment token: `W3-generative-i18n-20260907-r4`
 
 Status: `complete; delivered for main-window review`
