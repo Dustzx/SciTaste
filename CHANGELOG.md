@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Full Workflow can now admit a strict open-question `ResearchBrief` before any
+  project mutation. A self-hashed launch plan binds the question, objective,
+  exact budget, evidence requirements, success criteria, prohibited claims,
+  workflow identity, and five registered inputs. Formal execution copies those
+  inputs into the owning run and consumes the copies; dry-run remains
+  mutation-free, resume verifies or completes the intake transaction, and
+  content drift fails closed. The deterministic v1 planner admits registered
+  scenarios and gives models proposal-only authority; it does not claim to
+  synthesize those scenarios autonomously.
 - Full Workflow finalization is now restart-safe after all four research stages.
   A write-once plan binds stage records, final state, manuscript source, figures,
   configuration, and paper identity; registered paper artifacts carry a closed

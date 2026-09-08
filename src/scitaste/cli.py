@@ -69,7 +69,11 @@ from scitaste.executor.native_sandbox import (
     load_native_experiment_definition,
 )
 from scitaste.executor.workflow import build_autoresearchclaw_workflow
-from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
+from scitaste.full_workflow import (
+    FullWorkflow,
+    inspect_full_workflow_intake,
+    load_full_workflow_config,
+)
 from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
@@ -182,6 +186,12 @@ def build_parser() -> argparse.ArgumentParser:
     full.add_argument("--project-id", default=None)
     full.add_argument("--run-id", default=None)
     full.add_argument("--paper-directory", default=None)
+    full.add_argument(
+        "--research-brief",
+        type=Path,
+        default=None,
+        help="Override the config with a strict open-question research brief",
+    )
     full.add_argument(
         "--resume",
         action="store_true",
@@ -1323,7 +1333,12 @@ def _handle_full(args: argparse.Namespace) -> int:
     config = load_full_workflow_config(config_path)
     if args.backend is not None and args.backend not in {"scitaste-native", "mock"}:
         raise ValueError("run full supports --backend scitaste-native or mock")
-    if args.project_id is not None or args.paper_directory is not None or args.backend is not None:
+    if (
+        args.project_id is not None
+        or args.paper_directory is not None
+        or args.backend is not None
+        or args.research_brief is not None
+    ):
         payload = config.model_dump(mode="python")
         if args.project_id is not None:
             payload["project_id"] = args.project_id
@@ -1331,6 +1346,8 @@ def _handle_full(args: argparse.Namespace) -> int:
             payload["paper_directory"] = args.paper_directory
         if args.backend is not None:
             payload["execution_backend"] = args.backend
+        if args.research_brief is not None:
+            payload["research_brief"] = args.research_brief.resolve()
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
@@ -1380,6 +1397,7 @@ def _handle_full(args: argparse.Namespace) -> int:
             if config.model_node_advisory is not None
             else None
         )
+        research_intake = inspect_full_workflow_intake(config, run_id=run_id)
         print(
             json.dumps(
                 {
@@ -1389,6 +1407,25 @@ def _handle_full(args: argparse.Namespace) -> int:
                     "provider": config.provider,
                     "model": config.model,
                     "execution_backend": config.execution_backend,
+                    "research_intake": (
+                        None
+                        if research_intake is None
+                        else {
+                            "brief_id": research_intake.brief.brief_id,
+                            "question": research_intake.brief.question,
+                            "planning_mode": research_intake.plan.planning_mode,
+                            "readiness": research_intake.plan.readiness,
+                            "plan_sha256": research_intake.plan.record_sha256,
+                            "input_bindings": [
+                                item.model_dump(mode="json")
+                                for item in research_intake.plan.input_bindings
+                            ],
+                            "model_authority": research_intake.plan.model_authority,
+                            "execution_authority": research_intake.plan.execution_authority,
+                            "would_materialize_on_run": True,
+                            "limitations": list(research_intake.plan.limitations),
+                        }
+                    ),
                     "native_execution": {
                         "project_owned_records": config.execution_backend == "scitaste-native",
                         "knowledge_configured": config.native_knowledge_config is not None,

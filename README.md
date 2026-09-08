@@ -66,6 +66,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   readiness blockers;
 - a typed, revision-guarded project runtime that owns runs, paper bundles,
   content-hashed snapshots, and safe current-artifact aliases;
+- a strict open-question intake that turns a research brief into a self-hashed
+  launch admission plan, then executes only project-owned copies of the admitted
+  scenarios while keeping model planning proposal-only;
 - bounded, opt-in semantic model nodes whose typed advice remains behind
   deterministic feasibility, budget, evidence, and transition gates, plus a
   fail-closed compatible live backend, versioned self-development pilot, and
@@ -181,6 +184,23 @@ one managed project and produce a registered Markdown/TeX/PDF paper bundle:
   --paper-directory offline-full-seed-07-integration-fixture \
   --seed 7 --output outputs
 ```
+
+To start from an explicit research question and inspect the complete launch
+admission before creating a project, use:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_open_question_offline_v1.yaml \
+  --run-id open-question-seed-07 --seed 7 --output outputs --dry-run
+```
+
+Remove `--dry-run` to execute the admitted plan. The committed brief declares
+the question, objective, exact budget, required evidence, success criteria,
+constraints, and prohibited claims. A formal run copies the brief plus all four
+scenario inputs into `runs/<run-id>/intake/` and reads those copies. This first
+planner is deterministic and scenario-backed: it closes the intake/ownership
+gap, but does not yet claim autonomous scenario synthesis or scientific
+effectiveness.
 
 A failed workflow-stage attempt can resume the same run with `--resume`.
 Completed stage checkpoints are reused only after their state chain and declared

@@ -1,0 +1,23 @@
+schema_version: "1.0"
+project_id: scitaste-open-question-offline
+title: SciTaste Open-Question Offline Workflow
+research_direction: Test conflict-aware scientific control from an open research question
+target_domain: autonomous-research
+target_venue: general-ml
+condition: full_scitaste_open_question_intake
+execution_backend: scitaste-native
+provider: mock
+model: deterministic-controller
+evidence_scope: offline-open-question-integration
+research_brief: ../research/conflict_control_open_question_v1.yaml
+discovery_scenario: ../experiments/discovery_strong.yaml
+evidence_scenario: ../evidence/support_demo.yaml
+communication_scenario: ../writing/reviewer_experiment_demo.yaml
+figure_scenario: ../visual/mechanism_demo.yaml
+native_knowledge_config: ../taste/library_seed_v1.yaml
+native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
+paper_id: conflict-aware-open-question-fixture
+paper_directory: open-question-integration-fixture
+paper_title: "SciTaste Open-Question Integration Fixture: Conflict-Aware Research Control"
+paper_date: 2026-09-08
+paper_role: integration-fixture

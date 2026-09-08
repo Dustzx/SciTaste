@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-08.14`
+Board revision: `2026-09-08.15`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Phase 9 local-system execution and core workflow | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
-| 2 | Tool Intelligence semantic-hotspot execution v2 | integrated; idle | `feat/tool-intelligence-v2` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v2` | new assignment required |
-| 3 | Multilingual Generation as Content receiver v4 | integrated; idle | `feat/generative-ui-i18n-v4` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
+| Main | Open-question intake and workflow launch autonomy | acceptance in progress | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
+| 2 | Durable project-owned Tool Intelligence loop v3 | delivered; review pending | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | main integration review |
+| 3 | Generation as Content UX evaluation v5 | delivered; review pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | main integration review |
 
 ## Scheduling policy
 
@@ -25,9 +25,10 @@ Board revision: `2026-09-08.14`
 ## Current non-overlap
 
 - Window 2's Tool Intelligence v2 single-step leased executor is integrated at
-  `00b006b`; Window 3's English/Simplified-Chinese Generation as Content receiver
-  is integrated at `1b233da` and `1afaede`. Both windows are idle until a new
-  substantial Epic is assigned.
+  `00b006b`; its v3 durable-loop handoff is queued for review. Window 3's
+  English/Simplified-Chinese receiver is integrated at `1b233da` and `1afaede`;
+  its v5 UX-evaluation handoff is also queued. Neither handoff is treated as
+  integrated before main-window review.
 - Main owns Phase 9 local-system execution, core workflow development,
   integration repairs, project catalog refreshes, common architecture/roadmap/
   changelog edits, full-suite checks, and GitHub synchronization.
@@ -49,3 +50,8 @@ Board revision: `2026-09-08.14`
 - Main now owns explicit native resource profiles: content-bound datasets are
   copied into the project and mounted read-only, while GPU access requires exact
   device admission and bounded accounting. The default remains no dataset/no GPU.
+- Main has added a strict `ResearchBrief` and self-hashed Full Workflow launch
+  plan. Dry-run performs mutation-free admission; formal execution copies and
+  consumes five project-owned inputs. The v1 planner is registered-scenario based,
+  with model authority limited to proposals and deterministic execution admission
+  retained by SciTaste.

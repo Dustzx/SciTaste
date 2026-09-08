@@ -1,0 +1,32 @@
+schema_version: "1.0"
+brief_id: conflict-control-open-question-v1
+project_id: scitaste-open-question-offline
+question: >-
+  Can explicit support and contradiction structure improve autonomous research pivot
+  decisions under matched compute without degrading clear-evidence cases?
+objective: >-
+  Test the bounded conflict-aware control claim, retain negative evidence, and produce
+  an auditable integration manuscript whose conclusions do not exceed measured results.
+research_direction: Test conflict-aware scientific control from an open research question
+target_domain: autonomous-research
+target_venue: general-ml
+resource_budget:
+  gpu_hours: 2.0
+  max_experiments: 3
+  max_wall_time_hours: 2.0
+  max_api_cost_usd: 0.0
+required_evidence_types:
+  - matched held-out benchmark
+  - controlled pilot
+  - matched baseline
+success_criteria:
+  - Report the measured correct-pivot delta with replicate-level provenance.
+  - Preserve contradictory or null evidence in the evidence graph and manuscript scope.
+  - Bind every executable input and final paper artifact to a project-owned hash.
+constraints:
+  - Use registered offline evidence and the deterministic native executor.
+  - Do not contact an external model provider.
+  - Do not exceed the declared experiment or compute budget.
+prohibited_claims:
+  - Do not claim broad scientific effectiveness from this integration fixture.
+  - Do not describe registered scenario content as autonomously discovered evidence.

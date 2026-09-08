@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import tempfile
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -68,6 +69,12 @@ from scitaste.project import (
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 from scitaste.state.research_state import ResearchState
 from scitaste.visual.workflow import FigureScenario, FigureWorkflow, load_figure_scenario
+from scitaste.workflow_intake import (
+    WorkflowIntakeInspection,
+    inspect_workflow_intake,
+    materialize_workflow_intake,
+    verify_workflow_intake,
+)
 from scitaste.writing.evidence_projection import build_writing_evidence_projection
 from scitaste.writing.manuscript_quality import (
     ManuscriptAssessment,
@@ -98,6 +105,7 @@ class FullWorkflowConfig(BaseModel):
     provider: Literal["mock"] = "mock"
     model: str = "deterministic-controller"
     evidence_scope: str = "offline-integration-only"
+    research_brief: Path | None = None
     discovery_scenario: Path
     evidence_scenario: Path
     communication_scenario: Path
@@ -318,6 +326,11 @@ class FullWorkflow:
             code_generation=code_generation,
             execution_profile=execution_profile,
         )
+        intake_inspection = inspect_full_workflow_intake(
+            config,
+            run_id=run_id,
+            workflow_config_sha256=workflow_config_sha256,
+        )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
             completed = next(
@@ -335,6 +348,7 @@ class FullWorkflow:
                     config,
                     completed,
                     workflow_config_sha256=workflow_config_sha256,
+                    intake_inspection=intake_inspection,
                 )
             snapshot, resume_attempt = self._resume_run(
                 runtime,
@@ -342,8 +356,19 @@ class FullWorkflow:
                 config,
                 run_id,
                 workflow_config_sha256=workflow_config_sha256,
+                intake_inspection=intake_inspection,
             )
         else:
+            intake_metadata = (
+                {}
+                if intake_inspection is None
+                else {
+                    "research_brief_id": intake_inspection.brief.brief_id,
+                    "research_question": intake_inspection.brief.question,
+                    "launch_plan_locator": "intake/PLAN.json",
+                    "launch_plan_sha256": intake_inspection.plan.record_sha256,
+                }
+            )
             snapshot = runtime.begin_run(
                 config.project_id,
                 ProjectRun(
@@ -357,6 +382,7 @@ class FullWorkflow:
                     stage_path="stages",
                     execution_backend=config.execution_backend,
                     workflow_config_sha256=workflow_config_sha256,
+                    **intake_metadata,
                 ),
                 expected_revision=snapshot.revision,
             )
@@ -369,6 +395,11 @@ class FullWorkflow:
         run_root = runtime.outputs_root / "projects" / config.project_id / "runs" / run_id
 
         try:
+            prepared_intake = (
+                materialize_workflow_intake(intake_inspection, run_root=run_root)
+                if intake_inspection is not None
+                else None
+            )
             generated_code = (
                 generate_native_code_proposal(
                     code_generation,
@@ -405,6 +436,9 @@ class FullWorkflow:
                 model_advisory=model_advisory,
                 allow_live_model_nodes=allow_live_model_nodes,
                 executor=executor,
+                scenario_paths=(
+                    prepared_intake.scenario_paths if prepared_intake is not None else None
+                ),
             )
             reloaded_advisory = (
                 load_full_workflow_model_advisory(config.model_node_advisory)
@@ -444,6 +478,11 @@ class FullWorkflow:
                 != workflow_config_sha256
             ):
                 raise ValueError("workflow configuration changed during execution")
+            if intake_inspection is not None:
+                prepared_intake = verify_workflow_intake(
+                    intake_inspection,
+                    run_root=run_root,
+                )
             finalization_plan = _publish_or_verify_finalization_plan(
                 config,
                 run_id=run_id,
@@ -532,6 +571,9 @@ class FullWorkflow:
                 "execution_backend": config.execution_backend,
                 "native_execution": _native_execution_summary(executor, run_root=run_root),
                 "effectiveness_claim": False,
+                "research_intake": (
+                    prepared_intake.summary() if prepared_intake is not None else None
+                ),
                 "project_revision": snapshot.revision + 1,
                 "current_paper": snapshot.current_paper_locator,
                 "stages": summaries,
@@ -619,6 +661,7 @@ class FullWorkflow:
         run_id: str,
         *,
         workflow_config_sha256: str,
+        intake_inspection: WorkflowIntakeInspection | None,
     ) -> tuple[ProjectSnapshot, int]:
         matches = [item for item in snapshot.manifest.runs if item.run_id == run_id]
         if not matches:
@@ -649,6 +692,13 @@ class FullWorkflow:
         extra = run.model_extra or {}
         if extra.get("workflow_config_sha256") != workflow_config_sha256:
             raise ValueError("resume workflow configuration does not match the registered run")
+        if intake_inspection is not None and (
+            extra.get("research_brief_id") != intake_inspection.brief.brief_id
+            or extra.get("research_question") != intake_inspection.brief.question
+            or extra.get("launch_plan_locator") != "intake/PLAN.json"
+            or extra.get("launch_plan_sha256") != intake_inspection.plan.record_sha256
+        ):
+            raise ValueError("resume research intake does not match the registered run")
         raw_attempt = extra.get("resume_attempt", 0)
         if not isinstance(raw_attempt, int) or isinstance(raw_attempt, bool) or raw_attempt < 0:
             raise ValueError("registered run has an invalid resume_attempt")
@@ -682,6 +732,7 @@ class FullWorkflow:
         run: ProjectRun,
         *,
         workflow_config_sha256: str,
+        intake_inspection: WorkflowIntakeInspection | None,
     ) -> dict[str, object]:
         expected_identity = (
             config.provider,
@@ -711,6 +762,11 @@ class FullWorkflow:
         ):
             raise ValueError("only the current completed run can repair its finalization surface")
         run_root = runtime.outputs_root / "projects" / config.project_id / "runs" / run.run_id
+        prepared_intake = (
+            verify_workflow_intake(intake_inspection, run_root=run_root)
+            if intake_inspection is not None
+            else None
+        )
         plan_path = run_root / "finalization" / "PLAN.json"
         plan = FullFinalizationPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
         if (
@@ -769,6 +825,8 @@ class FullWorkflow:
             or summary.get("run_id") != run.run_id
             or summary.get("status") != "complete"
             or summary.get("workflow_config_sha256") != workflow_config_sha256
+            or summary.get("research_intake")
+            != (prepared_intake.summary() if prepared_intake is not None else None)
             or not isinstance(finalization, dict)
             or finalization.get("plan_sha256") != plan.record_sha256
             or summary.get("paper_files") != files
@@ -801,6 +859,7 @@ class FullWorkflow:
         model_advisory: LoadedFullWorkflowModelAdvisory | None,
         allow_live_model_nodes: bool,
         executor: ResearchExecutor,
+        scenario_paths: Mapping[StageName, Path] | None,
     ) -> tuple[dict[str, object], Path, list[str], list[str]]:
         stages = run_root / "stages"
         summaries: dict[str, object] = {}
@@ -808,6 +867,7 @@ class FullWorkflow:
         archived_attempts: list[str] = []
         reuse_allowed = resume
         previous_state: Path | None = None
+        owned_scenarios = scenario_paths or {}
 
         discovery_root = stages / "discovery"
         discovery_record = (
@@ -830,7 +890,7 @@ class FullWorkflow:
                 archived_attempts.append(_archive_stage(discovery_root, run_root, "discovery"))
             reuse_allowed = False
             discovery_raw = DiscoveryLoop(seed=self.seed, executor=executor).run(
-                _discovery_for_project(config),
+                _discovery_for_project(config, owned_scenarios.get("discovery")),
                 output_dir=discovery_root,
             )
             discovery_state = Path(str(discovery_raw["latest_state"]))
@@ -925,7 +985,9 @@ class FullWorkflow:
                         project_id=config.project_id,
                         run_id=run_id,
                         expected_project_revision=project_revision,
-                        evidence_scenario=_evidence_for_project(config),
+                        evidence_scenario=_evidence_for_project(
+                            config, owned_scenarios.get("evidence")
+                        ),
                         state_path=evidence_state,
                         record_path=advisory_record_path,
                         seed=self.seed,
@@ -953,7 +1015,7 @@ class FullWorkflow:
                     archived_attempts.append(_archive_stage(evidence_root, run_root, "evidence"))
                 reuse_allowed = False
                 evidence_raw = EvidenceWorkflow(seed=self.seed, executor=executor).run(
-                    _evidence_for_project(config),
+                    _evidence_for_project(config, owned_scenarios.get("evidence")),
                     output_dir=evidence_root,
                     state_path=previous_state,
                 )
@@ -979,7 +1041,9 @@ class FullWorkflow:
                         project_id=config.project_id,
                         run_id=run_id,
                         expected_project_revision=project_revision,
-                        evidence_scenario=_evidence_for_project(config),
+                        evidence_scenario=_evidence_for_project(
+                            config, owned_scenarios.get("evidence")
+                        ),
                         state_path=evidence_state,
                         record_path=advisory_record_path,
                         seed=self.seed,
@@ -1032,10 +1096,12 @@ class FullWorkflow:
                     _archive_stage(communication_root, run_root, "communication")
                 )
             reuse_allowed = False
-            communication_scenario = _communication_for_project(config)
+            communication_scenario = _communication_for_project(
+                config, owned_scenarios.get("communication")
+            )
             evidence_projection = None
             if communication_artifacts:
-                evidence_scenario = _evidence_for_project(config)
+                evidence_scenario = _evidence_for_project(config, owned_scenarios.get("evidence"))
                 evidence_projection = build_writing_evidence_projection(
                     state_path=previous_state,
                     run_root=run_root,
@@ -1081,7 +1147,7 @@ class FullWorkflow:
             if resume and figure_root.exists():
                 archived_attempts.append(_archive_stage(figure_root, run_root, "figure"))
             figure_raw = FigureWorkflow(seed=self.seed, executor=executor).run(
-                _figure_for_project(config),
+                _figure_for_project(config, owned_scenarios.get("figure")),
                 output_dir=figure_root,
                 state_path=previous_state,
             )
@@ -1464,6 +1530,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
     config_path = Path(path).resolve()
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     for field in (
+        "research_brief",
         "discovery_scenario",
         "evidence_scenario",
         "communication_scenario",
@@ -1483,18 +1550,52 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
     return FullWorkflowConfig.model_validate(payload)
 
 
-def _discovery_for_project(config: FullWorkflowConfig) -> DiscoveryScenario:
-    scenario = load_discovery_scenario(config.discovery_scenario)
+def inspect_full_workflow_intake(
+    config: FullWorkflowConfig,
+    *,
+    run_id: str,
+    workflow_config_sha256: str | None = None,
+) -> WorkflowIntakeInspection | None:
+    """Inspect an optional open-question intake without writing project state."""
+
+    if config.research_brief is None:
+        return None
+    config_sha256 = workflow_config_sha256 or _workflow_config_sha256(config)
+    return inspect_workflow_intake(
+        config.research_brief,
+        project_id=config.project_id,
+        run_id=run_id,
+        research_direction=config.research_direction,
+        target_domain=config.target_domain,
+        target_venue=config.target_venue,
+        workflow_config_sha256=config_sha256,
+        scenario_paths={
+            "discovery": config.discovery_scenario,
+            "evidence": config.evidence_scenario,
+            "communication": config.communication_scenario,
+            "figure": config.figure_scenario,
+        },
+    )
+
+
+def _discovery_for_project(
+    config: FullWorkflowConfig, scenario_path: Path | None = None
+) -> DiscoveryScenario:
+    scenario = load_discovery_scenario(scenario_path or config.discovery_scenario)
     return DiscoveryScenario.model_validate(_identity_payload(scenario, config))
 
 
-def _evidence_for_project(config: FullWorkflowConfig) -> EvidenceWorkflowScenario:
-    scenario = load_evidence_scenario(config.evidence_scenario)
+def _evidence_for_project(
+    config: FullWorkflowConfig, scenario_path: Path | None = None
+) -> EvidenceWorkflowScenario:
+    scenario = load_evidence_scenario(scenario_path or config.evidence_scenario)
     return EvidenceWorkflowScenario.model_validate(_identity_payload(scenario, config))
 
 
-def _communication_for_project(config: FullWorkflowConfig) -> CommunicationScenario:
-    scenario = load_communication_scenario(config.communication_scenario)
+def _communication_for_project(
+    config: FullWorkflowConfig, scenario_path: Path | None = None
+) -> CommunicationScenario:
+    scenario = load_communication_scenario(scenario_path or config.communication_scenario)
     payload = _identity_payload(scenario, config)
     if payload["review_resolution"] is not None:
         payload["review_resolution"].update(
@@ -1508,8 +1609,10 @@ def _communication_for_project(config: FullWorkflowConfig) -> CommunicationScena
     return CommunicationScenario.model_validate(payload)
 
 
-def _figure_for_project(config: FullWorkflowConfig) -> FigureScenario:
-    scenario = load_figure_scenario(config.figure_scenario)
+def _figure_for_project(
+    config: FullWorkflowConfig, scenario_path: Path | None = None
+) -> FigureScenario:
+    scenario = load_figure_scenario(scenario_path or config.figure_scenario)
     return FigureScenario.model_validate(_identity_payload(scenario, config))
 
 
@@ -1541,6 +1644,14 @@ def _publish_or_verify_finalization_plan(
         run_root / "stages" / "figure" / "figure.svg",
         run_root / "stages" / "figure" / "figure.drawio",
     ]
+    if config.research_brief is not None:
+        input_paths.extend(
+            [
+                run_root / "intake" / "PLAN.json",
+                run_root / "intake" / "BRIEF.yaml",
+                *(run_root / "intake" / "scenarios" / f"{stage}.yaml" for stage in _STAGE_ORDER),
+            ]
+        )
     input_sha256 = {_owned_locator(run_root, path): _file_sha256(path) for path in input_paths}
     expected = FullFinalizationPlan.create(
         project_id=config.project_id,
@@ -2012,6 +2123,10 @@ def _workflow_config_sha256(
     execution_profile: NativeExecutionProfileInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
+    if config.research_brief is None:
+        payload.pop("research_brief", None)
+    else:
+        payload["research_brief"] = {"content_sha256": _file_sha256(config.research_brief)}
     for field in (
         "discovery_scenario",
         "evidence_scenario",

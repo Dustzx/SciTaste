@@ -52,6 +52,41 @@ model-generation quality, or effectiveness.
 `--dry-run` validates the configuration and prints the planned executor and
 project/run/paper identity plus Bubblewrap availability without writing files.
 
+## Open-question intake
+
+The optional `research_brief` config field moves Full Workflow's entry boundary
+from an implicit topic string to a strict research contract. The brief fixes one
+question and objective, project identity, exact executable Discovery budget,
+required evidence types, success criteria, constraints, and prohibited claims.
+For example:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_open_question_offline_v1.yaml \
+  --run-id open-question-seed-07 --seed 7 --output outputs --dry-run
+```
+
+Dry-run builds the same self-hashed `WorkflowLaunchPlan` used by execution and
+reports its readiness, input hashes, authority boundary, and known limitations
+without creating `outputs/`. Admission fails if brief/config identity differs,
+the brief budget is not the executable Discovery budget, or any configured
+Evidence/Communication requirement lies outside the brief's authorized evidence
+types.
+
+On formal execution, the plan and exact brief/scenario bytes are published under
+the owning run before stage work begins. All four stages then load the run-owned
+copies. Source drift between inspection and copy, copy drift, plan drift, and
+resume-time tampering fail closed. A partially published intake can be completed
+on explicit resume only when every existing byte still matches its registered
+hash.
+
+The v1 planning mode is `deterministic-registered-inputs-v1`. It admits and binds
+registered scenarios; it does not generate new Discovery, Evidence,
+Communication, or Figure content from the question. Future model assistance may
+propose that content, but remains `proposal-only` and must pass the same identity,
+evidence, budget, execution, and project-revision gates. A `ready` plan is an
+execution admission result, not an effectiveness or publication claim.
+
 An opt-in offline acceptance config also exercises a bounded semantic node in
 the real evidence-stage path:
 
@@ -131,6 +166,8 @@ outputs/projects/<project-id>/
 ├── PROJECT.json
 ├── runs/<run-id>/
 │   ├── full_run_summary.json
+│   ├── intake/{BRIEF.yaml,PLAN.json}   # when open-question intake is enabled
+│   ├── intake/scenarios/{discovery,evidence,communication,figure}.yaml
 │   ├── finalization/PLAN.json          # write-once stage/paper input binding
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
 │   ├── failed_attempts/finalization/{paper,summary}/attempt-NNN/
@@ -204,7 +241,8 @@ marked `failed` with the exception type and bounded message for diagnosis.
 
 `--resume` accepts only a previously registered failed run with the same
 provider, model, condition, seed, evidence scope, stage path, and content-hashed
-workflow configuration (including all four scenario files and optional
+workflow configuration (including the optional research brief, all four
+scenario files and optional
 advisory or source-generation profile bindings). It reuses only
 the contiguous completed prefix whose record, state continuity, project
 identity, lifecycle position, and every declared file hash still validate. A

@@ -519,6 +519,14 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   complete the run metadata, and repair a missing post-completion surface without
   repeating any research-stage or provider action. Every paper file is hash-bound;
   registered paper or existing-surface drift blocks recovery.
+- Full Workflow now has a strict open-question intake boundary. A `ResearchBrief`
+  declares the question, objective, exact Discovery budget, evidence contract,
+  success criteria, constraints, and prohibited claims before project mutation.
+  Mutation-free inspection creates the same self-hashed launch plan used by a
+  formal run; execution copies and consumes five hash-bound project inputs, and
+  resume fails closed on plan or byte drift. This closes question-to-launch
+  ownership for registered scenarios. Autonomous scenario synthesis and
+  independently measured research-quality gain remain later gates.
 - An opt-in scripted or double-gated live semantic advisory now participates
   after evidence interpretation through the normal model-node runtime. Its
   predecessor/input state, profile, policy, proposal, recording, ledger head,

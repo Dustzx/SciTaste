@@ -1113,3 +1113,35 @@ response for unknown cost before source materialization; independent inspection
 also found invalid Python. This negative result is retained rather than repaired
 or executed. Priced provider acceptance, automatic source repair, dataset/GPU
 profiles, and scientific-effectiveness comparison remain separate gates.
+
+### ADR-039: Open research questions enter through a deterministic launch admission
+
+Status: accepted for registered-scenario Full Workflow intake.
+
+Full Workflow previously owned stage execution and finalization but began from
+four externally referenced scenario fixtures. Adding only a free-text `question`
+field would not close that gap: the executable budget and evidence requirements
+could still diverge from the user's intent, while the run would not own the
+inputs that determined its trajectory.
+
+An optional strict `ResearchBrief` now declares the question, objective, project
+identity, exact Discovery budget, required evidence types, success criteria,
+constraints, and prohibited claims. Before any project mutation, deterministic
+inspection loads every registered scenario, verifies identity/budget/evidence
+closure, hashes five inputs, and creates a self-hashed `WorkflowLaunchPlan` bound
+to the complete workflow configuration and run identity. Dry-run exposes that
+same plan without writing output.
+
+A formal run atomically copies the brief and four scenarios into `intake/`, then
+all stages consume those project-owned copies. Resume may complete a missing copy
+or plan only if every existing artifact still has its admitted content; completed
+run repair only verifies and never backfills intake. Both the registered run and
+final summary retain the brief and plan identities.
+
+The accepted planner mode is deliberately
+`deterministic-registered-inputs-v1`. Models have `proposal-only` authority and
+cannot change budgets, authorize evidence, select execution, or mark a plan
+ready. Question-to-scenario semantic alignment remains a user declaration in
+this version. Model-grounded scenario synthesis, research-quality comparison,
+and external review are separate later gates and must not be inferred from a
+ready launch plan.
