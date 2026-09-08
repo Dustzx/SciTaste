@@ -639,6 +639,8 @@ SciTaste development itself is also tracked as a dogfooding case for process
 usability and auditability. It is deliberately excluded from independent
 effectiveness claims; see
 [`docs/cases/SCITASTE_SELF_ITERATION.md`](docs/cases/SCITASTE_SELF_ITERATION.md).
+The restart-safe end-of-run transaction is documented separately in
+[`docs/cases/FULL_WORKFLOW_FINALIZATION_RECOVERY.md`](docs/cases/FULL_WORKFLOW_FINALIZATION_RECOVERY.md).
 Its canonical local project record is
 `outputs/projects/scitaste-self-development/`, alongside the research projects
 that SciTaste produces.
