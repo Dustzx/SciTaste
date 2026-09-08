@@ -47,8 +47,9 @@ The important boundary is proposal versus authority. A model node does not gain
 silent permission to execute code, spend budget, alter canonical state, or contact
 an undeclared system. Deterministic validation and the Taste controller retain
 those responsibilities. Current implementation supports typed advisory nodes,
-record/replay, project-owned receipts, and opt-in live providers; broader native
-code, analysis, and writing tools are still being implemented incrementally.
+record/replay, project-owned receipts, opt-in live providers, and one leased
+single-step read-only handler boundary; observations remain non-authoritative.
+Broader native code, analysis, and writing tools are still being implemented.
 
 ## Enabling innovations
 
@@ -88,9 +89,9 @@ designs:
 |---|---|---|
 | Scientific Taste control | Implemented and offline-tested | Formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces and typed intents implemented | Broader user studies and richer safe presentation repertoire |
-| Tool Intelligence | Proposal-only plans over three typed read-only capabilities, schema-pinned repair, replay, and live-provider gating implemented | Deterministic controlled executor, automatic workflow triggers, and registered effectiveness evidence |
+| Tool Intelligence | Plans, schema-pinned repair, replay/live gating, and a leased single-step executor over three typed read-only handlers implemented | Durable evidence admission, automatic workflow triggers, and registered effectiveness evidence |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
-| Native experiment execution | Isolated CPU replicate execution and metric derivation implemented | Dataset/GPU profiles, generated-code admission, broader workloads |
+| Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, and explicit NVIDIA device profiles implemented | Reproducible package/model environments, CUDA workload acceptance, and broader workloads |
 | Evidence-to-writing binding | Measured projection, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose and citation generation |
 | Independent superiority claim | Not claimed | Phase 9 formal cells and valid external review panel |
 

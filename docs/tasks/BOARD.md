@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-07.13`
+Board revision: `2026-09-08.14`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
 | Main | Phase 9 local-system execution and core workflow | in progress | `main` | `/home/good/zfx/papers/SciTaste` | integrated W2/W3 foundations |
-| 2 | Tool Intelligence follow-on from `INNOVATION_MAP.md` | in progress; owner assigned | `feat/tool-intelligence-v1` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence` | integrated v1 foundation |
-| 3 | Progress-first Generation as Content workspace | integrated; idle | `feat/generative-ui-intent-planner-v3` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
+| 2 | Tool Intelligence semantic-hotspot execution v2 | integrated; idle | `feat/tool-intelligence-v2` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v2` | new assignment required |
+| 3 | Multilingual Generation as Content receiver v4 | integrated; idle | `feat/generative-ui-i18n-v4` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | new assignment required |
 
 ## Scheduling policy
 
@@ -24,11 +24,10 @@ Board revision: `2026-09-07.13`
 
 ## Current non-overlap
 
-- Window 2's Tool Intelligence v1 Epic is integrated at `3013bc4`; the project
-  owner has assigned Window 2 a follow-on iteration from the Tool Intelligence
-  section of `docs/INNOVATION_MAP.md`. Main does not edit that subsystem while
-  the follow-on is active. Window 3's progress-first Generation as Content
-  WP1--WP5 is integrated and remains idle.
+- Window 2's Tool Intelligence v2 single-step leased executor is integrated at
+  `00b006b`; Window 3's English/Simplified-Chinese Generation as Content receiver
+  is integrated at `1b233da` and `1afaede`. Both windows are idle until a new
+  substantial Epic is assigned.
 - Main owns Phase 9 local-system execution, core workflow development,
   integration repairs, project catalog refreshes, common architecture/roadmap/
   changelog edits, full-suite checks, and GitHub synchronization.
@@ -47,3 +46,6 @@ Board revision: `2026-09-07.13`
   free questions, closed `SurfacePlan` composition, deterministic fallback, and
   the generated workspace receiver. Model-assisted plans require finite token,
   byte, latency, and measured-cost admission and never gain execution authority.
+- Main now owns explicit native resource profiles: content-bound datasets are
+  copied into the project and mounted read-only, while GPU access requires exact
+  device admission and bounded accounting. The default remains no dataset/no GPU.

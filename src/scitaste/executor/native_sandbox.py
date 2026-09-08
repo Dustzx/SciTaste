@@ -21,6 +21,13 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scitaste.executor.base import ExecutionResult, ExecutionStatus
+from scitaste.executor.native_profile import (
+    NativeExecutionProfile,
+    NativeGPUInventory,
+    NativeResourceAvailability,
+    PreparedNativeExecutionProfile,
+    preflight_native_resources,
+)
 from scitaste.executor.native_store import NativeExecutionStore
 from scitaste.schema.actions import ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -149,6 +156,7 @@ class NativeExperimentAvailability(BaseModel):
     available: bool
     isolation: Literal["bubblewrap"] = "bubblewrap"
     executable: str | None = None
+    resources: NativeResourceAvailability | None = None
     reason: str | None = None
 
 
@@ -160,30 +168,71 @@ class NativeExperimentRunner:
         definition: NativeExperimentDefinition,
         *,
         bubblewrap: str | Path | None = None,
+        execution_profile: PreparedNativeExecutionProfile | None = None,
     ) -> None:
         self.definition = definition
+        self.execution_profile = execution_profile
+        self.profile = (
+            execution_profile.profile
+            if execution_profile is not None
+            else NativeExecutionProfile(profile_id="default-deny")
+        )
         discovered = str(bubblewrap) if bubblewrap is not None else _find_executable("bwrap")
         self.bubblewrap = Path(discovered).resolve() if discovered else None
 
     @property
     def input_paths(self) -> tuple[Path, ...]:
-        return (self.definition.source_path,)
+        paths = [self.definition.source_path]
+        if self.execution_profile is not None:
+            paths.append(self.execution_profile.manifest_path)
+            for dataset in self.execution_profile.datasets:
+                if dataset.kind == "file":
+                    paths.append(dataset.materialized_path)
+                else:
+                    paths.extend(
+                        path
+                        for path in sorted(dataset.materialized_path.rglob("*"))
+                        if path.is_file()
+                    )
+        return tuple(paths)
 
     def availability(self) -> NativeExperimentAvailability:
+        resources = preflight_native_resources(
+            self.profile,
+            prepared=self.execution_profile,
+        )
+        if not resources.available:
+            return NativeExperimentAvailability(
+                available=False,
+                resources=resources,
+                reason=f"native execution resource preflight failed: {resources.reason}",
+            )
+        requested_gpu_hours = (
+            self.definition.limits.timeout_seconds * len(resources.gpu_devices) / 3600.0
+        )
+        if self.profile.gpu.enabled and requested_gpu_hours > self.profile.gpu.max_gpu_hours:
+            return NativeExperimentAvailability(
+                available=False,
+                resources=resources,
+                reason="native experiment timeout exceeds the admitted GPU-hour budget",
+            )
         if _resource is None:
             return NativeExperimentAvailability(
                 available=False,
+                resources=resources,
                 reason="POSIX process resource limits are unavailable",
             )
         if self.bubblewrap is None:
             return NativeExperimentAvailability(
                 available=False,
+                resources=resources,
                 reason="bubblewrap executable was not found",
             )
         if not self.bubblewrap.is_file() or not os.access(self.bubblewrap, os.X_OK):
             return NativeExperimentAvailability(
                 available=False,
                 executable=str(self.bubblewrap),
+                resources=resources,
                 reason="bubblewrap executable is not an executable regular file",
             )
         probe = [
@@ -209,6 +258,9 @@ class NativeExperimentRunner:
             "/lib64",
             "--proc",
             "/proc",
+            "--dev",
+            "/dev",
+            *self._resource_arguments(resources.gpu_devices),
             "/bin/true",
         ]
         try:
@@ -224,6 +276,7 @@ class NativeExperimentRunner:
             return NativeExperimentAvailability(
                 available=False,
                 executable=str(self.bubblewrap),
+                resources=resources,
                 reason=f"bubblewrap isolation probe failed: {type(exc).__name__}",
             )
         if checked.returncode != 0:
@@ -231,9 +284,14 @@ class NativeExperimentRunner:
             return NativeExperimentAvailability(
                 available=False,
                 executable=str(self.bubblewrap),
+                resources=resources,
                 reason=f"bubblewrap isolation probe returned {checked.returncode}: {detail}",
             )
-        return NativeExperimentAvailability(available=True, executable=str(self.bubblewrap))
+        return NativeExperimentAvailability(
+            available=True,
+            executable=str(self.bubblewrap),
+            resources=resources,
+        )
 
     def run(
         self,
@@ -252,6 +310,7 @@ class NativeExperimentRunner:
         returncode: int | None = None
         timed_out = False
         launch_error: str | None = None
+        process_started = False
 
         requested_id = action.parameters.get("experiment_id")
         if requested_id != self.definition.experiment_id:
@@ -270,15 +329,21 @@ class NativeExperimentRunner:
                 stdout_path.write_bytes(b"")
                 stderr_path.write_bytes(b"")
             else:
-                command = self._command(source)
-                environment = {
-                    "HOME": "/nonexistent",
-                    "LANG": "C.UTF-8",
-                    "PATH": "/usr/bin:/bin",
-                    "PYTHONHASHSEED": "0",
-                    "TZ": "UTC",
-                }
                 try:
+                    command = self._command(source)
+                    environment = {
+                        "HOME": "/nonexistent",
+                        "LANG": "C.UTF-8",
+                        "PATH": "/usr/bin:/bin",
+                        "PYTHONHASHSEED": "0",
+                        "TZ": "UTC",
+                    }
+                    if availability.resources is not None and availability.resources.gpu_devices:
+                        visible = ",".join(
+                            str(device.index) for device in availability.resources.gpu_devices
+                        )
+                        environment["CUDA_VISIBLE_DEVICES"] = visible
+                        environment["NVIDIA_VISIBLE_DEVICES"] = visible
                     with stdout_path.open("xb") as stdout, stderr_path.open("xb") as stderr:
                         process = subprocess.Popen(
                             command,
@@ -290,6 +355,7 @@ class NativeExperimentRunner:
                             start_new_session=True,
                             preexec_fn=self._limit_process,
                         )
+                        process_started = True
                         try:
                             returncode = process.wait(
                                 timeout=self.definition.limits.timeout_seconds
@@ -301,12 +367,18 @@ class NativeExperimentRunner:
                             except ProcessLookupError:
                                 pass
                             returncode = process.wait()
-                except (OSError, subprocess.SubprocessError) as exc:
+                except (OSError, ValueError, subprocess.SubprocessError) as exc:
                     launch_error = f"native experiment launch failed: {type(exc).__name__}: {exc}"
                     stdout_path.touch(exist_ok=True)
                     stderr_path.touch(exist_ok=True)
 
         elapsed_seconds = max(0.0, perf_counter() - started)
+        gpu_count = (
+            len(availability.resources.gpu_devices)
+            if process_started and availability.resources is not None
+            else 0
+        )
+        gpu_hours = elapsed_seconds * gpu_count / 3600.0
         finished_at = datetime.now(UTC)
         stdout_bytes = stdout_path.read_bytes()
         stderr_bytes = stderr_path.read_bytes()
@@ -338,13 +410,43 @@ class NativeExperimentRunner:
             result_id,
             "execution.json",
             {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "experiment_id": self.definition.experiment_id,
                 "isolation": "bubblewrap",
                 "network": "unshared",
                 "host_filesystem": "not-mounted",
                 "writable_filesystem": "none",
-                "gpu_devices": "not-mounted",
+                "execution_profile_id": self.profile.profile_id,
+                "execution_profile_fingerprint": (
+                    self.execution_profile.fingerprint
+                    if self.execution_profile is not None
+                    else None
+                ),
+                "datasets": (
+                    []
+                    if self.execution_profile is None
+                    else [
+                        {
+                            "dataset_id": item.dataset_id,
+                            "mount_path": item.mount_path,
+                            "content_sha256": item.content_sha256,
+                            "file_count": item.file_count,
+                            "total_bytes": item.total_bytes,
+                            "access": "read-only",
+                        }
+                        for item in self.execution_profile.datasets
+                    ]
+                ),
+                "gpu_devices": (
+                    "not-mounted"
+                    if gpu_count == 0
+                    else [
+                        item.model_dump(mode="json")
+                        for item in availability.resources.gpu_devices  # type: ignore[union-attr]
+                    ]
+                ),
+                "gpu_hours": gpu_hours,
+                "gpu_allocation_started": process_started and gpu_count > 0,
                 "returncode": returncode,
                 "timed_out": timed_out,
                 "elapsed_seconds": elapsed_seconds,
@@ -376,6 +478,9 @@ class NativeExperimentRunner:
             "experiment_id": self.definition.experiment_id,
             "isolation": availability.model_dump(mode="json"),
             "network_access": False,
+            "execution_profile_id": self.profile.profile_id,
+            "dataset_mounts": [item.mount_path for item in self.profile.datasets],
+            "gpu_device_count": gpu_count,
         }
         if error is not None or derived is None:
             return ExecutionResult(
@@ -386,7 +491,7 @@ class NativeExperimentRunner:
                 started_at=started_at,
                 finished_at=finished_at,
                 artifacts=artifacts,
-                cost={"wall_time_hours": elapsed_seconds / 3600.0},
+                cost={"wall_time_hours": elapsed_seconds / 3600.0, "gpu_hours": gpu_hours},
                 data=common_data,
                 error=error or "native experiment did not produce measured evidence",
             )
@@ -408,7 +513,11 @@ class NativeExperimentRunner:
             finished_at=finished_at,
             observations=[observation],
             artifacts=artifacts,
-            cost={"experiments": 1.0, "wall_time_hours": elapsed_seconds / 3600.0},
+            cost={
+                "experiments": 1.0,
+                "wall_time_hours": elapsed_seconds / 3600.0,
+                "gpu_hours": gpu_hours,
+            },
             data={
                 **common_data,
                 **derived,
@@ -423,6 +532,12 @@ class NativeExperimentRunner:
 
     def _command(self, source: Path) -> list[str]:
         assert self.bubblewrap is not None
+        resources = preflight_native_resources(
+            self.profile,
+            prepared=self.execution_profile,
+        )
+        if not resources.available:
+            raise ValueError(f"native execution resource preflight failed: {resources.reason}")
         return [
             str(self.bubblewrap),
             "--die-with-parent",
@@ -448,6 +563,7 @@ class NativeExperimentRunner:
             "/proc",
             "--dev",
             "/dev",
+            *self._resource_arguments(resources.gpu_devices),
             "--tmpfs",
             "/tmp",
             "--remount-ro",
@@ -474,6 +590,29 @@ class NativeExperimentRunner:
                 "runpy.run_path('/input/experiment.py',run_name='__main__')"
             ),
         ]
+
+    def _resource_arguments(
+        self,
+        gpu_devices: tuple[NativeGPUInventory, ...],
+    ) -> list[str]:
+        arguments: list[str] = []
+        if self.execution_profile is not None and self.execution_profile.datasets:
+            arguments.extend(["--dir", "/datasets"])
+            for dataset in self.execution_profile.datasets:
+                arguments.extend(
+                    [
+                        "--ro-bind",
+                        str(dataset.materialized_path.resolve(strict=True)),
+                        dataset.mount_path,
+                    ]
+                )
+        mounted_nodes: set[str] = set()
+        for device in gpu_devices:
+            for node in device.device_nodes:
+                if node not in mounted_nodes:
+                    arguments.extend(["--dev-bind", node, node])
+                    mounted_nodes.add(node)
+        return arguments
 
     def _limit_process(self) -> None:
         assert _resource is not None

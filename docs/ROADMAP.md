@@ -190,6 +190,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   stderr retention, strict replicate records, and independently derived metrics.
   Evidence consumes those measured values instead of the configured result
   fixture. This is executable integration evidence, not scientific effectiveness.
+- Native execution profiles now bind bounded dataset files/trees into immutable
+  run-owned copies and mount them read-only at derived `/datasets/<id>` paths.
+  GPU access remains default-deny; an explicit device identity and GPU-hour
+  budget can admit exact NVIDIA nodes. The dataset-backed Full Workflow and an
+  isolated local RTX 3090 inventory measurement pass. Reproducible package/model
+  environments and CUDA workload acceptance remain pending.
 - The default Full Workflow now passes that CPU source through a typed
   proposal/static-admission boundary. Exact proposal, policy, verdict, proposed
   source, and byte-identical admitted source are project-owned and hash-bound;
@@ -210,7 +216,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   clean reader-facing projection containing the measured mean, replicates,
   dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  iterative provider-backed code repair, dataset/GPU experiment profiles, generative
+  iterative provider-backed code repair, package/model environments, generative
   analysis, writing, and figures. Existing scenario-bound receipts are integration
   evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution
@@ -254,8 +260,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   dependency-checked plan over three closed read-only capability schemas, and
   one proposes a repair against a content-bound supported output schema. The
   runtime validates project runs, scopes, arguments, budgets, identities, and
-  exact replay while every receipt remains advisory and non-executable. No tool
-  executor or automatic workflow trigger is included, and ADR-022 remains
+  exact replay while every model receipt remains advisory and non-executable.
+  A deterministic v2 boundary may issue one expiring, single-use lease for the
+  next dependency-free step and invoke one registered in-process read-only
+  handler; its observation cannot mutate state or become evidence automatically.
+  No automatic workflow trigger is included, and ADR-022 remains
   proposed pending intervention, cost, safety, and external-review evidence.
 - A real project-owned GLM-5.3-Flash engineering probe completed all seven
   registered cases. The online response was schema-valid and exactly recorded,

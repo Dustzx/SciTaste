@@ -1,0 +1,14 @@
+schema_version: "1.0"
+profile_id: conflict-pivot-dataset-cpu
+datasets:
+  - dataset_id: conflict-pivot-cases
+    source_path: ../../examples/native_experiments/data/conflict_pivot_cases_v1.json
+    expected_sha256: a4fc5721c716e4ce6736d2ec1bb13298a200e2dc5dcf01e38d7c4d917c30d455
+    max_files: 1
+    max_total_bytes: 4096
+gpu:
+  enabled: false
+  devices: []
+  max_gpu_hours: 0
+network_access: false
+writable_workspace: false

@@ -106,6 +106,22 @@ imports, limits, backend, and budget. The live engineering configuration uses
 `--allow-live-model-nodes`, and is deliberately non-promotable until an auditable
 price for that exact model is available. See `docs/NATIVE_CODE_GENERATION.md`.
 
+An additional offline acceptance config exercises a real project-owned dataset
+mount:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_dataset_v1.yaml \
+  --run-id dataset-seed-07 --seed 7 --output outputs
+```
+
+The workflow verifies the registered dataset hash, copies the exact bytes into
+`native_execution/context/resources/`, and mounts only that copy read-only at
+the derived `/datasets/<dataset-id>` path. `--dry-run` validates the source data
+and optional GPU identity without materializing a project. GPU access remains
+disabled unless a separate profile explicitly admits device indices and a
+GPU-hour ceiling. See `docs/NATIVE_EXECUTION.md`.
+
 ## Project layout
 
 One execution owns this tree:
@@ -119,7 +135,8 @@ outputs/projects/<project-id>/
 │   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
 │   ├── native_execution/{context,artifacts,records}/ # native action evidence
 │   │   ├── context/code_generation/ # generated-source evidence when opted in
-│   │   └── context/code/            # deterministic admission and admitted source
+│   │   ├── context/code/            # deterministic admission and admitted source
+│   │   └── context/resources/       # profile plus copied datasets when opted in
 │   └── stages/
 │       ├── discovery/
 │       ├── evidence/model_advisory_input.json # pre-call, when opted in
@@ -272,8 +289,10 @@ AutoResearchClaw is not modified or invoked by this acceptance case. It remains
 an optional baseline/compatibility adapter. The native path now owns local
 retrieval plus one admitted isolated CPU experiment and its metric extraction.
 The same experiment can now originate from a first-party bounded provider-backed
-proposer while remaining behind independent admission and isolation. Open-web
-retrieval, iterative code repair, dataset/GPU profiles, and long-form generation
-remain capability-parity work; they must preserve the same
+proposer while remaining behind independent admission and isolation. Explicit
+dataset and NVIDIA device profiles now provide a default-deny resource boundary.
+Open-web retrieval, iterative code repair, reproducible package/model
+environments, CUDA workload acceptance, and long-form generation remain
+capability-parity work; they must preserve the same
 ProjectRuntime ownership, state-continuity, evidence-binding, and
 failure-retention contracts.

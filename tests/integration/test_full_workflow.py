@@ -181,6 +181,46 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
         full_workflow._verify_native_execution_bindings(tampered_log, run_root=run)
 
 
+def test_full_workflow_executes_a_materialized_dataset_profile(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_dataset_v1.yaml")
+    outputs = tmp_path / "outputs"
+
+    payload = FullWorkflow(seed=7).run(
+        config,
+        outputs_root=outputs,
+        run_id="dataset-seed-07",
+    )
+
+    run_root = outputs / "projects" / config.project_id / "runs/dataset-seed-07"
+    experiment = payload["native_execution"]["experiment"]
+    assert experiment["execution_profile_id"] == "conflict-pivot-dataset-cpu"
+    assert experiment["dataset_mounts"] == ["/datasets/conflict-pivot-cases"]
+    assert experiment["gpu_authorized"] is False
+    assert experiment["availability"]["resources"]["available"] is True
+    profile_record = run_root / "native_execution/context/resources/PROFILE.json"
+    copied_dataset = run_root / "native_execution/context/resources/datasets/conflict-pivot-cases"
+    assert profile_record.is_file()
+    assert (
+        copied_dataset.read_bytes()
+        == Path("examples/native_experiments/data/conflict_pivot_cases_v1.json").read_bytes()
+    )
+    records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((run_root / "native_execution/records").glob("*.json"))
+    ]
+    execution = next(
+        record
+        for record in records
+        if record["result"]["data"].get("result_basis") == "sandbox-measured-replicates"
+    )
+    assert any(locator.endswith("PROFILE.json") for locator in execution["input_sha256"])
+    assert any(
+        locator.endswith("datasets/conflict-pivot-cases") for locator in execution["input_sha256"]
+    )
+    assert execution["result"]["cost"]["gpu_hours"] == 0.0
+
+
 def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     outputs = tmp_path / "outputs"
 
@@ -205,6 +245,11 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert payload["execution_backend"] == "scitaste-native"
     assert payload["native_execution"]["project_owned_records"] is True
     assert payload["native_execution"]["knowledge_configured"] is True
+    assert payload["native_execution"]["resource_profile"] == {
+        "profile_id": "default-deny",
+        "datasets": [],
+        "gpu_authorized": False,
+    }
     assert payload["native_execution"]["experiment_configured"] is True
     assert payload["native_execution"]["experiment_id"] == "experiment-support"
     assert payload["native_execution"]["isolation_required"] is True
@@ -216,6 +261,37 @@ def test_full_cli_dry_run_is_mutation_free(tmp_path: Path, capsys) -> None:
     assert payload["stages"] == ["discovery", "evidence", "communication", "figure"]
     assert payload["paper"]["role"] == "integration-fixture"
     assert payload["paper"]["publication_ready"] is False
+    assert not outputs.exists()
+
+
+def test_full_cli_dry_run_preflights_dataset_profile_without_materializing(
+    tmp_path: Path, capsys
+) -> None:
+    outputs = tmp_path / "outputs"
+
+    exit_code = main(
+        [
+            "run",
+            "full",
+            "--config",
+            "configs/workflows/full_offline_dataset_v1.yaml",
+            "--output",
+            str(outputs),
+            "--dry-run",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    profile = payload["native_execution"]["resource_profile"]
+    assert exit_code == 0
+    assert profile["profile_id"] == "conflict-pivot-dataset-cpu"
+    assert len(profile["fingerprint"]) == 64
+    assert profile["datasets"][0]["mount_path"] == "/datasets/conflict-pivot-cases"
+    assert profile["preflight"]["available"] is True
+    assert profile["would_materialize_datasets_on_run"] is True
+    assert payload["native_execution"]["isolation"]["resource_mount_probe"] == (
+        "deferred-until-project-materialization"
+    )
     assert not outputs.exists()
 
 

@@ -1,0 +1,12 @@
+schema_version: "1.0"
+profile_id: local-rtx3090
+datasets: []
+gpu:
+  enabled: true
+  devices:
+    - index: 0
+      expected_name: NVIDIA GeForce RTX 3090
+      min_memory_mb: 24000
+  max_gpu_hours: 0.05
+network_access: false
+writable_workspace: false

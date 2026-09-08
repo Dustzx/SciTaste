@@ -7,6 +7,22 @@ semantic versioning.
 
 ### Added
 
+- Content-bound native execution profiles for bounded dataset files or trees and
+  explicit NVIDIA GPU authorization. Full Workflow copies datasets into the
+  owning run, mounts them read-only at derived paths, binds every copied file to
+  the action record, validates exact GPU identity/capacity and worst-case budget,
+  and records actual device inventory plus measured GPU-hours. A dataset-backed
+  end-to-end fixture and an isolated local RTX 3090 inventory test execute for
+  real; package environments and CUDA workload acceptance remain pending.
+- Tool Intelligence v2 adds expiring, single-use action leases and a deterministic
+  one-step executor over registered content-addressed read-only handlers. Fresh
+  project/state checks bracket handler execution, and returned observations stay
+  advisory, non-executable, non-mutating, and outside canonical evidence.
+- The Generation as Content receiver now provides complete English and Simplified
+  Chinese presentation catalogs, refreshable route-local locale selection, safe
+  English fallback, and in-place language changes that preserve evidence-bound
+  workspace state without another model/API call.
+
 - Manuscript outputs now carry an explicit `integration-fixture` or
   `research-working-draft` role and a self-hashed `ASSESSMENT.json`. The default
   Full Workflow paper is correctly treated as a publication-pipeline fixture;

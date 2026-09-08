@@ -55,6 +55,10 @@ from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
 from scitaste.executor.native_code_generation import load_native_code_generation_config
+from scitaste.executor.native_profile import (
+    inspect_native_execution_profile,
+    preflight_native_resources,
+)
 from scitaste.executor.native_sandbox import (
     NativeExperimentRunner,
     load_native_experiment_definition,
@@ -1152,6 +1156,19 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
+        execution_profile = (
+            inspect_native_execution_profile(config.native_execution_profile)
+            if config.native_execution_profile is not None
+            else None
+        )
+        resource_preflight = (
+            preflight_native_resources(
+                execution_profile.profile,
+                require_materialized_datasets=False,
+            )
+            if execution_profile is not None
+            else None
+        )
         code_generation = (
             load_native_code_generation_config(config.native_code_generation_config)
             if config.native_code_generation_config is not None
@@ -1177,6 +1194,9 @@ def _handle_full(args: argparse.Namespace) -> int:
             if native_experiment is not None and config.execution_backend == "scitaste-native"
             else None
         )
+        if isolation is not None and execution_profile is not None:
+            isolation["resources"] = resource_preflight.model_dump(mode="json")
+            isolation["resource_mount_probe"] = "deferred-until-project-materialization"
         model_advisory = (
             load_full_workflow_model_advisory(config.model_node_advisory)
             if config.model_node_advisory is not None
@@ -1198,6 +1218,25 @@ def _handle_full(args: argparse.Namespace) -> int:
                             str(config.native_knowledge_config)
                             if config.native_knowledge_config is not None
                             else None
+                        ),
+                        "resource_profile": (
+                            {
+                                "profile_id": execution_profile.profile.profile_id,
+                                "fingerprint": execution_profile.fingerprint,
+                                "datasets": [
+                                    item.model_dump(mode="json", exclude={"source_path"})
+                                    for item in execution_profile.datasets
+                                ],
+                                "gpu_authorized": execution_profile.profile.gpu.enabled,
+                                "preflight": resource_preflight.model_dump(mode="json"),
+                                "would_materialize_datasets_on_run": True,
+                            }
+                            if execution_profile is not None
+                            else {
+                                "profile_id": "default-deny",
+                                "datasets": [],
+                                "gpu_authorized": False,
+                            }
                         ),
                         "experiment_configured": (
                             registered_experiment is not None

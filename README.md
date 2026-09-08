@@ -71,9 +71,10 @@ review remain pending, so no effectiveness claim is made from that pilot.
   fail-closed compatible live backend, versioned self-development pilot, and
   durable project-owned runtime/CLI for layered profiles, execution, exact
   replay, restart-safe accounting, auditable resume, and verification. The
-  proposal-only Tool Intelligence catalog can now plan over three typed
-  read-only capabilities and propose schema-pinned repairs without executing
-  either result;
+  Tool Intelligence catalog can plan over three typed read-only capabilities,
+  propose schema-pinned repairs, and issue a short-lived one-step lease to a
+  registered deterministic read-only handler; observations cannot mutate state
+  or admit themselves as evidence;
 - an opt-in `run full` evidence hook that projects the real immutable research
   state into `interpretation-threat`, binds its input/proposal/recording/ledger
   to the stage checkpoint, grants it no mutation or execution power, and exposes
@@ -83,6 +84,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   evidence-derived quick intents, bounded free questions, closed native layout
   planning, deterministic fallback, proposal-only interactions, and exact
   ProjectRuntime evidence binding;
+- content-bound native execution profiles that copy admitted datasets into the
+  owning project run, mount them read-only, default-deny GPU access, and expose
+  only explicitly verified NVIDIA devices with measured GPU-hour accounting;
 - a three-part innovation model spanning Scientific Taste, Generation as Content,
   and bounded Tool Intelligence (see `docs/INNOVATION_MAP.md`);
 - a loopback-first authenticated local UI/API that renders the closed component

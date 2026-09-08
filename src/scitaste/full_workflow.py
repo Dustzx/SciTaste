@@ -37,6 +37,11 @@ from scitaste.executor.native_code_generation import (
     load_native_code_generation_config,
     load_native_code_generation_record,
 )
+from scitaste.executor.native_profile import (
+    NativeExecutionProfileInspection,
+    inspect_native_execution_profile,
+    prepare_native_execution_profile,
+)
 from scitaste.executor.native_sandbox import (
     NativeExperimentDefinition,
     NativeExperimentRunner,
@@ -98,6 +103,7 @@ class FullWorkflowConfig(BaseModel):
     communication_scenario: Path
     figure_scenario: Path
     native_knowledge_config: Path | None = None
+    native_execution_profile: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
     native_code_generation_config: Path | None = None
@@ -143,6 +149,12 @@ class FullWorkflowConfig(BaseModel):
             raise ValueError(
                 "native code generation and evidence advisory require a shared extension "
                 "registry before they can use one model ledger"
+            )
+        if self.native_execution_profile is not None and (
+            self.execution_backend != "scitaste-native" or not configured
+        ):
+            raise ValueError(
+                "a native execution profile requires a configured scitaste-native experiment"
             )
         return self
 
@@ -250,11 +262,17 @@ class FullWorkflow:
             if config.native_code_proposal_config is not None
             else None
         )
+        execution_profile = (
+            inspect_native_execution_profile(config.native_execution_profile)
+            if config.native_execution_profile is not None
+            else None
+        )
         workflow_config_sha256 = _workflow_config_sha256(
             config,
             model_advisory,
             code_inspection=code_inspection,
             code_generation=code_generation,
+            execution_profile=execution_profile,
         )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
@@ -315,6 +333,7 @@ class FullWorkflow:
                 seed=self.seed,
                 code_inspection=code_inspection,
                 generated_code=generated_code,
+                execution_profile=execution_profile,
             )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
@@ -356,6 +375,11 @@ class FullWorkflow:
                     reloaded_advisory,
                     code_inspection=(None if generated_code is not None else code_inspection),
                     code_generation=reloaded_generation,
+                    execution_profile=(
+                        inspect_native_execution_profile(config.native_execution_profile)
+                        if config.native_execution_profile is not None
+                        else None
+                    ),
                 )
                 != workflow_config_sha256
             ):
@@ -936,6 +960,7 @@ def _build_full_workflow_executor(
     seed: int,
     code_inspection: NativeCodeInspection | None = None,
     generated_code: GeneratedNativeCodeProposal | None = None,
+    execution_profile: NativeExecutionProfileInspection | None = None,
 ) -> ResearchExecutor:
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
@@ -954,13 +979,27 @@ def _build_full_workflow_executor(
             raise ValueError(
                 "native experiment identity does not match the primary evidence scenario"
             )
+    profile_inspection = execution_profile or (
+        inspect_native_execution_profile(config.native_execution_profile)
+        if config.native_execution_profile is not None
+        else None
+    )
+    prepared_profile = (
+        prepare_native_execution_profile(profile_inspection, run_root=run_root)
+        if profile_inspection is not None
+        else None
+    )
     return build_builtin_executor(
         config.execution_backend,
         seed=seed,
         workspace=run_root / "native_execution",
         artifact_root=run_root,
         knowledge_library=knowledge,
-        experiment_runner=(NativeExperimentRunner(experiment) if experiment is not None else None),
+        experiment_runner=(
+            NativeExperimentRunner(experiment, execution_profile=prepared_profile)
+            if experiment is not None
+            else None
+        ),
     )
 
 
@@ -1116,6 +1155,16 @@ def _native_execution_summary(
         if executor.experiment_runner is None
         else {
             "experiment_id": executor.experiment_runner.definition.experiment_id,
+            "execution_profile_id": executor.experiment_runner.profile.profile_id,
+            "execution_profile_fingerprint": (
+                executor.experiment_runner.execution_profile.fingerprint
+                if executor.experiment_runner.execution_profile is not None
+                else None
+            ),
+            "dataset_mounts": [
+                item.mount_path for item in executor.experiment_runner.profile.datasets
+            ],
+            "gpu_authorized": executor.experiment_runner.profile.gpu.enabled,
             "availability": executor.experiment_runner.availability().model_dump(mode="json"),
         }
     )
@@ -1164,6 +1213,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "communication_scenario",
         "figure_scenario",
         "native_knowledge_config",
+        "native_execution_profile",
         "native_experiment_config",
         "native_code_proposal_config",
         "native_code_generation_config",
@@ -1515,6 +1565,7 @@ def _workflow_config_sha256(
     *,
     code_inspection: NativeCodeInspection | None = None,
     code_generation: LoadedNativeCodeGeneration | None = None,
+    execution_profile: NativeExecutionProfileInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
     for field in (
@@ -1529,6 +1580,21 @@ def _workflow_config_sha256(
     else:
         payload["native_knowledge_config"] = {
             "content_sha256": _file_sha256(config.native_knowledge_config)
+        }
+    if config.native_execution_profile is None:
+        payload.pop("native_execution_profile", None)
+    else:
+        profile = execution_profile or inspect_native_execution_profile(
+            config.native_execution_profile
+        )
+        if profile.config_path != config.native_execution_profile.absolute():
+            raise ValueError("native execution profile inspection belongs to another config")
+        payload["native_execution_profile"] = {
+            "fingerprint": profile.fingerprint,
+            "config_sha256": profile.config_sha256,
+            "datasets": [
+                item.model_dump(mode="json", exclude={"source_path"}) for item in profile.datasets
+            ],
         }
     if config.native_experiment_config is None:
         payload.pop("native_experiment_config", None)
