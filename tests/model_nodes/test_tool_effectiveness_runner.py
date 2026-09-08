@@ -102,6 +102,7 @@ class GoldStructuredBackend:
             raw_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
             latency_ms=100,
             usage=Usage(input_tokens=100, output_tokens=50, cost_usd=0.001),
+            prompt_cache_input_tokens=5,
         )
 
 
@@ -137,6 +138,7 @@ def test_project_runner_executes_exact_matrix_and_resumes_without_calls(
     assert first.recovered_trial_count == 0
     assert first.report.baseline.grounded_resolution_accuracy == 0.5
     assert first.report.treatment.grounded_resolution_accuracy == 1.0
+    assert first.report.treatment.prompt_cache_input_tokens == 180
     assert first.report.paired_test.improved_pairs == 6
     assert first.report.paired_test.regressed_pairs == 0
     assert first.report.paired_test.exact_two_sided_mcnemar_p == pytest.approx(0.03125)

@@ -13,12 +13,15 @@ from scitaste.model_nodes import (
     RegisteredRunComparisonHandler,
 )
 from scitaste.model_nodes.tool_effectiveness import (
+    ToolEffectivenessBlindReview,
+    ToolEffectivenessBlindReviewRating,
     ToolEffectivenessCondition,
     ToolEffectivenessError,
     ToolEffectivenessFixture,
     build_tool_effectiveness_blind_packet,
     build_tool_effectiveness_trial,
     deterministic_v2_router,
+    evaluate_tool_effectiveness_blind_review,
     evaluate_tool_effectiveness_study,
     execute_read_only_step,
     load_tool_effectiveness_fixture,
@@ -177,6 +180,7 @@ def test_paired_evaluator_reports_exact_mcnemar_signal_without_scientific_claim(
     assert report.independent_task_count == 12
     assert report.baseline.grounded_resolution_accuracy == 0.5
     assert report.treatment.grounded_resolution_accuracy == 1.0
+    assert report.treatment.prompt_cache_input_tokens == 0
     assert report.paired_test.improved_pairs == 6
     assert report.paired_test.regressed_pairs == 0
     assert report.paired_test.exact_two_sided_mcnemar_p == pytest.approx(0.03125)
@@ -217,6 +221,57 @@ def test_blind_packet_excludes_condition_gold_and_mapping(tmp_path: Path) -> Non
     duplicate.write_text('{"schema_version":"1.0","schema_version":"1.0"}', encoding="utf-8")
     with pytest.raises(ToolEffectivenessError, match="invalid"):
         load_tool_effectiveness_fixture(duplicate)
+
+
+def test_independent_blind_review_requires_exact_packet_and_stays_non_claiming() -> None:
+    fixture = _fixture()
+    trials = _complete_matrix(fixture)
+    packet, key = build_tool_effectiveness_blind_packet(
+        fixture,
+        trials,
+        blinding_salt="independent-review-salt-v1",
+    )
+    trial_by_fingerprint = {item.fingerprint: item for item in trials}
+    review = ToolEffectivenessBlindReview(
+        review_id="independent-review-v1",
+        reviewer_id="reviewer-alpha",
+        packet_fingerprint=packet.fingerprint,
+        independence_attested=True,
+        fixture_author=False,
+        private_key_received_before_completion=False,
+        ratings=tuple(
+            ToolEffectivenessBlindReviewRating(
+                blind_id=entry.blind_id,
+                grounded_and_relevant=trial_by_fingerprint[
+                    entry.trial_fingerprint
+                ].grounded_resolution_correct,
+                scope_appropriate=True,
+                rationale="The selected record and action are relevant to the stated objective.",
+                confidence=4,
+            )
+            for entry in key.entries
+        ),
+    )
+
+    report = evaluate_tool_effectiveness_blind_review(fixture, packet, key, review)
+
+    assert report.rating_count == 72
+    assert report.baseline_grounded_relevance_rate == 0.5
+    assert report.treatment_grounded_relevance_rate == 1.0
+    assert report.improved_task_pairs == 6
+    assert report.regressed_task_pairs == 0
+    assert report.exact_two_sided_mcnemar_p == pytest.approx(0.03125)
+    assert report.independent_domain_review_complete is True
+    assert report.scientific_effectiveness_claim is False
+
+    incomplete = review.model_copy(update={"ratings": review.ratings[:-1]})
+    with pytest.raises(ToolEffectivenessError, match="exact packet"):
+        evaluate_tool_effectiveness_blind_review(fixture, packet, key, incomplete)
+
+    values = review.model_dump(mode="python", exclude={"fingerprint"})
+    values["private_key_received_before_completion"] = True
+    with pytest.raises(ValidationError):
+        ToolEffectivenessBlindReview.model_validate(values)
 
 
 def test_trial_contract_rejects_false_grounded_success() -> None:

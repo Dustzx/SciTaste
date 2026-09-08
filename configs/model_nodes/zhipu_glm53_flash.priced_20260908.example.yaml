@@ -16,6 +16,8 @@ pricing:
   # Provider rate: CNY 0.4 / 1M input tokens. Converted at the official
   # 2026-09-08 central parity of 1 USD = 6.7804 CNY.
   input_usd_per_million_tokens: 0.0589935697009026
+  # Provider cache-hit rate: CNY 0.115 / 1M input tokens.
+  cached_input_usd_per_million_tokens: 0.016960651289009497
   # Provider rate: CNY 1.4 / 1M output tokens, using the same FX evidence.
   output_usd_per_million_tokens: 0.2064774939531591
   captured_at: 2026-09-08T12:00:00+08:00

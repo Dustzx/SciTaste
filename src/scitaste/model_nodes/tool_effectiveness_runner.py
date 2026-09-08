@@ -561,6 +561,7 @@ class ProjectToolEffectivenessRunner:
             model_invocations=result.record.model_provider_invocation_count,
             tool_invocations=result.record.tool_handler_invocation_count,
             input_tokens=result.record.model_input_tokens,
+            prompt_cache_input_tokens=response.prompt_cache_input_tokens,
             output_tokens=result.record.model_output_tokens,
             known_cost_usd=result.record.model_cost_usd or 0.0,
             unknown_cost_count=int(result.record.model_cost_usd is None),

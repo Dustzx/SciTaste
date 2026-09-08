@@ -98,6 +98,9 @@ class ModelCostProvenance(BaseModel):
 
     currency: Literal["USD"] = "USD"
     input_usd_per_million_tokens: float = Field(ge=0, allow_inf_nan=False)
+    cached_input_usd_per_million_tokens: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False
+    )
     output_usd_per_million_tokens: float = Field(ge=0, allow_inf_nan=False)
     captured_at: datetime
     source: str = Field(min_length=1)
@@ -250,6 +253,7 @@ class StructuredModelResponse(BaseModel):
     raw_response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     latency_ms: float = Field(ge=0, allow_inf_nan=False)
     usage: Usage
+    prompt_cache_input_tokens: int = Field(default=0, ge=0)
     cost_provenance: ModelCostProvenance | None = None
     tool_calls: list[ToolCallProposal] = Field(default_factory=list)
     cached: bool = False
@@ -260,6 +264,8 @@ class StructuredModelResponse(BaseModel):
             observed = hashlib.sha256(self.raw_response.encode()).hexdigest()
             if observed != self.raw_response_sha256:
                 raise ValueError("raw_response_sha256 does not match raw_response")
+        if self.prompt_cache_input_tokens > self.usage.input_tokens:
+            raise ValueError("prompt cache tokens exceed total input tokens")
         return self
 
 

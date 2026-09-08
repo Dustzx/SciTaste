@@ -235,6 +235,63 @@ def test_token_usage_aliases_are_explicit(monkeypatch, usage: dict[str, int]) ->
     assert response.usage.cost_usd == pytest.approx(expected)
 
 
+def test_prompt_cache_usage_applies_the_explicit_cache_rate(monkeypatch) -> None:
+    monkeypatch.setenv("SCITASTE_STRUCTURED_TEST_KEY", "secret-for-test")
+    backend = StructuredOpenAICompatibleBackend(
+        config(
+            pricing=pricing(cached_input_usd_per_million_tokens=0.10),
+        ),
+        transport=StubTransport(
+            http_response(
+                provider_data(
+                    usage={
+                        "prompt_tokens": 13,
+                        "completion_tokens": 8,
+                        "prompt_tokens_details": {"cached_tokens": 3},
+                    }
+                )
+            )
+        ),
+    )
+
+    response = backend.complete(request())
+
+    assert response.prompt_cache_input_tokens == 3
+    expected = (10 * 0.25 + 3 * 0.10 + 8 * 0.50) / 1_000_000
+    assert response.usage.cost_usd == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    ("details", "message"),
+    [
+        ("invalid", "must be an object"),
+        ({"cached_tokens": -1}, "non-negative integer"),
+        ({"cached_tokens": 14}, "exceed total input tokens"),
+    ],
+)
+def test_invalid_prompt_cache_usage_fails_closed(
+    monkeypatch, details: object, message: str
+) -> None:
+    monkeypatch.setenv("SCITASTE_STRUCTURED_TEST_KEY", "secret-for-test")
+    backend = StructuredOpenAICompatibleBackend(
+        config(),
+        transport=StubTransport(
+            http_response(
+                provider_data(
+                    usage={
+                        "prompt_tokens": 13,
+                        "completion_tokens": 8,
+                        "prompt_tokens_details": details,
+                    }
+                )
+            )
+        ),
+    )
+
+    with pytest.raises(StructuredProviderResponseError, match=message):
+        backend.complete(request())
+
+
 @pytest.mark.parametrize(
     ("usage", "message"),
     [

@@ -214,8 +214,17 @@ class StructuredOpenAICompatibleBackend:
             )
         output_payload = _parse_json_object(content)
         tool_calls = _tool_call_proposals(message.get("tool_calls"))
-        input_tokens, output_tokens = _token_usage(http_response.data)
-        cost_usd = _cost_usd(input_tokens, output_tokens, pricing) if pricing is not None else None
+        input_tokens, output_tokens, cached_input_tokens = _token_usage(http_response.data)
+        cost_usd = (
+            _cost_usd(
+                input_tokens,
+                output_tokens,
+                pricing,
+                cached_input_tokens=cached_input_tokens,
+            )
+            if pricing is not None
+            else None
+        )
         provider_model = _provider_model(http_response.data, fallback=config.model)
 
         raw_response = http_response.raw_body
@@ -233,6 +242,7 @@ class StructuredOpenAICompatibleBackend:
                 output_tokens=output_tokens,
                 cost_usd=cost_usd,
             ),
+            prompt_cache_input_tokens=cached_input_tokens,
             cost_provenance=pricing,
             tool_calls=tool_calls,
             cached=False,
@@ -434,13 +444,43 @@ def _tool_call_proposals(value: JsonValue | None) -> list[ToolCallProposal]:
     return proposals
 
 
-def _token_usage(data: dict[str, JsonValue]) -> tuple[int, int]:
+def _token_usage(data: dict[str, JsonValue]) -> tuple[int, int, int]:
     usage = data.get("usage")
     if not isinstance(usage, dict):
         raise StructuredProviderResponseError("provider response is missing token usage")
     input_tokens = _token_alias(usage, "input", ("prompt_tokens", "input_tokens"))
     output_tokens = _token_alias(usage, "output", ("completion_tokens", "output_tokens"))
-    return input_tokens, output_tokens
+    cached_input_tokens = _cached_input_tokens(usage, input_tokens=input_tokens)
+    return input_tokens, output_tokens, cached_input_tokens
+
+
+def _cached_input_tokens(usage: dict[str, JsonValue], *, input_tokens: int) -> int:
+    observed: list[JsonValue] = []
+    for name in ("prompt_tokens_details", "input_tokens_details"):
+        if name not in usage:
+            continue
+        details = usage[name]
+        if not isinstance(details, dict):
+            raise StructuredProviderResponseError(f"provider usage {name} must be an object")
+        if "cached_tokens" in details:
+            observed.append(details["cached_tokens"])
+    if not observed:
+        return 0
+    if any(type(value) is not int or value < 0 for value in observed):
+        raise StructuredProviderResponseError(
+            "provider usage cached input tokens must be a non-negative integer"
+        )
+    if len(set(observed)) != 1:
+        raise StructuredProviderResponseError(
+            "provider usage has conflicting cached input token aliases"
+        )
+    cached = observed[0]
+    assert isinstance(cached, int)
+    if cached > input_tokens:
+        raise StructuredProviderResponseError(
+            "provider usage cached input tokens exceed total input tokens"
+        )
+    return cached
 
 
 def _token_alias(
@@ -475,10 +515,21 @@ def _cost_usd(
     input_tokens: int,
     output_tokens: int,
     pricing: ModelCostProvenance,
+    *,
+    cached_input_tokens: int = 0,
 ) -> float:
     million = Decimal(1_000_000)
+    cached_rate = pricing.cached_input_usd_per_million_tokens
+    priced_cached_tokens = cached_input_tokens if cached_rate is not None else 0
     cost = (
-        Decimal(input_tokens) * Decimal(str(pricing.input_usd_per_million_tokens)) / million
+        Decimal(input_tokens - priced_cached_tokens)
+        * Decimal(str(pricing.input_usd_per_million_tokens))
+        / million
+        + Decimal(priced_cached_tokens)
+        * Decimal(
+            str(cached_rate if cached_rate is not None else pricing.input_usd_per_million_tokens)
+        )
+        / million
         + Decimal(output_tokens) * Decimal(str(pricing.output_usd_per_million_tokens)) / million
     )
     value = float(cost)

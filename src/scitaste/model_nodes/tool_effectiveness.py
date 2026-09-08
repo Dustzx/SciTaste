@@ -259,6 +259,7 @@ class ToolEffectivenessTrial(ToolEffectivenessModel):
     model_invocations: int = Field(ge=0, le=1)
     tool_invocations: int = Field(ge=0, le=1)
     input_tokens: int = Field(ge=0)
+    prompt_cache_input_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(ge=0)
     known_cost_usd: float = Field(ge=0, allow_inf_nan=False)
     unknown_cost_count: int = Field(ge=0, le=1)
@@ -270,6 +271,8 @@ class ToolEffectivenessTrial(ToolEffectivenessModel):
 
     @model_validator(mode="after")
     def outcome_is_coherent(self) -> ToolEffectivenessTrial:
+        if self.prompt_cache_input_tokens > self.input_tokens:
+            raise ValueError("prompt cache tokens exceed trial input tokens")
         if self.workflow_resolved and (
             self.selected_step is None or self.observation_payload is None
         ):
@@ -310,6 +313,7 @@ class ToolEffectivenessConditionMetrics(ToolEffectivenessModel):
     model_invocations: int = Field(ge=0)
     tool_invocations: int = Field(ge=0)
     input_tokens: int = Field(ge=0)
+    prompt_cache_input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     known_cost_usd: float = Field(ge=0, allow_inf_nan=False)
     unknown_cost_count: int = Field(ge=0)
@@ -392,6 +396,70 @@ class ToolEffectivenessBlindKey(ToolEffectivenessModel):
     schema_version: Literal["1.0"] = "1.0"
     packet_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     entries: tuple[ToolEffectivenessBlindKeyEntry, ...] = Field(min_length=1)
+
+    @computed_field
+    @property
+    def fingerprint(self) -> str:
+        return canonical_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
+
+
+class ToolEffectivenessBlindReviewRating(ToolEffectivenessModel):
+    blind_id: str = Field(pattern=r"^blind-[0-9a-f]{24}$")
+    grounded_and_relevant: bool
+    scope_appropriate: bool
+    rationale: str = Field(min_length=1, max_length=2_000)
+    confidence: int = Field(ge=1, le=5)
+
+    @model_validator(mode="after")
+    def usable_rating_requires_safe_scope(self) -> ToolEffectivenessBlindReviewRating:
+        if self.grounded_and_relevant and not self.scope_appropriate:
+            raise ValueError("a grounded review rating cannot approve inappropriate scope")
+        return self
+
+
+class ToolEffectivenessBlindReview(ToolEffectivenessModel):
+    schema_version: Literal["1.0"] = "1.0"
+    review_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    reviewer_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    packet_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    independence_attested: Literal[True]
+    fixture_author: Literal[False]
+    private_key_received_before_completion: Literal[False]
+    ratings: tuple[ToolEffectivenessBlindReviewRating, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def blind_ids_are_unique(self) -> ToolEffectivenessBlindReview:
+        identifiers = [item.blind_id for item in self.ratings]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("blind review ratings contain duplicate IDs")
+        return self
+
+    @computed_field
+    @property
+    def fingerprint(self) -> str:
+        return canonical_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
+
+
+class ToolEffectivenessIndependentReviewReport(ToolEffectivenessModel):
+    schema_version: Literal["1.0"] = "1.0"
+    protocol_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    packet_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    review_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    reviewer_id: str
+    rating_count: int = Field(ge=1)
+    replicate_pair_count: int = Field(ge=1)
+    independent_task_count: int = Field(ge=1)
+    baseline_grounded_relevance_rate: float = Field(ge=0, le=1)
+    treatment_grounded_relevance_rate: float = Field(ge=0, le=1)
+    baseline_scope_appropriate_rate: float = Field(ge=0, le=1)
+    treatment_scope_appropriate_rate: float = Field(ge=0, le=1)
+    improved_task_pairs: int = Field(ge=0)
+    regressed_task_pairs: int = Field(ge=0)
+    tied_task_pairs: int = Field(ge=0)
+    exact_two_sided_mcnemar_p: float | None = Field(default=None, ge=0, le=1)
+    independent_domain_review_complete: Literal[True] = True
+    scientific_effectiveness_claim: Literal[False] = False
+    external_validity: Literal["unestablished"] = "unestablished"
 
     @computed_field
     @property
@@ -486,6 +554,7 @@ def build_tool_effectiveness_trial(
     model_invocations: int,
     tool_invocations: int,
     input_tokens: int = 0,
+    prompt_cache_input_tokens: int = 0,
     output_tokens: int = 0,
     known_cost_usd: float = 0.0,
     unknown_cost_count: int = 0,
@@ -519,6 +588,7 @@ def build_tool_effectiveness_trial(
         model_invocations=model_invocations,
         tool_invocations=tool_invocations,
         input_tokens=input_tokens,
+        prompt_cache_input_tokens=prompt_cache_input_tokens,
         output_tokens=output_tokens,
         known_cost_usd=known_cost_usd,
         unknown_cost_count=unknown_cost_count,
@@ -682,6 +752,96 @@ def build_tool_effectiveness_blind_packet(
     return packet, key
 
 
+def evaluate_tool_effectiveness_blind_review(
+    fixture: ToolEffectivenessFixture,
+    packet: ToolEffectivenessBlindPacket,
+    key: ToolEffectivenessBlindKey,
+    review: ToolEffectivenessBlindReview,
+) -> ToolEffectivenessIndependentReviewReport:
+    """Validate and unblind one complete independent secondary-outcome review."""
+
+    if (
+        packet.protocol_fingerprint != fixture.protocol.fingerprint
+        or key.packet_fingerprint != packet.fingerprint
+        or review.packet_fingerprint != packet.fingerprint
+    ):
+        raise ToolEffectivenessError("blind review identity differs from the study packet")
+    packet_ids = {item.blind_id for item in packet.items}
+    key_by_id = {item.blind_id: item for item in key.entries}
+    ratings = {item.blind_id: item for item in review.ratings}
+    if set(key_by_id) != packet_ids or set(ratings) != packet_ids:
+        raise ToolEffectivenessError("blind review does not cover the exact packet")
+
+    expected_pairs = len(fixture.protocol.tasks) * len(fixture.protocol.seeds)
+    if len(packet_ids) != expected_pairs * len(ToolEffectivenessCondition):
+        raise ToolEffectivenessError("blind packet does not contain the exact paired matrix")
+
+    unblinded: dict[
+        tuple[str, int, ToolEffectivenessCondition], ToolEffectivenessBlindReviewRating
+    ] = {}
+    for blind_id, entry in key_by_id.items():
+        identity = (entry.task_id, entry.seed, entry.condition)
+        if identity in unblinded:
+            raise ToolEffectivenessError("blind key contains a duplicate trial identity")
+        unblinded[identity] = ratings[blind_id]
+
+    condition_ratings: dict[
+        ToolEffectivenessCondition, list[ToolEffectivenessBlindReviewRating]
+    ] = {condition: [] for condition in ToolEffectivenessCondition}
+    task_outcomes: list[tuple[bool, bool]] = []
+    threshold = len(fixture.protocol.seeds) // 2
+    for task in fixture.protocol.tasks:
+        per_condition: dict[ToolEffectivenessCondition, list[bool]] = {
+            condition: [] for condition in ToolEffectivenessCondition
+        }
+        for seed in fixture.protocol.seeds:
+            for condition in ToolEffectivenessCondition:
+                try:
+                    rating = unblinded[(task.task_id, seed, condition)]
+                except KeyError as exc:
+                    raise ToolEffectivenessError(
+                        "blind key does not match the preregistered matrix"
+                    ) from exc
+                condition_ratings[condition].append(rating)
+                per_condition[condition].append(rating.grounded_and_relevant)
+        task_outcomes.append(
+            (
+                sum(per_condition[ToolEffectivenessCondition.V2_FIXED_ROUTER]) > threshold,
+                sum(per_condition[ToolEffectivenessCondition.V3_LIVE_PROJECT_LOOP]) > threshold,
+            )
+        )
+
+    baseline = condition_ratings[ToolEffectivenessCondition.V2_FIXED_ROUTER]
+    treatment = condition_ratings[ToolEffectivenessCondition.V3_LIVE_PROJECT_LOOP]
+    improved = sum((not left) and right for left, right in task_outcomes)
+    regressed = sum(left and (not right) for left, right in task_outcomes)
+    return ToolEffectivenessIndependentReviewReport(
+        protocol_fingerprint=fixture.protocol.fingerprint,
+        packet_fingerprint=packet.fingerprint,
+        review_fingerprint=review.fingerprint,
+        reviewer_id=review.reviewer_id,
+        rating_count=len(review.ratings),
+        replicate_pair_count=expected_pairs,
+        independent_task_count=len(fixture.protocol.tasks),
+        baseline_grounded_relevance_rate=(
+            sum(item.grounded_and_relevant for item in baseline) / len(baseline)
+        ),
+        treatment_grounded_relevance_rate=(
+            sum(item.grounded_and_relevant for item in treatment) / len(treatment)
+        ),
+        baseline_scope_appropriate_rate=(
+            sum(item.scope_appropriate for item in baseline) / len(baseline)
+        ),
+        treatment_scope_appropriate_rate=(
+            sum(item.scope_appropriate for item in treatment) / len(treatment)
+        ),
+        improved_task_pairs=improved,
+        regressed_task_pairs=regressed,
+        tied_task_pairs=len(task_outcomes) - improved - regressed,
+        exact_two_sided_mcnemar_p=_exact_two_sided_mcnemar(improved, regressed),
+    )
+
+
 def _condition_metrics(
     condition: ToolEffectivenessCondition,
     trials: tuple[ToolEffectivenessTrial, ...],
@@ -700,6 +860,7 @@ def _condition_metrics(
         model_invocations=sum(trial.model_invocations for trial in trials),
         tool_invocations=sum(trial.tool_invocations for trial in trials),
         input_tokens=sum(trial.input_tokens for trial in trials),
+        prompt_cache_input_tokens=sum(trial.prompt_cache_input_tokens for trial in trials),
         output_tokens=sum(trial.output_tokens for trial in trials),
         known_cost_usd=sum(trial.known_cost_usd for trial in trials),
         unknown_cost_count=sum(trial.unknown_cost_count for trial in trials),

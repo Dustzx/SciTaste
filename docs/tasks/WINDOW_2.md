@@ -2,7 +2,7 @@
 
 Assignment token: `W2-tool-intelligence-20260908-r3`
 
-Status: `scientific-effectiveness extension active`
+Status: `registered live study complete; independent review pending`
 
 This assignment is authorized by the project owner on 2026-09-08 to continue
 Tool Intelligence through a complete project-level development loop and report
@@ -198,5 +198,25 @@ the primary self-development project remain main-window owned.
   publishes a blinded packet plus private key and hash-bound run manifest, and
   rejects nested symlinks or artifact drift. A deterministic injected-backend
   test completes all 36 treatment calls and proves that a second run performs
-  zero provider calls. Formal live trials remain to be run after a source
-  commit.
+  zero provider calls.
+- The formal GLM-5.3-Flash run is registered against source commit `4606211`:
+  35/36 response-level grounded resolutions versus 18/36 for the fixed router,
+  12/12 versus 6/12 at the independent task-majority level, six improvements,
+  zero regressions, six ties, and exact two-sided McNemar p=0.03125. Scope
+  violations were 0/36. One over-broad three-metric proposal was rejected and
+  never executed. The 97,002 tokens cost USD 0.00727049 under the frozen
+  full-input ledger; applying 128 reported cache-hit tokens gives CNY 0.04926032
+  at the registered rates. Mean provider latency was 5.522 seconds.
+- All formal artifacts and runtime ledgers verify with zero pending attempts.
+  A second execution without the API key recovered all 72 condition records and
+  made no provider call. Independent blinded outcome review and primary-window
+  integration remain open; the report correctly keeps the scientific claim
+  false.
+- Provider cache-hit telemetry and pricing are now explicit for subsequent
+  runs, including fail-closed validation of malformed or impossible cached-token
+  counts. A strict blind-review return contract now requires complete ID
+  coverage and reviewer independence/key-separation attestations, then computes
+  response rates and task-majority paired outcomes without enabling a scientific
+  claim. All 213 model-node tests and all 901 repository tests pass after this
+  final follow-up; the frozen formal ledger and its source commit remain
+  unchanged.

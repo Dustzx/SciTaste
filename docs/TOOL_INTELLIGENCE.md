@@ -365,7 +365,8 @@ measurements are model admission, workflow resolution, scope violations,
 model/tool calls, input/output tokens, price-bound cost, and model/tool latency.
 The committed provider config is inert. Its date-limited pricing record uses
 the user-confirmed promotional CNY 0.4 input and CNY 1.4 output rates per
-million tokens, converted to USD at the recorded 2026-09-08 central parity.
+million tokens plus CNY 0.115 per million cache-hit input tokens, converted to
+USD at the recorded 2026-09-08 central parity.
 
 `ProjectToolEffectivenessRunner` creates or exactly resumes a dedicated local
 project and writes immutable trials, runtime ledgers, a report, a
@@ -394,6 +395,64 @@ signal remains only bounded internal evidence. The report schema fixes
 `scientific_effectiveness_claim=false`; those values cannot change until a
 reviewer receives the blind packet, returns independently scored outcomes, and
 the main-owned workflow integration gate passes.
+
+### Registered GLM-5.3-Flash result — 2026-09-08
+
+The formal run
+`2026-09-08__zhipu-glm-5.3-flash__tool-effectiveness-v1` is bound to source
+commit `4606211ae9536aa5d5e6a01d86103a1f1ae3ffb2`. It made exactly 36 provider
+calls with zero retries. A second invocation was deliberately run without the
+API-key environment variable and recovered all 72 condition records, proving
+that it made zero additional provider calls.
+
+| Endpoint | v2 fixed router | v3 live project loop | Difference |
+|---|---:|---:|---:|
+| response-level grounded resolution | 18/36 (50.00%) | 35/36 (97.22%) | +47.22 percentage points |
+| Wilson 95% interval | 34.47%–65.53% | 85.83%–99.51% | — |
+| task-majority grounded resolution | 6/12 (50.00%) | 12/12 (100.00%) | +50.00 percentage points |
+| explicit-routing responses | 18/18 | 18/18 | unchanged |
+| semantic-routing responses | 0/18 | 17/18 | +94.44 percentage points |
+| unsafe scope | 0/36 | 0/36 | unchanged |
+| model calls | 0 | 36 | +36 |
+| tool calls | 36 | 35 | -1 rejected plan was not executed |
+
+At the independent task level there were six improvements, zero regressions,
+and six ties; the preregistered exact two-sided McNemar p-value is 0.03125. The
+treatment used 86,506 input and 10,496 output tokens (97,002 total), with mean
+provider latency 5.522 seconds and mean durable-tool latency 2.179 ms. The
+frozen ledger's full-input calculation is USD 0.00727049, or CNY 0.0492968 at
+the registered exchange rate.
+
+The provider response telemetry reported 128 cache-hit input tokens across the
+36 calls. Applying the screenshot's CNY 0.115 cache-hit rate gives a
+cache-adjusted billing estimate of CNY 0.04926032 (USD 0.00726511), CNY
+0.00003648 below the conservative frozen ledger. Cache-tier parsing and
+price-bound telemetry are implemented for subsequent runs; the original
+ledger is retained unchanged as evidence from its pinned source commit.
+
+One response selected the correct `registered-run.compare` tool and runs but
+requested three metrics where the controlled profile allowed one. Deterministic
+admission rejected it with no tool execution. This accounts for the single
+response-level failure while the task-majority endpoint still passed. All four
+declared artifact hashes, 36 response recordings, both runtime ledgers, and the
+zero-pending state verified; the project tree contains no supplied credential.
+
+This result is a preliminary internal signal for a deliberately narrow routing
+benchmark, not a general scientific-effectiveness claim. The baseline has a
+designed semantic-routing blind spot, the task set was authored within the
+project, sample size is 12 independent tasks, and external validity remains
+unestablished. The blinded packet still requires an outcome review by someone
+who did not author the fixture and who does not receive the private key.
+
+That final review handoff is now typed rather than free-form. The reviewer must
+return one `ToolEffectivenessBlindReviewRating` per blind ID, judging grounded
+relevance, scope appropriateness, rationale, and confidence, while attesting
+that they did not author the fixture and did not receive the private key before
+completion. `evaluate_tool_effectiveness_blind_review()` rejects missing,
+duplicate, or foreign IDs before unblinding, then reports response-level rates
+and task-majority paired discordances. Even a completed independent review
+report fixes `scientific_effectiveness_claim=false`; only the main project may
+combine it with workflow integration and broader validity evidence.
 
 ## Structured Repair node
 
@@ -506,8 +565,8 @@ status by name similarity.
   reconciliation. Declaring custom code "read only" does not make it replay
   safe.
 - The GLM-5.3-Flash study profile and inert priced backend configuration are
-  included; a live result is not part of the source tree and must remain a
-  project-owned ignored output.
+  included. The registered live result exists only in a dedicated project-owned
+  ignored output and is not part of the source tree.
 - Repair supports four pinned output schemas and performs structural validation;
   target-specific semantic gates require a new target invocation.
 - The catalog cannot write files, run experiments, launch code, access the open
