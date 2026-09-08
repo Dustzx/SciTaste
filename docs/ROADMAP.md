@@ -95,6 +95,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Rhetorical-role retrieval supplies traceable writing precedents.
 - Nine distinct critics cover substance, narrative, claim/evidence, redundancy,
   style, venue style, terminology, citation, and global coherence.
+- Hierarchical Writing Taste now spans twelve integrity, argument, narrative,
+  evidence, reader, style, venue, and coherence dimensions. A deterministic
+  assessor and proposal-only semantic node preserve material limitations and
+  treat anti-defensive writing as one subordinate dimension rather than the
+  complete writing objective.
 - Reviewer feedback becomes typed concerns and research obligations with
   stage-specific actions rather than an unconditional rewrite.
 - Acceptance trajectory: a missing-baseline concern selects `ADD_BASELINE`, the

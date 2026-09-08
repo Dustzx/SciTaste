@@ -7,9 +7,10 @@ reviewer feedback to the research action it actually requires.
 Evidence
 → Narrative taste review
 → Section and paragraph contracts
-→ Rhetorical-role taste retrieval
+→ Hierarchical Writing Taste retrieval
 → Contract-backed draft
 → Decomposed writing critics
+→ Deterministic and optional semantic Writing Taste review
 → Structured reviewer concerns
 → Research obligations
 → Evidence / method / claim / communication action
@@ -23,10 +24,15 @@ Evidence
   only supported or partially supported contribution claims.
 - Section and paragraph contracts contain claim and evidence identifiers checked
   against the canonical `ResearchState`.
-- Writing taste is retrieved by rhetorical role. Unrelated role cases are not
-  returned merely because their topical words overlap.
+- Writing taste is retrieved by writing level, section type, rhetorical role,
+  transition, claim strength, citation density, dimension, venue, and context.
+- Scientific integrity, claim calibration, and positive scope outrank
+  anti-defensive style. Material limitations cannot be omitted or demoted by a
+  model proposal.
 - Substance, narrative, claim/evidence, redundancy, style, venue style,
-  terminology, citation, and global coherence are separate critics.
+  terminology, citation, and global coherence remain separate critics; a
+  hierarchical Writing Taste assessor adds cross-level diagnoses without
+  replacing them.
 - An evidence-bearing reviewer concern creates an obligation and routes to the
   Evidence Loop. A rewritten paragraph cannot close it.
 - Evidence closes an obligation only when it is new, targets the relevant claim,
@@ -50,8 +56,11 @@ second paper revision. `scitaste review` exposes the same complete acceptance
 workflow for review-focused automation.
 
 The generated prose is intentionally deterministic and minimal. It validates
-control and provenance, not language-model writing quality. A future live writer
-must consume the same contracts and critic outputs without changing routing.
+control and provenance, not language-model writing quality. The optional
+`writing-taste` semantic node can propose a bounded paper strategy and findings,
+but it cannot edit the manuscript or suppress registered limitations. A future
+live writer must consume the same contracts and critic outputs without changing
+routing. See [`WRITING_TASTE.md`](WRITING_TASTE.md).
 
 ## Venue-native submission gate
 
@@ -79,7 +88,9 @@ measures the main-text boundary from a renderer-owned label, and checks the
 9-page limit, one-paragraph abstract, citation/BibTeX closure, required AI Use
 Statement and its one-page limit, terminal statement order, duplicate BibTeX
 keys, obvious identity markers, and internal audit markers. The bundle owns
-both self-hashed assessments plus the build log and exact template assets.
+the self-hashed venue, manuscript, and Writing Taste assessments plus the build
+log and exact template assets. The Writing Taste assessment is also available
+in paper-build dry-runs and is hash-bound by the registered paper manifest.
 
 `eligible_for_submission` means these deterministic packaging checks passed; it
 does not certify novelty, factual correctness, external-review acceptance, or

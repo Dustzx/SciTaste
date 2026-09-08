@@ -71,7 +71,10 @@ designs:
 - **Evidence-native communication.** Narrative, section, paragraph, review, and
   figure contracts resolve against canonical claims and evidence. Reviewer
   concerns become research obligations; evidence-bearing concerns cannot be
-  closed by prose alone.
+  closed by prose alone. Hierarchical Writing Taste ranks positioning,
+  narrative, evidence priority, scope, reader guidance, and style decisions;
+  scientific integrity outranks persuasive framing and every semantic review
+  remains proposal-only.
 - **Project-owned auditability.** Runs, stages, decisions, native execution,
   measurements, papers, figures, and UI surfaces live under one project identity
   with content hashes, resumability checks, and tamper detection.
@@ -92,7 +95,7 @@ designs:
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, and a leased single-step executor over three typed read-only handlers implemented | Durable evidence admission, automatic workflow triggers, and registered effectiveness evidence |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
 | Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, explicit NVIDIA device profiles, and one content-bound local Qwen3-VL-2B CUDA environment implemented | Portable environment construction, cross-host/cold-cache reproduction, quality evaluation, and broader workloads |
-| Evidence-to-writing binding | Measured projection, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose and citation generation |
+| Evidence-to-writing binding | Measured projection, hierarchical Writing Taste retrieval/audit, bounded semantic review, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose, citation generation, and independent writing-quality evidence |
 | Independent superiority claim | Not claimed | Phase 9 formal cells and valid external review panel |
 
 ## Naming note

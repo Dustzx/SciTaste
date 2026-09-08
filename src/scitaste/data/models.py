@@ -59,7 +59,14 @@ class TasteCase(LibraryModel):
     confidence: float = Field(ge=0.0, le=1.0)
     domain_tags: list[str] = Field(default_factory=list)
     venue_tags: list[str] = Field(default_factory=list)
+    writing_level: str | None = None
+    section_type: str | None = None
     rhetorical_role: str | None = None
+    transition_pattern: str | None = None
+    claim_strength: str | None = None
+    citation_density: str | None = None
+    writing_taste_dimensions: list[str] = Field(default_factory=list)
+    style_tags: list[str] = Field(default_factory=list)
     figure_role: str | None = None
     label_basis: str = "project_curated"
     extractor_version: str | None = None

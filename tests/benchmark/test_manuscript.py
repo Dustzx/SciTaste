@@ -71,6 +71,7 @@ def test_materialize_manuscript_creates_self_contained_bundle(tmp_path, monkeypa
     assert target / "main.md" in paths
     assert target / "main.tex" in paths
     assert target / "references.bib" in paths
+    assert target / "WRITING_TASTE_ASSESSMENT.json" in paths
     assert target / "figures" / "comparison.png" in paths
     assert paths.count(target / "figures" / "comparison.png") == 1
     build = json.loads((target / "build.json").read_text())
@@ -187,4 +188,8 @@ No human-subject data were used.
     assert tmp_path / "bundle" / "main.pdf" in paths
     assert tmp_path / "bundle" / "SUBMISSION_ASSESSMENT.json" in paths
     assert tmp_path / "bundle" / "MANUSCRIPT_ASSESSMENT.json" in paths
+    assert tmp_path / "bundle" / "WRITING_TASTE_ASSESSMENT.json" in paths
+    writing_taste = json.loads((tmp_path / "bundle" / "WRITING_TASTE_ASSESSMENT.json").read_text())
+    assert writing_taste["target_venue"] == "Test Venue"
+    assert writing_taste["scientific_quality_established"] is False
     assert json.loads((tmp_path / "bundle" / "build.json").read_text())["main_text_pages"] == 8

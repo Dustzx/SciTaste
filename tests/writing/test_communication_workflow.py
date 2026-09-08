@@ -36,7 +36,10 @@ def test_review_triggers_evidence_and_returns_to_paper_revision(tmp_path) -> Non
     assert state.reviewer_concerns[0].status == "closed"
     assert state.evidence_graph.items[-1].evidence_type == "matched baseline"
     assert state.writing_state is not None
-    assert state.writing_state.retrieved_taste_case_ids == ["taste-introduction-limitation"]
+    assert state.writing_state.retrieved_taste_case_ids == [
+        "taste-introduction-limitation",
+        "taste-results-argument-not-log",
+    ]
     assert (
         "Review resolution obligation-review-matched-baseline" in (output / "paper.md").read_text()
     )

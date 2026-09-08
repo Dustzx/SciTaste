@@ -118,6 +118,7 @@ def test_project_paper_build_dry_run_is_read_only(tmp_path: Path, capsys) -> Non
     assert payload["status"] == "planned"
     assert payload["preflight"]["missing_citation_keys"] == []
     assert payload["manuscript_preflight"]["substantive_research_draft"] is True
+    assert payload["writing_taste_preflight"]["profile_id"] == "scitaste-writing-taste-v1"
     assert payload["would_compile"] is True
     assert not (runtime.projects_root / "paper-build-project/papers/venue-draft-v1").exists()
 
@@ -167,6 +168,9 @@ def test_project_paper_build_registers_gated_bundle(tmp_path: Path, monkeypatch,
     assert snapshot.revision == 1
     assert paper.status == "venue-submission-draft"
     assert paper.model_extra["eligible_for_submission"] is True
+    assert paper.model_extra["writing_taste_assessment_sha256"]
     assert (bundle / "main.pdf").is_file()
     assert (bundle / "SUBMISSION_ASSESSMENT.json").is_file()
     assert (bundle / "MANUSCRIPT_ASSESSMENT.json").is_file()
+    assert (bundle / "WRITING_TASTE_ASSESSMENT.json").is_file()
+    assert paper.files["writing-taste-assessment"] == "WRITING_TASTE_ASSESSMENT.json"

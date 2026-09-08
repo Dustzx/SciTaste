@@ -75,10 +75,223 @@ taste_cases:
     domain_tags: [scientific-writing]
     venue_tags: [general-ml]
     rhetorical_role: expose limitation
+    writing_level: paragraph
+    section_type: introduction
+    transition_pattern: prior work to unresolved evidence-backed gap
+    claim_strength: calibrated
+    citation_density: medium
+    writing_taste_dimensions: [scientific_positioning, narrative_focus, claim_calibration]
+    style_tags: [gap-first, evidence-bounded]
     provenance:
       - source_type: project_specification
         locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#19.2
         version: v1.1
+
+  - case_id: taste-paper-evidence-centered-story
+    stage: COMMUNICATION
+    context_summary: A research paper contains many implementation events, but only a subset supports its central scientific contribution.
+    problem_pattern: Equal-weight reporting obscures the strongest supported contribution.
+    evidence_state: Claims and evidence are registered, but narrative priority is unresolved.
+    candidate_actions: [CENTER_STRONGEST_EVIDENCE, REPORT_ALL_EQUALLY]
+    preferred_action: CENTER_STRONGEST_EVIDENCE
+    rejected_actions: [REPORT_ALL_EQUALLY]
+    decision_principle: Build the paper around the most important contribution that the registered evidence actually supports.
+    why_preferred: Scientific persuasion requires explicit priority without expanding claims or suppressing material counterevidence.
+    outcome_summary: The main narrative becomes selective by relevance while the complete evidence record remains auditable.
+    confidence: 0.9
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_curated_external_method
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: paper
+    rhetorical_role: select narrative center
+    claim_strength: calibrated
+    writing_taste_dimensions: [scientific_integrity, narrative_focus, evidence_prioritization]
+    style_tags: [claim-forward, evidence-bounded]
+    provenance:
+      - source_type: external_method
+        locator: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/skills/anti-defensive-writing-en/SKILL.md
+        title: Anti-Defensive Writing
+        version: b32067b3055d356e007c6986775fee069da3891a
+        license_id: MIT
+        license_url: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/LICENSE
+        derivation_method: Human-curated principle-level adaptation; no source prose copied.
+        redistributable: true
+        personal_data_removed: true
+
+  - case_id: taste-results-argument-not-log
+    stage: COMMUNICATION
+    context_summary: A Results section is organized around repository revisions, attempts, tests, and implementation chronology.
+    problem_pattern: Project-log structure replaces scientific argument.
+    evidence_state: Valid results exist, but their argumentative duties are not explicit.
+    candidate_actions: [ORGANIZE_BY_RESEARCH_QUESTION, KEEP_PROCESS_CHRONOLOGY]
+    preferred_action: ORGANIZE_BY_RESEARCH_QUESTION
+    rejected_actions: [KEEP_PROCESS_CHRONOLOGY]
+    decision_principle: Organize results by the question answered, mechanism tested, or alternative explanation ruled out.
+    why_preferred: Readers should see what each result establishes rather than reconstructing meaning from development history.
+    outcome_summary: Engineering provenance remains in the artifact record while the paper presents standing scientific logic.
+    confidence: 0.95
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_curated_external_method
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: section
+    section_type: results
+    rhetorical_role: report evidence
+    transition_pattern: research question to result to interpretation
+    claim_strength: calibrated
+    citation_density: low
+    writing_taste_dimensions: [argumentative_structure, evidence_prioritization, reader_guidance]
+    style_tags: [result-first, no-project-log]
+    provenance:
+      - source_type: external_method
+        locator: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/skills/anti-defensive-writing-en/SKILL.md
+        title: Anti-Defensive Writing
+        version: b32067b3055d356e007c6986775fee069da3891a
+        license_id: MIT
+        license_url: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/LICENSE
+        derivation_method: Human-curated principle-level adaptation; no source prose copied.
+        redistributable: true
+        personal_data_removed: true
+
+  - case_id: taste-positive-scope
+    stage: COMMUNICATION
+    context_summary: A contribution statement begins by listing what the paper does not establish.
+    problem_pattern: Repeated defensive qualification hides the supported positive scope.
+    evidence_state: The claim boundary is known and can be stated directly.
+    candidate_actions: [STATE_POSITIVE_SCOPE, LEAD_WITH_DISCLAIMER]
+    preferred_action: STATE_POSITIVE_SCOPE
+    rejected_actions: [LEAD_WITH_DISCLAIMER]
+    decision_principle: State the supported scope first and place a necessary qualification where it changes interpretation.
+    why_preferred: Positive scope improves clarity while retaining scientifically material limitations.
+    outcome_summary: The claim becomes direct, bounded, and less vulnerable to accidental self-expansion.
+    confidence: 0.9
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_curated_external_method
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: paragraph
+    rhetorical_role: state contribution
+    transition_pattern: supported finding to bounded implication
+    claim_strength: calibrated
+    citation_density: medium
+    writing_taste_dimensions: [anti_defensive_style, precision_and_scope, claim_calibration]
+    style_tags: [positive-scope, direct]
+    provenance:
+      - source_type: external_method
+        locator: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/skills/anti-defensive-writing-en/SKILL.md
+        title: Anti-Defensive Writing
+        version: b32067b3055d356e007c6986775fee069da3891a
+        license_id: MIT
+        license_url: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/LICENSE
+        derivation_method: Human-curated principle-level adaptation; no source prose copied.
+        redistributable: true
+        personal_data_removed: true
+
+  - case_id: taste-material-limitation-integrity
+    stage: COMMUNICATION
+    context_summary: Stronger framing is proposed for a paper whose central comparison has an unresolved validity limitation.
+    problem_pattern: Persuasive editing risks hiding information required to interpret the claim.
+    evidence_state: A material uncertainty or counterresult remains registered.
+    candidate_actions: [PRESERVE_AND_PLACE_LIMITATION, HIDE_LIMITATION]
+    preferred_action: PRESERVE_AND_PLACE_LIMITATION
+    rejected_actions: [HIDE_LIMITATION]
+    decision_principle: Scientific integrity outranks rhetorical advantage; preserve every limitation that changes validity, scope, safety, or reproducibility.
+    why_preferred: Writing Taste strengthens supported claims but never converts selective reporting into persuasion.
+    outcome_summary: The limitation is stated once, precisely, and in the section where readers interpret the affected claim.
+    confidence: 1.0
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_policy
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: paper
+    rhetorical_role: calibrate limitation
+    claim_strength: bounded
+    writing_taste_dimensions: [scientific_integrity, precision_and_scope, claim_calibration]
+    style_tags: [mandatory-disclosure, non-selective]
+    provenance:
+      - source_type: project_policy
+        locator: SciTaste_Full_Project_Codex_Spec_v1.1.md#19
+        version: v1.1
+        derivation_method: Human-authored integrity constraint for external style adaptations.
+        redistributable: true
+        personal_data_removed: true
+
+  - case_id: taste-abstract-contribution-opening
+    stage: COMMUNICATION
+    context_summary: An abstract opens with implementation status and qualifications before explaining the research problem and contribution.
+    problem_pattern: The highest-attention section delays its scientific message.
+    evidence_state: The problem, approach, and strongest supported result are all available.
+    candidate_actions: [OPEN_WITH_PROBLEM_CONTRIBUTION_RESULT, OPEN_WITH_PROJECT_STATUS]
+    preferred_action: OPEN_WITH_PROBLEM_CONTRIBUTION_RESULT
+    rejected_actions: [OPEN_WITH_PROJECT_STATUS]
+    decision_principle: Establish the problem, gap, contribution, strongest evidence, and meaning before secondary qualifications.
+    why_preferred: The abstract should make the paper's value legible without overstating evidence.
+    outcome_summary: Readers can recover the scientific argument from the opening sentences.
+    confidence: 0.9
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_curated_external_method
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: section
+    section_type: abstract
+    rhetorical_role: summarize contribution
+    transition_pattern: problem to gap to contribution to evidence to meaning
+    claim_strength: calibrated
+    citation_density: low
+    writing_taste_dimensions: [scientific_positioning, narrative_focus, reader_guidance]
+    style_tags: [claim-forward, abstract-opening]
+    provenance:
+      - source_type: external_method
+        locator: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/skills/anti-defensive-writing-en/SKILL.md
+        title: Anti-Defensive Writing
+        version: b32067b3055d356e007c6986775fee069da3891a
+        license_id: MIT
+        license_url: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/LICENSE
+        derivation_method: Human-curated principle-level adaptation; no source prose copied.
+        redistributable: true
+        personal_data_removed: true
+
+  - case_id: taste-conclusion-reinforce-takeaway
+    stage: COMMUNICATION
+    context_summary: A conclusion ends with new defensive qualifications that were not needed to interpret the central claim.
+    problem_pattern: The final paragraph replaces synthesis with self-negation.
+    evidence_state: Necessary limitations are already recorded in their proper section.
+    candidate_actions: [REINFORCE_BOUNDED_TAKEAWAY, ADD_NEW_DEFENSIVE_CAVEAT]
+    preferred_action: REINFORCE_BOUNDED_TAKEAWAY
+    rejected_actions: [ADD_NEW_DEFENSIVE_CAVEAT]
+    decision_principle: End with the supported takeaway and significance; do not introduce a new claim or a redundant caveat.
+    why_preferred: The conclusion should close the established argument while all material limitations remain visible elsewhere.
+    outcome_summary: The paper ends on its evidence-backed contribution rather than an imagined review exchange.
+    confidence: 0.9
+    retrieval_eligible: true
+    human_verified: true
+    label_basis: project_curated_external_method
+    domain_tags: [scientific-writing]
+    venue_tags: [general-ml]
+    writing_level: section
+    section_type: conclusion
+    rhetorical_role: synthesize contribution
+    transition_pattern: result synthesis to bounded significance
+    claim_strength: calibrated
+    citation_density: low
+    writing_taste_dimensions: [global_coherence, anti_defensive_style, reader_guidance]
+    style_tags: [takeaway-closing, no-new-caveat]
+    provenance:
+      - source_type: external_method
+        locator: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/skills/anti-defensive-writing-en/SKILL.md
+        title: Anti-Defensive Writing
+        version: b32067b3055d356e007c6986775fee069da3891a
+        license_id: MIT
+        license_url: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill/blob/b32067b3055d356e007c6986775fee069da3891a/LICENSE
+        derivation_method: Human-curated principle-level adaptation; no source prose copied.
+        redistributable: true
+        personal_data_removed: true
 
   - case_id: taste-figure-mechanism
     stage: COMMUNICATION

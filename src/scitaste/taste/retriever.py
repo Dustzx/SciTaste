@@ -18,6 +18,7 @@ class TasteRetrievalPolicy(StrEnum):
     DECISION_PATTERN = "decision_pattern"
     STAGE_CONDITIONED = "stage_conditioned"
     RHETORICAL_ROLE = "rhetorical_role"
+    WRITING_DECISION = "writing_decision"
     VISUAL_ROLE = "visual_role"
 
 
@@ -30,7 +31,12 @@ class TasteQuery(BaseModel):
     candidate_action_types: list[str] = Field(default_factory=list)
     domain_tags: list[str] = Field(default_factory=list)
     venue: str | None = None
+    writing_level: str | None = None
+    section_type: str | None = None
     rhetorical_role: str | None = None
+    claim_strength: str | None = None
+    citation_density: str | None = None
+    writing_taste_dimensions: list[str] = Field(default_factory=list)
     figure_role: str | None = None
 
 
@@ -55,6 +61,8 @@ class TasteRetriever:
                 if case.rhetorical_role
                 and case.rhetorical_role.casefold() == query.rhetorical_role.casefold()
             ]
+        if query.policy == TasteRetrievalPolicy.WRITING_DECISION:
+            cases = [case for case in cases if case.writing_level or case.rhetorical_role]
         if query.policy == TasteRetrievalPolicy.VISUAL_ROLE and query.figure_role:
             cases = [
                 case
@@ -85,6 +93,14 @@ class TasteRetriever:
                         case.decision_principle,
                         case.why_preferred,
                         case.preferred_action,
+                        case.writing_level,
+                        case.section_type,
+                        case.rhetorical_role,
+                        case.transition_pattern,
+                        case.claim_strength,
+                        case.citation_density,
+                        *case.writing_taste_dimensions,
+                        *case.style_tags,
                         *case.candidate_actions,
                     ],
                 )
@@ -108,6 +124,20 @@ class TasteRetriever:
             score += 0.25
             matched.append("venue")
         if (
+            query.writing_level
+            and case.writing_level
+            and query.writing_level.casefold() == case.writing_level.casefold()
+        ):
+            score += 0.4
+            matched.append("writing_level")
+        if (
+            query.section_type
+            and case.section_type
+            and query.section_type.casefold() == case.section_type.casefold()
+        ):
+            score += 0.45
+            matched.append("section_type")
+        if (
             query.policy == TasteRetrievalPolicy.RHETORICAL_ROLE
             and query.rhetorical_role
             and case.rhetorical_role
@@ -115,6 +145,33 @@ class TasteRetriever:
         ):
             score += 1.0
             matched.append("rhetorical_role")
+        if (
+            query.policy == TasteRetrievalPolicy.WRITING_DECISION
+            and query.rhetorical_role
+            and case.rhetorical_role
+            and query.rhetorical_role.casefold() == case.rhetorical_role.casefold()
+        ):
+            score += 1.0
+            matched.append("rhetorical_role")
+        if (
+            query.claim_strength
+            and case.claim_strength
+            and query.claim_strength.casefold() == case.claim_strength.casefold()
+        ):
+            score += 0.3
+            matched.append("claim_strength")
+        if (
+            query.citation_density
+            and case.citation_density
+            and query.citation_density.casefold() == case.citation_density.casefold()
+        ):
+            score += 0.2
+            matched.append("citation_density")
+        requested_dimensions = {item.casefold() for item in query.writing_taste_dimensions}
+        case_dimensions = {item.casefold() for item in case.writing_taste_dimensions}
+        if requested_dimensions & case_dimensions:
+            score += 0.35
+            matched.append("writing_taste_dimensions")
         if (
             query.policy == TasteRetrievalPolicy.VISUAL_ROLE
             and query.figure_role

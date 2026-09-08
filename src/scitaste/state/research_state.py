@@ -262,7 +262,13 @@ class WritingCritique(SciTasteModel):
     critic: str
     severity: str
     message: str
+    finding_id: str | None = None
+    code: str | None = None
+    dimension: str | None = None
+    level: str | None = None
+    recommendation: str | None = None
     section_name: str | None = None
+    paragraph_index: int | None = Field(default=None, ge=1)
     claim_ids: list[str] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
 

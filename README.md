@@ -48,9 +48,10 @@ review remain pending, so no effectiveness claim is made from that pilot.
   accepted-paper-shaped snapshots;
 - rights-scope preflight, deterministic ARIES/CASIMIR curation, and quarantine of
   external Taste Cases until human verification;
-- evidence-gated narrative and writing contracts, rhetorical-role taste
-  retrieval, decomposed writing critics, reviewer obligations, and review-driven
-  evidence collection returning to paper revision;
+- evidence-gated narrative and writing contracts, hierarchical Writing Taste
+  retrieval, an integrity-first deterministic assessor, a proposal-only semantic
+  writing review node, decomposed critics, reviewer obligations, and
+  review-driven evidence collection returning to paper revision;
 - claim-linked Figure Contracts, visual-role retrieval, semantic object
   reconstruction, editable SVG/draw.io export, split visual critics, and
   traceable object-level patches;

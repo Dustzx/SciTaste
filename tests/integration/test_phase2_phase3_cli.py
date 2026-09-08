@@ -30,7 +30,7 @@ def test_calibration_and_library_cli_work_offline(tmp_path) -> None:
     manifest = json.loads((library_dir / "library_manifest.json").read_text())
     assert report["overall"]["accuracy"] == 0.8
     assert manifest["knowledge_count"] == 2
-    assert manifest["taste_count"] == 4
+    assert manifest["taste_count"] == 10
 
 
 def test_discovery_cli_runs_the_strong_hypothesis_path(tmp_path) -> None:

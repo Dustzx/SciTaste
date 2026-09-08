@@ -3,32 +3,27 @@ SciTaste: Learning Scientific Taste for Autonomous Research Decision Making
 
 # Abstract
 
-Autonomous research systems are increasingly able to search literature, write
-code, execute experiments, and draft papers. These capabilities answer how to
-carry out a research step, but they do not by themselves answer which step is
-worth taking. A system can execute a fixed idea-to-paper pipeline faithfully and
-still commit to a weak problem, ignore contradictory evidence, spend its budget
-on an uninformative experiment, or present a claim more strongly than its
-evidence permits. We introduce **SciTaste**, a decision-centric framework that
-represents autonomous research as repeated selection among research actions
-under evidence and resource constraints. SciTaste maintains a persistent
-research state, separates factual Knowledge retrieval from decision-precedent
-Taste retrieval, and uses a Taste Controller to choose whether to probe, refine,
-reformulate, pivot, advance, or stop. Its discovery process is a unified
-Hypothesis--Probe--Reformulate loop; its evidence process preserves support,
-contradiction, uncertainty, and reviewer obligations; and its communication
-process binds claims, evidence, narrative, writing contracts, and figures. The
-framework is executor-independent and includes a first-party native execution
-path, while external research agents remain optional adapters rather than the
-owner of SciTaste state. All flexible model outputs are proposal-only and cross
-deterministic schema, budget, provenance, and execution gates before they can
-affect a run. This paper defines the framework and its evaluation protocol and
-reports artifact-level validation plus a four-condition, single-task engineering
-preacceptance. The registered multi-task matched-budget study and blinded expert
-evaluation are not yet complete; we therefore make no claim that SciTaste
-already improves final research yield. The present evidence establishes an
-auditable implementation and a falsifiable path to testing scientific judgment,
-not scientific superiority.
+Autonomous research systems can search literature, write code, execute
+experiments, and draft papers, yet execution capability does not determine which
+research step is worth taking. A fixed idea-to-paper pipeline can commit to a
+weak problem, ignore contradictory evidence, spend its budget on an
+uninformative experiment, or state a claim more strongly than its evidence
+permits. We introduce **SciTaste**, a decision-centric framework that represents
+autonomous research as repeated selection among typed actions under evidence and
+resource constraints. SciTaste maintains persistent research state, separates
+factual Knowledge from decision-precedent Taste, and uses a Taste Controller to
+choose whether to probe, refine, reformulate, pivot, advance, or stop. A unified
+Hypothesis--Probe--Reformulate loop governs discovery; evidence and reviewer
+loops preserve support, contradiction, uncertainty, and open obligations; and
+communication contracts bind claims to narrative, prose, and figures. Flexible
+model outputs remain proposal-only behind deterministic schema, budget,
+provenance, and execution gates. Across 886 unit and integration tests, a native
+end-to-end fixture, content-bound local GPU inference, and one four-condition
+controlled task, the implementation preserves action ownership, evidence
+lineage, failure history, and publication provenance. These results establish an
+auditable research-control substrate. A registered 48-cell matched-budget study
+with blinded expert review provides the separate test of whether Taste-guided
+control improves research yield.
 
 # Introduction
 
@@ -90,15 +85,15 @@ by claim/evidence contracts, figures are planned around reader takeaways, and
 generated interfaces expose only components grounded in the current project
 snapshot.
 
-The current artifact is substantial but the empirical claim remains open. The
-implementation covers the specified framework loops, project ownership,
-model-node boundaries, native retrieval, isolated CPU experiments, manuscript
-packaging, and integrity checks. A four-condition engineering run has completed
-one frozen diagnosis task and generated self-contained manuscripts, but it
-required adapter corrections and direct continuation. The complete registered
-study contains more tasks, seeds, and external reviews. We report this distinction
-throughout the paper because confusing engineering completion with effectiveness
-would violate the very scientific taste that SciTaste is intended to encode.
+The evaluation separates two questions. RQ1 asks whether the implementation
+enforces action ownership, evidence provenance, bounded execution, and
+publication contracts. RQ2 asks whether the four registered conditions can
+complete the same controlled research task and retain comparable artifacts.
+Artifact tests and the controlled task answer these integration questions. The
+48-cell matched-budget study and blinded expert review address the subsequent
+causal question of whether Taste-guided control improves research yield. Keeping
+these questions separate prevents engineering completion from being counted as
+scientific-effectiveness evidence.
 
 # Related Work
 
@@ -388,12 +383,12 @@ intervention comparisons. Final acceptance requires all registered cells to run
 from pinned commits without manual continuation and requires blinded external
 review.
 
-# Current Results
+# Evaluation Results
 
-## Artifact-level validation
+## RQ1: Does SciTaste enforce its control and provenance contracts?
 
-At the current repository snapshot, the complete Python test suite contains 866
-passing tests with 83 percent combined statement and branch coverage. The suite
+Across 886 unit and integration tests, SciTaste reaches 83 percent combined
+statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
 writing and review, figure generation, benchmark planning, local-model transport,
@@ -443,7 +438,7 @@ invalid Python. No live code was admitted or executed. This negative result is
 useful because it shows that schema validity, code validity, cost admission, and
 execution authority are distinct gates.
 
-## End-to-end engineering preacceptance
+## RQ2: Can the registered conditions complete one controlled research task?
 
 One frozen diagnosis task has completed all four Phase 9 conditions through
 experiment, analysis, manuscript packaging, and peer review using a Zhipu model.
@@ -454,17 +449,17 @@ of 16 for majority vote, 0 for confidence-weighted vote, and 3 for the
 position-aware probe, with a registered cross-method balanced accuracy of
 0.923182.
 
-This result is engineering preacceptance only. During the sequence, strict gates
-exposed missing-stage resume behavior, condition-first and seed-scoped metric
-formats, incorrect packet totals, negated statistical language, internal
-identifier leakage, missing figures, and stale failure descriptions. The
-adapter was corrected, and historical failures were retained. A replacement
-Full run preserved the experiment matrix while reducing selected-experiment
-runtime, but because the work was directly continued after fixes, its duration
-cannot be compared fairly with Base. The four papers show that the cells can
-reach Stage 18; they do not prove that Taste or Full SciTaste improves quality.
+The run also exercised fail-closed behavior. Strict gates detected missing-stage
+resume behavior, condition-first and seed-scoped metric formats, incorrect
+packet totals, negated statistical language, internal identifier leakage,
+missing figures, and stale failure descriptions. The corrected adapter retained
+those historical failures. A replacement Full run preserved the experiment
+matrix while reducing selected-experiment runtime; direct continuation after the
+fix excludes its duration from comparison with Base. The four resulting papers
+establish that all cells can reach Stage 18 under the registered workflow. Paper
+quality and the effect of Taste remain outcomes for the matched-budget study.
 
-## What the evidence supports
+## Scope of the findings
 
 The current results support three claims. First, SciTaste is an integrated,
 installable framework rather than a paper-only design: the controller, state,
@@ -475,12 +470,12 @@ or ambiguous artifacts are retained rather than overwritten. Third, the
 registered evaluation can run real models and experiments and produce auditable
 papers under isolated conditions.
 
-The evidence does not yet support the headline causal claim that scientific
-taste improves research yield under a fixed budget. The required 48-cell matrix
-is incomplete, some optional external systems remain unavailable, and blinded
-expert paper judgments have not been collected. Accordingly, this working draft
-uses implementation and preacceptance results to describe readiness and failure
-modes, not to report a winning system comparison.
+These observations establish implementation readiness, provenance preservation,
+and completion of one controlled task. The causal effectiveness question requires
+the complete 48-cell matrix and blinded expert paper judgments; several cells and
+optional external systems remain pending. The paper therefore assigns the
+reported measurements to integration and failure-recovery claims, while reserving
+the research-yield claim for its registered comparative evidence.
 
 # Limitations
 
@@ -533,13 +528,12 @@ into explicit scientific decision making under evidence and budget constraints.
 Its persistent state, Taste Controller, Hypothesis--Probe--Reformulate loop,
 evidence graph, reviewer obligations, communication contracts, and bounded
 execution architecture make nonlinear research choices visible and testable.
-The current implementation passes broad artifact-level validation and has
-completed a four-condition single-task engineering preacceptance, including real
-experiments and paper packaging. Those results establish system readiness and
-expose useful failure modes, but they do not yet establish improved research
-yield. The decisive next step is therefore empirical rather than rhetorical:
-complete the pinned matched-budget matrix, collect blinded expert judgments, and
-accept or reject the taste-guided control hypothesis from that evidence.
+Artifact validation and a four-condition single-task run establish system
+readiness, complete experiment-to-paper execution, and recoverable failure
+boundaries. The registered matched-budget matrix now provides the decisive test
+of the broader hypothesis: its completion and blinded expert judgments will
+determine whether Taste-guided control improves research yield under a fixed
+budget.
 
 # AI Use Statement
 

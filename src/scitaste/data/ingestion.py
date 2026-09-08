@@ -479,7 +479,16 @@ def _normalize_record(
         "confidence": float(_pick(raw, defaults, "confidence", default=0.5)),
         "domain_tags": _strings(_pick(raw, defaults, "domain_tags", default=[])),
         "venue_tags": _strings(_pick(raw, defaults, "venue_tags", "venues", default=[])),
+        "writing_level": _optional_text(_pick(raw, defaults, "writing_level")),
+        "section_type": _optional_text(_pick(raw, defaults, "section_type")),
         "rhetorical_role": _optional_text(_pick(raw, defaults, "rhetorical_role")),
+        "transition_pattern": _optional_text(_pick(raw, defaults, "transition_pattern")),
+        "claim_strength": _optional_text(_pick(raw, defaults, "claim_strength")),
+        "citation_density": _optional_text(_pick(raw, defaults, "citation_density")),
+        "writing_taste_dimensions": _strings(
+            _pick(raw, defaults, "writing_taste_dimensions", default=[])
+        ),
+        "style_tags": _strings(_pick(raw, defaults, "style_tags", default=[])),
         "figure_role": _optional_text(_pick(raw, defaults, "figure_role")),
         "label_basis": _text(_pick(raw, defaults, "label_basis", default="annotated")),
         "extractor_version": _optional_text(_pick(raw, defaults, "extractor_version")),

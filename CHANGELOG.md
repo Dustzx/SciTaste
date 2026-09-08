@@ -7,6 +7,20 @@ semantic versioning.
 
 ### Added
 
+- Writing Taste now operates as a twelve-dimension, five-level scientific
+  communication layer rather than a rhetorical-role lookup. Taste Cases and
+  retrieval can bind writing level, section, transition, claim strength,
+  citation density, style tags, and decision dimensions; an integrity-first
+  deterministic assessor detects project-report structure and defensive
+  framing, while a proposal-only semantic node may advise on paper strategy
+  without editing files, inventing evidence, or omitting material limitations.
+  Positive-scope principles are provenance-bound adaptations of the MIT-licensed
+  `anti-defensive-writing-Skill`, subordinate to scientific integrity. The
+  SciTaste manuscript dogfoods the new assessor and is reorganized around
+  explicit evaluation questions instead of `Current Results`. Ordinary and
+  venue-native manuscript bundles now carry a self-hashed Writing Taste
+  assessment, and registered paper manifests bind that record independently of
+  mechanical submission eligibility.
 - Full Workflow can now admit a strict open-question `ResearchBrief` before any
   project mutation. A self-hashed launch plan binds the question, objective,
   exact budget, evidence requirements, success criteria, prohibited claims,

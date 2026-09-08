@@ -1,0 +1,32 @@
+schema_version: "1.0"
+profile_id: writing-taste-zhipu-glm53-flash
+profile_version: 1.0.0
+provider: zhipu-direct
+model: glm-5.3-flash
+allowed_node_names:
+  - writing-taste
+live_execution_permitted: true
+unrestricted_code_generation: false
+generation:
+  schema_version: "1.0"
+  max_request_bytes: 240000
+  max_output_tokens: 8192
+  context_window_tokens: 128000
+  structured_json: true
+  deterministic_seed_supported: false
+admission:
+  schema_version: "1.0"
+  max_request_bytes: 220000
+  max_input_tokens: 40000
+  max_output_tokens: 6000
+  max_total_tokens: 46000
+  max_latency_ms: 180000
+  max_response_cost_usd: 0.15
+  allowed_tool_names: []
+  max_tool_call_proposals: 0
+cumulative_project:
+  schema_version: "1.0"
+  max_invocations: 8
+  max_total_tokens: 300000
+  max_api_cost_usd: 1.0
+  unknown_cost_blocks_acceptance: true

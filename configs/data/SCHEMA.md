@@ -29,6 +29,11 @@ a `derivation_method`, and `personal_data_removed: true`. These fields distingui
 observed/human labels from inferred preferences and make later audits possible.
 Acceptance or citation count must not be treated as a causal preference label.
 
+Writing precedents may additionally index `writing_level`, `section_type`,
+`rhetorical_role`, `transition_pattern`, `claim_strength`, `citation_density`,
+`writing_taste_dimensions`, and `style_tags`. These fields describe the decision
+context; they do not convert prose style into a scientific-quality label.
+
 OpenReview-style nested `{ "content": { "field": { "value": ... } } }` objects
 are accepted. JSON containers may be arrays or use `records`, `items`, `data`, or
 `notes`. Each output record carries a normalized SHA-256 content hash and license

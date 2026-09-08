@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from scitaste.state.research_state import ResearchState, WritingCritique
+from scitaste.writing.taste import assess_writing_taste, render_section_drafts_for_taste
 
 
 class WritingCritic(Protocol):
@@ -163,6 +164,36 @@ class GlobalCoherenceCritic:
         )
 
 
+class WritingTasteCritic:
+    """Hierarchical advisory critic; scientific integrity remains independently gated."""
+
+    name = "writing_taste"
+
+    def review(self, state: ResearchState) -> list[WritingCritique]:
+        writing = state.writing_state
+        if writing is None or not writing.section_drafts:
+            return []
+        assessment = assess_writing_taste(
+            render_section_drafts_for_taste(writing.section_drafts),
+            target_venue=state.target_venue,
+        )
+        return [
+            WritingCritique(
+                critic=self.name,
+                severity=finding.severity.value,
+                message=finding.message,
+                finding_id=finding.finding_id,
+                code=finding.code,
+                dimension=finding.dimension.value,
+                level=finding.level.value,
+                recommendation=finding.recommendation,
+                section_name=finding.section_name,
+                paragraph_index=finding.paragraph_index,
+            )
+            for finding in assessment.findings
+        ]
+
+
 class WritingCriticSuite:
     def __init__(self) -> None:
         self.critics: tuple[WritingCritic, ...] = (
@@ -175,6 +206,7 @@ class WritingCriticSuite:
             TerminologyCritic(),
             CitationCritic(),
             GlobalCoherenceCritic(),
+            WritingTasteCritic(),
         )
 
     def review(self, state: ResearchState) -> list[WritingCritique]:

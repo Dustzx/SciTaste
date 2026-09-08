@@ -3,5 +3,37 @@
 from scitaste.writing.critics import WritingCriticSuite
 from scitaste.writing.drafter import ContractDrafter
 from scitaste.writing.narrative import NarrativeTasteReview, review_narrative
+from scitaste.writing.semantic import WritingTasteNode, writing_node_types
+from scitaste.writing.semantic_models import (
+    MaterialWritingLimitation,
+    SemanticWritingTasteFinding,
+    WritingRevisionAction,
+    WritingTasteReviewProposal,
+    WritingTasteSectionInput,
+    WritingTasteSemanticInput,
+)
+from scitaste.writing.taste import (
+    WritingTasteAssessment,
+    WritingTasteDimension,
+    WritingTasteFinding,
+    assess_writing_taste,
+)
 
-__all__ = ["ContractDrafter", "NarrativeTasteReview", "WritingCriticSuite", "review_narrative"]
+__all__ = [
+    "ContractDrafter",
+    "MaterialWritingLimitation",
+    "NarrativeTasteReview",
+    "SemanticWritingTasteFinding",
+    "WritingCriticSuite",
+    "WritingRevisionAction",
+    "WritingTasteAssessment",
+    "WritingTasteDimension",
+    "WritingTasteFinding",
+    "WritingTasteNode",
+    "WritingTasteReviewProposal",
+    "WritingTasteSectionInput",
+    "WritingTasteSemanticInput",
+    "assess_writing_taste",
+    "review_narrative",
+    "writing_node_types",
+]

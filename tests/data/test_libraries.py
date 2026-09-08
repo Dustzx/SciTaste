@@ -64,7 +64,7 @@ def test_retrieval_uses_distinct_scientific_questions(tmp_path) -> None:
     )
 
     assert manifest["knowledge_count"] == 2
-    assert manifest["taste_count"] == 4
+    assert manifest["taste_count"] == 10
     assert knowledge_results[0].document.document_id == "knowledge-evidence-loop"
     assert taste_results[0].case.case_id == "taste-probe-before-commitment"
     assert "stage" in taste_results[0].matched_fields
@@ -93,6 +93,35 @@ def test_role_conditioned_retrieval(tmp_path) -> None:
 
     assert writing[0].case.case_id == "taste-introduction-limitation"
     assert visual[0].case.case_id == "taste-figure-mechanism"
+
+
+def test_hierarchical_writing_taste_retrieval_preserves_source_and_dimensions(tmp_path) -> None:
+    build_libraries("configs/taste/library_seed_v1.yaml", tmp_path)
+    retriever = TasteRetriever(TasteLibrary(tmp_path / "taste" / "records.jsonl"))
+
+    results = retriever.retrieve(
+        TasteQuery(
+            text="organize results by research question instead of repository chronology",
+            policy=TasteRetrievalPolicy.WRITING_DECISION,
+            stage="COMMUNICATION",
+            writing_level="section",
+            section_type="results",
+            rhetorical_role="report evidence",
+            writing_taste_dimensions=["argumentative_structure", "evidence_prioritization"],
+        ),
+        limit=2,
+    )
+
+    assert results[0].case.case_id == "taste-results-argument-not-log"
+    assert "writing_level" in results[0].matched_fields
+    assert "section_type" in results[0].matched_fields
+    assert "writing_taste_dimensions" in results[0].matched_fields
+    source = results[0].case.provenance[0]
+    assert source.license_id == "MIT"
+    assert source.version == "b32067b3055d356e007c6986775fee069da3891a"
+    assert source.derivation_method == (
+        "Human-curated principle-level adaptation; no source prose copied."
+    )
 
 
 def test_retrieval_excludes_quarantined_external_precedents(tmp_path) -> None:

@@ -16,6 +16,7 @@ from scitaste.writing.manuscript_quality import (
     assess_manuscript,
     require_requested_manuscript_role,
 )
+from scitaste.writing.taste import assess_writing_taste, write_writing_taste_assessment
 from scitaste.writing.venue import (
     VenueSubmissionAssessment,
     VenueTemplateInspection,
@@ -64,6 +65,10 @@ def materialize_manuscript(
         "-halt-on-error main.tex`.\n",
         encoding="utf-8",
     )
+    writing_taste_path = write_writing_taste_assessment(
+        assess_writing_taste(markdown),
+        target_dir / "WRITING_TASTE_ASSESSMENT.json",
+    )
 
     build = _compile_latex_bundle(target_dir)
     build_path = target_dir / "build.json"
@@ -73,7 +78,14 @@ def materialize_manuscript(
             f"LaTeX manuscript compilation failed; inspect {build_path} (status={build['status']})"
         )
 
-    paths = [markdown_target, tex_path, readme_path, build_path, *asset_paths]
+    paths = [
+        markdown_target,
+        tex_path,
+        readme_path,
+        build_path,
+        writing_taste_path,
+        *asset_paths,
+    ]
     if bibliography_target is not None:
         paths.append(bibliography_target)
     pdf_path = target_dir / "main.pdf"
@@ -158,6 +170,10 @@ def materialize_venue_manuscript(
         manuscript_assessment.model_dump_json(indent=2) + "\n",
         encoding="utf-8",
     )
+    writing_taste_path = write_writing_taste_assessment(
+        assess_writing_taste(markdown, target_venue=template.config.venue_name),
+        target_dir / "WRITING_TASTE_ASSESSMENT.json",
+    )
 
     paths = [
         markdown_target,
@@ -167,6 +183,7 @@ def materialize_venue_manuscript(
         build_path,
         assessment_path,
         manuscript_assessment_path,
+        writing_taste_path,
         *venue_assets,
         *figure_paths,
     ]

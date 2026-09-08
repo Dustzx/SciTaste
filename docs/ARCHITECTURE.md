@@ -1145,3 +1145,32 @@ ready. Question-to-scenario semantic alignment remains a user declaration in
 this version. Model-grounded scenario synthesis, research-quality comparison,
 and external review are separate later gates and must not be inferred from a
 ready launch plan.
+
+### ADR-040: Writing Taste is hierarchical and integrity-first
+
+Status: accepted for deterministic assessment, precedent retrieval, and bounded
+semantic advice.
+
+Treating Writing Taste as a banned-word list or a single paper score collapses
+different decisions and can turn persuasive editing into selective reporting.
+SciTaste therefore separates twelve dimensions across paper, section, paragraph,
+sentence, and phrase levels. Scientific integrity, claim calibration, and scope
+precede narrative focus and anti-defensive style. A material limitation that
+changes validity, interpretation, safety, ethics, or reproducibility remains in
+scope even when it weakens the preferred story.
+
+Writing Taste Cases add level, section, transition, claim-strength,
+citation-density, dimension, and style metadata to the existing provenance
+record. The `WRITING_DECISION` policy scores those fields alongside context,
+venue, and rhetorical role. External style methods enter only as human-curated,
+licensed precedents with an exact source and derivation method; they do not gain
+policy authority.
+
+A deterministic assessment reports observable antipatterns without claiming
+scientific quality. The optional `writing-taste` model-node extension reviews
+semantic strategy from a closed set of manuscript sections, claim IDs, evidence
+IDs, headline candidates, and material limitations. Its output is typed advice.
+Admission rejects manuscript drift, unknown references, incomplete section
+orders, missing limitations, and attempts to demote a material limitation. The
+node has no file mutation, evidence admission, tool, action, or execution field.
+Evidence gaps continue through the Evidence Loop; prose alone cannot close them.

@@ -95,6 +95,7 @@ from scitaste.writing.manuscript_quality import (
     RESEARCH_WORKING_DRAFT_MINIMUM_WORDS,
     assess_manuscript,
 )
+from scitaste.writing.taste import assess_writing_taste
 from scitaste.writing.venue import assess_venue_submission, inspect_venue_template
 from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
@@ -922,6 +923,10 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
         markdown,
         requested_role="research-working-draft",
     )
+    writing_taste_preflight = assess_writing_taste(
+        markdown,
+        target_venue=template.config.venue_name,
+    )
     project_dir = runtime.projects_root / args.project_id
     target = project_dir / "papers" / args.directory_name
     if target.exists() or target.is_symlink():
@@ -938,6 +943,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                     "template_fingerprint": template.fingerprint,
                     "preflight": preflight.model_dump(mode="json"),
                     "manuscript_preflight": manuscript_preflight.model_dump(mode="json"),
+                    "writing_taste_preflight": writing_taste_preflight.model_dump(mode="json"),
                     "would_compile": True,
                     "would_register": True,
                     "would_select": args.select,
@@ -982,6 +988,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             template_fingerprint=assessment.template_fingerprint,
             submission_assessment_sha256=assessment.record_sha256,
             manuscript_assessment_sha256=manuscript_assessment.record_sha256,
+            writing_taste_assessment_sha256=writing_taste_preflight.record_sha256,
             eligible_for_submission=assessment.eligible_for_submission,
         )
         os.replace(temporary, target)
@@ -1019,6 +1026,7 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         "build.json": "build-record",
         "SUBMISSION_ASSESSMENT.json": "submission-assessment",
         "MANUSCRIPT_ASSESSMENT.json": "manuscript-assessment",
+        "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
         "README.md": "bundle-readme",
     }
     mapped: dict[str, str] = {}
