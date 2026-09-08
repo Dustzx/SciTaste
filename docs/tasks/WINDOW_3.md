@@ -66,6 +66,47 @@ surface; and 12-component progress/paper surfaces need a later bounded-disclosur
 study. Main should not edit the manuscript's effectiveness claim until a powered,
 counterbalanced human study supports it.
 
+### r5 agent-led temporary-project follow-up
+
+The user authorized Window 3 to create a temporary project and operate the
+receiver as a realistic research-project user. Commit `89613d6`
+(`test(ui): record researcher workspace walkthrough`) makes the Chromium probe
+select any available server-issued quick intent and records the exact walkthrough
+and claim boundary in `docs/GENERATION_AS_CONTENT_EVALUATION.md`.
+
+The repository-external project `evidence-ui-research-experience` was built with
+two actual `run full` native offline executions at seeds 7 and 11, not with a UI
+fixture builder. Each completed 18 project-owned native records and materialized
+Discovery, Evidence, Communication, Figure, paper, assessment, TeX, PDF, and
+editable-figure evidence. The paper remained correctly classified as a short
+integration fixture and not publication ready. No temporary output, screenshot,
+response, question, or credential was committed.
+
+Researcher-task observations:
+
+- generated progress, comparison, paper review, verified Markdown inspection,
+  and proposal-only paper selection all worked against the real temporary
+  project;
+- a shell-execution request was refused, an absent blocker/next gate was not
+  invented, artifact bytes were rehashed, and the paper-selection receipt kept
+  `execution_authority: none`;
+- progress and paper review still reached 12 components, while comparison used
+  three; all checked 1440/768/390/320 layouts remained focused, free of runtime
+  errors, horizontal overflow, and sub-24-pixel enabled targets;
+- concrete next seams are entity-scoped semantic de-duplication, actionable
+  proposal-only clarification controls, an unambiguous paper-selection label,
+  and a trusted workflow/runtime projection for comparable metrics and next
+  gates. The last seam belongs to main/project runtime; UI must not infer it
+  from arbitrary run artifacts.
+
+Follow-up verification: configurable browser probes passed for progress,
+run comparison, and paper review; browser completion observations were 753.5,
+500.0, and 557.3 ms respectively; `node --check` passed; focused Generative UI
+and CLI tests passed (`237 passed`); full Ruff and repository tests passed
+through `PYTHON=/home/good/zfx/papers/SciTaste/.venv/bin/python PYTHONPATH=src
+make check` (`859 passed`); and `git diff --check` passed before commit. These
+remain agent-led engineering observations, not human-study results.
+
 Assignment token: `W3-generative-i18n-20260907-r4`
 
 Status: `complete; delivered for main-window review`
