@@ -392,7 +392,7 @@ review.
 
 ## Artifact-level validation
 
-At the current repository snapshot, the complete Python test suite contains 854
+At the current repository snapshot, the complete Python test suite contains 866
 passing tests with 83 percent combined statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
@@ -401,6 +401,14 @@ external-adapter recovery, Tool Intelligence, Generation as Content, native code
 admission, and Full Workflow composition. Formatting and static checks pass, and
 the package builds as a wheel without generated outputs, credentials, tests, or
 the external submodule.
+
+The manuscript itself now exercises a content-bound ICLR 2027 submission path.
+The renderer verifies the official template archive and each admitted style
+asset by hash, requires the long-form manuscript gate, checks citation closure,
+anonymity, terminal disclosure order, and the AI-statement page limit, then
+measures the main-text boundary from the compiled document. This draft compiles
+to nine Letter-sized pages with an eight-page main-text boundary. That result is
+venue-packaging evidence; it is not peer review or scientific acceptance.
 
 The native Full Workflow has also completed a controlled offline integration
 case from discovery through evidence, writing, review, figure generation, TeX,
