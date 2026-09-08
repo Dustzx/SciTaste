@@ -87,6 +87,9 @@ class SemanticHotspotTrigger(ToolExecutionModel):
     controlled_tool_profile_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     controlled_tool_profile_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     candidate_tool_names: tuple[ControlledToolName, ...] = Field(min_length=1, max_length=3)
+    reason_codes: tuple[Annotated[str, Field(pattern=_IDENTIFIER_PATTERN, max_length=128)], ...] = (
+        Field(default=(), max_length=16)
+    )
     evidence_ids: tuple[Annotated[str, Field(pattern=_IDENTIFIER_PATTERN)], ...] = Field(
         default=(),
         max_length=256,
@@ -95,7 +98,7 @@ class SemanticHotspotTrigger(ToolExecutionModel):
     advisory_only: Literal[True] = True
     state_transition_authorized: Literal[False] = False
 
-    @field_validator("candidate_tool_names", "evidence_ids")
+    @field_validator("candidate_tool_names", "reason_codes", "evidence_ids")
     @classmethod
     def identifiers_are_unique(cls, values: tuple[object, ...]) -> tuple[object, ...]:
         if len(values) != len(set(values)):
@@ -235,6 +238,7 @@ class ToolObservation(ToolExecutionModel):
     source_raw_response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_model_usage: Usage
     source_model_latency_ms: float = Field(ge=0, allow_inf_nan=False)
+    handler_invoked: bool = False
     advisory_only: Literal[True] = True
     executable: Literal[False] = False
     canonical_evidence: Literal[False] = False
@@ -787,6 +791,7 @@ class ControlledToolExecutor:
                 state_after=state_after,
                 reasons=("deterministic read-only handler failed",),
                 failure_type=type(exc).__name__,
+                handler_invoked=True,
             )
 
         after = _project_snapshot(self._project_runtime, lease.project.project_id)
@@ -816,6 +821,7 @@ class ControlledToolExecutor:
                 output_sha256=output_sha256,
                 output_bytes=output_bytes,
                 reasons=tuple(rejection_reasons),
+                handler_invoked=True,
             )
         return self._observation(
             lease,
@@ -830,6 +836,7 @@ class ControlledToolExecutor:
             output=output,
             output_sha256=output_sha256,
             output_bytes=output_bytes,
+            handler_invoked=True,
         )
 
     def _observation(
@@ -850,6 +857,7 @@ class ControlledToolExecutor:
         output_bytes: int | None = None,
         reasons: tuple[str, ...] = (),
         failure_type: str | None = None,
+        handler_invoked: bool = False,
     ) -> ToolObservation:
         finished = finished_at or self._clock()
         latency_ms = max(0.0, (self._monotonic() - start_tick) * 1_000)
@@ -877,6 +885,7 @@ class ControlledToolExecutor:
             source_raw_response_sha256=lease.source_raw_response_sha256,
             source_model_usage=lease.source_model_usage,
             source_model_latency_ms=lease.source_model_latency_ms,
+            handler_invoked=handler_invoked,
         )
 
 
