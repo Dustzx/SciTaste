@@ -1027,6 +1027,7 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   workspace.setAttribute("aria-busy", "false");
   if (focus) {
     workspace.focus({preventScroll: true});
+    workspace.scrollIntoView({block: "start"});
   }
 }
 

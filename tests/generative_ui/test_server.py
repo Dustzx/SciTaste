@@ -231,8 +231,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "generation-metadata" in script.text
     assert ".plan-emphasis-compact .progress-board" in stylesheet.text
     assert ".generated-blocker-list" in stylesheet.text
+    assert "@media (max-width: 1050px)" in stylesheet.text
+    assert ".workspace.generated-workspace" in stylesheet.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
+    assert "workspace.focus({preventScroll: true})" in script.text
+    assert 'workspace.scrollIntoView({block: "start"})' in script.text
     assert 'event_type: "artifact_inspection_requested"' in script.text
     assert "new Blob" in script.text
     catalog_update = script.text[script.text.index("function updateCatalogs") :]

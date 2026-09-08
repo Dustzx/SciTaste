@@ -1072,6 +1072,10 @@ code {
     grid-template-columns: minmax(14rem, 18rem) minmax(20rem, 1fr);
   }
 
+  .workspace.generated-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .inspector {
     grid-column: 1 / -1;
     position: static;

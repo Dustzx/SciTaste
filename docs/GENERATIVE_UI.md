@@ -352,6 +352,37 @@ entries, including `index.html`, `app.css`, `app.js`, `locale.js`, `en.json`,
 and `zh-CN.json`; it contained no `outputs/`, tests, `third_party/`, key, or
 environment files.
 
+### Evaluation boundary and pre-experiment
+
+The repeatable evaluation harness and paper-ready study design are documented in
+[Generation as Content Evaluation](GENERATION_AS_CONTENT_EVALUATION.md). The
+automated structural report measures fixed-source-view consolidation, focused
+component rank, component count, evidence grounding, and local service latency.
+Every output explicitly says that it is not a human-usability or
+scientific-effectiveness result.
+
+On 2026-09-08 the harness read `scitaste-self-development` revision 180 without
+writing project outputs. Across its four applicable quick intents, one generated
+workspace represented a mean 3.25 distinct fixed source views, a 65.83-percent
+structural reduction; the goal-focused component ranked first in all four cases
+and all 30 components remained grounded. Mean component count was 7.5, with both
+progress and paper review reaching the 12-component cap. Twenty local samples
+put deterministic generated-progress composition at 1,657.035 ms median and
+1,720.975 ms p95, compared with 132.748 ms and 152.052 ms for the fixed progress
+surface. The result is therefore a navigation-structure gain paired with a
+latency and information-load cost, not an unqualified usability gain.
+
+A dependency-free headless-Chromium probe now checks a real temporary project
+copy at 1440, 768, 390, and 320 CSS-pixel widths. It exposed and drove two
+receiver repairs: generated cards become single-column at the tablet breakpoint,
+and a completed response focuses and scrolls to the beginning of the workspace.
+At 768 pixels the same 12-component document fell from 134,812 to 28,134 pixels
+in the baseline/repaired comparison. The final run had no document horizontal
+overflow, undersized enabled target, locale-switch request, or runtime error.
+These remain engineering observations until the counterbalanced human study
+measures evidence-grounded task completion, time, SUS, task ease, and authority
+comprehension.
+
 ## Trusted project surface factory
 
 `ProjectSurfaceFactory` is the first-party entry point for a real project
@@ -782,9 +813,9 @@ two project identities.
   provider transport, but its output is rejected from workspace admission because
   accepted model-assisted plans require measured cost telemetry under the finite
   per-response policy ceiling.
-- The self-development project manifest at revision 21 predates later native
-  executor and UI work. Updating that visible progress belongs to the normal
-  main-window `ProjectRuntime` workflow, not UI inference.
+- A self-development project snapshot can lag repository work between normal
+  `ProjectRuntime` updates. The UI must continue to display only its recorded
+  revision rather than infer progress from Git or documentation.
 
 ## Deterministic fixtures
 
