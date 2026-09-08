@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Legacy top-level outputs can now be migrated into the non-retrieval
+  `scitaste-legacy-output-archive` project through a dry-run-first, content-bound
+  utility. Atomic same-filesystem moves preserve payload bytes, pre/post tree
+  fingerprints detect drift, project references are rewritten without flattening
+  indirect stage aliases, and full archive verification remains independently
+  repeatable. The local corpus now has 39 archived roots with 1,615 verified
+  files; this reorganizes historical evidence without promoting it to a current
+  acceptance claim.
 - Content-bound venue submission packaging with a first ICLR 2027 contract,
   safe exact-template materialization, anonymous venue-native TeX, pdfLaTeX
   compilation, measured main-text page limits, citation/BibTeX closure, required
