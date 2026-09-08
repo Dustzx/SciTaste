@@ -1,0 +1,35 @@
+schema_version: "1.0"
+profile_id: zhipu-glm53-tool-effectiveness
+profile_version: 1.0.0
+provider: zhipu-direct
+model: glm-5.3-flash
+allowed_node_names:
+  - tool-plan
+live_execution_permitted: true
+unrestricted_code_generation: false
+generation:
+  schema_version: "1.0"
+  max_request_bytes: 100000
+  max_output_tokens: 2048
+  context_window_tokens: 1000000
+  structured_json: true
+  deterministic_seed_supported: false
+admission:
+  schema_version: "1.0"
+  max_request_bytes: 100000
+  max_input_tokens: 8000
+  max_output_tokens: 2048
+  max_total_tokens: 10048
+  max_latency_ms: 180000
+  max_response_cost_usd: 0.01
+  allowed_tool_names:
+    - evidence.inspect
+    - knowledge.query
+    - registered-run.compare
+  max_tool_call_proposals: 0
+cumulative_project:
+  schema_version: "1.0"
+  max_invocations: 24
+  max_total_tokens: 241152
+  max_api_cost_usd: 0.05
+  unknown_cost_blocks_acceptance: true

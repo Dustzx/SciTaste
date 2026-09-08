@@ -1,0 +1,303 @@
+{
+  "schema_version": "1.0",
+  "fixture_id": "tool-intelligence-effectiveness-v1",
+  "protocol": {
+    "schema_version": "1.0",
+    "protocol_id": "tool-intelligence-grounded-resolution-paired-v1",
+    "protocol_version": "1.0.0",
+    "provider": "zhipu-direct",
+    "model": "glm-5.3-flash",
+    "seeds": [7, 19, 41],
+    "primary_endpoint": "grounded_resolution_correct",
+    "alpha": 0.05,
+    "minimum_paired_trials": 24,
+    "condition_order_blinded": true,
+    "independent_domain_review_required": true,
+    "external_validity": "unestablished",
+    "tasks": [
+      {
+        "task_id": "knowledge-explicit-replay",
+        "stratum": "explicit-routing",
+        "objective": "Run a knowledge query over library-design for the document explaining why exact replay remains valid after invocation token and cost budgets reach zero.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "knowledge.query",
+          "required_library_ids": ["library-design"],
+          "expected_observation_ids": ["doc-exact-replay"]
+        }
+      },
+      {
+        "task_id": "knowledge-semantic-latency",
+        "stratum": "semantic-routing",
+        "objective": "Which project note explains why durable safety adds roughly 130 ms of local overhead through fsync and hashing?",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "knowledge.query",
+          "required_library_ids": ["library-design"],
+          "expected_observation_ids": ["doc-durability-latency"]
+        }
+      },
+      {
+        "task_id": "evidence-explicit-restart",
+        "stratum": "explicit-routing",
+        "objective": "Inspect evidence record evidence-restart, including provenance, before reporting the restart duplicate-execution result.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "evidence.inspect",
+          "required_evidence_ids": ["evidence-restart"],
+          "expected_observation_ids": ["evidence-restart"]
+        }
+      },
+      {
+        "task_id": "evidence-semantic-stale",
+        "stratum": "semantic-routing",
+        "objective": "Before accepting a concurrently produced result, retrieve the registered observation that directly measures stale-result acceptance rather than a design note or aggregate run table.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "evidence.inspect",
+          "required_evidence_ids": ["evidence-stale"],
+          "expected_observation_ids": ["evidence-stale"]
+        }
+      },
+      {
+        "task_id": "run-explicit-duplicates",
+        "stratum": "explicit-routing",
+        "objective": "Compare registered runs run-v2 and run-v3 on restart_duplicate_rate before claiming a reliability gain.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "registered-run.compare",
+          "required_run_ids": ["run-v2", "run-v3"],
+          "required_metric_names": ["restart_duplicate_rate"],
+          "expected_observation_ids": ["run-v2", "run-v3"]
+        }
+      },
+      {
+        "task_id": "run-semantic-manual",
+        "stratum": "semantic-routing",
+        "objective": "Determine whether the candidate loop reduced operator handoffs relative to the earlier loop, using only registered quantitative results.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "registered-run.compare",
+          "required_run_ids": ["run-v2", "run-v3"],
+          "required_metric_names": ["manual_controller_steps"],
+          "expected_observation_ids": ["run-v2", "run-v3"]
+        }
+      },
+      {
+        "task_id": "knowledge-semantic-authority",
+        "stratum": "semantic-routing",
+        "objective": "Which design note states that model outputs remain proposals while deterministic code retains budget, evidence, sandbox and transition authority?",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "knowledge.query",
+          "required_library_ids": ["library-design"],
+          "expected_observation_ids": ["doc-proposal-authority"]
+        }
+      },
+      {
+        "task_id": "evidence-explicit-crash",
+        "stratum": "explicit-routing",
+        "objective": "Inspect evidence record evidence-crash and its provenance before reporting exact crash-recovery success.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "evidence.inspect",
+          "required_evidence_ids": ["evidence-crash"],
+          "expected_observation_ids": ["evidence-crash"]
+        }
+      }
+    ]
+  },
+  "knowledge_libraries": {
+    "library-design": [
+      {
+        "document_id": "doc-exact-replay",
+        "title": "Exact replay is independent of remaining invocation budget",
+        "content": "Exact replay consumes a recorded response and makes no provider invocation, so zero remaining invocation token or API-cost budget must not block replay verification.",
+        "domain_tags": ["replay", "budget"],
+        "method_tags": ["deterministic-runtime"],
+        "provenance": [{
+          "source_type": "project-test",
+          "locator": "tests/model_nodes/test_runtime.py",
+          "accessed_at": "2026-09-08T12:00:00+08:00",
+          "redistributable": true,
+          "personal_data_removed": true
+        }]
+      },
+      {
+        "document_id": "doc-durability-latency",
+        "title": "Durability overhead boundary",
+        "content": "The local one-pass benchmark attributed roughly 130 milliseconds of mean scenario overhead to atomic publication, hashing, file locking and fsync durability work.",
+        "domain_tags": ["latency", "durability"],
+        "method_tags": ["paired-benchmark"],
+        "provenance": [{
+          "source_type": "project-doc",
+          "locator": "docs/TOOL_INTELLIGENCE.md",
+          "accessed_at": "2026-09-08T12:00:00+08:00",
+          "redistributable": true,
+          "personal_data_removed": true
+        }]
+      },
+      {
+        "document_id": "doc-proposal-authority",
+        "title": "Proposal-only model authority",
+        "content": "Model outputs are proposals and advice only. Deterministic code retains budgets, evidence admission, tool allowlists, sandbox authority, state transitions and final acceptance or rejection.",
+        "domain_tags": ["authority", "safety"],
+        "method_tags": ["bounded-model-node"],
+        "provenance": [{
+          "source_type": "project-doc",
+          "locator": "docs/TOOL_INTELLIGENCE.md",
+          "accessed_at": "2026-09-08T12:00:00+08:00",
+          "redistributable": true,
+          "personal_data_removed": true
+        }]
+      }
+    ],
+    "library-methods": [
+      {
+        "document_id": "doc-independent-review",
+        "title": "Independent review remains a separate gate",
+        "content": "Engineering reliability proxies and a model capability probe do not establish open-ended scientific effectiveness; independent outcome review remains required.",
+        "domain_tags": ["evaluation"],
+        "method_tags": ["blind-review"],
+        "provenance": [{
+          "source_type": "project-doc",
+          "locator": "docs/TOOL_INTELLIGENCE.md",
+          "accessed_at": "2026-09-08T12:00:00+08:00",
+          "redistributable": true,
+          "personal_data_removed": true
+        }]
+      }
+    ]
+  },
+  "evidence_records": [
+    {
+      "evidence": {
+        "evidence_id": "evidence-crash",
+        "source_type": "paired-engineering-benchmark",
+        "evidence_type": "measurement",
+        "experiment_id": "tool-intelligence-v2-v3-paired-v1",
+        "observation": "Exact crash-recovery success increased from 0.0 under v2 to 1.0 under v3.",
+        "supports_claim_ids": ["claim-crash-recovery"],
+        "confidence": 1.0,
+        "stability": 1.0
+      },
+      "provenance": {"condition": "matched-scripted-fixture", "review_status": "engineering-only"}
+    },
+    {
+      "evidence": {
+        "evidence_id": "evidence-restart",
+        "source_type": "paired-engineering-benchmark",
+        "evidence_type": "measurement",
+        "experiment_id": "tool-intelligence-v2-v3-paired-v1",
+        "observation": "Restart duplicate execution decreased from 1.0 under v2 to 0.0 under v3.",
+        "supports_claim_ids": ["claim-restart-deduplication"],
+        "confidence": 1.0,
+        "stability": 1.0
+      },
+      "provenance": {"condition": "matched-scripted-fixture", "review_status": "engineering-only"}
+    },
+    {
+      "evidence": {
+        "evidence_id": "evidence-stale",
+        "source_type": "paired-engineering-benchmark",
+        "evidence_type": "measurement",
+        "experiment_id": "tool-intelligence-v2-v3-paired-v1",
+        "observation": "Stale or concurrent result acceptance remained 0.0 in both conditions.",
+        "relates_to_claim_ids": ["claim-concurrency-safety"],
+        "confidence": 1.0,
+        "stability": 1.0
+      },
+      "provenance": {"condition": "matched-scripted-fixture", "review_status": "engineering-only"}
+    }
+  ],
+  "run_metrics": [
+    {
+      "run_id": "run-v2",
+      "metrics": {
+        "crash_recovery_rate": 0.0,
+        "manual_controller_steps": 3.6666666667,
+        "restart_duplicate_rate": 1.0
+      }
+    },
+    {
+      "run_id": "run-v3",
+      "metrics": {
+        "crash_recovery_rate": 1.0,
+        "manual_controller_steps": 1.0,
+        "restart_duplicate_rate": 0.0
+      }
+    }
+  ]
+}

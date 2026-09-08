@@ -211,10 +211,11 @@ def test_controlled_profile_is_content_addressed_and_cannot_grant_side_effects()
 
 def test_tool_plan_node_returns_only_typed_non_executable_steps() -> None:
     node_input = _input()
+    backend = _backend("tool-plan-1", _plan_payload(node_input.tool_profile))
     result = ToolPlanNode().run(
         node_input,
         context=_context(),
-        backend=_backend("tool-plan-1", _plan_payload(node_input.tool_profile)),
+        backend=backend,
         policy=_policy("tool-plan", tools=node_input.tool_profile.allowed_tool_names),
         request_id="tool-plan-1",
     )
@@ -228,6 +229,10 @@ def test_tool_plan_node_returns_only_typed_non_executable_steps() -> None:
     ]
     assert all(step.executable is False for step in result.proposal.steps)
     assert result.executable is False
+    assert backend.calls[0].input_payload["controlled_tool_profile_binding"] == {
+        "profile_id": node_input.tool_profile.profile_id,
+        "profile_fingerprint": node_input.tool_profile.fingerprint,
+    }
 
 
 def test_tool_plan_scope_and_policy_drift_fail_before_backend_access() -> None:

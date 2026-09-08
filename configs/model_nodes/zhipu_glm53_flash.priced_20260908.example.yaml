@@ -1,0 +1,32 @@
+# Inert, date-pinned pricing evidence for the preregistered Tool Intelligence
+# study. A caller must still set live_enabled=true in an uncommitted runtime
+# copy and explicitly authorize live execution. Do not reuse these promotional
+# rates after 2026-09-08 without recapturing provider pricing and FX evidence.
+provider: zhipu-direct
+base_url: https://open.bigmodel.cn/api/paas/v4
+model: glm-5.3-flash
+api_key_env: ZAI_API_KEY
+live_enabled: false
+timeout_seconds: 180
+max_retries: 0
+max_output_tokens: 2048
+pricing_confirmed: true
+pricing:
+  currency: USD
+  # Provider rate: CNY 0.4 / 1M input tokens. Converted at the official
+  # 2026-09-08 central parity of 1 USD = 6.7804 CNY.
+  input_usd_per_million_tokens: 0.0589935697009026
+  # Provider rate: CNY 1.4 / 1M output tokens, using the same FX evidence.
+  output_usd_per_million_tokens: 0.2064774939531591
+  captured_at: 2026-09-08T12:00:00+08:00
+  source: >-
+    https://bigmodel.cn/pricing GLM-5.3-Flash promotional rate observed
+    2026-09-08 (CNY 0.4 input and CNY 1.4 output per million tokens), converted
+    with CFETS central parity USD/CNY 6.7804 published at
+    https://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: low

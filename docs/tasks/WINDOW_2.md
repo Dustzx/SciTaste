@@ -2,7 +2,7 @@
 
 Assignment token: `W2-tool-intelligence-20260908-r3`
 
-Status: `child epic complete; awaiting primary-window integration`
+Status: `scientific-effectiveness extension active`
 
 This assignment is authorized by the project owner on 2026-09-08 to continue
 Tool Intelligence through a complete project-level development loop and report
@@ -154,3 +154,40 @@ telemetry locators, and run repository regression tests from the integrated
 tree. Only after that integration should the project register the matched live
 model evaluation and independent outcome review required by the broader exit
 gate.
+
+## WP6 — Preregistered grounded-resolution study
+
+The project owner authorized further scientific-effectiveness validation on
+2026-09-08. Window 2 may extend only its existing owned paths and may create a
+dedicated, ignored local evaluation project; the main workflow call site and
+the primary self-development project remain main-window owned.
+
+1. Freeze a paired task matrix before the formal provider responses: eight
+   project-evidence acquisition tasks, three seeds, explicit and semantic
+   routing strata, and an unchanged v2-style keyword-router baseline.
+2. Use the same project-owned read-only Knowledge, Evidence, and registered-run
+   data in both conditions. The treatment must run the complete durable v3
+   bridge with the pinned `zhipu-direct/glm-5.3-flash` model and no retries.
+3. Make exact grounded resolution the primary endpoint. Report Wilson intervals,
+   paired discordances, an exact two-sided McNemar p-value, unsafe-scope rate,
+   admission/resolution rates, calls, tokens, price-bound cost, and latency.
+4. Produce a condition- and gold-blinded review packet plus a separately hashed
+   key. No result becomes a broad scientific-effectiveness claim until an
+   independent domain review is returned and the main-window integration gate
+   also passes.
+
+### WP6 progress — 2026-09-08
+
+- The strict 24-pair protocol, frozen baseline, typed scorer, exact paired test,
+  Wilson intervals, blind packet/key, and fail-closed claim boundary are
+  implemented under `model_nodes/**`; the committed config remains inert.
+- GLM-5.3-Flash availability was authenticated without persisting the key.
+  User-provided promotional pricing (CNY 0.4 input / CNY 1.4 output per million
+  tokens) is converted with the 2026-09-08 CFETS central parity of USD/CNY
+  6.7804 and bound to a date-limited configuration.
+- A one-call diagnostic selected the correct run-comparison action but exposed
+  that the request omitted the profile fingerprint that the output contract
+  required the model to echo. The diagnostic is not counted as a study trial.
+  The request contract now transmits that exact deterministic binding and has a
+  regression test. Formal live trials remain to be run after verification and
+  a source commit.

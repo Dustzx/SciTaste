@@ -502,11 +502,49 @@ class ToolPlanNode(ModelNode[ToolPlanInput, ToolPlanOutput]):
     prompt_version = "tool-plan-v1"
     system_instruction = (
         "Propose an ordered plan using only the supplied read-only tool profile and scope. "
+        "Copy controlled_tool_profile_binding.profile_id and "
+        "controlled_tool_profile_binding.profile_fingerprint exactly into the corresponding "
+        "output fields. "
         "Return data-only steps; do not call a provider tool, execute any step, mutate state, "
         "open network access, launch a process, or expand an identifier scope."
     )
     input_model = ToolPlanInput
     output_model = ToolPlanOutput
+
+    def _build_request(
+        self,
+        input_data: ToolPlanInput,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        request_id: str,
+        seed: int,
+        profile: ModelNodeProfile | None = None,
+    ) -> StructuredModelRequest:
+        """Expose the exact deterministic binding that the response must echo.
+
+        Pydantic does not include nested computed fields when ``ToolPlanInput`` is
+        serialized. Requiring the model to reproduce a hash that was not present in
+        its request made live Tool Plan responses impossible to admit even when the
+        semantic action was correct.
+        """
+
+        request = super()._build_request(
+            input_data,
+            context=context,
+            policy=policy,
+            request_id=request_id,
+            seed=seed,
+            profile=profile,
+        )
+        request_values = request.model_dump(mode="python", exclude={"fingerprint"})
+        input_payload = dict(request.input_payload)
+        input_payload["controlled_tool_profile_binding"] = {
+            "profile_id": input_data.tool_profile.profile_id,
+            "profile_fingerprint": input_data.tool_profile.fingerprint,
+        }
+        request_values["input_payload"] = input_payload
+        return StructuredModelRequest.model_validate(request_values, strict=True)
 
     def _preflight(
         self,
