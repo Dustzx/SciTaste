@@ -7,13 +7,23 @@ semantic versioning.
 
 ### Added
 
+- Native execution profile `1.1` admits content-hashed external Python runtime,
+  package, and model trees at derived read-only mount points. The sandbox selects
+  only the registered interpreter/import/library paths, remains offline, permits
+  an explicitly requested process-local ephemeral `/tmp`, fixes numerical-library
+  thread counts, rehashes external resources after execution, and measures GPU
+  allocation time separately from end-to-end verification time. A real RTX 3090
+  Qwen3-VL-2B acceptance completed two text cases plus one image case with all
+  three contract checks passing and about 4.27 GB peak allocated GPU memory. This
+  is execution-boundary evidence, not a scientific-quality or superiority result.
 - Content-bound native execution profiles for bounded dataset files or trees and
   explicit NVIDIA GPU authorization. Full Workflow copies datasets into the
   owning run, mounts them read-only at derived paths, binds every copied file to
   the action record, validates exact GPU identity/capacity and worst-case budget,
   and records actual device inventory plus measured GPU-hours. A dataset-backed
   end-to-end fixture and an isolated local RTX 3090 inventory test execute for
-  real; package environments and CUDA workload acceptance remain pending.
+  real; that earlier device-only result is superseded by the separate content-bound
+  Qwen3-VL-2B CUDA acceptance above.
 - Tool Intelligence v2 adds expiring, single-use action leases and a deterministic
   one-step executor over registered content-addressed read-only handlers. Fresh
   project/state checks bracket handler execution, and returned observations stay

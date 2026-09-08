@@ -194,8 +194,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   run-owned copies and mount them read-only at derived `/datasets/<id>` paths.
   GPU access remains default-deny; an explicit device identity and GPU-hour
   budget can admit exact NVIDIA nodes. The dataset-backed Full Workflow and an
-  isolated local RTX 3090 inventory measurement pass. Reproducible package/model
-  environments and CUDA workload acceptance remain pending.
+  isolated local RTX 3090 inventory measurement pass. Profile schema `1.1` now
+  additionally binds external Python base/package/model trees, mounts them
+  read-only, selects the admitted interpreter, and rehashes them after execution.
+  A three-case Qwen3-VL-2B text/vision CUDA acceptance passed on that 3090 with
+  separate child-process GPU time; portable environment construction and broader
+  model-quality evaluation remain pending.
 - The default Full Workflow now passes that CPU source through a typed
   proposal/static-admission boundary. Exact proposal, policy, verdict, proposed
   source, and byte-identical admitted source are project-owned and hash-bound;
@@ -216,7 +220,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   clean reader-facing projection containing the measured mean, replicates,
   dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  iterative provider-backed code repair, package/model environments, generative
+  iterative provider-backed code repair, portable environment construction, generative
   analysis, writing, and figures. Existing scenario-bound receipts are integration
   evidence, not a claim that these open-ended handlers are complete.
 - Phase 9 evidence will distinguish component ablation on a common execution

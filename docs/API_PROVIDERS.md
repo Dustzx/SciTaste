@@ -101,10 +101,10 @@ admission.
 An existing local Qwen checkpoint can instead run without a server or API key:
 
 ```bash
-export SCITASTE_LOCAL_MODEL_PATH=/absolute/path/to/Qwen3-VL-4B-Instruct
+export SCITASTE_LOCAL_MODEL_PATH=/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
 scitaste taste calibrate \
   --backend local-transformers \
-  --config configs/backends/local_transformers_qwen3vl4b.example.yaml \
+  --config configs/backends/local_transformers_qwen3vl2b.example.yaml \
   --record outputs/local-qwen/recording.jsonl \
   --output outputs/local-qwen
 ```

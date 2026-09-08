@@ -132,6 +132,24 @@ def test_local_config_expands_model_path(monkeypatch, tmp_path) -> None:
     assert parsed == config
 
 
+def test_committed_qwen3vl2b_config_pins_the_selected_local_snapshot(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    model_dir = tmp_path / "Qwen3-VL-2B-Instruct"
+    monkeypatch.setenv("SCITASTE_LOCAL_MODEL_PATH", str(model_dir))
+
+    config = load_local_transformers_config(
+        "configs/backends/local_transformers_qwen3vl2b.example.yaml"
+    )
+
+    assert config.model_path == model_dir
+    assert config.model_id == "Qwen/Qwen3-VL-2B-Instruct"
+    assert config.checkpoint_sha256 == (
+        "47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34"
+    )
+
+
 def test_local_checkpoint_hash_binds_names_sizes_and_bytes(tmp_path) -> None:
     checkpoint = tmp_path / "checkpoint"
     checkpoint.mkdir()

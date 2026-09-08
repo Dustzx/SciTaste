@@ -10,7 +10,7 @@ and compatibility commands.
 | Capability | Current implementation | Evidence level |
 |---|---|---|
 | Local knowledge retrieval | Real lexical retrieval from a content-bound `KnowledgeLibrary` | implemented |
-| Admitted Python experiment | Typed proposal, deterministic static admission, then Bubblewrap-isolated execution of one content-bound source | implemented, CPU/offline plus explicit dataset/GPU profiles |
+| Admitted Python experiment | Typed proposal, deterministic static admission, then Bubblewrap-isolated execution of one content-bound source | implemented, CPU/offline plus explicit dataset/GPU/runtime/model profiles |
 | Replicate metric extraction | Strict final machine record; means, dispersion, stability, and relation independently derived | implemented |
 | Controller/state actions | First-party typed workflow operation plus action receipt | implemented, scenario-bound |
 | Evidence/writing/figure components | Existing deterministic SciTaste components plus action receipt | implemented, scenario-bound |
@@ -65,9 +65,14 @@ the run-local source locator, primary metric, direction, support threshold, and
 limits. Resume rejects drift in either the registered external source or its
 run-local copy.
 
-`resources/PROFILE.json` binds a strict no-network, no-write execution profile,
+`resources/PROFILE.json` binds a strict no-network execution profile,
 the source configuration hash, each dataset's content hash/file count/byte
-count, the project-owned copy, and optional NVIDIA device expectations. Dataset
+count, the project-owned copy, and optional NVIDIA device expectations. Schema
+`1.1` may also bind large external Python base/package/model trees by complete
+entry hashes, counts, byte ceilings, and derived `/runtime/<id>` or `/models/<id>`
+mounts. These large trees are not copied; they are mounted read-only and rescanned
+both before and after the child process. Relative symlinks may be admitted only
+inside an explicitly marked runtime tree and may not escape it. Dataset
 files and the profile record are also direct inputs to the native action record,
 so later mutation fails normal execution-chain verification. Resume rescans both
 the source and copied datasets and rejects drift rather than silently refreshing
@@ -173,6 +178,20 @@ the profile names device indices, optional expected UUID/name/minimum memory,
 and a positive GPU-hour ceiling. The experiment's wall-time ceiling multiplied
 by device count must fit that budget.
 
+The local Qwen3-VL-2B acceptance uses profile schema `1.1` and three required
+environment variables so host-specific paths do not enter the committed config:
+
+```bash
+export SCITASTE_QWEN3VL2B_MODEL_PATH=/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+export SCITASTE_NATIVE_PYTHON_BASE="$(python -c 'import sys; print(sys.base_prefix)')"
+export SCITASTE_NATIVE_PYTHON_PACKAGES="$(python -c 'import site; print(site.getsitepackages()[0])')"
+```
+
+`configs/experiments/native_execution_qwen3vl2b_local_3090_v1.yaml` pins the
+complete bytes observed for those three local trees. Another machine must build
+or select its own runtime trees and deliberately replace their expected hashes;
+changing only a path cannot bypass the content check.
+
 The workflow-config hash includes the bytes of `native_knowledge_config`, the
 native code proposal, exact source, policy, proposal, admission records, and the
 resource-profile fingerprint with every dataset content identity—not only their
@@ -190,7 +209,11 @@ IPC, UTS, cgroup, and network namespaces. The process runs as UID/GID 65534 with
 only read-only system libraries and the registered source mounted. Host project
 paths and GPU devices are absent by default. An admitted profile may add only
 the project-owned dataset copies as read-only mounts and the exact verified
-NVIDIA device nodes. `/work` and `/tmp` remain read-only, and CPU,
+NVIDIA device nodes. `/work` remains read-only. `/tmp` is also read-only by
+default; a registered Python runtime may explicitly request an isolated ephemeral
+`/tmp` for libraries that create temporary modules. That directory disappears
+with the process, is not an evidence channel, and remains subject to output-file
+and process ceilings. CPU,
 address-space, output-file, file-descriptor, process-count, core-dump, and wall
 time ceilings are applied.
 
@@ -200,7 +223,15 @@ execution artifact records the actual index, UUID, model, memory, mounted device
 nodes, whether allocation started, and measured GPU-hours. A local RTX 3090
 acceptance test executes `nvidia-smi` inside the isolated namespace and verifies
 the restricted CUDA visibility. This proves real device visibility and resource
-accounting, not yet a CUDA training/inference workload or model-quality result.
+accounting. The subsequent registered Qwen3-VL-2B acceptance loads the
+content-bound checkpoint on CUDA and runs two text contracts plus one
+synthetic-image contract. All three returned the expected bounded answer; average
+generation latency was about 0.58 seconds, model load was about 1.35 seconds on a
+warm local cache, peak allocated GPU memory was about 4.27 GB, child-process GPU
+allocation was about 7.54 seconds (0.00209 GPU-hours), and end-to-end time including
+complete pre/post resource hashing was about 56.57 seconds. This validates one
+local execution environment and the vision path, not general model quality,
+scientific effectiveness, or cold-start performance.
 
 Read-only system userland remains mounted so Python can start; registered source
 could invoke an installed binary, but that child inherits the same namespaces,
@@ -239,11 +270,13 @@ fallback when native execution fails.
 ## Next capability gate
 
 This closes the typed proposal/static-admission gate, one bounded
-provider-backed source-generation path, and explicit read-only dataset/NVIDIA
-resource admission, not broad scientific execution. The next milestone is
+provider-backed source-generation path, explicit read-only dataset/NVIDIA
+resource admission, and one content-bound local Python/model CUDA acceptance,
+not broad scientific execution. The next milestone is
 priced live acceptance plus an explicit repair protocol that binds
 each failed source and exact repair request, raw response, extracted source,
 telemetry, and retry state before using this gate;
 the model still must not receive shell, filesystem, controller, or execution
-authority. Reproducible package/model environments, CUDA workload measurement,
-multi-process execution, and broader dataset governance remain separate gates.
+authority. Portable environment construction, cold-cache characterization,
+model-quality evaluation, multi-process execution, and broader dataset governance
+remain separate gates.

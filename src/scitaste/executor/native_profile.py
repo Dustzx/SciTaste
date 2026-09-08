@@ -1,10 +1,11 @@
-"""Content-bound dataset and accelerator profiles for native execution."""
+"""Content-bound data, runtime, model, and accelerator profiles."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -19,6 +20,11 @@ from scitaste.project.models import content_sha256
 _MAX_PROFILE_BYTES = 65_536
 _DATASET_ID = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
 _SHA256 = r"^[0-9a-f]{64}$"
+_EXTERNAL_ROOTS = {
+    "model": "/models",
+    "python-runtime": "/runtime",
+    "python-packages": "/runtime",
+}
 
 
 class NativeDatasetInput(BaseModel):
@@ -35,6 +41,47 @@ class NativeDatasetInput(BaseModel):
     @property
     def mount_path(self) -> str:
         return f"/datasets/{self.dataset_id}"
+
+
+class NativeExternalResourceInput(BaseModel):
+    """One large immutable host tree admitted without duplicating its bytes."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    resource_id: str = Field(pattern=_DATASET_ID)
+    resource_kind: Literal["model", "python-runtime", "python-packages"]
+    source_path: Path
+    expected_sha256: str = Field(pattern=_SHA256)
+    max_files: int = Field(default=100_000, ge=1, le=500_000)
+    max_total_bytes: int = Field(default=21_474_836_480, ge=1, le=1_099_511_627_776)
+    allow_internal_symlinks: bool = False
+
+    @property
+    def mount_path(self) -> str:
+        return f"{_EXTERNAL_ROOTS[self.resource_kind]}/{self.resource_id}"
+
+
+class NativePythonRuntimeRequest(BaseModel):
+    """Interpreter and import/library paths selected from admitted runtime trees."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    executable: str
+    python_paths: tuple[str, ...] = ()
+    library_paths: tuple[str, ...] = ()
+    ephemeral_tmp: bool = False
+
+    @field_validator("executable")
+    @classmethod
+    def executable_is_absolute_and_normalized(cls, value: str) -> str:
+        return _validate_sandbox_path(value, label="Python executable")
+
+    @field_validator("python_paths", "library_paths")
+    @classmethod
+    def paths_are_absolute_unique_and_bounded(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) > 16 or len(set(value)) != len(value):
+            raise ValueError("native Python paths must be unique and bounded")
+        return tuple(_validate_sandbox_path(item, label="Python path") for item in value)
 
 
 class NativeGPUDeviceRequest(BaseModel):
@@ -74,18 +121,47 @@ class NativeExecutionProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     profile_id: str = Field(pattern=_DATASET_ID)
     datasets: tuple[NativeDatasetInput, ...] = ()
+    external_resources: tuple[NativeExternalResourceInput, ...] = ()
+    python_runtime: NativePythonRuntimeRequest | None = None
     gpu: NativeGPURequest = Field(default_factory=NativeGPURequest)
     network_access: Literal[False] = False
     writable_workspace: Literal[False] = False
 
     @model_validator(mode="after")
-    def dataset_identities_are_unique(self) -> NativeExecutionProfile:
+    def resource_identities_are_unique_and_runtime_is_admitted(self) -> NativeExecutionProfile:
         identifiers = [dataset.dataset_id for dataset in self.datasets]
         if len(identifiers) != len(set(identifiers)) or len(identifiers) > 32:
             raise ValueError("native dataset identities must be unique and bounded")
+        external_ids = [resource.resource_id for resource in self.external_resources]
+        if len(external_ids) != len(set(external_ids)) or len(external_ids) > 16:
+            raise ValueError("native external resource identities must be unique and bounded")
+        mounts = [resource.mount_path for resource in self.external_resources]
+        if len(mounts) != len(set(mounts)):
+            raise ValueError("native external resource mount paths must be unique")
+        if self.schema_version == "1.0" and (self.external_resources or self.python_runtime):
+            raise ValueError("native profile schema 1.0 cannot admit external runtime resources")
+        if self.python_runtime is not None:
+            runtime_mounts = [
+                PurePosixPath(resource.mount_path)
+                for resource in self.external_resources
+                if resource.resource_kind in {"python-runtime", "python-packages"}
+            ]
+            executable = PurePosixPath(self.python_runtime.executable)
+            executable_mounts = [
+                PurePosixPath(resource.mount_path)
+                for resource in self.external_resources
+                if resource.resource_kind == "python-runtime"
+            ]
+            if not any(_is_beneath(executable, mount) for mount in executable_mounts):
+                raise ValueError("native Python executable must be inside a runtime resource")
+            for value in (*self.python_runtime.python_paths, *self.python_runtime.library_paths):
+                if not any(_is_beneath(PurePosixPath(value), mount) for mount in runtime_mounts):
+                    raise ValueError(
+                        "native Python paths must be inside admitted runtime resources"
+                    )
         return self
 
 
@@ -111,6 +187,28 @@ class NativeDatasetSnapshot(BaseModel):
         return value
 
 
+class NativeExternalResourceSnapshot(BaseModel):
+    """Verified identity of a large read-only tree at profile inspection time."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    resource_id: str = Field(pattern=_DATASET_ID)
+    resource_kind: Literal["model", "python-runtime", "python-packages"]
+    source_path: Path
+    content_sha256: str = Field(pattern=_SHA256)
+    file_count: int = Field(ge=1)
+    symlink_count: int = Field(ge=0)
+    total_bytes: int = Field(ge=0)
+    mount_path: str
+
+    @model_validator(mode="after")
+    def mount_is_derived_and_safe(self) -> NativeExternalResourceSnapshot:
+        expected = f"{_EXTERNAL_ROOTS[self.resource_kind]}/{self.resource_id}"
+        if self.mount_path != expected:
+            raise ValueError("native external resource mount does not match its identity")
+        return self
+
+
 class NativeExecutionProfileInspection(BaseModel):
     """Content-bound profile inspection that is safe to use in workflow hashes."""
 
@@ -120,6 +218,7 @@ class NativeExecutionProfileInspection(BaseModel):
     config_sha256: str = Field(pattern=_SHA256)
     profile: NativeExecutionProfile
     datasets: tuple[NativeDatasetSnapshot, ...]
+    external_resources: tuple[NativeExternalResourceSnapshot, ...] = ()
     fingerprint: str = Field(pattern=_SHA256)
 
 
@@ -141,6 +240,10 @@ class NativePreparedDataset(BaseModel):
         return self
 
 
+class NativePreparedExternalResource(NativeExternalResourceSnapshot):
+    """Verified external tree retained at its explicit read-only source path."""
+
+
 class PreparedNativeExecutionProfile(BaseModel):
     """Run-owned profile and dataset copies used by Bubblewrap."""
 
@@ -150,6 +253,7 @@ class PreparedNativeExecutionProfile(BaseModel):
     fingerprint: str = Field(pattern=_SHA256)
     manifest_path: Path
     datasets: tuple[NativePreparedDataset, ...]
+    external_resources: tuple[NativePreparedExternalResource, ...] = ()
     record_sha256: str = Field(pattern=_SHA256)
 
     @model_validator(mode="after")
@@ -158,6 +262,12 @@ class PreparedNativeExecutionProfile(BaseModel):
         actual = [item.dataset_id for item in self.datasets]
         if actual != expected:
             raise ValueError("prepared native datasets do not match the execution profile")
+        expected_external = [item.resource_id for item in self.profile.external_resources]
+        actual_external = [item.resource_id for item in self.external_resources]
+        if actual_external != expected_external:
+            raise ValueError(
+                "prepared native external resources do not match the execution profile"
+            )
         return self
 
 
@@ -177,12 +287,13 @@ class NativeResourceAvailability(BaseModel):
     available: bool
     profile_id: str
     dataset_mounts: tuple[str, ...]
+    external_mounts: tuple[str, ...] = ()
     gpu_devices: tuple[NativeGPUInventory, ...] = ()
     reason: str | None = None
 
 
 def inspect_native_execution_profile(path: str | Path) -> NativeExecutionProfileInspection:
-    """Load a strict profile and bind the exact bytes of every dataset."""
+    """Load a strict profile and bind every admitted data/runtime/model tree."""
 
     requested = Path(path)
     if requested.is_symlink():
@@ -207,26 +318,52 @@ def inspect_native_execution_profile(path: str | Path) -> NativeExecutionProfile
         source = raw_dataset.get("source_path")
         if not isinstance(source, str):
             raise ValueError("native dataset source_path must be a string")
-        candidate = Path(source)
+        candidate = Path(os.path.expandvars(source))
         if not candidate.is_absolute():
             candidate = config_path.parent / candidate
         if candidate.is_symlink():
             raise ValueError("native dataset sources cannot be symlinks")
         resolved_datasets.append({**raw_dataset, "source_path": candidate.resolve(strict=True)})
     payload["datasets"] = resolved_datasets
+    raw_external = payload.get("external_resources", [])
+    if not isinstance(raw_external, list):
+        raise ValueError("native execution profile external_resources must be a list")
+    resolved_external: list[dict[str, object]] = []
+    for raw_resource in raw_external:
+        if not isinstance(raw_resource, dict):
+            raise ValueError("native external resource entries must be mappings")
+        source = raw_resource.get("source_path")
+        if not isinstance(source, str):
+            raise ValueError("native external resource source_path must be a string")
+        candidate = Path(os.path.expandvars(source))
+        if not candidate.is_absolute():
+            candidate = config_path.parent / candidate
+        if candidate.is_symlink():
+            raise ValueError("native external resource sources cannot be symlinks")
+        resolved_external.append({**raw_resource, "source_path": candidate.resolve(strict=True)})
+    payload["external_resources"] = resolved_external
     profile = NativeExecutionProfile.model_validate(payload)
     snapshots = tuple(_snapshot_dataset(item) for item in profile.datasets)
+    external_snapshots = tuple(
+        _snapshot_external_resource(item) for item in profile.external_resources
+    )
+    _verify_python_runtime_layout(profile, external_snapshots)
     semantic = {
-        "schema_version": "1.0",
+        "schema_version": profile.schema_version,
         "config_sha256": hashlib.sha256(raw).hexdigest(),
-        "profile": profile.model_dump(mode="json", exclude={"datasets"}),
+        "profile": _profile_record_payload(profile),
         "datasets": [item.model_dump(mode="json", exclude={"source_path"}) for item in snapshots],
     }
+    if profile.schema_version == "1.1":
+        semantic["external_resources"] = [
+            item.model_dump(mode="json", exclude={"source_path"}) for item in external_snapshots
+        ]
     return NativeExecutionProfileInspection(
         config_path=config_path,
         config_sha256=semantic["config_sha256"],
         profile=profile,
         datasets=snapshots,
+        external_resources=external_snapshots,
         fingerprint=content_sha256(semantic),
     )
 
@@ -275,9 +412,13 @@ def prepare_native_execution_profile(
                 mount_path=expected.mount_path,
             )
         )
-    profile_payload = inspection.profile.model_dump(mode="json", exclude={"datasets"})
+    external_resources = tuple(
+        NativePreparedExternalResource.model_validate(item.model_dump(mode="python"))
+        for item in inspection.external_resources
+    )
+    profile_payload = _profile_record_payload(inspection.profile)
     payload = {
-        "schema_version": "1.0",
+        "schema_version": inspection.profile.schema_version,
         "profile_fingerprint": inspection.fingerprint,
         "source_config_sha256": inspection.config_sha256,
         "profile": profile_payload,
@@ -289,6 +430,10 @@ def prepare_native_execution_profile(
             for item in prepared
         ],
     }
+    if inspection.profile.schema_version == "1.1":
+        payload["external_resources"] = [
+            item.model_dump(mode="json", exclude={"source_path"}) for item in external_resources
+        ]
     record_sha256 = content_sha256(payload)
     _write_exclusive_json(manifest_path, {**payload, "record_sha256": record_sha256})
     return PreparedNativeExecutionProfile(
@@ -296,6 +441,7 @@ def prepare_native_execution_profile(
         fingerprint=inspection.fingerprint,
         manifest_path=manifest_path,
         datasets=tuple(prepared),
+        external_resources=external_resources,
         record_sha256=record_sha256,
     )
 
@@ -311,7 +457,7 @@ def verify_prepared_native_execution_profile(
         raise ValueError("native execution profile record hash mismatch")
     if manifest.get("profile_fingerprint") != prepared.fingerprint:
         raise ValueError("native execution profile fingerprint mismatch")
-    expected_profile = prepared.profile.model_dump(mode="json", exclude={"datasets"})
+    expected_profile = _profile_record_payload(prepared.profile)
     if manifest.get("profile") != expected_profile:
         raise ValueError("native execution profile record does not match the admitted profile")
     manifest_datasets = manifest.get("datasets")
@@ -340,6 +486,18 @@ def verify_prepared_native_execution_profile(
             or snapshot.total_bytes != dataset.total_bytes
         ):
             raise ValueError(f"materialized native dataset hash mismatch: {dataset.dataset_id}")
+    manifest_external = manifest.get("external_resources", [])
+    expected_external = [
+        item.model_dump(mode="json", exclude={"source_path"})
+        for item in prepared.external_resources
+    ]
+    if manifest_external != expected_external:
+        raise ValueError("native execution profile external resource record is incomplete")
+    source_by_id_external = {item.resource_id: item for item in prepared.profile.external_resources}
+    for resource in prepared.external_resources:
+        current = _snapshot_external_resource(source_by_id_external[resource.resource_id])
+        if current.model_dump(mode="json") != resource.model_dump(mode="json"):
+            raise ValueError(f"native external resource changed: {resource.resource_id}")
 
 
 def preflight_native_resources(
@@ -351,11 +509,13 @@ def preflight_native_resources(
     """Verify all requested dataset copies and exact NVIDIA devices."""
 
     mounts = tuple(item.mount_path for item in profile.datasets)
+    external_mounts = tuple(item.mount_path for item in profile.external_resources)
     if profile.datasets and prepared is None and require_materialized_datasets:
         return NativeResourceAvailability(
             available=False,
             profile_id=profile.profile_id,
             dataset_mounts=mounts,
+            external_mounts=external_mounts,
             reason="native datasets have not been materialized into the project run",
         )
     if prepared is not None:
@@ -366,6 +526,7 @@ def preflight_native_resources(
                 available=False,
                 profile_id=profile.profile_id,
                 dataset_mounts=mounts,
+                external_mounts=external_mounts,
                 reason=str(exc),
             )
     if not profile.gpu.enabled:
@@ -373,6 +534,7 @@ def preflight_native_resources(
             available=True,
             profile_id=profile.profile_id,
             dataset_mounts=mounts,
+            external_mounts=external_mounts,
         )
     inventory, error = _query_nvidia_inventory()
     if error is not None:
@@ -380,6 +542,7 @@ def preflight_native_resources(
             available=False,
             profile_id=profile.profile_id,
             dataset_mounts=mounts,
+            external_mounts=external_mounts,
             reason=error,
         )
     by_index = {item.index: item for item in inventory}
@@ -391,20 +554,22 @@ def preflight_native_resources(
                 available=False,
                 profile_id=profile.profile_id,
                 dataset_mounts=mounts,
+                external_mounts=external_mounts,
                 reason=f"requested NVIDIA GPU index is unavailable: {request.index}",
             )
         if request.expected_uuid is not None and actual.uuid != request.expected_uuid:
-            return _gpu_mismatch(profile, mounts, request.index, "UUID")
+            return _gpu_mismatch(profile, mounts, external_mounts, request.index, "UUID")
         if request.expected_name is not None and actual.name != request.expected_name:
-            return _gpu_mismatch(profile, mounts, request.index, "name")
+            return _gpu_mismatch(profile, mounts, external_mounts, request.index, "name")
         if request.min_memory_mb is not None and actual.memory_total_mb < request.min_memory_mb:
-            return _gpu_mismatch(profile, mounts, request.index, "memory")
+            return _gpu_mismatch(profile, mounts, external_mounts, request.index, "memory")
         missing = [node for node in actual.device_nodes if not Path(node).exists()]
         if missing:
             return NativeResourceAvailability(
                 available=False,
                 profile_id=profile.profile_id,
                 dataset_mounts=mounts,
+                external_mounts=external_mounts,
                 reason=f"requested NVIDIA device nodes are unavailable: {missing}",
             )
         selected.append(actual)
@@ -412,6 +577,7 @@ def preflight_native_resources(
         available=True,
         profile_id=profile.profile_id,
         dataset_mounts=mounts,
+        external_mounts=external_mounts,
         gpu_devices=tuple(selected),
     )
 
@@ -429,7 +595,7 @@ def _load_prepared_profile(
         raise ValueError("native execution profile changed since the run was created")
     if manifest.get("source_config_sha256") != inspection.config_sha256:
         raise ValueError("native execution profile source changed since the run was created")
-    expected_profile = inspection.profile.model_dump(mode="json", exclude={"datasets"})
+    expected_profile = _profile_record_payload(inspection.profile)
     if manifest.get("profile") != expected_profile:
         raise ValueError("native execution profile record does not match the admitted profile")
     raw_datasets = manifest.get("datasets")
@@ -444,11 +610,27 @@ def _load_prepared_profile(
             raise ValueError("native execution profile dataset locator is missing")
         path = _owned_regular_tree(owned_root, locator)
         prepared.append(NativePreparedDataset.model_validate({**raw, "materialized_path": path}))
+    raw_external = manifest.get("external_resources", [])
+    if not isinstance(raw_external, list) or len(raw_external) != len(
+        inspection.external_resources
+    ):
+        raise ValueError("native execution profile external resource record is incomplete")
+    prepared_external: list[NativePreparedExternalResource] = []
+    for raw, inspected in zip(raw_external, inspection.external_resources, strict=True):
+        if not isinstance(raw, dict):
+            raise ValueError("native execution profile external resource record is invalid")
+        candidate = NativePreparedExternalResource.model_validate(
+            {**raw, "source_path": inspected.source_path}
+        )
+        if candidate.model_dump(mode="json") != inspected.model_dump(mode="json"):
+            raise ValueError("native external resource record does not match its inspection")
+        prepared_external.append(candidate)
     result = PreparedNativeExecutionProfile(
         profile=inspection.profile,
         fingerprint=inspection.fingerprint,
         manifest_path=manifest_path,
         datasets=tuple(prepared),
+        external_resources=tuple(prepared_external),
         record_sha256=record_sha256,
     )
     verify_prepared_native_execution_profile(result)
@@ -486,6 +668,40 @@ def _snapshot_dataset(dataset: NativeDatasetInput) -> NativeDatasetSnapshot:
     )
 
 
+def _profile_record_payload(profile: NativeExecutionProfile) -> dict[str, object]:
+    excluded = {"datasets", "external_resources"}
+    if profile.schema_version == "1.0":
+        excluded.add("python_runtime")
+    return profile.model_dump(mode="json", exclude=excluded)
+
+
+def _verify_python_runtime_layout(
+    profile: NativeExecutionProfile,
+    resources: tuple[NativeExternalResourceSnapshot, ...],
+) -> None:
+    runtime = profile.python_runtime
+    if runtime is None:
+        return
+    mounts = sorted(resources, key=lambda item: len(item.mount_path), reverse=True)
+
+    def host_path(sandbox_path: str) -> Path:
+        requested = PurePosixPath(sandbox_path)
+        for resource in mounts:
+            mount = PurePosixPath(resource.mount_path)
+            if _is_beneath(requested, mount):
+                relative = requested.relative_to(mount)
+                return resource.source_path.joinpath(*relative.parts)
+        raise ValueError("native Python path is not backed by an admitted resource")
+
+    executable = host_path(runtime.executable)
+    if executable.is_symlink() or not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("native Python executable is not an executable regular file")
+    for value in (*runtime.python_paths, *runtime.library_paths):
+        path = host_path(value)
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError("native Python import/library path is not a regular directory")
+
+
 def _dataset_entries(dataset: NativeDatasetInput) -> tuple[tuple[Path, int, str], ...]:
     source = dataset.source_path
     candidates = [source] if source.is_file() else sorted(source.rglob("*"))
@@ -507,6 +723,124 @@ def _dataset_entries(dataset: NativeDatasetInput) -> tuple[tuple[Path, int, str]
     if not entries:
         raise ValueError(f"native dataset must contain at least one file: {dataset.dataset_id}")
     return tuple(entries)
+
+
+def native_external_tree_sha256(
+    path: str | Path,
+    *,
+    max_files: int = 100_000,
+    max_total_bytes: int = 21_474_836_480,
+    allow_internal_symlinks: bool = False,
+) -> str:
+    """Compute the canonical digest used by large read-only native resources."""
+
+    requested = Path(path)
+    if requested.is_symlink():
+        raise ValueError("native external resource source must be a non-symlink directory")
+    probe = NativeExternalResourceInput(
+        resource_id="digest-probe",
+        resource_kind="model",
+        source_path=requested.resolve(strict=True),
+        expected_sha256="0" * 64,
+        max_files=max_files,
+        max_total_bytes=max_total_bytes,
+        allow_internal_symlinks=allow_internal_symlinks,
+    )
+    entries, _total_bytes, _symlinks = _external_resource_entries(probe)
+    return _external_entries_sha256(entries)
+
+
+def _snapshot_external_resource(
+    resource: NativeExternalResourceInput,
+) -> NativeExternalResourceSnapshot:
+    source = resource.source_path
+    if source.is_symlink() or not source.is_dir():
+        raise ValueError("native external resource source must be a non-symlink directory")
+    entries, total_bytes, symlink_count = _external_resource_entries(resource)
+    digest = _external_entries_sha256(entries)
+    if digest != resource.expected_sha256:
+        raise ValueError(f"native external resource content hash mismatch: {resource.resource_id}")
+    return NativeExternalResourceSnapshot(
+        resource_id=resource.resource_id,
+        resource_kind=resource.resource_kind,
+        source_path=source,
+        content_sha256=digest,
+        file_count=len(entries),
+        symlink_count=symlink_count,
+        total_bytes=total_bytes,
+        mount_path=resource.mount_path,
+    )
+
+
+def _external_resource_entries(
+    resource: NativeExternalResourceInput,
+) -> tuple[tuple[str, str, int, str], int, int]:
+    root = resource.source_path
+    candidates = sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
+    entries: list[tuple[str, str, int, str]] = []
+    total_bytes = 0
+    symlink_count = 0
+    resolved_root = root.resolve(strict=True)
+    for candidate in candidates:
+        relative = candidate.relative_to(root).as_posix()
+        if candidate.is_symlink():
+            if not resource.allow_internal_symlinks:
+                raise ValueError(
+                    f"native external resource cannot contain symlinks: {resource.resource_id}"
+                )
+            target = os.readlink(candidate)
+            if Path(target).is_absolute():
+                raise ValueError("native external resource symlinks must be relative")
+            try:
+                candidate.resolve(strict=True).relative_to(resolved_root)
+            except ValueError as exc:
+                raise ValueError("native external resource symlink escapes its tree") from exc
+            entries.append(("symlink", relative, len(target.encode()), target))
+            symlink_count += 1
+        elif candidate.is_dir():
+            continue
+        elif candidate.is_file():
+            size = candidate.stat().st_size
+            total_bytes += size
+            entries.append(("file", relative, size, _file_sha256(candidate)))
+        else:
+            raise ValueError(
+                f"native external resource contains a special entry: {resource.resource_id}"
+            )
+        if len(entries) > resource.max_files or total_bytes > resource.max_total_bytes:
+            raise ValueError(
+                f"native external resource exceeds its declared bounds: {resource.resource_id}"
+            )
+    if not entries:
+        raise ValueError(f"native external resource must contain files: {resource.resource_id}")
+    return tuple(entries), total_bytes, symlink_count
+
+
+def _external_entries_sha256(entries: tuple[tuple[str, str, int, str], ...]) -> str:
+    return content_sha256(
+        {
+            "schema_version": "1.0",
+            "entries": [
+                {"type": kind, "path": path, "size": size, "identity": identity}
+                for kind, path, size, identity in entries
+            ],
+        }
+    )
+
+
+def _validate_sandbox_path(value: str, *, label: str) -> str:
+    if "\\" in value or "//" in value:
+        raise ValueError(f"{label} must use normalized POSIX separators")
+    path = PurePosixPath(value)
+    if not path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError(f"{label} must be an absolute normalized sandbox path")
+    if any(re.fullmatch(r"[A-Za-z0-9._+-]+", part) is None for part in path.parts[1:]):
+        raise ValueError(f"{label} contains an unsafe path segment")
+    return value
+
+
+def _is_beneath(path: PurePosixPath, root: PurePosixPath) -> bool:
+    return path == root or root in path.parents
 
 
 def _query_nvidia_inventory() -> tuple[tuple[NativeGPUInventory, ...], str | None]:
@@ -556,6 +890,7 @@ def _query_nvidia_inventory() -> tuple[tuple[NativeGPUInventory, ...], str | Non
 def _gpu_mismatch(
     profile: NativeExecutionProfile,
     mounts: tuple[str, ...],
+    external_mounts: tuple[str, ...],
     index: int,
     field: str,
 ) -> NativeResourceAvailability:
@@ -563,6 +898,7 @@ def _gpu_mismatch(
         available=False,
         profile_id=profile.profile_id,
         dataset_mounts=mounts,
+        external_mounts=external_mounts,
         reason=f"requested NVIDIA GPU {index} {field} does not match the admitted profile",
     )
 
@@ -641,13 +977,18 @@ __all__ = [
     "NativeDatasetSnapshot",
     "NativeExecutionProfile",
     "NativeExecutionProfileInspection",
+    "NativeExternalResourceInput",
+    "NativeExternalResourceSnapshot",
     "NativeGPUDeviceRequest",
     "NativeGPUInventory",
     "NativeGPURequest",
     "NativePreparedDataset",
+    "NativePreparedExternalResource",
+    "NativePythonRuntimeRequest",
     "NativeResourceAvailability",
     "PreparedNativeExecutionProfile",
     "inspect_native_execution_profile",
+    "native_external_tree_sha256",
     "preflight_native_resources",
     "prepare_native_execution_profile",
     "verify_prepared_native_execution_profile",

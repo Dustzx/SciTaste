@@ -12,7 +12,7 @@ import statistics
 import subprocess
 from datetime import UTC, datetime
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from time import perf_counter
 from typing import Literal
 from uuid import uuid4
@@ -27,6 +27,7 @@ from scitaste.executor.native_profile import (
     NativeResourceAvailability,
     PreparedNativeExecutionProfile,
     preflight_native_resources,
+    verify_prepared_native_execution_profile,
 )
 from scitaste.executor.native_store import NativeExecutionStore
 from scitaste.schema.actions import ResearchAction
@@ -311,6 +312,8 @@ class NativeExperimentRunner:
         timed_out = False
         launch_error: str | None = None
         process_started = False
+        gpu_allocation_started_at: float | None = None
+        gpu_allocation_finished_at: float | None = None
 
         requested_id = action.parameters.get("experiment_id")
         if requested_id != self.definition.experiment_id:
@@ -330,14 +333,30 @@ class NativeExperimentRunner:
                 stderr_path.write_bytes(b"")
             else:
                 try:
-                    command = self._command(source)
+                    assert availability.resources is not None
+                    command = self._command(source, resources=availability.resources)
                     environment = {
                         "HOME": "/nonexistent",
+                        "HF_HOME": "/tmp/huggingface",
+                        "HF_HUB_OFFLINE": "1",
                         "LANG": "C.UTF-8",
+                        "MKL_NUM_THREADS": "1",
+                        "OMP_NUM_THREADS": "1",
+                        "OPENBLAS_NUM_THREADS": "1",
                         "PATH": "/usr/bin:/bin",
                         "PYTHONHASHSEED": "0",
+                        "PYTHONNOUSERSITE": "1",
                         "TZ": "UTC",
+                        "TOKENIZERS_PARALLELISM": "false",
+                        "TRANSFORMERS_OFFLINE": "1",
                     }
+                    runtime = self.profile.python_runtime
+                    if runtime is not None:
+                        environment["PATH"] = (
+                            f"{PurePosixPath(runtime.executable).parent}:/usr/bin:/bin"
+                        )
+                        if runtime.library_paths:
+                            environment["LD_LIBRARY_PATH"] = ":".join(runtime.library_paths)
                     if availability.resources is not None and availability.resources.gpu_devices:
                         visible = ",".join(
                             str(device.index) for device in availability.resources.gpu_devices
@@ -356,6 +375,11 @@ class NativeExperimentRunner:
                             preexec_fn=self._limit_process,
                         )
                         process_started = True
+                        if (
+                            availability.resources is not None
+                            and availability.resources.gpu_devices
+                        ):
+                            gpu_allocation_started_at = perf_counter()
                         try:
                             returncode = process.wait(
                                 timeout=self.definition.limits.timeout_seconds
@@ -367,21 +391,37 @@ class NativeExperimentRunner:
                             except ProcessLookupError:
                                 pass
                             returncode = process.wait()
+                        finally:
+                            if gpu_allocation_started_at is not None:
+                                gpu_allocation_finished_at = perf_counter()
                 except (OSError, ValueError, subprocess.SubprocessError) as exc:
                     launch_error = f"native experiment launch failed: {type(exc).__name__}: {exc}"
                     stdout_path.touch(exist_ok=True)
                     stderr_path.touch(exist_ok=True)
 
-        elapsed_seconds = max(0.0, perf_counter() - started)
         gpu_count = (
             len(availability.resources.gpu_devices)
             if process_started and availability.resources is not None
             else 0
         )
-        gpu_hours = elapsed_seconds * gpu_count / 3600.0
-        finished_at = datetime.now(UTC)
+        gpu_allocation_seconds = (
+            max(0.0, gpu_allocation_finished_at - gpu_allocation_started_at)
+            if gpu_allocation_started_at is not None and gpu_allocation_finished_at is not None
+            else 0.0
+        )
+        gpu_hours = gpu_allocation_seconds * gpu_count / 3600.0
         stdout_bytes = stdout_path.read_bytes()
         stderr_bytes = stderr_path.read_bytes()
+        resource_integrity_postflight: bool | None = None
+        if process_started and self.execution_profile is not None:
+            try:
+                verify_prepared_native_execution_profile(self.execution_profile)
+                resource_integrity_postflight = True
+            except (OSError, ValueError) as exc:
+                resource_integrity_postflight = False
+                launch_error = f"native execution resource postflight failed: {exc}"
+        elapsed_seconds = max(0.0, perf_counter() - started)
+        finished_at = datetime.now(UTC)
         envelope: NativeMeasurementEnvelope | None = None
         parse_error: str | None = None
         derived: dict[str, object] | None = None
@@ -410,12 +450,17 @@ class NativeExperimentRunner:
             result_id,
             "execution.json",
             {
-                "schema_version": "1.1",
+                "schema_version": "1.2",
                 "experiment_id": self.definition.experiment_id,
                 "isolation": "bubblewrap",
                 "network": "unshared",
                 "host_filesystem": "not-mounted",
-                "writable_filesystem": "none",
+                "writable_filesystem": (
+                    "ephemeral-/tmp-only"
+                    if self.profile.python_runtime is not None
+                    and self.profile.python_runtime.ephemeral_tmp
+                    else "none"
+                ),
                 "execution_profile_id": self.profile.profile_id,
                 "execution_profile_fingerprint": (
                     self.execution_profile.fingerprint
@@ -437,6 +482,29 @@ class NativeExperimentRunner:
                         for item in self.execution_profile.datasets
                     ]
                 ),
+                "external_resources": (
+                    []
+                    if self.execution_profile is None
+                    else [
+                        {
+                            "resource_id": item.resource_id,
+                            "resource_kind": item.resource_kind,
+                            "mount_path": item.mount_path,
+                            "content_sha256": item.content_sha256,
+                            "file_count": item.file_count,
+                            "symlink_count": item.symlink_count,
+                            "total_bytes": item.total_bytes,
+                            "access": "read-only-external",
+                        }
+                        for item in self.execution_profile.external_resources
+                    ]
+                ),
+                "python_runtime": (
+                    None
+                    if self.profile.python_runtime is None
+                    else self.profile.python_runtime.model_dump(mode="json")
+                ),
+                "resource_integrity_postflight": resource_integrity_postflight,
                 "gpu_devices": (
                     "not-mounted"
                     if gpu_count == 0
@@ -446,6 +514,7 @@ class NativeExperimentRunner:
                     ]
                 ),
                 "gpu_hours": gpu_hours,
+                "gpu_allocation_seconds": gpu_allocation_seconds,
                 "gpu_allocation_started": process_started and gpu_count > 0,
                 "returncode": returncode,
                 "timed_out": timed_out,
@@ -480,6 +549,9 @@ class NativeExperimentRunner:
             "network_access": False,
             "execution_profile_id": self.profile.profile_id,
             "dataset_mounts": [item.mount_path for item in self.profile.datasets],
+            "external_resource_mounts": [
+                item.mount_path for item in self.profile.external_resources
+            ],
             "gpu_device_count": gpu_count,
         }
         if error is not None or derived is None:
@@ -530,14 +602,23 @@ class NativeExperimentRunner:
             },
         )
 
-    def _command(self, source: Path) -> list[str]:
+    def _command(
+        self,
+        source: Path,
+        *,
+        resources: NativeResourceAvailability | None = None,
+    ) -> list[str]:
         assert self.bubblewrap is not None
-        resources = preflight_native_resources(
-            self.profile,
-            prepared=self.execution_profile,
-        )
+        if resources is None:
+            resources = preflight_native_resources(
+                self.profile,
+                prepared=self.execution_profile,
+            )
         if not resources.available:
             raise ValueError(f"native execution resource preflight failed: {resources.reason}")
+        runtime = self.profile.python_runtime
+        executable = runtime.executable if runtime is not None else "/usr/bin/python3"
+        python_paths = runtime.python_paths if runtime is not None else ()
         return [
             str(self.bubblewrap),
             "--die-with-parent",
@@ -564,10 +645,7 @@ class NativeExperimentRunner:
             "--dev",
             "/dev",
             *self._resource_arguments(resources.gpu_devices),
-            "--tmpfs",
-            "/tmp",
-            "--remount-ro",
-            "/tmp",
+            *self._temporary_arguments(),
             "--tmpfs",
             "/work",
             "--remount-ro",
@@ -579,17 +657,25 @@ class NativeExperimentRunner:
             "/input/experiment.py",
             "--chdir",
             "/work",
-            "/usr/bin/python3",
+            executable,
             "-I",
             "-B",
             "-c",
             (
                 "import resource,runpy;"
+                f"__import__('sys').path[:0]=list({python_paths!r});"
                 f"resource.setrlimit(resource.RLIMIT_NPROC,({self.definition.limits.max_processes},"
                 f"{self.definition.limits.max_processes}));"
                 "runpy.run_path('/input/experiment.py',run_name='__main__')"
             ),
         ]
+
+    def _temporary_arguments(self) -> list[str]:
+        runtime = self.profile.python_runtime
+        arguments = ["--tmpfs", "/tmp"]
+        if runtime is None or not runtime.ephemeral_tmp:
+            arguments.extend(["--remount-ro", "/tmp"])
+        return arguments
 
     def _resource_arguments(
         self,
@@ -604,6 +690,23 @@ class NativeExperimentRunner:
                         "--ro-bind",
                         str(dataset.materialized_path.resolve(strict=True)),
                         dataset.mount_path,
+                    ]
+                )
+        if self.execution_profile is not None and self.execution_profile.external_resources:
+            roots = sorted(
+                {
+                    str(PurePosixPath(item.mount_path).parent)
+                    for item in self.execution_profile.external_resources
+                }
+            )
+            for root in roots:
+                arguments.extend(["--dir", root])
+            for resource in self.execution_profile.external_resources:
+                arguments.extend(
+                    [
+                        "--ro-bind",
+                        str(resource.source_path.resolve(strict=True)),
+                        resource.mount_path,
                     ]
                 )
         mounted_nodes: set[str] = set()

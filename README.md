@@ -315,16 +315,17 @@ model implicitly:
 
 ```bash
 .venv/bin/pip install -e '.[local-gpu]'
-export SCITASTE_LOCAL_MODEL_PATH=/absolute/path/to/Qwen3-VL-4B-Instruct
+export SCITASTE_LOCAL_MODEL_PATH=/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
 .venv/bin/scitaste benchmark run \
   --backend local-transformers \
-  --config configs/backends/local_transformers_qwen3vl4b.example.yaml \
+  --config configs/backends/local_transformers_qwen3vl2b.example.yaml \
   --condition base --condition full_scitaste \
-  --record outputs/qwen3vl4b-local/recording.jsonl \
-  --output outputs/qwen3vl4b-local --seed 7
+  --record outputs/qwen3vl2b-local/recording.jsonl \
+  --output outputs/qwen3vl2b-local --seed 7
 ```
 
-The example pins the official Qwen checkpoint revision. Keep one process alive
+The current example pins the complete local 2B checkpoint bytes; the older 4B
+configs remain as historical study protocols. Keep one process alive
 for a multi-case run so model weights load only once. The local backend is a
 model-decision backend, not a replacement for a complete Phase 9 system
 executor.

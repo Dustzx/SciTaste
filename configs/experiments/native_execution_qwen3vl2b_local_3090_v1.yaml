@@ -1,0 +1,47 @@
+schema_version: "1.1"
+profile_id: qwen3vl2b-local-rtx3090
+datasets:
+  - dataset_id: vision-probe
+    source_path: ../../examples/native_experiments/data/qwen3vl_red_probe_v1.ppm
+    expected_sha256: a219eed41e8b5e028630639095c21bdac15a6dd8e8b05d792ab8b679e346a614
+    max_files: 1
+    max_total_bytes: 4096
+external_resources:
+  - resource_id: python-base
+    resource_kind: python-runtime
+    source_path: ${SCITASTE_NATIVE_PYTHON_BASE}
+    expected_sha256: f1235fba718c52101a340184ccefb726a0ec75724b5f396d7e07d7c891b7453e
+    max_files: 20000
+    max_total_bytes: 2147483648
+    allow_internal_symlinks: true
+  - resource_id: python-packages
+    resource_kind: python-packages
+    source_path: ${SCITASTE_NATIVE_PYTHON_PACKAGES}
+    expected_sha256: a0ae101a88c324bebac4613697aeb445e986de7ecc52c70d65fa6a89e801a30f
+    max_files: 50000
+    max_total_bytes: 8589934592
+    allow_internal_symlinks: false
+  - resource_id: qwen3-vl-2b-instruct
+    resource_kind: model
+    source_path: ${SCITASTE_QWEN3VL2B_MODEL_PATH}
+    expected_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+    max_files: 32
+    max_total_bytes: 6442450944
+    allow_internal_symlinks: false
+python_runtime:
+  executable: /runtime/python-base/bin/python3.11
+  ephemeral_tmp: true
+  python_paths:
+    - /runtime/python-packages
+  library_paths:
+    - /runtime/python-base/lib
+    - /runtime/python-packages/torch/lib
+gpu:
+  enabled: true
+  devices:
+    - index: 0
+      expected_name: NVIDIA GeForce RTX 3090
+      min_memory_mb: 24000
+  max_gpu_hours: 0.15
+network_access: false
+writable_workspace: false

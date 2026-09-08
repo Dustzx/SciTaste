@@ -392,7 +392,7 @@ review.
 
 ## Artifact-level validation
 
-At the current repository snapshot, the complete Python test suite contains 850
+At the current repository snapshot, the complete Python test suite contains 854
 passing tests with 83 percent combined statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
@@ -416,11 +416,16 @@ A second offline integration fixture exercises an explicitly registered dataset.
 The workflow verifies its hash, copies it into the owning run, mounts only that
 copy read-only at a derived dataset path, binds it to the native action record,
 and reproduces the three-replicate measurement and complete paper package. A
-separate local RTX 3090 acceptance exposes only the admitted NVIDIA device nodes
-inside Bubblewrap, verifies the expected device identity and restricted CUDA
-visibility, and measures allocation time as GPU-hours. This is real resource
-visibility and accounting evidence, but not yet a CUDA model workload or a
-scientific result.
+separate local RTX 3090 acceptance first exposed only the admitted NVIDIA device
+nodes inside Bubblewrap and verified restricted CUDA visibility. The subsequent
+profile-1.1 acceptance additionally binds the complete local Python base, package,
+and Qwen3-VL-2B checkpoint trees, mounts them read-only, and revalidates their
+hashes after execution. Two text contracts and one synthetic-image contract all
+returned their required bounded answer. Average generation latency was 0.58
+seconds, peak allocated GPU memory was 4.27 GB, and child-process allocation was
+7.54 GPU-seconds (0.00209 GPU-hours); complete pre/post resource verification made
+end-to-end wall time 56.57 seconds. This is real execution-boundary evidence for
+one local environment, not a model-quality or scientific-effectiveness result.
 
 A real GLM-5.3-Flash engineering probe reached the provider and returned a
 structured source response with measured token and latency telemetry. The
@@ -489,13 +494,14 @@ experts.
 
 The execution boundary is intentionally conservative. Native generated code is
 limited to bounded Python experiments with a small standard-library import set.
-Separate profiles now admit content-bound read-only datasets and exact NVIDIA
-devices under a GPU-hour ceiling, but they do not yet provide a reproducible
-Python/package/model environment, CUDA workload acceptance, multiprocessing, or
-open-web access. Static source analysis is defense in depth, not a containment
-proof, and Bubblewrap availability varies by host. External providers may not
-expose reliable price, idempotency, or response-query interfaces, which can
-force an ambiguous call to remain blocked.
+Separate profiles admit content-bound read-only datasets and exact NVIDIA devices
+under a GPU-hour ceiling. One profile also binds and executes a local Python,
+package, and Qwen3-VL-2B environment on CUDA, but SciTaste does not yet construct
+that environment portably or demonstrate it across hosts, checkpoints, cold
+caches, multiprocessing workloads, or open-web access. Static source analysis is
+defense in depth, not a containment proof, and Bubblewrap availability varies by
+host. External providers may not expose reliable price, idempotency, or
+response-query interfaces, which can force an ambiguous call to remain blocked.
 
 The communication stack is not yet a fully autonomous long-form writer. The
 deterministic ContractDrafter used in Full Workflow is an integration fixture,

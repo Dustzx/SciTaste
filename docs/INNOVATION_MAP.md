@@ -91,7 +91,7 @@ designs:
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces and typed intents implemented | Broader user studies and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, and a leased single-step executor over three typed read-only handlers implemented | Durable evidence admission, automatic workflow triggers, and registered effectiveness evidence |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
-| Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, and explicit NVIDIA device profiles implemented | Reproducible package/model environments, CUDA workload acceptance, and broader workloads |
+| Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, explicit NVIDIA device profiles, and one content-bound local Qwen3-VL-2B CUDA environment implemented | Portable environment construction, cross-host/cold-cache reproduction, quality evaluation, and broader workloads |
 | Evidence-to-writing binding | Measured projection, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose and citation generation |
 | Independent superiority claim | Not claimed | Phase 9 formal cells and valid external review panel |
 

@@ -1,0 +1,23 @@
+schema_version: "1.1"
+experiment_id: qwen3vl2b-cuda-acceptance
+source_path: ../../examples/native_experiments/qwen3vl2b_cuda_acceptance.py
+primary_metric: acceptance_pass
+metric_direction: maximize
+support_threshold: 1.0
+required_metrics:
+  - acceptance_pass
+  - answer_match
+  - cuda_execution
+  - latency_seconds
+  - load_seconds
+  - modality_path_verified
+  - output_tokens
+  - peak_gpu_memory_gb
+  - response_nonempty
+limits:
+  timeout_seconds: 540.0
+  cpu_seconds: 540
+  max_memory_mb: 32768
+  max_output_bytes: 262144
+  max_open_files: 128
+  max_processes: 32

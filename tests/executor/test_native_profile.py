@@ -14,11 +14,14 @@ from scitaste.executor import (
     NativeExperimentDefinition,
     NativeExperimentLimits,
     NativeExperimentRunner,
+    NativeExternalResourceInput,
     NativeGPUDeviceRequest,
     NativeGPUInventory,
     NativeGPURequest,
+    NativePythonRuntimeRequest,
     SciTasteNativeExecutor,
     inspect_native_execution_profile,
+    native_external_tree_sha256,
     preflight_native_resources,
     prepare_native_execution_profile,
 )
@@ -164,6 +167,17 @@ def test_profile_rejects_hash_drift_symlinks_and_declared_bounds(tmp_path: Path)
         inspect_native_execution_profile(profile_path)
 
 
+def test_schema_1_profile_fingerprint_remains_backward_compatible() -> None:
+    inspection = inspect_native_execution_profile(
+        "configs/experiments/native_execution_dataset_cpu_v1.yaml"
+    )
+
+    assert inspection.fingerprint == (
+        "f353115217cfa07a93b51108b9d8f1252ece371c391f1d97990bd92eb21af183"
+    )
+    assert inspection.external_resources == ()
+
+
 def test_directory_profile_binds_tree_paths_and_rejects_rehashed_omission(
     tmp_path: Path,
 ) -> None:
@@ -277,6 +291,124 @@ def test_disabled_gpu_profile_cannot_smuggle_devices_or_budget() -> None:
         )
 
 
+def test_external_model_and_python_trees_are_bound_mounted_and_reverified(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    (runtime / "bin").mkdir(parents=True)
+    (runtime / "lib").mkdir()
+    (runtime / "bin/python3.11").write_text("runtime\n", encoding="utf-8")
+    (runtime / "bin/python3.11").chmod(0o755)
+    packages = tmp_path / "packages"
+    packages.mkdir()
+    (packages / "dependency.py").write_text("VALUE = 1\n", encoding="utf-8")
+    model = tmp_path / "model"
+    model.mkdir()
+    (model / "config.json").write_text('{"model_type":"test"}\n', encoding="utf-8")
+    profile_path = tmp_path / "external-profile.yaml"
+    profile_path.write_text(
+        "\n".join(
+            [
+                "schema_version: '1.1'",
+                "profile_id: external-test",
+                "datasets: []",
+                "external_resources:",
+                "  - resource_id: python-base",
+                "    resource_kind: python-runtime",
+                "    source_path: runtime",
+                f"    expected_sha256: '{native_external_tree_sha256(runtime)}'",
+                "  - resource_id: python-packages",
+                "    resource_kind: python-packages",
+                "    source_path: packages",
+                f"    expected_sha256: '{native_external_tree_sha256(packages)}'",
+                "  - resource_id: model",
+                "    resource_kind: model",
+                "    source_path: model",
+                f"    expected_sha256: '{native_external_tree_sha256(model)}'",
+                "python_runtime:",
+                "  executable: /runtime/python-base/bin/python3.11",
+                "  python_paths: [/runtime/python-packages]",
+                "  library_paths: [/runtime/python-base/lib]",
+                "gpu: {enabled: false, devices: [], max_gpu_hours: 0}",
+                "network_access: false",
+                "writable_workspace: false",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inspection = inspect_native_execution_profile(profile_path)
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    prepared = prepare_native_execution_profile(inspection, run_root=run_root)
+
+    assert [item.mount_path for item in prepared.external_resources] == [
+        "/runtime/python-base",
+        "/runtime/python-packages",
+        "/models/model",
+    ]
+    assert preflight_native_resources(inspection.profile, prepared=prepared).available is True
+    manifest = json.loads(prepared.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "1.1"
+    assert manifest["external_resources"][2]["content_sha256"] == (
+        native_external_tree_sha256(model)
+    )
+
+    source = run_root / "experiment.py"
+    source.write_text("pass\n", encoding="utf-8")
+    runner = NativeExperimentRunner(
+        _definition_for_external(source),
+        bubblewrap="/bin/true",
+        execution_profile=prepared,
+    )
+    command = runner._command(source)
+    assert "/runtime/python-base/bin/python3.11" in command
+    assert "/models/model" in command
+    assert "/runtime/python-packages" in command
+
+    (model / "config.json").write_text('{"model_type":"drifted"}\n', encoding="utf-8")
+    unavailable = preflight_native_resources(inspection.profile, prepared=prepared)
+    assert unavailable.available is False
+    assert "content hash mismatch" in (unavailable.reason or "")
+
+
+def _definition_for_external(source: Path) -> NativeExperimentDefinition:
+    return NativeExperimentDefinition(
+        schema_version="1.0",
+        experiment_id="external-test",
+        source_path=source,
+        primary_metric="score",
+        metric_direction=MetricDirection.MAXIMIZE,
+        support_threshold=1.0,
+    )
+
+
+def test_external_runtime_rejects_unbound_paths_and_unsafe_symlinks(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "python").write_text("runtime\n", encoding="utf-8")
+    (runtime / "python").chmod(0o755)
+    resource = NativeExternalResourceInput(
+        resource_id="runtime",
+        resource_kind="python-runtime",
+        source_path=runtime,
+        expected_sha256=native_external_tree_sha256(runtime),
+    )
+    with pytest.raises(ValueError, match="inside a runtime resource"):
+        NativeExecutionProfile(
+            schema_version="1.1",
+            profile_id="bad-runtime",
+            external_resources=(resource,),
+            python_runtime=NativePythonRuntimeRequest(executable="/usr/bin/python3"),
+        )
+
+    outside = tmp_path / "outside"
+    outside.write_text("outside\n", encoding="utf-8")
+    (runtime / "escape").symlink_to("../outside")
+    with pytest.raises(ValueError, match="symlink escapes"):
+        native_external_tree_sha256(runtime, allow_internal_symlinks=True)
+
+
 def test_local_3090_profile_runs_a_real_isolated_inventory_measurement(
     tmp_path: Path,
 ) -> None:
@@ -354,3 +486,4 @@ def test_local_3090_profile_runs_a_real_isolated_inventory_measurement(
     execution = json.loads(execution_path.read_text(encoding="utf-8"))
     assert execution["gpu_devices"][0]["name"] == "NVIDIA GeForce RTX 3090"
     assert execution["gpu_hours"] == pytest.approx(result.cost["gpu_hours"])
+    assert execution["elapsed_seconds"] >= execution["gpu_allocation_seconds"]

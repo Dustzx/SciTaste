@@ -291,8 +291,10 @@ retrieval plus one admitted isolated CPU experiment and its metric extraction.
 The same experiment can now originate from a first-party bounded provider-backed
 proposer while remaining behind independent admission and isolation. Explicit
 dataset and NVIDIA device profiles now provide a default-deny resource boundary.
-Open-web retrieval, iterative code repair, reproducible package/model
-environments, CUDA workload acceptance, and long-form generation remain
-capability-parity work; they must preserve the same
+Open-web retrieval, iterative code repair, portable package/model environment
+construction, cross-host CUDA reproduction, and long-form generation remain
+capability-parity work. One content-bound local Qwen3-VL-2B text/vision workload
+has passed on the registered RTX 3090, but it is execution-boundary evidence and
+not a model-quality result; subsequent work must preserve the same
 ProjectRuntime ownership, state-continuity, evidence-binding, and
 failure-retention contracts.
