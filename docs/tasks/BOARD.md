@@ -4,7 +4,7 @@ Board revision: `2026-09-08.15`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Open-question intake and workflow launch autonomy | acceptance in progress | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
+| Main | Open-question intake and workflow launch autonomy | accepted; sync pending | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
 | 2 | Durable project-owned Tool Intelligence loop v3 | delivered; review pending | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | main integration review |
 | 3 | Generation as Content UX evaluation v5 | delivered; review pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | main integration review |
 
@@ -54,4 +54,6 @@ Board revision: `2026-09-08.15`
   plan. Dry-run performs mutation-free admission; formal execution copies and
   consumes five project-owned inputs. The v1 planner is registered-scenario based,
   with model authority limited to proposals and deterministic execution admission
-  retained by SciTaste.
+  retained by SciTaste. Clean-commit acceptance passed 875 tests with one
+  local-output-dependent UI skip and 83 percent combined coverage; the
+  self-development project records revision 198.

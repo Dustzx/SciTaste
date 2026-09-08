@@ -28,3 +28,18 @@ The committed offline example is
 admission boundary for registered scenarios; it does not claim that the question
 autonomously generated those scenarios or that the resulting scientific idea is
 effective.
+
+Implementation commit `dcfeda23484fa9a83b015cb7ae99adbebcc043a5`
+passed 25 focused intake/Full Workflow tests. A clean detached worktree at that
+exact commit passed 875 repository tests with one environment-dependent UI test
+skipped because the clean tree intentionally had no local `outputs` fixture;
+combined statement and branch coverage was 83 percent. Ruff format/check and
+repository diff checks passed. No live model call, API token, API cost, or GPU
+time was used.
+
+The self-development project records this result at revision 198 in run
+`2026-09-08__scitaste-native__open-question-intake-v1__seed-07`; its canonical
+evidence is `mainline/evidence.json`, and the trusted project surface is
+`surfaces/project-overview-rev198/`. The selected paper remains the ICLR 2027
+submission draft v2, so an engineering iteration cannot silently replace the
+reader-facing manuscript.
