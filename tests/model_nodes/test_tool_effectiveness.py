@@ -133,10 +133,11 @@ def _complete_matrix(fixture: ToolEffectivenessFixture):
 def test_preregistered_fixture_is_closed_and_balanced() -> None:
     fixture = _fixture()
 
-    assert len(fixture.protocol.tasks) == 8
+    assert len(fixture.protocol.tasks) == 12
     assert len(fixture.protocol.seeds) == 3
     assert len({task.stratum for task in fixture.protocol.tasks}) == 2
-    assert fixture.protocol.minimum_paired_trials == 24
+    assert fixture.protocol.minimum_paired_trials == 36
+    assert fixture.protocol.minimum_independent_tasks == 12
     assert fixture.protocol.independent_domain_review_required is True
     assert fixture.protocol.external_validity == "unestablished"
 
@@ -164,7 +165,7 @@ def test_fixed_router_is_frozen_and_does_not_use_a_model() -> None:
             )
         )
 
-    assert sum(trial.grounded_resolution_correct for trial in trials) == 4
+    assert sum(trial.grounded_resolution_correct for trial in trials) == 6
     assert all(trial.model_invocations == 0 for trial in trials)
 
 
@@ -172,12 +173,13 @@ def test_paired_evaluator_reports_exact_mcnemar_signal_without_scientific_claim(
     fixture = _fixture()
     report = evaluate_tool_effectiveness_study(fixture, _complete_matrix(fixture))
 
-    assert report.pair_count == 24
+    assert report.replicate_pair_count == 36
+    assert report.independent_task_count == 12
     assert report.baseline.grounded_resolution_accuracy == 0.5
     assert report.treatment.grounded_resolution_accuracy == 1.0
-    assert report.paired_test.improved_pairs == 12
+    assert report.paired_test.improved_pairs == 6
     assert report.paired_test.regressed_pairs == 0
-    assert report.paired_test.exact_two_sided_mcnemar_p == pytest.approx(0.00048828125)
+    assert report.paired_test.exact_two_sided_mcnemar_p == pytest.approx(0.03125)
     assert report.preliminary_effectiveness_signal is True
     assert report.independent_domain_review_complete is False
     assert report.scientific_effectiveness_claim is False
@@ -204,7 +206,7 @@ def test_blind_packet_excludes_condition_gold_and_mapping(tmp_path: Path) -> Non
     )
     packet_json = packet.model_dump_json()
 
-    assert len(packet.items) == 48
+    assert len(packet.items) == 72
     assert packet.fingerprint == key.packet_fingerprint
     assert "v2-fixed-router" not in packet_json
     assert "v3-live-project-loop" not in packet_json

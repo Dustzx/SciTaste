@@ -9,8 +9,10 @@
     "model": "glm-5.3-flash",
     "seeds": [7, 19, 41],
     "primary_endpoint": "grounded_resolution_correct",
+    "analysis_unit": "task-majority-over-seeds",
     "alpha": 0.05,
-    "minimum_paired_trials": 24,
+    "minimum_paired_trials": 36,
+    "minimum_independent_tasks": 12,
     "condition_order_blinded": true,
     "independent_domain_review_required": true,
     "external_validity": "unestablished",
@@ -175,6 +177,88 @@
           "expected_tool_name": "evidence.inspect",
           "required_evidence_ids": ["evidence-crash"],
           "expected_observation_ids": ["evidence-crash"]
+        }
+      },
+      {
+        "task_id": "knowledge-explicit-review",
+        "stratum": "explicit-routing",
+        "objective": "Run a knowledge query over library-methods for the document explaining why independent domain review remains a separate effectiveness gate.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "knowledge.query",
+          "required_library_ids": ["library-methods"],
+          "expected_observation_ids": ["doc-independent-review"]
+        }
+      },
+      {
+        "task_id": "run-explicit-crash",
+        "stratum": "explicit-routing",
+        "objective": "Compare registered runs run-v2 and run-v3 on crash_recovery_rate before reporting recovery success.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "registered-run.compare",
+          "required_run_ids": ["run-v2", "run-v3"],
+          "required_metric_names": ["crash_recovery_rate"],
+          "expected_observation_ids": ["run-v2", "run-v3"]
+        }
+      },
+      {
+        "task_id": "evidence-semantic-restart",
+        "stratum": "semantic-routing",
+        "objective": "Retrieve the registered observation that directly measures whether executing the same action again after a restart caused duplication, rather than consulting an aggregate table or design note.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "evidence.inspect",
+          "required_evidence_ids": ["evidence-restart"],
+          "expected_observation_ids": ["evidence-restart"]
+        }
+      },
+      {
+        "task_id": "run-semantic-crash",
+        "stratum": "semantic-routing",
+        "objective": "Determine quantitatively whether the candidate loop can recover a completed result after abrupt interruption relative to the earlier loop, using only registered results.",
+        "scope": {
+          "schema_version": "1.0",
+          "project_id": "tool-intelligence-effectiveness",
+          "state_snapshot_id": "study-state-v1",
+          "library_ids": ["library-design", "library-methods"],
+          "evidence_ids": ["evidence-crash", "evidence-restart", "evidence-stale"],
+          "run_ids": ["run-v2", "run-v3"],
+          "metric_names": ["crash_recovery_rate", "manual_controller_steps", "restart_duplicate_rate"]
+        },
+        "candidate_tool_names": ["knowledge.query", "evidence.inspect", "registered-run.compare"],
+        "gold": {
+          "expected_tool_name": "registered-run.compare",
+          "required_run_ids": ["run-v2", "run-v3"],
+          "required_metric_names": ["crash_recovery_rate"],
+          "expected_observation_ids": ["run-v2", "run-v3"]
         }
       }
     ]

@@ -162,15 +162,17 @@ The project owner authorized further scientific-effectiveness validation on
 dedicated, ignored local evaluation project; the main workflow call site and
 the primary self-development project remain main-window owned.
 
-1. Freeze a paired task matrix before the formal provider responses: eight
+1. Freeze a paired task matrix before the formal provider responses: twelve
    project-evidence acquisition tasks, three seeds, explicit and semantic
    routing strata, and an unchanged v2-style keyword-router baseline.
 2. Use the same project-owned read-only Knowledge, Evidence, and registered-run
    data in both conditions. The treatment must run the complete durable v3
    bridge with the pinned `zhipu-direct/glm-5.3-flash` model and no retries.
-3. Make exact grounded resolution the primary endpoint. Report Wilson intervals,
-   paired discordances, an exact two-sided McNemar p-value, unsafe-scope rate,
-   admission/resolution rates, calls, tokens, price-bound cost, and latency.
+3. Make exact grounded resolution the primary endpoint. Aggregate three seeds
+   by majority within each task, then report task-level paired discordances, an
+   exact two-sided McNemar p-value, response-level Wilson intervals,
+   unsafe-scope rate, admission/resolution rates, calls, tokens, price-bound
+   cost, and latency. Seeds are replicates, not independent sample-size units.
 4. Produce a condition- and gold-blinded review packet plus a separately hashed
    key. No result becomes a broad scientific-effectiveness claim until an
    independent domain review is returned and the main-window integration gate
@@ -178,7 +180,8 @@ the primary self-development project remain main-window owned.
 
 ### WP6 progress — 2026-09-08
 
-- The strict 24-pair protocol, frozen baseline, typed scorer, exact paired test,
+- The strict 36-response/12-independent-task protocol, frozen baseline, typed
+  scorer, task-clustered exact paired test,
   Wilson intervals, blind packet/key, and fail-closed claim boundary are
   implemented under `model_nodes/**`; the committed config remains inert.
 - GLM-5.3-Flash availability was authenticated without persisting the key.
@@ -189,5 +192,11 @@ the primary self-development project remain main-window owned.
   that the request omitted the profile fingerprint that the output contract
   required the model to echo. The diagnostic is not counted as a study trial.
   The request contract now transmits that exact deterministic binding and has a
-  regression test. Formal live trials remain to be run after verification and
-  a source commit.
+  regression test.
+- The dedicated project-owned runner now materializes hash-pinned inputs, runs
+  or exactly resumes all 72 condition records, verifies the model/tool ledgers,
+  publishes a blinded packet plus private key and hash-bound run manifest, and
+  rejects nested symlinks or artifact drift. A deterministic injected-backend
+  test completes all 36 treatment calls and proves that a second run performs
+  zero provider calls. Formal live trials remain to be run after a source
+  commit.

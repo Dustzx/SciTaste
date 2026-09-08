@@ -157,8 +157,10 @@ class ToolEffectivenessProtocol(ToolEffectivenessModel):
     seeds: tuple[int, ...] = Field(min_length=2)
     tasks: tuple[ToolEffectivenessTask, ...] = Field(min_length=4)
     primary_endpoint: Literal["grounded_resolution_correct"] = "grounded_resolution_correct"
+    analysis_unit: Literal["task-majority-over-seeds"] = "task-majority-over-seeds"
     alpha: float = Field(default=0.05, gt=0, lt=1, allow_inf_nan=False)
     minimum_paired_trials: int = Field(default=20, ge=4)
+    minimum_independent_tasks: int = Field(default=12, ge=6)
     condition_order_blinded: Literal[True] = True
     independent_domain_review_required: Literal[True] = True
     external_validity: Literal["unestablished"] = "unestablished"
@@ -168,6 +170,8 @@ class ToolEffectivenessProtocol(ToolEffectivenessModel):
     def seeds_are_unique(cls, values: tuple[int, ...]) -> tuple[int, ...]:
         if any(value < 0 for value in values) or len(values) != len(set(values)):
             raise ValueError("study seeds must be unique non-negative integers")
+        if len(values) % 2 == 0:
+            raise ValueError("task-majority analysis requires an odd number of seeds")
         return values
 
     @model_validator(mode="after")
@@ -177,6 +181,8 @@ class ToolEffectivenessProtocol(ToolEffectivenessModel):
             raise ValueError("study task IDs must be unique")
         if len(self.tasks) * len(self.seeds) < self.minimum_paired_trials:
             raise ValueError("study matrix is smaller than minimum_paired_trials")
+        if len(self.tasks) < self.minimum_independent_tasks:
+            raise ValueError("study has too few independent task units")
         strata = {task.stratum for task in self.tasks}
         if strata != set(ToolEffectivenessStratum):
             raise ValueError("study must include explicit and semantic routing strata")
@@ -313,6 +319,7 @@ class ToolEffectivenessConditionMetrics(ToolEffectivenessModel):
 
 class ToolEffectivenessPairedTest(ToolEffectivenessModel):
     endpoint: Literal["grounded_resolution_correct"] = "grounded_resolution_correct"
+    analysis_unit: Literal["task-majority-over-seeds"] = "task-majority-over-seeds"
     improved_pairs: int = Field(ge=0)
     regressed_pairs: int = Field(ge=0)
     tied_pairs: int = Field(ge=0)
@@ -325,7 +332,8 @@ class ToolEffectivenessStudyReport(ToolEffectivenessModel):
     protocol_id: str
     protocol_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     fixture_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
-    pair_count: int = Field(ge=1)
+    replicate_pair_count: int = Field(ge=1)
+    independent_task_count: int = Field(ge=1)
     baseline: ToolEffectivenessConditionMetrics
     treatment: ToolEffectivenessConditionMetrics
     paired_test: ToolEffectivenessPairedTest
@@ -577,18 +585,29 @@ def evaluate_tool_effectiveness_study(
     treatment = _condition_metrics(
         ToolEffectivenessCondition.V3_LIVE_PROJECT_LOOP, treatment_trials
     )
-    improved = sum(
-        (not left.grounded_resolution_correct) and right.grounded_resolution_correct
-        for left, right in zip(baseline_trials, treatment_trials, strict=True)
-    )
-    regressed = sum(
-        left.grounded_resolution_correct and (not right.grounded_resolution_correct)
-        for left, right in zip(baseline_trials, treatment_trials, strict=True)
-    )
+    task_outcomes: list[tuple[bool, bool]] = []
+    for task in fixture.protocol.tasks:
+        task_baseline = tuple(
+            grouped[f"{task.task_id}.seed-{seed}"][ToolEffectivenessCondition.V2_FIXED_ROUTER]
+            for seed in fixture.protocol.seeds
+        )
+        task_treatment = tuple(
+            grouped[f"{task.task_id}.seed-{seed}"][ToolEffectivenessCondition.V3_LIVE_PROJECT_LOOP]
+            for seed in fixture.protocol.seeds
+        )
+        threshold = len(fixture.protocol.seeds) // 2
+        task_outcomes.append(
+            (
+                sum(item.grounded_resolution_correct for item in task_baseline) > threshold,
+                sum(item.grounded_resolution_correct for item in task_treatment) > threshold,
+            )
+        )
+    improved = sum((not left) and right for left, right in task_outcomes)
+    regressed = sum(left and (not right) for left, right in task_outcomes)
     paired_test = ToolEffectivenessPairedTest(
         improved_pairs=improved,
         regressed_pairs=regressed,
-        tied_pairs=len(baseline_trials) - improved - regressed,
+        tied_pairs=len(task_outcomes) - improved - regressed,
         absolute_accuracy_gain=(
             treatment.grounded_resolution_accuracy - baseline.grounded_resolution_accuracy
         ),
@@ -596,6 +615,7 @@ def evaluate_tool_effectiveness_study(
     )
     signal = bool(
         len(baseline_trials) >= fixture.protocol.minimum_paired_trials
+        and len(task_outcomes) >= fixture.protocol.minimum_independent_tasks
         and paired_test.absolute_accuracy_gain > 0
         and paired_test.exact_two_sided_mcnemar_p is not None
         and paired_test.exact_two_sided_mcnemar_p <= fixture.protocol.alpha
@@ -605,7 +625,8 @@ def evaluate_tool_effectiveness_study(
         protocol_id=fixture.protocol.protocol_id,
         protocol_fingerprint=fixture.protocol.fingerprint,
         fixture_fingerprint=fixture.fingerprint,
-        pair_count=len(baseline_trials),
+        replicate_pair_count=len(baseline_trials),
+        independent_task_count=len(task_outcomes),
         baseline=baseline,
         treatment=treatment,
         paired_test=paired_test,

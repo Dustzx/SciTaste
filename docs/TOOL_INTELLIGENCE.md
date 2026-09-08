@@ -338,6 +338,63 @@ hash/containment verification on tiny fixtures. Timing is environment-dependent
 and must be remeasured on the deployment filesystem. These are engineering
 proxies, not evidence that Tool Intelligence improves scientific outcomes.
 
+## Preregistered grounded-resolution study
+
+The frozen WP6 protocol is
+`configs/model_nodes/tool_intelligence_effectiveness_study_v1.json`. It contains
+12 independent project-evidence acquisition tasks, split evenly between
+explicit and semantic routing, with three model seeds per task. This produces
+36 response-level paired replicates. The primary paired analysis does not treat
+the seeds as independent observations: it takes a majority over the three
+seeds within each task, then applies an exact two-sided McNemar test to the 12
+task outcomes. Response-level accuracy receives a Wilson 95% interval.
+
+The two conditions share the exact same content-addressed Knowledge, Evidence,
+and registered-run inputs:
+
+- `v2-fixed-router` is a frozen, no-model keyword router followed by the trusted
+  read-only handler;
+- `v3-live-project-loop` runs the complete durable Tool Plan bridge with the
+  pinned `zhipu-direct/glm-5.3-flash` identity, one proposed action, no retries,
+  and the same read-only handler.
+
+The primary endpoint is exact grounded resolution: the selected typed action
+must match the preregistered tool and identifiers, remain inside scope, execute
+successfully, and return the expected project-owned record IDs. Secondary
+measurements are model admission, workflow resolution, scope violations,
+model/tool calls, input/output tokens, price-bound cost, and model/tool latency.
+The committed provider config is inert. Its date-limited pricing record uses
+the user-confirmed promotional CNY 0.4 input and CNY 1.4 output rates per
+million tokens, converted to USD at the recorded 2026-09-08 central parity.
+
+`ProjectToolEffectivenessRunner` creates or exactly resumes a dedicated local
+project and writes immutable trials, runtime ledgers, a report, a
+condition-and-gold-blinded review packet, a separately located private key, and
+a hash-bound `RUN.json`. It rejects source/config drift, an incomplete task
+matrix, unsafe nested paths, content replacement, provider/model substitution,
+retries, unpriced calls, or a response-count mismatch. A complete rerun loads
+all 72 condition records and makes zero provider or handler calls.
+
+The formal command requires an explicit live switch and runtime-only secrets:
+
+```bash
+PYTHONPATH=src ZAI_API_KEY=... SCITASTE_BLINDING_SALT=... \
+  .venv/bin/python -m scitaste.model_nodes.tool_effectiveness_runner \
+  --outputs-root outputs \
+  --fixture configs/model_nodes/tool_intelligence_effectiveness_study_v1.json \
+  --profile configs/model_nodes/profile_zhipu_glm53_tool_effectiveness_v1.yaml \
+  --backend-config \
+    configs/model_nodes/zhipu_glm53_flash.priced_20260908.example.yaml \
+  --run-id <registered-run-id> --source-commit <full-sha> --allow-live
+```
+
+Neither credential nor blinding salt is serialized. A preliminary statistical
+signal remains only bounded internal evidence. The report schema fixes
+`independent_domain_review_complete=false` and
+`scientific_effectiveness_claim=false`; those values cannot change until a
+reviewer receives the blind packet, returns independently scored outcomes, and
+the main-owned workflow integration gate passes.
+
 ## Structured Repair node
 
 `StructuredRepairNode` (`structured-repair-v1`) operates only on a previously
@@ -448,12 +505,16 @@ status by name similarity.
 - A custom handler interrupted after its start marker requires human
   reconciliation. Declaring custom code "read only" does not make it replay
   safe.
-- No live provider profile or live call is included.
+- The GLM-5.3-Flash study profile and inert priced backend configuration are
+  included; a live result is not part of the source tree and must remain a
+  project-owned ignored output.
 - Repair supports four pinned output schemas and performs structural validation;
   target-specific semantic gates require a new target invocation.
 - The catalog cannot write files, run experiments, launch code, access the open
   web, or mutate ResearchState.
-- The paired benchmark establishes deterministic safety/recovery behavior and
-  controller-step proxies only. A registered matched live-model study and an
-  independent domain review remain required for scientific-efficiency,
-  scientific-quality, or ADR-022 acceptance claims.
+- The paired engineering benchmark establishes deterministic safety/recovery
+  behavior and controller-step proxies only. The preregistered study adds a
+  narrow grounded evidence-acquisition endpoint, but independent domain review,
+  main-workflow integration, broader tasks, and external replication remain
+  required for scientific-efficiency, scientific-quality, or ADR-022 acceptance
+  claims.

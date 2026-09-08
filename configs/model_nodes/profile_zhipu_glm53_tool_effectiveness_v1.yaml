@@ -29,7 +29,7 @@ admission:
   max_tool_call_proposals: 0
 cumulative_project:
   schema_version: "1.0"
-  max_invocations: 24
-  max_total_tokens: 241152
+  max_invocations: 36
+  max_total_tokens: 361728
   max_api_cost_usd: 0.05
   unknown_cost_blocks_acceptance: true
