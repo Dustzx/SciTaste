@@ -14,14 +14,19 @@ duplicate keys, enforces terminal statement order and the one-page AI Use
 Statement limit, compiles through pdfLaTeX, and reads the main-text endpoint
 from a renderer-owned label.
 
-The first accepted project-owned bundle is
-`outputs/projects/scitaste-self-development/papers/scitaste-iclr2027-submission-draft-v1/`.
-It contains 4,815 assessed manuscript words, 21 headings, all seven cited BibTeX
+The selected project-owned bundle is
+`outputs/projects/scitaste-self-development/papers/scitaste-iclr2027-submission-draft-v2/`.
+It contains 4,891 assessed manuscript words, 21 headings, all seven cited BibTeX
 keys, no detected identity or internal audit markers, an eight-page main-text
 boundary, a one-page AI Use Statement, and a nine-page Letter-sized PDF. The
 full repository result is 866 passing tests with 83 percent combined statement
-and branch coverage. Project revision 186 selects both the writing acceptance
+and branch coverage. Project revision 190 selects both the writing acceptance
 run and this paper.
+
+The first attempt to build v2 was rejected because the AI Use Statement began at
+the bottom of the main-text page and crossed onto the next page. No partial paper
+was registered. The renderer now places non-counted venue statements on a fresh
+page; the successful rebuild records the statement as exactly one page.
 
 Mechanical submission eligibility is not novelty, correctness, blinded-review,
 effectiveness, or publication readiness evidence. The paper manifest therefore
