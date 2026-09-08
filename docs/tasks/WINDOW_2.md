@@ -2,7 +2,7 @@
 
 Assignment token: `W2-tool-intelligence-20260908-r3`
 
-Status: `ready for primary-window review`
+Status: `child epic complete; awaiting primary-window integration`
 
 This assignment is authorized by the project owner on 2026-09-08 to continue
 Tool Intelligence through a complete project-level development loop and report
@@ -141,5 +141,16 @@ support any claimed efficiency or scientific-quality improvement.
   approximately 130 ms mean scenario overhead on the local one-pass fixture.
 - WP5 implemented: 62 focused Tool Intelligence tests pass; `make check` passes
   formatting, lint, and all 886 repository tests. The final diff, owned-path,
-  secret-pattern, JSON, and submodule-pin audits pass; only the cohesive
-  feature-branch commit remains before main-window handoff.
+  secret-pattern, JSON, and submodule-pin audits pass. The cohesive feature
+  implementation is committed as `0012d669ccc7526553190e43372eba7ceaf00217`;
+  all 198 model-node tests pass on that commit.
+
+## Primary-window handoff
+
+Window 2 has no remaining implementation item inside its owned paths. The
+primary window must now review and integrate `0012d66`, wire the documented
+bridge contract into the main-owned workflow, expose the durable decision and
+telemetry locators, and run repository regression tests from the integrated
+tree. Only after that integration should the project register the matched live
+model evaluation and independent outcome review required by the broader exit
+gate.
