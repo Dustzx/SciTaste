@@ -91,15 +91,19 @@ project so audit initialization cannot modify repository outputs:
 SCITASTE_UI_PROBE_URL=http://127.0.0.1:8766 \
 SCITASTE_UI_PROBE_TOKEN="$SCITASTE_UI_TOKEN" \
 SCITASTE_UI_PROBE_PROJECT=scitaste-self-development \
+SCITASTE_UI_PROBE_QUICK_INTENT=review-project-progress \
 node tests/generative_ui/browser_response_probe.mjs
 ```
 
 The probe starts a fresh headless Chromium profile, enters the credential in the
-page, opens the real progress view, activates the progress quick intent, changes
-locale in place, and checks 1440, 768, 390, and 320 CSS-pixel widths. It reports
-end-to-end browser observations, document reflow, target sizes, generated-workspace
-focus, component count, locale-switch requests, and runtime errors. It does not
-claim to measure subjective usability.
+page, opens the real progress view, activates the requested server-issued quick
+intent, changes locale in place, and checks 1440, 768, 390, and 320 CSS-pixel
+widths. `SCITASTE_UI_PROBE_QUICK_INTENT` defaults to
+`review-project-progress`; setting it to another available quick-intent ID makes
+comparison and paper views repeatable without changing the script. The probe
+reports end-to-end browser observations, document reflow, target sizes,
+generated-workspace focus, component count, locale-switch requests, and runtime
+errors. It does not claim to measure subjective usability.
 
 ## 2026-09-08 self-hosted result
 
@@ -161,6 +165,60 @@ The repair makes generated cards single-column at the tablet breakpoint and
 focuses then scrolls the generated workspace to its start. This is a measured
 engineering improvement, but document height remains large because the progress
 surface contains 12 components.
+
+## 2026-09-08 agent-led temporary-project walkthrough
+
+An additional exploratory session used a repository-external temporary outputs
+root and the normal `scitaste run full` command, rather than a Generative UI test
+fixture. The project `evidence-ui-research-experience` contained two completed
+native offline runs, seeds 7 and 11. Each run executed 18 project-owned native
+records across Discovery, Evidence, Communication, and Figure, including one
+Bubblewrap-isolated measurement. Both observed a `correct_pivot_delta` of 0.10
+and each produced a Markdown, TeX, PDF, assessment, build record, and editable
+figure bundle. The generated manuscripts remained truthfully marked as 63-word
+`integration-fixture` artifacts and `publication_ready: false`; this session
+did not reclassify them as substantive research papers.
+
+The agent then used the running authenticated receiver as a research-project
+operator. This is an engineering walkthrough by the development agent, not an
+external participant, independent researcher, or human-usability observation.
+No temporary project output, screenshot, HTTP response, question, or credential
+is committed.
+
+| Researcher task | Observed result | Friction or missing integration |
+|---|---|---|
+| Understand completed work | Generated one evidence-bound progress workspace and put the canonical progress board first | 12 components; 390-pixel document height was 13,758 pixels |
+| Find blockers or failures | Returned `no_matching_evidence` because both registered runs were complete | Safe and truthful, but the receiver does not explain how to record a newly discovered blocker |
+| Compare seeds 7 and 11 | Generated a focused three-component comparison with both run identities | Scientific metrics were unavailable even though each run summary contains the measured delta; `ProjectRun` has no registered comparable-metric projection yet |
+| Judge paper readiness | Required selection between the two registered paper versions, then showed `publication_ready: false` and verified artifacts | Clarification candidates are display-only; the user must retype an exact ID. The 12-component result repeats current/registered paper context and an artifact |
+| Decide what to do next | Returned `no_matching_evidence` because no next gate was declared | Correctly avoids inventing advice, but provides no evidence-grounded route for recording or requesting that gate |
+| Attempt an executable request | Refused a request to create an execution page and run a shell command; authority remained `none` | Expected safety behavior |
+
+The paper path also completed the read-only artifact and proposal boundaries.
+Inspecting the selected `main.md` returned 550 verified bytes with SHA-256
+`b959ab9db1a6...77a7139`; proposing the current paper produced only a
+`proposal_pending` receipt for `paper_selection`, with `execution_authority` set
+to `none` and `deterministic_controller` as the next boundary. The visible button
+label “Request paper approval” is nevertheless easy to confuse with publication
+approval even though its typed meaning is paper selection.
+
+Ten in-process samples after two warmups measured fixed progress at 54.539 ms
+median/68.700 ms p95, quick-intent catalog construction at 55.543 ms/55.991 ms,
+and generated progress at 534.585 ms/591.331 ms. The structural report covered
+three available intents, represented a mean three fixed source views in one
+generated workspace (63.89-percent structural reduction), ranked focused content
+first in 3/3 cases, and grounded all 27 components. Browser quick-intent completion
+was 753.5 ms for progress, 500.0 ms for run comparison, and 557.3 ms for paper
+review in separate fresh-browser observations. These environment-specific
+measurements are diagnostics, not user task time.
+
+This walkthrough raises four implementation candidates for a later scoped Epic:
+entity-scoped component selection and semantic duplicate removal; actionable but
+still proposal-only clarification controls; an unambiguous paper-selection label;
+and a trusted workflow-to-`ProjectRun` projection for comparable scientific
+metrics and declared next gates. The first three fit the receiver boundary. The
+last requires main-window ownership because the UI must not infer metrics or
+research state from arbitrary artifacts.
 
 ## Paper evaluation protocol
 

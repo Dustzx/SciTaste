@@ -11,6 +11,7 @@ import {join} from "node:path";
 const configuredBaseUrl = process.env.SCITASTE_UI_PROBE_URL || "http://127.0.0.1:8766";
 const token = process.env.SCITASTE_UI_PROBE_TOKEN;
 const projectId = process.env.SCITASTE_UI_PROBE_PROJECT || "scitaste-self-development";
+const quickIntentId = process.env.SCITASTE_UI_PROBE_QUICK_INTENT || "review-project-progress";
 const chromeCommand = process.env.SCITASTE_CHROME || "google-chrome";
 const screenshotRoot = process.env.SCITASTE_UI_PROBE_SCREENSHOTS || "";
 
@@ -19,6 +20,9 @@ if (!token) {
 }
 if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId)) {
   throw new Error("SCITASTE_UI_PROBE_PROJECT is invalid");
+}
+if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(quickIntentId)) {
+  throw new Error("SCITASTE_UI_PROBE_QUICK_INTENT is invalid");
 }
 const parsedBaseUrl = new URL(configuredBaseUrl);
 if (
@@ -117,8 +121,8 @@ async function main() {
       await evaluate(cdp, sessionId, `
         (() => {
           const button = [...document.querySelectorAll("#quick-intents button")]
-            .find((item) => item.dataset.quickIntentId === "review-project-progress");
-          if (!button) throw new Error("progress quick intent unavailable");
+            .find((item) => item.dataset.quickIntentId === ${JSON.stringify(quickIntentId)});
+          if (!button) throw new Error("requested quick intent unavailable");
           window.__scitasteGenerationStarted = performance.now();
           button.click();
         })()
@@ -230,7 +234,7 @@ async function main() {
             captureBeyondViewport: false,
           }, sessionId);
           await writeFile(
-            join(screenshotRoot, `generated-progress-${width}.png`),
+            join(screenshotRoot, `generated-${quickIntentId}-${width}.png`),
             Buffer.from(capture.data, "base64"),
           );
         }
@@ -240,6 +244,7 @@ async function main() {
         measurement_kind: "automated-browser-engineering-probe",
         interpretation_boundary: "not-human-usability-or-scientific-effectiveness",
         project_id: projectId,
+        quick_intent_id: quickIntentId,
         locale_switch_network_requests: localeSwitchRequests,
         connect_to_fixed_workspace_ms: Math.round(connectToFixedMs * 1000) / 1000,
         quick_intent_to_generated_workspace_ms:
