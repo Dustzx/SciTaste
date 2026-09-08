@@ -256,6 +256,7 @@ def markdown_to_venue_latex(
         "\\maketitle\n\n"
         f"{converted_main.rstrip()}\n\n"
         "\\phantomsection\\label{scitaste-main-text-end}\n"
+        "\\clearpage\n"
         f"{converted_statements.rstrip()}\n\n"
         f"\\bibliographystyle{{{template.config.bibliography_style}}}\n"
         "\\bibliography{references}\n"

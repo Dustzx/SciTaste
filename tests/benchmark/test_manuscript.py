@@ -104,6 +104,8 @@ No human-subject data were used.
     assert tex.index("\\label{scitaste-main-text-end}") < tex.index(
         "\\subsection*{AI Use Statement}"
     )
+    assert tex.index("\\label{scitaste-main-text-end}") < tex.index("\\clearpage")
+    assert tex.index("\\clearpage") < tex.index("\\subsection*{AI Use Statement}")
     assert "\\bibliographystyle{venue}" in tex
 
 
