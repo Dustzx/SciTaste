@@ -337,9 +337,13 @@ rank a fixed action set, identify interpretation threats, propose an ordered pla
 over closed read-only tool schemas, or suggest a repair against a declared
 output schema. These objects remain advisory. A deterministic caller validates
 tool names, arguments, dependencies, identity, budget, and output before any
-authorized executor acts. Generation as Content applies the same approach to
+authorized executor acts. The current narrow executor can issue one expiring,
+single-use lease for a dependency-free step and invoke one registered
+content-addressed read-only handler; its observation cannot mutate state or
+admit itself as evidence. Generation as Content applies the same approach to
 interaction: a model may select from server-issued intents and components, but
-the receiver owns the shell, project access, rendering, and all mutations.
+the bilingual receiver owns the shell, project access, rendering, and all
+mutations.
 
 # Evaluation Protocol
 
@@ -388,7 +392,7 @@ review.
 
 ## Artifact-level validation
 
-At the current repository snapshot, the complete Python test suite contains 823
+At the current repository snapshot, the complete Python test suite contains 850
 passing tests with 83 percent combined statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
@@ -407,6 +411,16 @@ measured synthetic correct-pivot delta was 0.1. This result demonstrates source
 provenance, recovery, admission, isolation, measurement, and publication
 plumbing. It is not an effectiveness result and is now explicitly classified as
 an integration fixture rather than a reviewed research manuscript.
+
+A second offline integration fixture exercises an explicitly registered dataset.
+The workflow verifies its hash, copies it into the owning run, mounts only that
+copy read-only at a derived dataset path, binds it to the native action record,
+and reproduces the three-replicate measurement and complete paper package. A
+separate local RTX 3090 acceptance exposes only the admitted NVIDIA device nodes
+inside Bubblewrap, verifies the expected device identity and restricted CUDA
+visibility, and measures allocation time as GPU-hours. This is real resource
+visibility and accounting evidence, but not yet a CUDA model workload or a
+scientific result.
 
 A real GLM-5.3-Flash engineering probe reached the provider and returned a
 structured source response with measured token and latency telemetry. The
@@ -474,12 +488,14 @@ held-out temporal and cross-domain evaluation plus calibration against diverse
 experts.
 
 The execution boundary is intentionally conservative. Native generated code is
-limited to bounded Python CPU experiments with a small standard-library import
-set. Dataset mounts, package environments, GPUs, multiprocessing, and open-web
-access require distinct policies and resource accounting. Static source analysis
-is defense in depth, not a containment proof, and Bubblewrap availability varies
-by host. External providers may not expose reliable price, idempotency, or
-response-query interfaces, which can force an ambiguous call to remain blocked.
+limited to bounded Python experiments with a small standard-library import set.
+Separate profiles now admit content-bound read-only datasets and exact NVIDIA
+devices under a GPU-hour ceiling, but they do not yet provide a reproducible
+Python/package/model environment, CUDA workload acceptance, multiprocessing, or
+open-web access. Static source analysis is defense in depth, not a containment
+proof, and Bubblewrap availability varies by host. External providers may not
+expose reliable price, idempotency, or response-query interfaces, which can
+force an ambiguous call to remain blocked.
 
 The communication stack is not yet a fully autonomous long-form writer. The
 deterministic ContractDrafter used in Full Workflow is an integration fixture,

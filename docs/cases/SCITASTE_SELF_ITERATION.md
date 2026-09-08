@@ -464,6 +464,40 @@ This accepts provider transport and the complete generation/admission/isolation
 pipeline, not priced live acceptance, automatic repair, broad dataset/GPU
 execution, model-quality gain, or scientific effectiveness.
 
+## Native dataset and GPU resource-profile case
+
+The next intervention addresses the resource-authority gap without making host
+paths or accelerators ambient sandbox capabilities. Four alternatives were
+retained: trust direct host mounts, expose every detected GPU, defer the whole
+problem to a future scheduler, or admit resources through a separate
+content-bound profile. SciTaste selected the last option. Dataset files or
+bounded directory trees must match a registered hash, are copied into the owning
+run, receive only derived `/datasets/<id>` read-only mounts, and become direct
+inputs to the native action record. GPU access remains off unless an exact
+device request and positive worst-case GPU-hour budget pass before Bubblewrap.
+
+Implementation commit `68b04b5135058a3c53d8bf8f15d36b68169e07f3`
+completed 850 tests at 83% total coverage; the focused native/Full Workflow
+slice completed 28 tests, Ruff passed, and the wheel contained the new executor
+module without outputs, tests, or AutoResearchClaw. The canonical dataset-backed
+Full Workflow is project `scitaste-offline-dataset-full`, run `dataset-seed-07`.
+It copied the 524-byte registered dataset, produced 18 verified native records,
+derived three replicate measurements with `correct_pivot_delta` approximately
+0.1, and packaged a correctly labeled integration-fixture PDF.
+
+The self-development run also performed a real local device acceptance. Inside
+the no-network, read-only Bubblewrap namespace, `nvidia-smi` observed device 0 as
+an NVIDIA GeForce RTX 3090 with 24,576 MiB; CUDA visibility was restricted to
+that device and the record measured `0.0000707703` GPU-hours. This supersedes the
+old Xid-79 operational blocker for this narrow device check. It is not yet a
+CUDA kernel, local-Qwen inference, training, reproducibility, or effectiveness
+result. A content-bound Python/package/model environment and a real CUDA workload
+are therefore the next native-execution gate.
+
+The self-development project is revision 156. Its current run and exact evidence
+are under
+`outputs/projects/scitaste-self-development/runs/2026-09-08__scitaste-native__dataset-gpu-profiles-v1__seed-07/`.
+
 ## Main SciTaste manuscript correction
 
 The framework paper is now a separate, substantive artifact rather than the
