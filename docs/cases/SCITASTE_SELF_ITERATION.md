@@ -492,10 +492,10 @@ that device and the record measured `0.0000707703` GPU-hours. This supersedes th
 old Xid-79 operational blocker for this narrow device check. It is not yet a
 CUDA kernel, local-Qwen inference, training, reproducibility, or effectiveness
 result. A content-bound Python/package/model environment and a real CUDA workload
-are therefore the next native-execution gate.
+were therefore recorded as the next native-execution gate at that revision.
 
 After registering the updated framework manuscript, the self-development project
-is revision 159. Its current run and exact execution evidence
+reached revision 159. Its then-current run and exact execution evidence
 are under
 `outputs/projects/scitaste-self-development/runs/2026-09-08__scitaste-native__dataset-gpu-profiles-v1__seed-07/`.
 
@@ -516,11 +516,48 @@ remains immutable. Revision 159 selects
 `outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v2/`,
 which contains 4,467 assessed words across 18 headings and a compiled 10-page
 PDF. Its source is bound to commit
-`12a4e31a09b5404daa1ab741a4cd11402881c4df`, reports the current 850-test
+`12a4e31a09b5404daa1ab741a4cd11402881c4df`, reports the then-current 850-test
 snapshot, and documents the leased Tool Intelligence executor plus dataset/GPU
 resource-profile boundary. The corrected short
 fixture is selected by `scitaste-native-codegen-acceptance` at revision 9, while
 the earlier misclassified directory remains visible as historical evidence.
+
+## Content-bound Qwen3-VL-2B CUDA case
+
+The next intervention selected the user-requested local 2B checkpoint rather
+than treating the older 4B study configuration as the current default. Native
+execution profile schema `1.1` binds the complete Python base, package, and model
+trees, derives read-only `/runtime/<id>` and `/models/<id>` mounts, selects only
+the admitted interpreter/import/library paths, and rehashes every external tree
+after the child process. The checkpoint is
+`/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct`; its admitted tree identity
+is `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`.
+
+Five non-canonical attempts remain visible before the accepted v6 run. They
+exposed, in order, a read-only temporary-directory/threading issue, an optional
+`torchvision` processor dependency, an invalid multimodal message shape, GPU
+cost overcounting, and wall-time truncation before postflight hashing. The
+accepted run is
+`2026-09-08__scitaste-native__qwen3vl2b-cuda-runtime-v6__seed-07`. It executed
+two text contracts and one synthetic-image contract inside the no-network
+Bubblewrap boundary; all three passed answer, non-empty response, CUDA, and
+modality-path checks. Average generation latency was 0.579 seconds, model load
+was 1.352 seconds on a warm local cache, peak allocated GPU memory was 4.271 GB,
+child-process allocation was 7.536 seconds (`0.002093` GPU-hours), and complete
+end-to-end time was 56.567 seconds. Postflight resource integrity passed and the
+single native record chain verifies.
+
+Implementation commit `859e86540b8ccdb8ea778eae8a552bb7239c4240`
+completed 854 tests at 83% combined statement and branch coverage; Ruff and the
+155-entry wheel check passed, and AutoResearchClaw remained fixed at
+`12d3fd809fa9658e91a0328c3280a0e462c78386`. The updated paper bundle
+`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v3/`
+contains 4,541 assessed words, Markdown, TeX, a compiled 10-page PDF,
+bibliography, build evidence, and a self-hashed assessment under the original
+SciTaste title. At project revision 180, v6 is the current run and working draft
+v3 is the current paper. This accepts one local execution environment, not model
+quality, portable reproduction, scientific effectiveness, or SciTaste
+superiority.
 
 ## Anti-self-confirmation rules
 
