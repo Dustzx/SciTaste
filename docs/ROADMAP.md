@@ -513,6 +513,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   `--resume` reuses only a contiguous prefix whose self-hashed state, decisions,
   and required artifacts still validate; incomplete downstream work is archived
   before rerun and tampered completion records fail closed.
+- Full Workflow finalization now has its own content-bound recovery transaction.
+  Once all four stage records validate, resume can verify/reuse a registered
+  paper, archive and rebuild only an unregistered partial paper or stale summary,
+  complete the run metadata, and repair a missing post-completion surface without
+  repeating any research-stage or provider action. Every paper file is hash-bound;
+  registered paper or existing-surface drift blocks recovery.
 - An opt-in scripted or double-gated live semantic advisory now participates
   after evidence interpretation through the normal model-node runtime. Its
   predecessor/input state, profile, policy, proposal, recording, ledger head,

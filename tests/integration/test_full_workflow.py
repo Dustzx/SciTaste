@@ -160,6 +160,10 @@ def test_full_cli_preserves_one_state_and_registers_a_project_paper(
     assessment = json.loads((paper / "ASSESSMENT.json").read_text(encoding="utf-8"))
     assert paper_manifest["status"] == "integration-fixture"
     assert paper_manifest["manuscript_role"] == "integration-fixture"
+    assert set(paper_manifest["artifact_sha256"]) == set(paper_manifest["files"].values())
+    assert len(paper_manifest["finalization_plan_sha256"]) == 64
+    assert (run / "finalization/PLAN.json").is_file()
+    assert payload["finalization"]["recovered_after_all_stages"] is False
     assert (
         assessment["manuscript_sha256"]
         == hashlib.sha256((paper / "main.md").read_bytes()).hexdigest()
@@ -545,7 +549,7 @@ def test_failed_native_execution_is_logged_without_advancing_state(tmp_path: Pat
     assert registered.status == "failed"
 
 
-def test_full_workflow_does_not_register_completion_before_summary_exists(
+def test_full_workflow_recovers_registered_paper_after_summary_interruption(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
@@ -583,6 +587,228 @@ def test_full_workflow_does_not_register_completion_before_summary_exists(
         outputs / "projects/summary-failure-project/runs/summary-failure-seed-07/"
         "full_run_summary.json"
     ).exists()
+    paper_root = (
+        outputs
+        / "projects/summary-failure-project/papers/summary-failure-reviewed-draft"
+    )
+    original_manifest = (paper_root / "MANIFEST.json").read_bytes()
+
+    monkeypatch.setattr(full_workflow, "_write_json", original_write_json)
+    result = FullWorkflow(seed=7).run(
+        config,
+        outputs_root=outputs,
+        run_id="summary-failure-seed-07",
+        resume=True,
+    )
+
+    assert result["status"] == "complete"
+    assert result["reused_stages"] == ["discovery", "evidence", "communication", "figure"]
+    assert result["finalization"]["recovered_after_all_stages"] is True
+    assert result["finalization"]["reused_registered_paper"] is True
+    assert (paper_root / "MANIFEST.json").read_bytes() == original_manifest
+    completed = ProjectRuntime(outputs).open("summary-failure-project").manifest.runs[0]
+    assert completed.status == "complete"
+
+
+def test_full_workflow_archives_partial_paper_before_finalization_retry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "project_id": "partial-paper-project",
+            "paper_directory": "partial-paper-draft",
+        }
+    )
+    original_materialize = full_workflow.materialize_manuscript
+
+    def interrupt_materialization(*, markdown_path: Path, target_dir: Path) -> list[Path]:
+        target_dir.mkdir(parents=True)
+        (target_dir / "partial.txt").write_text("interrupted", encoding="utf-8")
+        raise OSError("controlled paper interruption")
+
+    monkeypatch.setattr(full_workflow, "materialize_manuscript", interrupt_materialization)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(OSError, match="controlled paper interruption"):
+        workflow.run(config, outputs_root=outputs, run_id="partial-paper-seed-07")
+
+    monkeypatch.setattr(full_workflow, "materialize_manuscript", original_materialize)
+    result = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="partial-paper-seed-07",
+        resume=True,
+    )
+
+    archived = (
+        outputs
+        / "projects/partial-paper-project/runs/partial-paper-seed-07/"
+        "failed_attempts/finalization/paper/attempt-001/partial-paper-draft/partial.txt"
+    )
+    assert archived.read_text(encoding="utf-8") == "interrupted"
+    assert result["archived_attempts"] == [
+        "failed_attempts/finalization/paper/attempt-001/partial-paper-draft"
+    ]
+    assert result["finalization"]["recovered_after_all_stages"] is True
+
+
+def test_full_workflow_rejects_tampered_registered_paper_on_retry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "project_id": "tampered-finalization-project",
+            "paper_directory": "tampered-finalization-draft",
+        }
+    )
+    original_write_json = full_workflow._write_json
+
+    def fail_summary(path: Path, value: object) -> None:
+        if path.name == "full_run_summary.json":
+            raise OSError("controlled summary failure")
+        original_write_json(path, value)
+
+    monkeypatch.setattr(full_workflow, "_write_json", fail_summary)
+    outputs = tmp_path / "outputs"
+    with pytest.raises(OSError, match="controlled summary failure"):
+        FullWorkflow(seed=7).run(
+            config,
+            outputs_root=outputs,
+            run_id="tampered-finalization-seed-07",
+        )
+    paper = outputs / "projects/tampered-finalization-project/papers/tampered-finalization-draft"
+    (paper / "main.md").write_text("tampered\n", encoding="utf-8")
+
+    monkeypatch.setattr(full_workflow, "_write_json", original_write_json)
+    with pytest.raises(ValueError, match="artifact hash mismatch"):
+        FullWorkflow(seed=7).run(
+            config,
+            outputs_root=outputs,
+            run_id="tampered-finalization-seed-07",
+            resume=True,
+        )
+
+
+def test_completed_run_repairs_missing_snapshot_binding_without_stage_execution(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "project_id": "surface-repair-project",
+            "paper_directory": "surface-repair-draft",
+        }
+    )
+    original_write_json = full_workflow._write_json
+
+    def fail_surface(path: Path, value: object) -> None:
+        if path.name == "surface-repair-seed-07-snapshot-binding.json":
+            raise OSError("controlled surface interruption")
+        original_write_json(path, value)
+
+    monkeypatch.setattr(full_workflow, "_write_json", fail_surface)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(OSError, match="controlled surface interruption"):
+        workflow.run(config, outputs_root=outputs, run_id="surface-repair-seed-07")
+    before = ProjectRuntime(outputs).open(config.project_id)
+    assert before.manifest.runs[0].status == "complete"
+    native_records = list(
+        (
+            outputs
+            / "projects/surface-repair-project/runs/surface-repair-seed-07/"
+            "native_execution/records"
+        ).glob("*.json")
+    )
+
+    monkeypatch.setattr(full_workflow, "_write_json", original_write_json)
+    result = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="surface-repair-seed-07",
+        resume=True,
+    )
+
+    assert result["completion_repaired"] is True
+    assert Path(result["snapshot_binding"]).is_file()
+    assert len(
+        list(
+            (
+                outputs
+                / "projects/surface-repair-project/runs/surface-repair-seed-07/"
+                "native_execution/records"
+            ).glob("*.json")
+        )
+    ) == len(native_records)
+
+
+def test_full_workflow_archives_stale_summary_after_completion_update_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = load_full_workflow_config("configs/workflows/full_offline_v1.yaml")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "project_id": "summary-update-retry-project",
+            "paper_directory": "summary-update-retry-draft",
+        }
+    )
+    original_update_run = full_workflow.ProjectRuntime.update_run
+    interrupted = False
+
+    def fail_completion_once(
+        runtime: ProjectRuntime,
+        project_id: str,
+        registered_run_id: str,
+        *,
+        expected_revision: int,
+        **changes: object,
+    ) -> object:
+        nonlocal interrupted
+        if changes.get("status") == "complete" and not interrupted:
+            interrupted = True
+            raise OSError("controlled completion update failure")
+        return original_update_run(
+            runtime,
+            project_id,
+            registered_run_id,
+            expected_revision=expected_revision,
+            **changes,
+        )
+
+    monkeypatch.setattr(full_workflow.ProjectRuntime, "update_run", fail_completion_once)
+    outputs = tmp_path / "outputs"
+    workflow = FullWorkflow(seed=7)
+    with pytest.raises(OSError, match="controlled completion update failure"):
+        workflow.run(config, outputs_root=outputs, run_id="summary-update-retry-seed-07")
+
+    monkeypatch.setattr(full_workflow.ProjectRuntime, "update_run", original_update_run)
+    result = workflow.run(
+        config,
+        outputs_root=outputs,
+        run_id="summary-update-retry-seed-07",
+        resume=True,
+    )
+
+    assert result["status"] == "complete"
+    assert result["archived_attempts"] == [
+        "failed_attempts/finalization/summary/attempt-001/full_run_summary.json"
+    ]
+    archived_summary = (
+        outputs
+        / "projects/summary-update-retry-project/runs/summary-update-retry-seed-07/"
+        "failed_attempts/finalization/summary/attempt-001/full_run_summary.json"
+    )
+    assert archived_summary.is_file()
 
 
 def test_full_workflow_resumes_a_valid_prefix_and_archives_partial_stage(

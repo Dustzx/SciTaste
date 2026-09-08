@@ -131,7 +131,9 @@ outputs/projects/<project-id>/
 ├── PROJECT.json
 ├── runs/<run-id>/
 │   ├── full_run_summary.json
+│   ├── finalization/PLAN.json          # write-once stage/paper input binding
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
+│   ├── failed_attempts/finalization/{paper,summary}/attempt-NNN/
 │   ├── model_nodes/{ledger,recordings,pending,attempts}/ # when opted in
 │   ├── native_execution/{context,artifacts,records}/ # native action evidence
 │   │   ├── context/code_generation/ # generated-source evidence when opted in
@@ -229,10 +231,23 @@ returns that exact entry without another call. If a live call may have started
 but no complete response exists, its cost remains unknown and resume refuses to
 repeat it. An invalid input checkpoint fails closed instead of being archived.
 
-This recovery path deliberately covers workflow-stage interruption. If all four
-stage records already validate, or a paper directory already exists, automated
-finalization recovery refuses to overwrite it and requires manual inspection.
-Completed runs cannot be resumed.
+Finalization has a separate write-once, self-hashed plan binding all four stage
+records, the final state, publication manuscript, editable figures, workflow
+configuration, and intended paper identity. If all four stages already validate,
+`--resume` continues finalization without executing a stage again. An incomplete,
+unregistered paper directory is moved intact beneath
+`failed_attempts/finalization/paper/` before deterministic rebuilding. A
+registered paper is reused only when every declared file hash, assessment,
+source, figure, and manifest field still matches the plan; drift fails closed.
+Likewise, a summary left before an interrupted completion-metadata update is
+archived before a fresh revision-bound summary is published.
+
+If the command stops after the run becomes complete but before its generated UI
+snapshot binding is published, the same `--resume` command verifies the complete
+run, plan, summary, paper, and project identity and writes only the missing
+binding. It performs no model, retrieval, experiment, writing, or figure action.
+An existing binding with different content is treated as tampering rather than
+overwritten.
 
 Native execution resume first validates its contiguous predecessor chain, every
 bound Knowledge or experiment-source input, every generation/ledger/admission

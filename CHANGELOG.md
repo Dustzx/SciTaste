@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Full Workflow finalization is now restart-safe after all four research stages.
+  A write-once plan binds stage records, final state, manuscript source, figures,
+  configuration, and paper identity; registered paper artifacts carry a closed
+  per-file hash manifest. Resume reuses only a fully verified paper, archives an
+  unregistered partial bundle or stale summary before rebuilding, and can repair
+  a missing post-completion UI binding without repeating a model, retrieval,
+  experiment, writing, or figure action. Registered-paper or binding drift fails
+  closed.
 - Legacy top-level outputs can now be migrated into the non-retrieval
   `scitaste-legacy-output-archive` project through a dry-run-first, content-bound
   utility. Atomic same-filesystem moves preserve payload bytes, pre/post tree

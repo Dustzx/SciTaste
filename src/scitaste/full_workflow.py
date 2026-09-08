@@ -48,7 +48,7 @@ from scitaste.executor.native_sandbox import (
     load_native_experiment_definition,
 )
 from scitaste.executor.native_store import NativeExecutionRecord
-from scitaste.generative_ui import ProjectSnapshotAdapter
+from scitaste.generative_ui import ProjectSnapshotAdapter, SnapshotBinding
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryRecord,
     LoadedFullWorkflowModelAdvisory,
@@ -212,6 +212,52 @@ class FullStageRecord(BaseModel):
         return self
 
 
+class FullFinalizationPlan(BaseModel):
+    """Write-once binding for restart-safe paper and summary finalization."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str = Field(min_length=1)
+    run_id: str = Field(min_length=1)
+    workflow_config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    paper_id: str = Field(min_length=1)
+    paper_directory: str = Field(min_length=1)
+    paper_title: str = Field(min_length=1)
+    paper_role: ManuscriptRole
+    paper_source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input_sha256: dict[str, str]
+    record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("input_sha256")
+    @classmethod
+    def input_hashes_are_closed(cls, value: dict[str, str]) -> dict[str, str]:
+        invalid = any(
+            not locator or not _is_sha256(digest) for locator, digest in value.items()
+        )
+        if not value or invalid:
+            raise ValueError("finalization inputs require valid locators and SHA-256 values")
+        return value
+
+    @model_validator(mode="after")
+    def self_hash_matches(self) -> FullFinalizationPlan:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
+        if self.record_sha256 != expected:
+            raise ValueError("finalization plan hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> FullFinalizationPlan:
+        payload = {"schema_version": "1.0", **values}
+        unsigned = cls.model_construct(record_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            record_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"record_sha256"})
+            ),
+        )
+
+
 class FullWorkflow:
     """Run Discovery through Figure generation inside one managed project run."""
 
@@ -276,6 +322,22 @@ class FullWorkflow:
         )
         snapshot = self._open_or_create_project(runtime, config, resume=resume)
         if resume:
+            completed = next(
+                (
+                    item
+                    for item in snapshot.manifest.runs
+                    if item.run_id == run_id and item.status == "complete"
+                ),
+                None,
+            )
+            if completed is not None:
+                return self._repair_completed_finalization(
+                    runtime,
+                    snapshot,
+                    config,
+                    completed,
+                    workflow_config_sha256=workflow_config_sha256,
+                )
             snapshot, resume_attempt = self._resume_run(
                 runtime,
                 snapshot,
@@ -384,63 +446,82 @@ class FullWorkflow:
                 != workflow_config_sha256
             ):
                 raise ValueError("workflow configuration changed during execution")
-            if resume and reused_stages == list(_STAGE_ORDER):
-                raise ValueError(
-                    "all workflow stages are already complete; finalization recovery "
-                    "requires manual inspection"
-                )
-            paper_files, manuscript_assessment = self._materialize_paper(
+            finalization_plan = _publish_or_verify_finalization_plan(
+                config,
+                run_id=run_id,
+                run_root=run_root,
+                final_state=final_state,
+                workflow_config_sha256=workflow_config_sha256,
+            )
+            (
+                paper_files,
+                manuscript_assessment,
+                artifact_sha256,
+                existing_paper,
+                finalization_archives,
+            ) = self._materialize_or_reuse_paper(
                 config,
                 runtime,
+                snapshot,
                 run_root,
+                run_id=run_id,
+                resume=resume,
+                finalization_plan=finalization_plan,
             )
-            paper = PaperManifest(
-                paper_id=config.paper_id,
-                project_id=config.project_id,
-                title=config.paper_title,
-                date=config.paper_date,
-                provider=config.provider,
-                model=config.model,
-                condition=config.condition,
-                task="conflict-aware-research-control",
+            archived_attempts.extend(finalization_archives)
+            paper = _build_paper_manifest(
+                config,
+                run_id=run_id,
                 seed=self.seed,
-                stage=18,
-                status=manuscript_assessment.paper_status,
-                evidence_scope=config.evidence_scope,
-                publication_ready=False,
-                source_run=run_id,
                 files=paper_files,
-                stage_semantics=f"{config.execution_backend}-phase-4-to-7-integration",
-                manuscript_role=config.paper_role,
-                manuscript_assessment="ASSESSMENT.json",
-                manuscript_assessment_sha256=manuscript_assessment.record_sha256,
-                manuscript_word_count=manuscript_assessment.word_count,
+                assessment=manuscript_assessment,
+                artifact_sha256=artifact_sha256,
+                finalization_plan=finalization_plan,
             )
-            snapshot = runtime.register_paper(
-                config.project_id,
-                paper,
-                directory_name=config.paper_directory,
-                expected_revision=snapshot.revision,
+            if existing_paper is not None:
+                if existing_paper.model_dump(mode="json") != paper.model_dump(mode="json"):
+                    raise ValueError("registered paper does not match the finalization plan")
+            else:
+                snapshot = runtime.register_paper(
+                    config.project_id,
+                    paper,
+                    directory_name=config.paper_directory,
+                    expected_revision=snapshot.revision,
+                )
+            expected_paper_locator = f"papers/{config.paper_directory}"
+            if (
+                snapshot.manifest.current_paper != expected_paper_locator
+                or snapshot.current_paper_locator is None
+            ):
+                snapshot = runtime.select_paper(
+                    config.project_id,
+                    config.paper_directory,
+                    expected_revision=snapshot.revision,
+                )
+            project_status = (
+                "research-working-draft"
+                if config.paper_role == "research-working-draft"
+                else "complete"
             )
-            snapshot = runtime.select_paper(
-                config.project_id,
-                config.paper_directory,
-                expected_revision=snapshot.revision,
-            )
-            snapshot = runtime.update(
-                config.project_id,
-                expected_revision=snapshot.revision,
-                status=(
-                    "research-working-draft"
-                    if config.paper_role == "research-working-draft"
-                    else "complete"
-                ),
-            )
+            if snapshot.manifest.status != project_status:
+                snapshot = runtime.update(
+                    config.project_id,
+                    expected_revision=snapshot.revision,
+                    status=project_status,
+                )
+
+            summary_path = run_root / "full_run_summary.json"
+            if summary_path.exists():
+                if not resume:
+                    raise FileExistsError(summary_path)
+                archived_attempts.append(
+                    _archive_finalization_path(summary_path, run_root, "summary")
+                )
 
             # The summary must exist before the registered run can claim it as its
             # completion artifact. The final metadata update advances one revision.
             summary: dict[str, object] = {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "project_id": config.project_id,
                 "run_id": run_id,
                 "status": "complete",
@@ -459,8 +540,15 @@ class FullWorkflow:
                 "final_state": f"runs/{run_id}/{_owned_locator(run_root, final_state)}",
                 "paper_files": paper_files,
                 "manuscript_assessment": manuscript_assessment.model_dump(mode="json"),
+                "finalization": {
+                    "plan": "finalization/PLAN.json",
+                    "plan_sha256": finalization_plan.record_sha256,
+                    "recovered_after_all_stages": (
+                        resume and reused_stages == list(_STAGE_ORDER)
+                    ),
+                    "reused_registered_paper": existing_paper is not None,
+                },
             }
-            summary_path = run_root / "full_run_summary.json"
             _write_json(summary_path, summary)
             snapshot = runtime.update_run(
                 config.project_id,
@@ -472,24 +560,25 @@ class FullWorkflow:
                 stage_records={
                     name: f"runs/{run_id}/stages/{name}/STAGE.json" for name in summaries
                 },
+                artifact_sha256=_file_sha256(summary_path),
+                finalization_plan_locator="finalization/PLAN.json",
+                finalization_plan_sha256=finalization_plan.record_sha256,
             )
         except BaseException as exc:
             self._mark_failed(runtime, config.project_id, run_id, exc)
             raise
-        binding = ProjectSnapshotAdapter(runtime).build_binding(config.project_id)
-        binding_path = (
-            runtime.outputs_root
-            / "projects"
-            / config.project_id
-            / "surfaces"
-            / f"{run_id}-snapshot-binding.json"
+        binding, binding_path = _publish_snapshot_binding(
+            runtime,
+            project_id=config.project_id,
+            run_id=run_id,
+            allow_existing=False,
         )
-        _write_json(binding_path, binding.model_dump(mode="json"))
         return {
             **summary,
             "summary": str(summary_path),
             "snapshot_binding": str(binding_path),
             "snapshot_binding_sha256": binding.snapshot_sha256,
+            "completion_repaired": False,
         }
 
     @staticmethod
@@ -575,13 +664,138 @@ class FullWorkflow:
             status="running",
             resume_attempt=resume_attempt,
         )
-        if snapshot.manifest.current_run != run_id:
+        if snapshot.manifest.status != "active":
+            snapshot = runtime.update(
+                config.project_id,
+                expected_revision=snapshot.revision,
+                status="active",
+            )
+        if snapshot.manifest.current_run != run_id or snapshot.current_stage_locator is None:
             snapshot = runtime.select_run(
                 config.project_id,
                 run_id,
                 expected_revision=snapshot.revision,
             )
         return snapshot, resume_attempt
+
+    def _repair_completed_finalization(
+        self,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        config: FullWorkflowConfig,
+        run: ProjectRun,
+        *,
+        workflow_config_sha256: str,
+    ) -> dict[str, object]:
+        expected_identity = (
+            config.provider,
+            config.model,
+            config.condition,
+            self.seed,
+            config.evidence_scope,
+            "stages",
+        )
+        observed_identity = (
+            run.provider,
+            run.model,
+            run.condition,
+            run.seed,
+            run.evidence_scope,
+            run.stage_path,
+        )
+        if observed_identity != expected_identity:
+            raise ValueError("resume configuration does not match the registered run identity")
+        extra = run.model_extra or {}
+        if extra.get("workflow_config_sha256") != workflow_config_sha256:
+            raise ValueError("resume workflow configuration does not match the registered run")
+        expected_paper = f"papers/{config.paper_directory}"
+        if (
+            snapshot.manifest.current_run != run.run_id
+            or snapshot.manifest.current_paper != expected_paper
+        ):
+            raise ValueError("only the current completed run can repair its finalization surface")
+        run_root = (
+            runtime.outputs_root / "projects" / config.project_id / "runs" / run.run_id
+        )
+        plan_path = run_root / "finalization" / "PLAN.json"
+        plan = FullFinalizationPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+        if (
+            plan.project_id != config.project_id
+            or plan.run_id != run.run_id
+            or plan.workflow_config_sha256 != workflow_config_sha256
+            or plan.paper_id != config.paper_id
+            or plan.paper_directory != config.paper_directory
+            or plan.paper_title != config.paper_title
+            or plan.paper_role != config.paper_role
+            or plan.paper_source_sha256
+            != hashlib.sha256(_paper_source_text(config, run_root).encode("utf-8")).hexdigest()
+        ):
+            raise ValueError("completed finalization plan does not match the requested workflow")
+        for locator, digest in plan.input_sha256.items():
+            _verified_file(run_root, locator, digest)
+        paper_entries = [
+            item for item in snapshot.papers if item.directory_name == config.paper_directory
+        ]
+        if len(paper_entries) != 1:
+            raise ValueError("completed run has no unique registered paper")
+        paper = paper_entries[0].manifest
+        paper_root = runtime.outputs_root / "projects" / config.project_id / expected_paper
+        files, assessment, hashes = _verify_reusable_paper(
+            config,
+            run_root=run_root,
+            paper_root=paper_root,
+            paper=paper,
+            finalization_plan=plan,
+        )
+        expected_manifest = _build_paper_manifest(
+            config,
+            run_id=run.run_id,
+            seed=self.seed,
+            files=files,
+            assessment=assessment,
+            artifact_sha256=hashes,
+            finalization_plan=plan,
+        )
+        if paper.model_dump(mode="json") != expected_manifest.model_dump(mode="json"):
+            raise ValueError("completed paper does not match its finalization plan")
+        expected_artifact = f"runs/{run.run_id}/full_run_summary.json"
+        if run.artifact != expected_artifact:
+            raise ValueError("completed run has a noncanonical summary locator")
+        summary_path = runtime.outputs_root / "projects" / config.project_id / expected_artifact
+        expected_summary_sha256 = extra.get("artifact_sha256")
+        if not isinstance(expected_summary_sha256, str) or not _is_sha256(
+            expected_summary_sha256
+        ):
+            raise ValueError("completed run has no summary content binding")
+        if _file_sha256(summary_path) != expected_summary_sha256:
+            raise ValueError("completed full-workflow summary hash mismatch")
+        summary = _load_json_mapping(summary_path)
+        finalization = summary.get("finalization")
+        if (
+            summary.get("schema_version") != "1.1"
+            or summary.get("project_id") != config.project_id
+            or summary.get("run_id") != run.run_id
+            or summary.get("status") != "complete"
+            or summary.get("workflow_config_sha256") != workflow_config_sha256
+            or not isinstance(finalization, dict)
+            or finalization.get("plan_sha256") != plan.record_sha256
+            or summary.get("paper_files") != files
+            or summary.get("manuscript_assessment") != assessment.model_dump(mode="json")
+        ):
+            raise ValueError("completed full-workflow summary is inconsistent")
+        binding, binding_path = _publish_snapshot_binding(
+            runtime,
+            project_id=config.project_id,
+            run_id=run.run_id,
+            allow_existing=True,
+        )
+        return {
+            **summary,
+            "summary": str(summary_path),
+            "snapshot_binding": str(binding_path),
+            "snapshot_binding_sha256": binding.snapshot_sha256,
+            "completion_repaired": True,
+        }
 
     def _run_stages(
         self,
@@ -892,6 +1106,59 @@ class FullWorkflow:
         return summaries, figure_state, reused_stages, archived_attempts
 
     @staticmethod
+    def _materialize_or_reuse_paper(
+        config: FullWorkflowConfig,
+        runtime: ProjectRuntime,
+        snapshot: ProjectSnapshot,
+        run_root: Path,
+        *,
+        run_id: str,
+        resume: bool,
+        finalization_plan: FullFinalizationPlan,
+    ) -> tuple[
+        dict[str, str],
+        ManuscriptAssessment,
+        dict[str, str],
+        PaperManifest | None,
+        list[str],
+    ]:
+        paper_root = (
+            runtime.outputs_root
+            / "projects"
+            / config.project_id
+            / "papers"
+            / config.paper_directory
+        )
+        archives: list[str] = []
+        manifest_path = paper_root / "MANIFEST.json"
+        if os.path.lexists(paper_root):
+            if paper_root.is_symlink() or not paper_root.is_dir():
+                raise ValueError("paper finalization target must be a physical directory")
+            if not resume:
+                raise FileExistsError(f"paper directory already exists: {paper_root}")
+            if manifest_path.is_file() and not manifest_path.is_symlink():
+                matches = [
+                    entry
+                    for entry in snapshot.papers
+                    if entry.directory_name == config.paper_directory
+                ]
+                if len(matches) != 1:
+                    raise ValueError("registered paper cannot be loaded for finalization recovery")
+                existing = matches[0].manifest
+                files, assessment, hashes = _verify_reusable_paper(
+                    config,
+                    run_root=run_root,
+                    paper_root=paper_root,
+                    paper=existing,
+                    finalization_plan=finalization_plan,
+                )
+                return files, assessment, hashes, existing, archives
+            archives.append(_archive_finalization_path(paper_root, run_root, "paper"))
+        files, assessment = FullWorkflow._materialize_paper(config, runtime, run_root)
+        hashes = _paper_artifact_hashes(paper_root, files)
+        return files, assessment, hashes, None, archives
+
+    @staticmethod
     def _materialize_paper(
         config: FullWorkflowConfig,
         runtime: ProjectRuntime,
@@ -904,13 +1171,10 @@ class FullWorkflow:
             / "papers"
             / config.paper_directory
         )
-        if paper_root.exists():
+        if os.path.lexists(paper_root):
             raise FileExistsError(f"paper directory already exists: {paper_root}")
-        communication_paper = run_root / "stages" / "communication" / "paper.publication.md"
         source = run_root / "stages" / "communication" / "paper_with_title.md"
-        source_text = f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(
-            encoding="utf-8"
-        )
+        source_text = _paper_source_text(config, run_root)
         assessment = assess_manuscript(source_text, requested_role=config.paper_role)
         require_requested_manuscript_role(assessment)
         source.write_text(source_text, encoding="utf-8")
@@ -1270,6 +1534,158 @@ def _identity_payload(scenario: BaseModel, config: FullWorkflowConfig) -> dict[s
     return payload
 
 
+def _publish_or_verify_finalization_plan(
+    config: FullWorkflowConfig,
+    *,
+    run_id: str,
+    run_root: Path,
+    final_state: Path,
+    workflow_config_sha256: str,
+) -> FullFinalizationPlan:
+    input_paths = [
+        *(run_root / "stages" / stage / "STAGE.json" for stage in _STAGE_ORDER),
+        final_state,
+        run_root / "stages" / "communication" / "paper.publication.md",
+        run_root / "stages" / "figure" / "figure.svg",
+        run_root / "stages" / "figure" / "figure.drawio",
+    ]
+    input_sha256 = {
+        _owned_locator(run_root, path): _file_sha256(path) for path in input_paths
+    }
+    expected = FullFinalizationPlan.create(
+        project_id=config.project_id,
+        run_id=run_id,
+        workflow_config_sha256=workflow_config_sha256,
+        paper_id=config.paper_id,
+        paper_directory=config.paper_directory,
+        paper_title=config.paper_title,
+        paper_role=config.paper_role,
+        paper_source_sha256=hashlib.sha256(
+            _paper_source_text(config, run_root).encode("utf-8")
+        ).hexdigest(),
+        input_sha256=input_sha256,
+    )
+    path = run_root / "finalization" / "PLAN.json"
+    if path.is_symlink():
+        raise ValueError("finalization plan must be a physical file")
+    if path.exists():
+        observed = FullFinalizationPlan.model_validate_json(path.read_text(encoding="utf-8"))
+        if observed != expected:
+            raise ValueError("finalization plan no longer matches its stage inputs")
+        return observed
+    if path.parent.exists() and any(path.parent.iterdir()):
+        raise ValueError("incomplete finalization checkpoint requires manual inspection")
+    _write_json(path, expected.model_dump(mode="json"))
+    return expected
+
+
+def _paper_source_text(config: FullWorkflowConfig, run_root: Path) -> str:
+    communication_paper = run_root / "stages" / "communication" / "paper.publication.md"
+    return f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(
+        encoding="utf-8"
+    )
+
+
+def _paper_artifact_hashes(paper_root: Path, files: dict[str, str]) -> dict[str, str]:
+    if paper_root.is_symlink() or not paper_root.is_dir():
+        raise ValueError("paper bundle must be a physical directory")
+    hashes: dict[str, str] = {}
+    for locator in files.values():
+        path = paper_root / locator
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"paper artifact is not a regular file: {locator}")
+        try:
+            path.resolve(strict=True).relative_to(paper_root.resolve(strict=True))
+        except ValueError as exc:
+            raise ValueError(f"paper artifact escapes its bundle: {locator}") from exc
+        hashes[locator] = _file_sha256(path)
+    return hashes
+
+
+def _build_paper_manifest(
+    config: FullWorkflowConfig,
+    *,
+    run_id: str,
+    seed: int,
+    files: dict[str, str],
+    assessment: ManuscriptAssessment,
+    artifact_sha256: dict[str, str],
+    finalization_plan: FullFinalizationPlan,
+) -> PaperManifest:
+    return PaperManifest(
+        paper_id=config.paper_id,
+        project_id=config.project_id,
+        title=config.paper_title,
+        date=config.paper_date,
+        provider=config.provider,
+        model=config.model,
+        condition=config.condition,
+        task="conflict-aware-research-control",
+        seed=seed,
+        stage=18,
+        status=assessment.paper_status,
+        evidence_scope=config.evidence_scope,
+        publication_ready=False,
+        source_run=run_id,
+        files=files,
+        stage_semantics=f"{config.execution_backend}-phase-4-to-7-integration",
+        manuscript_role=config.paper_role,
+        manuscript_assessment="ASSESSMENT.json",
+        manuscript_assessment_sha256=assessment.record_sha256,
+        manuscript_word_count=assessment.word_count,
+        artifact_sha256=artifact_sha256,
+        finalization_plan_locator=f"runs/{run_id}/finalization/PLAN.json",
+        finalization_plan_sha256=finalization_plan.record_sha256,
+        publication_source_sha256=finalization_plan.paper_source_sha256,
+    )
+
+
+def _verify_reusable_paper(
+    config: FullWorkflowConfig,
+    *,
+    run_root: Path,
+    paper_root: Path,
+    paper: PaperManifest,
+    finalization_plan: FullFinalizationPlan,
+) -> tuple[dict[str, str], ManuscriptAssessment, dict[str, str]]:
+    if paper.source_run != finalization_plan.run_id:
+        raise ValueError("registered paper belongs to another workflow run")
+    extra = paper.model_extra or {}
+    raw_hashes = extra.get("artifact_sha256")
+    if not isinstance(raw_hashes, dict) or set(raw_hashes) != set(paper.files.values()):
+        raise ValueError("registered paper has no closed artifact hash manifest")
+    hashes = {str(locator): str(digest) for locator, digest in raw_hashes.items()}
+    if any(not _is_sha256(digest) for digest in hashes.values()):
+        raise ValueError("registered paper artifact hash is invalid")
+    observed_hashes = _paper_artifact_hashes(paper_root, paper.files)
+    if hashes != observed_hashes:
+        raise ValueError("registered paper artifact hash mismatch")
+    if "main.md" not in paper.files.values():
+        raise ValueError("registered paper has no canonical Markdown manuscript")
+    main_path = paper_root / "main.md"
+    if not main_path.is_file() or _file_sha256(main_path) != finalization_plan.paper_source_sha256:
+        raise ValueError("registered paper source differs from the finalization plan")
+    assessment_locator = extra.get("manuscript_assessment")
+    if (
+        not isinstance(assessment_locator, str)
+        or assessment_locator not in paper.files.values()
+    ):
+        raise ValueError("registered paper has no manuscript assessment locator")
+    assessment = ManuscriptAssessment.model_validate_json(
+        (paper_root / assessment_locator).read_text(encoding="utf-8")
+    )
+    if assessment.requested_role != config.paper_role:
+        raise ValueError("registered paper role differs from the finalization plan")
+    for name in ("figure.svg", "figure.drawio"):
+        source = run_root / "stages" / "figure" / name
+        copied = paper_root / "figures" / name
+        if f"figures/{name}" not in paper.files.values():
+            raise ValueError(f"registered paper has no declared figure artifact: {name}")
+        if _file_sha256(source) != _file_sha256(copied):
+            raise ValueError(f"registered paper figure differs from stage evidence: {name}")
+    return dict(paper.files), assessment, hashes
+
+
 def _stage_record(
     root: Path,
     name: StageName,
@@ -1477,6 +1893,49 @@ def _archive_stage(root: Path, run_root: Path, name: StageName) -> str:
     target = archive_root / f"attempt-{index:03d}"
     os.replace(root, target)
     return _owned_locator(run_root, target)
+
+
+def _archive_finalization_path(path: Path, run_root: Path, category: str) -> str:
+    validate_entry_id(category, field_name="finalization archive category")
+    archive_root = run_root / "failed_attempts" / "finalization" / category
+    archive_root.mkdir(parents=True, exist_ok=True)
+    index = 1
+    while (archive_root / f"attempt-{index:03d}").exists():
+        index += 1
+    attempt = archive_root / f"attempt-{index:03d}"
+    attempt.mkdir()
+    target = attempt / path.name
+    os.replace(path, target)
+    return _owned_locator(run_root, target)
+
+
+def _publish_snapshot_binding(
+    runtime: ProjectRuntime,
+    *,
+    project_id: str,
+    run_id: str,
+    allow_existing: bool,
+) -> tuple[SnapshotBinding, Path]:
+    binding = ProjectSnapshotAdapter(runtime).build_binding(project_id)
+    binding_path = (
+        runtime.outputs_root
+        / "projects"
+        / project_id
+        / "surfaces"
+        / f"{run_id}-snapshot-binding.json"
+    )
+    expected = binding.model_dump(mode="json")
+    if binding_path.is_symlink():
+        raise ValueError("snapshot binding must be a physical file")
+    if binding_path.exists():
+        if not allow_existing:
+            raise FileExistsError(binding_path)
+        observed = _load_json_mapping(binding_path)
+        if observed != expected:
+            raise ValueError("completed run snapshot binding differs from current project state")
+        return binding, binding_path
+    _write_json(binding_path, expected)
+    return binding, binding_path
 
 
 def _paper_file_label(path: Path, root: Path) -> str:
