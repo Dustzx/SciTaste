@@ -532,3 +532,39 @@ expose useful failure modes, but they do not yet establish improved research
 yield. The decisive next step is therefore empirical rather than rhetorical:
 complete the pinned matched-budget matrix, collect blinded expert judgments, and
 accept or reject the taste-guided control hypothesis from that evidence.
+
+# AI Use Statement
+
+Generative AI tools were used during this work for assisted literature discovery,
+code generation, debugging, experiment orchestration, documentation, manuscript
+drafting, and language editing. Their outputs were not accepted as evidence by
+default: code and generated artifacts were checked through deterministic tests,
+content hashes, source inspection, isolated execution where applicable, reruns,
+and author review. Generative AI was not treated as an author or as the sole
+source for scientific claims. The authors remain responsible for the manuscript,
+the reported measurements, the cited sources, and any errors that remain.
+
+# Ethics Statement
+
+This systems work reports no human-subject experiment and makes no empirical
+claim from private personal data. Autonomous research systems can nevertheless
+amplify incorrect claims, unsafe generated code, licensing violations, privacy
+leakage, and inherited bias in retrieved precedents. SciTaste addresses these
+risks through provenance, explicit evidence scopes, fail-closed execution and
+publication gates, separation of retrieved knowledge from evaluative precedent,
+and human review for externally consequential actions. These controls reduce but
+do not eliminate misuse or automation bias; deployment beyond the bounded
+research setting requires domain-specific safety and governance review.
+
+# Reproducibility Statement
+
+The implementation records versioned configurations, seeds, content hashes,
+model and provider identities, token and cost telemetry, stage artifacts,
+interventions, and failure histories under project-owned manifests. The reported
+engineering checks are backed by executable tests and self-hashed acceptance
+records. The current causal evaluation is deliberately described as incomplete:
+the paper specifies the frozen matched-budget matrix and exclusion rules so that
+the headline hypothesis can be assessed only after every required cell and
+blinded expert judgment is available. Hardware- and provider-specific results
+remain scoped to their recorded environments rather than asserted as universally
+reproducible.

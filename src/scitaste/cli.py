@@ -5,6 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import shutil
+import tempfile
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +45,7 @@ from scitaste.benchmark import (
     save_study_report,
     scripted_selections,
 )
+from scitaste.benchmark.manuscript import materialize_venue_manuscript
 from scitaste.data.curation import CurationFormat, curate_snapshot
 from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
 from scitaste.data.store import build_libraries
@@ -72,6 +77,7 @@ from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.project.models import validate_entry_id
 from scitaste.project_substrate_cli import register_project_substrate_cli
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -81,7 +87,11 @@ from scitaste.taste.intrinsic import (
     save_calibration_report,
 )
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
-from scitaste.writing.manuscript_quality import RESEARCH_WORKING_DRAFT_MINIMUM_WORDS
+from scitaste.writing.manuscript_quality import (
+    RESEARCH_WORKING_DRAFT_MINIMUM_WORDS,
+    assess_manuscript,
+)
+from scitaste.writing.venue import assess_venue_submission, inspect_venue_template
 from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
 
@@ -305,6 +315,36 @@ def build_parser() -> argparse.ArgumentParser:
     project_paper_register.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(project_paper_register)
     project_paper_register.set_defaults(handler=_handle_project_paper_register)
+    project_paper_build = project_paper_commands.add_parser(
+        "build", help="Build, gate, and register a venue-native paper bundle"
+    )
+    project_paper_build.add_argument("--project-id", required=True)
+    project_paper_build.add_argument("--directory-name", required=True)
+    project_paper_build.add_argument("--source", type=Path, required=True)
+    project_paper_build.add_argument("--bibliography", type=Path, required=True)
+    project_paper_build.add_argument(
+        "--venue-config",
+        type=Path,
+        default=Path("configs/writing/iclr2027_submission_v1.yaml"),
+    )
+    project_paper_build.add_argument("--asset-root", type=Path, action="append", default=[])
+    project_paper_build.add_argument("--source-run", default=None)
+    project_paper_build.add_argument("--provider", default="scitaste-native")
+    project_paper_build.add_argument("--model", default="deterministic-venue-renderer")
+    project_paper_build.add_argument("--condition", default="venue-submission-build")
+    project_paper_build.add_argument("--task", default="project-manuscript")
+    project_paper_build.add_argument("--seed", type=int, default=0)
+    project_paper_build.add_argument("--stage", type=int, default=17)
+    project_paper_build.add_argument(
+        "--evidence-scope",
+        default="venue-compliance-only-no-scientific-effectiveness-claim",
+    )
+    project_paper_build.add_argument("--date", default=date.today().isoformat())
+    project_paper_build.add_argument("--expected-revision", type=int, required=True)
+    project_paper_build.add_argument("--select", action="store_true")
+    project_paper_build.add_argument("--no-global-latest", action="store_true")
+    _add_project_options(project_paper_build)
+    project_paper_build.set_defaults(handler=_handle_project_paper_build)
     project_paper_select = project_paper_commands.add_parser(
         "select", help="Select a current project paper"
     )
@@ -839,6 +879,144 @@ def _handle_project_paper_register(args: argparse.Namespace) -> int:
     )
     print(snapshot.model_dump_json(indent=2))
     return 0
+
+
+def _handle_project_paper_build(args: argparse.Namespace) -> int:
+    """Materialize a venue submission under project ownership and register it."""
+
+    validate_entry_id(args.directory_name, field_name="paper directory")
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    if snapshot.revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+        )
+    source_run = args.source_run or snapshot.manifest.current_run
+    if source_run is not None and source_run not in snapshot.run_locators:
+        raise ValueError(f"unknown project run {source_run!r}")
+    source = args.source.resolve(strict=True)
+    bibliography = args.bibliography.resolve(strict=True)
+    if not source.is_file() or not bibliography.is_file():
+        raise ValueError("paper source and bibliography must be regular files")
+    template = inspect_venue_template(args.venue_config)
+    markdown = source.read_text(encoding="utf-8", errors="strict")
+    bibliography_text = bibliography.read_text(encoding="utf-8", errors="strict")
+    preflight = assess_venue_submission(
+        markdown,
+        bibliography_text,
+        template=template,
+        compiled=False,
+        main_text_pages=None,
+    )
+    manuscript_preflight = assess_manuscript(
+        markdown,
+        requested_role="research-working-draft",
+    )
+    project_dir = runtime.projects_root / args.project_id
+    target = project_dir / "papers" / args.directory_name
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": args.project_id,
+                    "directory_name": args.directory_name,
+                    "source_run": source_run,
+                    "venue_id": template.config.venue_id,
+                    "template_fingerprint": template.fingerprint,
+                    "preflight": preflight.model_dump(mode="json"),
+                    "manuscript_preflight": manuscript_preflight.model_dump(mode="json"),
+                    "would_compile": True,
+                    "would_register": True,
+                    "would_select": args.select,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
+    papers_dir = project_dir / "papers"
+    papers_dir.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=".venue-build-", dir=papers_dir))
+    moved = False
+    registered = False
+    try:
+        paths, assessment, manuscript_assessment = materialize_venue_manuscript(
+            markdown_path=source,
+            bibliography_path=bibliography,
+            target_dir=temporary,
+            template=template,
+            asset_roots=tuple(path.resolve(strict=True) for path in args.asset_root),
+        )
+        files = _venue_paper_file_map(paths, root=temporary)
+        paper = PaperManifest(
+            paper_id=args.directory_name,
+            project_id=args.project_id,
+            title=assessment.title,
+            date=date.fromisoformat(args.date),
+            provider=args.provider,
+            model=args.model,
+            condition=args.condition,
+            task=args.task,
+            seed=args.seed,
+            stage=args.stage,
+            status="venue-submission-draft",
+            evidence_scope=args.evidence_scope,
+            publication_ready=False,
+            source_run=source_run,
+            files=files,
+            venue_id=assessment.venue_id,
+            template_fingerprint=assessment.template_fingerprint,
+            submission_assessment_sha256=assessment.record_sha256,
+            manuscript_assessment_sha256=manuscript_assessment.record_sha256,
+            eligible_for_submission=assessment.eligible_for_submission,
+        )
+        os.replace(temporary, target)
+        moved = True
+        snapshot = runtime.register_paper(
+            args.project_id,
+            paper,
+            directory_name=args.directory_name,
+            expected_revision=args.expected_revision,
+        )
+        registered = True
+        if args.select:
+            snapshot = runtime.select_paper(
+                args.project_id,
+                args.directory_name,
+                expected_revision=snapshot.revision,
+                global_latest=not args.no_global_latest,
+            )
+    except BaseException:
+        if temporary.exists():
+            shutil.rmtree(temporary, ignore_errors=True)
+        elif moved and not registered and target.exists():
+            shutil.rmtree(target, ignore_errors=True)
+        raise
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
+    labels = {
+        "main.md": "source-markdown",
+        "main.tex": "submission-tex",
+        "main.pdf": "submission-pdf",
+        "references.bib": "bibliography",
+        "build.json": "build-record",
+        "SUBMISSION_ASSESSMENT.json": "submission-assessment",
+        "MANUSCRIPT_ASSESSMENT.json": "manuscript-assessment",
+        "README.md": "bundle-readme",
+    }
+    mapped: dict[str, str] = {}
+    for index, path in enumerate(sorted(paths)):
+        relative = path.relative_to(root).as_posix()
+        label = labels.get(relative, f"supporting-artifact-{index:02d}")
+        mapped[label] = relative
+    return mapped
 
 
 def _handle_project_paper_select(args: argparse.Namespace) -> int:

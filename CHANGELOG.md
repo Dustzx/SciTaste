@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Content-bound venue submission packaging with a first ICLR 2027 contract,
+  safe exact-template materialization, anonymous venue-native TeX, pdfLaTeX
+  compilation, measured main-text page limits, citation/BibTeX closure, required
+  statement ordering/page limits and leakage checks, long-form manuscript admission, self-hashed
+  assessments, and revision-guarded project registration. The SciTaste paper
+  compiles through the official style with an 8-page main-text boundary; this is
+  a mechanical submission gate, not a scientific or peer-review verdict.
 - Native execution profile `1.1` admits content-hashed external Python runtime,
   package, and model trees at derived read-only mount points. The sandbox selects
   only the registered interpreter/import/library paths, remains offline, permits

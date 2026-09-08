@@ -52,3 +52,36 @@ workflow for review-focused automation.
 The generated prose is intentionally deterministic and minimal. It validates
 control and provenance, not language-model writing quality. A future live writer
 must consume the same contracts and critic outputs without changing routing.
+
+## Venue-native submission gate
+
+Research manuscripts can be packaged through an exact venue contract after the
+content-level writing loop. For ICLR 2027, the contract binds the complete
+official template ZIP by SHA-256 and admits only individually hashed style,
+bibliography, and support files. It refuses unsafe ZIP paths, archive drift, and
+unregistered substitutions.
+
+```bash
+export SCITASTE_ICLR2027_TEMPLATE=/absolute/path/to/iclr-2027-style-files.zip
+.venv/bin/scitaste project paper build \
+  --project-id <project-id> \
+  --directory-name <paper-version> \
+  --source manuscripts/<project>/main.md \
+  --bibliography manuscripts/<project>/references.bib \
+  --venue-config configs/writing/iclr2027_submission_v1.yaml \
+  --expected-revision <revision> \
+  --select --outputs-root outputs
+```
+
+The build first requires the source to pass the existing long-form research
+draft gate. It then renders anonymous venue-native TeX, compiles with pdfLaTeX,
+measures the main-text boundary from a renderer-owned label, and checks the
+9-page limit, one-paragraph abstract, citation/BibTeX closure, required AI Use
+Statement and its one-page limit, terminal statement order, duplicate BibTeX
+keys, obvious identity markers, and internal audit markers. The bundle owns
+both self-hashed assessments plus the build log and exact template assets.
+
+`eligible_for_submission` means these deterministic packaging checks passed; it
+does not certify novelty, factual correctness, external-review acceptance, or
+scientific effectiveness. The registered paper therefore remains
+`publication_ready: false` until those separate obligations close.

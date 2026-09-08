@@ -205,8 +205,12 @@ to register a structurally incomplete manuscript as a `research-working-draft`.
 The substantive framework manuscript uses the specification title
 **SciTaste: Learning Scientific Taste for Autonomous Research Decision Making**;
 its tracked source is [`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md),
-with its assessed 4,321-word, 10-page Markdown/TeX/PDF bundle at
-`outputs/projects/scitaste-self-development/papers/scitaste-framework-working-draft-v1/`.
+and now includes the required AI-use disclosure plus recommended ethics and
+reproducibility statements. The ICLR 2027 venue builder binds the official
+template archive and admitted assets by hash, checks citation closure and
+anonymity, and compiles an 8-page main-text submission boundary. See
+[`docs/COMMUNICATION_LOOP.md`](docs/COMMUNICATION_LOOP.md); passing that gate
+does not mark the manuscript publication-ready or establish its headline claim.
 
 To exercise the same full path with a network-free, project-ledger-backed
 semantic advisory, use
@@ -554,6 +558,12 @@ taste precedents. A missing-baseline review concern routes to the Evidence Loop;
 matching new evidence closes the obligation and produces revision 2. This tests
 research control and traceability rather than model prose quality. See
 [`docs/COMMUNICATION_LOOP.md`](docs/COMMUNICATION_LOOP.md).
+
+To package a substantive project manuscript for an exact venue template, use
+`scitaste project paper build`. The initial ICLR 2027 contract requires the
+official ZIP through `SCITASTE_ICLR2027_TEMPLATE`, emits both manuscript and
+submission assessments, and registers the resulting paper under its owning
+project only after all deterministic gates pass.
 
 ## Offline Figure Loop
 

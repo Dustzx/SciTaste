@@ -17,6 +17,7 @@ the revision-guarded runtime rather than by editing symlinks manually:
 .venv/bin/scitaste project status --project-id <project-id> --outputs-root outputs
 .venv/bin/scitaste project run begin --help
 .venv/bin/scitaste project paper register --help
+.venv/bin/scitaste project paper build --help
 ```
 
 See [`PROJECT_RUNTIME.md`](PROJECT_RUNTIME.md) for creation, registration,
@@ -48,16 +49,41 @@ Each paper directory contains a `MANIFEST.json`. `outputs/papers/` is only a
 cross-project alias layer; `outputs/papers/latest` points to the most recently
 selected paper but does not own it.
 
+A venue-native bundle additionally contains `main.md`, `main.tex`, `main.pdf`,
+`references.bib`, `build.json`, `MANUSCRIPT_ASSESSMENT.json`, and
+`SUBMISSION_ASSESSMENT.json`, together with exact hash-verified venue assets.
+The submission assessment records the template fingerprint, citation closure,
+anonymous-mode checks, required statements, main-text page count, and its own
+content hash. These are packaging and compliance facts, not a publication or
+scientific-quality verdict.
+
 Trusted project interface bundles live under the same owner in `surfaces/`.
 `outputs/INDEX.md` lists these bundles beside the project, and
 `outputs/catalog.json` records their files and surface fingerprint. A surface is
 a content-addressed view and proposal channel, not an executor or project-state
 mutation endpoint.
 
-Historical test and preacceptance directories are not renamed automatically. Cell requests,
-execution records, resumable checkpoints, reports, and artifact manifests can
-contain path-dependent identities or hashes. The catalog provides stable aliases
-without invalidating that evidence.
+Historical test and preacceptance directories are preserved as a dedicated,
+non-retrieval project rather than left as unowned roots:
+
+```text
+outputs/projects/scitaste-legacy-output-archive/runs/<original-name>/
+├── ARCHIVE.json
+└── payload/                 # unchanged original content tree
+```
+
+Use `scripts/migrate_legacy_outputs.py outputs` for a read-only plan. Applying a
+migration requires the additional `--apply --all-discovered` flags (or one or
+more exact `--directory` values). The migrator hashes each physical content tree,
+moves it atomically on the same filesystem, verifies the post-move hash, and
+rewrites project symlinks that referenced the old root. `ARCHIVE.json` retains
+the original locator and recovery map. It does not rewrite files inside the
+payload, so embedded historical paths and evidence hashes keep their original
+meaning. Re-run full archive verification at any time with:
+
+```bash
+.venv/bin/python scripts/migrate_legacy_outputs.py outputs --verify
+```
 
 Within a raw AutoResearchClaw run, `stage-16/outline.md` is an outline,
 `stage-17/paper_draft.md` is the generated draft, and `stage-18/reviews.md` is

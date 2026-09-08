@@ -100,6 +100,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - Acceptance trajectory: a missing-baseline concern selects `ADD_BASELINE`, the
   existing Evidence Loop records matched-baseline evidence, the obligation
   closes, and the paper returns to `COMMUNICATION` for revision 2.
+- Venue-native publication packaging binds an official template archive and
+  admitted assets by hash, requires a substantive long-form manuscript, renders
+  anonymous TeX, and fails closed on compilation, page-limit, citation-closure,
+  required-statement, identity, or internal-marker violations. The SciTaste
+  framework manuscript exercises the ICLR 2027 contract with an 8-page main-text
+  boundary; this is deterministic submission compliance, not paper acceptance.
 
 ## Phase 7 completion
 

@@ -11,6 +11,19 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from scitaste.writing.manuscript_quality import (
+    ManuscriptAssessment,
+    assess_manuscript,
+    require_requested_manuscript_role,
+)
+from scitaste.writing.venue import (
+    VenueSubmissionAssessment,
+    VenueTemplateInspection,
+    assess_venue_submission,
+    materialize_venue_assets,
+    require_venue_submission_ready,
+)
+
 
 def materialize_manuscript(
     *,
@@ -69,6 +82,100 @@ def materialize_manuscript(
     return sorted(paths)
 
 
+def materialize_venue_manuscript(
+    *,
+    markdown_path: Path,
+    bibliography_path: Path,
+    target_dir: Path,
+    template: VenueTemplateInspection,
+    asset_roots: tuple[Path, ...] = (),
+) -> tuple[list[Path], VenueSubmissionAssessment, ManuscriptAssessment]:
+    """Create and gate a content-bound, venue-native submission bundle."""
+
+    if target_dir.exists() and any(target_dir.iterdir()):
+        raise FileExistsError(f"venue bundle target must be empty: {target_dir}")
+    markdown = markdown_path.read_text(encoding="utf-8", errors="strict")
+    bibliography = bibliography_path.read_text(encoding="utf-8", errors="strict")
+    manuscript_assessment = assess_manuscript(
+        markdown,
+        requested_role="research-working-draft",
+    )
+    require_requested_manuscript_role(manuscript_assessment)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    markdown_target = target_dir / "main.md"
+    bibliography_target = target_dir / "references.bib"
+    markdown_target.write_text(markdown, encoding="utf-8")
+    bibliography_target.write_text(bibliography, encoding="utf-8")
+
+    venue_assets = materialize_venue_assets(template, target_dir=target_dir)
+    asset_map, figure_paths = _copy_manuscript_assets(
+        markdown,
+        target_dir=target_dir,
+        asset_roots=asset_roots,
+    )
+    tex_path = target_dir / "main.tex"
+    tex_path.write_text(
+        markdown_to_venue_latex(markdown, template=template, asset_map=asset_map),
+        encoding="utf-8",
+    )
+    readme_path = target_dir / "README.md"
+    readme_path.write_text(
+        f"# {template.config.venue_name} submission bundle\n\n"
+        "This anonymous bundle was deterministically rendered from Markdown and "
+        "the exact, hash-bound venue template. No language-model call occurs during "
+        "rendering or compliance assessment.\n\n"
+        "Compile with `latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex`.\n",
+        encoding="utf-8",
+    )
+
+    statement_labels = {
+        name: _statement_label(name) for name in template.config.statement_page_limits
+    }
+    build = _compile_latex_bundle(
+        target_dir,
+        latex_engine="pdflatex",
+        statement_labels=statement_labels,
+    )
+    build_path = target_dir / "build.json"
+    build_path.write_text(
+        json.dumps(build, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    assessment = assess_venue_submission(
+        markdown,
+        bibliography,
+        template=template,
+        compiled=build["status"] == "succeeded",
+        main_text_pages=build.get("main_text_pages"),
+        statement_pages=build.get("statement_pages"),
+    )
+    assessment_path = target_dir / "SUBMISSION_ASSESSMENT.json"
+    assessment_path.write_text(assessment.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    require_venue_submission_ready(assessment)
+    manuscript_assessment_path = target_dir / "MANUSCRIPT_ASSESSMENT.json"
+    manuscript_assessment_path.write_text(
+        manuscript_assessment.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    paths = [
+        markdown_target,
+        bibliography_target,
+        tex_path,
+        readme_path,
+        build_path,
+        assessment_path,
+        manuscript_assessment_path,
+        *venue_assets,
+        *figure_paths,
+    ]
+    pdf_path = target_dir / "main.pdf"
+    if pdf_path.is_file():
+        paths.append(pdf_path)
+    return sorted(paths), assessment, manuscript_assessment
+
+
 def markdown_to_latex(
     markdown: str,
     *,
@@ -107,6 +214,55 @@ def markdown_to_latex(
     )
 
 
+def markdown_to_venue_latex(
+    markdown: str,
+    *,
+    template: VenueTemplateInspection,
+    asset_map: dict[str, str] | None = None,
+) -> str:
+    """Render constrained Markdown through an exact anonymous venue shell."""
+
+    assets = asset_map or {}
+    title, body = _extract_title(markdown)
+    statement_names = {
+        *template.config.required_statements,
+        *template.config.recommended_statements,
+    }
+    main_body, statements = _split_statement_sections(body, statement_names)
+    converted_main = _convert_blocks(main_body, assets)
+    converted_statements = _render_venue_statements(
+        statements,
+        asset_map=assets,
+        statement_names=statement_names,
+        page_limited_statements=set(template.config.statement_page_limits),
+    )
+    math_commands = (
+        "\\input{math_commands.tex}\n" if "math_commands.tex" in template.asset_sha256 else ""
+    )
+    return (
+        "\\documentclass{article}\n"
+        f"\\usepackage{{{template.config.style_package},times}}\n"
+        f"{math_commands}"
+        "\\usepackage{amsmath,amssymb}\n"
+        "\\usepackage{booktabs,longtable,tabularx,array}\n"
+        "\\usepackage{graphicx}\n"
+        "\\usepackage{algorithm,algorithmic}\n"
+        "\\usepackage{hyperref}\n"
+        "\\usepackage{url}\n"
+        "\\setlength{\\emergencystretch}{3em}\n"
+        f"\\title{{{_inline_latex(title)}}}\n"
+        "\\author{}\n"
+        "\\begin{document}\n"
+        "\\maketitle\n\n"
+        f"{converted_main.rstrip()}\n\n"
+        "\\phantomsection\\label{scitaste-main-text-end}\n"
+        f"{converted_statements.rstrip()}\n\n"
+        f"\\bibliographystyle{{{template.config.bibliography_style}}}\n"
+        "\\bibliography{references}\n"
+        "\\end{document}\n"
+    )
+
+
 def _extract_title(markdown: str) -> tuple[str, str]:
     match = re.search(
         r"(?ims)^#{1,2}\s+title\s*$\s*(.+?)(?=^#{1,2}\s+|\Z)",
@@ -120,7 +276,12 @@ def _extract_title(markdown: str) -> tuple[str, str]:
     return title or "Evidence-Bounded Study Manuscript", body
 
 
-def _convert_blocks(markdown: str, asset_map: dict[str, str]) -> str:
+def _convert_blocks(
+    markdown: str,
+    asset_map: dict[str, str],
+    *,
+    unnumbered_headings: set[str] | None = None,
+) -> str:
     lines = markdown.splitlines()
     output: list[str] = []
     paragraph: list[str] = []
@@ -225,6 +386,8 @@ def _convert_blocks(markdown: str, asset_map: dict[str, str]) -> str:
                 abstract_open = True
             else:
                 command = {1: "section", 2: "section", 3: "subsection", 4: "subsubsection"}[level]
+                if canonical in (unnumbered_headings or set()):
+                    command = "subsection*"
                 output.append(f"\\{command}{{{_inline_latex(name)}}}")
                 output.append("")
             index += 1
@@ -300,6 +463,51 @@ def _convert_blocks(markdown: str, asset_map: dict[str, str]) -> str:
     if in_display_math:
         output.append("\\]")
     return "\n".join(output)
+
+
+def _split_statement_sections(markdown: str, names: set[str]) -> tuple[str, str]:
+    canonical_names = {name.casefold() for name in names}
+    for match in re.finditer(r"(?m)^#{1,4}\s+(.+?)\s*$", markdown):
+        heading = re.sub(r"^[0-9]+(?:\.[0-9]+)*[.)]?\s*", "", match.group(1))
+        canonical = re.sub(r"[*_`]", "", heading).strip().casefold()
+        if canonical in canonical_names:
+            return markdown[: match.start()], markdown[match.start() :]
+    return markdown, ""
+
+
+def _render_venue_statements(
+    markdown: str,
+    *,
+    asset_map: dict[str, str],
+    statement_names: set[str],
+    page_limited_statements: set[str],
+) -> str:
+    matches = list(re.finditer(r"(?m)^#{1,4}\s+(.+?)\s*$", markdown))
+    rendered: list[str] = []
+    limited = {name.casefold(): name for name in page_limited_statements}
+    unnumbered = {name.casefold() for name in statement_names}
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(markdown)
+        block = markdown[match.start() : end]
+        canonical = re.sub(r"[*_`]", "", match.group(1)).strip().casefold()
+        if canonical in limited:
+            label = _statement_label(limited[canonical])
+            rendered.append(f"\\phantomsection\\label{{{label}-start}}")
+        rendered.append(
+            _convert_blocks(
+                block,
+                asset_map,
+                unnumbered_headings=unnumbered,
+            ).rstrip()
+        )
+        if canonical in limited:
+            rendered.append(f"\\phantomsection\\label{{{label}-end}}")
+    return "\n\n".join(rendered)
+
+
+def _statement_label(name: str) -> str:
+    digest = hashlib.sha256(name.casefold().encode()).hexdigest()[:12]
+    return f"scitaste-statement-{digest}"
 
 
 def _markdown_table_to_latex(lines: list[str]) -> list[str]:
@@ -418,19 +626,27 @@ def _copy_manuscript_assets(
     return mapping, copied
 
 
-def _compile_latex_bundle(target_dir: Path) -> dict[str, Any]:
+def _compile_latex_bundle(
+    target_dir: Path,
+    *,
+    latex_engine: str = "xelatex",
+    statement_labels: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    if latex_engine not in {"xelatex", "pdflatex"}:
+        raise ValueError(f"unsupported LaTeX engine: {latex_engine}")
     executable = shutil.which("latexmk")
+    engine_name = f"latexmk-{latex_engine}"
     if executable is None:
         return {
             "schema_version": "1.0",
-            "engine": "latexmk-xelatex",
+            "engine": engine_name,
             "status": "unavailable",
             "returncode": None,
             "pdf_generated": False,
         }
     command = [
         executable,
-        "-xelatex",
+        "-xelatex" if latex_engine == "xelatex" else "-pdf",
         "-interaction=nonstopmode",
         "-halt-on-error",
         "-file-line-error",
@@ -462,9 +678,9 @@ def _compile_latex_bundle(target_dir: Path) -> dict[str, Any]:
                 status = "succeeded"
             else:
                 status = "failed"
-            return {
+            result = {
                 "schema_version": "1.0",
-                "engine": "latexmk-xelatex",
+                "engine": engine_name,
                 "status": status,
                 "returncode": completed.returncode,
                 "pdf_generated": (target_dir / "main.pdf").is_file(),
@@ -473,12 +689,24 @@ def _compile_latex_bundle(target_dir: Path) -> dict[str, Any]:
                 "stdout_excerpt": stdout[-8000:],
                 "stderr_excerpt": stderr[-4000:],
             }
+            main_text_pages = _main_text_pages(build_dir / "main.aux")
+            if main_text_pages is not None:
+                result["main_text_pages"] = main_text_pages
+            pages: dict[str, int] = {}
+            for name, label in (statement_labels or {}).items():
+                start = _aux_label_page(build_dir / "main.aux", f"{label}-start")
+                end = _aux_label_page(build_dir / "main.aux", f"{label}-end")
+                if start is not None and end is not None and end >= start:
+                    pages[name] = end - start + 1
+            if statement_labels:
+                result["statement_pages"] = pages
+            return result
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
             stderr = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
             return {
                 "schema_version": "1.0",
-                "engine": "latexmk-xelatex",
+                "engine": engine_name,
                 "status": "timed_out",
                 "returncode": None,
                 "pdf_generated": False,
@@ -487,3 +715,17 @@ def _compile_latex_bundle(target_dir: Path) -> dict[str, Any]:
                 "stdout_excerpt": stdout[-8000:],
                 "stderr_excerpt": stderr[-4000:],
             }
+
+
+def _main_text_pages(aux_path: Path) -> int | None:
+    return _aux_label_page(aux_path, "scitaste-main-text-end")
+
+
+def _aux_label_page(aux_path: Path, label: str) -> int | None:
+    if not aux_path.is_file():
+        return None
+    match = re.search(
+        rf"\\newlabel\{{{re.escape(label)}\}}\{{\{{[^}}]*\}}\{{([0-9]+)\}}",
+        aux_path.read_text(encoding="utf-8", errors="replace"),
+    )
+    return int(match.group(1)) if match else None
