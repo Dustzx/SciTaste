@@ -137,9 +137,7 @@ def plan_legacy_output_migration(
             MigrationPlanEntry(
                 name=name,
                 source_locator=name,
-                destination_locator=(
-                    f"projects/{ARCHIVE_PROJECT_ID}/runs/{name}/payload"
-                ),
+                destination_locator=(f"projects/{ARCHIVE_PROJECT_ID}/runs/{name}/payload"),
                 fingerprint=fingerprints[name],
                 reference_rewrites=tuple(rewrites.get(name, ())),
             )
@@ -270,9 +268,7 @@ def migrate_legacy_outputs(
             {
                 "run_id": run.run_id,
                 "original_locator": run.model_extra.get("original_locator"),
-                "payload_locator": (
-                    f"projects/{ARCHIVE_PROJECT_ID}/runs/{run.run_id}/payload"
-                ),
+                "payload_locator": (f"projects/{ARCHIVE_PROJECT_ID}/runs/{run.run_id}/payload"),
                 "status": run.status,
                 "tree_sha256": (
                     run.model_extra.get("post_move_fingerprint")
@@ -355,13 +351,7 @@ def _plan_reference_rewrites(
             except ValueError:
                 continue
             destination = (
-                outputs_root
-                / "projects"
-                / ARCHIVE_PROJECT_ID
-                / "runs"
-                / name
-                / "payload"
-                / suffix
+                outputs_root / "projects" / ARCHIVE_PROJECT_ID / "runs" / name / "payload" / suffix
             )
             rewrites.setdefault(name, []).append(
                 ReferenceRewrite(

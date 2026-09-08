@@ -65,9 +65,7 @@ def test_migration_preserves_content_and_repairs_project_reference(tmp_path: Pat
     assert indirect.resolve() == (payload / "nested").resolve()
     record = json.loads((payload.parent / "ARCHIVE.json").read_text())
     assert record["fingerprint"]["sha256"] == before.sha256
-    manifest = json.loads(
-        (outputs / "projects" / ARCHIVE_PROJECT_ID / "PROJECT.json").read_text()
-    )
+    manifest = json.loads((outputs / "projects" / ARCHIVE_PROJECT_ID / "PROJECT.json").read_text())
     assert manifest["retrieval_eligible"] is False
     assert manifest["runs"][0]["status"] == "archived"
     assert manifest["runs"][0]["stage_path"] == "payload"
