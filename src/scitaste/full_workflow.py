@@ -232,9 +232,7 @@ class FullFinalizationPlan(BaseModel):
     @field_validator("input_sha256")
     @classmethod
     def input_hashes_are_closed(cls, value: dict[str, str]) -> dict[str, str]:
-        invalid = any(
-            not locator or not _is_sha256(digest) for locator, digest in value.items()
-        )
+        invalid = any(not locator or not _is_sha256(digest) for locator, digest in value.items())
         if not value or invalid:
             raise ValueError("finalization inputs require valid locators and SHA-256 values")
         return value
@@ -543,9 +541,7 @@ class FullWorkflow:
                 "finalization": {
                     "plan": "finalization/PLAN.json",
                     "plan_sha256": finalization_plan.record_sha256,
-                    "recovered_after_all_stages": (
-                        resume and reused_stages == list(_STAGE_ORDER)
-                    ),
+                    "recovered_after_all_stages": (resume and reused_stages == list(_STAGE_ORDER)),
                     "reused_registered_paper": existing_paper is not None,
                 },
             }
@@ -714,9 +710,7 @@ class FullWorkflow:
             or snapshot.manifest.current_paper != expected_paper
         ):
             raise ValueError("only the current completed run can repair its finalization surface")
-        run_root = (
-            runtime.outputs_root / "projects" / config.project_id / "runs" / run.run_id
-        )
+        run_root = runtime.outputs_root / "projects" / config.project_id / "runs" / run.run_id
         plan_path = run_root / "finalization" / "PLAN.json"
         plan = FullFinalizationPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
         if (
@@ -763,9 +757,7 @@ class FullWorkflow:
             raise ValueError("completed run has a noncanonical summary locator")
         summary_path = runtime.outputs_root / "projects" / config.project_id / expected_artifact
         expected_summary_sha256 = extra.get("artifact_sha256")
-        if not isinstance(expected_summary_sha256, str) or not _is_sha256(
-            expected_summary_sha256
-        ):
+        if not isinstance(expected_summary_sha256, str) or not _is_sha256(expected_summary_sha256):
             raise ValueError("completed run has no summary content binding")
         if _file_sha256(summary_path) != expected_summary_sha256:
             raise ValueError("completed full-workflow summary hash mismatch")
@@ -1549,9 +1541,7 @@ def _publish_or_verify_finalization_plan(
         run_root / "stages" / "figure" / "figure.svg",
         run_root / "stages" / "figure" / "figure.drawio",
     ]
-    input_sha256 = {
-        _owned_locator(run_root, path): _file_sha256(path) for path in input_paths
-    }
+    input_sha256 = {_owned_locator(run_root, path): _file_sha256(path) for path in input_paths}
     expected = FullFinalizationPlan.create(
         project_id=config.project_id,
         run_id=run_id,
@@ -1581,9 +1571,7 @@ def _publish_or_verify_finalization_plan(
 
 def _paper_source_text(config: FullWorkflowConfig, run_root: Path) -> str:
     communication_paper = run_root / "stages" / "communication" / "paper.publication.md"
-    return f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(
-        encoding="utf-8"
-    )
+    return f"## Title\n{config.paper_title}\n\n" + communication_paper.read_text(encoding="utf-8")
 
 
 def _paper_artifact_hashes(paper_root: Path, files: dict[str, str]) -> dict[str, str]:
@@ -1666,10 +1654,7 @@ def _verify_reusable_paper(
     if not main_path.is_file() or _file_sha256(main_path) != finalization_plan.paper_source_sha256:
         raise ValueError("registered paper source differs from the finalization plan")
     assessment_locator = extra.get("manuscript_assessment")
-    if (
-        not isinstance(assessment_locator, str)
-        or assessment_locator not in paper.files.values()
-    ):
+    if not isinstance(assessment_locator, str) or assessment_locator not in paper.files.values():
         raise ValueError("registered paper has no manuscript assessment locator")
     assessment = ManuscriptAssessment.model_validate_json(
         (paper_root / assessment_locator).read_text(encoding="utf-8")

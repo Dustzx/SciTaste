@@ -587,10 +587,7 @@ def test_full_workflow_recovers_registered_paper_after_summary_interruption(
         outputs / "projects/summary-failure-project/runs/summary-failure-seed-07/"
         "full_run_summary.json"
     ).exists()
-    paper_root = (
-        outputs
-        / "projects/summary-failure-project/papers/summary-failure-reviewed-draft"
-    )
+    paper_root = outputs / "projects/summary-failure-project/papers/summary-failure-reviewed-draft"
     original_manifest = (paper_root / "MANIFEST.json").read_bytes()
 
     monkeypatch.setattr(full_workflow, "_write_json", original_write_json)
@@ -644,8 +641,7 @@ def test_full_workflow_archives_partial_paper_before_finalization_retry(
     )
 
     archived = (
-        outputs
-        / "projects/partial-paper-project/runs/partial-paper-seed-07/"
+        outputs / "projects/partial-paper-project/runs/partial-paper-seed-07/"
         "failed_attempts/finalization/paper/attempt-001/partial-paper-draft/partial.txt"
     )
     assert archived.read_text(encoding="utf-8") == "interrupted"
@@ -723,8 +719,7 @@ def test_completed_run_repairs_missing_snapshot_binding_without_stage_execution(
     assert before.manifest.runs[0].status == "complete"
     native_records = list(
         (
-            outputs
-            / "projects/surface-repair-project/runs/surface-repair-seed-07/"
+            outputs / "projects/surface-repair-project/runs/surface-repair-seed-07/"
             "native_execution/records"
         ).glob("*.json")
     )
@@ -742,8 +737,7 @@ def test_completed_run_repairs_missing_snapshot_binding_without_stage_execution(
     assert len(
         list(
             (
-                outputs
-                / "projects/surface-repair-project/runs/surface-repair-seed-07/"
+                outputs / "projects/surface-repair-project/runs/surface-repair-seed-07/"
                 "native_execution/records"
             ).glob("*.json")
         )
@@ -804,8 +798,7 @@ def test_full_workflow_archives_stale_summary_after_completion_update_failure(
         "failed_attempts/finalization/summary/attempt-001/full_run_summary.json"
     ]
     archived_summary = (
-        outputs
-        / "projects/summary-update-retry-project/runs/summary-update-retry-seed-07/"
+        outputs / "projects/summary-update-retry-project/runs/summary-update-retry-seed-07/"
         "failed_attempts/finalization/summary/attempt-001/full_run_summary.json"
     )
     assert archived_summary.is_file()
