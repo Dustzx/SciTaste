@@ -527,6 +527,23 @@ were absent. ADR-022 therefore remains proposed. It does not alter the
 registered Phase 9 protocol and becomes accepted only after a fresh pilot clears
 the recorded schema, safety, intervention, cost, and review gates.
 
+The integrated v3 boundary extends the single-step executor into a durable
+project-owned loop. Content-addressed run files construct only the three reviewed
+read-only handlers. A project/run lock, exclusive action claim, write-once
+start/result/observation records, decision envelope, and predecessor-bound ledger
+support exact recovery while rejecting symlink escape, content drift, stale
+project or research state, and ambiguous non-replay-safe calls. The semantic
+hotspot bridge may return accepted advice, rejection, bounded re-plan, or human
+escalation, but it still cannot admit evidence or authorize a state transition.
+
+A preregistered 12-task, three-seed internal GLM-5.3-Flash comparison exercises
+that complete bridge and retains provider usage, price, latency, tool, blind
+packet, and runtime-verification evidence below one ignored project run. Its
+typed report fixes the scientific claim to false, even after a blind review is
+returned. The current preliminary routing signal does not accept ADR-022;
+independent review, main-workflow trigger policy, broader tasks, and external
+replication remain distinct gates.
+
 ### ADR-023: Project directories are revisioned ownership boundaries
 
 Status: accepted. Generated research artifacts are owned by
@@ -597,6 +614,14 @@ or mutations, and it is rejected on identity, schema, evidence, byte, token,
 latency, tool-call, or measured-cost failure. Generated deep links name exact
 admitted surfaces retained in a bounded process-local cache and fail stale after
 restart or eviction rather than silently regenerating different content.
+
+Its evaluation layer is also data-only. Fingerprinted reports may compare the
+number of fixed source views represented in one generated composition and record
+environment-bound local latency. A dependency-free Chromium probe observes
+focus, reflow, minimum target dimensions, locale network activity, and runtime
+errors. These records deliberately contain no human-outcome field and cannot be
+interpreted as task success, workload, comprehension, preference, usability, or
+scientific effectiveness; those require the separate counterbalanced study.
 
 ### ADR-025: Full workflow stages extend one project-owned state
 

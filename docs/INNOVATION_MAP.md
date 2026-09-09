@@ -47,9 +47,10 @@ The important boundary is proposal versus authority. A model node does not gain
 silent permission to execute code, spend budget, alter canonical state, or contact
 an undeclared system. Deterministic validation and the Taste controller retain
 those responsibilities. Current implementation supports typed advisory nodes,
-record/replay, project-owned receipts, opt-in live providers, and one leased
-single-step read-only handler boundary; observations remain non-authoritative.
-Broader native code, analysis, and writing tools are still being implemented.
+record/replay, project-owned receipts, opt-in live providers, content-addressed
+first-party bindings, and a durable single-step read-only execution chain across
+restarts; observations remain non-authoritative. Broader native code, analysis,
+and writing tools are still being implemented.
 
 ## Enabling innovations
 
@@ -91,8 +92,8 @@ designs:
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
 | Scientific Taste control | Implemented and offline-tested | Formal independent matched-system effectiveness evidence |
-| Generation as Content workspace | Trusted-shell, evidence-bound surfaces and typed intents implemented | Broader user studies and richer safe presentation repertoire |
-| Tool Intelligence | Plans, schema-pinned repair, replay/live gating, and a leased single-step executor over three typed read-only handlers implemented | Durable evidence admission, automatic workflow triggers, and registered effectiveness evidence |
+| Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
+| Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, and a durable project-owned single-step loop implemented; one registered live study is a narrow preliminary signal | Independent blinded review, automatic main-workflow triggers, durable observation-to-evidence admission, broader tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
 | Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, explicit NVIDIA device profiles, and one content-bound local Qwen3-VL-2B CUDA environment implemented | Portable environment construction, cross-host/cold-cache reproduction, quality evaluation, and broader workloads |
 | Evidence-to-writing binding | Measured projection, hierarchical Writing Taste retrieval/audit, bounded semantic review, audit draft, and clean publication view implemented | Open-ended high-quality scientific prose, citation generation, and independent writing-quality evidence |

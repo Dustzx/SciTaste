@@ -76,9 +76,11 @@ review remain pending, so no effectiveness claim is made from that pilot.
   durable project-owned runtime/CLI for layered profiles, execution, exact
   replay, restart-safe accounting, auditable resume, and verification. The
   Tool Intelligence catalog can plan over three typed read-only capabilities,
-  propose schema-pinned repairs, and issue a short-lived one-step lease to a
-  registered deterministic read-only handler; observations cannot mutate state
-  or admit themselves as evidence;
+  propose schema-pinned repairs, and run one admitted action through a durable,
+  project-owned lease/claim/result/observation chain backed by content-addressed
+  first-party handlers; observations cannot mutate state or admit themselves as
+  evidence. Its registered GLM-5.3-Flash study is a narrow preliminary routing
+  signal and remains non-scientific pending independent blinded review;
 - an opt-in `run full` evidence hook that projects the real immutable research
   state into `interpretation-threat`, binds its input/proposal/recording/ledger
   to the stage checkpoint, grants it no mutation or execution power, and exposes
@@ -87,7 +89,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - a progress-first Generation as Content workspace with a fixed trusted shell,
   evidence-derived quick intents, bounded free questions, closed native layout
   planning, deterministic fallback, proposal-only interactions, and exact
-  ProjectRuntime evidence binding;
+  ProjectRuntime evidence binding, plus fingerprinted structural/latency
+  evaluation and a responsive browser probe explicitly separated from human
+  usability evidence;
 - content-bound native execution profiles that copy admitted datasets into the
   owning project run, mount them read-only, default-deny GPU access, and expose
   only explicitly verified NVIDIA devices with measured GPU-hour accounting;

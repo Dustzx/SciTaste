@@ -1,12 +1,12 @@
 # Parallel Task Board
 
-Board revision: `2026-09-08.15`
+Board revision: `2026-09-09.16`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Open-question intake and workflow launch autonomy | accepted; sync pending | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
-| 2 | Durable project-owned Tool Intelligence loop v3 | delivered; review pending | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | main integration review |
-| 3 | Generation as Content UX evaluation v5 | delivered; review pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | main integration review |
+| Main | Open-question intake and workflow launch autonomy | accepted and synchronized | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
+| 2 | Durable project-owned Tool Intelligence loop v3 | audited and integrated; independent review pending | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | automatic main-workflow trigger policy |
+| 3 | Generation as Content UX evaluation v5 | audited and integrated; human study pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | powered counterbalanced evaluation |
 
 ## Scheduling policy
 
@@ -24,11 +24,12 @@ Board revision: `2026-09-08.15`
 
 ## Current non-overlap
 
-- Window 2's Tool Intelligence v2 single-step leased executor is integrated at
-  `00b006b`; its v3 durable-loop handoff is queued for review. Window 3's
-  English/Simplified-Chinese receiver is integrated at `1b233da` and `1afaede`;
-  its v5 UX-evaluation handoff is also queued. Neither handoff is treated as
-  integrated before main-window review.
+- Window 2's five v3 commits are audited and integrated on main as `12ad322`
+  through `782d3af`. Window 3's four UX-evaluation commits are audited and
+  integrated as `3b6bc97` through `f9adec8`. Focused combined verification
+  passes 456 model-node, Generation-as-Content, and related CLI tests; Ruff and
+  the complete repository suite pass with 938 tests. Node syntax checks and an
+  isolated wheel-content check also pass.
 - Main owns Phase 9 local-system execution, core workflow development,
   integration repairs, project catalog refreshes, common architecture/roadmap/
   changelog edits, full-suite checks, and GitHub synchronization.
@@ -40,13 +41,18 @@ Board revision: `2026-09-08.15`
   A pre-call evidence checkpoint and exact recorded-response recovery prevent a
   known paid response from being called or counted twice; ambiguous calls remain
   blocked rather than retried.
-- The real seven-case GLM-5.3-Flash engineering probe remains intentionally
-  blocked rather than promoted. Priced external measurement, independent review,
-  and a registered effectiveness comparison remain later model-node gates.
+- The earlier seven-case GLM-5.3-Flash engineering probe remains enforcement
+  evidence only. The new registered 36-call comparison supplies priced,
+  project-owned preliminary routing evidence, but independent blinded review,
+  broader tasks, and external replication remain open; no scientific
+  effectiveness claim is promoted.
 - Main has integrated evidence-derived project progress, quick intents, bounded
   free questions, closed `SurfacePlan` composition, deterministic fallback, and
   the generated workspace receiver. Model-assisted plans require finite token,
   byte, latency, and measured-cost admission and never gain execution authority.
+- Main has integrated the read-only structural/latency evaluator, responsive
+  focus repair, and Chromium engineering probe. The recorded proxy and
+  walkthrough evidence is explicitly not a human-usability result.
 - Main now owns explicit native resource profiles: content-bound datasets are
   copied into the project and mounted read-only, while GPU access requires exact
   device admission and bounded accounting. The default remains no dataset/no GPU.

@@ -4,6 +4,18 @@ Assignment token: `W2-tool-intelligence-20260908-r3`
 
 Status: `registered live study complete; independent review pending`
 
+## Main integration record — 2026-09-09
+
+The primary window audited and integrated the five r3/WP6 commits as main
+commits `12ad322`, `1079ef9`, `14496a9`, `3d87f59`, and `782d3af`. It confirmed
+the environment-only credential boundary, project/run/revision containment,
+content-addressed first-party bindings, durable no-repeat recovery, fail-closed
+custom-call ambiguity, bounded advisory authority, and the explicit
+non-scientific claim status. Combined focused verification passed 456 tests;
+Ruff and the complete integrated repository passed 938 tests. Automatic
+full-workflow hotspot triggering and independent blinded domain review remain
+open and were not inferred from integration.
+
 This assignment is authorized by the project owner on 2026-09-08 to continue
 Tool Intelligence through a complete project-level development loop and report
 measured improvements. It supersedes the integrated v2 dispatch. V2 is present

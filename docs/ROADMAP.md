@@ -276,17 +276,28 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   one proposes a repair against a content-bound supported output schema. The
   runtime validates project runs, scopes, arguments, budgets, identities, and
   exact replay while every model receipt remains advisory and non-executable.
-  A deterministic v2 boundary may issue one expiring, single-use lease for the
-  next dependency-free step and invoke one registered in-process read-only
-  handler; its observation cannot mutate state or become evidence automatically.
-  No automatic workflow trigger is included, and ADR-022 remains
-  proposed pending intervention, cost, safety, and external-review evidence.
+  The v3 project boundary loads only content-addressed first-party sources and
+  persists an expiring lease, exclusive claim, handler start/result,
+  observation, decision envelope, and hash-chained ledger. Exact results replay
+  without another handler call; ambiguous custom calls and stale revisions fail
+  closed. No automatic full-workflow trigger or observation-to-evidence admission
+  is included, and ADR-022 remains proposed pending independent review, broader
+  effectiveness evidence, and external replication.
 - A real project-owned GLM-5.3-Flash engineering probe completed all seven
   registered cases. The online response was schema-valid and exactly recorded,
   but deterministic token, latency, missing-cost, and action-allowlist gates
   rejected it. The report remains blocked on external intervention measurement,
   verified pricing/cost, an unsupported-action increase, and independent review;
   this validates enforcement, not effectiveness.
+- A separate preregistered Tool Intelligence study has now exercised the full
+  durable bridge for 36 live GLM-5.3-Flash treatment calls over 12 paired tasks
+  and three seeds. It recorded 35/36 grounded resolutions versus 18/36 for the
+  frozen router, six task-level improvements, zero regressions, six ties,
+  exact McNemar p=0.03125, zero executed scope violations, 97,002 tokens, and
+  USD 0.00727049 under the conservative registered price ledger. This is a
+  narrow internal routing signal: the task set is project-authored, independent
+  blinded domain review is still missing, external validity is unestablished,
+  and the typed report cannot assert scientific effectiveness.
 - A 16-cell Qwen3-VL-4B local pilot remains permanently non-headline. Its four
   conditions now have executable launchers backed by a loopback-only,
   bearer-protected OpenAI-compatible bridge to the exact local Transformers
@@ -603,6 +614,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   cache, and clears stale project state on project switches. Optional structured
   model assistance is double-gated and requires finite byte, token, time, and
   measured-cost admission; invalid or unavailable output falls back safely.
+- A read-only evaluator now fingerprints structural view-composition proxies and
+  local service latency, while a loopback Chromium probe checks focus, reflow,
+  target size, locale stability, and runtime errors at 1440/768/390/320 pixels.
+  The self-hosted result found a 65.83-percent fixed-view structural proxy
+  reduction but substantially slower deterministic generation and two
+  12-component surfaces. These are engineering diagnostics, not observed click,
+  task-time, comprehension, preference, or scientific-quality gains.
 - Pending product integration: deterministic controller endpoints and explicit
   approval policy for turning a pending proposal into an authorized action. The
   local UI deliberately cannot execute proposals.

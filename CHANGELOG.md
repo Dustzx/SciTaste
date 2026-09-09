@@ -7,6 +7,21 @@ semantic versioning.
 
 ### Added
 
+- Tool Intelligence v3 now owns content-addressed Knowledge, Evidence, and
+  registered-run bindings; durable leases, exclusive claims, start/result/
+  observation records, hash-chained ledgers, exact replay, and fail-closed crash
+  recovery; and a bounded semantic-hotspot bridge whose accepted payload remains
+  advice rather than canonical evidence. A preregistered project-owned
+  GLM-5.3-Flash study recorded 35/36 treatment resolutions versus 18/36 for the
+  frozen router and zero scope violations, but the result remains a narrow
+  preliminary internal signal with `scientific_effectiveness_claim=false` until
+  independent blinded review and broader replication are complete.
+- Generation as Content now includes fingerprinted, read-only structural and
+  local-latency evaluation plus a dependency-free Chromium engineering probe.
+  Responsive repairs keep the generated workspace focused and single-column at
+  the tablet breakpoint. Every automated result explicitly excludes human
+  usability and scientific-effectiveness interpretation; the powered,
+  counterbalanced user study remains pending.
 - Writing Taste now operates as a twelve-dimension, five-level scientific
   communication layer rather than a rhetorical-role lookup. Taste Cases and
   retrieval can bind writing level, section, transition, claim strength,

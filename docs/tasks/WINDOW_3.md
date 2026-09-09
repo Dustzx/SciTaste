@@ -6,6 +6,18 @@ Assignment token: `W3-generative-ux-evaluation-20260908-r5`
 
 Status: `complete; delivered for main-window review`
 
+### Main integration record — 2026-09-09
+
+The primary window audited and integrated the r5 implementation and follow-up
+as main commits `3b6bc97`, `5d81cd2`, `ebc6a01`, and `f9adec8`. It retained the
+automated-proxy, local-latency, agent-walkthrough, and human-study boundaries;
+no usability or scientific-effectiveness result was promoted. Combined focused
+verification passed 456 tests, all three JavaScript syntax checks passed, the
+isolated wheel contains the evaluator and receiver assets, and Ruff plus the
+complete integrated repository passed 938 tests. The counterbalanced human
+study and trusted workflow projection for comparable metrics/next gates remain
+future work.
+
 - feature branch: `feat/generative-ui-ux-evaluation-v5`
 - base: `efae9d5`
 - delivery commit: `0393f4d` (`feat(ui): add evidence workspace evaluation harness`)
