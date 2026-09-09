@@ -317,11 +317,7 @@ def build_venue_writing_taste_context(
             )
         )
     overlay = next(
-        (
-            item
-            for item in inspection.profile.archetype_overlays
-            if item.archetype is archetype
-        ),
+        (item for item in inspection.profile.archetype_overlays if item.archetype is archetype),
         None,
     )
     unresolved = []

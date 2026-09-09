@@ -183,9 +183,10 @@ def materialize_venue_manuscript(
     if venue_taste_context is not None:
         if venue_taste_context.venue_id != template.config.venue_id:
             raise ValueError("venue taste context does not match the submission template")
-        if venue_taste_context.manuscript_sha256 != hashlib.sha256(
-            markdown.encode("utf-8")
-        ).hexdigest():
+        if (
+            venue_taste_context.manuscript_sha256
+            != hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+        ):
             raise ValueError("venue taste context does not match the manuscript")
         venue_taste_path = write_venue_writing_taste_context(
             venue_taste_context,

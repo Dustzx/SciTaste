@@ -103,9 +103,7 @@ def test_colocated_and_legacy_iclr_submission_configs_do_not_drift() -> None:
         (_ROOT / "configs/writing/iclr2027_submission_v1.yaml").read_text(encoding="utf-8")
     )
     colocated = yaml.safe_load(
-        (_ROOT / "configs/writing/venues/iclr-2027/submission.yaml").read_text(
-            encoding="utf-8"
-        )
+        (_ROOT / "configs/writing/venues/iclr-2027/submission.yaml").read_text(encoding="utf-8")
     )
 
     assert colocated == legacy

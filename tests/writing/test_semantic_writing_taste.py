@@ -167,9 +167,7 @@ def test_semantic_writing_taste_receives_exact_venue_profile_context() -> None:
             *(f"# {item.section_name}\n\n{item.text}" for item in input_data.sections),
         ]
     )
-    profile = inspect_venue_writing_taste(
-        "configs/writing/venues/iclr-2027/taste.yaml"
-    )
+    profile = inspect_venue_writing_taste("configs/writing/venues/iclr-2027/taste.yaml")
     context = build_venue_writing_taste_context(
         rendered,
         inspection=profile,
