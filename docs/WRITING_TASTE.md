@@ -27,6 +27,24 @@ The order is an authority rule, not a cosmetic preference. Persuasive framing
 cannot override evidence, hide a material limitation, discard counterevidence,
 expand a claim, or turn an engineering fixture into a scientific result.
 
+## Reference-derived candidate layer
+
+The auditable source study in
+[`research/WRITING_TASTE_REFERENCE_STUDY_V1.md`](research/WRITING_TASTE_REFERENCE_STUDY_V1.md)
+covers the complete set of 29 papers recognized by the official ICLR 2023--2026
+Outstanding Paper and Honorable Mention announcements, plus six version- and
+license-audited open-source writing projects. Its machine-readable record pins
+paper locators, acquired PDF hashes, structural observations, evidence-carrier
+counts, candidate principles, counterexamples, and transfer restrictions.
+
+The reference study is currently a candidate layer with a `hold` promotion
+decision. In particular, figure, table, experiment, and ablation counts remain
+descriptive observations rather than quotas. A pure-theory Outstanding Paper
+with no numbered figures or tables is retained as a boundary case. New
+whole-paper rules require accepted non-award and negative controls, independent
+human annotation, and archetype-specific error measurement before they can
+become production Taste Cases or submission gates.
+
 ## Anti-defensive writing as one component
 
 The positive-scope, strength-centered, and no-project-log principles were adapted

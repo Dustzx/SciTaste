@@ -1,0 +1,646 @@
+schema_version: "1.0"
+study_id: writing-taste-reference-study-v1
+cutoff_date: "2026-09-09"
+status: candidate_reference_library
+normative_status: not_yet_promoted_to_writing_taste_rules
+
+selection:
+  positive_population:
+    description: >-
+      Complete set of papers recognized as Outstanding Paper or Honorable
+      Mention by the official ICLR award announcements from 2023 through 2026.
+    count: 29
+    years: [2023, 2024, 2025, 2026]
+    award_pages:
+      - https://blog.iclr.cc/2023/03/21/announcing-the-iclr-2023-outstanding-paper-award-recipients/
+      - https://blog.iclr.cc/2024/05/06/iclr-2024-outstanding-paper-awards/
+      - https://blog.iclr.cc/2025/04/22/announcing-the-outstanding-paper-awards-at-iclr-2025/
+      - https://blog.iclr.cc/2026/04/23/announcing-the-iclr-2026-outstanding-papers/
+  inclusion_rule: >-
+    Include every officially recognized paper in the four award pages; do not
+    select papers according to whether they support a preferred writing rule.
+  negative_population:
+    status: pending
+    requirement: >-
+      Accepted non-award, rejected, and deliberately perturbed papers must be
+      added before calibrating a classifier or claiming predictive validity.
+
+extraction:
+  acquisition_date: "2026-09-09"
+  review_depth: structural_targeted_reading
+  manual_fields:
+    - archetype
+    - evidence_arc
+    - primary_carriers
+    - boundary_note
+  automated_fields:
+    - pdf_pages
+    - unique_figure_labels
+    - unique_table_labels
+    - unique_algorithm_labels
+  automated_method: >-
+    PDFs were converted with pdftotext -layout. Counts are the number of unique
+    Arabic-numbered Figure, Table, and Algorithm labels found in extracted text.
+  counting_limitations:
+    - Counts include appendices and do not measure visual quality.
+    - Unnumbered panels, theorem environments, and extraction failures are omitted.
+    - A count is a descriptive corpus observation, never a minimum quota.
+  copyright_policy: >-
+    Store bibliographic locators, measurements, and original paraphrased
+    observations only. Do not vendor PDFs or reproduce source prose.
+
+papers:
+  - reference_id: 2023-vtm
+    year: 2023
+    recognition: outstanding
+    title: Universal Few-shot Learning of Dense Prediction Tasks with Visual Token Matching
+    paper_url: https://arxiv.org/abs/2303.14969
+    pdf_sha256: 5f6561eeb3b430d0e78648a03e5c1e675eb59eafb7dff33df9529a73d5dd078d
+    archetype: empirical_method
+    counts: {pdf_pages: 26, unique_figure_labels: 18, unique_table_labels: 9, unique_algorithm_labels: 0}
+    evidence_arc: [task_unification, method_contract, broad_task_evaluation, support_set_and_training_ablations]
+    primary_carriers: [architecture_diagram, qualitative_predictions, benchmark_tables, sensitivity_plots]
+    boundary_note: Visual and table density reflects a broad dense-prediction claim, not a universal paper quota.
+
+  - reference_id: 2023-gnn-biconnectivity
+    year: 2023
+    recognition: outstanding
+    title: Rethinking the Expressive Power of GNNs via Graph Biconnectivity
+    paper_url: https://arxiv.org/abs/2301.09505
+    pdf_sha256: 8c72a052af5b6bb72d845cedf8c67e01523e8bf57bf97da7b694d64a7c00bcaf
+    archetype: theory_empirical
+    counts: {pdf_pages: 60, unique_figure_labels: 12, unique_table_labels: 6, unique_algorithm_labels: 5}
+    evidence_arc: [counterexample_to_existing_measure, formal_characterization, new_procedure, synthetic_and_real_validation]
+    primary_carriers: [graph_constructions, theorems, algorithms, controlled_results]
+    boundary_note: The paper closes a theoretical claim with targeted empirical behavior rather than treating benchmarks as the main contribution.
+
+  - reference_id: 2023-dreamfusion
+    year: 2023
+    recognition: outstanding
+    title: "DreamFusion: Text-to-3D using 2D Diffusion"
+    paper_url: https://arxiv.org/abs/2209.14988
+    pdf_sha256: 4473f1693549e74ae651447936a959ce010ee988a943165a8df907c2e2d9fdcb
+    archetype: empirical_method
+    counts: {pdf_pages: 18, unique_figure_labels: 9, unique_table_labels: 3, unique_algorithm_labels: 0}
+    evidence_arc: [capability_gap, score_distillation_method, qualitative_and_quantitative_validation, seed_and_guidance_analysis]
+    primary_carriers: [method_overview, qualitative_grid, baseline_comparison, failure_examples]
+    boundary_note: Qualitative evidence is primary because perceptual 3D generation is central to the claim.
+
+  - reference_id: 2023-emergence-maps
+    year: 2023
+    recognition: outstanding
+    title: Emergence of Maps in the Memories of Blind Navigation Agents
+    paper_url: https://arxiv.org/abs/2301.13261
+    pdf_sha256: e10b8ef367fb9b15f325cb026d8aa5798173f6fcf19e9973e540c4243bd8eef1
+    archetype: empirical_discovery
+    counts: {pdf_pages: 26, unique_figure_labels: 5, unique_table_labels: 1, unique_algorithm_labels: 0}
+    evidence_arc: [behavioral_phenomenon, neuron_and_memory_diagnostics, alternative_explanation_controls, map_decoding]
+    primary_carriers: [behavior_curves, trajectory_visualizations, decoding_results]
+    boundary_note: A finding paper can be organized as successive questions without proposing a new algorithm.
+
+  - reference_id: 2024-diffusion-generalization
+    year: 2024
+    recognition: outstanding
+    title: Generalization in diffusion models arises from geometry-adaptive harmonic representations
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/cbaf319a4712385b5ba8a414808b5713-Abstract-Conference.html
+    pdf_sha256: 9b7c46c74e2010bacf663ba46e9663dc0d6dc445f27e5d4a3197699dc3e09ceb
+    archetype: theory_empirical
+    counts: {pdf_pages: 25, unique_figure_labels: 21, unique_table_labels: 1, unique_algorithm_labels: 2}
+    evidence_arc: [memorization_generalization_transition, inductive_bias_hypothesis, adaptive_basis_mechanism, synthetic_validation]
+    primary_carriers: [transition_curves, spectral_visualizations, analytic_results, controlled_simulations]
+    boundary_note: Dense figures are integral to a mechanism-discovery argument with multiple observable transitions.
+
+  - reference_id: 2024-unisim
+    year: 2024
+    recognition: outstanding
+    title: Learning Interactive Real-World Simulators
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/c4d66eae503694424123b93ac0fbaf17-Abstract-Conference.html
+    pdf_sha256: b4238fc715f53dc3df18c02e989f8ea5ed2ccb33ac973e8bdb3349b8e33421f8
+    archetype: empirical_system
+    counts: {pdf_pages: 25, unique_figure_labels: 14, unique_table_labels: 9, unique_algorithm_labels: 0}
+    evidence_arc: [heterogeneous_data_problem, unified_simulator, interaction_and_application_tests, joint_training_ablation]
+    primary_carriers: [system_overview, simulated_sequences, application_results, failed_variant_examples]
+    boundary_note: The system claim requires both component evidence and downstream-use evidence.
+
+  - reference_id: 2024-never-train-scratch
+    year: 2024
+    recognition: outstanding
+    title: "Never Train from Scratch: Fair Comparison of Long-Sequence Models Requires Data-Driven Priors"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/07cf32cf61224da628157b7ed0ce994a-Abstract-Conference.html
+    pdf_sha256: 0557ad0cdf0ec34ced6c92f867882b9ef26cd0a95cf402baa0590c8f1e96a275
+    archetype: empirical_analysis
+    counts: {pdf_pages: 19, unique_figure_labels: 5, unique_table_labels: 10, unique_algorithm_labels: 0}
+    evidence_arc: [fairness_problem, matched_experimental_setup, successive_comparison_questions, scale_and_pretraining_controls]
+    primary_carriers: [comparison_tables, scaling_curves, compute_accounting]
+    boundary_note: Experimental sections are organized by fairness questions, not chronological runs.
+
+  - reference_id: 2024-protein-walk-jump
+    year: 2024
+    recognition: outstanding
+    title: Protein Discovery with Discrete Walk-Jump Sampling
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/78b6beab44f92adc74ac1fdb212ac3a0-Abstract-Conference.html
+    pdf_sha256: e24557d27e0780cb2100710bd30f571b804891ed217b24e9cf7208294794c1a8
+    archetype: empirical_method
+    counts: {pdf_pages: 20, unique_figure_labels: 5, unique_table_labels: 7, unique_algorithm_labels: 4}
+    evidence_arc: [discrete_generation_problem, sampling_method, in_silico_screening, wet_lab_validation]
+    primary_carriers: [algorithm, benchmark_tables, experimental_pipeline, binding_measurements]
+    boundary_note: Real-world validation closes the application claim more strongly than additional in-silico comparisons alone.
+
+  - reference_id: 2024-vit-registers
+    year: 2024
+    recognition: outstanding
+    title: Vision Transformers Need Registers
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/0b408293619f725fd30162af057e531a-Abstract-Conference.html
+    pdf_sha256: c213bb4d22de53b9e093ab1e12880b49c5ac82b1261b29386bad727dad35c91e
+    archetype: empirical_discovery
+    counts: {pdf_pages: 21, unique_figure_labels: 21, unique_table_labels: 6, unique_algorithm_labels: 0}
+    evidence_arc: [artifact_detection, causal_hypothesis, minimal_intervention, downstream_and_qualitative_validation]
+    primary_carriers: [feature_visualizations, distribution_plots, intervention_comparisons]
+    boundary_note: The paper's clarity comes from the diagnosis-to-intervention chain, not the simplicity of the intervention alone.
+
+  - reference_id: 2024-amortized-inference
+    year: 2024
+    recognition: honorable_mention
+    title: Amortizing intractable inference in large language models
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/bc667ac84ef58f2b5022da97a465cbab-Abstract-Conference.html
+    pdf_sha256: 1a44f4b86d818aaf77ca86eaa87f3fdb51c69f8b63ff92a20ca758bdf549c749
+    archetype: empirical_method
+    counts: {pdf_pages: 31, unique_figure_labels: 3, unique_table_labels: 4, unique_algorithm_labels: 0}
+    evidence_arc: [motivating_sampling_example, posterior_formulation, amortized_inference_method, four_task_evaluation]
+    primary_carriers: [formal_objective, task_tables, distribution_diagnostics]
+    boundary_note: An empirical paper can use relatively few figures when formalization and tables carry the argument.
+
+  - reference_id: 2024-nash-stochastic
+    year: 2024
+    recognition: honorable_mention
+    title: Approximating Nash Equilibria in Normal-Form Games via Stochastic Optimization
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/420678bb4c8251ab30e765bc27c3b047-Abstract-Conference.html
+    pdf_sha256: c748939bb3d939ea88ff2493c77977ba7373486ae24548e62f68e550643f0d7c
+    archetype: theory_empirical
+    counts: {pdf_pages: 48, unique_figure_labels: 6, unique_table_labels: 3, unique_algorithm_labels: 1}
+    evidence_arc: [estimable_loss_gap, formal_properties, convergent_algorithms, targeted_empirical_comparison]
+    primary_carriers: [definitions, theorems, algorithm, convergence_and_performance_plots]
+    boundary_note: Formal guarantees and empirical behavior have different evidentiary duties and should not be collapsed into one score.
+
+  - reference_id: 2024-beyond-wl
+    year: 2024
+    recognition: honorable_mention
+    title: "Beyond Weisfeiler-Lehman: A Quantitative Framework for GNN Expressiveness"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/ec702dd6e83b2113a43614685a7e2ac6-Abstract-Conference.html
+    pdf_sha256: ed5881f2a9b85fdef712acc578bf7d94a4ef8b9664ce2f2f9080c1829880dff7
+    archetype: theory_empirical
+    counts: {pdf_pages: 73, unique_figure_labels: 9, unique_table_labels: 9, unique_algorithm_labels: 0}
+    evidence_arc: [limitation_of_qualitative_measure, quantitative_definition, unified_characterization, theory_aligned_experiments]
+    primary_carriers: [formal_results, comparison_tables, synthetic_and_real_tests]
+    boundary_note: The empirical section verifies correspondence with the proposed measure rather than substituting for the theory.
+
+  - reference_id: 2024-flow-matching-geometries
+    year: 2024
+    recognition: honorable_mention
+    title: Flow Matching on General Geometries
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/d1f9936d3be6997ffffab692977eebe6-Abstract-Conference.html
+    pdf_sha256: 21b5c8ae5102524f6bc566ab7ddb17b5ef707607fa386212e7788d6c870d707d
+    archetype: theory_empirical
+    counts: {pdf_pages: 24, unique_figure_labels: 13, unique_table_labels: 6, unique_algorithm_labels: 3}
+    evidence_arc: [geometric_generation_gap, closed_form_method, scalable_implementation, cross_geometry_validation]
+    primary_carriers: [geometric_diagrams, derivations, algorithms, benchmark_and_sample_figures]
+    boundary_note: Diverse geometries are part of the claim scope, so breadth evidence is scientifically necessary.
+
+  - reference_id: 2024-one-video
+    year: 2024
+    recognition: honorable_mention
+    title: Is ImageNet worth 1 video? Learning strong image encoders from 1 long unlabelled video
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/874cfcfdb9decc30f38edee5d0264153-Abstract-Conference.html
+    pdf_sha256: 67bb17e9ce979eac0a519741122aba0bfdfb8d30df99b189a478a10f078a170b
+    archetype: empirical_method
+    counts: {pdf_pages: 22, unique_figure_labels: 6, unique_table_labels: 11, unique_algorithm_labels: 0}
+    evidence_arc: [data_efficiency_question, dataset_characterization, tracking_based_method, ablation_and_downstream_comparison]
+    primary_carriers: [dataset_visuals, ablation_tables, downstream_tables]
+    boundary_note: A memorable question is backed by careful dataset and method controls, not title rhetoric alone.
+
+  - reference_id: 2024-meta-continual
+    year: 2024
+    recognition: honorable_mention
+    title: "Meta Continual Learning Revisited: Implicitly Enhancing Online Hessian Approximation via Variance Reduction"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/0b6df1a973b82b3cf7fadca6c387ae5a-Abstract-Conference.html
+    pdf_sha256: 8588c93c5c2292596a5aaf3c35d6c63fd70c34866359c4905fe6862e5d3247a9
+    archetype: theory_empirical
+    counts: {pdf_pages: 30, unique_figure_labels: 7, unique_table_labels: 19, unique_algorithm_labels: 1}
+    evidence_arc: [unified_hessian_view, meta_learning_reinterpretation, variance_reduced_method, multi_setting_validation]
+    primary_carriers: [derivations, algorithm, comparison_and_ablation_tables]
+    boundary_note: Table density follows the need to compare continual-learning settings and metrics.
+
+  - reference_id: 2024-kv-compression
+    year: 2024
+    recognition: honorable_mention
+    title: "Model Tells You What to Discard: Adaptive KV Cache Compression for LLMs"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/639a9a172c044fbb64175b5fad42e9a5-Abstract-Conference.html
+    pdf_sha256: d922cfcb98cd636361ac28cb47b17552aff8cb63d74190e0b2b9859932972861
+    archetype: empirical_system
+    counts: {pdf_pages: 14, unique_figure_labels: 6, unique_table_labels: 5, unique_algorithm_labels: 2}
+    evidence_arc: [attention_structure_diagnosis, adaptive_policy, quality_memory_tradeoff, latency_and_profiling_cost]
+    primary_carriers: [attention_profiles, tradeoff_curves, systems_tables]
+    boundary_note: Efficiency claims require quality, resource, and overhead evidence together.
+
+  - reference_id: 2024-contamination
+    year: 2024
+    recognition: honorable_mention
+    title: Proving Test Set Contamination in Black-Box Language Models
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/46e624c244cff669223d488defd4e835-Abstract-Conference.html
+    pdf_sha256: 6e9fe1d9529a7f12c984f805cc7df6fc3ce98f76c43583d8732263c74ee6869c
+    archetype: theory_empirical
+    counts: {pdf_pages: 19, unique_figure_labels: 4, unique_table_labels: 5, unique_algorithm_labels: 1}
+    evidence_arc: [auditability_problem, statistical_test, power_and_false_positive_analysis, public_model_audit]
+    primary_carriers: [test_definition, guarantees, controlled_contamination_curves, audit_table]
+    boundary_note: A proof-oriented empirical paper can be visually sparse while remaining evidentially complete.
+
+  - reference_id: 2024-causal-world-models
+    year: 2024
+    recognition: honorable_mention
+    title: Robust agents learn causal world models
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/44a2b9f7bf9aec3f1fa333ad875b0ee0-Abstract-Conference.html
+    pdf_sha256: 143d458cbee2f4f5d04d7380f6741e8105965d1ee94834e1ddb3bd231722a0e7
+    archetype: pure_theory
+    counts: {pdf_pages: 32, unique_figure_labels: 7, unique_table_labels: 0, unique_algorithm_labels: 2}
+    evidence_arc: [necessity_question, formal_task_and_shift_definitions, necessity_theorems, interpretation_and_assumption_limits]
+    primary_carriers: [causal_graphs, definitions, theorems, proof_constructions]
+    boundary_note: Figures explain formal objects; benchmark and ablation requirements do not apply.
+
+  - reference_id: 2024-abrupt-learning
+    year: 2024
+    recognition: honorable_mention
+    title: The mechanistic basis of data dependence and abrupt learning in an in-context classification task
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/540a3bf4863672cdaebfed69fa2ce335-Abstract-Conference.html
+    pdf_sha256: 07507bf352741cd852140de624be626714e2eae09cf4b288d24d2df1f4917eac
+    archetype: empirical_discovery
+    counts: {pdf_pages: 14, unique_figure_labels: 7, unique_table_labels: 0, unique_algorithm_labels: 0}
+    evidence_arc: [controlled_task, abrupt_transition_observation, progress_measure_diagnostics, minimal_mechanistic_model]
+    primary_carriers: [learning_curves, intervention_diagrams, mechanistic_model_fit]
+    boundary_note: Targeted experiments distinguish competing causal sequences instead of maximizing benchmark breadth.
+
+  - reference_id: 2024-data-selection
+    year: 2024
+    recognition: honorable_mention
+    title: Towards a statistical theory of data selection under weak supervision
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2024/hash/b7870bd43b2d133a1ed95582ae5d82a4-Abstract-Conference.html
+    pdf_sha256: 8d5e2f2542e113c16b8aa170b462ab93b88d9c3091794183eb761a12d25f0078
+    archetype: theory_empirical
+    counts: {pdf_pages: 39, unique_figure_labels: 9, unique_table_labels: 0, unique_algorithm_labels: 0}
+    evidence_arc: [selection_problem, asymptotic_characterization, counterintuitive_predictions, synthetic_and_real_validation]
+    primary_carriers: [theorems, phase_and_error_curves, repeated_subsampling_results]
+    boundary_note: Curves carry comparisons that could be obscured by large result tables.
+
+  - reference_id: 2025-safety-alignment
+    year: 2025
+    recognition: outstanding
+    title: Safety Alignment Should Be Made More Than Just a Few Tokens Deep
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/88be023075a5a3ff3dc3b5d26623fa22-Abstract-Conference.html
+    pdf_sha256: aa33eef3883547e13d7cf0b3fea52704212162a7b417c78cb18cffd85f5e58b3
+    archetype: empirical_discovery
+    counts: {pdf_pages: 31, unique_figure_labels: 5, unique_table_labels: 13, unique_algorithm_labels: 0}
+    evidence_arc: [shallow_alignment_diagnosis, vulnerability_connection, deep_alignment_counterfactual, mitigation_and_attack_evaluation]
+    primary_carriers: [behavior_tables, attack_results, mitigation_utility_tables, ablations]
+    boundary_note: Material safety failures remain visible even when the main result is framed positively.
+
+  - reference_id: 2025-learning-dynamics
+    year: 2025
+    recognition: outstanding
+    title: Learning Dynamics of LLM Finetuning
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/afe1aa79e5eea7955f553c61a307273e-Abstract-Conference.html
+    pdf_sha256: c511947cb4657de7cdc89e3802bc476ab68e7e0536b3243829954b7fccd0f1e2
+    archetype: theory_empirical
+    counts: {pdf_pages: 41, unique_figure_labels: 23, unique_table_labels: 2, unique_algorithm_labels: 0}
+    evidence_arc: [pedagogical_phenomenon, formal_sft_dpo_decomposition, empirical_verification, mechanism_inspired_intervention]
+    primary_carriers: [teaching_figure, dynamical_derivations, trajectories, intervention_results]
+    boundary_note: A simple opening example reduces cognitive load before the general analysis.
+
+  - reference_id: 2025-alphaedit
+    year: 2025
+    recognition: outstanding
+    title: "AlphaEdit: Null-Space Constrained Knowledge Editing for Language Models"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/29c8c615b3187ee995029284702d3f43-Abstract-Conference.html
+    pdf_sha256: 20a32617138b497c7814c3a6a5bc76906e134e6377a5f65b8a778cd8283b0e25
+    archetype: theory_empirical
+    counts: {pdf_pages: 31, unique_figure_labels: 13, unique_table_labels: 7, unique_algorithm_labels: 0}
+    evidence_arc: [editing_interference_failure, null_space_constraint, multi_model_comparison, limitations_and_case_analysis]
+    primary_carriers: [geometric_explanation, benchmark_tables, retention_curves, cases]
+    boundary_note: The method claim is paired with both edit success and preservation evidence.
+
+  - reference_id: 2025-data-shapley
+    year: 2025
+    recognition: honorable_mention
+    title: Data Shapley in One Training Run
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/20fdaf67581e6d7157376d1ed584040a-Abstract-Conference.html
+    pdf_sha256: 096f4a18f6858f805d6c5c6da4843656d17ce7953bd3a4536e0a7605ab674100
+    archetype: theory_empirical
+    counts: {pdf_pages: 38, unique_figure_labels: 15, unique_table_labels: 5, unique_algorithm_labels: 0}
+    evidence_arc: [valuation_cost_problem, one_run_estimator, runtime_and_fidelity_tests, use_case_validation]
+    primary_carriers: [estimator_derivation, runtime_curves, fidelity_plots, downstream_cases]
+    boundary_note: Efficiency is supported separately from approximation fidelity and usefulness.
+
+  - reference_id: 2025-faster-cascades
+    year: 2025
+    recognition: honorable_mention
+    title: Faster Cascades via Speculative Decoding
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/6f43166f50f26e8d8f3edc5545b0749f-Abstract-Conference.html
+    pdf_sha256: 306aa026fb02978795688a0e50a03ee599201b0249ce914db75499ec67139307
+    archetype: theory_empirical
+    counts: {pdf_pages: 39, unique_figure_labels: 12, unique_table_labels: 5, unique_algorithm_labels: 6}
+    evidence_arc: [cascade_tradeoff, optimal_deferral_analysis, speculative_hybrid, cost_quality_and_speed_evaluation]
+    primary_carriers: [tradeoff_diagram, theorem, algorithms, Pareto_curves]
+    boundary_note: Multi-objective performance is clearer as a frontier than as one aggregate score.
+
+  - reference_id: 2025-sam2
+    year: 2025
+    recognition: honorable_mention
+    title: "SAM 2: Segment Anything in Images and Videos"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2025/hash/45c1f6a8cbf2da59ebf2c802b4f742cd-Abstract-Conference.html
+    pdf_sha256: 6c07c6ecf2f592e3f7f9833409b8ec63232e2193b4ab4edb7db575805f27c028
+    archetype: empirical_system
+    counts: {pdf_pages: 44, unique_figure_labels: 18, unique_table_labels: 20, unique_algorithm_labels: 0}
+    evidence_arc: [image_video_task_unification, model_data_engine_codesign, zero_shot_evaluation, scale_and_component_ablations]
+    primary_carriers: [codesign_overview, dataset_statistics, benchmark_tables, ablation_tables, qualitative_sequences]
+    boundary_note: A platform-scale claim creates obligations across model, data, interaction, scale, and failure modes.
+
+  - reference_id: 2026-transformers-succinct
+    year: 2026
+    recognition: outstanding
+    title: Transformers are Inherently Succinct
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/5f7804e8855efe5554025217abc49315-Abstract-Conference.html
+    pdf_sha256: 368b8ceffd698d2a05ae60bc88746c385b5422294e794d2e9a81bff548de6f3a
+    archetype: pure_theory
+    counts: {pdf_pages: 21, unique_figure_labels: 0, unique_table_labels: 0, unique_algorithm_labels: 0}
+    evidence_arc: [alternative_expressivity_measure, formal_definitions, separation_results, verification_consequence]
+    primary_carriers: [definitions, theorems, lower_and_upper_bounds, proofs]
+    boundary_note: This award paper is the decisive counterexample to universal figure, table, experiment, or ablation requirements.
+
+  - reference_id: 2026-multiturn-lost
+    year: 2026
+    recognition: outstanding
+    title: LLMs Get Lost In Multi-Turn Conversation
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/59f6421e64707225fdf5b28840679a07-Abstract-Conference.html
+    pdf_sha256: d2b5f711528c08ecf44e4112b2b490de3c2ad84148a904ecb6377e913a2cee42
+    archetype: empirical_discovery
+    counts: {pdf_pages: 41, unique_figure_labels: 10, unique_table_labels: 10, unique_algorithm_labels: 0}
+    evidence_arc: [deployment_evaluation_gap, paired_sharding_protocol, broad_factorial_evaluation, aptitude_reliability_decomposition]
+    primary_carriers: [protocol_diagram, paired_results, decomposition_plots, quality_controls]
+    boundary_note: The study introduces a diagnostic decomposition after establishing a robust paired effect.
+
+  - reference_id: 2026-polar-express
+    year: 2026
+    recognition: honorable_mention
+    title: "The Polar Express: Optimal Matrix Sign Methods and their Application to the Muon Algorithm"
+    paper_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/df88b275bef31ac96c85f0c4013734fc-Abstract-Conference.html
+    pdf_sha256: ecf4837ee6846a8dbb3435cbd679a8f219ddfdfa20c409ec92234ca416509e75
+    archetype: theory_empirical
+    counts: {pdf_pages: 38, unique_figure_labels: 18, unique_table_labels: 2, unique_algorithm_labels: 4}
+    evidence_arc: [application_specific_numerical_requirements, minimax_approximation, finite_precision_algorithm, convergence_and_training_tests]
+    primary_carriers: [approximation_plots, proofs, algorithms, convergence_and_loss_curves]
+    boundary_note: Modest application gains do not erase the independently supported approximation-theory contribution.
+
+open_source_projects:
+  - reference_id: oss-anti-defensive-writing
+    repository: https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill
+    commit: b32067b3055d356e007c6986775fee069da3891a
+    license: MIT
+    provenance_quality: explicit_principles_without_paper_corpus
+    use_policy: principle_level_adaptation_with_attribution
+    useful_scope: [positive_scope, non_chronological_story, experiment_argumentative_duty]
+    rejected_scope: [hide_material_weaknesses, omit_valid_counterevidence, never_report_losses]
+
+  - reference_id: oss-embodied-ai-paper-writer
+    repository: https://github.com/OpenGHz/embodied-ai-paper-writer
+    commit: 6d30f1bbd6d6ed9d2c2814b052bbfbb3a2ff87c9
+    license: MIT
+    provenance_quality: published_63_item_roster_with_mixed_selection_labels
+    use_policy: method_comparison_and_domain_specific_candidates
+    useful_scope: [corpus_roster, lazy_reference_routing, figure_roles, experiment_narration]
+    rejected_scope: [unvalidated_numeric_style_thresholds, transfer_of_robotics_norms_to_all_ml]
+
+  - reference_id: oss-academic-paper-writing
+    repository: https://github.com/ldwww-divesss/academic-paper-writing-skill
+    commit: 0dcd6856573ae96a1e80342d5df1224752bb0d28
+    license: MIT
+    provenance_quality: explicit_four_guide_source_map_and_tension_resolution
+    use_policy: methodology_and_principle_level_adaptation_with_attribution
+    useful_scope: [source_map, preference_hierarchy, write_first_evidence_planning, whole_paper_audit]
+    rejected_scope: [source_specific_house_style_as_universal_rule]
+
+  - reference_id: oss-paper-writing-guide
+    repository: https://github.com/write-with-ai/paper-writing-guide
+    commit: d60cd06fc330a4b7f715f17b321e5535fc4bf6bc
+    license: no_license_file_observed
+    provenance_quality: concise_guidance_without_explicit_corpus_or_source_map
+    use_policy: citation_and_method_comparison_only
+    useful_scope: [single_center, question_organized_experiments, cross_section_consistency]
+    rejected_scope: [copying_text, direct_rule_import, fixed_caption_length]
+
+  - reference_id: oss-nature-writing-skill
+    repository: https://github.com/SyntaxSmith/nature-writing-skill
+    commit: c1a8716047b6304d922b9528a18421203e3e7acc
+    license: no_license_file_observed
+    provenance_quality: published_44_item_open_access_corpus_with_venue_specific_focus
+    use_policy: citation_and_method_comparison_only
+    useful_scope: [corpus_to_playbook_pipeline, source_extract_index, task_routed_references]
+    rejected_scope: [copying_text, nature_voice_transfer_to_iclr, direct_rule_import]
+
+  - reference_id: oss-releasing-research-code
+    repository: https://github.com/paperswithcode/releasing-research-code
+    commit: a5b2c85490435108e306d38c64a0d2a558f110e6
+    license: MIT
+    provenance_quality: checklist_backed_by_more_than_200_ml_repositories
+    use_policy: artifact_completeness_reference
+    useful_scope: [training_and_evaluation_entrypoints, result_reproduction, paper_repository_consistency]
+    rejected_scope: [using_repository_popularity_as_paper_quality]
+
+candidate_principles:
+  - principle_id: WT-R01
+    name: one_scientific_center
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      Give the paper one central answer; secondary contributions must support,
+      extend, operationalize, or bound that answer.
+    diagnostic_questions:
+      - Can a reviewer state the main answer in one sentence?
+      - Does every claimed contribution have an explicit relation to that answer?
+    supporting_references: [2023-emergence-maps, 2024-never-train-scratch, 2024-vit-registers, 2025-safety-alignment, 2026-multiturn-lost]
+    triangulating_projects: [oss-anti-defensive-writing, oss-paper-writing-guide]
+
+  - principle_id: WT-R02
+    name: promise_delivery_contract
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      The title, abstract, and introduction promise a question and answer that
+      the results, proofs, and conclusion visibly deliver at the same scope.
+    diagnostic_questions:
+      - Is each headline promise linked to a primary evidence carrier?
+      - Does the conclusion answer the introduced question without expanding scope?
+    supporting_references: [2023-vtm, 2023-gnn-biconnectivity, 2024-contamination, 2025-data-shapley, 2026-transformers-succinct]
+    triangulating_projects: [oss-academic-paper-writing, oss-paper-writing-guide]
+
+  - principle_id: WT-R03
+    name: question_driven_evidence_progression
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      Organize empirical results by the scientific questions they answer, not
+      by run chronology, implementation milestones, or artifact inventory.
+    diagnostic_questions:
+      - Does each result subsection state the uncertainty it resolves?
+      - Would changing the experiment order change the argument order?
+    supporting_references: [2023-emergence-maps, 2024-never-train-scratch, 2024-abrupt-learning, 2025-learning-dynamics, 2026-multiturn-lost]
+    triangulating_projects: [oss-anti-defensive-writing, oss-paper-writing-guide]
+
+  - principle_id: WT-R04
+    name: claim_has_primary_carrier
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      Every important claim needs a named primary carrier: theorem, controlled
+      comparison, table, curve, qualitative panel, audit, or real-world test.
+    diagnostic_questions:
+      - What artifact would a reviewer inspect first to verify the claim?
+      - Is prose interpreting that artifact rather than substituting for it?
+    supporting_references: [2023-dreamfusion, 2024-protein-walk-jump, 2024-contamination, 2025-alphaedit, 2026-polar-express]
+    triangulating_projects: [oss-academic-paper-writing, oss-releasing-research-code]
+
+  - principle_id: WT-R05
+    name: type_conditioned_visual_completeness
+    evidence_level: strong_descriptive_with_counterexample
+    statement: >-
+      Require the visual or formal carriers demanded by the paper's claims; do
+      not impose a universal count of figures, tables, experiments, or ablations.
+    diagnostic_questions:
+      - Which relationships or effects are materially harder to verify in prose?
+      - Is the carrier appropriate for empirical, systems, discovery, or theory work?
+    supporting_references: [2024-amortized-inference, 2024-vit-registers, 2025-sam2, 2026-multiturn-lost]
+    boundary_references: [2024-causal-world-models, 2026-transformers-succinct]
+    triangulating_projects: [oss-academic-paper-writing, oss-embodied-ai-paper-writer]
+
+  - principle_id: WT-R06
+    name: diagnosis_mechanism_intervention_ladder
+    evidence_level: recurrent_discovery_pattern
+    statement: >-
+      When making a mechanistic claim, establish the phenomenon, discriminate
+      explanations, and test an intervention or prediction derived from the mechanism.
+    diagnostic_questions:
+      - Is the mechanism distinguishable from a descriptive correlation?
+      - Does an intervention or novel prediction close the causal story?
+    supporting_references: [2023-emergence-maps, 2024-diffusion-generalization, 2024-vit-registers, 2024-abrupt-learning, 2025-learning-dynamics, 2025-safety-alignment]
+    triangulating_projects: []
+
+  - principle_id: WT-R07
+    name: fair_contest
+    evidence_level: recurrent_empirical_pattern
+    statement: >-
+      A comparative claim must state and match the resources that could explain
+      the result, including data, compute, model scale, tuning, and evaluation access.
+    diagnostic_questions:
+      - Could an unmatched resource explain the claimed advantage?
+      - Is the baseline strong under the same information and budget?
+    supporting_references: [2023-vtm, 2024-never-train-scratch, 2024-one-video, 2025-alphaedit, 2025-sam2]
+    triangulating_projects: [oss-academic-paper-writing]
+
+  - principle_id: WT-R08
+    name: stress_the_claim
+    evidence_level: recurrent_empirical_pattern
+    statement: >-
+      Robustness, ablation, sensitivity, scale, and seed analyses are selected
+      according to the failure modes of the central claim, not added as a checklist pile.
+    diagnostic_questions:
+      - What plausible alternative explanation does each analysis eliminate?
+      - Which stress test would most likely reverse the conclusion?
+    supporting_references: [2023-dreamfusion, 2023-vtm, 2024-unisim, 2024-kv-compression, 2025-safety-alignment, 2025-sam2, 2026-polar-express]
+    triangulating_projects: [oss-embodied-ai-paper-writer]
+
+  - principle_id: WT-R09
+    name: close_the_world_interface
+    evidence_level: recurrent_system_and_application_pattern
+    statement: >-
+      If a claim crosses from an algorithm into a system or application, include
+      evidence at that interface rather than relying only on proxy benchmarks.
+    diagnostic_questions:
+      - Where does the proposed component touch users, hardware, data, or downstream tasks?
+      - Is that interface directly evaluated?
+    supporting_references: [2024-unisim, 2024-protein-walk-jump, 2024-kv-compression, 2025-sam2, 2026-polar-express]
+    triangulating_projects: [oss-releasing-research-code]
+
+  - principle_id: WT-R10
+    name: every_visual_has_argumentative_duty
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      Each figure or table should make one scientific relation, comparison, or
+      boundary easier to verify; decoration and prose duplication do not count.
+    diagnostic_questions:
+      - Can the visual's intended takeaway be stated in one sentence?
+      - Does the surrounding text explain why the pattern matters?
+    supporting_references: [2023-dreamfusion, 2024-diffusion-generalization, 2024-never-train-scratch, 2025-faster-cascades, 2025-learning-dynamics]
+    triangulating_projects: [oss-anti-defensive-writing, oss-embodied-ai-paper-writer, oss-academic-paper-writing]
+
+  - principle_id: WT-R11
+    name: main_text_evidence_first
+    evidence_level: recurrent_layout_pattern
+    statement: >-
+      Put the evidence necessary to believe the headline claim in the main text;
+      use appendices for derivation depth, additional settings, and reproducibility detail.
+    diagnostic_questions:
+      - Can the main claim be assessed without opening the appendix?
+      - Does the appendix deepen rather than rescue the central argument?
+    supporting_references: [2023-gnn-biconnectivity, 2024-contamination, 2024-flow-matching-geometries, 2025-alphaedit, 2026-multiturn-lost]
+    triangulating_projects: [oss-embodied-ai-paper-writer, oss-academic-paper-writing]
+
+  - principle_id: WT-R12
+    name: boundaries_visible_once_and_precisely
+    evidence_level: recurrent_integrity_pattern
+    statement: >-
+      Keep limitations that alter validity, scope, safety, or reproducibility,
+      but state each precisely where it changes interpretation instead of repeatedly self-negating.
+    diagnostic_questions:
+      - Would omitting the limitation mislead a reviewer about validity or scope?
+      - Is the same caveat repeated where it no longer helps interpretation?
+    supporting_references: [2023-dreamfusion, 2024-contamination, 2024-causal-world-models, 2025-safety-alignment, 2026-multiturn-lost]
+    triangulating_projects: [oss-anti-defensive-writing, oss-academic-paper-writing]
+
+  - principle_id: WT-R13
+    name: theory_uses_a_proof_chain
+    evidence_level: recurrent_theory_pattern
+    statement: >-
+      A theory paper should expose definitions, intuition, main result, proof
+      dependencies, consequences, and assumptions as a navigable chain.
+    diagnostic_questions:
+      - Can the reader see why every formal component is needed before the proof uses it?
+      - Are consequences and assumption boundaries separated from the theorem itself?
+    supporting_references: [2023-gnn-biconnectivity, 2024-nash-stochastic, 2024-causal-world-models, 2024-beyond-wl, 2026-transformers-succinct, 2026-polar-express]
+    triangulating_projects: [oss-paper-writing-guide]
+
+  - principle_id: WT-R14
+    name: reproducibility_is_part_of_the_claim
+    evidence_level: recurrent_empirical_and_artifact_pattern
+    statement: >-
+      The paper and repository should expose the data, procedure, settings,
+      compute, and evaluation path needed to recreate the principal result.
+    diagnostic_questions:
+      - Is there a traceable path from headline result to executable evaluation?
+      - Are resource and preprocessing choices reported where they affect comparison?
+    supporting_references: [2024-never-train-scratch, 2024-protein-walk-jump, 2024-contamination, 2025-data-shapley, 2025-sam2]
+    triangulating_projects: [oss-releasing-research-code, oss-academic-paper-writing]
+
+  - principle_id: WT-R15
+    name: entry_points_agree
+    evidence_level: recurrent_cross_archetype
+    statement: >-
+      Title, abstract, introduction, first explanatory carrier, headline result,
+      and conclusion should expose the same central question, answer, and scope.
+    diagnostic_questions:
+      - Does skimming only the entry points yield one coherent paper?
+      - Do terminology and claim strength remain stable across those surfaces?
+    supporting_references: [2023-vtm, 2024-one-video, 2024-vit-registers, 2025-learning-dynamics, 2025-sam2, 2026-multiturn-lost]
+    triangulating_projects: [oss-academic-paper-writing, oss-paper-writing-guide]
+
+promotion_gate:
+  current_decision: hold
+  requirements:
+    - Add an accepted non-award comparison sample.
+    - Add rejected or deliberately perturbed negative examples with known defects.
+    - Obtain independent human annotations for whole-paper coherence and evidence completeness.
+    - Measure false positives separately by paper archetype.
+    - Convert only validated principles into typed, provenance-bearing Taste Cases.
+    - Keep descriptive counts out of submission eligibility gates.
