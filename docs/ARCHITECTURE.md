@@ -1168,8 +1168,9 @@ returned a structured proposal and exact usage, but the provider's public pricin
 evidence did not yet cover that model. The runtime consequently rejected the
 response for unknown cost before source materialization; independent inspection
 also found invalid Python. This negative result is retained rather than repaired
-or executed. Priced provider acceptance, automatic source repair, dataset/GPU
-profiles, and scientific-effectiveness comparison remain separate gates.
+or executed because that historical probe did not configure the later repair
+contract. Priced provider acceptance, live repair quality, runtime-failure repair,
+and scientific-effectiveness comparison remain separate gates.
 
 ### ADR-039: Open research questions enter through a deterministic launch admission
 
@@ -1239,3 +1240,38 @@ Admission rejects manuscript drift, unknown references, incomplete section
 orders, missing limitations, and attempts to demote a material limitation. The
 node has no file mutation, evidence admission, tool, action, or execution field.
 Evidence gaps continue through the Evidence Loop; prose alone cannot close them.
+
+### ADR-041: Native source repair is one conditional proposal, not an iterative executor
+
+Status: accepted for deterministic static-admission failures.
+
+Silently rewriting rejected generated code would destroy negative evidence, while
+an unrestricted retry loop could spend an unbounded budget and gradually escape
+the reviewed task. SciTaste therefore permits one optional `native-code-repair`
+invocation only when ADR-037 static admission has already produced a content-bound
+rejection. An accepted first proposal creates no repair checkpoint, ledger entry,
+provider call, or repair artifact.
+
+Before the repair call, `REPAIR_INPUT.json` binds the exact generation record,
+rejected source and admission fingerprints, typed generation brief, unchanged
+policy, and deterministic violation set. The repair node can return only source,
+rationale, assumptions, and a bounded change summary. It has no fields for an
+experiment, metric, resource limit, import allowlist, path, tool, action, state
+transition, execution, or retry count. Configuration schema fixes
+`max_attempts=1`; provider/profile/policy/cost/live gates remain independent and
+credential-free.
+
+The replacement is projected into a separate `repair/result/` namespace with
+its own model provenance. Original `generated.py` and its rejected verdict are
+immutable. The identical controller-owned proposal metadata and admission policy
+are applied again. Only an accepted `repaired.py` is copied byte-for-byte to the
+ADR-019 Bubblewrap input. A second rejection is terminal and creates no admitted
+path. Resume reuses a complete repair ledger/result and never performs another
+completion; incomplete paid attempts follow the existing recorded-response and
+unknown-cost rules.
+
+This closes bounded recovery from deterministic syntax/import/AST/metric-marker
+failures. It does not diagnose a sandbox/runtime failure, install a dependency,
+change an environment, or establish that a model improves scientific code.
+Priced live acceptance and comparative repair-quality evaluation remain required
+before an effectiveness claim.

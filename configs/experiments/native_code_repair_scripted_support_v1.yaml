@@ -1,0 +1,98 @@
+schema_version: "1.0"
+repair_id: conflict-pivot-code-repair-v1
+generation_id: conflict-pivot-codegen-v1
+rejected_proposal_id: conflict-pivot-model-proposal-v1
+repaired_proposal_id: conflict-pivot-model-repair-v1
+trigger_reason: >-
+  The first model-produced source was rejected by deterministic static admission;
+  request one source-only replacement under the unchanged experiment and policy.
+max_attempts: 1
+profile_set: native_code_repair_profiles_scripted_v1.yaml
+profile_id: scitaste-native-code-repair-scripted
+policy:
+  policy_id: scitaste-native-code-repair-scripted-v1
+  enabled: true
+  allowed_node_names:
+    - native-code-repair
+  expected_backend: scitaste-scripted
+  expected_model: bounded-python-repair-v1
+  allowed_tool_names: []
+  allowed_action_types: []
+  max_request_bytes: 160000
+  max_input_tokens: 12000
+  max_output_tokens: 8192
+  max_total_tokens: 20192
+  max_api_cost_usd: 1.0
+  max_latency_ms: 180000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.0
+backend:
+  kind: scripted
+  provider: scitaste-scripted
+  model: bounded-python-repair-v1
+  reply:
+    output_payload:
+      schema_version: "1.0"
+      source_code: |
+        from __future__ import annotations
+
+        import json
+
+        measurements = [
+            {
+                "replicate_id": "seed-7",
+                "metrics": {
+                    "baseline_correct_pivot_rate": 0.7,
+                    "conflict_aware_correct_pivot_rate": 0.8,
+                    "correct_pivot_delta": 0.1,
+                },
+            },
+            {
+                "replicate_id": "seed-19",
+                "metrics": {
+                    "baseline_correct_pivot_rate": 0.8,
+                    "conflict_aware_correct_pivot_rate": 0.9,
+                    "correct_pivot_delta": 0.1,
+                },
+            },
+            {
+                "replicate_id": "seed-31",
+                "metrics": {
+                    "baseline_correct_pivot_rate": 0.6,
+                    "conflict_aware_correct_pivot_rate": 0.7,
+                    "correct_pivot_delta": 0.1,
+                },
+            },
+        ]
+
+        print(
+            "SCITASTE_MEASUREMENTS_JSON="
+            + json.dumps(
+                {"schema_version": "1.0", "measurements": measurements},
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
+      rationale: >-
+        Remove the forbidden operating-system import while preserving the registered
+        deterministic measurement contract and all three expected metrics.
+      assumptions:
+        - The registered synthetic replicates remain the intended engineering fixture.
+      change_summary:
+        - Removed the forbidden import and all operating-system access.
+        - Preserved the registered metric envelope and deterministic replicates.
+      repair_proposal_only: true
+      advisory_only: true
+      executable: false
+    usage:
+      input_tokens: 800
+      output_tokens: 950
+      cost_usd: 0.0
+    latency_ms: 5.0
+    tool_calls: []
+live_enabled: false
+conditional_on_static_rejection: true
+repair_proposal_only: true
+deterministic_readmission_required: true
+runtime_isolation_required: true
+effectiveness_claim: false

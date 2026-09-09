@@ -30,7 +30,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
   hashes, real local Knowledge Library retrieval in both Full Workflow and
   composable Discovery, plus a proposal-only registered or model-produced CPU
   experiment that requires deterministic admission before Bubblewrap execution
-  and independently derived replicate metrics;
+  and independently derived replicate metrics; a rejected generated source may
+  receive one separately ledgered source-only repair, which must pass the same
+  admission policy and is never called when the first proposal is accepted;
 - runnable nonlinear demo and tests;
 - fixed-candidate intrinsic taste calibration with accuracy, confidence, Brier,
   and calibration metrics;

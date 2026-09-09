@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Full Workflow can now request exactly one proposal-only native source repair
+  after a deterministic static-admission rejection. The repair input binds the
+  immutable failed generation and violation set; the replacement cannot change
+  experiment identity, metrics, policy, paths, budgets, or execution authority,
+  and must pass the identical admission policy before Bubblewrap execution.
+  Accepted initial source causes zero repair calls, resume never repeats a
+  completed repair, and a second rejection is terminal.
+
 - Writing Taste now has content-bound, per-venue and per-archetype guidance
   distinct from mechanical submission compliance. The ICLR 2027 bundle
   co-locates its exact template contract, provenance record, five official

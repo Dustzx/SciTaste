@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: scitaste-native-code-repair-scripted
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: native_code_repair_profile_scripted_v1.yaml
+    sha256: 7031e0d7f8b84ea1326e74e5f4eef27a0606718afe09aa3ba3f03bdc24847bd3
+    profile_sha256: f805ede095bdd944c5cfea340ab0d84b8b999d769a715819eca48e7b65435ed3

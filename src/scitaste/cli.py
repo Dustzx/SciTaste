@@ -62,7 +62,11 @@ from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_c
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
-from scitaste.executor.native_code_generation import load_native_code_generation_config
+from scitaste.executor.native_code_generation import (
+    load_native_code_generation_config,
+    load_native_code_repair_config,
+    validate_native_code_repair_binding,
+)
 from scitaste.executor.native_profile import (
     inspect_native_execution_profile,
     preflight_native_resources,
@@ -1583,6 +1587,14 @@ def _handle_full(args: argparse.Namespace) -> int:
             if config.native_code_generation_config is not None
             else None
         )
+        code_repair = (
+            load_native_code_repair_config(config.native_code_repair_config)
+            if config.native_code_repair_config is not None
+            else None
+        )
+        if code_repair is not None:
+            assert code_generation is not None
+            validate_native_code_repair_binding(code_repair, code_generation)
         code_inspection = (
             inspect_native_code_proposal(config.native_code_proposal_config)
             if config.native_code_proposal_config is not None
@@ -1737,6 +1749,33 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "deterministic_admission_required": True,
                                 "runtime_isolation_required": True,
                                 "would_materialize_on_run": True,
+                            }
+                        ),
+                        "code_repair": (
+                            None
+                            if code_repair is None
+                            else {
+                                "repair_id": code_repair.config.repair_id,
+                                "generation_id": code_repair.config.generation_id,
+                                "repaired_proposal_id": (code_repair.config.repaired_proposal_id),
+                                "provider": code_repair.profile.provider,
+                                "model": code_repair.profile.model,
+                                "backend_mode": code_repair.config.backend.mode.value,
+                                "max_output_tokens": (
+                                    code_repair.profile.generation.max_output_tokens
+                                ),
+                                "max_attempts": code_repair.config.max_attempts,
+                                "conditional_on_static_rejection": True,
+                                "live_configured": code_repair.config.live_enabled,
+                                "caller_authorized": args.allow_live_model_nodes,
+                                "would_contact_provider": (
+                                    code_repair.config.live_enabled and args.allow_live_model_nodes
+                                ),
+                                "network_access": code_repair.config.live_enabled,
+                                "repair_proposal_only": True,
+                                "deterministic_readmission_required": True,
+                                "runtime_isolation_required": True,
+                                "would_materialize_only_if_rejected": True,
                             }
                         ),
                     },

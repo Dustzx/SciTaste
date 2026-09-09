@@ -34,10 +34,16 @@ from scitaste.executor.native_code import (
 from scitaste.executor.native_code_generation import (
     GeneratedNativeCodeProposal,
     LoadedNativeCodeGeneration,
+    LoadedNativeCodeRepair,
+    RepairedNativeCodeProposal,
     generate_native_code_proposal,
     load_native_code_generation_config,
     load_native_code_generation_record,
+    load_native_code_repair_config,
+    load_native_code_repair_record,
     native_code_generation_node_types,
+    repair_native_code_proposal,
+    validate_native_code_repair_binding,
 )
 from scitaste.executor.native_profile import (
     NativeExecutionProfileInspection,
@@ -127,6 +133,7 @@ class FullWorkflowConfig(BaseModel):
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
     native_code_generation_config: Path | None = None
+    native_code_repair_config: Path | None = None
     model_node_advisory: Path | None = None
     tool_intelligence_advisory: Path | None = None
     paper_id: str
@@ -178,6 +185,11 @@ class FullWorkflowConfig(BaseModel):
             self.execution_backend != "scitaste-native"
         ):
             raise ValueError("native code generation requires the scitaste-native executor")
+        if (
+            self.native_code_repair_config is not None
+            and self.native_code_generation_config is None
+        ):
+            raise ValueError("native code repair requires native code generation")
         if self.native_execution_profile is not None and (
             self.execution_backend != "scitaste-native" or not configured
         ):
@@ -196,6 +208,7 @@ _STAGE_ORDER: tuple[StageName, ...] = (
     "figure",
 )
 _GENERATION_RECOVERY_CONTRACT = "1.0"
+_REPAIR_RECOVERY_CONTRACT = "1.0"
 _STAGE_PURPOSES: dict[StageName, str] = {
     "discovery": "Form and probe hypotheses, then select a bounded idea.",
     "evidence": "Test a registered claim and route the interpreted result.",
@@ -327,6 +340,14 @@ class FullWorkflow:
             if config.native_code_generation_config is not None
             else None
         )
+        code_repair = (
+            load_native_code_repair_config(config.native_code_repair_config)
+            if config.native_code_repair_config is not None
+            else None
+        )
+        if code_repair is not None:
+            assert code_generation is not None
+            validate_native_code_repair_binding(code_repair, code_generation)
         model_node_extensions = (
             native_code_generation_node_types() if code_generation is not None else None
         )
@@ -348,6 +369,12 @@ class FullWorkflow:
             and not allow_live_model_nodes
         ):
             raise ValueError("live native source generation requires --allow-live-model-nodes")
+        if (
+            code_repair is not None
+            and code_repair.config.live_enabled
+            and not allow_live_model_nodes
+        ):
+            raise ValueError("live native source repair requires --allow-live-model-nodes")
         code_inspection = (
             inspect_native_code_proposal(config.native_code_proposal_config)
             if config.native_code_proposal_config is not None
@@ -365,6 +392,7 @@ class FullWorkflow:
             scenario_catalog=scenario_catalog,
             code_inspection=code_inspection,
             code_generation=code_generation,
+            code_repair=code_repair,
             execution_profile=execution_profile,
         )
         intake_inspection = inspect_full_workflow_intake(
@@ -459,12 +487,34 @@ class FullWorkflow:
             )
             if generated_code is not None:
                 code_inspection = generated_code.inspection
+            repaired_code = (
+                repair_native_code_proposal(
+                    code_repair,
+                    generated=generated_code,
+                    project_runtime=runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    run_root=run_root,
+                    expected_project_revision=snapshot.revision,
+                    workflow_config_sha256=workflow_config_sha256,
+                    seed=self.seed,
+                    resume=resume,
+                    allow_live=allow_live_model_nodes,
+                )
+                if code_repair is not None
+                and generated_code is not None
+                and generated_code.inspection.admission.decision == "rejected"
+                else None
+            )
+            if repaired_code is not None:
+                code_inspection = repaired_code.inspection
             executor = self.executor or _build_full_workflow_executor(
                 config,
                 run_root=run_root,
                 seed=self.seed,
                 code_inspection=code_inspection,
                 generated_code=generated_code,
+                repaired_code=repaired_code,
                 execution_profile=execution_profile,
                 evidence_scenario_path=(
                     prepared_intake.scenario_paths["evidence"]
@@ -508,6 +558,14 @@ class FullWorkflow:
                 if config.native_code_generation_config is not None
                 else None
             )
+            reloaded_repair = (
+                load_native_code_repair_config(config.native_code_repair_config)
+                if config.native_code_repair_config is not None
+                else None
+            )
+            if reloaded_repair is not None:
+                assert reloaded_generation is not None
+                validate_native_code_repair_binding(reloaded_repair, reloaded_generation)
             if reloaded_generation is not None:
                 generated_code = generate_native_code_proposal(
                     reloaded_generation,
@@ -521,6 +579,24 @@ class FullWorkflow:
                     resume=True,
                     allow_live=allow_live_model_nodes,
                 )
+                repaired_code = (
+                    repair_native_code_proposal(
+                        reloaded_repair,
+                        generated=generated_code,
+                        project_runtime=runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        run_root=run_root,
+                        expected_project_revision=snapshot.revision,
+                        workflow_config_sha256=workflow_config_sha256,
+                        seed=self.seed,
+                        resume=True,
+                        allow_live=allow_live_model_nodes,
+                    )
+                    if reloaded_repair is not None
+                    and generated_code.inspection.admission.decision == "rejected"
+                    else None
+                )
             if (
                 _workflow_config_sha256(
                     config,
@@ -529,6 +605,7 @@ class FullWorkflow:
                     scenario_catalog=reloaded_scenario_catalog,
                     code_inspection=(None if generated_code is not None else code_inspection),
                     code_generation=reloaded_generation,
+                    code_repair=reloaded_repair,
                     execution_profile=(
                         inspect_native_execution_profile(config.native_execution_profile)
                         if config.native_execution_profile is not None
@@ -629,7 +706,11 @@ class FullWorkflow:
                 "archived_attempts": archived_attempts,
                 "scope": config.evidence_scope,
                 "execution_backend": config.execution_backend,
-                "native_execution": _native_execution_summary(executor, run_root=run_root),
+                "native_execution": _native_execution_summary(
+                    executor,
+                    run_root=run_root,
+                    code_repair=code_repair,
+                ),
                 "effectiveness_claim": False,
                 "research_intake": (
                     prepared_intake.summary() if prepared_intake is not None else None
@@ -1412,6 +1493,7 @@ def _build_full_workflow_executor(
     seed: int,
     code_inspection: NativeCodeInspection | None = None,
     generated_code: GeneratedNativeCodeProposal | None = None,
+    repaired_code: RepairedNativeCodeProposal | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
     evidence_scenario_path: Path | None = None,
 ) -> ResearchExecutor:
@@ -1423,6 +1505,7 @@ def _build_full_workflow_executor(
         run_root=run_root,
         code_inspection=code_inspection,
         generated_code=generated_code,
+        repaired_code=repaired_code,
     )
     if experiment is not None:
         evidence_experiment_id = load_evidence_scenario(
@@ -1533,11 +1616,16 @@ def _prepare_native_experiment(
     run_root: Path,
     code_inspection: NativeCodeInspection | None = None,
     generated_code: GeneratedNativeCodeProposal | None = None,
+    repaired_code: RepairedNativeCodeProposal | None = None,
 ) -> NativeExperimentDefinition | None:
     code_proposal_path = (
-        generated_code.proposal_config_path
-        if generated_code is not None
-        else config.native_code_proposal_config
+        repaired_code.proposal_config_path
+        if repaired_code is not None
+        else (
+            generated_code.proposal_config_path
+            if generated_code is not None
+            else config.native_code_proposal_config
+        )
     )
     if code_proposal_path is not None:
         return prepare_native_code_experiment(
@@ -1598,6 +1686,7 @@ def _native_execution_summary(
     executor: ResearchExecutor,
     *,
     run_root: Path,
+    code_repair: LoadedNativeCodeRepair | None = None,
 ) -> dict[str, object] | None:
     if not isinstance(executor, SciTasteNativeExecutor) or executor.store is None:
         return None
@@ -1624,6 +1713,8 @@ def _native_execution_summary(
     code_context = load_native_code_context_record(run_root)
     code_generation = load_native_code_generation_record(run_root)
     code_generation_result = code_generation.typed_result if code_generation is not None else None
+    code_repair_record = load_native_code_repair_record(run_root)
+    code_repair_result = code_repair_record.typed_result if code_repair_record is not None else None
     payload["code_generation"] = (
         None
         if code_generation is None
@@ -1654,6 +1745,66 @@ def _native_execution_summary(
             "runtime_isolation_required": True,
         }
     )
+    payload["code_repair"] = (
+        None
+        if code_repair is None
+        else {
+            "repair_id": code_repair.config.repair_id,
+            "configured": True,
+            "triggered": code_repair_record is not None,
+            "status": (
+                "not-triggered"
+                if code_repair_record is None
+                else (
+                    "accepted-by-readmission"
+                    if code_repair_record.admission_decision == "accepted"
+                    else "rejected-by-readmission"
+                )
+            ),
+            "initial_admission_decision": (
+                code_generation.admission_decision if code_generation is not None else None
+            ),
+            "readmission_decision": (
+                code_repair_record.admission_decision if code_repair_record is not None else None
+            ),
+            "provider": (
+                code_repair_result.response.backend if code_repair_result is not None else None
+            ),
+            "model": (
+                code_repair_result.response.model if code_repair_result is not None else None
+            ),
+            "input_tokens": (
+                code_repair_record.receipt.telemetry.input_tokens
+                if code_repair_record is not None
+                else 0
+            ),
+            "output_tokens": (
+                code_repair_record.receipt.telemetry.output_tokens
+                if code_repair_record is not None
+                else 0
+            ),
+            "cost_usd": (
+                code_repair_record.receipt.telemetry.cost_usd
+                if code_repair_record is not None
+                else 0.0
+            ),
+            "recovered_without_provider": (
+                code_repair_record.receipt.recovered_without_provider
+                if code_repair_record is not None
+                else False
+            ),
+            "record_sha256": (
+                code_repair_record.record_sha256 if code_repair_record is not None else None
+            ),
+            "attempt_number": (
+                code_repair_record.attempt_number if code_repair_record is not None else 0
+            ),
+            "max_attempts": code_repair.config.max_attempts,
+            "repair_proposal_only": True,
+            "deterministic_readmission_required": True,
+            "runtime_isolation_required": True,
+        }
+    )
     return payload
 
 
@@ -1672,6 +1823,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "native_experiment_config",
         "native_code_proposal_config",
         "native_code_generation_config",
+        "native_code_repair_config",
         "model_node_advisory",
         "tool_intelligence_advisory",
     ):
@@ -2298,6 +2450,7 @@ def _workflow_config_sha256(
     scenario_catalog: LoadedScenarioBundleCatalog | None = None,
     code_inspection: NativeCodeInspection | None = None,
     code_generation: LoadedNativeCodeGeneration | None = None,
+    code_repair: LoadedNativeCodeRepair | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
@@ -2376,6 +2529,17 @@ def _workflow_config_sha256(
         payload["native_code_generation_config"] = {
             "binding_sha256": binding.fingerprint,
             "generation_recovery_contract": _GENERATION_RECOVERY_CONTRACT,
+        }
+    if config.native_code_repair_config is None:
+        payload.pop("native_code_repair_config", None)
+    else:
+        repair_binding = code_repair or load_native_code_repair_config(
+            config.native_code_repair_config
+        )
+        payload["native_code_repair_config"] = {
+            "binding_sha256": repair_binding.fingerprint,
+            "repair_recovery_contract": _REPAIR_RECOVERY_CONTRACT,
+            "max_attempts": repair_binding.config.max_attempts,
         }
     if config.model_node_advisory is None:
         # Preserve hashes registered by pre-advisory v1.0 offline runs.

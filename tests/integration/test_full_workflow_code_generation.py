@@ -14,11 +14,23 @@ from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.project import ProjectRuntime
 
 CONFIG = Path("configs/workflows/full_offline_code_generation_v1.yaml")
+REPAIR_CONFIG = Path("configs/workflows/full_offline_code_repair_v1.yaml")
 LIVE_CONFIG = Path("configs/workflows/full_zhipu_glm53_flash_code_generation_probe_v1.yaml")
 
 
 def _config(project_id: str):
     config = load_full_workflow_config(CONFIG)
+    payload = config.model_dump(mode="python")
+    payload.update(
+        project_id=project_id,
+        paper_id=f"{project_id}-paper",
+        paper_directory=f"{project_id}-integration-fixture",
+    )
+    return type(config).model_validate(payload)
+
+
+def _repair_config(project_id: str):
+    config = load_full_workflow_config(REPAIR_CONFIG)
     payload = config.model_dump(mode="python")
     payload.update(
         project_id=project_id,
@@ -115,6 +127,109 @@ def test_full_code_generation_dry_run_is_explicit_and_mutation_free(
     assert generation["deterministic_admission_required"] is True
     assert payload["native_execution"]["experiment_configured"] is True
     assert payload["native_execution"]["isolation_required"] is True
+    assert not outputs.exists()
+
+
+def test_full_workflow_repairs_rejected_code_once_before_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    outputs = tmp_path / "outputs"
+    config = _repair_config("full-repaired-code-project")
+
+    result = FullWorkflow(seed=7).run(
+        config,
+        outputs_root=outputs,
+        run_id="repaired-code-seed-07",
+    )
+
+    run_root = outputs / "projects/full-repaired-code-project/runs/repaired-code-seed-07"
+    repair = result["native_execution"]["code_repair"]
+    assert repair["triggered"] is True
+    assert repair["status"] == "accepted-by-readmission"
+    assert repair["initial_admission_decision"] == "rejected"
+    assert repair["readmission_decision"] == "accepted"
+    assert repair["attempt_number"] == repair["max_attempts"] == 1
+    assert repair["input_tokens"] == 800
+    assert repair["output_tokens"] == 950
+    generated = run_root / "native_execution/context/code_generation/result/generated.py"
+    repaired = run_root / "native_execution/context/code_generation/repair/result/repaired.py"
+    admitted = run_root / "native_execution/context/code/admitted/experiment.py"
+    assert "import os" in generated.read_text(encoding="utf-8")
+    assert repaired.read_bytes() == admitted.read_bytes()
+    assert repaired.read_bytes() != generated.read_bytes()
+    assert result["stages"]["evidence"]["measured_metrics"]["correct_pivot_delta"] == pytest.approx(
+        0.1
+    )
+    verification = verify_native_code_generation_ledger(
+        ProjectRuntime(outputs),
+        project_id=config.project_id,
+        run_id="repaired-code-seed-07",
+    )
+    assert verification.totals.entry_count == 2
+    assert verification.totals.total_tokens == 2250
+    assert verification.totals.cost_usd == 0
+
+
+def test_configured_repair_is_not_called_when_first_proposal_is_accepted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    config = _config("repair-not-needed-project")
+    payload = config.model_dump(mode="python")
+    payload["native_code_repair_config"] = Path(
+        "configs/experiments/native_code_repair_scripted_support_v1.yaml"
+    ).resolve()
+    config = type(config).model_validate(payload)
+
+    result = FullWorkflow(seed=7).run(
+        config,
+        outputs_root=tmp_path / "outputs",
+        run_id="repair-not-needed-seed-07",
+    )
+
+    repair = result["native_execution"]["code_repair"]
+    assert repair["triggered"] is False
+    assert repair["status"] == "not-triggered"
+    assert repair["attempt_number"] == 0
+    verification = verify_native_code_generation_ledger(
+        ProjectRuntime(tmp_path / "outputs"),
+        project_id=config.project_id,
+        run_id="repair-not-needed-seed-07",
+    )
+    assert verification.totals.entry_count == 1
+
+
+def test_code_repair_dry_run_exposes_hard_attempt_cap(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    outputs = tmp_path / "outputs"
+    exit_code = main(
+        [
+            "run",
+            "full",
+            "--config",
+            str(REPAIR_CONFIG),
+            "--project-id",
+            "code-repair-dry-run",
+            "--output",
+            str(outputs),
+            "--dry-run",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    repair = payload["native_execution"]["code_repair"]
+
+    assert exit_code == 0
+    assert repair["backend_mode"] == "scripted"
+    assert repair["max_attempts"] == 1
+    assert repair["conditional_on_static_rejection"] is True
+    assert repair["would_contact_provider"] is False
+    assert repair["repair_proposal_only"] is True
+    assert repair["deterministic_readmission_required"] is True
     assert not outputs.exists()
 
 

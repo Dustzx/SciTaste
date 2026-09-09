@@ -8,6 +8,7 @@ trusted generation brief
   -> durable model-node request/raw-response ledger
   -> proposal-only generated.py + proposal.json
   -> deterministic AST/import/metric admission
+  -> [on rejection only] one proposal-only repair + identical readmission
   -> byte-identical admitted/experiment.py
   -> no-network Bubblewrap execution
 ```
@@ -49,6 +50,22 @@ per-request safety ceiling, not a global limit on SciTaste development or paper
 generation. The static source limit remains independently fixed at 65,536
 UTF-8 bytes.
 
+The conditional repair acceptance deliberately starts from a rejected source,
+performs exactly one scripted repair call, repeats the unchanged deterministic
+admission policy, and executes only the readmitted replacement:
+
+```bash
+scitaste run full \
+  --config configs/workflows/full_offline_code_repair_v1.yaml \
+  --run-id repaired-code-seed-07 \
+  --seed 7 \
+  --output /tmp/scitaste-code-repair-acceptance
+```
+
+`max_attempts` is schema-fixed to `1`. This is a hard orchestration boundary,
+not a tuning default. When the initial proposal is accepted, no repair input,
+ledger entry, model call, or repair artifact is created.
+
 ## Evidence layout
 
 One project run owns all generation and execution evidence:
@@ -66,6 +83,12 @@ runs/<run-id>/
       generated.py
       proposal.json
       GENERATION.json
+    repair/                       # only after static rejection
+      REPAIR_INPUT.json
+      result/
+        repaired.py
+        proposal.json
+        REPAIR.json
   native_execution/context/code/
     proposed.py
     POLICY.json
@@ -87,6 +110,14 @@ non-executable. `CODE.json` belongs to the independent deterministic admission
 stage. The sandbox reads only `code/admitted/experiment.py`; the native execution
 record retains that exact input locator and hash.
 
+`REPAIR_INPUT.json` binds the rejected generation record, rejected source and
+admission fingerprints, typed generation brief, and static violations before
+the repair call. `REPAIR.json` binds the second ledger entry to `repaired.py`,
+its model provenance, and the second independent admission verdict. The
+original `generated.py`, proposal, and rejection remain immutable. Repair can
+replace only source, rationale, assumptions, and a bounded change summary; it
+cannot replace trusted identity, metrics, policy, paths, budgets, or permission.
+
 ## Resume rules
 
 - A complete generation record is revalidated against the full model ledger and
@@ -98,8 +129,14 @@ record retains that exact input locator and hash.
   recovery backend without contacting the provider again.
 - A call that may have started but has no complete recording is unknown-cost and
   is not retried automatically.
-- Rejected model output stays in the ledger. Rejected static admission additionally
-  retains its proposed source and verdict but creates no admitted path.
+- Rejected model output stays in the ledger. Rejected static admission retains
+  its proposed source and verdict. If repair is configured, that exact rejection
+  is the only trigger for one separately ledgered replacement.
+- A complete repair record is revalidated and reused without invoking its
+  backend. Interruption after its ledger commit follows the same recorded-response
+  recovery boundary as generation.
+- A second rejected static verdict is terminal: no admitted path is created and
+  no additional repair call is permitted.
 - Any input, ledger, generated source, proposal, policy, or admission drift fails
   closed.
 
@@ -135,10 +172,12 @@ provider responses, and recordings remain outside Git.
   one ledger through a shared extension registry. Every entry remains type-
   checked; an earlier advisory receipt binds its exact historical prefix while
   final verification covers later cumulative entries.
-- There is no automatic code repair loop. A malformed provider proposal remains
-  negative evidence rather than being silently modified.
+- One conditional source-repair attempt is integrated for deterministic static
+  admission failures. It preserves the original negative evidence, exposes no
+  execution authority, and cannot iterate beyond one attempt.
 - Dataset mounts, GPU execution, package installation, open-web access, shell
   commands, and provider tools are not exposed.
 - Scripted acceptance establishes orchestration and safety properties, not model
   quality or scientific effectiveness.
-- Priced live acceptance and matched external evaluation remain pending.
+- Runtime-failure diagnosis/repair, priced live repair acceptance, and matched
+  external evaluation remain pending.

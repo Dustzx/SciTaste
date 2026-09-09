@@ -231,15 +231,24 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   response was retained but rejected before materialization for unavailable
   price evidence; its candidate also failed syntax inspection, so no online code
   was executed.
+- A deterministic static rejection can now trigger exactly one separately
+  configured `native-code-repair` proposal. The repair input binds the original
+  generation evidence and violation set; experiment identity, metrics, policy,
+  paths, budgets, and execution authority remain controller-owned. The original
+  negative evidence stays immutable, the replacement faces identical readmission,
+  accepted initial source causes zero repair calls, and a second rejection is
+  terminal. Offline end-to-end execution and no-second-call recovery pass;
+  runtime-failure repair and priced live repair quality remain later gates.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a
   clean reader-facing projection containing the measured mean, replicates,
   dispersion, and explicit synthetic-offline limitation.
 - Native open-ended capability parity remains pending for open-web retrieval,
-  iterative provider-backed code repair, portable environment construction, generative
-  analysis, writing, and figures. Existing scenario-bound receipts are integration
-  evidence, not a claim that these open-ended handlers are complete.
+  runtime-failure diagnosis/repair, portable environment construction, and
+  generative analysis, writing, and figures. Existing scenario-bound receipts
+  are integration evidence, not a claim that these open-ended handlers are
+  complete.
 - Phase 9 evidence will distinguish component ablation on a common execution
   base from independent-system comparison of SciTaste Native against pinned
   external systems. Neither the current AutoResearchClaw-based cells nor native
@@ -671,7 +680,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and Tool Intelligence executes only a leased registered read-only handler.
 - This is engineering/product completeness for the bounded native path, not a
   claim of autonomous open-domain research quality. Open-web retrieval,
-  arbitrary environment construction, iterative code repair, broader model-
+  arbitrary environment construction, runtime-failure code repair, broader model-
   generated analysis/writing/figures, all 48 real matched-budget cells, and
   independent expert review remain Phase 9 capability/effectiveness gates.
 
