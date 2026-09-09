@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from scitaste.generative_ui.audit import (
     ArtifactInspectedAudit,
     AuditIntegrityError,
+    ProposalControlledAudit,
     ProposalIssuedAudit,
     SurfaceAuditLog,
 )
@@ -30,6 +31,8 @@ from scitaste.generative_ui.inspection import (
 from scitaste.generative_ui.intent import QuickIntentCatalog
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
+    ProposalControllerDecision,
+    ProposalControllerRequest,
     ProposalReceipt,
     StaleSurfaceError,
     SurfaceEvent,
@@ -240,6 +243,24 @@ class GenerativeUIApplication:
                 raise AuditIntegrityError("generated event did not produce a proposal audit record")
             return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
 
+    def decide_generated_proposal(
+        self,
+        project_id: str,
+        generation_id: str,
+        request: ProposalControllerRequest | dict[str, object],
+    ) -> ProposalControllerDecision:
+        """Authorize or reject one audited generated-surface proposal."""
+
+        parsed = (
+            request
+            if isinstance(request, ProposalControllerRequest)
+            else ProposalControllerRequest.model_validate(request)
+        )
+        parsed = ProposalControllerRequest.model_validate(parsed.model_dump(mode="json"))
+        with self._request_lock:
+            _, surface = self._current_generated(project_id, generation_id)
+            return self._append_controller_decision(self._open_audit(surface), parsed)
+
     def inspect_generated_artifact(
         self,
         project_id: str,
@@ -299,6 +320,24 @@ class GenerativeUIApplication:
                 raise AuditIntegrityError("accepted event did not produce a proposal audit record")
             return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
 
+    def decide_proposal(
+        self,
+        project_id: str,
+        request: ProposalControllerRequest | dict[str, object],
+    ) -> ProposalControllerDecision:
+        """Authorize or reject one audited fixed-overview proposal."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, ProposalControllerRequest)
+            else ProposalControllerRequest.model_validate(request)
+        )
+        parsed = ProposalControllerRequest.model_validate(parsed.model_dump(mode="json"))
+        with self._request_lock:
+            surface = self._factory.build_project_overview(project_id)
+            return self._append_controller_decision(self._open_audit(surface), parsed)
+
     def submit_workspace_event(
         self,
         query: ProjectWorkspaceQuery | dict[str, object],
@@ -330,6 +369,43 @@ class GenerativeUIApplication:
             if not isinstance(record.payload, ProposalIssuedAudit):
                 raise AuditIntegrityError("accepted event did not produce a proposal audit record")
             return ProposalReceipt.model_validate(record.payload.receipt.model_dump(mode="json"))
+
+    def decide_workspace_proposal(
+        self,
+        query: ProjectWorkspaceQuery | dict[str, object],
+        request: ProposalControllerRequest | dict[str, object],
+    ) -> ProposalControllerDecision:
+        """Authorize or reject one audited workspace proposal."""
+
+        parsed_query = validate_workspace_query(query)
+        if isinstance(parsed_query, ProjectListQuery):
+            raise TypeError("project-list view cannot control proposals")
+        parsed = (
+            request
+            if isinstance(request, ProposalControllerRequest)
+            else ProposalControllerRequest.model_validate(request)
+        )
+        parsed = ProposalControllerRequest.model_validate(parsed.model_dump(mode="json"))
+        with self._request_lock:
+            surface = self._workspace_factory.build_surface(parsed_query)
+            return self._append_controller_decision(self._open_audit(surface), parsed)
+
+    @staticmethod
+    def _append_controller_decision(
+        audit: SurfaceAuditLog,
+        request: ProposalControllerRequest,
+    ) -> ProposalControllerDecision:
+        try:
+            record = audit.append_controller_decision(request)
+        except AuditIntegrityError as exc:
+            if isinstance(exc.__cause__, DuplicateEventError):
+                raise exc.__cause__ from exc
+            raise
+        if not isinstance(record.payload, ProposalControlledAudit):
+            raise AuditIntegrityError("controller request produced another audit payload")
+        return ProposalControllerDecision.model_validate(
+            record.payload.decision.model_dump(mode="json")
+        )
 
     def inspect_workspace_artifact(
         self,

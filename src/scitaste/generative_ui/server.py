@@ -291,6 +291,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             receipt = self.server.application.submit_event(project_id, payload)
             self._send_model(HTTPStatus.ACCEPTED, receipt)
             return
+        if resource == "decisions":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            decision = self.server.application.decide_proposal(
+                project_id,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.OK, decision)
+            return
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
 
     def _dispatch_generative_api(self, method: str, path: str) -> None:
@@ -337,6 +346,16 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 )
                 self._send_model(HTTPStatus.ACCEPTED, receipt)
                 return
+            if operation == "decisions":
+                if method != "POST":
+                    raise _method_not_allowed("POST")
+                decision = self.server.application.decide_generated_proposal(
+                    project_id,
+                    generation_id,
+                    self._read_json_object(),
+                )
+                self._send_model(HTTPStatus.OK, decision)
+                return
             if operation == "inspections":
                 if method != "POST":
                     raise _method_not_allowed("POST")
@@ -364,7 +383,9 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         project_id = parts[4]
         raw_view = parts[5]
         tail = parts[6:]
-        operation = tail[-1] if tail and tail[-1] in {"events", "inspections"} else None
+        operation = (
+            tail[-1] if tail and tail[-1] in {"events", "inspections", "decisions"} else None
+        )
         if operation is not None:
             tail = tail[:-1]
         query = _workspace_query(project_id, raw_view, tail)
@@ -376,6 +397,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 self._read_json_object(),
             )
             self._send_model(HTTPStatus.ACCEPTED, receipt)
+            return
+        if operation == "decisions":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            decision = self.server.application.decide_workspace_proposal(
+                query,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.OK, decision)
             return
         if operation == "inspections":
             if method != "POST":

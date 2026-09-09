@@ -27,6 +27,9 @@ from scitaste.generative_ui.inspection import (
 )
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
+    ProposalController,
+    ProposalControllerDecision,
+    ProposalControllerRequest,
     ProposalReceipt,
     SurfaceEvent,
     SurfaceInteractionError,
@@ -120,8 +123,35 @@ class ArtifactInspectedAudit(BaseModel):
         return self
 
 
+class ProposalControlledAudit(BaseModel):
+    """One deterministic decision over a previously audited proposal."""
+
+    model_config = _MODEL_CONFIG
+
+    kind: Literal["proposal_controlled"] = "proposal_controlled"
+    request: ProposalControllerRequest
+    decision: ProposalControllerDecision
+
+    @model_validator(mode="after")
+    def request_matches_decision(self) -> ProposalControlledAudit:
+        expected = {
+            "controller_request_id": self.request.controller_request_id,
+            "controller_request_fingerprint": self.request.fingerprint,
+            "proposal_event_id": self.request.proposal_event_id,
+            "requested_decision": self.request.requested_decision,
+        }
+        actual = {key: getattr(self.decision, key) for key in expected}
+        if expected != actual:
+            raise ValueError("controller decision does not match its request")
+        return self
+
+
 AuditPayload = Annotated[
-    SurfaceOpenedAudit | SurfaceRevisedAudit | ProposalIssuedAudit | ArtifactInspectedAudit,
+    SurfaceOpenedAudit
+    | SurfaceRevisedAudit
+    | ProposalIssuedAudit
+    | ArtifactInspectedAudit
+    | ProposalControlledAudit,
     Field(discriminator="kind"),
 ]
 
@@ -258,6 +288,44 @@ class SurfaceAuditLog:
                 sequence=len(records),
                 previous_record_sha256=records[-1].record_sha256,
                 payload=payload,
+            )
+            self._atomic_write(storage, [*records, record], expected_identity=identity)
+            return record
+
+    def append_controller_decision(
+        self,
+        request: ProposalControllerRequest,
+    ) -> SurfaceAuditRecord:
+        """Reproduce and append one bounded controller decision exactly once."""
+
+        request = ProposalControllerRequest.model_validate(request.model_dump(mode="json"))
+        with self._locked(exclusive=True) as storage:
+            records, identity = self._load_verified(storage)
+            if request.controller_request_id in _recorded_controller_request_ids(records):
+                raise AuditIntegrityError(
+                    "controller request cannot be replayed: duplicate controller_request_id"
+                ) from DuplicateEventError("controller_request_id was already accepted")
+            if request.proposal_event_id in _controlled_proposal_event_ids(records):
+                raise AuditIntegrityError(
+                    "proposal already has a controller decision"
+                ) from DuplicateEventError("proposal already has a controller decision")
+            receipts = _issued_proposal_receipts(records)
+            receipt = receipts.get(request.proposal_event_id)
+            if receipt is None:
+                raise AuditIntegrityError("controller request references an unknown proposal")
+            session = _replay(records)
+            try:
+                decision = ProposalController(session.surface).decide(
+                    receipt,
+                    request,
+                    current_snapshot=session.surface.snapshot,
+                )
+            except SurfaceInteractionError as exc:
+                raise AuditIntegrityError(f"controller request cannot be replayed: {exc}") from exc
+            record = _new_record(
+                sequence=len(records),
+                previous_record_sha256=records[-1].record_sha256,
+                payload=ProposalControlledAudit(request=request, decision=decision),
             )
             self._atomic_write(storage, [*records, record], expected_identity=identity)
             return record
@@ -697,6 +765,8 @@ def _validate_audit_project(
             project_ids = (payload.revision.surface.project_id,)
         elif isinstance(payload, (ProposalIssuedAudit, ArtifactInspectedAudit)):
             project_ids = (payload.event.project_id, payload.receipt.project_id)
+        elif isinstance(payload, ProposalControlledAudit):
+            project_ids = (payload.decision.project_id,)
         else:  # pragma: no cover - discriminated audit models are closed
             raise AuditIntegrityError("surface audit contains an unsupported record")
         if any(project_id != expected_project_id for project_id in project_ids):
@@ -747,6 +817,9 @@ def _replay(records: list[SurfaceAuditRecord]) -> SurfaceSession:
         raise AuditIntegrityError("surface audit must begin with surface_opened")
     _recorded_event_ids(records)
     session = SurfaceSession(records[0].payload.surface)
+    issued: dict[str, ProposalReceipt] = {}
+    controller_request_ids: set[str] = set()
+    controlled_event_ids: set[str] = set()
     for record in records[1:]:
         payload = record.payload
         try:
@@ -758,8 +831,30 @@ def _replay(records: list[SurfaceAuditRecord]) -> SurfaceSession:
                     raise AuditIntegrityError(
                         f"proposal receipt mismatch at record {record.sequence}"
                     )
+                issued[receipt.event_id] = receipt
             elif isinstance(payload, ArtifactInspectedAudit):
                 validate_inspection_binding(session.surface, payload.event, payload.receipt)
+            elif isinstance(payload, ProposalControlledAudit):
+                if payload.request.controller_request_id in controller_request_ids:
+                    raise AuditIntegrityError("surface audit contains a duplicate controller ID")
+                if payload.request.proposal_event_id in controlled_event_ids:
+                    raise AuditIntegrityError("surface audit controls one proposal more than once")
+                receipt = issued.get(payload.request.proposal_event_id)
+                if receipt is None:
+                    raise AuditIntegrityError(
+                        f"controller decision lacks a prior proposal at record {record.sequence}"
+                    )
+                decision = ProposalController(session.surface).decide(
+                    receipt,
+                    payload.request,
+                    current_snapshot=session.surface.snapshot,
+                )
+                if decision != payload.decision:
+                    raise AuditIntegrityError(
+                        f"controller decision mismatch at record {record.sequence}"
+                    )
+                controller_request_ids.add(payload.request.controller_request_id)
+                controlled_event_ids.add(payload.request.proposal_event_id)
             else:
                 raise AuditIntegrityError(
                     f"surface_opened may appear only at record zero, got {record.sequence}"
@@ -780,3 +875,29 @@ def _recorded_event_ids(records: list[SurfaceAuditRecord]) -> set[str]:
                 raise AuditIntegrityError("surface audit contains a duplicate event_id")
             ids.add(payload.event.event_id)
     return ids
+
+
+def _issued_proposal_receipts(
+    records: list[SurfaceAuditRecord],
+) -> dict[str, ProposalReceipt]:
+    return {
+        record.payload.receipt.event_id: record.payload.receipt
+        for record in records
+        if isinstance(record.payload, ProposalIssuedAudit)
+    }
+
+
+def _recorded_controller_request_ids(records: list[SurfaceAuditRecord]) -> set[str]:
+    return {
+        record.payload.request.controller_request_id
+        for record in records
+        if isinstance(record.payload, ProposalControlledAudit)
+    }
+
+
+def _controlled_proposal_event_ids(records: list[SurfaceAuditRecord]) -> set[str]:
+    return {
+        record.payload.request.proposal_event_id
+        for record in records
+        if isinstance(record.payload, ProposalControlledAudit)
+    }

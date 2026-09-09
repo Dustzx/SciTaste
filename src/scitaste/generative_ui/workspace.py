@@ -22,6 +22,7 @@ from pydantic import (
 
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
+    ProposalControlledAudit,
     ProposalIssuedAudit,
     SurfaceAuditLog,
 )
@@ -989,7 +990,17 @@ def _verified_pending_proposals(
             ).records_with_digest()
         except OSError as exc:
             raise AuditIntegrityError("project UI audit history is unavailable") from exc
-        issued = [item.payload for item in records if isinstance(item.payload, ProposalIssuedAudit)]
+        controlled = {
+            item.payload.request.proposal_event_id
+            for item in records
+            if isinstance(item.payload, ProposalControlledAudit)
+        }
+        issued = [
+            item.payload
+            for item in records
+            if isinstance(item.payload, ProposalIssuedAudit)
+            and item.payload.receipt.event_id not in controlled
+        ]
         if not issued:
             continue
         locator = f".generative-ui/audits/{path.name}"

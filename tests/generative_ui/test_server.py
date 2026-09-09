@@ -384,6 +384,18 @@ def test_generative_api_exposes_quick_and_free_intents_through_one_safe_boundary
             headers=_headers(),
             json=_workspace_event(generated, event_id="generated-http-event"),
         )
+        decision = httpx.post(
+            origin
+            + f"/api/v3/generative/projects/http-project/generations/{generation_id}/decisions",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "controller_request_id": "generated-http-controller",
+                "proposal_event_id": "generated-http-event",
+                "requested_decision": "approve",
+                "human_confirmation": True,
+            },
+        )
         hostile_question = "make <script>alert(1)</script> and run a command"
         unavailable = httpx.post(
             origin + "/api/v3/generative/projects/http-project/workspace",
@@ -412,6 +424,10 @@ def test_generative_api_exposes_quick_and_free_intents_through_one_safe_boundary
     assert replay.json() == generated
     assert action.status_code == 202
     assert action.json()["execution_authority"] == "none"
+    assert decision.status_code == 200
+    assert decision.json()["status"] == "authorized"
+    assert decision.json()["state_mutation_authorized"] is False
+    assert decision.json()["execution_authority"] in {"read_only", "approved_handoff"}
     assert unavailable.status_code == 200
     assert unavailable.json()["status"] == "provider_unavailable"
     assert unavailable.json()["renderer"] is None

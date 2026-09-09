@@ -66,6 +66,7 @@ let activeProjectId = "";
 let eventCounter = 0;
 let artifactObjectUrl = null;
 let lastProposalReceipt = null;
+let lastControllerDecision = null;
 let lastArtifactPreview = null;
 let intentResultState = {kind: "empty"};
 let connectionStatusKey = "connection.credential_required";
@@ -968,6 +969,7 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   workspace.replaceChildren();
   if (!preserveTransient) {
     lastProposalReceipt = null;
+    lastControllerDecision = null;
     lastArtifactPreview = null;
   }
   renderProposalResult();
@@ -1168,6 +1170,7 @@ async function submitAction(action) {
       body: JSON.stringify(event),
     });
     lastProposalReceipt = receipt;
+    lastControllerDecision = null;
     renderProposalResult();
   } catch (error) {
     showError(proposalResult, error);
@@ -1215,6 +1218,22 @@ function renderProposalResult() {
     proposalResult.appendChild(empty);
     return;
   }
+  if (lastControllerDecision) {
+    const outcome = document.createElement("p");
+    outcome.className = "proposal-explanation";
+    appendText(outcome, t("inspector.controller_recorded"));
+    proposalResult.append(
+      outcome,
+      fixedFields(lastControllerDecision, [
+        "status",
+        "execution_authority",
+        "next_boundary",
+        "proposal_kind",
+        "controller_request_id",
+      ]),
+    );
+    return;
+  }
   const explanation = document.createElement("p");
   explanation.className = "proposal-explanation";
   explanation.textContent = t("inspector.proposal_recorded");
@@ -1228,6 +1247,40 @@ function renderProposalResult() {
       "action_id",
     ]),
   );
+  const controls = document.createElement("div");
+  controls.className = "component-actions";
+  const approve = document.createElement("button");
+  approve.type = "button";
+  appendText(approve, t("inspector.approve"));
+  approve.addEventListener("click", () => submitControllerDecision("approve"));
+  const reject = document.createElement("button");
+  reject.type = "button";
+  appendText(reject, t("inspector.reject"));
+  reject.addEventListener("click", () => submitControllerDecision("reject"));
+  controls.append(approve, reject);
+  proposalResult.appendChild(controls);
+}
+
+async function submitControllerDecision(requestedDecision) {
+  if (!lastProposalReceipt || !currentDocument) {
+    return;
+  }
+  const request = {
+    schema_version: "1.0",
+    controller_request_id: `controller-${Date.now()}-${eventCounter++}`,
+    proposal_event_id: lastProposalReceipt.event_id,
+    requested_decision: requestedDecision,
+    human_confirmation: requestedDecision === "approve",
+  };
+  try {
+    lastControllerDecision = await api(interactionPath("decisions"), {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+    renderProposalResult();
+  } catch (error) {
+    showError(proposalResult, error);
+  }
 }
 
 function clearArtifactPreview({forget = true} = {}) {
@@ -1242,7 +1295,7 @@ function clearArtifactPreview({forget = true} = {}) {
 }
 
 function interactionPath(operation) {
-  if (!currentDocument || !["events", "inspections"].includes(operation)) {
+  if (!currentDocument || !["events", "inspections", "decisions"].includes(operation)) {
     throw uiError("error.no_interaction_surface");
   }
   if (currentDocument.status === "generated") {
@@ -1316,6 +1369,7 @@ function clearProjectContext(projectId = "") {
   currentDocument = null;
   quickIntentCatalog = null;
   lastProposalReceipt = null;
+  lastControllerDecision = null;
   lastArtifactPreview = null;
   intentResultState = {kind: "empty"};
   responseCache.clear();

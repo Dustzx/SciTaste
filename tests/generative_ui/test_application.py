@@ -17,6 +17,8 @@ from scitaste.generative_ui import (
     GenerativeUIApplication,
     PaperEvidenceQuery,
     PendingProposalsQuery,
+    ProposalControlledAudit,
+    ProposalControllerRequest,
     QuickIntentRequest,
     RunStageQuery,
     StaleSurfaceError,
@@ -370,6 +372,58 @@ def test_pending_workspace_exposes_verified_proposals_without_controller_authori
     )
     audit_bytes = (runtime.projects_root / "app-project" / audit_ref.locator).read_bytes()
     assert audit_ref.sha256 == hashlib.sha256(audit_bytes).hexdigest()
+
+
+def test_application_records_controller_decision_and_removes_pending_proposal(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    query = RunStageQuery(project_id="app-project", run_id="trusted-run")
+    renderer = app.current_workspace(query).renderer
+    event = SurfaceEvent(
+        event_id="workspace-controller-history",
+        project_id=renderer.project_id,
+        surface_id=renderer.surface_id,
+        surface_revision=renderer.surface_revision,
+        surface_fingerprint=renderer.surface_fingerprint,
+        snapshot_revision=renderer.snapshot.snapshot_revision,
+        snapshot_sha256=renderer.snapshot.snapshot_sha256,
+        action_id=renderer.actions[0].action_id,
+    )
+    receipt = app.submit_workspace_event(query, event)
+
+    decision = app.decide_workspace_proposal(
+        query,
+        ProposalControllerRequest(
+            controller_request_id="controller-workspace-approval",
+            proposal_event_id=receipt.event_id,
+            requested_decision="approve",
+            human_confirmation=True,
+        ),
+    )
+
+    assert decision.status == "authorized"
+    assert decision.next_boundary == "selection_registry"
+    assert decision.execution_authority == "approved_handoff"
+    assert decision.state_mutation_authorized is False
+    records = SurfaceAuditLog(_audit_path(runtime)).records()
+    assert isinstance(records[-1].payload, ProposalControlledAudit)
+    pending = app.current_workspace(PendingProposalsQuery(project_id="app-project"))
+    assert all(
+        item.renderer is not TrustedComponent.PENDING_PROPOSAL_LIST
+        for item in pending.renderer.components
+    )
+
+    with pytest.raises(DuplicateEventError):
+        app.decide_workspace_proposal(
+            query,
+            ProposalControllerRequest(
+                controller_request_id="controller-workspace-retry",
+                proposal_event_id=receipt.event_id,
+                requested_decision="reject",
+            ),
+        )
 
 
 def test_pending_workspace_rejects_valid_audit_copied_from_another_project(

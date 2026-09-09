@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from scitaste.generative_ui import (
     DuplicateEventError,
+    ProposalController,
+    ProposalControllerRequest,
     RendererComponent,
     RendererDocument,
     RevisionConflictError,
@@ -17,6 +19,7 @@ from scitaste.generative_ui import (
     SurfaceSession,
     TrustedComponent,
     UnknownActionError,
+    build_next_step_fixture,
     build_paper_status_fixture,
     make_surface_event,
     project_surface,
@@ -128,6 +131,59 @@ def test_session_activation_returns_pending_proposal_without_execution_authority
     assert receipt.execution_authority == "none"
     assert receipt.next_boundary == "deterministic_controller"
     assert receipt.event_fingerprint == event.fingerprint
+
+
+def test_deterministic_controller_authorizes_only_a_bounded_current_handoff() -> None:
+    surface = build_paper_status_fixture()
+    receipt = SurfaceSession(surface).activate(
+        make_surface_event(surface, event_id="inspect-proposal", action_id="inspect-paper")
+    )
+    request = ProposalControllerRequest(
+        controller_request_id="authorize-inspection",
+        proposal_event_id=receipt.event_id,
+        requested_decision="approve",
+    )
+
+    decision = ProposalController(surface).decide(
+        receipt,
+        request,
+        current_snapshot=surface.snapshot,
+    )
+
+    assert decision.status == "authorized"
+    assert decision.next_boundary == "artifact_inspector"
+    assert decision.execution_authority == "read_only"
+    assert decision.state_mutation_authorized is False
+    assert decision.proposal_receipt_fingerprint == receipt.fingerprint
+
+
+def test_controller_requires_explicit_confirmation_for_transition_handoff() -> None:
+    surface = build_next_step_fixture()
+    action = surface.actions[0]
+    receipt = SurfaceSession(surface).activate(
+        make_surface_event(
+            surface,
+            event_id="transition-proposal",
+            action_id=action.action_id,
+        )
+    )
+    request = ProposalControllerRequest(
+        controller_request_id="unconfirmed-transition",
+        proposal_event_id=receipt.event_id,
+        requested_decision="approve",
+        human_confirmation=False,
+    )
+
+    decision = ProposalController(surface).decide(
+        receipt,
+        request,
+        current_snapshot=surface.snapshot,
+    )
+
+    assert decision.status == "rejected"
+    assert decision.reason_codes == ("human-confirmation-required",)
+    assert decision.next_boundary == "none"
+    assert decision.execution_authority == "none"
 
 
 def test_session_owns_and_returns_deeply_independent_surface_copies() -> None:

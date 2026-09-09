@@ -8,6 +8,7 @@ from scitaste.generative_ui.application import (
 from scitaste.generative_ui.audit import (
     ArtifactInspectedAudit,
     AuditIntegrityError,
+    ProposalControlledAudit,
     ProposalIssuedAudit,
     SurfaceAuditLog,
     SurfaceAuditRecord,
@@ -65,6 +66,9 @@ from scitaste.generative_ui.intent import (
 )
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
+    ProposalController,
+    ProposalControllerDecision,
+    ProposalControllerRequest,
     ProposalReceipt,
     RevisionConflictError,
     StaleSurfaceError,
@@ -266,6 +270,10 @@ __all__ = [
     "ProjectSurfaceEvidenceError",
     "ProjectSurfaceFactory",
     "ProjectSurfaceOutput",
+    "ProposalControlledAudit",
+    "ProposalController",
+    "ProposalControllerDecision",
+    "ProposalControllerRequest",
     "ProposalIssuedAudit",
     "ProposalKind",
     "ProposalReceipt",

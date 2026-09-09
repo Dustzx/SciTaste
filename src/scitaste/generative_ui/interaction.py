@@ -7,9 +7,15 @@ import json
 from threading import RLock
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from scitaste.generative_ui.models import ActionProposal, SurfaceRevision, SurfaceSpec
+from scitaste.generative_ui.models import (
+    ActionProposal,
+    SnapshotBinding,
+    SurfaceRevision,
+    SurfaceSpec,
+)
+from scitaste.generative_ui.registry import ProposalKind
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha256
 
 _MODEL_CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -79,6 +85,182 @@ class ProposalReceipt(BaseModel):
     @property
     def fingerprint(self) -> str:
         return _fingerprint(self.model_dump(mode="json"))
+
+
+class ProposalControllerRequest(BaseModel):
+    """Explicit user decision bound to one previously audited proposal receipt."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    controller_request_id: SafeIdentifier
+    proposal_event_id: SafeIdentifier
+    requested_decision: Literal["approve", "reject"]
+    human_confirmation: bool = False
+
+    @property
+    def fingerprint(self) -> str:
+        return _fingerprint(self.model_dump(mode="json"))
+
+
+class ProposalControllerDecision(BaseModel):
+    """Durable controller result; authorization remains narrower than execution."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    controller_request_id: SafeIdentifier
+    controller_request_fingerprint: Sha256
+    proposal_event_id: SafeIdentifier
+    proposal_receipt_fingerprint: Sha256
+    project_id: ProjectIdentifier
+    surface_id: SafeIdentifier
+    snapshot_revision: int = Field(ge=0)
+    snapshot_sha256: Sha256
+    action_id: SafeIdentifier
+    proposal_kind: ProposalKind
+    requested_decision: Literal["approve", "reject"]
+    status: Literal["authorized", "rejected"]
+    reason_codes: tuple[SafeIdentifier, ...]
+    next_boundary: Literal[
+        "artifact_inspector",
+        "run_comparison_service",
+        "research_controller",
+        "selection_registry",
+        "none",
+    ]
+    execution_authority: Literal["read_only", "approved_handoff", "none"]
+    controller_mode: Literal["deterministic"] = "deterministic"
+    state_mutation_authorized: Literal[False] = False
+
+    @model_validator(mode="after")
+    def authority_matches_status(self) -> ProposalControllerDecision:
+        if not self.reason_codes or len(self.reason_codes) != len(set(self.reason_codes)):
+            raise ValueError("controller decision reason codes must be non-empty and unique")
+        if self.status == "rejected":
+            if self.next_boundary != "none" or self.execution_authority != "none":
+                raise ValueError("rejected controller decisions cannot grant a handoff")
+            return self
+        expected = {
+            ProposalKind.INSPECT_ARTIFACT: ("artifact_inspector", "read_only"),
+            ProposalKind.COMPARE_RUNS: ("run_comparison_service", "read_only"),
+            ProposalKind.PROPOSE_TRANSITION: ("research_controller", "approved_handoff"),
+            ProposalKind.REQUEST_APPROVAL: ("selection_registry", "approved_handoff"),
+        }[self.proposal_kind]
+        if (self.next_boundary, self.execution_authority) != expected:
+            raise ValueError("authorized controller decision has an invalid authority boundary")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        return _fingerprint(self.model_dump(mode="json"))
+
+
+class ProposalController:
+    """Revalidate a proposal and turn explicit approval into a bounded handoff."""
+
+    def __init__(self, surface: SurfaceSpec) -> None:
+        self._surface = _validated_surface_copy(surface)
+
+    def decide(
+        self,
+        receipt: ProposalReceipt,
+        request: ProposalControllerRequest,
+        *,
+        current_snapshot: SnapshotBinding,
+    ) -> ProposalControllerDecision:
+        receipt = ProposalReceipt.model_validate(receipt.model_dump(mode="json"))
+        request = ProposalControllerRequest.model_validate(request.model_dump(mode="json"))
+        current_snapshot = SnapshotBinding.model_validate(current_snapshot.model_dump(mode="json"))
+        surface = self._surface
+        if current_snapshot != surface.snapshot:
+            raise StaleSurfaceError("controller request references a stale project snapshot")
+        if (
+            receipt.project_id != surface.project_id
+            or receipt.surface_id != surface.surface_id
+            or receipt.surface_revision != surface.revision
+            or receipt.surface_fingerprint != surface.fingerprint
+            or receipt.snapshot_revision != surface.snapshot.snapshot_revision
+            or receipt.snapshot_sha256 != surface.snapshot.snapshot_sha256
+        ):
+            raise StaleSurfaceError("proposal receipt does not match the current surface")
+        try:
+            action = next(item for item in surface.actions if item.action_id == receipt.action_id)
+        except StopIteration as exc:
+            raise UnknownActionError("proposal receipt action is no longer registered") from exc
+        if action.proposal != receipt.proposal:
+            raise SurfaceInteractionError("proposal receipt differs from its server-owned action")
+        if request.proposal_event_id != receipt.event_id:
+            raise SurfaceInteractionError("controller request differs from its proposal receipt")
+
+        kind = receipt.proposal.payload.kind
+        if request.requested_decision == "reject":
+            return self._decision(
+                receipt,
+                request,
+                status="rejected",
+                reason_codes=("explicit-user-rejection",),
+                next_boundary="none",
+                execution_authority="none",
+            )
+        if receipt.proposal.requires_approval and not request.human_confirmation:
+            return self._decision(
+                receipt,
+                request,
+                status="rejected",
+                reason_codes=("human-confirmation-required",),
+                next_boundary="none",
+                execution_authority="none",
+            )
+        boundaries = {
+            ProposalKind.INSPECT_ARTIFACT: ("artifact_inspector", "read_only"),
+            ProposalKind.COMPARE_RUNS: ("run_comparison_service", "read_only"),
+            ProposalKind.PROPOSE_TRANSITION: ("research_controller", "approved_handoff"),
+            ProposalKind.REQUEST_APPROVAL: ("selection_registry", "approved_handoff"),
+        }
+        next_boundary, authority = boundaries[kind]
+        return self._decision(
+            receipt,
+            request,
+            status="authorized",
+            reason_codes=("current-snapshot-validated", "explicit-user-approval"),
+            next_boundary=next_boundary,
+            execution_authority=authority,
+        )
+
+    @staticmethod
+    def _decision(
+        receipt: ProposalReceipt,
+        request: ProposalControllerRequest,
+        *,
+        status: Literal["authorized", "rejected"],
+        reason_codes: tuple[str, ...],
+        next_boundary: Literal[
+            "artifact_inspector",
+            "run_comparison_service",
+            "research_controller",
+            "selection_registry",
+            "none",
+        ],
+        execution_authority: Literal["read_only", "approved_handoff", "none"],
+    ) -> ProposalControllerDecision:
+        return ProposalControllerDecision(
+            controller_request_id=request.controller_request_id,
+            controller_request_fingerprint=request.fingerprint,
+            proposal_event_id=receipt.event_id,
+            proposal_receipt_fingerprint=receipt.fingerprint,
+            project_id=receipt.project_id,
+            surface_id=receipt.surface_id,
+            snapshot_revision=receipt.snapshot_revision,
+            snapshot_sha256=receipt.snapshot_sha256,
+            action_id=receipt.action_id,
+            proposal_kind=receipt.proposal.payload.kind,
+            requested_decision=request.requested_decision,
+            status=status,
+            reason_codes=reason_codes,
+            next_boundary=next_boundary,
+            execution_authority=execution_authority,
+        )
 
 
 class SurfaceSession:
