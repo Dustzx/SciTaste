@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -26,6 +27,7 @@ from scitaste.model_nodes.profiles import (
     validate_profile_binding,
 )
 from scitaste.model_nodes.runtime import (
+    ModelNodeRegistration,
     ModelNodeRuntime,
     ModelNodeTrigger,
     RuntimeInvocationReceipt,
@@ -396,6 +398,7 @@ def execute_full_workflow_model_advisory(
     allow_live: bool = False,
     invocation_id: str | None = None,
     invocation_project_revision: int | None = None,
+    node_types: Mapping[str, ModelNodeRegistration] | None = None,
 ) -> FullWorkflowModelAdvisoryRecord:
     """Run one bounded interpretation hook without changing ``ResearchState``."""
 
@@ -460,7 +463,7 @@ def execute_full_workflow_model_advisory(
         backend_mode=loaded.config.backend.mode,
         seed=seed,
     )
-    result = ModelNodeFacade(ModelNodeRuntime(project_runtime)).execute(
+    result = ModelNodeFacade(ModelNodeRuntime(project_runtime, node_types=node_types)).execute(
         request,
         backend=loaded.config.backend.build(invocation_id),
         resume=resume,
@@ -504,8 +507,9 @@ def verify_full_workflow_model_advisory(
     run_id: str,
     state_path: Path,
     record_path: Path,
+    node_types: Mapping[str, ModelNodeRegistration] | None = None,
 ) -> FullWorkflowModelAdvisoryRecord:
-    """Verify the bridge record, immutable state binding, and complete ledger head."""
+    """Verify the bridge record, immutable state binding, and historical ledger entry."""
 
     if record_path.is_symlink() or not record_path.is_file():
         raise ValueError("model advisory record must be a regular file")
@@ -546,7 +550,8 @@ def verify_full_workflow_model_advisory(
         or record.output_state_sha256 != state_sha256
     ):
         raise ValueError("model advisory state binding drift")
-    verification = ModelNodeRuntime(project_runtime).verify(
+    runtime = ModelNodeRuntime(project_runtime, node_types=node_types)
+    verification = runtime.verify(
         project_id=project_id,
         run_id=run_id,
     )
@@ -554,8 +559,57 @@ def verify_full_workflow_model_advisory(
         raise ValueError("model advisory ledger contains incomplete attempts")
     if verification.ledger_locator != record.receipt.ledger_locator:
         raise ValueError("model advisory ledger locator drift")
-    if verification.totals != record.receipt.totals:
-        raise ValueError("model advisory ledger totals drift")
+    entry = runtime.entry(
+        project_id=project_id,
+        run_id=run_id,
+        invocation_id=record.receipt.invocation_id,
+    )
+    telemetry = record.receipt.telemetry
+    entry_binding = (
+        entry.entry_sha256,
+        entry.outcome,
+        entry.request_fingerprint,
+        entry.result,
+        entry.input_tokens,
+        entry.output_tokens,
+        entry.input_tokens + entry.output_tokens,
+        entry.cost_effect_usd,
+        entry.latency_ms,
+        entry.cached,
+        entry.replayed,
+        entry.blockers,
+        entry.intent.profile.generation.model_dump(mode="json"),
+        entry.intent.profile.admission.model_dump(mode="json"),
+        entry.intent.profile.cumulative_project.model_dump(mode="json"),
+    )
+    receipt_binding = (
+        record.receipt.entry_sha256,
+        record.receipt.outcome,
+        record.receipt.request_fingerprint,
+        record.receipt.result,
+        telemetry.input_tokens,
+        telemetry.output_tokens,
+        telemetry.total_tokens,
+        telemetry.cost_usd,
+        telemetry.latency_ms,
+        telemetry.cached,
+        telemetry.replayed,
+        record.receipt.blockers,
+        record.receipt.generation_envelope,
+        record.receipt.admission_budget,
+        record.receipt.cumulative_project_budget,
+    )
+    if entry_binding != receipt_binding:
+        raise ValueError("model advisory receipt differs from its ledger entry")
+    if (
+        runtime.totals_through_entry(
+            project_id=project_id,
+            run_id=run_id,
+            invocation_id=record.receipt.invocation_id,
+        )
+        != record.receipt.totals
+    ):
+        raise ValueError("model advisory historical ledger totals drift")
     return record
 
 

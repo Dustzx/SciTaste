@@ -512,6 +512,39 @@ class ModelNodeRuntime:
             )
         return matches[0]
 
+    def totals_through_entry(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        invocation_id: str,
+    ) -> RuntimeLedgerTotals:
+        """Return verified cumulative totals at one historical ledger entry."""
+
+        validate_entry_id(invocation_id, field_name="invocation_id")
+        stage, _ = self._validate_project_run(
+            project_id,
+            run_id,
+            expected_revision=None,
+            create_stage=False,
+        )
+        entries = self._load_ledger(stage, project_id=project_id, run_id=run_id)
+        matches = [
+            index
+            for index, item in enumerate(entries)
+            if item.intent.invocation_id == invocation_id
+        ]
+        if len(matches) != 1:
+            raise ModelNodeRuntimeError(
+                f"model-node invocation is not a unique committed entry: {invocation_id!r}"
+            )
+        return self._totals(
+            project_id,
+            run_id,
+            entries[: matches[0] + 1],
+            stage=stage,
+        )
+
     def _execute_locked(
         self,
         *,

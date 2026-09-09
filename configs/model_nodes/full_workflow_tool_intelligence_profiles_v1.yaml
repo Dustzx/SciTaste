@@ -1,0 +1,8 @@
+schema_version: "1.0"
+profile_set_id: full-workflow-tool-intelligence-offline-v1
+profile_set_version: 1.0.0
+live_enabled: false
+profiles:
+  - path: profile_full_workflow_tool_plan_v1.yaml
+    sha256: 7cac6ec3a47424e3af1cb8f9f71800cdcddda3a4d1d30c4637abb8eca258676d
+    profile_sha256: a4b1e98ce34c48e31be4fa951b1a115fa5aaf8eb4c117bf11d1ffa72f6eff0a6

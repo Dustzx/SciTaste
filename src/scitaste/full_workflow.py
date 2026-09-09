@@ -37,6 +37,7 @@ from scitaste.executor.native_code_generation import (
     generate_native_code_proposal,
     load_native_code_generation_config,
     load_native_code_generation_record,
+    native_code_generation_node_types,
 )
 from scitaste.executor.native_profile import (
     NativeExecutionProfileInspection,
@@ -50,6 +51,14 @@ from scitaste.executor.native_sandbox import (
 )
 from scitaste.executor.native_store import NativeExecutionRecord
 from scitaste.generative_ui import ProjectSnapshotAdapter, SnapshotBinding
+from scitaste.model_nodes.full_workflow_tool_intelligence import (
+    FullWorkflowToolIntelligenceRecord,
+    LoadedFullWorkflowToolIntelligence,
+    execute_full_workflow_tool_intelligence,
+    load_full_workflow_tool_intelligence,
+    verify_full_workflow_tool_intelligence,
+)
+from scitaste.model_nodes.runtime import ModelNodeRegistration
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryRecord,
     LoadedFullWorkflowModelAdvisory,
@@ -70,8 +79,10 @@ from scitaste.project.models import content_sha256, validate_entry_id, validate_
 from scitaste.state.research_state import ResearchState
 from scitaste.visual.workflow import FigureScenario, FigureWorkflow, load_figure_scenario
 from scitaste.workflow_intake import (
+    LoadedScenarioBundleCatalog,
     WorkflowIntakeInspection,
     inspect_workflow_intake,
+    load_scenario_bundle_catalog,
     materialize_workflow_intake,
     verify_workflow_intake,
 )
@@ -106,16 +117,18 @@ class FullWorkflowConfig(BaseModel):
     model: str = "deterministic-controller"
     evidence_scope: str = "offline-integration-only"
     research_brief: Path | None = None
-    discovery_scenario: Path
-    evidence_scenario: Path
-    communication_scenario: Path
-    figure_scenario: Path
+    discovery_scenario: Path | None = None
+    evidence_scenario: Path | None = None
+    communication_scenario: Path | None = None
+    figure_scenario: Path | None = None
+    scenario_catalog: Path | None = None
     native_knowledge_config: Path | None = None
     native_execution_profile: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
     native_code_generation_config: Path | None = None
     model_node_advisory: Path | None = None
+    tool_intelligence_advisory: Path | None = None
     paper_id: str
     paper_directory: str
     paper_title: str = Field(min_length=1)
@@ -135,6 +148,18 @@ class FullWorkflowConfig(BaseModel):
 
     @model_validator(mode="after")
     def native_experiment_source_is_unambiguous(self) -> FullWorkflowConfig:
+        scenarios = (
+            self.discovery_scenario,
+            self.evidence_scenario,
+            self.communication_scenario,
+            self.figure_scenario,
+        )
+        if self.scenario_catalog is None and any(item is None for item in scenarios):
+            raise ValueError("full workflow requires all registered stage scenarios")
+        if self.scenario_catalog is not None and any(item is not None for item in scenarios):
+            raise ValueError("scenario catalog and direct stage scenarios are mutually exclusive")
+        if self.scenario_catalog is not None and self.research_brief is None:
+            raise ValueError("automatic scenario selection requires a research brief")
         configured = tuple(
             item
             for item in (
@@ -153,11 +178,6 @@ class FullWorkflowConfig(BaseModel):
             self.execution_backend != "scitaste-native"
         ):
             raise ValueError("native code generation requires the scitaste-native executor")
-        if self.native_code_generation_config is not None and self.model_node_advisory is not None:
-            raise ValueError(
-                "native code generation and evidence advisory require a shared extension "
-                "registry before they can use one model ledger"
-            )
         if self.native_execution_profile is not None and (
             self.execution_backend != "scitaste-native" or not configured
         ):
@@ -292,10 +312,23 @@ class FullWorkflow:
             if config.model_node_advisory is not None
             else None
         )
+        tool_intelligence = (
+            load_full_workflow_tool_intelligence(config.tool_intelligence_advisory)
+            if config.tool_intelligence_advisory is not None
+            else None
+        )
+        scenario_catalog = (
+            load_scenario_bundle_catalog(config.scenario_catalog)
+            if config.scenario_catalog is not None
+            else None
+        )
         code_generation = (
             load_native_code_generation_config(config.native_code_generation_config)
             if config.native_code_generation_config is not None
             else None
+        )
+        model_node_extensions = (
+            native_code_generation_node_types() if code_generation is not None else None
         )
         if (
             model_advisory is not None
@@ -303,6 +336,12 @@ class FullWorkflow:
             and not allow_live_model_nodes
         ):
             raise ValueError("live full-workflow model nodes require --allow-live-model-nodes")
+        if (
+            tool_intelligence is not None
+            and tool_intelligence.config.live_enabled
+            and not allow_live_model_nodes
+        ):
+            raise ValueError("live Tool Intelligence requires --allow-live-model-nodes")
         if (
             code_generation is not None
             and code_generation.config.live_enabled
@@ -322,6 +361,8 @@ class FullWorkflow:
         workflow_config_sha256 = _workflow_config_sha256(
             config,
             model_advisory,
+            tool_intelligence=tool_intelligence,
+            scenario_catalog=scenario_catalog,
             code_inspection=code_inspection,
             code_generation=code_generation,
             execution_profile=execution_profile,
@@ -425,6 +466,11 @@ class FullWorkflow:
                 code_inspection=code_inspection,
                 generated_code=generated_code,
                 execution_profile=execution_profile,
+                evidence_scenario_path=(
+                    prepared_intake.scenario_paths["evidence"]
+                    if prepared_intake is not None
+                    else None
+                ),
             )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
@@ -434,6 +480,8 @@ class FullWorkflow:
                 run_id=run_id,
                 project_revision=snapshot.revision,
                 model_advisory=model_advisory,
+                tool_intelligence=tool_intelligence,
+                model_node_extensions=model_node_extensions,
                 allow_live_model_nodes=allow_live_model_nodes,
                 executor=executor,
                 scenario_paths=(
@@ -443,6 +491,16 @@ class FullWorkflow:
             reloaded_advisory = (
                 load_full_workflow_model_advisory(config.model_node_advisory)
                 if config.model_node_advisory is not None
+                else None
+            )
+            reloaded_tool_intelligence = (
+                load_full_workflow_tool_intelligence(config.tool_intelligence_advisory)
+                if config.tool_intelligence_advisory is not None
+                else None
+            )
+            reloaded_scenario_catalog = (
+                load_scenario_bundle_catalog(config.scenario_catalog)
+                if config.scenario_catalog is not None
                 else None
             )
             reloaded_generation = (
@@ -467,6 +525,8 @@ class FullWorkflow:
                 _workflow_config_sha256(
                     config,
                     reloaded_advisory,
+                    tool_intelligence=reloaded_tool_intelligence,
+                    scenario_catalog=reloaded_scenario_catalog,
                     code_inspection=(None if generated_code is not None else code_inspection),
                     code_generation=reloaded_generation,
                     execution_profile=(
@@ -857,6 +917,8 @@ class FullWorkflow:
         run_id: str,
         project_revision: int,
         model_advisory: LoadedFullWorkflowModelAdvisory | None,
+        tool_intelligence: LoadedFullWorkflowToolIntelligence | None,
+        model_node_extensions: Mapping[str, ModelNodeRegistration] | None,
         allow_live_model_nodes: bool,
         executor: ResearchExecutor,
         scenario_paths: Mapping[StageName, Path] | None,
@@ -906,11 +968,17 @@ class FullWorkflow:
         previous_state = discovery_state
 
         evidence_root = stages / "evidence"
-        advisory_artifacts = (
+        advisory_artifacts: tuple[str, ...] = (
             ("model_advisory_input.json", "model_advisory.json")
             if model_advisory is not None
             else ()
         )
+        if tool_intelligence is not None:
+            advisory_artifacts += (
+                "tool_intelligence_binding.json",
+                "tool_intelligence_input.json",
+                "tool_intelligence.json",
+            )
         evidence_record = (
             _load_stage_record(
                 evidence_root,
@@ -942,6 +1010,20 @@ class FullWorkflow:
                     run_id=run_id,
                     state_path=evidence_state,
                     record_path=evidence_root / "model_advisory.json",
+                    node_types=model_node_extensions,
+                )
+            if tool_intelligence is not None:
+                verify_full_workflow_tool_intelligence(
+                    tool_intelligence,
+                    project_runtime=project_runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    run_root=run_root,
+                    predecessor_state_path=previous_state,
+                    state_path=evidence_state,
+                    input_path=evidence_root / "tool_intelligence_input.json",
+                    record_path=evidence_root / "tool_intelligence.json",
+                    node_types=model_node_extensions,
                 )
             reused_stages.append("evidence")
         else:
@@ -977,6 +1059,7 @@ class FullWorkflow:
                         run_id=run_id,
                         state_path=evidence_state,
                         record_path=advisory_record_path,
+                        node_types=model_node_extensions,
                     )
                 else:
                     advisory_record = execute_full_workflow_model_advisory(
@@ -995,12 +1078,36 @@ class FullWorkflow:
                         allow_live=allow_live_model_nodes,
                         invocation_id=input_record.invocation_id,
                         invocation_project_revision=input_record.project_revision,
+                        node_types=model_node_extensions,
                     )
                 evidence["model_advisory"] = _model_advisory_summary(
                     advisory_record,
                     run_root=run_root,
                     record_path=advisory_record_path,
                 )
+                if tool_intelligence is not None:
+                    tool_record_path = evidence_root / "tool_intelligence.json"
+                    tool_record = execute_full_workflow_tool_intelligence(
+                        tool_intelligence,
+                        project_runtime=project_runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        expected_project_revision=project_revision,
+                        run_root=run_root,
+                        predecessor_state_path=previous_state,
+                        state_path=evidence_state,
+                        evidence_summary_path=evidence_root / "evidence_summary.json",
+                        record_path=tool_record_path,
+                        seed=self.seed,
+                        resume=True,
+                        allow_live=allow_live_model_nodes,
+                        node_types=model_node_extensions,
+                    )
+                    evidence["tool_intelligence"] = _tool_intelligence_summary(
+                        tool_record,
+                        run_root=run_root,
+                        record_path=tool_record_path,
+                    )
                 _stage_record(
                     evidence_root,
                     "evidence",
@@ -1050,11 +1157,34 @@ class FullWorkflow:
                         allow_live=allow_live_model_nodes,
                         invocation_id=input_record.invocation_id,
                         invocation_project_revision=input_record.project_revision,
+                        node_types=model_node_extensions,
                     )
                     evidence["model_advisory"] = _model_advisory_summary(
                         advisory_record,
                         run_root=run_root,
                         record_path=advisory_record_path,
+                    )
+                if tool_intelligence is not None:
+                    tool_record_path = evidence_root / "tool_intelligence.json"
+                    tool_record = execute_full_workflow_tool_intelligence(
+                        tool_intelligence,
+                        project_runtime=project_runtime,
+                        project_id=config.project_id,
+                        run_id=run_id,
+                        expected_project_revision=project_revision,
+                        run_root=run_root,
+                        predecessor_state_path=previous_state,
+                        state_path=evidence_state,
+                        evidence_summary_path=evidence_root / "evidence_summary.json",
+                        record_path=tool_record_path,
+                        seed=self.seed,
+                        allow_live=allow_live_model_nodes,
+                        node_types=model_node_extensions,
+                    )
+                    evidence["tool_intelligence"] = _tool_intelligence_summary(
+                        tool_record,
+                        run_root=run_root,
+                        record_path=tool_record_path,
                     )
                 _stage_record(
                     evidence_root,
@@ -1283,6 +1413,7 @@ def _build_full_workflow_executor(
     code_inspection: NativeCodeInspection | None = None,
     generated_code: GeneratedNativeCodeProposal | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
+    evidence_scenario_path: Path | None = None,
 ) -> ResearchExecutor:
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
@@ -1295,7 +1426,7 @@ def _build_full_workflow_executor(
     )
     if experiment is not None:
         evidence_experiment_id = load_evidence_scenario(
-            config.evidence_scenario
+            evidence_scenario_path or _required_scenario_path(config.evidence_scenario)
         ).result.experiment_id
         if experiment.experiment_id != evidence_experiment_id:
             raise ValueError(
@@ -1535,12 +1666,14 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "evidence_scenario",
         "communication_scenario",
         "figure_scenario",
+        "scenario_catalog",
         "native_knowledge_config",
         "native_execution_profile",
         "native_experiment_config",
         "native_code_proposal_config",
         "native_code_generation_config",
         "model_node_advisory",
+        "tool_intelligence_advisory",
     ):
         if payload.get(field) is None:
             continue
@@ -1569,33 +1702,44 @@ def inspect_full_workflow_intake(
         target_domain=config.target_domain,
         target_venue=config.target_venue,
         workflow_config_sha256=config_sha256,
-        scenario_paths={
-            "discovery": config.discovery_scenario,
-            "evidence": config.evidence_scenario,
-            "communication": config.communication_scenario,
-            "figure": config.figure_scenario,
-        },
+        scenario_paths=(
+            None
+            if config.scenario_catalog is not None
+            else {
+                "discovery": _required_scenario_path(config.discovery_scenario),
+                "evidence": _required_scenario_path(config.evidence_scenario),
+                "communication": _required_scenario_path(config.communication_scenario),
+                "figure": _required_scenario_path(config.figure_scenario),
+            }
+        ),
+        scenario_catalog=config.scenario_catalog,
     )
 
 
 def _discovery_for_project(
     config: FullWorkflowConfig, scenario_path: Path | None = None
 ) -> DiscoveryScenario:
-    scenario = load_discovery_scenario(scenario_path or config.discovery_scenario)
+    scenario = load_discovery_scenario(
+        scenario_path or _required_scenario_path(config.discovery_scenario)
+    )
     return DiscoveryScenario.model_validate(_identity_payload(scenario, config))
 
 
 def _evidence_for_project(
     config: FullWorkflowConfig, scenario_path: Path | None = None
 ) -> EvidenceWorkflowScenario:
-    scenario = load_evidence_scenario(scenario_path or config.evidence_scenario)
+    scenario = load_evidence_scenario(
+        scenario_path or _required_scenario_path(config.evidence_scenario)
+    )
     return EvidenceWorkflowScenario.model_validate(_identity_payload(scenario, config))
 
 
 def _communication_for_project(
     config: FullWorkflowConfig, scenario_path: Path | None = None
 ) -> CommunicationScenario:
-    scenario = load_communication_scenario(scenario_path or config.communication_scenario)
+    scenario = load_communication_scenario(
+        scenario_path or _required_scenario_path(config.communication_scenario)
+    )
     payload = _identity_payload(scenario, config)
     if payload["review_resolution"] is not None:
         payload["review_resolution"].update(
@@ -1612,7 +1756,9 @@ def _communication_for_project(
 def _figure_for_project(
     config: FullWorkflowConfig, scenario_path: Path | None = None
 ) -> FigureScenario:
-    scenario = load_figure_scenario(scenario_path or config.figure_scenario)
+    scenario = load_figure_scenario(
+        scenario_path or _required_scenario_path(config.figure_scenario)
+    )
     return FigureScenario.model_validate(_identity_payload(scenario, config))
 
 
@@ -1627,6 +1773,12 @@ def _identity_payload(scenario: BaseModel, config: FullWorkflowConfig) -> dict[s
         }
     )
     return payload
+
+
+def _required_scenario_path(path: Path | None) -> Path:
+    if path is None:
+        raise ValueError("full workflow has no admitted scenario path")
+    return path
 
 
 def _publish_or_verify_finalization_plan(
@@ -1652,6 +1804,8 @@ def _publish_or_verify_finalization_plan(
                 *(run_root / "intake" / "scenarios" / f"{stage}.yaml" for stage in _STAGE_ORDER),
             ]
         )
+        if config.scenario_catalog is not None:
+            input_paths.append(run_root / "intake" / "SCENARIO_CATALOG.yaml")
     input_sha256 = {_owned_locator(run_root, path): _file_sha256(path) for path in input_paths}
     expected = FullFinalizationPlan.create(
         project_id=config.project_id,
@@ -2102,6 +2256,28 @@ def _model_advisory_summary(
     }
 
 
+def _tool_intelligence_summary(
+    record: FullWorkflowToolIntelligenceRecord,
+    *,
+    run_root: Path,
+    record_path: Path,
+) -> dict[str, object]:
+    decision = record.decision
+    return {
+        "hook_id": record.hook_id,
+        "status": record.status,
+        "triggered": decision is not None,
+        "decision": decision.decision.value if decision is not None else None,
+        "selected_tool_step": (decision.selected_step_id if decision is not None else None),
+        "resolved": decision.resolved if decision is not None else None,
+        "recovered": record.recovered,
+        "advisory_only": True,
+        "canonical_evidence": False,
+        "state_transition_authorized": False,
+        "record": _owned_locator(run_root, record_path),
+    }
+
+
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
@@ -2118,6 +2294,8 @@ def _workflow_config_sha256(
     config: FullWorkflowConfig,
     model_advisory: LoadedFullWorkflowModelAdvisory | None = None,
     *,
+    tool_intelligence: LoadedFullWorkflowToolIntelligence | None = None,
+    scenario_catalog: LoadedScenarioBundleCatalog | None = None,
     code_inspection: NativeCodeInspection | None = None,
     code_generation: LoadedNativeCodeGeneration | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
@@ -2133,7 +2311,16 @@ def _workflow_config_sha256(
         "communication_scenario",
         "figure_scenario",
     ):
-        payload[field] = {"content_sha256": _file_sha256(Path(payload[field]))}
+        configured_path = getattr(config, field)
+        if configured_path is None:
+            payload.pop(field, None)
+        else:
+            payload[field] = {"content_sha256": _file_sha256(configured_path)}
+    if config.scenario_catalog is None:
+        payload.pop("scenario_catalog", None)
+    else:
+        catalog = scenario_catalog or load_scenario_bundle_catalog(config.scenario_catalog)
+        payload["scenario_catalog"] = {"binding_sha256": catalog.fingerprint}
     if config.native_knowledge_config is None:
         payload.pop("native_knowledge_config", None)
     else:
@@ -2198,6 +2385,16 @@ def _workflow_config_sha256(
         payload["model_node_advisory"] = {
             "binding_sha256": binding.fingerprint,
             "stage_recovery_contract": "2.0",
+        }
+    if config.tool_intelligence_advisory is None:
+        payload.pop("tool_intelligence_advisory", None)
+    else:
+        binding = tool_intelligence or load_full_workflow_tool_intelligence(
+            config.tool_intelligence_advisory
+        )
+        payload["tool_intelligence_advisory"] = {
+            "binding_sha256": binding.fingerprint,
+            "stage_recovery_contract": "1.0",
         }
     return content_sha256(payload)
 

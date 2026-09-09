@@ -1,0 +1,11 @@
+schema_version: "1.0"
+catalog_id: scitaste-registered-scenario-bundles
+catalog_version: 1.0.0
+bundles:
+  - bundle_id: conflict-aware-control-support-v1
+    target_domains: [autonomous-research]
+    keywords: [conflict, contradiction, pivot, evidence, research control]
+    discovery_scenario: ../experiments/discovery_strong.yaml
+    evidence_scenario: ../evidence/support_demo.yaml
+    communication_scenario: ../writing/reviewer_experiment_demo.yaml
+    figure_scenario: ../visual/mechanism_demo.yaml

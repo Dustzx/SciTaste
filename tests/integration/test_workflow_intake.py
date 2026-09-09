@@ -174,6 +174,11 @@ def test_open_question_dry_run_is_a_mutation_free_admission_plan(
     assert exit_code == 0
     assert payload["status"] == "planned"
     assert payload["research_intake"]["readiness"] == "ready"
+    assert payload["research_intake"]["planning_mode"] == ("deterministic-catalog-selection-v1")
+    assert payload["research_intake"]["selected_bundle_id"] == ("conflict-aware-control-support-v1")
+    assert payload["research_intake"]["candidate_bundle_ids"] == [
+        "conflict-aware-control-support-v1"
+    ]
     assert payload["research_intake"]["model_authority"] == "proposal-only"
     assert payload["research_intake"]["would_materialize_on_run"] is True
     assert len(payload["research_intake"]["input_bindings"]) == 5
@@ -204,6 +209,8 @@ def test_full_workflow_executes_only_run_owned_scenarios_and_verifies_resume(
     expected_discovery = run_root / "intake/scenarios/discovery.yaml"
     assert payload["status"] == "complete"
     assert payload["research_intake"]["readiness"] == "ready"
+    assert payload["research_intake"]["planning_mode"] == ("deterministic-catalog-selection-v1")
+    assert payload["research_intake"]["selected_bundle_id"] == ("conflict-aware-control-support-v1")
     assert observed_discovery_paths == [expected_discovery]
     assert (run_root / "intake/BRIEF.yaml").is_file()
     assert (run_root / "intake/PLAN.json").is_file()
@@ -215,6 +222,7 @@ def test_full_workflow_executes_only_run_owned_scenarios_and_verifies_resume(
         "intake/scenarios/evidence.yaml",
         "intake/scenarios/communication.yaml",
         "intake/scenarios/figure.yaml",
+        "intake/SCENARIO_CATALOG.yaml",
     }.issubset(finalization["input_sha256"])
     snapshot = ProjectRuntime(outputs).open(config.project_id)
     registered = snapshot.manifest.runs[0]

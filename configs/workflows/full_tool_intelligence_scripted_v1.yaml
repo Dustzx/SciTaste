@@ -1,0 +1,84 @@
+# Offline evidence-stage Tool Intelligence hook. A deterministic claim-status
+# trigger may request one read-only inspection; the result remains advice and
+# cannot mutate ResearchState or promote canonical evidence.
+schema_version: "1.0"
+hook_id: evidence-grounding-tool-intelligence
+trigger_claim_statuses: [supported, partially_supported]
+objective: Inspect the supporting project-owned evidence before the controller authorizes communication.
+hotspot_kind: evidence-synthesis
+semantic_gap: competing-interpretations
+reason_codes: [claim-status-supported, precommunication-evidence-inspection-required]
+candidate_tool_names: [evidence.inspect]
+profile_set: ../model_nodes/full_workflow_tool_intelligence_profiles_v1.yaml
+profile_id: full-workflow-tool-plan
+policy:
+  policy_id: full-workflow-tool-intelligence-v1
+  enabled: true
+  allowed_node_names: [tool-plan]
+  expected_backend: scripted
+  expected_model: scripted-v1
+  allowed_tool_names: [evidence.inspect]
+  allowed_action_types: []
+  max_request_bytes: 100000
+  max_input_tokens: 4000
+  max_output_tokens: 1024
+  max_total_tokens: 5024
+  max_api_cost_usd: 1.0
+  max_latency_ms: 30000
+  require_cost_telemetry: true
+  ambiguity_margin_max: 0.05
+backend:
+  kind: scripted
+  provider: scripted
+  model: scripted-v1
+  reply:
+    output_payload:
+      tool_profile_id: full-workflow-evidence-readonly
+      tool_profile_fingerprint: e0c14c174c6311df5433dc9110cdf388abba49378c2643da5551be4abdecce50
+      steps:
+        - step_id: inspect-supporting-evidence
+          tool_name: evidence.inspect
+          depends_on: []
+          purpose: Inspect the admitted evidence record and provenance before proposing a communication response.
+          arguments:
+            evidence_ids: [evidence-result-support-claim-matched-performance]
+            include_provenance: true
+          advisory_only: true
+          executable: false
+      rationale: The supported claim should be grounded in the immutable evidence record before communication is authorized.
+      confidence: 0.94
+      advisory_only: true
+      executable: false
+    usage:
+      input_tokens: 132
+      output_tokens: 94
+      cost_usd: 0.0
+    latency_ms: 1.0
+    tool_calls: []
+    response_backend: null
+    response_model: null
+controlled_tool_profile:
+  schema_version: "1.0"
+  profile_id: full-workflow-evidence-readonly
+  profile_version: 1.0.0
+  permissions:
+    - tool_name: evidence.inspect
+      allowed_evidence_ids: [evidence-result-support-claim-matched-performance]
+      max_evidence_items: 1
+  max_plan_steps: 1
+  max_dependency_edges: 0
+budget:
+  max_model_invocations: 1
+  max_tool_invocations: 1
+  max_replans: 1
+  max_total_tokens: 4096
+  max_api_cost_usd: 1.0
+  max_model_latency_ms: 120000
+  max_tool_latency_ms: 30000
+  max_end_to_end_latency_ms: 150000
+  max_observation_bytes: 262144
+  action_lease_ttl_seconds: 60
+live_enabled: false
+advisory_only: true
+canonical_evidence_admission: false
+state_transition_authorized: false

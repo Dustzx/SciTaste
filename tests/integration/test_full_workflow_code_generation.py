@@ -187,15 +187,40 @@ def test_live_code_generation_requires_explicit_caller_authority(tmp_path: Path)
     assert not outputs.exists()
 
 
-def test_code_generation_rejects_an_unshared_advisory_ledger() -> None:
+def test_code_generation_and_evidence_advisory_share_one_verified_ledger(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
     config = load_full_workflow_config(CONFIG)
     payload = config.model_dump(mode="python")
-    payload["model_node_advisory"] = Path(
-        "configs/workflows/full_model_advisory_scripted_v1.yaml"
-    ).resolve()
+    payload.update(
+        project_id="composed-model-nodes-project",
+        paper_id="composed-model-nodes-paper",
+        paper_directory="composed-model-nodes-integration-fixture",
+        model_node_advisory=Path(
+            "configs/workflows/full_model_advisory_scripted_v1.yaml"
+        ).resolve(),
+    )
+    combined = type(config).model_validate(payload)
 
-    with pytest.raises(ValueError, match="shared extension registry"):
-        type(config).model_validate(payload)
+    result = FullWorkflow(seed=7).run(
+        combined,
+        outputs_root=tmp_path / "outputs",
+        run_id="composed-model-nodes-seed-07",
+    )
+    verification = verify_native_code_generation_ledger(
+        ProjectRuntime(tmp_path / "outputs"),
+        project_id=combined.project_id,
+        run_id="composed-model-nodes-seed-07",
+    )
+
+    assert result["status"] == "complete"
+    assert result["native_execution"]["code_generation"]["outcome"] == "accepted"
+    assert result["stages"]["evidence"]["model_advisory"]["outcome"] == "accepted"
+    assert verification.verified is True
+    assert verification.totals.entry_count == 2
+    assert verification.totals.cost_usd == 0
 
 
 def test_full_workflow_rechecks_generation_recording_before_publication(

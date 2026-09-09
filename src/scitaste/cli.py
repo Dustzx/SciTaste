@@ -78,6 +78,9 @@ from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
+from scitaste.model_nodes.full_workflow_tool_intelligence import (
+    load_full_workflow_tool_intelligence,
+)
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
@@ -1405,6 +1408,11 @@ def _handle_full(args: argparse.Namespace) -> int:
             if config.model_node_advisory is not None
             else None
         )
+        tool_intelligence = (
+            load_full_workflow_tool_intelligence(config.tool_intelligence_advisory)
+            if config.tool_intelligence_advisory is not None
+            else None
+        )
         research_intake = inspect_full_workflow_intake(config, run_id=run_id)
         print(
             json.dumps(
@@ -1422,6 +1430,8 @@ def _handle_full(args: argparse.Namespace) -> int:
                             "brief_id": research_intake.brief.brief_id,
                             "question": research_intake.brief.question,
                             "planning_mode": research_intake.plan.planning_mode,
+                            "selected_bundle_id": research_intake.plan.selected_bundle_id,
+                            "candidate_bundle_ids": list(research_intake.plan.candidate_bundle_ids),
                             "readiness": research_intake.plan.readiness,
                             "plan_sha256": research_intake.plan.record_sha256,
                             "input_bindings": [
@@ -1544,6 +1554,32 @@ def _handle_full(args: argparse.Namespace) -> int:
                             "network_access": model_advisory.config.live_enabled,
                             "advisory_only": True,
                             "executable": False,
+                        }
+                    ),
+                    "tool_intelligence": (
+                        None
+                        if tool_intelligence is None
+                        else {
+                            "hook_id": tool_intelligence.config.hook_id,
+                            "trigger_claim_statuses": [
+                                item.value
+                                for item in tool_intelligence.config.trigger_claim_statuses
+                            ],
+                            "candidate_tools": [
+                                item.value for item in tool_intelligence.config.candidate_tool_names
+                            ],
+                            "backend_mode": tool_intelligence.config.backend.mode.value,
+                            "live_configured": tool_intelligence.config.live_enabled,
+                            "caller_authorized": args.allow_live_model_nodes,
+                            "would_contact_provider": (
+                                tool_intelligence.config.live_enabled
+                                and args.allow_live_model_nodes
+                            ),
+                            "network_access": tool_intelligence.config.live_enabled,
+                            "automatic_trigger": "deterministic-claim-status-policy",
+                            "advisory_only": True,
+                            "canonical_evidence": False,
+                            "state_transition_authorized": False,
                         }
                     ),
                     "paper_directory": config.paper_directory,

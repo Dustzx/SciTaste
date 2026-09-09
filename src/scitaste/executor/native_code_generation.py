@@ -581,16 +581,22 @@ def verify_native_code_generation_ledger(
     return _generation_runtime(project_runtime).verify(project_id=project_id, run_id=run_id)
 
 
+def native_code_generation_node_types() -> dict[str, ModelNodeRegistration]:
+    """Return the extension registry required to verify a generation ledger."""
+
+    return {
+        _NODE_NAME: ModelNodeRegistration(
+            NativeCodeGenerationNode,
+            NativeCodeGenerationInput,
+            NativeCodeGenerationOutput,
+        )
+    }
+
+
 def _generation_runtime(project_runtime: ProjectRuntime) -> ModelNodeRuntime:
     return ModelNodeRuntime(
         project_runtime,
-        node_types={
-            _NODE_NAME: ModelNodeRegistration(
-                NativeCodeGenerationNode,
-                NativeCodeGenerationInput,
-                NativeCodeGenerationOutput,
-            )
-        },
+        node_types=native_code_generation_node_types(),
     )
 
 

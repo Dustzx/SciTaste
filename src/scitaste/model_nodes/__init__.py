@@ -11,6 +11,16 @@ from scitaste.model_nodes.facade import (
     ModelNodeFacadeRequest,
     ModelNodeFacadeResult,
 )
+from scitaste.model_nodes.full_workflow_tool_intelligence import (
+    FullWorkflowToolIntelligenceConfig,
+    FullWorkflowToolIntelligenceInputRecord,
+    FullWorkflowToolIntelligenceRecord,
+    LoadedFullWorkflowToolIntelligence,
+    execute_full_workflow_tool_intelligence,
+    load_full_workflow_tool_intelligence,
+    verify_full_workflow_tool_intelligence,
+    verify_full_workflow_tool_intelligence_input,
+)
 from scitaste.model_nodes.models import (
     CumulativeProjectBudget,
     ModelCostProvenance,
@@ -316,6 +326,9 @@ __all__ = [
     "FullWorkflowModelAdvisoryConfig",
     "FullWorkflowModelAdvisoryInputRecord",
     "FullWorkflowModelAdvisoryRecord",
+    "FullWorkflowToolIntelligenceConfig",
+    "FullWorkflowToolIntelligenceInputRecord",
+    "FullWorkflowToolIntelligenceRecord",
     "HttpxStructuredTransport",
     "ImmutableStateProjection",
     "IndependentOutcomeReview",
@@ -330,6 +343,7 @@ __all__ = [
     "KnowledgeQueryStep",
     "LiveRuntimeBackend",
     "LoadedFullWorkflowModelAdvisory",
+    "LoadedFullWorkflowToolIntelligence",
     "LoadedModelNodeProfiles",
     "LoadedModelNodeRuntimeConfig",
     "ManualInterventionBundle",
@@ -485,8 +499,10 @@ __all__ = [
     "evaluate_tool_effectiveness_study",
     "evaluate_tool_intelligence_benchmark",
     "execute_full_workflow_model_advisory",
+    "execute_full_workflow_tool_intelligence",
     "execute_read_only_step",
     "load_full_workflow_model_advisory",
+    "load_full_workflow_tool_intelligence",
     "load_model_node_profile",
     "load_model_node_profile_set",
     "load_model_node_runtime_config",
@@ -504,4 +520,6 @@ __all__ = [
     "validate_profile_binding",
     "verify_full_workflow_model_advisory",
     "verify_full_workflow_model_advisory_input",
+    "verify_full_workflow_tool_intelligence",
+    "verify_full_workflow_tool_intelligence_input",
 ]
