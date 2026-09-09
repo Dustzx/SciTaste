@@ -27,8 +27,9 @@ returns observations and artifacts but cannot select the next global action.
 - `evidence`: claim/evidence graphs, gap analysis, information-value experiment
   planning, interpretation critic, routing, and a state-integrated workflow.
 - `writing`: evidence-gated narrative, section/paragraph contracts,
-  rhetorical-role taste retrieval, deterministic drafting, decomposed critics,
-  and the state-integrated Communication Loop.
+  rhetorical-role taste retrieval, content-bound venue/archetype profiles,
+  deterministic drafting, decomposed critics, and the state-integrated
+  Communication Loop.
 - `review`: structured concerns, stage-specific research obligations, action
   routing, and evidence-aware closure.
 - `visual`: figure-need detection, claim-linked contracts, semantic object
@@ -158,6 +159,12 @@ returns observations and artifacts but cannot select the next global action.
     after rejection. The normal controller/executor path remains the sole
     transition authority, and every accepted proposal remains in one ordered,
     cumulatively budgeted semantic history.
+49. Venue Writing Taste is a content-bound advisory context, not a submission
+    gate or acceptance predictor. Venue guidance cannot override scientific
+    integrity, claim calibration, or scope; paper-archetype overlays may select
+    appropriate evidence duties but cannot impose universal figure, table,
+    experiment, or ablation quotas. Mechanical template compliance remains an
+    independent deterministic contract.
 
 ## Architecture decision records
 

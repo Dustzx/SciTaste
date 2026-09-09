@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- Writing Taste now has content-bound, per-venue and per-archetype guidance
+  distinct from mechanical submission compliance. The ICLR 2027 bundle
+  co-locates its exact template contract, provenance record, five official
+  reviewer-facing constructs, fifteen corpus-derived candidate principles, and
+  six archetype overlays. Paper builds auto-discover the profile, bind it to the
+  manuscript, persist `VENUE_TASTE_CONTEXT.json`, and expose its identity in the
+  project paper manifest. The proposal-only semantic reviewer receives the same
+  typed context; all profile rules remain advisory, corpus rules remain on
+  `hold`, and neither submission eligibility nor scientific quality can be
+  inferred from the profile.
+
 - Phase 9 now has a read-only, integrity-aware matrix status command. It scans
   project-owned result roots, separates exact-protocol sources from historical
   protocol revisions, and admits a record only after the run manifest, cell

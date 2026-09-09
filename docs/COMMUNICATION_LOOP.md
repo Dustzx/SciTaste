@@ -77,7 +77,8 @@ export SCITASTE_ICLR2027_TEMPLATE=/absolute/path/to/iclr-2027-style-files.zip
   --directory-name <paper-version> \
   --source manuscripts/<project>/main.md \
   --bibliography manuscripts/<project>/references.bib \
-  --venue-config configs/writing/iclr2027_submission_v1.yaml \
+  --venue-config configs/writing/venues/iclr-2027/submission.yaml \
+  --paper-archetype empirical-system \
   --expected-revision <revision> \
   --select --outputs-root outputs
 ```
@@ -91,6 +92,15 @@ keys, obvious identity markers, and internal audit markers. The bundle owns
 the self-hashed venue, manuscript, and Writing Taste assessments plus the build
 log and exact template assets. The Writing Taste assessment is also available
 in paper-build dry-runs and is hash-bound by the registered paper manifest.
+
+The venue submission config is co-located with `taste.yaml` and
+`provenance.yaml`. A paper build automatically loads that sibling profile,
+checks that its venue identity matches the template, selects only principles
+applicable to `--paper-archetype`, and writes the self-hashed
+`VENUE_TASTE_CONTEXT.json`. The context contains guidance supplied to semantic
+review; it is not an automated judgment of whether the manuscript follows that
+guidance. An unspecified archetype applies only cross-archetype principles and
+records the conditional guidance it omitted.
 
 `eligible_for_submission` means these deterministic packaging checks passed; it
 does not certify novelty, factual correctness, external-review acceptance, or

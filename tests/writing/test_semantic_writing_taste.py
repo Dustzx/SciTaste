@@ -17,6 +17,11 @@ from scitaste.writing.semantic_models import (
     WritingTasteSectionInput,
     WritingTasteSemanticInput,
 )
+from scitaste.writing.venue_taste import (
+    PaperArchetype,
+    build_venue_writing_taste_context,
+    inspect_venue_writing_taste,
+)
 
 
 def _input() -> WritingTasteSemanticInput:
@@ -152,6 +157,41 @@ def test_semantic_writing_taste_node_accepts_bounded_advice() -> None:
     assert result.advisory_only is True
     assert result.executable is False
     assert set(writing_node_types()) == {"writing-taste"}
+
+
+def test_semantic_writing_taste_receives_exact_venue_profile_context() -> None:
+    input_data = _input()
+    rendered = "\n\n".join(
+        [
+            input_data.title,
+            *(f"# {item.section_name}\n\n{item.text}" for item in input_data.sections),
+        ]
+    )
+    profile = inspect_venue_writing_taste(
+        "configs/writing/venues/iclr-2027/taste.yaml"
+    )
+    context = build_venue_writing_taste_context(
+        rendered,
+        inspection=profile,
+        paper_archetype=PaperArchetype.EMPIRICAL_SYSTEM,
+    )
+    payload = input_data.model_dump(mode="json")
+    payload["venue_taste_context"] = context.model_dump(mode="json")
+    input_data = WritingTasteSemanticInput.model_validate(payload)
+
+    result = WritingTasteNode().run(
+        input_data,
+        context=_context(input_data),
+        backend=_backend(_proposal(input_data)),
+        policy=_policy(),
+        request_id="writing-review-1",
+    )
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.request.prompt_version == "writing-taste-v2"
+    supplied = result.request.input_payload["input"]["venue_taste_context"]
+    assert supplied["profile_fingerprint"] == profile.fingerprint
+    assert supplied["paper_archetype"] == "empirical-system"
 
 
 def test_semantic_writing_taste_rejects_omitted_limitation_and_unknown_evidence() -> None:

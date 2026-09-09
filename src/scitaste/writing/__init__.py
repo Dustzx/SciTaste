@@ -29,6 +29,14 @@ from scitaste.writing.taste import (
     WritingTasteFinding,
     assess_writing_taste,
 )
+from scitaste.writing.venue_taste import (
+    PaperArchetype,
+    VenueWritingTasteContext,
+    VenueWritingTasteInspection,
+    VenueWritingTasteProfile,
+    build_venue_writing_taste_context,
+    inspect_venue_writing_taste,
+)
 
 __all__ = [
     "ClaimPresentationContract",
@@ -37,12 +45,16 @@ __all__ = [
     "MaterialLimitationContract",
     "MaterialWritingLimitation",
     "NarrativeTasteReview",
+    "PaperArchetype",
     "PaperArgumentAssessment",
     "PaperArgumentContract",
     "PaperArgumentGap",
     "PaperEntryPointContract",
     "SectionDeliveryContract",
     "SemanticWritingTasteFinding",
+    "VenueWritingTasteContext",
+    "VenueWritingTasteInspection",
+    "VenueWritingTasteProfile",
     "WritingCriticSuite",
     "WritingRevisionAction",
     "WritingTasteAssessment",
@@ -54,6 +66,8 @@ __all__ = [
     "WritingTasteSemanticInput",
     "assess_paper_argument",
     "assess_writing_taste",
+    "build_venue_writing_taste_context",
+    "inspect_venue_writing_taste",
     "review_narrative",
     "writing_node_types",
 ]

@@ -24,6 +24,10 @@ from scitaste.writing.venue import (
     materialize_venue_assets,
     require_venue_submission_ready,
 )
+from scitaste.writing.venue_taste import (
+    VenueWritingTasteContext,
+    write_venue_writing_taste_context,
+)
 
 
 def materialize_manuscript(
@@ -101,6 +105,7 @@ def materialize_venue_manuscript(
     target_dir: Path,
     template: VenueTemplateInspection,
     asset_roots: tuple[Path, ...] = (),
+    venue_taste_context: VenueWritingTasteContext | None = None,
 ) -> tuple[list[Path], VenueSubmissionAssessment, ManuscriptAssessment]:
     """Create and gate a content-bound, venue-native submission bundle."""
 
@@ -174,6 +179,18 @@ def materialize_venue_manuscript(
         assess_writing_taste(markdown, target_venue=template.config.venue_name),
         target_dir / "WRITING_TASTE_ASSESSMENT.json",
     )
+    venue_taste_path: Path | None = None
+    if venue_taste_context is not None:
+        if venue_taste_context.venue_id != template.config.venue_id:
+            raise ValueError("venue taste context does not match the submission template")
+        if venue_taste_context.manuscript_sha256 != hashlib.sha256(
+            markdown.encode("utf-8")
+        ).hexdigest():
+            raise ValueError("venue taste context does not match the manuscript")
+        venue_taste_path = write_venue_writing_taste_context(
+            venue_taste_context,
+            target_dir / "VENUE_TASTE_CONTEXT.json",
+        )
 
     paths = [
         markdown_target,
@@ -187,6 +204,8 @@ def materialize_venue_manuscript(
         *venue_assets,
         *figure_paths,
     ]
+    if venue_taste_path is not None:
+        paths.append(venue_taste_path)
     pdf_path = target_dir / "main.pdf"
     if pdf_path.is_file():
         paths.append(pdf_path)

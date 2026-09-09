@@ -50,7 +50,8 @@ review remain pending, so no effectiveness claim is made from that pilot.
   external Taste Cases until human verification;
 - evidence-gated narrative and writing contracts, hierarchical Writing Taste
   retrieval, an integrity-first deterministic assessor, a proposal-only semantic
-  writing review node, decomposed critics, reviewer obligations, and
+  writing review node, content-bound venue/archetype guidance, decomposed critics,
+  reviewer obligations, and
   review-driven evidence collection returning to paper revision;
 - claim-linked Figure Contracts, visual-role retrieval, semantic object
   reconstruction, editable SVG/draw.io export, split visual critics, and
@@ -604,6 +605,15 @@ To package a substantive project manuscript for an exact venue template, use
 official ZIP through `SCITASTE_ICLR2027_TEMPLATE`, emits both manuscript and
 submission assessments, and registers the resulting paper under its owning
 project only after all deterministic gates pass.
+
+The ICLR configuration is a co-located venue bundle under
+`configs/writing/venues/iclr-2027/`: `submission.yaml` owns mechanical rules,
+while the content-bound `taste.yaml` and `provenance.yaml` supply advisory
+review constructs and archetype-specific writing duties. Use
+`--paper-archetype empirical-system` (or another declared archetype) to activate
+conditional guidance. Paper builds auto-discover a sibling `taste.yaml`, persist
+the exact `VENUE_TASTE_CONTEXT.json`, and keep it outside submission eligibility
+and scientific-quality verdicts.
 
 An optional whole-paper audit can be added with `--argument-contract` and
 `--argument-state`. It distinguishes unsupported claims, missing registered

@@ -1,0 +1,45 @@
+schema_version: "1.0"
+venue_id: iclr-2027
+cutoff_date: "2026-09-09"
+
+official_guidance:
+  reviewer_guide:
+    locator: https://iclr.cc/Conferences/2027/ReviewerGuidelines
+    retrieved_on: "2026-09-09"
+    distilled_constructs:
+      - Make the specific question or problem identifiable.
+      - Motivate the approach and place it in the relevant literature.
+      - Make theoretical or empirical support for each claim inspectable and rigorous.
+      - Explain the new knowledge and value contributed to the ICLR community.
+      - Do not treat state-of-the-art performance as a universal acceptance requirement.
+    transfer_boundary: >-
+      These are reviewer-facing evaluation constructs, not a mandated prose template,
+      section order, scoring model, or acceptance guarantee.
+
+reference_corpus:
+  manifest_locator: docs/research/data/writing_taste_reference_corpus_v1.yaml
+  manifest_sha256: 0a420bd1b20787d30f3a466aeab6128e00ef3517823068312f4adbbf7dcb8391
+  study_locator: docs/research/WRITING_TASTE_REFERENCE_STUDY_V1.md
+  study_sha256: 015b99ea5aa449ca8d8aef7b7e6627b73668f81368ec9376250c39ef21161ea8
+  positive_population:
+    count: 29
+    selection: complete ICLR 2023--2026 Outstanding and Honorable Mention population
+  missing_controls:
+    - accepted non-award papers stratified by archetype and review score
+    - rejected or deliberately perturbed papers with known defects
+    - independent human annotations
+    - false-positive and false-negative measurements by paper archetype
+  normative_status: candidate-only
+  prohibited_inferences:
+    - Award recognition does not establish that a writing pattern causes acceptance.
+    - Figure, table, experiment, and ablation counts cannot become universal quotas.
+    - An automated venue-taste context cannot establish scientific quality.
+open_source_transfer:
+  policy: >-
+    Licensed projects may contribute workflow methods and principle-level ideas only.
+    Venue-specific voice, unsupported thresholds, and text from unlicensed projects are
+    not imported into the ICLR profile.
+  primary_method_sources:
+    - anti-defensive-writing-Skill@b32067b3055d356e007c6986775fee069da3891a
+    - academic-paper-writing-skill@0dcd6856573ae96a1e80342d5df1224752bb0d28
+    - embodied-ai-paper-writer@6d30f1bbd6d6ed9d2c2814b052bbfbb3a2ff87c9

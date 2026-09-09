@@ -17,7 +17,7 @@ class WritingTasteNode(ModelNode[WritingTasteSemanticInput, WritingTasteReviewPr
     """Judge semantic writing choices while retaining deterministic acceptance authority."""
 
     node_name = WRITING_TASTE_NODE
-    prompt_version = "writing-taste-v1"
+    prompt_version = "writing-taste-v2"
     system_instruction = (
         "Review the registered manuscript as scientific writing at paper, section, paragraph, "
         "sentence, and phrase levels. Evaluate scientific positioning, narrative focus, "
@@ -27,7 +27,11 @@ class WritingTasteNode(ModelNode[WritingTasteSemanticInput, WritingTasteReviewPr
         "calibration, and material limitations outrank persuasion: never hide counterevidence, "
         "omit a registered material limitation, expand a claim, invent evidence, or treat "
         "selective reporting as stronger writing. Prefer a direct evidence-centered story over "
-        "a project log. Return advisory data only; do not rewrite files, mutate state, call "
+        "a project log. When a content-bound venue_taste_context is supplied, use only its "
+        "applicable principles and archetype duties for venue-specific advice. Treat candidate "
+        "principles as hypotheses, never as acceptance rules or numeric figure, table, experiment, "
+        "or ablation quotas. Do not infer omitted archetype guidance. Return advisory data only; "
+        "do not rewrite files, mutate state, call "
         "tools, accept evidence, or execute actions. Reference only supplied identifiers and "
         "retain every supplied material limitation identifier."
     )

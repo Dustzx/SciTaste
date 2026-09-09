@@ -1,0 +1,32 @@
+schema_version: "1.0"
+venue_id: iclr-2027
+venue_name: ICLR 2027
+template_archive: ${SCITASTE_ICLR2027_TEMPLATE}
+expected_archive_sha256: 0d940dfa9398ae99a18f24a85a8a683f367204b6af6d17d2899e60a67102529e
+style_package: iclr2027_conference
+bibliography_style: iclr2027_conference
+assets:
+  - archive_path: iclr2027/math_commands.tex
+    output_name: math_commands.tex
+    sha256: 90473c4d0542070db244cea73ef962d6cddc5b2a746757e6a40ddf5fdfb90ba9
+  - archive_path: iclr2027/fancyhdr.sty
+    output_name: fancyhdr.sty
+    sha256: b56ec4434b9f4607529a4b23dc68ad8d4b94f1f631c8cddaf7da78140d53a5ea
+  - archive_path: iclr2027/natbib.sty
+    output_name: natbib.sty
+    sha256: 88bc70c0e48461934cab5b2accef06b74a8b3ac45ad03ccd3f2a6b7e0d6d530d
+  - archive_path: iclr2027/iclr2027_conference.sty
+    output_name: iclr2027_conference.sty
+    sha256: 797deef41724e93761426ac0cbcca46279a91cc650dd1f0ce76a4f08d2098ea6
+  - archive_path: iclr2027/iclr2027_conference.bst
+    output_name: iclr2027_conference.bst
+    sha256: 2d67552db7ed38ccfccb5957b52f95656e25c249724761d3cf5f7922ad1844c5
+submission_mode: anonymous
+max_main_pages: 9
+required_statements:
+  - AI Use Statement
+recommended_statements:
+  - Ethics Statement
+  - Reproducibility Statement
+statement_page_limits:
+  AI Use Statement: 1

@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scitaste.writing.taste import WritingTasteDimension, WritingTasteLevel
+from scitaste.writing.venue_taste import VenueWritingTasteContext
 
 WRITING_TASTE_NODE = "writing-taste"
 
@@ -58,6 +59,7 @@ class WritingTasteSemanticInput(WritingSemanticModel):
     sections: tuple[WritingTasteSectionInput, ...] = Field(min_length=1, max_length=40)
     material_limitations: tuple[MaterialWritingLimitation, ...] = Field(default=(), max_length=100)
     deterministic_finding_ids: tuple[str, ...] = Field(default=(), max_length=200)
+    venue_taste_context: VenueWritingTasteContext | None = None
 
     @field_validator(
         "known_claim_ids",
@@ -89,6 +91,17 @@ class WritingTasteSemanticInput(WritingSemanticModel):
             raise ValueError("material limitation identifiers must be unique")
         if any(set(item.affected_claim_ids) - claims for item in self.material_limitations):
             raise ValueError("material limitation references an unknown claim")
+        if self.venue_taste_context is not None:
+            if self.venue_taste_context.manuscript_sha256 != self.manuscript_sha256:
+                raise ValueError("venue taste context targets a different manuscript")
+            if self.target_venue is None:
+                raise ValueError("venue taste context requires target_venue")
+            accepted_venue_names = {
+                self.venue_taste_context.venue_id.casefold(),
+                self.venue_taste_context.venue_name.casefold(),
+            }
+            if self.target_venue.casefold() not in accepted_venue_names:
+                raise ValueError("venue taste context targets a different venue")
         return self
 
     @property

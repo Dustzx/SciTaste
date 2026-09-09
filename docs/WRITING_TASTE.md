@@ -45,6 +45,43 @@ whole-paper rules require accepted non-award and negative controls, independent
 human annotation, and archetype-specific error measurement before they can
 become production Taste Cases or submission gates.
 
+## Venue and paper-archetype layer
+
+Writing Taste separates cross-venue scientific principles from venue-specific
+guidance and mechanical submission rules. A venue is represented by a
+co-located bundle:
+
+```text
+configs/writing/venues/<venue-version>/
+├── submission.yaml   # template, anonymity, pages, statements, compilation
+├── taste.yaml        # review constructs and writing/evidence guidance
+└── provenance.yaml   # sources, corpus identity, transfer limits, missing controls
+```
+
+The first complete bundle is `iclr-2027`. Its profile contains five advisory
+constructs distilled from the current official reviewer guide and fifteen
+candidate principles from the registered ICLR award-paper reference study. The
+profile pins its local provenance bytes, exposes its promotion decision, and
+marks every principle `submission_gate: false`. Corpus principles stay
+`candidate` while accepted non-award controls, negative examples, independent
+annotations, and archetype-specific error measurements are missing.
+
+Six overlays distinguish empirical method, empirical system, empirical analysis,
+empirical discovery, theory--empirical, and pure-theory papers. Conditional
+guidance is selected only when the paper archetype is declared. An unspecified
+archetype receives cross-archetype guidance and an explicit unresolved condition;
+it does not guess. This prevents systems expectations from leaking into pure
+theory and prevents empirical papers from treating formal exposition alone as
+evidence of a claimed real-world effect.
+
+`VenueWritingTasteContext` binds the exact profile fingerprint, manuscript hash,
+archetype, applied principles, omitted conditional principles, and overlay duties.
+It is supplied as structured input to the proposal-only semantic Writing Taste
+node and stored by venue paper builds as `VENUE_TASTE_CONTEXT.json`. The context
+does not claim that a manuscript satisfies the principles. Deterministic template
+readiness, general Writing Taste findings, whole-paper argument closure, semantic
+review, and eventual human review remain separate records.
+
 ## Anti-defensive writing as one component
 
 The positive-scope, strength-centered, and no-project-log principles were adapted
@@ -148,6 +185,9 @@ claim narrowing, or an evidence request. Deterministic admission rejects unknown
 references, a changed manuscript identity, an incomplete section order, or any
 attempt to omit or demote a registered material limitation. The node cannot edit
 files, mutate state, call tools, accept evidence, or execute an action.
+When a content-bound venue context is present, the node may use only its applied
+principles and archetype duties; candidate guidance remains hypothetical and
+omitted archetype rules cannot be inferred by the model.
 
 Two bounded profiles are provided:
 

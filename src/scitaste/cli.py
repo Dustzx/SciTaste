@@ -111,6 +111,13 @@ from scitaste.writing.manuscript_quality import (
 )
 from scitaste.writing.taste import assess_writing_taste
 from scitaste.writing.venue import assess_venue_submission, inspect_venue_template
+from scitaste.writing.venue_taste import (
+    PaperArchetype,
+    VenueWritingTasteContext,
+    build_venue_writing_taste_context,
+    inspect_venue_writing_taste,
+    require_venue_taste_matches_template,
+)
 from scitaste.writing.workflow import CommunicationWorkflow, load_communication_scenario
 
 
@@ -350,7 +357,22 @@ def build_parser() -> argparse.ArgumentParser:
     project_paper_build.add_argument(
         "--venue-config",
         type=Path,
-        default=Path("configs/writing/iclr2027_submission_v1.yaml"),
+        default=Path("configs/writing/venues/iclr-2027/submission.yaml"),
+    )
+    project_paper_build.add_argument(
+        "--venue-taste-profile",
+        type=Path,
+        default=None,
+        help="Optional venue Writing Taste profile; a sibling taste.yaml is auto-discovered",
+    )
+    project_paper_build.add_argument(
+        "--paper-archetype",
+        choices=[item.value for item in PaperArchetype],
+        default=None,
+        help=(
+            "Paper form used to select venue guidance; inferred from an optional "
+            "whole-paper argument contract"
+        ),
     )
     project_paper_build.add_argument("--asset-root", type=Path, action="append", default=[])
     project_paper_build.add_argument(
@@ -988,6 +1010,13 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
         args,
         markdown=markdown,
     )
+    venue_taste_context = _build_venue_taste_preflight(
+        args,
+        markdown=markdown,
+        template_venue_id=template.config.venue_id,
+        template_config_path=template.config_path,
+        argument_contract=argument_contract,
+    )
     project_dir = runtime.projects_root / args.project_id
     target = project_dir / "papers" / args.directory_name
     if target.exists() or target.is_symlink():
@@ -1005,6 +1034,11 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                     "preflight": preflight.model_dump(mode="json"),
                     "manuscript_preflight": manuscript_preflight.model_dump(mode="json"),
                     "writing_taste_preflight": writing_taste_preflight.model_dump(mode="json"),
+                    "venue_taste_preflight": (
+                        venue_taste_context.model_dump(mode="json")
+                        if venue_taste_context is not None
+                        else None
+                    ),
                     "paper_argument_preflight": (
                         argument_assessment.model_dump(mode="json")
                         if argument_assessment is not None
@@ -1032,6 +1066,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             target_dir=temporary,
             template=template,
             asset_roots=tuple(path.resolve(strict=True) for path in args.asset_root),
+            venue_taste_context=venue_taste_context,
         )
         if argument_contract is not None and argument_assessment is not None:
             paths.extend(
@@ -1054,6 +1089,16 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                 "paper_argument_contract_complete": argument_assessment.contract_complete,
             }
             if argument_contract is not None and argument_assessment is not None
+            else {}
+        )
+        venue_taste_metadata = (
+            {
+                "venue_taste_profile_id": venue_taste_context.profile_id,
+                "venue_taste_profile_fingerprint": venue_taste_context.profile_fingerprint,
+                "venue_taste_context_sha256": venue_taste_context.record_sha256,
+                "paper_archetype": venue_taste_context.paper_archetype.value,
+            }
+            if venue_taste_context is not None
             else {}
         )
         paper = PaperManifest(
@@ -1079,6 +1124,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             writing_taste_assessment_sha256=writing_taste_preflight.record_sha256,
             eligible_for_submission=assessment.eligible_for_submission,
             **argument_metadata,
+            **venue_taste_metadata,
         )
         os.replace(temporary, target)
         moved = True
@@ -1116,6 +1162,7 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         "SUBMISSION_ASSESSMENT.json": "submission-assessment",
         "MANUSCRIPT_ASSESSMENT.json": "manuscript-assessment",
         "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
+        "VENUE_TASTE_CONTEXT.json": "venue-taste-context",
         "PAPER_ARGUMENT_CONTRACT.yaml": "paper-argument-contract",
         "PAPER_ARGUMENT_ASSESSMENT.json": "paper-argument-assessment",
         "README.md": "bundle-readme",
@@ -1126,6 +1173,37 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         label = labels.get(relative, f"supporting-artifact-{index:02d}")
         mapped[label] = relative
     return mapped
+
+
+def _build_venue_taste_preflight(
+    args: argparse.Namespace,
+    *,
+    markdown: str,
+    template_venue_id: str,
+    template_config_path: Path,
+    argument_contract: PaperArgumentContract | None,
+) -> VenueWritingTasteContext | None:
+    profile_path = args.venue_taste_profile
+    if profile_path is None:
+        sibling = template_config_path.parent / "taste.yaml"
+        profile_path = sibling if sibling.is_file() else None
+    if profile_path is None:
+        return None
+    inspection = inspect_venue_writing_taste(profile_path)
+    require_venue_taste_matches_template(inspection, venue_id=template_venue_id)
+    contract_archetype = argument_contract.archetype if argument_contract is not None else None
+    if (
+        args.paper_archetype is not None
+        and contract_archetype is not None
+        and args.paper_archetype != contract_archetype
+    ):
+        raise ValueError("--paper-archetype does not match the whole-paper argument contract")
+    archetype = args.paper_archetype or contract_archetype or PaperArchetype.UNSPECIFIED.value
+    return build_venue_writing_taste_context(
+        markdown,
+        inspection=inspection,
+        paper_archetype=archetype,
+    )
 
 
 def _assess_paper_argument_preflight(

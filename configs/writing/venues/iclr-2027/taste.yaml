@@ -1,0 +1,385 @@
+schema_version: "1.0"
+profile_id: iclr-2027-writing-taste-v1
+venue_id: iclr-2027
+venue_name: ICLR 2027
+effective_from: "2026-09-09"
+profile_status: advisory
+promotion_decision: hold
+immutable_core_dimensions:
+  - scientific_integrity
+  - claim_calibration
+  - precision_and_scope
+submission_eligibility_authority: false
+scientific_quality_established: false
+
+sources:
+  - source_id: iclr-reviewer-guide
+    source_kind: official-guidance
+    locator: https://iclr.cc/Conferences/2027/ReviewerGuidelines
+    retrieved_on: "2026-09-09"
+    local_path: provenance.yaml
+    expected_sha256: 05829e1afa656397856adb162ce995546615ae260864fca205e14359425e06d4
+    support_scope:
+      - reviewer evaluation constructs
+      - objective and motivation
+      - claim support and rigor
+      - significance and community value
+    limitations:
+      - The reviewer guide is not a mandated prose template or acceptance predictor.
+  - source_id: iclr-award-corpus
+    source_kind: reference-corpus
+    locator: docs/research/data/writing_taste_reference_corpus_v1.yaml
+    retrieved_on: "2026-09-09"
+    local_path: provenance.yaml
+    expected_sha256: 05829e1afa656397856adb162ce995546615ae260864fca205e14359425e06d4
+    support_scope:
+      - cross-archetype evidence arcs
+      - claim-carrier roles
+      - whole-paper entry-point consistency
+    limitations:
+      - The positive population contains award papers and lacks calibrated controls.
+      - Structural observations cannot be converted into numeric quotas.
+  - source_id: writing-methods
+    source_kind: open-source-method
+    locator: docs/research/WRITING_TASTE_REFERENCE_STUDY_V1.md
+    retrieved_on: "2026-09-09"
+    local_path: provenance.yaml
+    expected_sha256: 05829e1afa656397856adb162ce995546615ae260864fca205e14359425e06d4
+    support_scope:
+      - provenance-aware principle distillation
+      - positive-scope anti-defensive writing
+      - whole-paper audit methodology
+    limitations:
+      - Project-specific voice and unsupported thresholds are not transferable.
+
+principles:
+  - principle_id: iclr-question-visible
+    name: Make the research question identifiable
+    maturity: advisory
+    dimensions: [narrative_focus, reader_guidance]
+    instruction: >-
+      Make the specific question or problem visible early enough that a reviewer can
+      use it to interpret the approach and evidence.
+    diagnostic_questions:
+      - What exact question or problem would a reviewer write in the review form?
+      - Do the title, abstract, and introduction identify the same object of study?
+    source_ids: [iclr-reviewer-guide]
+    submission_gate: false
+  - principle_id: iclr-motivation-and-placement
+    name: Motivate and place the approach
+    maturity: advisory
+    dimensions: [scientific_positioning, argumentative_structure]
+    instruction: >-
+      Explain why the question matters, why the approach is plausible, and how the
+      contribution differs from the relevant literature without constructing a strawman.
+    diagnostic_questions:
+      - Is the approach motivated by the problem rather than introduced as an isolated artifact?
+      - Can the distinctive relation to prior work be checked from cited sources?
+    source_ids: [iclr-reviewer-guide]
+    submission_gate: false
+  - principle_id: iclr-claims-supported-rigorously
+    name: Expose rigorous claim support
+    maturity: advisory
+    dimensions: [scientific_integrity, claim_calibration, evidence_prioritization]
+    instruction: >-
+      Make the theoretical or empirical support for each headline claim inspectable,
+      including assumptions, uncertainty, controls, and boundaries that affect validity.
+    diagnostic_questions:
+      - What evidence or formal result supports each headline claim?
+      - Are correctness and rigor assessable without inferring missing experimental details?
+    source_ids: [iclr-reviewer-guide]
+    submission_gate: false
+  - principle_id: iclr-significance-and-value
+    name: State new knowledge and community value
+    maturity: advisory
+    dimensions: [scientific_positioning, narrative_focus]
+    instruction: >-
+      State what new, relevant, and potentially impactful knowledge the work contributes
+      to the ICLR community, at the strength supported by the registered evidence.
+    diagnostic_questions:
+      - What becomes newly known or newly possible if the central result is correct?
+      - Is significance argued from the result rather than from generic importance language?
+    source_ids: [iclr-reviewer-guide]
+    submission_gate: false
+  - principle_id: iclr-value-beyond-sota
+    name: Do not reduce value to leaderboard rank
+    maturity: advisory
+    dimensions: [venue_fit, scientific_positioning]
+    instruction: >-
+      Present the actual form of contribution—empirical, theoretical, methodological,
+      diagnostic, or practical—without treating state-of-the-art performance as universal.
+    diagnostic_questions:
+      - Is the paper's value legible under its true objective and archetype?
+      - Does it avoid manufacturing a leaderboard story unsupported by the contribution?
+    source_ids: [iclr-reviewer-guide]
+    submission_gate: false
+
+  - principle_id: wt-r01-one-scientific-center
+    name: One scientific center
+    maturity: candidate
+    dimensions: [narrative_focus, global_coherence]
+    instruction: >-
+      Give the paper one central answer; secondary contributions should support,
+      extend, operationalize, or bound that answer.
+    diagnostic_questions:
+      - Can a reviewer state the main answer in one sentence?
+      - Does every contribution have an explicit relation to that answer?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r02-promise-delivery
+    name: Promise-delivery contract
+    maturity: candidate
+    dimensions: [claim_calibration, global_coherence]
+    instruction: >-
+      Keep the question, answer, and scope promised by the title, abstract, and
+      introduction aligned with what results, proofs, and conclusion visibly deliver.
+    diagnostic_questions:
+      - Is each headline promise linked to a primary evidence carrier?
+      - Does the conclusion answer the introduced question without expanding scope?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r03-question-driven-evidence
+    name: Question-driven evidence progression
+    maturity: candidate
+    dimensions: [argumentative_structure, evidence_prioritization]
+    applies_to:
+      - empirical-method
+      - empirical-system
+      - empirical-analysis
+      - empirical-discovery
+      - theory-empirical
+    instruction: >-
+      Order empirical results by the uncertainties they resolve, not by execution
+      chronology, implementation milestones, or artifact inventory.
+    diagnostic_questions:
+      - Does each result subsection state the uncertainty it resolves?
+      - Would changing run order incorrectly change the paper's argument order?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r04-primary-carrier
+    name: Every important claim has a primary carrier
+    maturity: candidate
+    dimensions: [claim_calibration, evidence_prioritization]
+    instruction: >-
+      Name the theorem, controlled comparison, table, curve, qualitative panel,
+      audit, or real-world test a reviewer should inspect first for each important claim.
+    diagnostic_questions:
+      - What artifact would a reviewer inspect first to verify the claim?
+      - Does prose interpret the carrier instead of substituting for it?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r05-type-conditioned-carriers
+    name: Type-conditioned carrier completeness
+    maturity: candidate
+    dimensions: [evidence_prioritization, venue_fit]
+    instruction: >-
+      Require the visual, empirical, or formal carriers demanded by the claims and
+      archetype; never impose universal figure, table, experiment, or ablation counts.
+    diagnostic_questions:
+      - Which relation or effect is materially harder to verify in prose?
+      - Is the chosen carrier appropriate for this paper archetype?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r06-mechanism-ladder
+    name: Diagnosis-mechanism-intervention ladder
+    maturity: candidate
+    dimensions: [argumentative_structure, claim_calibration]
+    applies_to: [empirical-discovery, theory-empirical]
+    instruction: >-
+      For a mechanistic claim, establish the phenomenon, discriminate alternative
+      explanations, and test an intervention or novel prediction derived from the mechanism.
+    diagnostic_questions:
+      - Is the mechanism distinguishable from descriptive correlation?
+      - Does an intervention or novel prediction close the claimed causal story?
+    source_ids: [iclr-award-corpus]
+    submission_gate: false
+  - principle_id: wt-r07-fair-contest
+    name: Set up a fair contest
+    maturity: candidate
+    dimensions: [scientific_integrity, evidence_prioritization]
+    applies_to:
+      - empirical-method
+      - empirical-system
+      - empirical-analysis
+      - empirical-discovery
+      - theory-empirical
+    instruction: >-
+      For comparative claims, expose and match resources that could explain the result,
+      including data, compute, model scale, tuning, evaluation access, and preprocessing.
+    diagnostic_questions:
+      - Could an unmatched resource explain the claimed advantage?
+      - Is each baseline strong under the same information and budget?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r08-stress-central-claim
+    name: Stress the central claim
+    maturity: candidate
+    dimensions: [evidence_prioritization, argumentative_structure]
+    applies_to:
+      - empirical-method
+      - empirical-system
+      - empirical-analysis
+      - empirical-discovery
+      - theory-empirical
+    instruction: >-
+      Select robustness, sensitivity, scale, seed, and ablation analyses according
+      to plausible failure modes and alternative explanations of the central claim.
+    diagnostic_questions:
+      - What alternative explanation does each analysis eliminate?
+      - Which stress test is most capable of reversing the conclusion?
+    source_ids: [iclr-award-corpus]
+    submission_gate: false
+  - principle_id: wt-r09-world-interface
+    name: Close the world interface
+    maturity: candidate
+    dimensions: [claim_calibration, evidence_prioritization]
+    applies_to: [empirical-system]
+    instruction: >-
+      If a claim crosses into a system or application, include evidence at the
+      user, hardware, data, or downstream-task interface instead of proxy evidence alone.
+    diagnostic_questions:
+      - Where does the contribution touch the world outside the isolated component?
+      - Is that interface directly evaluated at the scope used in the claim?
+    source_ids: [iclr-award-corpus]
+    submission_gate: false
+  - principle_id: wt-r10-visual-duty
+    name: Every visual has an argumentative duty
+    maturity: candidate
+    dimensions: [reader_guidance, evidence_prioritization]
+    instruction: >-
+      Make each figure or table expose one scientific relation, comparison, mechanism,
+      or boundary; surrounding text should explain why the pattern matters.
+    diagnostic_questions:
+      - Can the visual's intended takeaway be stated in one sentence?
+      - Does it make a claim easier to verify than prose alone?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r11-main-text-evidence
+    name: Main-text evidence comes first
+    maturity: candidate
+    dimensions: [evidence_prioritization, reader_guidance]
+    instruction: >-
+      Put evidence necessary to believe the headline claim in the main text; use
+      appendices to deepen derivations, settings, robustness, and reproducibility.
+    diagnostic_questions:
+      - Can the headline claim be assessed without opening the appendix?
+      - Does the appendix deepen rather than rescue the central argument?
+    source_ids: [iclr-award-corpus]
+    submission_gate: false
+  - principle_id: wt-r12-boundaries-visible
+    name: Boundaries remain visible once and precisely
+    maturity: candidate
+    dimensions: [scientific_integrity, anti_defensive_style]
+    instruction: >-
+      Preserve limitations that alter validity, scope, safety, ethics, or reproducibility,
+      while avoiding repeated defensive self-negation that obscures the supported result.
+    diagnostic_questions:
+      - Would omission mislead a reviewer about validity or scope?
+      - Is the same caveat repeated where it no longer aids interpretation?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r13-proof-chain
+    name: Theory exposes a proof chain
+    maturity: candidate
+    dimensions: [argumentative_structure, reader_guidance]
+    applies_to: [pure-theory, theory-empirical]
+    instruction: >-
+      Expose definitions, intuition, main results, proof dependencies, consequences,
+      and assumption boundaries as a navigable formal chain.
+    diagnostic_questions:
+      - Can the reader see why each formal component is needed before it is used?
+      - Are consequences and assumption boundaries separated from the theorem itself?
+    source_ids: [iclr-award-corpus]
+    submission_gate: false
+  - principle_id: wt-r14-reproducibility-claim
+    name: Reproducibility is part of the claim
+    maturity: candidate
+    dimensions: [scientific_integrity, evidence_prioritization]
+    applies_to:
+      - empirical-method
+      - empirical-system
+      - empirical-analysis
+      - empirical-discovery
+      - theory-empirical
+    instruction: >-
+      Expose the data, procedure, settings, compute, and evaluation path needed to
+      recreate the principal empirical result where those choices affect interpretation.
+    diagnostic_questions:
+      - Is there a traceable path from headline result to executable evaluation?
+      - Are resource and preprocessing choices reported where they affect comparison?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+  - principle_id: wt-r15-entry-points-agree
+    name: High-attention entry points agree
+    maturity: candidate
+    dimensions: [global_coherence, precision_and_scope]
+    instruction: >-
+      Keep title, abstract, introduction, first explanatory carrier, headline result,
+      and conclusion aligned on the central question, answer, terminology, and scope.
+    diagnostic_questions:
+      - Does an entry-point-only reading yield one coherent paper?
+      - Do terminology and claim strength remain stable across those surfaces?
+    source_ids: [iclr-award-corpus, writing-methods]
+    submission_gate: false
+
+archetype_overlays:
+  - archetype: empirical-method
+    narrative_duties:
+      - Connect the method design to the uncertainty or limitation it resolves.
+      - Progress from the primary comparison to explanation, stress tests, and boundaries.
+    evidence_duties:
+      - Use matched and sufficiently strong baselines for comparative claims.
+      - Isolate material components and report stability across relevant variation.
+    principle_ids: [wt-r03-question-driven-evidence, wt-r07-fair-contest, wt-r08-stress-central-claim, wt-r14-reproducibility-claim]
+    prohibited_shortcuts:
+      - Treating more benchmark rows as a substitute for testing the central explanation.
+  - archetype: empirical-system
+    narrative_duties:
+      - Separate component capability from end-to-end system value.
+      - Make the system boundary and real-world interface explicit.
+    evidence_duties:
+      - Measure quality, cost, latency, reliability, and failure behavior when claimed.
+      - Evaluate the downstream interface rather than relying only on component proxies.
+    principle_ids: [wt-r03-question-driven-evidence, wt-r07-fair-contest, wt-r08-stress-central-claim, wt-r09-world-interface, wt-r14-reproducibility-claim]
+    prohibited_shortcuts:
+      - Substituting software test coverage for comparative scientific effectiveness.
+  - archetype: empirical-analysis
+    narrative_duties:
+      - Organize the analysis around successive questions and alternative explanations.
+      - Separate descriptive observations from explanatory or causal conclusions.
+    evidence_duties:
+      - Match comparison resources and expose uncertainty and sensitivity.
+      - Test whether the result survives plausible alternative definitions and controls.
+    principle_ids: [wt-r03-question-driven-evidence, wt-r07-fair-contest, wt-r08-stress-central-claim, wt-r14-reproducibility-claim]
+    prohibited_shortcuts:
+      - Promoting a correlation to a mechanism without discriminating evidence.
+  - archetype: empirical-discovery
+    narrative_duties:
+      - Move from phenomenon through diagnosis to a discriminating intervention or prediction.
+      - Keep the discovered pattern distinct from the proposed explanation.
+    evidence_duties:
+      - Demonstrate that the phenomenon is stable and not a measurement artifact.
+      - Test alternative explanations and the strongest feasible intervention.
+    principle_ids: [wt-r03-question-driven-evidence, wt-r06-mechanism-ladder, wt-r07-fair-contest, wt-r08-stress-central-claim, wt-r14-reproducibility-claim]
+    prohibited_shortcuts:
+      - Using mechanistic language for an untested descriptive association.
+  - archetype: theory-empirical
+    narrative_duties:
+      - Make the dependency between formal results and empirical tests explicit.
+      - Explain whether experiments illustrate, falsify, or extend the theory.
+    evidence_duties:
+      - Expose assumptions and proof dependencies for formal claims.
+      - Align empirical tests with the theory's predicted regime and boundary cases.
+    principle_ids: [wt-r03-question-driven-evidence, wt-r06-mechanism-ladder, wt-r07-fair-contest, wt-r08-stress-central-claim, wt-r13-proof-chain, wt-r14-reproducibility-claim]
+    prohibited_shortcuts:
+      - Presenting unrelated benchmark gains as validation of the formal claim.
+  - archetype: pure-theory
+    narrative_duties:
+      - Build a navigable chain from definitions and intuition to results and consequences.
+      - State why the formal result changes understanding of the problem.
+    evidence_duties:
+      - Make assumptions, theorem scope, proof dependencies, and boundary cases inspectable.
+      - Use diagrams or examples only when they clarify formal objects; experiments are not mandatory.
+    principle_ids: [wt-r13-proof-chain]
+    prohibited_shortcuts:
+      - Penalizing a complete formal contribution for lacking empirical figures or ablations.

@@ -22,6 +22,7 @@ from scitaste.writing.argument import (
     write_paper_argument_contract,
 )
 from tests.writing.test_venue import _template
+from tests.writing.test_venue_taste import _profile
 
 
 def _project(runtime: ProjectRuntime) -> None:
@@ -117,6 +118,7 @@ def test_project_paper_build_dry_run_is_read_only(tmp_path: Path, capsys) -> Non
     _project(runtime)
     source, bibliography = _sources(tmp_path)
     venue = _template(tmp_path)
+    _profile(tmp_path)
     args = build_parser().parse_args(
         _arguments(
             tmp_path,
@@ -134,6 +136,9 @@ def test_project_paper_build_dry_run_is_read_only(tmp_path: Path, capsys) -> Non
     assert payload["preflight"]["missing_citation_keys"] == []
     assert payload["manuscript_preflight"]["substantive_research_draft"] is True
     assert payload["writing_taste_preflight"]["profile_id"] == "scitaste-writing-taste-v1"
+    assert payload["venue_taste_preflight"]["profile_id"] == "test-venue-writing-taste-v1"
+    assert payload["venue_taste_preflight"]["paper_archetype"] == "unspecified"
+    assert payload["venue_taste_preflight"]["submission_eligibility_authority"] is False
     assert payload["would_compile"] is True
     assert not (runtime.projects_root / "paper-build-project/papers/venue-draft-v1").exists()
 
@@ -143,6 +148,7 @@ def test_project_paper_build_registers_gated_bundle(tmp_path: Path, monkeypatch,
     _project(runtime)
     source, bibliography = _sources(tmp_path)
     venue = _template(tmp_path)
+    _profile(tmp_path)
 
     def fake_compile(
         target: Path,
@@ -184,11 +190,15 @@ def test_project_paper_build_registers_gated_bundle(tmp_path: Path, monkeypatch,
     assert paper.status == "venue-submission-draft"
     assert paper.model_extra["eligible_for_submission"] is True
     assert paper.model_extra["writing_taste_assessment_sha256"]
+    assert paper.model_extra["venue_taste_profile_id"] == "test-venue-writing-taste-v1"
+    assert paper.model_extra["venue_taste_context_sha256"]
     assert (bundle / "main.pdf").is_file()
     assert (bundle / "SUBMISSION_ASSESSMENT.json").is_file()
     assert (bundle / "MANUSCRIPT_ASSESSMENT.json").is_file()
     assert (bundle / "WRITING_TASTE_ASSESSMENT.json").is_file()
+    assert (bundle / "VENUE_TASTE_CONTEXT.json").is_file()
     assert paper.files["writing-taste-assessment"] == "WRITING_TASTE_ASSESSMENT.json"
+    assert paper.files["venue-taste-context"] == "VENUE_TASTE_CONTEXT.json"
 
 
 def test_project_paper_build_owns_optional_whole_paper_argument_audit(
@@ -198,6 +208,7 @@ def test_project_paper_build_owns_optional_whole_paper_argument_audit(
     _project(runtime)
     source, bibliography = _sources(tmp_path)
     venue = _template(tmp_path)
+    _profile(tmp_path)
     claim = ScientificClaim(
         claim_id="claim-bounded",
         text="The bounded fixture preserves the registered contract.",
@@ -299,3 +310,4 @@ def test_project_paper_build_owns_optional_whole_paper_argument_audit(
     payload = json.loads(capsys.readouterr().out)
     assert payload["paper_argument_preflight"]["contract_complete"] is True
     assert payload["paper_argument_preflight"]["scientific_quality_established"] is False
+    assert payload["venue_taste_preflight"]["paper_archetype"] == "empirical-system"

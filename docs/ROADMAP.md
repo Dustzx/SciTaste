@@ -100,6 +100,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   assessor and proposal-only semantic node preserve material limitations and
   treat anti-defensive writing as one subordinate dimension rather than the
   complete writing objective.
+- Venue Writing Taste profiles are now distinct from template compliance. The
+  ICLR 2027 bundle co-locates a hash-bound submission contract, provenance
+  record, five official reviewer-facing constructs, fifteen corpus-derived
+  candidate principles, and six paper-archetype overlays. Paper builds and the
+  semantic reviewer consume the exact profile context, while candidate guidance
+  remains on hold and cannot affect submission eligibility.
 - Reviewer feedback becomes typed concerns and research obligations with
   stage-specific actions rather than an unconditional rewrite.
 - Acceptance trajectory: a missing-baseline concern selects `ADD_BASELINE`, the
