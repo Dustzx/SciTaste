@@ -29,6 +29,10 @@ cost, or GPU was used by this acceptance.
   and both locale catalogs—were present.
 - `tests/generative_ui/test_locale_assets.py`: 6 passed.
 - `git diff --check`: passed.
+- A detached clean worktree at `93c0bab`, with the pinned AutoResearchClaw
+  submodule initialized and no local `outputs`, passed 949 tests in 197.54
+  seconds. One self-hosting UI fixture skipped explicitly because its local
+  `scitaste-offline-full` project was absent; there were no failures.
 
 The repository suite executes real offline Full Workflow integration cases, not
 only parser smoke tests. It materializes project runs, executes the admitted CPU
