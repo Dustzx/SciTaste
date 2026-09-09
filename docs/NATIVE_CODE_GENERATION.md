@@ -131,10 +131,10 @@ provider responses, and recordings remain outside Git.
 ## Current limitations
 
 - Only one bounded Python CPU experiment proposal is integrated.
-- Native code generation and the evidence-stage advisory are currently rejected
-  as a combined configuration because both must verify one typed ledger through
-  a shared extension registry. They work independently; silent partial ledger
-  verification is not allowed.
+- Native code generation and built-in evidence/tool model nodes now compose on
+  one ledger through a shared extension registry. Every entry remains type-
+  checked; an earlier advisory receipt binds its exact historical prefix while
+  final verification covers later cumulative entries.
 - There is no automatic code repair loop. A malformed provider proposal remains
   negative evidence rather than being silently modified.
 - Dataset mounts, GPU execution, package installation, open-web access, shell

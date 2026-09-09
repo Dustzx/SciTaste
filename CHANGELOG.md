@@ -7,6 +7,23 @@ semantic versioning.
 
 ### Added
 
+- Full Workflow now composes proposal-only native code generation, evidence
+  advice, and Tool Intelligence through one typed project ledger. Historical
+  receipts verify against their exact ledger prefix while later nodes remain
+  type-checked through a shared extension registry. A deterministic evidence
+  hotspot can execute one leased, registered, read-only tool; its observation is
+  explicitly non-canonical and has no state-transition authority.
+- Open-question intake can now choose a complete four-stage action bundle from a
+  content-bound catalog. Domain, budget, authorized evidence types, and bounded
+  keyword gates determine a reproducible selection before project mutation; the
+  catalog and selected scenario bytes become run-owned inputs. This selects only
+  registered actions and does not admit arbitrary model-authored execution.
+- Generation as Content now carries an audited proposal through an explicit
+  deterministic controller decision. Versioned fixed, workspace, and generated
+  endpoints accept identity-only approval/rejection requests, revalidate the
+  current snapshot and server-owned proposal, record the result exactly once,
+  and grant at most a bounded read-only or approved handoff. Neither approval nor
+  the browser mutates `ResearchState` or executes a tool.
 - Tool Intelligence v3 now owns content-addressed Knowledge, Evidence, and
   registered-run bindings; durable leases, exclusive claims, start/result/
   observation records, hash-chained ledgers, exact replay, and fail-closed crash

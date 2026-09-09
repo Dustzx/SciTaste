@@ -11,8 +11,9 @@ This module is a contract and interaction-boundary layer plus a trusted
 ProjectRuntime adapter. It includes a framework-neutral renderer document and a
 runnable, local receiver-owned browser/API application. An optional bounded
 structured model may classify a long-tail question or arrange server-owned
-component candidates. It does not include controller approval or a task
-executor, and the provider never authors renderer content.
+component candidates. An explicit deterministic controller can approve a
+bounded handoff, but the interface includes no task executor and the provider
+never authors renderer content or authority.
 
 ## Evidence-native project workspace
 
@@ -106,13 +107,12 @@ gate only when their required project records exist. They contain no command or
 execution authority.
 
 The existing `scitaste-self-development` project is a read-only self-hosting
-acceptance case. At revision 21 it truthfully yields nine registered runs, four
-observed completions, two blocked records, one failed record, one candidate,
-one unknown reference, four manifest-declared milestones, no registered paper,
-and a blocked overall project status. That project record predates some later
-repository work, so the UI must not infer newer progress from Git or docs. Main
-must register later milestones through the normal `ProjectRuntime` workflow if
-they should appear in this view.
+acceptance case. Its repository-local manifest had reached revision 203 with 40
+registered run records and a selected project-owned manuscript bundle before
+this mainline closure. The exact categorical composition is derived afresh from
+that manifest rather than frozen in the UI documentation. The UI must not infer
+newer progress from Git or docs; main registers later milestones through the
+normal `ProjectRuntime` workflow before they can appear in this view.
 
 ### Unified intent and surface-plan contracts
 
@@ -301,14 +301,12 @@ controller decision.
 
 ### Self-hosting verification
 
-On 2026-09-06 the offline receiver was exercised against a temporary copy of
-the existing `scitaste-self-development` project, leaving the repository's
-`outputs/` untouched. The progress endpoint opened revision 21 as `blocked` and
-reported exactly nine registered runs: four observed completed, two blocked,
-one failed, one candidate, and one unknown; it reported no registered paper or
-AutoResearchClaw stage completion. The quick catalog offered progress review,
-blocker diagnosis, run comparison, and next-step review, but correctly omitted
-paper review.
+On 2026-09-06 the offline receiver was exercised against a temporary copy of the
+then-current revision 21 `scitaste-self-development` project, leaving the
+repository's `outputs/` untouched. That historical fixture reported nine runs
+and no paper. Later project registrations supersede those counts; the observation
+is retained only as the first self-hosting UI check, not as current project
+status.
 
 Selecting progress review produced an admitted deterministic generation with
 five native components grouped as primary, attention, and context. The response
@@ -447,10 +445,10 @@ without creating the destination. The command reports the selected trusted
 components and proposal IDs; it does not activate those proposals.
 
 The factory itself still stops at the declarative boundary: it does not provide
-a model-driven layout generator, deterministic controller, approval workflow,
-or action executor. The local application described below revalidates every
-interaction through `SurfaceSession`, but its successful receipt still stops
-before the later controller boundary.
+a model-driven layout generator, approval workflow, or action executor. The
+local application described below adds planning and a deterministic proposal
+controller around freshly rebuilt factory surfaces. Authorization stops at a
+typed handoff and never executes the proposed operation.
 
 ## Local receiver application
 
@@ -468,12 +466,16 @@ The versioned same-origin JSON API is deliberately closed:
   renderer document;
 - `POST /api/v1/projects/<project-id>/events` accepts exactly `SurfaceEvent`
   and returns exactly `ProposalReceipt` with HTTP 202.
+- `POST /api/v1/projects/<project-id>/decisions` accepts exactly one explicit
+  `ProposalControllerRequest` and returns its deterministic decision;
 - `GET /api/v2/workspace/projects` returns the authenticated project-list view;
 - `GET /api/v2/workspace/projects/<project-id>/<view>` returns one current
   workspace, with typed `/runs/...` or `/papers/...` suffixes only where the
   closed query permits them;
 - `POST` to the same workspace path plus `/events` records a proposal-only
   interaction;
+- `POST` to that workspace path plus `/decisions` controls a previously audited
+  proposal against the same current surface;
 - `POST` to a workspace path containing a visible artifact plus `/inspections` accepts exactly
   `ArtifactInspectionEvent` and returns a bounded `ArtifactInspectionDocument`.
 - `GET /api/v3/generative/projects/<project-id>/intents` returns the current
@@ -483,16 +485,18 @@ The versioned same-origin JSON API is deliberately closed:
   `GeneratedWorkspaceDocument`;
 - `GET /api/v3/generative/projects/<project-id>/generations/<surface-id>`
   revalidates and returns an exact in-memory admitted generation;
-- `POST` to that generated path plus `/events` or `/inspections` resolves only
-  against the retained server-owned surface.
+- `POST` to that generated path plus `/events`, `/decisions`, or `/inspections`
+  resolves only against the retained server-owned surface.
 
-There is no general filesystem, artifact download, callback, controller, tool,
-or model endpoint. Query strings are rejected, so credentials cannot be passed
-in a query. API requests require an exact bearer authorization header, compared
-in constant time. The fixed HTML, CSS, and JavaScript shell is public because it
-contains no project state or credential; all project data remains behind the
-authenticated API. The browser retains the credential only in its password
-input and does not use local or session storage.
+There is no general filesystem, artifact download, callback, tool, model, or
+executor endpoint. The controller endpoint accepts only a request/proposal
+identity and explicit approval or rejection; it cannot accept commands, tool
+arguments, or state patches. Query strings are rejected, so credentials cannot
+be passed in a query. API requests require an exact bearer authorization header,
+compared in constant time. The fixed HTML, CSS, and JavaScript shell is public
+because it contains no project state or credential; all project data remains
+behind the authenticated API. The browser retains the credential only in its
+password input and does not use local or session storage.
 
 The packaged JavaScript contains a closed receiver function for every
 `TrustedComponent`. It creates elements and text nodes with `createTextNode` or
@@ -549,9 +553,13 @@ variable; embedded credentials are rejected. Dry-run output includes only the
 provider, model, mode, and configuration hash, never the endpoint credential or
 question. No live provider call is part of the automated test suite.
 
-This receiver does not approve or execute the returned proposal. The only next
-boundary named by a valid receipt is `deterministic_controller`, which is not
-called by the HTTP service or browser.
+The receiver can explicitly approve or reject the returned proposal. Approval
+rebuilds the current surface, reproduces its audited receipt, checks the current
+snapshot and human-confirmation requirement, and emits only a closed handoff:
+artifact inspection or run comparison is `read_only`; transition or approval is
+`approved_handoff`. The decision always records
+`state_mutation_authorized=false`. The receiver does not consume that handoff or
+execute the proposal.
 
 ## Safe artifact inspection
 
@@ -647,8 +655,8 @@ initial proposal kinds are:
 
 Every proposal serializes `authority: proposal_only`. It has no command, URL,
 tool name, callback, or executor field. Transition and approval proposals must
-set `requires_approval`; a later deterministic controller decides whether a
-proposal is feasible and accepted. Each approval subject is also restricted to
+set `requires_approval`; the deterministic controller decides whether the
+proposal receives a bounded handoff. Each approval subject is also restricted to
 its corresponding evidence kind: decision, artifact/paper, paper, run record, or
 blocker evidence.
 
@@ -681,8 +689,16 @@ the current server-owned surface before resolving the registered action.
 
 Successful activation returns a `ProposalReceipt` with status
 `proposal_pending`, execution authority `none`, and next boundary
-`deterministic_controller`. It neither invokes that controller nor modifies
+`deterministic_controller`. It does not itself invoke that controller or modify
 research state. Accepted event IDs cannot be replayed.
+
+`ProposalControllerRequest` then names only the issued proposal event, a unique
+request ID, approve/reject, and explicit human confirmation. The controller
+revalidates the exact current `SnapshotBinding`, server-owned surface/action, and
+receipt. Rejection grants nothing. Approval maps the four proposal kinds to one
+closed read-only or approved-handoff boundary; the resulting
+`ProposalControllerDecision` is non-executable and cannot mutate state. A
+proposal and controller request may each be decided only once.
 
 `SurfaceSession.replace` applies a complete `SurfaceRevision` only when the
 previous revision and fingerprint still match. It rejects project changes,
@@ -697,7 +713,8 @@ proposing against a new research state.
 
 `SurfaceAuditLog` stores accepted UI history as self-hashed, predecessor-linked
 JSONL. A log starts with one complete `surface_opened` record and can append only
-`surface_revised`, `proposal_issued`, or `artifact_inspected` records. Each
+`surface_revised`, `proposal_issued`, `proposal_controlled`, or
+`artifact_inspected` records. Each
 append first validates and semantically replays the entire history; a proposal
 receipt must be reproducible from the server-owned action, and an inspection
 receipt must match a visible artifact binding, before it can be recorded.
@@ -721,16 +738,19 @@ closed rather than falling back to an overwrite-capable rename.
 The pending-proposals workspace reads only fully verified project-local chains,
 content-addresses each contributing audit file as `audit_record` evidence, and
 checks every opened/revised surface and every proposal/inspection event and
-receipt against the owning project directory, and then shows the recorded
-pending receipts. A corrupt, changing, oversized, symlinked, renamed
+receipt and controller decision against the owning project directory, and then
+shows only issued receipts without a valid controller result. A corrupt,
+changing, oversized, symlinked, renamed
 cross-project, or otherwise foreign history is rejected instead of partially
-displayed. Pending still means advice awaiting the later deterministic
-controller; this view has no approval or mutation operation.
+displayed. The browser can submit approval/rejection from this evidence view,
+but the result remains a non-mutating handoff rather than execution.
 
 Each audit epoch is capped at 8 MiB and fails closed when the limit is reached.
-The log records proposals and read-only inspections, not executions. Persisted
-receipts retain `proposal_only` authority and `execution_authority: none`; no log
-API invokes a controller, tool, model, or state mutation. The hash chain detects
+The log records proposals, controller decisions, and read-only inspections, not
+executions. Persisted receipts retain `proposal_only` authority and
+`execution_authority: none`; controller records separately retain only their
+closed handoff authority. No log API invokes a tool, model, executor, or state
+mutation. The hash chain detects
 corruption or editing relative to the copy being inspected, but is not a digital
 signature and does not establish authorship. A future ProjectRuntime event-log
 integration should anchor the latest record hash in a separately trusted project
@@ -853,10 +873,13 @@ on an A2UI package in this phase:
 | `SurfacePlan` | ID-only ordered/grouped declarative layout |
 | `GeneratedWorkspaceDocument` | validated generated surface plus provenance |
 | `ArtifactInspectionEvent` | identity-only request for a visible evidence preview |
+| `ProposalControllerRequest` | explicit identity-bound approve/reject request |
+| `ProposalControllerDecision` | audited non-executable handoff result |
 | `SurfaceAuditRecord` | receiver-side append-only interaction history |
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,
 evidence IDs, snapshot revision/hash, and `proposal_only` authority. A2UI events
-must return to a deterministic approval/controller boundary; they must not be
-mapped directly to shell commands or tools.
+must return to the deterministic approval/controller boundary; only its bounded
+handoff may reach a separately validated downstream service. Events and
+controller results must not be mapped directly to shell commands or tools.

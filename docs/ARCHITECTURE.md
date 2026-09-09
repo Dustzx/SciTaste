@@ -574,9 +574,9 @@ current stage, paper manifests, and declared paper artifacts. Renderer-facing
 documents retain the binding while omitting server-owned proposal payloads. This
 decision also permits an atomic, hash-chained audit stream only after each
 surface revision or proposal receipt reproduces through the server-owned
-`SurfaceSession`. The stream records proposals, never execution authority. This
-accepts the contract and trust boundary; it does not authorize a controller or
-executor.
+`SurfaceSession`. The initial stream records proposals with no execution
+authority. This accepts the surface contract and trust boundary; the factory
+itself does not authorize a controller or executor.
 
 The first-party project surface factory now accepts only a trusted
 `ProjectRuntime` plus project ID, derives the overview from that authority, and
@@ -603,6 +603,14 @@ directory-descriptor-bound lock, temporary-write, and atomic replacement
 operations prevent a checked audit path from being redirected during mutation.
 Browser project/view changes clear stale selection catalogs before fetching the
 new authoritative view.
+
+The application now implements the deterministic controller boundary without
+turning it into an executor. One identity-only approval/rejection request must
+resolve to an already audited proposal on the exact current surface and snapshot.
+Its append-only result grants only the proposal kind's registered read-only or
+approved-handoff boundary and always fixes state-mutation authority to false.
+Duplicate requests and a second decision for one proposal fail closed. Pending
+views subtract controlled receipts only after complete audit replay.
 
 Generation as Content extends this same accepted boundary rather than adding a
 second renderer. Evidence-derived quick intents and bounded free questions
@@ -640,12 +648,17 @@ and artifact registration.
 Stage completion records are self-hashed and bind the predecessor state, output
 state, decision log, and required artifacts. Resume may reuse only the validated
 contiguous prefix. An incomplete attempt is preserved under the owning run before
-rerun, while an invalid claimed completion fails closed. Paper/finalization
-overwrite recovery remains an explicit manual boundary.
+rerun, while an invalid claimed completion fails closed. A separate write-once
+finalization plan now verifies or safely archives incomplete paper/summary work
+without overwriting a registered bundle.
 This ADR establishes offline orchestration and artifact ownership, not a claim
 that the mock executor or scripted semantic hook measures research effectiveness.
-The offline proposal-only model-node bridge is implemented; live model advice
-and complete AutoResearchClaw orchestration remain later gates.
+Proposal-only evidence advice, source generation, and bounded Tool Intelligence
+now compose through one typed ledger. A deterministic post-evidence hotspot may
+issue one registered read-only tool lease; its observation remains non-canonical
+and cannot advance state. Live conditions remain double-gated engineering
+probes, and complete AutoResearchClaw orchestration is an optional comparison
+gate rather than a native product dependency.
 
 ### ADR-026: Matched-study resume requires content-bound project ownership
 
@@ -1163,13 +1176,21 @@ or plan only if every existing artifact still has its admitted content; complete
 run repair only verifies and never backfills intake. Both the registered run and
 final summary retain the brief and plan identities.
 
-The accepted planner mode is deliberately
-`deterministic-registered-inputs-v1`. Models have `proposal-only` authority and
-cannot change budgets, authorize evidence, select execution, or mark a plan
-ready. Question-to-scenario semantic alignment remains a user declaration in
-this version. Model-grounded scenario synthesis, research-quality comparison,
-and external review are separate later gates and must not be inferred from a
-ready launch plan.
+Two accepted planner modes retain deterministic execution authority. The direct
+`deterministic-registered-inputs-v1` mode binds four caller-selected scenarios.
+The committed open-question path uses
+`deterministic-catalog-selection-v1`: a content-bound registry supplies complete
+four-stage bundles, which are filtered before mutation by exact target domain,
+Discovery budget, brief-authorized evidence types, and bounded keyword matches,
+then ranked by match count and stable bundle ID. The exact catalog and selected
+scenario bytes become run-owned inputs and are rechecked on resume.
+
+Models retain `proposal-only` authority and cannot change budgets, authorize
+evidence, select arbitrary execution, or mark a plan ready. Catalog selection is
+more autonomous than caller-supplied paths but remains a closed registered-action
+policy, not open-ended scenario synthesis. Model-grounded scenario generation,
+research-quality comparison, and external review are separate later gates and
+must not be inferred from a ready launch plan.
 
 ### ADR-040: Writing Taste is hierarchical and integrity-first
 

@@ -1,11 +1,11 @@
 # Parallel Task Board
 
-Board revision: `2026-09-09.16`
+Board revision: `2026-09-09.17`
 
 | Window | Assignment | Status | Branch | Worktree | Depends on |
 |---|---|---|---|---|---|
-| Main | Open-question intake and workflow launch autonomy | accepted and synchronized | `main` | `/home/good/zfx/papers/SciTaste` | restart-safe Full Workflow |
-| 2 | Durable project-owned Tool Intelligence loop v3 | audited and integrated; independent review pending | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | automatic main-workflow trigger policy |
+| Main | Bounded native mainline closure | implementation complete; repository acceptance in progress | `main` | `/home/good/zfx/papers/SciTaste` | external Phase 9 gates |
+| 2 | Durable project-owned Tool Intelligence loop v3 | audited and integrated; main-workflow trigger integrated | `feat/tool-intelligence-v3` | `/home/good/zfx/papers/SciTaste-worktrees/tool-intelligence-v3` | independent review and broader tasks |
 | 3 | Generation as Content UX evaluation v5 | audited and integrated; human study pending | `feat/generative-ui-ux-evaluation-v5` | `/home/good/zfx/papers/SciTaste-worktrees/generative-ui` | powered counterbalanced evaluation |
 
 ## Scheduling policy
@@ -63,3 +63,11 @@ Board revision: `2026-09-09.16`
   retained by SciTaste. Clean-commit acceptance passed 875 tests with one
   local-output-dependent UI skip and 83 percent combined coverage; the
   self-development project records revision 198.
+- Main has extended that boundary with deterministic selection from a
+  content-bound four-stage scenario catalog; the catalog and selected inputs are
+  copied into the run and verified on resume.
+- Main has integrated the deterministic UI proposal controller and Full Workflow
+  Tool Intelligence hotspot. Approval yields only an audited bounded handoff;
+  the evidence tool is leased and read-only, and its observation remains outside
+  canonical state. Proposal-only source generation, evidence advice, and tool
+  planning now compose through one typed ledger.

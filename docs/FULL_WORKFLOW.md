@@ -1,9 +1,9 @@
 # Project-owned full workflow
 
 `scitaste run full` is the first-party composition of SciTaste's Phase 4--7
-workflows. Its core path is deterministic and offline; an explicitly configured
-evidence advisory or native-source proposer may additionally use a bounded live
-model node. It is not a
+workflows. Its core path is deterministic and offline; explicitly configured
+evidence advice, native-source generation, or Tool Intelligence may additionally
+use bounded model nodes. It is not a
 reserved CLI or four disconnected demos. Discovery creates the initial `ResearchState`;
 Evidence, Communication, reviewer-driven evidence collection, and Figure
 generation each load and extend that same state history.
@@ -73,19 +73,23 @@ the brief budget is not the executable Discovery budget, or any configured
 Evidence/Communication requirement lies outside the brief's authorized evidence
 types.
 
-On formal execution, the plan and exact brief/scenario bytes are published under
-the owning run before stage work begins. All four stages then load the run-owned
-copies. Source drift between inspection and copy, copy drift, plan drift, and
-resume-time tampering fail closed. A partially published intake can be completed
-on explicit resume only when every existing byte still matches its registered
-hash.
+The committed config uses a content-bound `scenario_catalog`. Before mutation,
+`deterministic-catalog-selection-v1` filters complete four-stage bundles by exact
+domain, executable budget, authorized evidence types, and question/objective
+keyword matches, then ranks ties by hit count and stable bundle ID. Dry-run
+reports the selected and eligible bundle IDs. Directly configured scenarios
+remain supported through `deterministic-registered-inputs-v1` for pinned
+experiments.
 
-The v1 planning mode is `deterministic-registered-inputs-v1`. It admits and binds
-registered scenarios; it does not generate new Discovery, Evidence,
-Communication, or Figure content from the question. Future model assistance may
-propose that content, but remains `proposal-only` and must pass the same identity,
-evidence, budget, execution, and project-revision gates. A `ready` plan is an
-execution admission result, not an effectiveness or publication claim.
+On formal execution, the plan, exact brief, catalog, and selected scenario bytes
+are published under the owning run before stage work begins. All four stages then
+load the run-owned copies. Source drift between inspection and copy, copy drift,
+plan drift, and resume-time tampering fail closed. A partially published intake
+can be completed on explicit resume only when every existing byte still matches
+its registered hash. Catalog selection admits only registered actions; it does
+not generate arbitrary Discovery, Evidence, Communication, or Figure code. A
+`ready` plan is an execution admission result, not an effectiveness or
+publication claim.
 
 An opt-in offline acceptance config also exercises a bounded semantic node in
 the real evidence-stage path:
@@ -105,6 +109,24 @@ costs zero, has no network or tool path, and exists to validate integration—no
 model quality. Its accepted output remains a proposal: it cannot update claims,
 select an action, execute a tool, or mutate state. The record proves this by
 binding identical input/output state hashes.
+
+Tool Intelligence is a separate optional post-interpretation hook:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_tool_intelligence_v1.yaml \
+  --run-id offline-tool-intelligence-seed-07 \
+  --seed 7 --output outputs
+```
+
+A deterministic claim-status policy first decides whether a registered hotspot
+exists. If it does, the run publishes an immutable state/evidence request,
+invokes the normal typed model ledger, admits at most one dependency-free tool
+step, issues a single-use lease, and executes the registered read-only handler.
+The committed case inspects one exact project-owned evidence record. The
+observation and final decision remain `advisory_only`; they are neither canonical
+evidence nor authority to advance `ResearchState`. Resume verifies and reuses the
+model and tool ledgers without repeating a completed call.
 
 The live engineering condition is separately configured and double-gated:
 
@@ -166,7 +188,7 @@ outputs/projects/<project-id>/
 ├── PROJECT.json
 ├── runs/<run-id>/
 │   ├── full_run_summary.json
-│   ├── intake/{BRIEF.yaml,PLAN.json}   # when open-question intake is enabled
+│   ├── intake/{BRIEF.yaml,PLAN.json,SCENARIO_CATALOG.yaml}
 │   ├── intake/scenarios/{discovery,evidence,communication,figure}.yaml
 │   ├── finalization/PLAN.json          # write-once stage/paper input binding
 │   ├── failed_attempts/stages/<stage>/attempt-NNN/  # when resumed
@@ -241,9 +263,9 @@ marked `failed` with the exception type and bounded message for diagnosis.
 
 `--resume` accepts only a previously registered failed run with the same
 provider, model, condition, seed, evidence scope, stage path, and content-hashed
-workflow configuration (including the optional research brief, all four
-scenario files and optional
-advisory or source-generation profile bindings). It reuses only
+workflow configuration (including the optional research brief, scenario catalog,
+all four scenario files, and optional advisory, Tool Intelligence, or
+source-generation profile bindings). It reuses only
 the contiguous completed prefix whose record, state continuity, project
 identity, lifecycle position, and every declared file hash still validate. A
 missing completion record means that stage is incomplete: its existing directory
@@ -252,11 +274,15 @@ stage plus every downstream stage is rerun. A malformed completion record or a
 hash mismatch is treated as possible tampering and fails closed; it is not
 silently archived or regenerated.
 
-When model advice is enabled, evidence-stage reuse additionally revalidates the
-self-hashed pre-call input record and advisory result, immutable predecessor and
-evidence states, decision log, evidence summary, complete model-node ledger
-totals/head, and exact response recording. A verified prefix therefore does not
-call the backend again.
+When model advice or Tool Intelligence is enabled, evidence-stage reuse
+additionally revalidates the self-hashed pre-call input record and advisory
+result, immutable predecessor and evidence states, decision log, evidence
+summary, complete model-node ledger totals/head, exact response recording,
+and—where applicable—the controlled tool binding, lease, observation, and
+decision ledger. A verified prefix therefore does not call the backend or tool
+again. Multiple Full Workflow model-node hooks share one typed ledger;
+historical receipts bind the exact prefix visible when they were issued, while
+final verification covers the complete chain.
 
 The input record is published before provider access and cannot be overwritten.
 If a live response was durably recorded but the process stopped before ledger
@@ -328,6 +354,12 @@ tools, non-zero scripted cost, inconsistent live gates, and policy/profile/
 backend identity drift. `--dry-run` reports the backend mode, both authorization
 gates, and whether a real execution would contact a provider without creating a
 project or accessing the network.
+
+`configs/workflows/full_offline_tool_intelligence_v1.yaml` adds the
+content-bound `full_tool_intelligence_scripted_v1.yaml`. Its controlled profile
+names exact tools and evidence IDs; loading and dry-run reject permission,
+backend, profile, trigger, budget, or authority drift. A profile valid for one
+evidence identity is not silently generalized to another workflow result.
 
 `configs/workflows/full_offline_code_generation_v1.yaml` replaces the registered
 source proposal with a content-bound generation configuration and 8,192-token

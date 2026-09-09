@@ -555,9 +555,10 @@ status by name similarity.
 
 ## Current limitations
 
-- The complete bridge is integrated below `model_nodes/**`, but automatic
-  semantic-hotspot detection from the main-owned full workflow remains an
-  explicit policy and call-site step rather than an implicit trigger.
+- Full Workflow now owns an explicit deterministic post-evidence hotspot policy
+  and call site. It can trigger one bounded Tool Intelligence request from
+  actual project state and evidence, but it does not let a model invent the
+  trigger, tool catalog, permissions, or canonical evidence.
 - One attempt executes at most one dependency-free read-only action. A
   `replan-required` result requires a new typed state projection and a new
   bounded model invocation; the model never executes its proposed DAG.
@@ -574,6 +575,6 @@ status by name similarity.
 - The paired engineering benchmark establishes deterministic safety/recovery
   behavior and controller-step proxies only. The preregistered study adds a
   narrow grounded evidence-acquisition endpoint, but independent domain review,
-  automatic main-workflow triggering, broader tasks, and external replication remain
+  broader main-workflow tasks and external replication remain
   required for scientific-efficiency, scientific-quality, or ADR-022 acceptance
   claims.

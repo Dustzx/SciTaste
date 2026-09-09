@@ -68,8 +68,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - a typed, revision-guarded project runtime that owns runs, paper bundles,
   content-hashed snapshots, and safe current-artifact aliases;
 - a strict open-question intake that turns a research brief into a self-hashed
-  launch admission plan, then executes only project-owned copies of the admitted
-  scenarios while keeping model planning proposal-only;
+  launch admission plan, deterministically selects an eligible registered
+  four-stage bundle from a content-bound catalog, then executes only project-owned
+  copies while keeping model planning proposal-only;
 - bounded, opt-in semantic model nodes whose typed advice remains behind
   deterministic feasibility, budget, evidence, and transition gates, plus a
   fail-closed compatible live backend, versioned self-development pilot, and
@@ -86,6 +87,11 @@ review remain pending, so no effectiveness claim is made from that pilot.
   to the stage checkpoint, grants it no mutation or execution power, and exposes
   live GLM-5.3-Flash only behind configuration plus caller authorization with
   no-repeat paid-response recovery;
+- a Full Workflow Tool Intelligence hook that detects a deterministic
+  post-evidence hotspot, binds one exact project evidence scope, and may execute
+  one leased registered read-only handler while keeping its observation outside
+  canonical evidence and state-transition authority; all configured model-node
+  hooks share one type-checked ledger;
 - a progress-first Generation as Content workspace with a fixed trusted shell,
   evidence-derived quick intents, bounded free questions, closed native layout
   planning, deterministic fallback, proposal-only interactions, and exact
@@ -100,7 +106,9 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - a loopback-first authenticated local UI/API that renders the closed component
   registry as a navigable evidence workspace, restricts inspection to visible
   hashed artifacts, revalidates identity-only events, and persists project-bound
-  proposal/inspection audits without invoking a controller or tool.
+  proposal, explicit controller-decision, and inspection audits. Controller
+  approval grants only a bounded handoff; the UI cannot invoke a tool or mutate
+  research state.
 
 The milestone sequence and acceptance criteria live in
 [`docs/ROADMAP.md`](docs/ROADMAP.md). The full project specification is tracked
@@ -174,9 +182,11 @@ export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
 ```
 
 The default bind is `127.0.0.1:8765`. Project APIs require the bearer credential;
-the fixed public shell contains no project state. Browser actions produce only
-audited `proposal_pending` receipts with execution authority `none`. There is no
-controller, tool, arbitrary file, or model endpoint. See
+the fixed public shell contains no project state. Browser actions first produce
+audited `proposal_pending` receipts with execution authority `none`; explicit
+approval/rejection then produces a separately audited deterministic handoff with
+`state_mutation_authorized=false`. There is no tool, executor, arbitrary file,
+or model endpoint. See
 [`docs/GENERATIVE_UI.md`](docs/GENERATIVE_UI.md).
 
 Run the complete offline Discovery → Evidence → Communication → Figure path in
@@ -202,10 +212,11 @@ admission before creating a project, use:
 Remove `--dry-run` to execute the admitted plan. The committed brief declares
 the question, objective, exact budget, required evidence, success criteria,
 constraints, and prohibited claims. A formal run copies the brief plus all four
-scenario inputs into `runs/<run-id>/intake/` and reads those copies. This first
-planner is deterministic and scenario-backed: it closes the intake/ownership
-gap, but does not yet claim autonomous scenario synthesis or scientific
-effectiveness.
+scenario inputs into `runs/<run-id>/intake/` and reads those copies. The
+deterministic catalog planner selects that complete registered bundle by domain,
+budget, evidence authorization, and bounded keyword gates, and the catalog is
+copied alongside it. This closes registered action selection and ownership; it
+does not claim arbitrary scenario synthesis or scientific effectiveness.
 
 A failed workflow-stage attempt can resume the same run with `--resume`.
 Completed stage checkpoints are reused only after their state chain and declared

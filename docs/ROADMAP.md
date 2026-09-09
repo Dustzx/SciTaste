@@ -555,6 +555,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and isolated execution are separately hash-bound. An accepted offline source
   runs only from `context/code/admitted/experiment.py`; interrupted downstream
   publication reuses the generation ledger instead of calling the backend again.
+- Full Workflow now invokes Tool Intelligence from a deterministic post-evidence
+  hotspot. The exact predecessor/current state, evidence summary, project
+  revision, controlled profile, request, model ledger, tool lease, observation,
+  and final advisory decision are project-owned and independently verified.
+  Code generation, evidence advice, and tool planning may share one typed ledger;
+  an earlier receipt is verified against its historical prefix rather than
+  incorrectly compared with later cumulative totals.
+- Open-question launch no longer requires the caller to choose four scenario
+  files directly. The committed acceptance config uses a content-bound catalog;
+  deterministic domain, budget, authorized-evidence, and keyword gates select a
+  registered four-stage bundle and materialize the catalog plus selected inputs
+  under the run. Arbitrary scenario synthesis remains outside this authority.
 - Project-owned Discovery is the second normal model-node consumer. Its typed
   hypothesis, reformulation, and ideation nodes can replace scenario prose but
   cannot choose actions, rank/select ideas, call tools, mutate state, allocate
@@ -621,9 +633,29 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   reduction but substantially slower deterministic generation and two
   12-component surfaces. These are engineering diagnostics, not observed click,
   task-time, comprehension, preference, or scientific-quality gains.
-- Pending product integration: deterministic controller endpoints and explicit
-  approval policy for turning a pending proposal into an authorized action. The
-  local UI deliberately cannot execute proposals.
+- Pending proposals now have deterministic controller endpoints in all three API
+  families. Explicit approval/rejection is rebound to the current snapshot and
+  server-owned action, recorded exactly once in the project audit chain, and
+  yields only the registered read-only or approved-handoff boundary. Controlled
+  proposals disappear from the pending view. The local UI still cannot mutate
+  research state or execute tools; downstream services must consume the bounded
+  handoff through their own contracts.
+
+## Bounded native mainline closure
+
+- The v1 product path is now closed from an open research brief through
+  deterministic registered-scenario selection, project-owned Discovery,
+  Evidence, Communication and Figure stages, isolated measured experiments,
+  optional proposal-only model/code/tool nodes, publication packaging, project
+  registration, and an evidence-bound interactive workspace.
+- Every autonomy boundary remains narrower than execution: generated UI selects
+  content, the proposal controller authorizes only a handoff, model nodes advise,
+  and Tool Intelligence executes only a leased registered read-only handler.
+- This is engineering/product completeness for the bounded native path, not a
+  claim of autonomous open-domain research quality. Open-web retrieval,
+  arbitrary environment construction, iterative code repair, broader model-
+  generated analysis/writing/figures, all 48 real matched-budget cells, and
+  independent expert review remain Phase 9 capability/effectiveness gates.
 
 ## Project controls
 
