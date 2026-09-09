@@ -1,0 +1,190 @@
+schema_version: '1.0'
+project_id: scitaste-self-development
+paper_id: scitaste-iclr2027-submission-draft-v4
+archetype: empirical-system
+central_question: Can a research framework keep scientific action selection, evidence admission, and publication provenance explicit while delegating bounded work to models and executors?
+central_answer: SciTaste provides that auditable control substrate in the implemented and registered settings; whether Taste-guided control improves research yield remains a separate pending effectiveness question.
+manuscript_sha256: a51abeb20775a04415dd87e3ce9809c48bd64381146138488813cc79d23dd3f1
+required_entry_points:
+- title
+- abstract
+- introduction
+- headline-results
+- conclusion
+claims:
+- claim_id: claim-decision-ownership
+  role: headline
+  primary_carrier_ids:
+  - carrier-contract-suite
+- claim_id: claim-bounded-completion
+  role: headline
+  primary_carrier_ids:
+  - carrier-result-boundaries
+- claim_id: claim-publication-provenance
+  role: supporting
+  primary_carrier_ids:
+  - carrier-venue-build
+carriers:
+- carrier_id: carrier-contract-suite
+  kind: evidence-audit
+  evidentiary_role: audit
+  status: available
+  title: Repository contract suite
+  intended_takeaway: The tested implementation preserves action ownership, provenance, bounded admission, recovery, and packaging contracts.
+  target_claim_ids:
+  - claim-decision-ownership
+  evidence_ids:
+  - evidence-repository-suite
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: null
+- carrier_id: carrier-result-boundaries
+  kind: result-table
+  evidentiary_role: empirical
+  status: available
+  title: Evidence carriers and excluded inferences
+  intended_takeaway: Registered integration evidence establishes bounded operability but does not establish a research-yield improvement.
+  target_claim_ids:
+  - claim-bounded-completion
+  evidence_ids:
+  - evidence-native-full-workflow
+  - evidence-four-condition-task
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: null
+- carrier_id: carrier-venue-build
+  kind: evidence-audit
+  evidentiary_role: audit
+  status: available
+  title: ICLR 2027 venue build assessment
+  intended_takeaway: The current source can be rendered with the exact venue template and checked mechanically without implying peer-review acceptance.
+  target_claim_ids:
+  - claim-publication-provenance
+  evidence_ids:
+  - evidence-venue-build
+  artifact_locator: null
+  artifact_sha256: null
+  absence_reason: null
+- carrier_id: carrier-control-loop-figure
+  kind: system-diagram
+  evidentiary_role: explanatory
+  status: available
+  title: SciTaste control loop
+  intended_takeaway: Models and executors perform bounded work while the Taste Controller and deterministic admission retain decision and transition authority.
+  target_claim_ids:
+  - claim-decision-ownership
+  evidence_ids:
+  - evidence-repository-suite
+  artifact_locator: assets/fig1-scitaste-control.pdf
+  artifact_sha256: fafb1eb4083c16c38bc0bb29105f3f887f8321870a8a48956dc890ae98a06613
+  absence_reason: null
+entry_points:
+- location: title
+  claim_ids:
+  - claim-decision-ownership
+  central_question_visible: false
+  central_answer_visible: true
+  scope_matches_contract: false
+- location: abstract
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  central_question_visible: true
+  central_answer_visible: true
+  scope_matches_contract: true
+- location: introduction
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  central_question_visible: true
+  central_answer_visible: true
+  scope_matches_contract: true
+- location: first-figure
+  claim_ids:
+  - claim-decision-ownership
+  central_question_visible: false
+  central_answer_visible: true
+  scope_matches_contract: true
+- location: headline-results
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  - claim-publication-provenance
+  central_question_visible: true
+  central_answer_visible: true
+  scope_matches_contract: true
+- location: conclusion
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  central_question_visible: true
+  central_answer_visible: true
+  scope_matches_contract: true
+sections:
+- section_id: introduction
+  heading: Introduction
+  question_answered: What scientific decision problem does SciTaste expose, and which current claims does the evaluation test?
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  primary_carrier_ids:
+  - carrier-control-loop-figure
+- section_id: framework
+  heading: 'Framework: SciTaste'
+  question_answered: Which state, controller, evidence, review, and communication objects implement decision-centric research control?
+  claim_ids:
+  - claim-decision-ownership
+  primary_carrier_ids:
+  - carrier-control-loop-figure
+- section_id: trust-architecture
+  heading: Trust and Execution Architecture
+  question_answered: Which component owns each proposal, action, execution, admission, and state transition?
+  claim_ids:
+  - claim-decision-ownership
+  primary_carrier_ids:
+  - carrier-contract-suite
+- section_id: evaluation-results
+  heading: Evaluation Results
+  question_answered: Which implementation and bounded completion claims do the registered artifacts support, and which effectiveness inference remains excluded?
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  - claim-publication-provenance
+  primary_carrier_ids:
+  - carrier-contract-suite
+  - carrier-result-boundaries
+  - carrier-venue-build
+- section_id: limitations
+  heading: Limitations
+  question_answered: Which missing evidence changes the interpretation of the current system and paper claims?
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  primary_carrier_ids: []
+- section_id: conclusion
+  heading: Conclusion
+  question_answered: What has the current implementation established, and what decisive evaluation remains open?
+  claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  primary_carrier_ids:
+  - carrier-result-boundaries
+material_limitations:
+- limitation_id: limitation-effectiveness-pending
+  statement: The current evidence does not establish that Taste-guided control improves research yield; the registered matched-budget cells and blinded expert review remain incomplete.
+  affected_claim_ids:
+  - claim-bounded-completion
+  disclosed_in:
+  - Abstract
+  - Introduction
+  - Scope of the findings
+  - Limitations
+  - Conclusion
+- limitation_id: limitation-self-development-circularity
+  statement: SciTaste self-development is useful dogfooding evidence but cannot independently validate the scientific effectiveness of SciTaste.
+  affected_claim_ids:
+  - claim-decision-ownership
+  - claim-bounded-completion
+  disclosed_in:
+  - Limitations
+contract_sha256: 7e3b2b14f7a35284c156f0db705ba258413de9d7bed694c0f41d51d2481f5859

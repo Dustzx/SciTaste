@@ -2,7 +2,11 @@
 
 `main.md` is the tracked source for **SciTaste: Learning Scientific Taste for
 Autonomous Research Decision Making**. `references.bib` contains its primary
-references.
+references. `argument_contract.yaml` binds the draft's paper-level question,
+claims, evidence carriers, entry points, and material limitations to registered
+research evidence. `assets/fig1-scitaste-control.drawio` is the editable source
+for the first figure; the SVG supports source inspection and the PDF is the
+publication-rendering asset.
 
 The reader-facing Markdown, generated TeX, compiled PDF, bibliography, build
 record, and manuscript assessment are registered as a versioned paper bundle

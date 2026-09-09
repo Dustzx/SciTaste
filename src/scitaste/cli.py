@@ -94,6 +94,14 @@ from scitaste.taste.intrinsic import (
     save_calibration_report,
 )
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
+from scitaste.writing.argument import (
+    PaperArgumentAssessment,
+    PaperArgumentContract,
+    assess_paper_argument,
+    load_paper_argument_contract,
+    write_paper_argument_assessment,
+    write_paper_argument_contract,
+)
 from scitaste.writing.manuscript_quality import (
     RESEARCH_WORKING_DRAFT_MINIMUM_WORDS,
     assess_manuscript,
@@ -342,6 +350,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("configs/writing/iclr2027_submission_v1.yaml"),
     )
     project_paper_build.add_argument("--asset-root", type=Path, action="append", default=[])
+    project_paper_build.add_argument(
+        "--argument-contract",
+        type=Path,
+        default=None,
+        help="Optional self-hashed whole-paper argument contract",
+    )
+    project_paper_build.add_argument(
+        "--argument-state",
+        type=Path,
+        default=None,
+        help="ResearchState supplying the contract's registered claims and evidence",
+    )
+    project_paper_build.add_argument(
+        "--argument-artifact-root",
+        type=Path,
+        default=None,
+        help="Root for rehashing contract-bound presentation artifacts (defaults to source parent)",
+    )
     project_paper_build.add_argument("--source-run", default=None)
     project_paper_build.add_argument("--provider", default="scitaste-native")
     project_paper_build.add_argument("--model", default="deterministic-venue-renderer")
@@ -930,6 +956,10 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
         markdown,
         target_venue=template.config.venue_name,
     )
+    argument_contract, argument_assessment = _assess_paper_argument_preflight(
+        args,
+        markdown=markdown,
+    )
     project_dir = runtime.projects_root / args.project_id
     target = project_dir / "papers" / args.directory_name
     if target.exists() or target.is_symlink():
@@ -947,6 +977,11 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                     "preflight": preflight.model_dump(mode="json"),
                     "manuscript_preflight": manuscript_preflight.model_dump(mode="json"),
                     "writing_taste_preflight": writing_taste_preflight.model_dump(mode="json"),
+                    "paper_argument_preflight": (
+                        argument_assessment.model_dump(mode="json")
+                        if argument_assessment is not None
+                        else None
+                    ),
                     "would_compile": True,
                     "would_register": True,
                     "would_select": args.select,
@@ -970,7 +1005,29 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             template=template,
             asset_roots=tuple(path.resolve(strict=True) for path in args.asset_root),
         )
+        if argument_contract is not None and argument_assessment is not None:
+            paths.extend(
+                [
+                    write_paper_argument_contract(
+                        argument_contract,
+                        temporary / "PAPER_ARGUMENT_CONTRACT.yaml",
+                    ),
+                    write_paper_argument_assessment(
+                        argument_assessment,
+                        temporary / "PAPER_ARGUMENT_ASSESSMENT.json",
+                    ),
+                ]
+            )
         files = _venue_paper_file_map(paths, root=temporary)
+        argument_metadata = (
+            {
+                "paper_argument_contract_sha256": argument_contract.contract_sha256,
+                "paper_argument_assessment_sha256": argument_assessment.record_sha256,
+                "paper_argument_contract_complete": argument_assessment.contract_complete,
+            }
+            if argument_contract is not None and argument_assessment is not None
+            else {}
+        )
         paper = PaperManifest(
             paper_id=args.directory_name,
             project_id=args.project_id,
@@ -993,6 +1050,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             manuscript_assessment_sha256=manuscript_assessment.record_sha256,
             writing_taste_assessment_sha256=writing_taste_preflight.record_sha256,
             eligible_for_submission=assessment.eligible_for_submission,
+            **argument_metadata,
         )
         os.replace(temporary, target)
         moved = True
@@ -1030,6 +1088,8 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         "SUBMISSION_ASSESSMENT.json": "submission-assessment",
         "MANUSCRIPT_ASSESSMENT.json": "manuscript-assessment",
         "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
+        "PAPER_ARGUMENT_CONTRACT.yaml": "paper-argument-contract",
+        "PAPER_ARGUMENT_ASSESSMENT.json": "paper-argument-assessment",
         "README.md": "bundle-readme",
     }
     mapped: dict[str, str] = {}
@@ -1038,6 +1098,43 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         label = labels.get(relative, f"supporting-artifact-{index:02d}")
         mapped[label] = relative
     return mapped
+
+
+def _assess_paper_argument_preflight(
+    args: argparse.Namespace,
+    *,
+    markdown: str,
+) -> tuple[PaperArgumentContract | None, PaperArgumentAssessment | None]:
+    contract_path = args.argument_contract
+    state_path = args.argument_state
+    if (contract_path is None) != (state_path is None):
+        raise ValueError("--argument-contract and --argument-state must be supplied together")
+    if contract_path is None or state_path is None:
+        if args.argument_artifact_root is not None:
+            raise ValueError("--argument-artifact-root requires an argument contract and state")
+        return None, None
+    contract = load_paper_argument_contract(contract_path.resolve(strict=True))
+    state_source = state_path.resolve(strict=True)
+    if not state_source.is_file():
+        raise ValueError("argument state must be a regular file")
+    state = ResearchState.model_validate_json(state_source.read_text(encoding="utf-8"))
+    if contract.project_id != args.project_id or state.project_id != args.project_id:
+        raise ValueError("paper argument contract and state must belong to the owning project")
+    if contract.paper_id != args.directory_name:
+        raise ValueError("paper argument contract paper_id must match --directory-name")
+    artifact_root = (
+        args.argument_artifact_root.resolve(strict=True)
+        if args.argument_artifact_root is not None
+        else args.source.resolve(strict=True).parent
+    )
+    assessment = assess_paper_argument(
+        contract,
+        claims=state.claims,
+        evidence=state.evidence_graph.items,
+        manuscript_markdown=markdown,
+        artifact_root=artifact_root,
+    )
+    return contract, assessment
 
 
 def _handle_project_paper_select(args: argparse.Namespace) -> int:

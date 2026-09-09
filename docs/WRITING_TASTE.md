@@ -91,6 +91,48 @@ defensive framing in high-attention sections, missing abstract contribution or
 evidence cues, conclusion self-negation, and overloaded paragraphs. It is an
 advisory writing signal, not a scientific-quality score.
 
+### Whole-paper argument and carrier contract
+
+`PaperArgumentContract` now makes paper-level integrity inspectable above the
+section and paragraph layers. It records:
+
+- one central question and bounded answer;
+- headline, supporting, and boundary claims tied to registered
+  `ScientificClaim` objects;
+- planned, available, or unavailable reader-facing carriers such as result
+  tables, figures, qualitative examples, ablations, proofs, algorithms, audit
+  reports, and reproducibility artifacts;
+- the story exposed by the title, abstract, introduction, first figure,
+  headline Results, and conclusion;
+- the question, claims, and primary carrier delivered by each section; and
+- every material limitation together with its affected claims and disclosure
+  locations.
+
+The deterministic assessment keeps three failures distinct. An
+`unsupported-claim` means the scientific claim is absent, provisional,
+contradicted, or unsupported. `missing-evidence` means the claim lacks a
+reciprocal registered support relation. `missing-presentation-carrier` means
+support exists but no available primary table, figure, proof, or audit carrier
+exposes it to the reader. A planned carrier remains a visible gap; it is never
+silently treated as completed.
+
+Carrier admission is type-aware without imposing universal figure or experiment
+counts. An explanatory architecture diagram cannot replace empirical or audit
+evidence for a headline system claim. Conversely, a pure-theory paper may bind a
+claim to a formal statement and proof without being penalized for lacking an
+empirical figure. Artifact locators are project-relative and may be rehashed;
+the manuscript itself can also be content-bound so edits after review become
+visible as drift.
+
+`scitaste project paper build` accepts `--argument-contract` together with
+`--argument-state`. Dry-run reports `paper_argument_preflight`; a formal build
+stores `PAPER_ARGUMENT_CONTRACT.yaml` and the self-hashed
+`PAPER_ARGUMENT_ASSESSMENT.json` beside Markdown, TeX, PDF, venue checks, and
+surface Writing Taste checks. The argument result is deliberately advisory and
+sets `scientific_quality_established=false`. The reference-derived principles
+remain on hold as production quality gates until the registered controls and
+human evaluation are complete.
+
 Every ordinary manuscript bundle and venue-native submission bundle now owns a
 `WRITING_TASTE_ASSESSMENT.json`. Project paper dry-runs expose the same
 assessment before mutation, and registered paper manifests bind its record
@@ -124,6 +166,13 @@ assessment correctly identified `Current Results`, `Artifact-level validation`,
 and `End-to-end engineering preacceptance` as project-report headings, along with
 project-status framing in the abstract, introduction, and conclusion. The source
 was reorganized around two evaluation questions and positive evidence scope.
+
+The second dogfooding pass adds a claim-linked overview figure and a result
+summary table whose third column states the inference that each artifact cannot
+support. Its whole-paper contract intentionally keeps the original programmatic
+title while flagging that title's broader *learning* promise as an entry-point
+scope risk until learned-policy or comparative effectiveness evidence exists.
+This is a useful contract finding, not a prose defect to hide.
 
 Passing the deterministic advisory means only that the registered surface
 antipatterns are absent. Expert judgment, semantic model comparison, citation

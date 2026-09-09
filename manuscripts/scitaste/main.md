@@ -17,7 +17,7 @@ Hypothesis--Probe--Reformulate loop governs discovery; evidence and reviewer
 loops preserve support, contradiction, uncertainty, and open obligations; and
 communication contracts bind claims to narrative, prose, and figures. Flexible
 model outputs remain proposal-only behind deterministic schema, budget,
-provenance, and execution gates. Across 886 unit and integration tests, a native
+provenance, and execution gates. Across 961 unit and integration tests, a native
 end-to-end fixture, content-bound local GPU inference, and one four-condition
 controlled task, the implementation preserves action ownership, evidence
 lineage, failure history, and publication provenance. These results establish an
@@ -94,6 +94,8 @@ Artifact tests and the controlled task answer these integration questions. The
 causal question of whether Taste-guided control improves research yield. Keeping
 these questions separate prevents engineering completion from being counted as
 scientific-effectiveness evidence.
+
+![SciTaste control loop. Canonical scientific state is projected into a closed action set; the Taste Controller selects one action; bounded workers return a typed result; and deterministic admission alone may commit the next state. The diagram explains authority boundaries and is not an effectiveness result.](assets/fig1-scitaste-control.pdf)
 
 # Related Work
 
@@ -279,6 +281,14 @@ that specify rhetorical purpose, required claims and evidence, intended
 takeaway, transitions, and word budget. Writing exemplars are retrieved by
 rhetorical role rather than topic alone.
 
+A whole-paper argument contract names the central question and bounded answer,
+classifies claims, assigns their primary reader-facing evidence carriers, and
+records what high-attention entry points promise. Its audit distinguishes an
+unsupported claim from a supported claim whose table, proof, or audit artifact is
+missing. Carrier roles are archetype-aware: formal statements and proofs suffice
+for a pure-theory claim, while an explanatory architecture diagram cannot stand
+in for empirical or audit evidence.
+
 Independent critics check substance, narrative, claim--evidence alignment,
 redundancy, style, terminology, citations, venue fit, and global coherence.
 Figures similarly begin with a contract over the target claim, reader takeaway,
@@ -385,9 +395,21 @@ review.
 
 # Evaluation Results
 
+The main evidence carriers and their interpretation boundaries are summarized
+below. This table is a map to the detailed results, not an aggregation into a
+single quality score.
+
+| Carrier | Supported conclusion; excluded inference |
+|---|---|
+| Contract suite (83% combined coverage) | Tested control and provenance contracts hold; scientific decisions are not thereby better |
+| ICLR 2027 venue build | Implemented mechanical checks pass; acceptance, novelty, and correctness are not assessed |
+| Native Full Workflow fixture (three replicates, delta 0.1) | The bounded experiment-to-paper path runs with provenance; general research yield is untested |
+| RTX 3090 Qwen3-VL-2B run (4.27 GB peak) | One registered multimodal boundary executes; model quality and portability are untested |
+| Four-condition single task | All conditions produce paper artifacts; causal comparison awaits the full matrix and blinded review |
+
 ## RQ1: Does SciTaste enforce its control and provenance contracts?
 
-Across 886 unit and integration tests, SciTaste reaches 83 percent combined
+Across 961 unit and integration tests, SciTaste reaches 83 percent combined
 statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
@@ -402,7 +424,7 @@ The renderer verifies the official template archive and each admitted style
 asset by hash, requires the long-form manuscript gate, checks citation closure,
 anonymity, terminal disclosure order, and the AI-statement page limit, then
 measures the main-text boundary from the compiled document. This draft compiles
-to nine Letter-sized pages with an eight-page main-text boundary. That result is
+to ten Letter-sized pages with a nine-page main-text boundary. That result is
 venue-packaging evidence; it is not peer review or scientific acceptance.
 
 The native Full Workflow has also completed a controlled offline integration

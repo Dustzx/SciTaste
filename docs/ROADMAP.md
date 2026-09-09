@@ -657,6 +657,20 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   generated analysis/writing/figures, all 48 real matched-budget cells, and
   independent expert review remain Phase 9 capability/effectiveness gates.
 
+## Writing Taste whole-paper closure
+
+- A typed argument contract now joins central question/answer, registered
+  claims, reciprocal evidence, reader-facing carriers, section delivery,
+  high-attention entry points, and material limitations without treating a
+  figure count as a universal quality rule.
+- Venue paper builds can retain a self-hashed advisory assessment and recheck
+  manuscript/carrier content. SciTaste itself now supplies a first explanatory
+  control-loop figure and an evidence-boundary result table.
+- The next acceptance gate is evidence, not more prose: complete the registered
+  matched-budget cells and blinded expert review, then test the candidate
+  reference-derived Writing Taste principles against accepted non-award and
+  negative controls before promoting any of them to quality gates.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

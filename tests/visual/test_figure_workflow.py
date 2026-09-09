@@ -66,6 +66,9 @@ def test_text_to_editable_reviewed_and_patched_figure(tmp_path) -> None:
     assert svg.attrib["role"] == "img"
     drawio = ET.parse(output / "figure.drawio").getroot()
     assert drawio.attrib["compressed"] == "false"
+    panel = drawio.find(".//mxCell[@id='panel-bg-panel-decision']")
+    assert panel is not None
+    assert panel.attrib["connectable"] == "0"
     assert 'id="executor"' in (output / "figure.svg").read_text()
     assert 'data-emphasis="normal"' in (output / "figure.svg").read_text()
 

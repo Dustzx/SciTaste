@@ -1,0 +1,91 @@
+project_id: scitaste-self-development
+research_direction: Decision-centric control for autonomous scientific research
+target_domain: autonomous-research
+target_venue: ICLR 2027
+resource_budget:
+  max_api_cost_usd: 0
+claims:
+  - claim_id: claim-decision-ownership
+    text: SciTaste keeps action selection and state-transition authority outside flexible model and executor components.
+    claim_type: system architecture
+    strength: implementation-scoped
+    required_evidence_types: [contract and integration audit]
+    supporting_evidence_ids: [evidence-control-audit]
+    status: supported
+evidence:
+  - evidence_id: evidence-control-audit
+    source_type: repository validation
+    evidence_type: contract and integration audit
+    observation: Negative and integration tests exercise action identity, proposal admission, executor isolation, and state-transition ownership.
+    supports_claim_ids: [claim-decision-ownership]
+    confidence: 1.0
+    stability: 1.0
+source_text: SciTaste repeatedly projects registered scientific state into a closed candidate action set, selects one action using explicit criteria and retrieved decision precedent, delegates bounded work, and admits a returned result only after deterministic identity, evidence, provenance, and budget checks.
+figure_role: mechanism
+contract:
+  figure_id: fig-scitaste-control-loop
+  purpose: Show SciTaste's decision, execution, and admission loop without implying scientific-effectiveness evidence.
+  target_claim_ids: [claim-decision-ownership]
+  intended_reader_takeaway: Flexible components can propose or execute bounded work, while SciTaste retains action selection and state-transition authority.
+  required_entities:
+    - entity_id: research-state
+      label: ResearchState + evidence
+      role: canonical-state
+    - entity_id: candidate-actions
+      label: Closed candidate actions
+      role: decision-input
+    - entity_id: taste-controller
+      label: Taste Controller
+      role: decision-owner
+    - entity_id: bounded-worker
+      label: Executor / model proposal
+      role: bounded-worker
+    - entity_id: typed-result
+      label: Typed result + provenance
+      role: unadmitted-result
+    - entity_id: admission-gate
+      label: Deterministic admission
+      role: transition-gate
+  required_relations:
+    - relation_id: relation-state-candidates
+      source_entity_id: research-state
+      target_entity_id: candidate-actions
+      label: projects
+    - relation_id: relation-candidates-controller
+      source_entity_id: candidate-actions
+      target_entity_id: taste-controller
+      label: scores
+    - relation_id: relation-controller-worker
+      source_entity_id: taste-controller
+      target_entity_id: bounded-worker
+      label: selects one action
+    - relation_id: relation-worker-result
+      source_entity_id: bounded-worker
+      target_entity_id: typed-result
+      label: returns
+    - relation_id: relation-result-gate
+      source_entity_id: typed-result
+      target_entity_id: admission-gate
+      label: validates
+    - relation_id: relation-gate-state
+      source_entity_id: admission-gate
+      target_entity_id: research-state
+      label: commits S(t+1)
+  optional_entities: []
+  forbidden_emphasis: [bounded-worker]
+  panel_plan:
+    - panel_id: panel-observe
+      title: 1. Observe
+      objective: Project canonical state into the decisions currently allowed.
+      entity_ids: [research-state, candidate-actions]
+    - panel_id: panel-decide
+      title: 2. Decide
+      objective: Make action selection an explicit framework-owned decision.
+      entity_ids: [taste-controller]
+    - panel_id: panel-act-admit
+      title: 3. Act and admit
+      objective: Separate bounded work from deterministic state-transition authority.
+      entity_ids: [bounded-worker, typed-result, admission-gate]
+  reference_figure_ids: []
+initial_emphasis:
+  bounded-worker: prominent

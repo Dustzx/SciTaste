@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import scitaste.benchmark.manuscript as manuscript
 from scitaste.cli import build_parser
 from scitaste.project import ProjectManifest, ProjectRuntime
+from scitaste.state.research_state import (
+    EvidenceGraph,
+    EvidenceItem,
+    ResearchState,
+    ScientificClaim,
+)
+from scitaste.writing.argument import (
+    ClaimPresentationContract,
+    EvidenceCarrierContract,
+    PaperArgumentContract,
+    PaperEntryPointContract,
+    SectionDeliveryContract,
+    write_paper_argument_contract,
+)
 from tests.writing.test_venue import _template
 
 
@@ -174,3 +189,113 @@ def test_project_paper_build_registers_gated_bundle(tmp_path: Path, monkeypatch,
     assert (bundle / "MANUSCRIPT_ASSESSMENT.json").is_file()
     assert (bundle / "WRITING_TASTE_ASSESSMENT.json").is_file()
     assert paper.files["writing-taste-assessment"] == "WRITING_TASTE_ASSESSMENT.json"
+
+
+def test_project_paper_build_owns_optional_whole_paper_argument_audit(
+    tmp_path: Path, capsys
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    _project(runtime)
+    source, bibliography = _sources(tmp_path)
+    venue = _template(tmp_path)
+    claim = ScientificClaim(
+        claim_id="claim-bounded",
+        text="The bounded fixture preserves the registered contract.",
+        claim_type="system",
+        strength="bounded",
+        required_evidence_types=["contract audit"],
+        supporting_evidence_ids=["evidence-bounded"],
+        status="supported",
+    )
+    evidence = EvidenceItem(
+        evidence_id="evidence-bounded",
+        source_type="test report",
+        evidence_type="contract audit",
+        observation="The contract checks passed.",
+        supports_claim_ids=[claim.claim_id],
+        confidence=1.0,
+    )
+    state = ResearchState(
+        project_id="paper-build-project",
+        research_direction="Test venue-native paper packaging.",
+        target_domain="machine learning",
+        claims=[claim],
+        evidence_graph=EvidenceGraph(items=[evidence]),
+    )
+    state_path = tmp_path / "argument-state.json"
+    state_path.write_text(state.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    entry_points = tuple(
+        PaperEntryPointContract(
+            location=location,
+            claim_ids=(claim.claim_id,),
+            central_question_visible=location != "title",
+            central_answer_visible=True,
+            scope_matches_contract=True,
+        )
+        for location in (
+            "title",
+            "abstract",
+            "introduction",
+            "headline-results",
+            "conclusion",
+        )
+    )
+    contract = PaperArgumentContract.create(
+        project_id="paper-build-project",
+        paper_id="venue-draft-v1",
+        archetype="empirical-system",
+        central_question="Does the fixture preserve its registered contract?",
+        central_answer="It does within the bounded test setting.",
+        manuscript_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+        claims=(
+            ClaimPresentationContract(
+                claim_id=claim.claim_id,
+                role="headline",
+                primary_carrier_ids=("carrier-audit",),
+            ),
+        ),
+        carriers=(
+            EvidenceCarrierContract(
+                carrier_id="carrier-audit",
+                kind="evidence-audit",
+                evidentiary_role="audit",
+                status="available",
+                title="Contract audit",
+                intended_takeaway="The bounded contract checks pass.",
+                target_claim_ids=(claim.claim_id,),
+                evidence_ids=(evidence.evidence_id,),
+            ),
+        ),
+        entry_points=entry_points,
+        sections=(
+            SectionDeliveryContract(
+                section_id="results",
+                heading="Results",
+                question_answered="Does the bounded contract pass?",
+                claim_ids=(claim.claim_id,),
+                primary_carrier_ids=("carrier-audit",),
+            ),
+        ),
+    )
+    contract_path = write_paper_argument_contract(contract, tmp_path / "argument.yaml")
+    arguments = _arguments(
+        tmp_path,
+        source=source,
+        bibliography=bibliography,
+        venue=venue,
+        dry_run=True,
+    )
+    arguments.extend(
+        [
+            "--argument-contract",
+            str(contract_path),
+            "--argument-state",
+            str(state_path),
+        ]
+    )
+    args = build_parser().parse_args(arguments)
+
+    assert args.handler(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["paper_argument_preflight"]["contract_complete"] is True
+    assert payload["paper_argument_preflight"]["scientific_quality_established"] is False

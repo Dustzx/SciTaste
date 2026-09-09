@@ -601,6 +601,12 @@ official ZIP through `SCITASTE_ICLR2027_TEMPLATE`, emits both manuscript and
 submission assessments, and registers the resulting paper under its owning
 project only after all deterministic gates pass.
 
+An optional whole-paper audit can be added with `--argument-contract` and
+`--argument-state`. It distinguishes unsupported claims, missing registered
+evidence, missing reader-facing evidence carriers, entry-point scope drift, and
+content-changed artifacts. The resulting argument assessment is advisory and
+does not convert mechanical submission eligibility into scientific quality.
+
 ## Offline Figure Loop
 
 Build the mechanism-figure acceptance fixture:

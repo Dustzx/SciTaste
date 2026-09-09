@@ -7,6 +7,18 @@ semantic versioning.
 
 ### Added
 
+- Writing Taste now includes a self-hashed whole-paper argument contract over
+  the central question and answer, headline/supporting/boundary claims,
+  archetype-aware evidence carriers, section delivery, high-attention entry
+  points, and material limitations. Its deterministic audit separates
+  unsupported claims, missing reciprocal evidence, and missing presentation
+  carriers; rehashes bound manuscript and carrier artifacts; and remains
+  explicitly advisory. Venue paper builds can own the contract and assessment
+  beside Markdown, TeX, PDF, venue, manuscript, and surface-style checks. The
+  SciTaste paper dogfoods the layer with an editable authority-loop figure and
+  an evidence/inference-boundary result table without inventing the pending
+  matched-budget result.
+
 - Full Workflow now composes proposal-only native code generation, evidence
   advice, and Tool Intelligence through one typed project ledger. Historical
   receipts verify against their exact ledger prefix while later nodes remain

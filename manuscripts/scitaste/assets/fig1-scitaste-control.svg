@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="360" viewBox="0 0 900 360" role="img" aria-labelledby="figure-title figure-description">
+  <title id="figure-title">Show SciTaste's decision, execution, and admission loop without implying scientific-effectiveness evidence.</title>
+  <desc id="figure-description">Flexible components can propose or execute bounded work, while SciTaste retains action selection and state-transition authority.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+    </marker>
+  </defs>
+  <g id="panel-observe" data-kind="panel">
+    <rect x="15" y="20" width="270" height="310" rx="12" fill="#f8fafc" stroke="#cbd5e1" />
+    <text x="30" y="50" font-family="sans-serif" font-size="16" font-weight="600" fill="#0f172a">1. Observe</text>
+  </g>
+  <g id="panel-decide" data-kind="panel">
+    <rect x="315" y="20" width="270" height="310" rx="12" fill="#f8fafc" stroke="#cbd5e1" />
+    <text x="330" y="50" font-family="sans-serif" font-size="16" font-weight="600" fill="#0f172a">2. Decide</text>
+  </g>
+  <g id="panel-act-admit" data-kind="panel">
+    <rect x="615" y="20" width="270" height="310" rx="12" fill="#f8fafc" stroke="#cbd5e1" />
+    <text x="630" y="50" font-family="sans-serif" font-size="16" font-weight="600" fill="#0f172a">3. Act and admit</text>
+  </g>
+  <g id="relation-state-candidates" data-kind="relation">
+    <line x1="145.0" y1="144.0" x2="145.0" y2="180.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="145.0" y="156.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">projects</text>
+  </g>
+  <g id="relation-candidates-controller" data-kind="relation">
+    <line x1="250.0" y1="207.0" x2="340.0" y2="117.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="295.0" y="156.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">scores</text>
+  </g>
+  <g id="relation-controller-worker" data-kind="relation">
+    <line x1="550.0" y1="117.0" x2="640.0" y2="117.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="595.0" y="111.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">selects one action</text>
+  </g>
+  <g id="relation-worker-result" data-kind="relation">
+    <line x1="745.0" y1="144.0" x2="745.0" y2="150.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="745.0" y="141.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">returns</text>
+  </g>
+  <g id="relation-result-gate" data-kind="relation">
+    <line x1="745.0" y1="204.0" x2="745.0" y2="210.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="745.0" y="201.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">validates</text>
+  </g>
+  <g id="relation-gate-state" data-kind="relation">
+    <path d="M 850.0 237.0 L 868.0 237.0 L 868.0 300.0 L 25.0 300.0 L 25.0 117.0 L 40.0 117.0" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="445.0" y="293.0" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#475569">commits S(t+1)</text>
+  </g>
+  <g id="research-state" data-kind="entity" data-role="canonical-state" data-emphasis="normal">
+    <rect x="40.0" y="90.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="145.0" y="122.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">ResearchState + evidence</text>
+  </g>
+  <g id="candidate-actions" data-kind="entity" data-role="decision-input" data-emphasis="normal">
+    <rect x="40.0" y="180.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="145.0" y="212.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">Closed candidate actions</text>
+  </g>
+  <g id="taste-controller" data-kind="entity" data-role="decision-owner" data-emphasis="normal">
+    <rect x="340.0" y="90.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="445.0" y="122.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">Taste Controller</text>
+  </g>
+  <g id="bounded-worker" data-kind="entity" data-role="bounded-worker" data-emphasis="normal">
+    <rect x="640.0" y="90.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="745.0" y="122.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">Executor / model proposal</text>
+  </g>
+  <g id="typed-result" data-kind="entity" data-role="unadmitted-result" data-emphasis="normal">
+    <rect x="640.0" y="150.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="745.0" y="182.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">Typed result + provenance</text>
+  </g>
+  <g id="admission-gate" data-kind="entity" data-role="transition-gate" data-emphasis="normal">
+    <rect x="640.0" y="210.0" width="210.0" height="54.0" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+    <text x="745.0" y="242.0" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="400" fill="#0f172a">Deterministic admission</text>
+  </g>
+</svg>

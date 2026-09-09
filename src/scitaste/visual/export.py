@@ -193,6 +193,34 @@ def export_drawio(
     root = ET.SubElement(graph, "root")
     ET.SubElement(root, "mxCell", {"id": "0"})
     ET.SubElement(root, "mxCell", {"id": "1", "parent": "0"})
+    for panel_index, panel in enumerate(contract.panel_plan):
+        panel_cell = ET.SubElement(
+            root,
+            "mxCell",
+            {
+                "id": f"panel-bg-{panel.panel_id}",
+                "value": f"<b>{panel.title}</b>",
+                "style": (
+                    "rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;"
+                    "spacingTop=10;fontSize=14;fillColor=#f8fafc;"
+                    "strokeColor=#cbd5e1;connectable=0;"
+                ),
+                "vertex": "1",
+                "connectable": "0",
+                "parent": "1",
+            },
+        )
+        ET.SubElement(
+            panel_cell,
+            "mxGeometry",
+            {
+                "x": str(15 + panel_index * 300),
+                "y": "20",
+                "width": "270",
+                "height": "310",
+                "as": "geometry",
+            },
+        )
     for item in objects:
         prominent = item.emphasis == "prominent"
         shape_style = (
