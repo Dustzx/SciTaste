@@ -221,9 +221,7 @@ class MaterialLimitationContract(BaseModel):
 
     @field_validator("affected_claim_ids")
     @classmethod
-    def affected_claim_ids_are_safe_and_unique(
-        cls, values: tuple[str, ...]
-    ) -> tuple[str, ...]:
+    def affected_claim_ids_are_safe_and_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
         for value in values:
             _safe_id(value, field_name="affected claim_id")
         return _unique(values, field_name="affected_claim_ids")
@@ -382,9 +380,7 @@ class PaperArgumentContract(BaseModel):
                 )
         for item in self.material_limitations:
             if set(item.affected_claim_ids) - known_claims:
-                raise ValueError(
-                    f"limitation {item.limitation_id!r} references an unknown claim"
-                )
+                raise ValueError(f"limitation {item.limitation_id!r} references an unknown claim")
         return self
 
 
@@ -641,9 +637,7 @@ def assess_paper_argument(
         headline_claim_count=len(headline_claims),
         available_carrier_count=sum(item.status == "available" for item in contract.carriers),
         planned_carrier_count=sum(item.status == "planned" for item in contract.carriers),
-        unavailable_carrier_count=sum(
-            item.status == "unavailable" for item in contract.carriers
-        ),
+        unavailable_carrier_count=sum(item.status == "unavailable" for item in contract.carriers),
         gaps=tuple(gaps),
         contract_complete=not gaps,
         advisory_only=True,
@@ -658,9 +652,7 @@ def load_paper_argument_contract(path: str | Path) -> PaperArgumentContract:
     return PaperArgumentContract.model_validate(payload)
 
 
-def write_paper_argument_contract(
-    contract: PaperArgumentContract, path: str | Path
-) -> Path:
+def write_paper_argument_contract(contract: PaperArgumentContract, path: str | Path) -> Path:
     """Write a stable YAML representation of a verified contract."""
 
     target = Path(path)
@@ -676,9 +668,7 @@ def write_paper_argument_contract(
     return target
 
 
-def write_paper_argument_assessment(
-    assessment: PaperArgumentAssessment, path: str | Path
-) -> Path:
+def write_paper_argument_assessment(assessment: PaperArgumentAssessment, path: str | Path) -> Path:
     """Write a stable, self-hashed JSON assessment."""
 
     target = Path(path)
