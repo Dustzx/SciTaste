@@ -55,6 +55,31 @@ def test_study_evaluate_cli_reports_incomplete_matrix(tmp_path) -> None:
     assert "48 planned cells have no execution record" in report["blockers"]
 
 
+def test_study_status_cli_is_read_only_and_classifies_foreign_results(tmp_path, capsys) -> None:
+    outputs = tmp_path / "outputs"
+    foreign = outputs / "projects/old/runs/one/study/study_results.json"
+    foreign.parent.mkdir(parents=True)
+    foreign.write_text(
+        StudyResults(
+            protocol_sha256="a" * 64,
+            records=[],
+            expert_reviews=[],
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    before = {path.relative_to(outputs) for path in outputs.rglob("*")}
+
+    assert main(["study", "status", "--outputs-root", str(outputs)]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["planned_cells"] == payload["missing_cells"] == 48
+    assert payload["integrity_verified_records"] == 0
+    assert payload["compatible_sources"] == 0
+    assert payload["foreign_sources"] == 1
+    assert len(payload["next_execution_batch"]) == 4
+    assert {path.relative_to(outputs) for path in outputs.rglob("*")} == before
+
+
 def test_study_run_cli_dry_runs_four_local_pilot_conditions(tmp_path, capsys) -> None:
     output = tmp_path / "pilot"
 

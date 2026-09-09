@@ -95,6 +95,24 @@ Audit externally produced execution records and blinded panel reviews:
 Planning and evaluation are local operations. They never invoke an LLM or launch
 an experiment implicitly.
 
+Inspect all project-owned result sources against one exact protocol without
+launching a cell or writing a file:
+
+```bash
+.venv/bin/scitaste study status \
+  --config configs/experiments/matched_budget_study_v1.yaml \
+  --outputs-root outputs
+```
+
+The status command separates exact-protocol, foreign-protocol, and invalid
+sources. Exact-protocol records count only when their self-hashed run manifest,
+cell checkpoint, request, aggregate/owned execution records, and evidence bytes
+all revalidate. Identical duplicates are deduplicated; conflicting records or
+reviews are excluded. The proposed next execution batch is one incomplete
+task/seed/repetition block, preserving the matched four-condition design. An
+optional `--output` writes a self-hashed report to the caller-selected path; a
+project run directory should be used rather than a new loose top-level output.
+
 Run selected execution-ready cells through explicit command adapters:
 
 ```bash
@@ -226,6 +244,17 @@ content-addressed local snapshot. Fixed synthetic generators provide controlled
 internal comparisons; transfer to natural scientific corpora remains an explicit
 limitation.
 
+As of 2026-09-09, the current formal protocol fingerprint is
+`ce09bf7d3ad22db09d40fc4368b03e3b903b3087b571cc1ecfecbb081690587c`
+and its plan fingerprint is
+`c510998914b7be5a2874698478b73131c7483b44d4128b1a75a84947581d22d5`.
+The integrity-aware status scan finds 0/48 exact-protocol execution records and
+0/48 external reviews. The earlier successful Base cell uses predecessor
+protocol `20ee06e9...` and remains valid engineering evidence, but is not
+reusable in this matrix because later adapter fixes changed the registered
+implementation identity. Thus the operational count for the current protocol
+is 48 missing cells, not 47.
+
 The four first-party launchers run unmodified AutoResearchClaw from hypothesis
 generation through peer review. The adapter isolates Knowledge and Taste
 augmentation, records the Full SciTaste controller decision, captures exact wire
@@ -241,7 +270,8 @@ panel instead of allowing unequal revision retries.
 
 Remaining exit-gate work is operational:
 
-- pass four-condition preacceptance and then all 48 registered cells;
+- restore or replace the protocol-pinned Qwen provider access, then pass one
+  clean four-condition matched batch before scaling to all 48 registered cells;
 - inspect every generated code/result/paper manifest and budget audit;
 - collect independent condition-blinded reviews and adjudicate conflicts;
 - optionally enable Sibyl/AI Scientist-v2 after their separate gates pass.

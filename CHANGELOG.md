@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Phase 9 now has a read-only, integrity-aware matrix status command. It scans
+  project-owned result roots, separates exact-protocol sources from historical
+  protocol revisions, and admits a record only after the run manifest, cell
+  checkpoint, request, execution record, and every declared evidence byte
+  revalidate. Conflicting records fail closed, and the next execution/review
+  batches preserve task/seed matching instead of treating any historical
+  success as reusable.
+
 - Writing Taste now includes a self-hashed whole-paper argument contract over
   the central question and answer, headline/supporting/boundary claims,
   archetype-aware evidence carriers, section delivery, high-attention entry

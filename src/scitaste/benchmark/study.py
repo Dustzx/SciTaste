@@ -104,6 +104,11 @@ class MatchedStudyEvaluator:
         if unknown:
             raise ValueError(f"results contain unknown study cells: {', '.join(unknown)}")
         reviews = _unique_by(results.expert_reviews, "blind_id", "expert review")
+        unknown_reviews = sorted(set(reviews) - {cell.blind_id for cell in plan.cells})
+        if unknown_reviews:
+            raise ValueError(
+                "results contain unknown expert review identities: " + ", ".join(unknown_reviews)
+            )
 
         missing = sorted(set(cells) - set(records))
         audits: list[CellAudit] = []

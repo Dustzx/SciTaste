@@ -14,7 +14,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
-| Phase 9 — matched-budget study | in progress | protocol/planner/auditor done; real matched runs and external expert review pending |
+| Phase 9 — matched-budget study | in progress | protocol/planner/runner/integrity status done; 48 exact-protocol runs and external expert review pending |
 
 ## Phase 2/3 progress
 
@@ -280,9 +280,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   persists an expiring lease, exclusive claim, handler start/result,
   observation, decision envelope, and hash-chained ledger. Exact results replay
   without another handler call; ambiguous custom calls and stale revisions fail
-  closed. No automatic full-workflow trigger or observation-to-evidence admission
-  is included, and ADR-022 remains proposed pending independent review, broader
-  effectiveness evidence, and external replication.
+  closed. An opt-in deterministic post-evidence hotspot now triggers that
+  bounded read-only path inside Full Workflow, while the returned observation
+  remains non-canonical and cannot enter the evidence graph. ADR-022 remains
+  proposed pending independent review, broader effectiveness evidence, and
+  external replication.
 - A real project-owned GLM-5.3-Flash engineering probe completed all seven
   registered cases. The online response was schema-valid and exactly recorded,
   but deterministic token, latency, missing-cost, and action-allowlist gates
@@ -353,7 +355,11 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 - A clean commit-pinned formal base cell subsequently passed in one runner
   lifecycle with complete wall/GPU accounting, 138,157 provider tokens, one
   repaired real experiment, a 0.615945 registered aggregate, and Stage 18
-  artifacts. The other 47 cells and external blinded reviews remain pending.
+  artifacts under predecessor protocol `20ee06e9...`. The current registered
+  protocol is `ce09bf7d...`; later adapter fixes changed its implementation pin,
+  so the earlier cell remains engineering evidence but is not one of the
+  current matrix's reusable cells. All 48 current cells and their external
+  blinded reviews remain pending.
 - The Knowledge RAG preacceptance exposed a Stage 12 failure/Stage 13 repair
   provenance ambiguity and internal identifier leakage into its draft. The adapter
   now projects one hashed successful experiment into analysis/writing, separates
@@ -453,6 +459,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   implemented and acceptance-tested; no surrogate output is used while disabled.
 - Pending before the exit gate: run all 48 commit-pinned cells without manual
   continuation, audit their artifacts, and collect external reviews.
+- `study status` now scans project-owned aggregates without mutation, admits
+  only exact-protocol records whose run/cell identities and evidence bytes
+  rehash, excludes conflicting duplicates, and reports the next matched
+  task/seed block. The 2026-09-09 scan classified 21 historical result files as
+  foreign protocol revisions and counted 0/48 current records, preventing the
+  predecessor Base acceptance from being reported as current progress.
 
 ## Self-development project
 

@@ -48,6 +48,14 @@ from scitaste.benchmark.study_project import (
     ProjectStudyConfig,
     ProjectStudySummary,
 )
+from scitaste.benchmark.study_status import (
+    StudyCellProgress,
+    StudyMatrixStatus,
+    StudyResultSourceAudit,
+    discover_study_result_paths,
+    inspect_study_matrix,
+    save_study_matrix_status,
+)
 
 __all__ = [
     "BenchmarkCase",
@@ -65,8 +73,11 @@ __all__ = [
     "ProjectStudyConfig",
     "ProjectStudySummary",
     "SciTasteBenchRunner",
+    "StudyCellProgress",
     "StudyLaunchConfig",
+    "StudyMatrixStatus",
     "StudyPlan",
+    "StudyResultSourceAudit",
     "StudyResults",
     "StudyRunSummary",
     "StudyScope",
@@ -74,6 +85,8 @@ __all__ = [
     "SystemCondition",
     "TransferAxis",
     "compare_model_boundaries",
+    "discover_study_result_paths",
+    "inspect_study_matrix",
     "load_benchmark_report",
     "load_benchmark_suite",
     "load_study_launch_config",
@@ -81,6 +94,7 @@ __all__ = [
     "load_study_results",
     "save_benchmark_report",
     "save_boundary_comparison",
+    "save_study_matrix_status",
     "save_study_plan",
     "save_study_report",
     "scripted_selections",

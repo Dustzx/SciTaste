@@ -168,6 +168,18 @@ def test_real_complete_matrix_with_external_reviews_is_headline_eligible() -> No
     assert report.blockers == []
 
 
+def test_evaluator_rejects_unknown_blinded_review_identity() -> None:
+    protocol = ready_protocol()
+    results = synthetic_results(protocol)
+    unknown = results.expert_reviews[0].model_copy(update={"blind_id": "blind-unknown"})
+
+    with pytest.raises(ValueError, match="unknown expert review identities"):
+        MatchedStudyEvaluator().evaluate(
+            protocol,
+            results.model_copy(update={"expert_reviews": [*results.expert_reviews, unknown]}),
+        )
+
+
 @pytest.mark.parametrize(
     "protocol_path",
     [

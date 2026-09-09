@@ -286,6 +286,12 @@ search snapshot, code revision, task assets, and resource ceilings. Execution
 records are imported rather than fabricated by the evaluator, and blinded panel
 reviews attach through opaque IDs. Incomplete telemetry, over-budget cells,
 synthetic evidence, or internal review cannot support headline comparisons.
+The read-only matrix-status projection may discover multiple project-owned
+aggregates, but protocol identity is exact rather than name-based. It counts a
+record only after the run manifest, cell checkpoint, request, aggregate/owned
+record, and all checkpoint evidence bytes revalidate. Historical protocol
+revisions stay visible as foreign sources, while conflicting exact-identity
+records are excluded instead of selected by recency.
 
 ### ADR-017: Direct local inference stays behind the backend boundary
 
@@ -682,6 +688,12 @@ selection cannot claim matrix completion, and a concurrent project writer causes
 finalization conflict rather than a latest-revision retry. This decision improves
 execution provenance only; synthetic cells, incomplete matrices, and missing
 external blinded reviews remain ineligible for effectiveness claims.
+
+Cross-run status is a read-only projection over those same authorities, not a
+second resume mechanism. Its next execution batch is the first incomplete
+task/seed/repetition block so operational scheduling retains the matched
+four-condition structure. It cannot import a predecessor protocol cell, repair
+an invalid checkpoint, launch a provider, or manufacture an external review.
 
 ### ADR-027: Selected substrate actions execute from immutable project inputs
 

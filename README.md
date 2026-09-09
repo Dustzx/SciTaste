@@ -306,10 +306,14 @@ Inspect the Phase 9 system-study matrix without launching any experiment:
 
 ```bash
 .venv/bin/scitaste study plan --dry-run
+.venv/bin/scitaste study status --outputs-root outputs
 ```
 
-The current 48-cell plan remains blocked from real execution until the provider
-model revision and frozen search snapshot are resolved. See
+The plan is protocol-ready, but the current exact protocol has no reusable
+completed cell or external review. `study status` is read-only: it scans
+project-owned results, revalidates exact-protocol checkpoints and evidence, and
+classifies older protocol revisions as historical rather than counting them
+toward the 48-cell matrix. See
 [`docs/MATCHED_BUDGET_STUDY.md`](docs/MATCHED_BUDGET_STUDY.md).
 
 Dry-run the non-headline, 16-cell local RTX 3090 pilot through the standard

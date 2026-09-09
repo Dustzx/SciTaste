@@ -34,6 +34,8 @@ from scitaste.benchmark import (
     SciTasteBenchRunner,
     SystemCondition,
     compare_model_boundaries,
+    discover_study_result_paths,
+    inspect_study_matrix,
     load_benchmark_report,
     load_benchmark_suite,
     load_study_launch_config,
@@ -41,6 +43,7 @@ from scitaste.benchmark import (
     load_study_results,
     save_benchmark_report,
     save_boundary_comparison,
+    save_study_matrix_status,
     save_study_plan,
     save_study_report,
     scripted_selections,
@@ -652,6 +655,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     study_evaluate.add_argument("--results", type=Path, required=True)
     study_evaluate.set_defaults(handler=_handle_study_evaluate)
+    study_status = study_commands.add_parser(
+        "status",
+        help="Inspect exact-protocol progress across integrity-checked result sources",
+    )
+    study_status.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/experiments/matched_budget_study_v1.yaml"),
+    )
+    study_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    study_status.add_argument(
+        "--results",
+        type=Path,
+        action="append",
+        default=None,
+        help="Additional study_results.json path; repeat to add sources",
+    )
+    study_status.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional status JSON path; omitted for a mutation-free inspection",
+    )
+    _add_log_level_option(study_status)
+    study_status.set_defaults(handler=_handle_study_status)
     return parser
 
 
@@ -1970,6 +1998,41 @@ def _handle_study_evaluate(args: argparse.Namespace) -> int:
     path = save_study_report(report, args.output)
     print(json.dumps({**payload, "report": str(path)}, indent=2))
     return 0 if not report.blockers else 1
+
+
+def _handle_study_status(args: argparse.Namespace) -> int:
+    protocol = load_study_protocol(args.config)
+    paths = discover_study_result_paths(
+        args.outputs_root,
+        explicit_paths=args.results,
+    )
+    status = inspect_study_matrix(protocol, paths)
+    payload = {
+        "study_id": status.study_id,
+        "protocol_sha256": status.protocol_sha256,
+        "plan_sha256": status.plan_sha256,
+        "evaluation_status": status.evaluation_status.value,
+        "headline_eligible": status.headline_eligible,
+        "planned_cells": status.planned_cells,
+        "integrity_verified_records": status.integrity_verified_records,
+        "succeeded_cells": status.succeeded_cells,
+        "failed_cells": status.failed_cells,
+        "valid_external_reviews": status.valid_external_reviews,
+        "missing_cells": status.missing_cells,
+        "compatible_sources": status.compatible_sources,
+        "foreign_sources": status.foreign_sources,
+        "invalid_sources": status.invalid_sources,
+        "next_execution_batch": status.next_execution_batch,
+        "next_review_batch": status.next_review_batch,
+        "blockers": status.blockers,
+        "sources": [source.model_dump(mode="json") for source in status.sources],
+        "status_sha256": status.sha256,
+    }
+    if args.output is not None:
+        saved = save_study_matrix_status(status, args.output)
+        payload["status_report"] = str(saved)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
