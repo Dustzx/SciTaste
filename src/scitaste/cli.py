@@ -64,8 +64,10 @@ from scitaste.evaluation import (
     EvaluationCriticSuite,
     inspect_git_source,
     inspect_prelaunch_manifest,
+    inspect_task_selection,
     load_external_resource_corpus,
     load_prelaunch_manifest,
+    load_task_selection_manifest,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
@@ -801,12 +803,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="inspect the exact executable Git checkout (default: current repository)",
     )
     prelaunch.add_argument(
+        "--evidence-root",
+        type=Path,
+        default=Path("."),
+        help="verify content-bound protocol evidence (default: current repository)",
+    )
+    prelaunch.add_argument(
         "--require-ready",
         action="store_true",
         help="Return a nonzero status when readiness or authorization is incomplete",
     )
     _add_log_level_option(prelaunch)
     prelaunch.set_defaults(handler=_handle_evaluation_prelaunch)
+    task_selection = evaluation_commands.add_parser(
+        "task-selection",
+        help="Inspect an exact metadata-only benchmark task selection",
+    )
+    task_selection.add_argument("--manifest", type=Path, required=True)
+    task_selection.add_argument("--resource-corpus", type=Path, required=True)
+    task_selection.add_argument(
+        "--require-scope-ready",
+        action="store_true",
+        help="Return nonzero when the metadata scope is not ready for owner review",
+    )
+    _add_log_level_option(task_selection)
+    task_selection.set_defaults(handler=_handle_evaluation_task_selection)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -2467,7 +2488,7 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
         inspection.manifest,
         corpus.corpus,
         report,
-        evidence_root=args.source_root,
+        evidence_root=args.evidence_root,
     )
     payload = {
         "manifest_path": str(inspection.path),
@@ -2482,6 +2503,23 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
     if args.require_ready and (
         not critic_report.ready_for_author_review or not report.execution_authorized
     ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_task_selection(args: argparse.Namespace) -> int:
+    inspection = load_task_selection_manifest(args.manifest)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    report = inspect_task_selection(inspection.manifest, corpus.corpus)
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_scope_ready and not report.ready_for_owner_scope_review:
         return 1
     return 0
 

@@ -24,7 +24,7 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource currently named | Planned first block | Current state |
 |---|---|---|---:|---|
-| `formal-v4-prepilot` | API matched-backbone feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 system × task × seed cells | current proposal; blocked on task subset, adapters, analysis/integrity contracts, reviewers, and approval |
+| `formal-v4-prepilot` | API matched-backbone feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | current scope proposal; blocked on task qualification, adapters, replication, analysis/integrity contracts, reviewers, and approval |
 | `formal-v3-prepilot` | historical API proposal | retired DeepSeek V4 API identity, temporarily compatibility-routed by the provider | 5 system × task × seed cells | immutable history; do not launch or edit into V4.1 evidence |
 | `formal-v2-prepilot` | API matched-backbone feasibility | requested Zhipu `glm-5.3-flash` | 5 system × task × seed cells | additionally blocked on official/authenticated model identity and pricing |
 | `robustness-v1-prepilot` | local small-model robustness | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablation × task × seed cells | blocked on ablation adapters, task subset, remote inventory/checkpoint, reviewers, and approval |
@@ -50,6 +50,17 @@ model. The remote machine has not been contacted, so GPU count, free storage,
 runtime compatibility, and remote checkpoint presence remain pending. The 2B
 model is a robustness condition, not a replacement for a frontier API backbone.
 
+The V4.1 proposal now names the exact ten-task MLR-Bench Appendix A population
+used by the accepted benchmark for experimentation, writing, and end-to-end
+evaluation. It contains seven Trustworthy AI, two LLM/VLM, and one ML Theory
+task. This preserves direct comparability but is not a broad field sample. The
+metadata-only selection is tracked in
+`research/data/mlr_bench_official_ten_candidate_v1.yaml`; its task bytes are not
+present, its upstream licenses and executable signals remain pending, and it
+authorizes neither download nor execution. One seed yields a scope/preflight
+block, not a variance estimate; the statistics critic therefore continues to
+block author review until a multi-seed pilot is frozen.
+
 ## Machine gate
 
 Inspect any proposal without provider or GPU access:
@@ -58,7 +69,8 @@ Inspect any proposal without provider or GPU access:
 .venv/bin/scitaste evaluation prelaunch \
   --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
-  --source-root /path/to/exact-clean-executable-checkout
+  --source-root /path/to/exact-clean-executable-checkout \
+  --evidence-root /path/to/proposal-and-protocol-checkout
 ```
 
 The result contains:
@@ -85,10 +97,11 @@ A launch service must independently require `execution_authorized=true` and the
 same proposal hash.
 
 The `max_output_tokens_per_call` values in these proposals are per-experiment
-ceilings, not a global SciTaste limit. API proposals currently reserve 32,768
-output tokens per call and five million total tokens for the first block; these
-budgets can change only by creating new proposal bytes and obtaining a new
-hash-bound approval.
+ceilings, not a global SciTaste limit. The V4.1 scope proposal reserves 32,768
+output tokens per call, 1,500 requests, and fifteen million total tokens across
+all 50 cells. These are ceilings rather than targets and still require a
+pilot-informed adequacy check. Any change creates new proposal bytes and needs a
+new hash-bound approval.
 
 ## Remaining work before the first approved block
 

@@ -67,11 +67,22 @@ from scitaste.evaluation.resources import (
     evaluate_resource_feasibility,
     load_external_resource_corpus,
 )
+from scitaste.evaluation.task_selection import (
+    BenchmarkTaskSelectionManifest,
+    CandidateBenchmarkTask,
+    TaskSelectionFinding,
+    TaskSelectionInspection,
+    TaskSelectionReport,
+    inspect_task_selection,
+    load_task_selection_manifest,
+)
 
 __all__ = [
     "AnalysisContract",
     "ApiModelResource",
     "ApprovalRecord",
+    "BenchmarkTaskSelectionManifest",
+    "CandidateBenchmarkTask",
     "ComparisonBlock",
     "DatasetPin",
     "DesignBlocker",
@@ -122,10 +133,15 @@ __all__ = [
     "ScientificLaneRole",
     "StatisticalDesign",
     "SystemRole",
+    "TaskSelectionFinding",
+    "TaskSelectionInspection",
+    "TaskSelectionReport",
     "attribute_failure",
     "evaluate_resource_feasibility",
     "inspect_git_source",
     "inspect_prelaunch_manifest",
+    "inspect_task_selection",
     "load_external_resource_corpus",
     "load_prelaunch_manifest",
+    "load_task_selection_manifest",
 ]

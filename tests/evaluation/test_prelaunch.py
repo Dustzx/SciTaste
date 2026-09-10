@@ -311,6 +311,9 @@ def test_repository_v41_proposal_preserves_new_identity_as_a_new_protocol() -> N
     assert model.model_revision == "DeepSeek-V4.1-Flash"
     assert model.pricing.input_cache_miss_per_million == 0.3
     assert model.pricing.output_per_million == 1.2
+    assert len(manifest.tasks) == 10
+    assert manifest.lanes[0].planned_cells == 50
+    assert manifest.lanes[0].api_model.max_total_tokens == 15_000_000
     assert manifest.approval.approved is False
 
 

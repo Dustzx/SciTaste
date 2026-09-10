@@ -39,15 +39,96 @@ systems:
     availability: pending
     real_implementation: true
 tasks:
-  - task_id: mlr-bench-pilot-block
+  - task_id: iclr2025_bi_align
     benchmark_resource_id: mlr-bench
-    split: source-disjoint-pilot-to-be-frozen
-    selected_asset_manifest: null
-    asset_manifest_sha256: null
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
     license_status: pending
     asset_status: pending
-    held_out: true
-    source_group_disjoint: true
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_buildingtrust
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_data_problems
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_dl4c
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_mldpr
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_question
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_scope
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_scsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_verifai
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_wsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
 lanes:
   - lane_id: deepseek-v41-api
     kind: api_only
@@ -58,10 +139,20 @@ lanes:
       - mlr-agent
       - ai-scientist-v2
       - autoresearchclaw
-    task_ids: [mlr-bench-pilot-block]
+    task_ids:
+      - iclr2025_bi_align
+      - iclr2025_buildingtrust
+      - iclr2025_data_problems
+      - iclr2025_dl4c
+      - iclr2025_mldpr
+      - iclr2025_question
+      - iclr2025_scope
+      - iclr2025_scsl
+      - iclr2025_verifai
+      - iclr2025_wsl
     seeds: [7]
     repetitions: 1
-    planned_cells: 5
+    planned_cells: 50
     api_model:
       provider_id: deepseek
       endpoint: https://api.deepseek.com/chat/completions
@@ -74,8 +165,8 @@ lanes:
       api_key_env: DEEPSEEK_API_KEY
       max_input_tokens_per_call: 100000
       max_output_tokens_per_call: 32768
-      max_requests: 300
-      max_total_tokens: 5000000
+      max_requests: 1500
+      max_total_tokens: 15000000
       max_cost: 100.0
       pricing:
         currency: USD
