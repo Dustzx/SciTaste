@@ -358,7 +358,7 @@
   "title.generated.next_step_review": "Generated next-step review workspace",
   "title.generated.research_landscape_review": "Generated research landscape workspace",
   "component.ProjectProgressBoard": "Evidence-grounded project progress",
-  "component.ResearchLandscapeMap": "AutoResearch evaluation map",
+  "component.ResearchLandscapeMap": "AutoResearch methods & evaluation map",
   "component.ProjectSummaryCard": "Project summary",
   "component.StageTimeline": "Stage timeline",
   "component.BlockerList": "Blockers",

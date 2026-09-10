@@ -691,7 +691,7 @@ class WorkspaceSurfaceFactory:
                 ComponentSpec(
                     component_id="research-landscape-map",
                     component=TrustedComponent.RESEARCH_LANDSCAPE_MAP,
-                    title="AutoResearch evaluation landscape",
+                    title="AutoResearch methods and evaluation landscape",
                     evidence_ref_ids=[project_ref.evidence_id, run_ref.evidence_id],
                     data=data.model_dump(mode="json"),
                 )

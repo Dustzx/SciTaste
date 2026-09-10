@@ -358,7 +358,7 @@
   "title.generated.next_step_review": "生成的下一步审查工作区",
   "title.generated.research_landscape_review": "生成的研究评测地图",
   "component.ProjectProgressBoard": "基于证据的项目进度",
-  "component.ResearchLandscapeMap": "AutoResearch 评测地图",
+  "component.ResearchLandscapeMap": "AutoResearch 方法与评测地图",
   "component.ProjectSummaryCard": "项目摘要",
   "component.StageTimeline": "阶段时间线",
   "component.BlockerList": "阻塞事项",
