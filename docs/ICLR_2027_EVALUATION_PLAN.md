@@ -36,12 +36,37 @@ Autonomous Research.”** The current word *Learning* is not justified unless th
 submitted method actually estimates or updates a learned taste policy; retrieval
 from a precedent library alone is not sufficient.
 
+## Recursive self-iteration contract
+
+The default development mode is recursive, not merely retrospective
+dogfooding:
+
+1. SciTaste is the independent product and research method.
+2. `scitaste-self-development` is a SciTaste-owned research project that uses
+   the full lifecycle to improve the product and build this paper.
+3. The self-development project creates separate held-out formal projects in
+   which SciTaste Native and external systems attempt independent research tasks
+   from idea through executable evidence and paper.
+4. Formal failures and effects return to the self-development project as
+   evidence gaps and versioned proposals; accepted fixes create a new system and
+   protocol version rather than rewriting completed cells.
+
+The self-development trajectory can establish ecological usefulness,
+traceability, and defect discovery. It cannot establish comparative
+effectiveness because the subject system, development process, and selected
+evidence are coupled. Only held-out external projects contribute to the
+headline effect estimate.
+
+The accepted-literature basis and the resulting evaluation-stack decision are
+recorded in
+[`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md).
+
 ## Four distinct evaluation tracks
 
 | Track | Question | Required comparison | Role in the paper |
 |---|---|---|---|
 | A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
-| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct ReAct-style agent, AutoResearchClaw, at least one second pinned external research system, SciTaste Native | headline external-validity result |
+| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, MLR-Agent, AI Scientist-v2, compatible AutoResearchClaw, SciTaste Native | headline external-validity result |
 | C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
@@ -84,36 +109,48 @@ negative controls so that gains cannot be attributed merely to extra context.
 
 1. **Direct/ReAct-style LM agent**: a minimal execution-capable baseline with no
    research-specific taste memory.
-2. **AutoResearchClaw**: the pinned, unmodified external baseline through its
-   existing adapter.
-3. **A second independent research system**: AI Scientist-v2 is preferred if its
-   license, sandbox, version, task mapping, and telemetry gates pass. Agent
-   Laboratory is an acceptable predeclared alternative. Sibyl remains a stretch
-   baseline and is reported as unavailable rather than replaced by a mock if its
-   environment cannot be reproduced.
-4. **SciTaste Native**: the first-party controller, state, native executor, and
+2. **MLR-Agent**: the official agent scaffold associated with the accepted
+   MLR-Bench lifecycle, if its version, license, and environment pass.
+3. **AI Scientist-v2**: a real pinned external system, if its license, sandbox,
+   task mapping, and telemetry gates pass. It remains unavailable if those gates
+   fail; no mock implementation may replace it.
+4. **AutoResearchClaw**: an additional pinned, unmodified external system only
+   where its existing adapter can preserve the same task semantics and budget.
+5. **SciTaste Native**: the first-party controller, state, native executor, and
    publication path, with no AutoResearchClaw runtime dependency.
 
 At least two independent external research systems, in addition to the direct
 agent, must pass the adapter and fairness gates before the manuscript claims
-broad external-system superiority. If only AutoResearchClaw is executable, the
-paper must narrow its claim to decision-policy and component evidence.
+broad external-system superiority. Agent Laboratory may be a predeclared
+fallback only after a separate applicability review. Sibyl remains a stretch
+baseline and is reported as unavailable rather than replaced by a mock.
 
-### Tasks and repetitions
+### Accepted-benchmark task stack and repetitions
 
-The formal end-to-end floor is 12 held-out tasks across at least three task
-families and three domains, with three registered seeds per system. Four systems
-therefore imply 144 task-system-seed trajectories; adding a fifth system implies
-180. The exact task list must be frozen as a content-addressed data manifest
-before the first formal run.
+The earlier 12-task natural-transfer floor was a planning heuristic rather than
+an accepted-benchmark design. It is replaced by this evidence stack:
+
+1. **MLR-Bench stagewise population**: evaluate idea and proposal decisions on
+   all feasible official tasks or a powered, source-stratified, frozen subset no
+   smaller than 120 cases.
+2. **MLR-Bench end-to-end population**: begin with the benchmark's official
+   executable subset for matched idea-to-paper runs. The exact system/task/seed
+   count follows adapter feasibility and pilot power analysis. Four systems on
+   ten tasks with three seeds would yield 120 trajectories, but this is a
+   planning reference rather than authorization.
+3. **EXP-Bench experiment-integrity population**: use a preregistered,
+   source-stratified subset to measure hypothesis, design, implementation,
+   execution, conclusion, and conjunctive full success. Its size follows a
+   no-formal-data pilot and resource calculation.
+4. **Bounded frontier-progress cases**: optionally test two or three external
+   open-ended objectives against human or strong public baselines. Treat these
+   as a high-cost case series, not a population estimate.
 
 The existing four synthetic generators remain controlled stress tests. They do
-not satisfy the 12-task natural-transfer floor and must be reported separately.
-Candidate natural tasks must have public inputs, redistributable or precisely
-retrievable assets, an executable success signal, and enough ambiguity to make
-research decisions consequential. A task is excluded before launch if any
-system cannot receive an equivalent starting package or if its evaluation
-depends on unavailable private data.
+not satisfy external validity and must be reported separately. Every formal
+task list is frozen as a content-addressed manifest before the first run. A task
+is excluded before launch if systems cannot receive an equivalent starting
+package or if evaluation depends on unavailable private data.
 
 ### Fairness tracks
 
@@ -140,7 +177,8 @@ The single headline endpoint is condition-blinded expert preference for the
 scientific value and evidence validity of the complete research package under a
 matched budget. Reviewers receive anonymized trajectories, executable evidence,
 and papers with system-identifying metadata removed. Paper fluency alone is not
-the target.
+the target. MLR-Judge or another model judge is secondary until calibrated
+against independent experts on the actual SciTaste comparison population.
 
 Secondary endpoints include:
 
@@ -215,6 +253,11 @@ No formal run may start until all of these gates pass:
    scale-out;
 7. retention and archive locations are declared before using the remote 3090
    host, whose storage headroom is limited.
+8. the self-development memory, current SciTaste manuscript, benchmark answers,
+   hidden source papers, and previous formal outputs cannot enter a held-out
+   external task;
+9. formal tasks are separate project records, and an L0 product change after a
+   block begins creates a new protocol rather than silently replacing its cells.
 
 The current local v9 failure is an engineering recovery item. It must not be
 resumed from an unverified source tree and must not be counted as formal-v2 or

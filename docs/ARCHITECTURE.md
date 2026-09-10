@@ -39,6 +39,9 @@ returns observations and artifacts but cannot select the next global action.
 - `benchmark`: evaluation-only fixed-pair suites, isolated augmentation
   conditions, robustness/transfer metrics, paired Base comparisons, and the
   matched-budget system-study planner/auditor.
+- `evaluation`: typed recursive project, task, framework, comparison,
+  statistical, approval, and bounded failure-attribution contracts for
+  external AutoResearch studies.
 - `model_nodes`: opt-in typed semantic advice, pinned structured backends,
   exact record/replay, and project-owned pilot orchestration whose resumable
   evidence remains engineering-only until independently accepted.
@@ -165,6 +168,11 @@ returns observations and artifacts but cannot select the next global action.
     appropriate evidence duties but cannot impose universal figure, table,
     experiment, or ablation quotas. Mechanical template compliance remains an
     independent deterministic contract.
+50. Self-development is process evidence only. Every headline AutoResearch
+    comparison uses held-out child projects, SciTaste plus at least two real
+    independent external systems in the same matched block, evidence-bound
+    papers, frozen statistics, and an approval record over the exact design
+    hash. Feedback after launch creates a new protocol version.
 
 ## Architecture decision records
 
@@ -1275,3 +1283,38 @@ failures. It does not diagnose a sandbox/runtime failure, install a dependency,
 change an environment, or establish that a model improves scientific code.
 Priced live acceptance and comparative repair-quality evaluation remain required
 before an effectiveness claim.
+
+### ADR-042: Recursive self-development cannot evaluate itself as a headline task
+
+Status: accepted for experiment-design admission; external runs remain pending.
+
+SciTaste intentionally uses its own full lifecycle to develop the SciTaste
+product and paper. This supplies realistic process evidence, but the resulting
+project is statistically and temporally coupled to the method under study.
+Treating it as an effectiveness task would allow design choices, retained
+memory, selected failures, and manuscript revisions to confirm the preferred
+claim.
+
+The `evaluation` package therefore represents the product, its self-development
+parent, and held-out formal child projects as different objects. A headline
+full-lifecycle block must contain SciTaste and at least two real independent
+external systems under matched model, starting information, permissions,
+repair, and telemetry policies. Headline tasks must be held out, external to the
+parent evidence, executable, and produce a final paper. The self-development
+task may appear only as process evidence.
+
+Scientific completeness and launch authority are independent. The deterministic
+gate first checks external-system reality, task independence, comparison
+fairness, estimand, power, failure handling, blinded review, judge validation,
+and immutable feedback semantics. Execution additionally requires an explicit
+human approval bound to the proposal hash. A later product change invalidates no
+historical evidence, but it creates a new protocol rather than replacing
+completed cells.
+
+Failure attribution is similarly bounded. Same-state comparator success makes a
+model limit a candidate; Base success followed by Full failure indicates a
+framework-induced regression; sound but unrepresentable or unexecutable plans
+indicate a framework limit; context and resource failures remain separate; and
+ambiguous cases remain unresolved. This prevents weak model output from hiding
+framework omissions and prevents framework failures from being assigned to a
+model without a controlled comparison.

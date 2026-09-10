@@ -253,6 +253,15 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   base from independent-system comparison of SciTaste Native against pinned
   external systems. Neither the current AutoResearchClaw-based cells nor native
   integration tests alone establish that SciTaste is better.
+- The external-evaluation plan now treats `scitaste-self-development` as a
+  process-only parent project and held-out benchmark attempts as separate formal
+  child projects. A typed design contract blocks self-referential headline
+  evidence, pseudo baselines, unmatched comparison blocks, incomplete
+  statistical review, mutable feedback protocols, and unapproved launch bytes.
+  The accepted-work audit identifies MLR-Bench as the primary idea-to-paper
+  scaffold and EXP-Bench as the experiment-integrity scaffold; repository,
+  license, data, adapter, power, and resource feasibility remain the next
+  no-run gates.
 
 - A content-hashed protocol covers diagnosis-friendly, clear-hypothesis,
   new-formulation, and ambiguous-direction tasks.

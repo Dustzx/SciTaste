@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- Recursive AutoResearch evaluation design is now a typed, hash-bound contract
+  rather than a prose-only plan. It separates held-out full-lifecycle,
+  experiment-integrity, frontier-progress, decision, and self-development
+  evidence; blocks self-referential headline tasks, pseudo external systems,
+  unmatched budgets, incomplete statistics, and unvalidated judges; and keeps
+  scientific design completeness separate from exact human launch approval.
+  Bounded failure attribution distinguishes same-state model-limit candidates,
+  framework limits/regressions, context/tooling gaps, resource failures, and
+  unresolved causes. The accompanying accepted-paper audit replaces an
+  arbitrary natural-task floor with an MLR-Bench/EXP-Bench-anchored proposal.
+
 - Full Workflow can now request exactly one proposal-only native source repair
   after a deterministic static-admission rejection. The repair input binds the
   immutable failed generation and violation set; the replacement cannot change
