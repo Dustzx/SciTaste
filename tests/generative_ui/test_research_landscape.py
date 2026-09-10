@@ -23,8 +23,9 @@ from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
 _SOURCE = (
     Path(__file__).resolve().parents[2]
-    / "docs/research/data/autoresearch_evaluation_landscape_v1.yaml"
+    / "docs/research/data/autoresearch_evaluation_landscape_v2.yaml"
 )
+_LEGACY_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v1.yaml")
 
 
 def _runtime(tmp_path: Path, *, projection: bool = True) -> ProjectRuntime:
@@ -52,7 +53,7 @@ def _runtime(tmp_path: Path, *, projection: bool = True) -> ProjectRuntime:
             status="complete",
             evidence_scope="literature-and-protocol-design-only",
             artifact=artifact,
-            generative_ui_projection="autoresearch-evaluation-landscape-v1",
+            generative_ui_projection="autoresearch-evaluation-landscape-v2",
         ),
         expected_revision=snapshot.revision,
     )
@@ -70,14 +71,35 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
 
     assert artifact.synthesis_scope == "literature-and-protocol-design-only"
     assert artifact.freeze_decision == "hold"
-    assert len(artifact.works) == 11
+    assert len(artifact.works) == 15
     assert {item.role for item in artifact.works} == {"primary", "anchor", "context"}
+    assert {item.contribution_type for item in artifact.works} == {
+        "method",
+        "benchmark",
+        "hybrid",
+    }
+    assert sum(item.contribution_type == "method" for item in artifact.works) == 3
+    assert sum(item.contribution_type == "hybrid" for item in artifact.works) == 2
+    assert sum(item.contribution_type == "benchmark" for item in artifact.works) == 10
     assert not any(item.readiness == "formal" for item in artifact.comparison_candidates)
 
     payload = artifact.model_dump(mode="json")
     payload["works"][0]["stage_ids"].append("invented-stage")
     with pytest.raises(ValidationError, match="unknown lifecycle stage"):
         ResearchLandscapeArtifact.model_validate(payload)
+
+    payload = artifact.model_dump(mode="json")
+    payload["works"][0]["contribution_type"] = "unclassified"
+    with pytest.raises(ValidationError, match="explicit contribution type"):
+        ResearchLandscapeArtifact.model_validate(payload)
+
+
+def test_legacy_landscape_remains_readable_but_explicitly_unclassified() -> None:
+    artifact = load_research_landscape_source(_LEGACY_SOURCE)
+
+    assert artifact.schema_version == "1.0"
+    assert artifact.artifact_kind == "autoresearch-evaluation-landscape-v1"
+    assert {item.contribution_type for item in artifact.works} == {"unclassified"}
 
 
 def test_registered_landscape_builds_one_content_bound_trusted_map(tmp_path: Path) -> None:
@@ -167,7 +189,7 @@ def test_landscape_artifact_must_remain_inside_declaring_run(tmp_path: Path) -> 
             status="complete",
             evidence_scope="engineering-only",
             artifact="PROJECT.json",
-            generative_ui_projection="autoresearch-evaluation-landscape-v1",
+            generative_ui_projection="autoresearch-evaluation-landscape-v2",
         ),
         expected_revision=snapshot.revision,
     )

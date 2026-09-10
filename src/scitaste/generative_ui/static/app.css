@@ -1125,6 +1125,83 @@ code {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.landscape-scope-note {
+  align-items: start;
+  background: #eef2f3;
+  border-left: 0.3rem solid #587b94;
+  border-radius: 0.45rem;
+  color: #36566c;
+  display: grid;
+  font-size: 0.76rem;
+  gap: 0.18rem;
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.landscape-scope-note strong {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.landscape-type-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landscape-type-card {
+  background: #f5f6f2;
+  border-top: 0.28rem solid #557b67;
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.7rem;
+}
+
+.landscape-type-card.type-hybrid {
+  border-top-color: #9a7136;
+}
+
+.landscape-type-card.type-benchmark {
+  border-top-color: #587b94;
+}
+
+.landscape-type-card:only-child {
+  grid-column: 1 / -1;
+}
+
+.landscape-type-card > div {
+  align-items: baseline;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.landscape-type-card > div > strong {
+  font-size: 1.35rem;
+}
+
+.landscape-type-card h4,
+.landscape-type-card p {
+  margin: 0;
+}
+
+.landscape-type-card h4 {
+  font-size: 0.82rem;
+}
+
+.landscape-type-card p {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.landscape-type-card small {
+  color: var(--forest);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
 .landscape-lenses article {
   align-items: start;
   background: #f4f6f1;
@@ -1192,6 +1269,12 @@ code {
   display: block;
 }
 
+.landscape-work-use {
+  color: var(--forest);
+  font-weight: 700;
+  margin-top: 0.14rem;
+}
+
 .landscape-work.role-primary th:first-child {
   border-left: 0.28rem solid #2b7657;
 }
@@ -1242,17 +1325,51 @@ code {
   margin-top: 0.2rem;
 }
 
-.landscape-context {
-  margin-top: 0.55rem;
+.landscape-contribution-groups {
+  display: grid;
+  gap: 0.55rem;
 }
 
-.landscape-context > summary,
+.landscape-contribution-group > summary,
 .landscape-open-questions > summary {
   color: var(--forest);
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 750;
   padding: 0.35rem 0;
+}
+
+.landscape-contribution-group > summary {
+  align-items: center;
+  background: #eef2ec;
+  border-left: 0.3rem solid #557b67;
+  border-radius: 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+}
+
+.landscape-contribution-group.type-hybrid > summary {
+  border-left-color: #9a7136;
+}
+
+.landscape-contribution-group.type-benchmark > summary {
+  border-left-color: #587b94;
+}
+
+.landscape-contribution-group > summary > span {
+  align-items: center;
+  background: rgb(255 255 255 / 70%);
+  border-radius: 99rem;
+  display: inline-flex;
+  font-size: 0.7rem;
+  height: 1.45rem;
+  justify-content: center;
+  min-width: 1.45rem;
+}
+
+.landscape-contribution-group[open] > summary {
+  margin-bottom: 0.4rem;
 }
 
 .readiness-lanes {
@@ -1461,6 +1578,7 @@ code {
   }
 
   .landscape-lenses,
+  .landscape-type-grid,
   .readiness-lanes {
     grid-template-columns: 1fr;
   }

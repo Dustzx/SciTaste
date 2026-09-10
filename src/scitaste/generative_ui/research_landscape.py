@@ -19,7 +19,8 @@ _CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_PROJECTION_KIND = "autoresearch-evaluation-landscape-v1"
+_PROJECTION_KIND = "autoresearch-evaluation-landscape-v2"
+_PROJECTION_KINDS = frozenset({"autoresearch-evaluation-landscape-v1", _PROJECTION_KIND})
 _MAX_ARTIFACT_BYTES = 256 * 1024
 
 
@@ -51,6 +52,13 @@ class ResearchWork(BaseModel):
     evaluation_unit: SafeText
     scale: SafeText
     comparison_anchor: SafeText
+    contribution_type: Literal["method", "benchmark", "hybrid", "unclassified"] = "unclassified"
+    experiment_role: Literal["system-comparator", "task-source", "design-precedent"] = (
+        "design-precedent"
+    )
+    bundled_artifacts: tuple[Literal["system", "benchmark", "judge", "dataset"], ...] = Field(
+        default=(), max_length=4
+    )
     stage_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=8)
     lens_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=6)
     execution_signal: Literal["executed", "mixed", "artifact", "simulated"]
@@ -92,23 +100,37 @@ class ResearchLandscapeArtifact(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
-    artifact_kind: Literal["autoresearch-evaluation-landscape-v1"] = _PROJECTION_KIND
+    schema_version: Literal["1.0", "1.1"] = "1.1"
+    artifact_kind: Literal[
+        "autoresearch-evaluation-landscape-v1",
+        "autoresearch-evaluation-landscape-v2",
+    ] = _PROJECTION_KIND
     title: SafeText
     source_document: SafeLocator
     source_document_sha256: Sha256
     synthesis_scope: Literal["literature-and-protocol-design-only"]
+    corpus_scope: Literal["targeted-evaluation-precedents"] = "targeted-evaluation-precedents"
+    scope_note_en: SafeText = (
+        "Selected evaluation precedents; counts do not estimate publication prevalence."
+    )
+    scope_note_zh: SafeText = "评测先例定向样本的数量不代表领域论文分布。"
     freeze_decision: Literal["hold", "candidate", "ready"]
     decision_reason_code: SafeIdentifier
     stages: tuple[ResearchStage, ...] = Field(min_length=4, max_length=8)
     lenses: tuple[EvaluationLens, ...] = Field(min_length=3, max_length=6)
-    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=12)
+    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=16)
     comparison_candidates: tuple[ComparisonCandidate, ...] = Field(min_length=2, max_length=12)
     planning_gates: tuple[PlanningGate, ...] = Field(min_length=4, max_length=8)
     open_questions: tuple[ResearchQuestion, ...] = Field(min_length=1, max_length=6)
 
     @model_validator(mode="after")
     def references_are_closed_and_ordered(self) -> ResearchLandscapeArtifact:
+        expected_pair = {
+            "1.0": "autoresearch-evaluation-landscape-v1",
+            "1.1": "autoresearch-evaluation-landscape-v2",
+        }
+        if self.artifact_kind != expected_pair[self.schema_version]:
+            raise ValueError("research landscape schema and artifact kind must match")
         stage_ids = [item.stage_id for item in self.stages]
         lens_ids = [item.lens_id for item in self.lenses]
         work_ids = [item.work_id for item in self.works]
@@ -138,6 +160,15 @@ class ResearchLandscapeArtifact(BaseModel):
                 raise ValueError("research work evaluation lenses must be unique")
         if not any(item.role == "primary" for item in self.works):
             raise ValueError("research landscape requires a primary comparison work")
+        contribution_types = {item.contribution_type for item in self.works}
+        if self.schema_version == "1.1":
+            if "unclassified" in contribution_types:
+                raise ValueError("v2 research works require an explicit contribution type")
+            if not {"method", "benchmark", "hybrid"}.issubset(contribution_types):
+                raise ValueError("v2 landscape must separate method, benchmark, and hybrid work")
+            for work in self.works:
+                if len(work.bundled_artifacts) != len(set(work.bundled_artifacts)):
+                    raise ValueError("research work bundled artifacts must be unique")
         if self.freeze_decision == "ready" and any(
             item.state != "ready" for item in self.planning_gates
         ):
@@ -201,7 +232,7 @@ def find_research_landscape_run(snapshot: ProjectSnapshot) -> ProjectRun | None:
     matches = [
         run
         for run in snapshot.manifest.runs
-        if getattr(run, "generative_ui_projection", None) == _PROJECTION_KIND
+        if getattr(run, "generative_ui_projection", None) in _PROJECTION_KINDS
     ]
     return matches[-1] if matches else None
 
@@ -213,7 +244,8 @@ def load_project_research_landscape(
 ) -> ResearchLandscapeArtifact:
     """Read a bounded artifact contained by its registered run directory."""
 
-    if getattr(run, "generative_ui_projection", None) != _PROJECTION_KIND:
+    declared_projection = getattr(run, "generative_ui_projection", None)
+    if declared_projection not in _PROJECTION_KINDS:
         raise ValueError("run does not declare the research-landscape projection")
     if run.artifact is None:
         raise ValueError("research-landscape run does not declare an artifact")
@@ -234,7 +266,10 @@ def load_project_research_landscape(
     if len(payload) > _MAX_ARTIFACT_BYTES:
         raise ValueError("research-landscape artifact exceeds its byte limit")
     value = json.loads(payload.decode("utf-8"), object_pairs_hook=_unique_object)
-    return ResearchLandscapeArtifact.model_validate(value)
+    artifact = ResearchLandscapeArtifact.model_validate(value)
+    if artifact.artifact_kind != declared_projection:
+        raise ValueError("research-landscape artifact kind differs from its declaring run")
+    return artifact
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -244,4 +279,3 @@ def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
             raise ValueError(f"duplicate JSON key in research landscape: {key}")
         value[key] = item
     return value
-

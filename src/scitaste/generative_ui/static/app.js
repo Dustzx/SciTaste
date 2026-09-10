@@ -712,7 +712,10 @@ function renderLandscapeTable(data, works) {
     appendText(name, work.name);
     const venue = document.createElement("small");
     appendText(venue, work.venue);
-    identity.append(name, venue);
+    const use = document.createElement("small");
+    use.className = "landscape-work-use";
+    appendText(use, t(`landscape.use.${work.experiment_role}`));
+    identity.append(name, venue, use);
     row.appendChild(identity);
     for (const stage of data.stages) {
       const covered = work.stage_ids.includes(stage.stage_id);
@@ -742,6 +745,49 @@ function renderLandscapeTable(data, works) {
   return scroll;
 }
 
+function renderContributionSummary(data) {
+  const section = progressSection(
+    t("landscape.types.title"),
+    t("landscape.types.subtitle"),
+  );
+  const scope = document.createElement("aside");
+  scope.className = "landscape-scope-note";
+  const scopeLabel = document.createElement("strong");
+  appendText(scopeLabel, t("landscape.scope.eyebrow"));
+  const scopeCopy = document.createElement("span");
+  appendText(scopeCopy, activeLocale === "zh-CN" ? data.scope_note_zh : data.scope_note_en);
+  scope.append(scopeLabel, scopeCopy);
+
+  const grid = document.createElement("div");
+  grid.className = "landscape-type-grid";
+  const types = data.works.some((work) => work.contribution_type === "unclassified")
+    ? ["unclassified"]
+    : ["method", "hybrid", "benchmark"];
+  for (const type of types) {
+    const works = data.works.filter((work) => work.contribution_type === type);
+    const card = document.createElement("article");
+    card.className = `landscape-type-card type-${type}`;
+    const header = document.createElement("div");
+    const count = document.createElement("strong");
+    appendText(count, works.length);
+    const label = document.createElement("h4");
+    appendText(label, t(`landscape.type.${type}`));
+    header.append(count, label);
+    const description = document.createElement("p");
+    appendText(description, t(`landscape.type.${type}.description`));
+    const names = document.createElement("small");
+    const visibleNames = works.slice(0, 4).map((work) => work.name).join(" · ");
+    const remainder = works.length - 4;
+    appendText(names, remainder > 0
+      ? `${visibleNames} · ${t("landscape.type.more", {count: remainder})}`
+      : visibleNames);
+    card.append(header, description, names);
+    grid.appendChild(card);
+  }
+  section.append(scope, grid);
+  return section;
+}
+
 function renderResearchLandscape(data) {
   const container = document.createElement("div");
   container.className = "research-landscape";
@@ -757,11 +803,24 @@ function renderResearchLandscape(data) {
   decisionCopy.append(eyebrow, heading);
   const synthesis = document.createElement("div");
   synthesis.className = "landscape-counts";
-  for (const [value, label] of [
-    [data.works.length, t("landscape.count.works")],
-    [data.stages.length, t("landscape.count.stages")],
-    [data.lenses.length, t("landscape.count.lenses")],
-  ]) {
+  const typeCounts = Object.fromEntries(
+    ["method", "hybrid", "benchmark"].map((type) => [
+      type,
+      data.works.filter((work) => work.contribution_type === type).length,
+    ]),
+  );
+  const countItems = data.works.some((work) => work.contribution_type === "unclassified")
+    ? [
+        [data.works.length, t("landscape.count.works")],
+        [data.stages.length, t("landscape.count.stages")],
+        [data.lenses.length, t("landscape.count.lenses")],
+      ]
+    : [
+        [typeCounts.method, t("landscape.count.methods")],
+        [typeCounts.hybrid, t("landscape.count.hybrids")],
+        [typeCounts.benchmark, t("landscape.count.benchmarks")],
+      ];
+  for (const [value, label] of countItems) {
     const item = document.createElement("span");
     const number = document.createElement("strong");
     appendText(number, value);
@@ -771,6 +830,8 @@ function renderResearchLandscape(data) {
     synthesis.appendChild(item);
   }
   gate.append(decisionCopy, synthesis);
+
+  const contributionTypes = renderContributionSummary(data);
 
   const lenses = progressSection(t("landscape.lenses.title"), t("landscape.lenses.subtitle"));
   const lensGrid = document.createElement("div");
@@ -792,17 +853,31 @@ function renderResearchLandscape(data) {
   lenses.appendChild(lensGrid);
 
   const map = progressSection(t("landscape.matrix.title"), t("landscape.matrix.subtitle"));
-  const foreground = data.works.filter((work) => work.role !== "context");
-  const context = data.works.filter((work) => work.role === "context");
-  map.appendChild(renderLandscapeTable(data, foreground));
-  if (context.length > 0) {
-    const more = document.createElement("details");
-    more.className = "landscape-context";
+  const groups = document.createElement("div");
+  groups.className = "landscape-contribution-groups";
+  const contributionTypesInData = data.works.some(
+    (work) => work.contribution_type === "unclassified",
+  ) ? ["unclassified"] : ["method", "hybrid", "benchmark"];
+  for (const type of contributionTypesInData) {
+    const works = data.works.filter((work) => work.contribution_type === type);
+    if (works.length === 0) {
+      continue;
+    }
+    const group = document.createElement("details");
+    group.className = `landscape-contribution-group type-${type}`;
+    if (type !== "benchmark") {
+      group.open = true;
+    }
     const summary = document.createElement("summary");
-    appendText(summary, t("landscape.matrix.more", {count: context.length}));
-    more.append(summary, renderLandscapeTable(data, context));
-    map.appendChild(more);
+    const label = document.createElement("strong");
+    appendText(label, t(`landscape.type.${type}`));
+    const count = document.createElement("span");
+    appendText(count, works.length);
+    summary.append(label, count);
+    group.append(summary, renderLandscapeTable(data, works));
+    groups.appendChild(group);
   }
+  map.appendChild(groups);
 
   const candidateSection = progressSection(
     t("landscape.candidates.title"),
@@ -869,6 +944,7 @@ function renderResearchLandscape(data) {
 
   container.append(
     gate,
+    contributionTypes,
     lenses,
     map,
     candidateSection,
