@@ -77,6 +77,7 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
     assert artifact.corpus_scope == (
         "accepted-method-census-candidate-and-targeted-evaluation-resources"
     )
+    assert artifact.prevalence_inference == "not-estimable"
     assert len(artifact.works) == 18
     assert {item.role for item in artifact.works} == {"primary", "anchor", "context"}
     assert {item.contribution_type for item in artifact.works} == {
@@ -93,6 +94,27 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
     )
     census = next(item for item in artifact.planning_gates if item.gate_id == "census")
     assert census.state == "candidate"
+
+    system_sources = {
+        item.work_id
+        for item in artifact.works
+        if item.contribution_type in {"method", "hybrid"} and "system" in item.bundled_artifacts
+    }
+    evaluation_sources = {
+        item.work_id
+        for item in artifact.works
+        if item.contribution_type == "benchmark"
+        or (
+            item.contribution_type == "hybrid"
+            and {"benchmark", "judge", "dataset"} & set(item.bundled_artifacts)
+        )
+    }
+    assert len(system_sources) == 8
+    assert len(evaluation_sources) == 12
+    assert system_sources & evaluation_sources == {
+        "ai-researcher",
+        "empirical-outcome-prediction",
+    }
 
     payload = artifact.model_dump(mode="json")
     payload["works"][0]["stage_ids"].append("invented-stage")

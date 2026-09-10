@@ -9,6 +9,7 @@ synthesis_scope: literature-and-protocol-design-only
 corpus_scope: accepted-method-census-candidate-and-targeted-evaluation-resources
 scope_note_en: Accepted method coverage is a census candidate pending a second screen; benchmark rows remain a targeted protocol-design sample, so counts do not estimate field prevalence.
 scope_note_zh: 已接收方法覆盖目前只是待复核的普查候选；基准行仍为协议设计定向样本，因此数量不代表领域论文分布。
+prevalence_inference: not-estimable
 freeze_decision: hold
 decision_reason_code: second-method-screen-tasks-adapters-power-and-judging-remain-open
 

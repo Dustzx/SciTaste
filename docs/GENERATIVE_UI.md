@@ -141,6 +141,17 @@ to-formal readiness ladder. Contextual benchmarks and unresolved design choices
 use progressive disclosure. No completion percentage, universal score, or
 inferred superiority appears.
 
+The same projection now exposes two non-interchangeable experiment tracks. The
+system-comparator track contains accepted methods and only the system portion of
+hybrid papers; the evaluation-infrastructure track contains benchmarks, tasks,
+datasets, rubrics, judges, and only the corresponding portion of hybrid papers.
+They meet at a matched-protocol gate rather than in one paper leaderboard. The
+schema fixes prevalence inference to `not-estimable`, because the method side is
+a census candidate while evaluation resources are a targeted design sample.
+Candidate readiness is rendered separately for systems and for benchmarks or
+judges, so an adapted benchmark cannot visually imply an adapted baseline
+system.
+
 This Taste is a presentation and abstraction policy, not a factual rewriter. It
 chooses relationships, visual hierarchy, compression, and disclosure while
 preserving the registered synthesis bytes and evidence identities. The current
@@ -150,6 +161,18 @@ adapters, statistical power, expert calibration, and a resource manifest remain
 blocked. The map can justify continuing experiment *planning*; it cannot
 authorize downloads, provider calls, GPU work, human recruitment, or formal
 cells.
+
+On 2026-09-11 the two-track projection was exercised through the real local
+receiver against the registered `scitaste-self-development` landscape. The
+generated Chinese workspace showed eight screened system-track sources, twelve
+screened evaluation-track sources, seven registered system candidates, three
+registered evaluation candidates, and zero formal-ready candidates in either
+track. Those overlapping source counts are classification outputs, not paper
+prevalence or experiment results. Headless Chromium at 1440, 768, 390, and 320
+CSS pixels found no document-level horizontal overflow, undersized enabled
+target, locale-switch request, or runtime error after the tablet track layout
+was repaired. This is an engineering presentation check, not usability or
+scientific-effectiveness evidence.
 
 The existing `scitaste-self-development` project is a read-only self-hosting
 acceptance case. Its repository-local manifest had reached revision 203 with 40

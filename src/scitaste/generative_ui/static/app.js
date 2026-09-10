@@ -796,6 +796,135 @@ function renderContributionSummary(data) {
   return section;
 }
 
+function renderExperimentTracks(data) {
+  const section = progressSection(
+    t("landscape.tracks.title"),
+    t("landscape.tracks.subtitle"),
+  );
+  const tracks = document.createElement("div");
+  tracks.className = "landscape-experiment-tracks";
+  const systemWorks = data.works.filter((work) =>
+    ["method", "hybrid"].includes(work.contribution_type)
+      && work.bundled_artifacts.includes("system"));
+  const resourceWorks = data.works.filter((work) =>
+    work.contribution_type === "benchmark"
+      || (work.contribution_type === "hybrid"
+        && work.bundled_artifacts.some((item) =>
+          ["benchmark", "judge", "dataset"].includes(item))));
+  const trackSpecs = [
+    {
+      id: "systems",
+      works: systemWorks,
+      candidates: data.comparison_candidates.filter((item) => item.candidate_kind === "system"),
+    },
+    {
+      id: "resources",
+      works: resourceWorks,
+      candidates: data.comparison_candidates.filter((item) => item.candidate_kind !== "system"),
+    },
+  ];
+  for (const spec of trackSpecs) {
+    const card = document.createElement("article");
+    card.className = `landscape-experiment-track track-${spec.id}`;
+    const marker = document.createElement("span");
+    marker.className = "track-marker";
+    appendText(marker, t(`landscape.track.${spec.id}.marker`));
+    const copy = document.createElement("div");
+    const heading = document.createElement("h4");
+    appendText(heading, t(`landscape.track.${spec.id}`));
+    const purpose = document.createElement("p");
+    appendText(purpose, t(`landscape.track.${spec.id}.purpose`));
+    const measures = document.createElement("div");
+    measures.className = "track-measures";
+    for (const [value, label] of [
+      [spec.works.length, t("landscape.track.screened")],
+      [spec.candidates.length, t("landscape.track.candidates")],
+      [spec.candidates.filter((item) => item.readiness === "formal").length,
+        t("landscape.track.formal")],
+    ]) {
+      const measure = document.createElement("span");
+      const number = document.createElement("strong");
+      appendText(number, value);
+      const labelNode = document.createElement("small");
+      appendText(labelNode, label);
+      measure.append(number, labelNode);
+      measures.appendChild(measure);
+    }
+    const names = document.createElement("small");
+    names.className = "track-names";
+    appendText(names, spec.works.slice(0, 4).map((work) => work.name).join(" · "));
+    copy.append(heading, purpose, measures, names);
+    card.append(marker, copy);
+    tracks.appendChild(card);
+  }
+  const protocol = document.createElement("article");
+  protocol.className = "landscape-protocol-gate";
+  const protocolMarker = document.createElement("span");
+  appendText(protocolMarker, "∩");
+  const protocolCopy = document.createElement("div");
+  const protocolHeading = document.createElement("h4");
+  appendText(protocolHeading, t("landscape.track.protocol"));
+  const protocolDescription = document.createElement("p");
+  appendText(protocolDescription, t("landscape.track.protocol.purpose"));
+  protocolCopy.append(protocolHeading, protocolDescription);
+  protocol.append(protocolMarker, protocolCopy, landscapeStatePill(data.freeze_decision));
+  section.append(tracks, protocol);
+  return section;
+}
+
+function renderCandidateReadiness(data) {
+  const section = progressSection(
+    t("landscape.candidates.title"),
+    t("landscape.candidates.subtitle"),
+  );
+  const groups = document.createElement("div");
+  groups.className = "candidate-readiness-groups";
+  const candidateGroups = [
+    ["systems", (item) => item.candidate_kind === "system"],
+    ["resources", (item) => item.candidate_kind !== "system"],
+  ];
+  for (const [groupId, predicate] of candidateGroups) {
+    const group = document.createElement("section");
+    group.className = `candidate-readiness-group group-${groupId}`;
+    const heading = document.createElement("h4");
+    appendText(heading, t(`landscape.candidates.${groupId}`));
+    const lanes = document.createElement("div");
+    lanes.className = "readiness-lanes";
+    for (const readiness of ["reference", "adaptation", "formal"]) {
+      const lane = document.createElement("section");
+      lane.className = `readiness-lane readiness-${readiness}`;
+      const laneHeading = document.createElement("h5");
+      appendText(laneHeading, t(`landscape.readiness.${readiness}`));
+      lane.appendChild(laneHeading);
+      for (const candidate of data.comparison_candidates.filter(
+        (item) => predicate(item) && item.readiness === readiness,
+      )) {
+        const card = document.createElement("article");
+        const name = document.createElement("strong");
+        appendText(name, candidate.name);
+        const meta = document.createElement("small");
+        appendText(meta, `${t(`landscape.kind.${candidate.candidate_kind}`)} · ${t(`landscape.role.${candidate.role}`)}`);
+        const barrier = document.createElement("span");
+        barrier.className = "barrier-code";
+        appendText(barrier, localizedCode(candidate.barrier_code));
+        card.append(name, meta, barrier);
+        lane.appendChild(card);
+      }
+      if (!lane.querySelector("article")) {
+        const empty = document.createElement("p");
+        empty.className = "lane-empty";
+        appendText(empty, t("landscape.readiness.none"));
+        lane.appendChild(empty);
+      }
+      lanes.appendChild(lane);
+    }
+    group.append(heading, lanes);
+    groups.appendChild(group);
+  }
+  section.appendChild(groups);
+  return section;
+}
+
 function renderResearchLandscape(data) {
   const container = document.createElement("div");
   container.className = "research-landscape";
@@ -840,6 +969,7 @@ function renderResearchLandscape(data) {
   gate.append(decisionCopy, synthesis);
 
   const contributionTypes = renderContributionSummary(data);
+  const experimentTracks = renderExperimentTracks(data);
 
   const lenses = progressSection(t("landscape.lenses.title"), t("landscape.lenses.subtitle"));
   const lensGrid = document.createElement("div");
@@ -887,41 +1017,7 @@ function renderResearchLandscape(data) {
   }
   map.appendChild(groups);
 
-  const candidateSection = progressSection(
-    t("landscape.candidates.title"),
-    t("landscape.candidates.subtitle"),
-  );
-  const lanes = document.createElement("div");
-  lanes.className = "readiness-lanes";
-  for (const readiness of ["reference", "adaptation", "formal"]) {
-    const lane = document.createElement("section");
-    lane.className = `readiness-lane readiness-${readiness}`;
-    const laneHeading = document.createElement("h4");
-    appendText(laneHeading, t(`landscape.readiness.${readiness}`));
-    lane.appendChild(laneHeading);
-    for (const candidate of data.comparison_candidates.filter(
-      (item) => item.readiness === readiness,
-    )) {
-      const card = document.createElement("article");
-      const name = document.createElement("strong");
-      appendText(name, candidate.name);
-      const meta = document.createElement("small");
-      appendText(meta, `${t(`landscape.kind.${candidate.candidate_kind}`)} · ${t(`landscape.role.${candidate.role}`)}`);
-      const barrier = document.createElement("span");
-      barrier.className = "barrier-code";
-      appendText(barrier, localizedCode(candidate.barrier_code));
-      card.append(name, meta, barrier);
-      lane.appendChild(card);
-    }
-    if (!lane.querySelector("article")) {
-      const empty = document.createElement("p");
-      empty.className = "lane-empty";
-      appendText(empty, t("landscape.readiness.none"));
-      lane.appendChild(empty);
-    }
-    lanes.appendChild(lane);
-  }
-  candidateSection.appendChild(lanes);
+  const candidateSection = renderCandidateReadiness(data);
 
   const planning = progressSection(t("landscape.gates.title"), t("landscape.gates.subtitle"));
   const gateRail = document.createElement("ol");
@@ -953,6 +1049,7 @@ function renderResearchLandscape(data) {
   container.append(
     gate,
     contributionTypes,
+    experimentTracks,
     lenses,
     map,
     candidateSection,

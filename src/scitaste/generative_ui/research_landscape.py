@@ -124,6 +124,7 @@ class ResearchLandscapeArtifact(BaseModel):
         "Selected evaluation precedents; counts do not estimate publication prevalence."
     )
     scope_note_zh: SafeText = "评测先例定向样本的数量不代表领域论文分布。"
+    prevalence_inference: Literal["not-estimable"] = "not-estimable"
     freeze_decision: Literal["hold", "candidate", "ready"]
     decision_reason_code: SafeIdentifier
     stages: tuple[ResearchStage, ...] = Field(min_length=4, max_length=8)
@@ -223,6 +224,7 @@ class ResearchLandscapeOverlay(BaseModel):
     corpus_scope: Literal["accepted-method-census-candidate-and-targeted-evaluation-resources"]
     scope_note_en: SafeText
     scope_note_zh: SafeText
+    prevalence_inference: Literal["not-estimable"]
     freeze_decision: Literal["hold", "candidate", "ready"]
     decision_reason_code: SafeIdentifier
     work_additions: tuple[ResearchWork, ...] = Field(min_length=1, max_length=12)
@@ -293,6 +295,7 @@ def _compose_research_landscape_overlay(
             "corpus_scope": overlay.corpus_scope,
             "scope_note_en": overlay.scope_note_en,
             "scope_note_zh": overlay.scope_note_zh,
+            "prevalence_inference": overlay.prevalence_inference,
             "freeze_decision": overlay.freeze_decision,
             "decision_reason_code": overlay.decision_reason_code,
         }
