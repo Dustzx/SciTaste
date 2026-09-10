@@ -166,8 +166,7 @@ def assess_project_lifecycle(
     )
     by_id = {item.gate_id: item for item in gates}
     idea_to_paper = all(
-        by_id[gate_id].state == "satisfied"
-        for gate_id in ("idea", "evidence", "lineage", "paper")
+        by_id[gate_id].state == "satisfied" for gate_id in ("idea", "evidence", "lineage", "paper")
     )
     internal = idea_to_paper and response_gate.state == "satisfied"
     independent = idea_to_paper and independent_gate.state == "satisfied"
@@ -241,8 +240,7 @@ def _verified_native_stages(
         for run in snapshot.manifest.runs:
             if (
                 run.status != "complete"
-                or (run.model_extra or {}).get("workflow_type")
-                != "composable-native-discovery"
+                or (run.model_extra or {}).get("workflow_type") != "composable-native-discovery"
             ):
                 continue
             try:
@@ -304,9 +302,7 @@ def _paper_gates(
             ),
         )
     paper_directory = PurePosixPath(snapshot.manifest.current_paper).parts[1]
-    entry = next(
-        (item for item in snapshot.papers if item.directory_name == paper_directory), None
-    )
+    entry = next((item for item in snapshot.papers if item.directory_name == paper_directory), None)
     if entry is None:
         return (
             paper_directory,
@@ -355,8 +351,7 @@ def _paper_gates(
             eligible = (
                 eligible
                 and assessment.eligible_for_submission
-                and paper_extra.get("submission_assessment_sha256")
-                == assessment.record_sha256
+                and paper_extra.get("submission_assessment_sha256") == assessment.record_sha256
                 and paper_extra.get("venue_id") == assessment.venue_id
             )
             submission_evidence.append(owned)
@@ -376,9 +371,7 @@ def _paper_gates(
 def _paper_source_run(snapshot: ProjectSnapshot, paper_directory: str | None) -> str | None:
     if paper_directory is None:
         return None
-    entry = next(
-        (item for item in snapshot.papers if item.directory_name == paper_directory), None
-    )
+    entry = next((item for item in snapshot.papers if item.directory_name == paper_directory), None)
     return entry.manifest.source_run if entry is not None else None
 
 

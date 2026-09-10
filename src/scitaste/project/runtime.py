@@ -349,8 +349,7 @@ class ProjectRuntime:
             if observed != updated.round_sha256:
                 raise ValueError("review round hash does not match the materialized record")
             reviews = [
-                updated if item.review_id == review_id else item
-                for item in manifest.reviews
+                updated if item.review_id == review_id else item for item in manifest.reviews
             ]
             manifest = self._replace_manifest(
                 project,

@@ -290,9 +290,7 @@ class VenueReviewVerification(BaseModel):
         concern_ids = [item.concern_id for item in self.concerns]
         if len(concern_ids) != len(set(concern_ids)):
             raise ValueError("verification concern IDs must be unique")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"verification_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"verification_sha256"}))
         if self.verification_sha256 != expected:
             raise ValueError("venue review verification hash mismatch")
         return self
@@ -402,9 +400,7 @@ class ReviewRoutingRecord(BaseModel):
 
     @model_validator(mode="after")
     def routing_record_is_self_hashed(self) -> ReviewRoutingRecord:
-        if not (
-            len(self.concern_ids) == len(self.action_ids) == len(self.obligation_ids)
-        ):
+        if not (len(self.concern_ids) == len(self.action_ids) == len(self.obligation_ids)):
             raise ValueError("review routing must preserve one action and obligation per concern")
         expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
         if self.record_sha256 != expected:
@@ -594,9 +590,7 @@ def import_venue_review_report(
         raise ValueError("no reports may be added after an author response")
     if report.report_id in reports:
         raise FileExistsError(root / "reports" / f"{report.report_id}.json")
-    if report.reviewer.reviewer_id in {
-        item.reviewer.reviewer_id for item in reports.values()
-    }:
+    if report.reviewer.reviewer_id in {item.reviewer.reviewer_id for item in reports.values()}:
         raise ValueError("one reviewer may submit only one report per round")
     if len(reports) >= _MAX_REPORTS:
         raise ValueError("review round report limit reached")
@@ -835,9 +829,7 @@ def _project_round(
     response: VenueReviewResponse | None,
     verifications: dict[str, VenueReviewVerification],
 ) -> VenueReviewRound:
-    concerns = {
-        item.concern_id for report in reports.values() for item in report.concerns
-    }
+    concerns = {item.concern_id for report in reports.values() for item in report.concerns}
     verified_closed = {
         item.concern_id
         for verification in verifications.values()
@@ -847,8 +839,7 @@ def _project_round(
     unresolved = tuple(sorted(concerns - verified_closed))
     all_verified = len(verifications) == len(reports) and not unresolved
     all_accept = bool(reports) and all(
-        verification.final_recommendation == "accept"
-        for verification in verifications.values()
+        verification.final_recommendation == "accept" for verification in verifications.values()
     )
     internal_complete = all_verified and all_accept
     expert_count = len(
@@ -926,9 +917,7 @@ def _review_context(
     return snapshot, review, root, packet, current
 
 
-def _load_reports(
-    root: Path, round_record: VenueReviewRound
-) -> dict[str, VenueReviewReport]:
+def _load_reports(root: Path, round_record: VenueReviewRound) -> dict[str, VenueReviewReport]:
     reports: dict[str, VenueReviewReport] = {}
     for report_id, digest in round_record.report_sha256.items():
         validate_entry_id(report_id, field_name="report_id")
@@ -940,9 +929,7 @@ def _load_reports(
     return reports
 
 
-def _load_response(
-    root: Path, round_record: VenueReviewRound
-) -> VenueReviewResponse | None:
+def _load_response(root: Path, round_record: VenueReviewRound) -> VenueReviewResponse | None:
     if round_record.response_locator is None:
         return None
     path = root / round_record.response_locator

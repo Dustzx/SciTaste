@@ -660,9 +660,7 @@ class WorkspaceSurfaceFactory:
                     "current_paper_id": lifecycle.current_paper_directory,
                     "current_review_id": lifecycle.current_review_id,
                     "idea_to_paper_complete": lifecycle.idea_to_paper_complete,
-                    "internal_review_cycle_complete": (
-                        lifecycle.internal_review_cycle_complete
-                    ),
+                    "internal_review_cycle_complete": (lifecycle.internal_review_cycle_complete),
                     "independent_pre_submission_review_complete": (
                         lifecycle.independent_pre_submission_review_complete
                     ),

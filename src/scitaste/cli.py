@@ -287,9 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
         "status", help="Derive content-bound lifecycle gates"
     )
     project_lifecycle_status.add_argument("--project-id", required=True)
-    project_lifecycle_status.add_argument(
-        "--outputs-root", type=Path, default=Path("outputs")
-    )
+    project_lifecycle_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_lifecycle_status)
     project_lifecycle_status.set_defaults(handler=_handle_project_lifecycle_status)
 
@@ -789,9 +787,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluation = commands.add_parser(
         "evaluation", help="Evaluation design and no-run resource gates"
     )
-    evaluation_commands = evaluation.add_subparsers(
-        dest="evaluation_command", required=True
-    )
+    evaluation_commands = evaluation.add_subparsers(dest="evaluation_command", required=True)
     prelaunch = evaluation_commands.add_parser(
         "prelaunch", help="Inspect a hash-bound experiment resource manifest"
     )
@@ -954,9 +950,7 @@ def _handle_project_status(args: argparse.Namespace) -> int:
 
 
 def _handle_project_lifecycle_status(args: argparse.Namespace) -> int:
-    assessment = assess_project_lifecycle(
-        ProjectRuntime(args.outputs_root), args.project_id
-    )
+    assessment = assess_project_lifecycle(ProjectRuntime(args.outputs_root), args.project_id)
     print(assessment.model_dump_json(indent=2))
     return 0
 
@@ -1658,9 +1652,7 @@ def _handle_project_paper_review_runtime_config(args: argparse.Namespace) -> int
 
 def _handle_project_paper_review_respond(args: argparse.Namespace) -> int:
     _reject_review_import_dry_run(args)
-    response = VenueReviewResponse.model_validate_json(
-        args.response.read_text(encoding="utf-8")
-    )
+    response = VenueReviewResponse.model_validate_json(args.response.read_text(encoding="utf-8"))
     snapshot, review_round = submit_venue_review_response(
         ProjectRuntime(args.outputs_root),
         project_id=args.project_id,

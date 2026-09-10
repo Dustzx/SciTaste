@@ -391,9 +391,7 @@ _FOCUS_COMPONENTS = {
         }
     ),
     IntentGoal.NEXT_STEP_REVIEW: frozenset({TrustedComponent.PROJECT_PROGRESS_BOARD}),
-    IntentGoal.RESEARCH_LANDSCAPE_REVIEW: frozenset(
-        {TrustedComponent.RESEARCH_LANDSCAPE_MAP}
-    ),
+    IntentGoal.RESEARCH_LANDSCAPE_REVIEW: frozenset({TrustedComponent.RESEARCH_LANDSCAPE_MAP}),
 }
 
 

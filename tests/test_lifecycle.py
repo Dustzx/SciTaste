@@ -31,9 +31,7 @@ def _write_stage(run_root: Path, stage: str) -> str:
         "decision_log_locator": f"stages/{stage}/decisions.jsonl",
         "decision_log_sha256": hashlib.sha256(decisions.read_bytes()).hexdigest(),
         "artifact_sha256": {
-            f"stages/{stage}/{stage}_summary.json": hashlib.sha256(
-                summary.read_bytes()
-            ).hexdigest()
+            f"stages/{stage}/{stage}_summary.json": hashlib.sha256(summary.read_bytes()).hexdigest()
         },
     }
     payload["record_sha256"] = content_sha256(payload)
@@ -102,9 +100,7 @@ def test_lifecycle_requires_verified_native_stages_and_review_closure(tmp_path: 
         expected_revision=snapshot.revision,
     )
     run_root = runtime.projects_root / "lifecycle-project/runs/native-run"
-    stage_records = {
-        stage: _write_stage(run_root, stage) for stage in ("discovery", "evidence")
-    }
+    stage_records = {stage: _write_stage(run_root, stage) for stage in ("discovery", "evidence")}
     snapshot = runtime.update_run(
         "lifecycle-project",
         "native-run",
@@ -170,9 +166,7 @@ def test_lifecycle_requires_verified_native_stages_and_review_closure(tmp_path: 
     assert lifecycle.gates[5].reason_code == "no-review-round"
     assert lifecycle.official_decision_authority is False
 
-    (run_root / "stages/evidence/evidence_summary.json").write_text(
-        "tampered\n", encoding="utf-8"
-    )
+    (run_root / "stages/evidence/evidence_summary.json").write_text("tampered\n", encoding="utf-8")
     drifted = assess_project_lifecycle(runtime, "lifecycle-project")
     assert drifted.idea_to_paper_complete is False
     assert drifted.gates[1].reason_code == "native-evidence-unverified"

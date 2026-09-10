@@ -240,9 +240,7 @@ def test_register_update_and_select_review_are_content_and_revision_guarded(
         round_sha256=hashlib.sha256(round_path.read_bytes()).hexdigest(),
     )
 
-    snapshot = runtime.register_review(
-        "typed-project", review, expected_revision=snapshot.revision
-    )
+    snapshot = runtime.register_review("typed-project", review, expected_revision=snapshot.revision)
     assert snapshot.review_locators == {
         "review-one": "projects/typed-project/reviews/review-one/ROUND.json"
     }
@@ -267,9 +265,7 @@ def test_register_update_and_select_review_are_content_and_revision_guarded(
 
     round_path.write_text("drift\n", encoding="utf-8")
     with pytest.raises(ValueError, match="drifted"):
-        runtime.select_review(
-            "typed-project", "review-one", expected_revision=snapshot.revision
-        )
+        runtime.select_review("typed-project", "review-one", expected_revision=snapshot.revision)
 
 
 def test_paper_registration_rejects_missing_or_escaping_artifacts(tmp_path: Path) -> None:

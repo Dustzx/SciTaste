@@ -166,9 +166,7 @@ def test_complete_manifest_is_ready_but_not_authorized() -> None:
     assert report.ready_for_author_approval is True
     assert report.execution_authorized is False
     assert report.planned_cells == 2
-    assert [item.code for item in report.authorization_blockers] == [
-        "author_approval_required"
-    ]
+    assert [item.code for item in report.authorization_blockers] == ["author_approval_required"]
 
 
 def test_exact_hash_approval_authorizes_only_ready_manifest() -> None:
@@ -198,16 +196,12 @@ def test_exact_hash_approval_authorizes_only_ready_manifest() -> None:
         source_tree_clean=True,
     )
     assert drift.execution_authorized is False
-    assert "approval_hash_mismatch" in {
-        item.code for item in drift.authorization_blockers
-    }
+    assert "approval_hash_mismatch" in {item.code for item in drift.authorization_blockers}
 
 
 def test_pending_assets_and_gpu_or_api_identity_fail_closed() -> None:
     manifest = _manifest()
-    task = manifest.tasks[0].model_copy(
-        update={"asset_status": ReadinessStatus.PENDING}
-    )
+    task = manifest.tasks[0].model_copy(update={"asset_status": ReadinessStatus.PENDING})
     api = manifest.lanes[0].api_model.model_copy(
         update={"identity_status": ReadinessStatus.BLOCKED}
     )
@@ -250,9 +244,7 @@ def test_source_identity_and_cleanliness_are_observed_not_declared() -> None:
 
 def test_method_and_benchmark_resources_cannot_be_swapped() -> None:
     manifest = _manifest()
-    wrong = manifest.systems[1].model_copy(
-        update={"external_resource_id": "mlr-bench"}
-    )
+    wrong = manifest.systems[1].model_copy(update={"external_resource_id": "mlr-bench"})
     report = inspect_prelaunch_manifest(
         manifest.model_copy(update={"systems": (manifest.systems[0], wrong)}),
         _admitted_corpus(),
