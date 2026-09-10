@@ -43,6 +43,7 @@ from scitaste.generative_ui.workspace import (
     UnknownWorkspaceSelectionError,
     WorkspaceView,
 )
+from scitaste.generative_ui.workspace_store import IncompatibleResearchTurnError
 
 _LOGGER = logging.getLogger(__name__)
 _MAX_EVENT_BYTES = 64 * 1024
@@ -268,6 +269,14 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                     HTTPStatus.NOT_FOUND,
                     "selection_not_found",
                     "workspace selection is not registered by the current project",
+                )
+            )
+        except IncompatibleResearchTurnError:
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.CONFLICT,
+                    "archived_turn_incompatible",
+                    "archived research turn requires an older renderer schema",
                 )
             )
         except FileNotFoundError:

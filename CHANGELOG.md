@@ -12,8 +12,11 @@ semantic versioning.
   preserving explicit bearer access for API clients. The default route is a
   global project index, every project has an evidence-grounded home, and user
   questions create project-owned research topics with immutable ordered turn
-  pages. Generated documents and exact receiver surfaces persist across process
-  restart; the bounded in-memory cache no longer controls history retention.
+  pages. The active topic now expands those pages for direct navigation; a
+  recognized older renderer page is isolated and labelled instead of breaking
+  the whole project catalog. Generated documents and exact receiver surfaces
+  persist across process restart; the bounded in-memory cache no longer controls
+  history retention.
   Large projects also bound candidate admission before planning, and the
   deterministic progress view now favors structural summaries over exhaustive
   paper/artifact repetition.

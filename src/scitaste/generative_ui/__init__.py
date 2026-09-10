@@ -206,6 +206,7 @@ from scitaste.generative_ui.workspace import (
     workspace_document,
 )
 from scitaste.generative_ui.workspace_store import (
+    IncompatibleResearchTurnError,
     ResearchTurnPrompt,
     ResearchTurnRecord,
     ResearchTurnSummary,
@@ -258,6 +259,7 @@ __all__ = [
     "GeneratedWorkspaceDocument",
     "GenerativeUIApplication",
     "GenerativeUIHTTPServer",
+    "IncompatibleResearchTurnError",
     "InspectArtifactPayload",
     "IntentEntityCandidate",
     "IntentEntityRole",

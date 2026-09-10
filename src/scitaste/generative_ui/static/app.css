@@ -256,6 +256,11 @@ textarea {
   padding: 0;
 }
 
+.workspace-history-topic {
+  display: grid;
+  gap: 0.3rem;
+}
+
 .workspace-history-button {
   background: transparent;
   color: var(--forest);
@@ -275,6 +280,46 @@ textarea {
 .workspace-history-button.selected {
   background: #dcebe1;
   border-color: #799983;
+}
+
+.workspace-history-status {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.workspace-history-status.state-archive_incompatible {
+  color: var(--warning);
+}
+
+.workspace-turn-items {
+  border-left: 2px solid #c9dacf;
+  display: grid;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0 0 0 0.65rem;
+  padding: 0 0 0 0.45rem;
+}
+
+.workspace-turn-button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--forest);
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  width: 100%;
+}
+
+.workspace-turn-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-turn-button.selected {
+  background: #eef5f0;
+  border-color: #9db6a5;
 }
 
 .control-hint {

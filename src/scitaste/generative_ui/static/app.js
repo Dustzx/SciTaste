@@ -72,6 +72,7 @@ let researchWorkspaceCatalog = null;
 let activeResearchWorkspaceId = "";
 let activeResearchTurnId = "";
 let activeResearchWorkspace = null;
+let activeResearchWorkspaceDetail = null;
 let eventCounter = 0;
 let artifactObjectUrl = null;
 let lastProposalReceipt = null;
@@ -1746,6 +1747,7 @@ function clearProjectContext(projectId = "") {
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
+  activeResearchWorkspaceDetail = null;
   currentDocument = null;
   quickIntentCatalog = null;
   lastProposalReceipt = null;
@@ -1811,6 +1813,7 @@ function renderWorkspaceHistory() {
   list.className = "workspace-history-items";
   for (const item of researchWorkspaceCatalog.workspaces) {
     const row = document.createElement("li");
+    row.className = "workspace-history-topic";
     const button = document.createElement("button");
     button.type = "button";
     button.className = item.workspace_id === activeResearchWorkspaceId
@@ -1820,13 +1823,45 @@ function renderWorkspaceHistory() {
     appendText(title, item.title);
     const metadata = document.createElement("small");
     appendText(metadata, t("thread.turn_count", {count: item.revision}));
-    button.append(title, metadata);
+    const status = document.createElement("small");
+    status.className = `workspace-history-status state-${item.latest_status}`;
+    appendText(status, localizedCode(item.latest_status));
+    button.append(title, metadata, status);
     button.addEventListener("click", () => loadResearchTurn({
       project_id: activeProjectId,
       workspace_id: item.workspace_id,
       turn_id: item.latest_turn_id,
     }));
     row.appendChild(button);
+    if (item.workspace_id === activeResearchWorkspaceId
+        && activeResearchWorkspaceDetail?.workspace.workspace_id === item.workspace_id) {
+      const turns = document.createElement("ol");
+      turns.className = "workspace-turn-items";
+      for (const turn of activeResearchWorkspaceDetail.turns) {
+        const turnRow = document.createElement("li");
+        const turnButton = document.createElement("button");
+        turnButton.type = "button";
+        turnButton.className = turn.turn_id === activeResearchTurnId
+          ? "workspace-turn-button selected"
+          : "workspace-turn-button";
+        const page = document.createElement("span");
+        appendText(page, t("thread.turn_page", {ordinal: turn.ordinal}));
+        const prompt = document.createElement("small");
+        appendText(prompt, turn.prompt.text);
+        const turnStatus = document.createElement("small");
+        turnStatus.className = `workspace-history-status state-${turn.status}`;
+        appendText(turnStatus, localizedCode(turn.status));
+        turnButton.append(page, prompt, turnStatus);
+        turnButton.addEventListener("click", () => loadResearchTurn({
+          project_id: activeProjectId,
+          workspace_id: item.workspace_id,
+          turn_id: turn.turn_id,
+        }));
+        turnRow.appendChild(turnButton);
+        turns.appendChild(turnRow);
+      }
+      row.appendChild(turns);
+    }
     list.appendChild(row);
   }
   workspaceHistoryList.appendChild(list);
@@ -1847,6 +1882,30 @@ async function loadResearchWorkspaceCatalog(projectId) {
     if (activeProjectId !== requestedProject) {
       return;
     }
+    showError(workspaceHistoryList, error);
+  }
+}
+
+async function loadResearchWorkspaceDetail(projectId, workspaceId) {
+  const requestedProject = projectId;
+  const requestedWorkspace = workspaceId;
+  try {
+    const detail = await api(
+      `/api/v4/projects/${encodeURIComponent(projectId)}`
+        + `/workspaces/${encodeURIComponent(workspaceId)}`,
+    );
+    if (activeProjectId !== requestedProject
+        || activeResearchWorkspaceId !== requestedWorkspace) {
+      return;
+    }
+    activeResearchWorkspaceDetail = detail;
+    renderWorkspaceHistory();
+  } catch (error) {
+    if (activeProjectId !== requestedProject
+        || activeResearchWorkspaceId !== requestedWorkspace) {
+      return;
+    }
+    activeResearchWorkspaceDetail = null;
     showError(workspaceHistoryList, error);
   }
 }
@@ -1934,10 +1993,14 @@ async function generateWithIntent(intentRequest) {
     activeResearchWorkspace = turnDocument.workspace;
     activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
     activeResearchTurnId = turnDocument.turn.turn_id;
+    activeResearchWorkspaceDetail = null;
     const documentValue = turnDocument.turn.document;
     if (documentValue.status !== "generated") {
       renderGenerationFailure(documentValue);
-      await loadResearchWorkspaceCatalog(requestedProject);
+      await Promise.all([
+        loadResearchWorkspaceCatalog(requestedProject),
+        loadResearchWorkspaceDetail(requestedProject, activeResearchWorkspaceId),
+      ]);
       return;
     }
     currentDocument = documentValue;
@@ -1949,7 +2012,10 @@ async function generateWithIntent(intentRequest) {
     renderIntentResult();
     const route = researchTurnHash(turnDocument);
     history.pushState({route}, "", route);
-    await loadResearchWorkspaceCatalog(requestedProject);
+    await Promise.all([
+      loadResearchWorkspaceCatalog(requestedProject),
+      loadResearchWorkspaceDetail(requestedProject, activeResearchWorkspaceId),
+    ]);
   } catch (error) {
     intentResultState = {kind: "error", error};
     renderIntentResult();
@@ -2163,6 +2229,7 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
     activeResearchWorkspace = null;
     activeResearchWorkspaceId = "";
     activeResearchTurnId = "";
+    activeResearchWorkspaceDetail = null;
     currentDocument = documentValue;
     projectSelect.value = documentValue.project_id;
     renderWorkspace(documentValue);
@@ -2208,6 +2275,7 @@ async function loadResearchTurn(route, historyMode = "push") {
     activeResearchWorkspace = turnDocument.workspace;
     activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
     activeResearchTurnId = turnDocument.turn.turn_id;
+    activeResearchWorkspaceDetail = null;
     projectSelect.value = documentValue.project_id;
     if (documentValue.status !== "generated") {
       renderGenerationFailure(documentValue);
@@ -2227,7 +2295,10 @@ async function loadResearchTurn(route, historyMode = "push") {
     if (!quickIntentCatalog) {
       await loadQuickIntents(documentValue.project_id);
     }
-    await loadResearchWorkspaceCatalog(documentValue.project_id);
+    await Promise.all([
+      loadResearchWorkspaceCatalog(documentValue.project_id),
+      loadResearchWorkspaceDetail(documentValue.project_id, activeResearchWorkspaceId),
+    ]);
   } catch (error) {
     currentDocument = null;
     setBusy(false);
@@ -2516,6 +2587,7 @@ newTopicButton.addEventListener("click", () => {
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
+  activeResearchWorkspaceDetail = null;
   renderWorkspaceHistory();
   loadWorkspace(defaultQuery(activeProjectId));
 });

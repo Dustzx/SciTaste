@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -197,6 +198,7 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "img-src 'self' blob:" in index.headers["content-security-policy"]
     assert "https://" not in index.text
     assert "http://" not in index.text
+    assert "credential" not in index.text.lower()
     assert "document.createTextNode" in script.text
     assert ".textContent" in script.text
     assert "innerHTML" not in script.text
@@ -210,6 +212,9 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "ProjectProgressBoard: renderProjectProgress" in script.text
     assert 'return {view: "project-progress"' in script.text
     assert 'data-view="project-progress"' in index.text
+    assert 'id="workspace-history-list"' in index.text
+    assert "loadResearchWorkspaceDetail" in script.text
+    assert 'className = "workspace-turn-items"' in script.text
     assert "history.pushState" in script.text
     assert 'window.addEventListener("popstate"' in script.text
     assert 'headers["If-None-Match"]' in script.text
@@ -522,6 +527,31 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
             origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns/turn-0001",
             headers=_headers(),
         )
+        turn_path = (
+            runtime.projects_root
+            / "http-project/.generative-ui/workspaces"
+            / workspace_id
+            / "turn-0001.json"
+        )
+        payload = json.loads(turn_path.read_text(encoding="utf-8"))
+        progress_component = next(
+            item
+            for item in payload["document"]["renderer"]["components"]
+            if item["renderer"] == "ProjectProgressBoard"
+        )
+        del progress_component["data"]["lifecycle"]
+        turn_path.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        legacy_detail = httpx.get(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
+            headers=_headers(),
+        )
+        incompatible = httpx.get(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns/turn-0001",
+            headers=_headers(),
+        )
 
     assert created.status_code == 201
     assert first["turn"]["turn_id"] == "turn-0001"
@@ -536,6 +566,10 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
     ]
     assert replay.status_code == 200
     assert replay.json()["turn"] == first["turn"]
+    assert legacy_detail.status_code == 200
+    assert legacy_detail.json()["turns"][0]["status"] == "archive_incompatible"
+    assert incompatible.status_code == 409
+    assert incompatible.json()["error"]["code"] == "archived_turn_incompatible"
 
 
 def test_generative_api_rejects_stale_catalog_cross_project_and_unknown_replay(

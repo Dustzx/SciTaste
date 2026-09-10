@@ -98,9 +98,11 @@ review remain pending, so no effectiveness claim is made from that pilot.
 - a progress-first Generation as Content workspace with a fixed trusted shell,
   evidence-derived quick intents, bounded free questions, closed native layout
   planning, deterministic fallback, proposal-only interactions, and exact
-  ProjectRuntime evidence binding, plus fingerprinted structural/latency
-  evaluation and a responsive browser probe explicitly separated from human
-  usability evidence;
+  ProjectRuntime evidence binding. Its credential-free loopback shell opens a
+  portfolio index, a stable home for every project, project-owned research
+  topics, and one deep-linked page per immutable question or follow-up, plus
+  fingerprinted structural/latency evaluation and a responsive browser probe
+  explicitly separated from human usability evidence;
 - content-bound native execution profiles that copy admitted datasets into the
   owning project run, mount them read-only, default-deny GPU access, and expose
   only explicitly verified NVIDIA devices with measured GPU-hour accounting;

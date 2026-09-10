@@ -11,7 +11,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from scitaste.generative_ui.audit import AuditIntegrityError
 from scitaste.generative_ui.generation import (
@@ -156,6 +156,14 @@ class ResearchWorkspaceTurnDocument(BaseModel):
         return self
 
 
+class IncompatibleResearchTurnError(ValueError):
+    """A structurally known historical turn cannot use the current renderer schema."""
+
+    def __init__(self, summary: ResearchTurnSummary) -> None:
+        super().__init__("research turn uses an incompatible archived renderer schema")
+        self.summary = summary
+
+
 class ResearchWorkspaceStore:
     """Append-only turns with an atomically replaced project-local index."""
 
@@ -249,7 +257,7 @@ class ResearchWorkspaceStore:
             try:
                 validate_entry_id(directory.name, field_name="workspace_id")
                 workspace = self._load_workspace(directory)
-                latest = self._load_turn(directory, workspace.latest_turn_id)
+                latest = self._load_turn_summary(directory, workspace.latest_turn_id)
             except (AuditIntegrityError, ValueError) as exc:
                 raise AuditIntegrityError(
                     "research workspace catalog contains invalid state"
@@ -262,7 +270,7 @@ class ResearchWorkspaceStore:
                     updated_at=workspace.updated_at,
                     revision=workspace.revision,
                     latest_turn_id=workspace.latest_turn_id,
-                    latest_status=latest.document.status,
+                    latest_status=latest.status,
                 )
             )
         summaries.sort(key=lambda item: (item.updated_at, item.workspace_id), reverse=True)
@@ -271,9 +279,7 @@ class ResearchWorkspaceStore:
     def detail(self, project_id: str, workspace_id: str) -> ResearchWorkspaceDetail:
         directory = self._workspace_directory(project_id, workspace_id)
         workspace = self._load_workspace(directory)
-        turns = tuple(
-            _turn_summary(self._load_turn(directory, turn_id)) for turn_id in workspace.turn_ids
-        )
+        turns = tuple(self._load_turn_summary(directory, turn_id) for turn_id in workspace.turn_ids)
         return ResearchWorkspaceDetail(workspace=workspace, turns=turns)
 
     def turn(
@@ -326,10 +332,36 @@ class ResearchWorkspaceStore:
 
     @staticmethod
     def _load_turn(directory: Path, turn_id: str) -> ResearchTurnRecord:
-        turn = ResearchTurnRecord.model_validate_json(_read_regular(directory / f"{turn_id}.json"))
+        content = _read_regular(directory / f"{turn_id}.json")
+        try:
+            turn = ResearchTurnRecord.model_validate_json(content)
+        except ValidationError as exc:
+            compatible_envelope = _known_legacy_progress_turn(content)
+            if compatible_envelope is not None:
+                if (
+                    compatible_envelope.workspace_id != directory.name
+                    or compatible_envelope.turn_id != turn_id
+                ):
+                    raise AuditIntegrityError(
+                        "research turn path does not match its identity"
+                    ) from exc
+                raise IncompatibleResearchTurnError(
+                    _turn_summary(
+                        compatible_envelope,
+                        status="archive_incompatible",
+                    )
+                ) from exc
+            raise AuditIntegrityError("research turn contains invalid state") from exc
         if turn.workspace_id != directory.name or turn.turn_id != turn_id:
             raise AuditIntegrityError("research turn path does not match its identity")
         return turn
+
+    @classmethod
+    def _load_turn_summary(cls, directory: Path, turn_id: str) -> ResearchTurnSummary:
+        try:
+            return _turn_summary(cls._load_turn(directory, turn_id))
+        except IncompatibleResearchTurnError as exc:
+            return exc.summary
 
 
 def _turn_record(
@@ -368,15 +400,82 @@ def _workspace_title(prompt: str) -> str:
     return compact if len(compact) <= 96 else compact[:95].rstrip() + "…"
 
 
-def _turn_summary(turn: ResearchTurnRecord) -> ResearchTurnSummary:
+def _turn_summary(
+    turn: ResearchTurnRecord,
+    *,
+    status: str | None = None,
+) -> ResearchTurnSummary:
     return ResearchTurnSummary(
         turn_id=turn.turn_id,
         ordinal=turn.ordinal,
         created_at=turn.created_at,
         prompt=turn.prompt,
         generation_id=turn.generation_id,
-        status=turn.document.status,
+        status=status or turn.document.status,
     )
+
+
+def _known_legacy_progress_turn(content: bytes) -> ResearchTurnRecord | None:
+    """Recognize only the pre-lifecycle progress shape without rewriting stored bytes."""
+
+    try:
+        payload = json.loads(content)
+        renderer = payload["document"]["renderer"]
+        components = renderer["components"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return None
+    if (
+        not isinstance(renderer, dict)
+        or not isinstance(components, list)
+        or renderer.get("catalog_version") != "scitaste-trusted-components-v2"
+    ):
+        return None
+    patched_count = 0
+    for component in components:
+        if not isinstance(component, dict) or component.get("renderer") != "ProjectProgressBoard":
+            continue
+        data = component.get("data")
+        if not isinstance(data, dict) or "lifecycle" in data:
+            continue
+        project_ref_id = data.get("project_ref_id")
+        if not isinstance(project_ref_id, str):
+            return None
+        data["lifecycle"] = {
+            "lifecycle_state": "discovery",
+            "current_paper_id": None,
+            "current_review_id": None,
+            "idea_to_paper_complete": False,
+            "internal_review_cycle_complete": False,
+            "independent_pre_submission_review_complete": False,
+            "official_decision_authority": False,
+            "scientific_effectiveness_established": False,
+            "gates": [
+                {
+                    "gate_id": gate_id,
+                    "state": "unavailable",
+                    "reason_code": "legacy-archive-missing-lifecycle",
+                    "support_ref_ids": [],
+                }
+                for gate_id in (
+                    "idea",
+                    "evidence",
+                    "lineage",
+                    "paper",
+                    "submission",
+                    "review",
+                    "response_verification",
+                    "independent_review",
+                )
+            ],
+            "support_ref_ids": [project_ref_id],
+        }
+        patched_count += 1
+    if patched_count != 1:
+        return None
+    try:
+        return ResearchTurnRecord.model_validate(payload)
+    except ValidationError:
+        return None
 
 
 def _fingerprint(value: object) -> str:
@@ -453,6 +552,7 @@ def _read_regular(path: Path) -> bytes:
 
 
 __all__ = [
+    "IncompatibleResearchTurnError",
     "ResearchTurnPrompt",
     "ResearchTurnRecord",
     "ResearchTurnSummary",

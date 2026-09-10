@@ -44,6 +44,21 @@ also clears the prior quick-intent catalog, free-question value, generated
 layout, proposal result, artifact preview, response cache, and current document
 before any newly selected project is rendered.
 
+The navigation hierarchy is deliberately four-level: the portfolio index lists
+all registered projects; each project opens to its stable `project-progress`
+home; a first question creates a project-owned research topic; and every
+question or follow-up is an immutable turn page with its own deep link. Follow-up
+questions stay in the active topic, while `New topic` returns to the project home
+and makes the next question start a separate context. The active topic expands
+its ordered page list, so earlier questions are navigable without relying on
+browser history. This is a project workspace model, not one disconnected chat
+window per sentence.
+
+The browser shell contains no credential field. Loopback use establishes an
+ephemeral HttpOnly session automatically; a remote deployment must enforce
+identity and project access outside the content surface, through an explicit
+bearer API client or a deployment-owned authentication gateway.
+
 ### Progress-first self-hosting view
 
 `project-progress` is the default view after selecting a project. Its
@@ -860,8 +875,12 @@ two project identities.
   users should not paste credentials into a research question. The records stay
   below ignored `outputs/projects/<project-id>/.generative-ui/workspaces/`.
 - Generated documents and exact server-owned surfaces survive restart below the
-  project archive. A later project revision keeps the historical page readable
-  but generated actions still fail closed against stale evidence.
+  project archive. A later project revision keeps a current-schema historical
+  page readable, but generated actions still fail closed against stale evidence.
+  A recognized pre-lifecycle renderer page remains byte-preserved and visible in
+  its topic index as `archive_incompatible`; the current receiver refuses to
+  render it instead of weakening validation or breaking the entire project
+  topic catalog. General schema migration remains future work.
 - The first deterministic free-question resolver is a bounded Chinese/English
   keyword classifier. Unknown phrasing needs the optional model selector; the
   model can still choose only a currently offered quick intent and cannot answer

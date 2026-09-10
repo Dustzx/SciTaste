@@ -11,6 +11,7 @@ import {dirname, join} from "node:path";
 const configuredBaseUrl = process.env.SCITASTE_UI_PROBE_URL || "http://127.0.0.1:8766";
 const projectId = process.env.SCITASTE_UI_PROBE_PROJECT || "scitaste-self-development";
 const quickIntentId = process.env.SCITASTE_UI_PROBE_QUICK_INTENT || "review-project-progress";
+const followupQuickIntentId = process.env.SCITASTE_UI_PROBE_FOLLOWUP_INTENT || "";
 const chromeCommand = process.env.SCITASTE_CHROME || "google-chrome";
 const screenshotRoot = process.env.SCITASTE_UI_PROBE_SCREENSHOTS || "";
 const finalLocale = process.env.SCITASTE_UI_PROBE_FINAL_LOCALE || "en";
@@ -25,6 +26,9 @@ if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId)) {
 }
 if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(quickIntentId)) {
   throw new Error("SCITASTE_UI_PROBE_QUICK_INTENT is invalid");
+}
+if (followupQuickIntentId && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(followupQuickIntentId)) {
+  throw new Error("SCITASTE_UI_PROBE_FOLLOWUP_INTENT is invalid");
 }
 const parsedBaseUrl = new URL(configuredBaseUrl);
 if (
@@ -140,6 +144,39 @@ async function main() {
         })()
       `);
 
+      let topicNavigation = {tested: false};
+      if (followupQuickIntentId) {
+        await waitFor(cdp, sessionId, `
+          document.querySelectorAll(".workspace-turn-button").length === 1
+        `);
+        const firstWorkspaceId = await evaluate(cdp, sessionId, `
+          location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || ""
+        `);
+        await evaluate(cdp, sessionId, `
+          (() => {
+            const button = [...document.querySelectorAll("#quick-intents button")]
+              .find((item) => item.dataset.quickIntentId === ${JSON.stringify(followupQuickIntentId)});
+            if (!button) throw new Error("requested follow-up intent unavailable");
+            button.click();
+          })()
+        `);
+        await waitFor(cdp, sessionId, `
+          location.hash.includes("/turns/turn-0002")
+          && document.querySelectorAll(".workspace-turn-button").length === 2
+        `, 30_000);
+        topicNavigation = await evaluate(cdp, sessionId, `
+          (() => {
+            const workspaceId = location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || "";
+            return {
+              tested: true,
+              workspace_id_preserved: workspaceId === ${JSON.stringify(firstWorkspaceId)},
+              active_turn_id: location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "",
+              turn_page_count: document.querySelectorAll(".workspace-turn-button").length,
+            };
+          })()
+        `);
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 200));
       const beforeLocaleSwitch = networkRequests;
       await evaluate(cdp, sessionId, `
@@ -254,6 +291,7 @@ async function main() {
         quick_intent_to_generated_workspace_ms:
           Math.round(quickIntentToGeneratedMs * 1000) / 1000,
         generated_response_focus: generatedResponseFocus,
+        topic_navigation: topicNavigation,
         runtime_errors: runtimeErrors,
         viewports,
       };
@@ -268,6 +306,9 @@ async function main() {
         || localeSwitchRequests !== 0
         || !generatedResponseFocus.workspace_visible
         || !generatedResponseFocus.workspace_has_focus
+        || (topicNavigation.tested && (
+          !topicNavigation.workspace_id_preserved || topicNavigation.turn_page_count !== 2
+        ))
         || Math.abs(generatedResponseFocus.workspace_top) > 1
         || viewports.some((item) =>
           item.horizontal_overflow

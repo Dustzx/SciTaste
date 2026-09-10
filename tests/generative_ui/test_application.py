@@ -15,6 +15,7 @@ from scitaste.generative_ui import (
     AuditIntegrityError,
     DuplicateEventError,
     GenerativeUIApplication,
+    IncompatibleResearchTurnError,
     PaperEvidenceQuery,
     PendingProposalsQuery,
     ProposalControlledAudit,
@@ -662,3 +663,60 @@ def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path)
         ).turn
         == first.turn
     )
+
+
+def test_known_legacy_turn_is_isolated_without_breaking_project_topic_catalog(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    progress = next(
+        item for item in catalog.intents if item.quick_intent_id == "review-project-progress"
+    )
+    created = app.create_research_workspace(
+        "app-project",
+        WorkspaceGenerationRequest(
+            quick_catalog_fingerprint=catalog.fingerprint,
+            intent_request=QuickIntentRequest(
+                project_id="app-project",
+                snapshot_revision=catalog.snapshot.snapshot_revision,
+                snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                quick_intent_id=progress.quick_intent_id,
+            ),
+        ),
+    )
+    turn_path = (
+        runtime.projects_root
+        / "app-project/.generative-ui/workspaces"
+        / created.workspace.workspace_id
+        / "turn-0001.json"
+    )
+    payload = json.loads(turn_path.read_text(encoding="utf-8"))
+    progress_component = next(
+        item
+        for item in payload["document"]["renderer"]["components"]
+        if item["renderer"] == "ProjectProgressBoard"
+    )
+    del progress_component["data"]["lifecycle"]
+    payload["document"]["renderer"]["catalog_version"] = "scitaste-trusted-components-v2"
+    turn_path.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
+    listed = restarted.research_workspace_catalog("app-project")
+    detail = restarted.research_workspace_detail(
+        "app-project",
+        created.workspace.workspace_id,
+    )
+
+    assert listed.workspaces[0].latest_status == "archive_incompatible"
+    assert detail.turns[0].status == "archive_incompatible"
+    with pytest.raises(IncompatibleResearchTurnError):
+        restarted.research_workspace_turn(
+            "app-project",
+            created.workspace.workspace_id,
+            "turn-0001",
+        )
