@@ -1,0 +1,42 @@
+schema_version: "1.0"
+preflight_id: autoresearchclaw-mlr-adapter-v1
+authorization_scope: static-inspection-only
+external_resource_id: autoresearchclaw
+expected_upstream_commit: 12d3fd809fa9658e91a0328c3280a0e462c78386
+upstream_checkout: third_party/autoresearchclaw
+require_clean_upstream: true
+adapter_entrypoint: src/scitaste/benchmark/study_adapter.py
+adapter_entrypoint_sha256: 0675a140d9df4cdcf6790432b5e3d75a9b78275841d810548094ed37b5cc849d
+requirements:
+  task_mapping:
+    status: pending
+    summary: Exact MLR-Bench task inputs, hidden information, tools, and terminal conditions are not mapped.
+    evidence_ref: null
+    evidence_sha256: null
+  model_mapping:
+    status: pending
+    summary: DeepSeek V4.1 Flash matched-backbone semantics have not been qualified against the upstream stage interfaces.
+    evidence_ref: null
+    evidence_sha256: null
+  sandbox:
+    status: pending
+    summary: The existing process boundary has not been qualified for the selected MLR-Bench task assets and generated code.
+    evidence_ref: null
+    evidence_sha256: null
+  telemetry:
+    status: pending
+    summary: Calls, tokens, cost, wall time, GPU allocation/active use, retries, and human intervention need matched acceptance tests.
+    evidence_ref: null
+    evidence_sha256: null
+  artifact_mapping:
+    status: verified
+    summary: The first-party adapter maps native stage artifacts into LauncherResult without editing the upstream core.
+    evidence_ref: src/scitaste/benchmark/study_adapter.py
+    evidence_sha256: 0675a140d9df4cdcf6790432b5e3d75a9b78275841d810548094ed37b5cc849d
+  failure_resume:
+    status: verified
+    summary: Runner-owned checkpoints preserve failed attempts and validate exact-hash resume boundaries.
+    evidence_ref: tests/benchmark/test_study_execution.py
+    evidence_sha256: 45627f2e4b5cd299fbb747e917909b32db507ac705ce7513c81dcbd789ed914c
+no_external_download: true
+no_execution_performed: true

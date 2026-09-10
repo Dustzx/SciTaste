@@ -1,5 +1,15 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.adapter_preflight import (
+    AdapterPreflightFinding,
+    AdapterPreflightInspection,
+    AdapterPreflightReport,
+    AdapterRequirement,
+    AdapterRequirementEvidence,
+    ExternalAdapterPreflightManifest,
+    inspect_adapter_preflight,
+    load_adapter_preflight_manifest,
+)
 from scitaste.evaluation.critics import (
     EvaluationCriticDomain,
     EvaluationCriticFinding,
@@ -78,6 +88,11 @@ from scitaste.evaluation.task_selection import (
 )
 
 __all__ = [
+    "AdapterPreflightFinding",
+    "AdapterPreflightInspection",
+    "AdapterPreflightReport",
+    "AdapterRequirement",
+    "AdapterRequirementEvidence",
     "AnalysisContract",
     "ApiModelResource",
     "ApprovalRecord",
@@ -102,6 +117,7 @@ __all__ = [
     "ExperimentDesignGate",
     "ExperimentDesignState",
     "ExperimentPrelaunchManifest",
+    "ExternalAdapterPreflightManifest",
     "ExternalEvaluationResource",
     "ExternalResourceCorpus",
     "FailureAttribution",
@@ -138,9 +154,11 @@ __all__ = [
     "TaskSelectionReport",
     "attribute_failure",
     "evaluate_resource_feasibility",
+    "inspect_adapter_preflight",
     "inspect_git_source",
     "inspect_prelaunch_manifest",
     "inspect_task_selection",
+    "load_adapter_preflight_manifest",
     "load_external_resource_corpus",
     "load_prelaunch_manifest",
     "load_task_selection_manifest",

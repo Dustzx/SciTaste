@@ -62,9 +62,11 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    inspect_adapter_preflight,
     inspect_git_source,
     inspect_prelaunch_manifest,
     inspect_task_selection,
+    load_adapter_preflight_manifest,
     load_external_resource_corpus,
     load_prelaunch_manifest,
     load_task_selection_manifest,
@@ -828,6 +830,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(task_selection)
     task_selection.set_defaults(handler=_handle_evaluation_task_selection)
+    adapter_preflight = evaluation_commands.add_parser(
+        "adapter-preflight",
+        help="Inspect a pinned external-system adapter without running it",
+    )
+    adapter_preflight.add_argument("--manifest", type=Path, required=True)
+    adapter_preflight.add_argument("--resource-corpus", type=Path, required=True)
+    adapter_preflight.add_argument("--source-root", type=Path, default=Path("."))
+    adapter_preflight.add_argument(
+        "--require-adapter-ready",
+        action="store_true",
+        help="Return nonzero until every matched-adapter requirement is verified",
+    )
+    _add_log_level_option(adapter_preflight)
+    adapter_preflight.set_defaults(handler=_handle_evaluation_adapter_preflight)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -2520,6 +2536,27 @@ def _handle_evaluation_task_selection(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_scope_ready and not report.ready_for_owner_scope_review:
+        return 1
+    return 0
+
+
+def _handle_evaluation_adapter_preflight(args: argparse.Namespace) -> int:
+    inspection = load_adapter_preflight_manifest(args.manifest)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    report = inspect_adapter_preflight(
+        inspection.manifest,
+        corpus.corpus,
+        source_root=args.source_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_adapter_ready and not report.ready_for_matched_adapter:
         return 1
     return 0
 

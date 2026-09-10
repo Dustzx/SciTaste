@@ -81,6 +81,32 @@ agent teams, MCP services, and broad orchestration permissions. Neither is
 required to start the four-condition local pilot, and neither receives a mock
 score while unavailable.
 
+## Static adapter preflight
+
+The adapter-preflight contract makes that distinction machine-checkable without
+starting an external system:
+
+```bash
+.venv/bin/scitaste evaluation adapter-preflight \
+  --manifest configs/evaluation/adapters/autoresearchclaw_mlr_v1.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
+  --source-root .
+```
+
+It verifies the corpus identity, local upstream commit and cleanliness,
+first-party adapter bytes, and every content-addressed requirement artifact. A
+report may propose verified requirement evidence for a future corpus revision;
+its schema always fixes `authorizes_execution=false` and
+`no_execution_performed=true`.
+
+The current AutoResearchClaw static report observes the exact clean
+`12d3fd80…` upstream and verifies the existing artifact mapping and
+failure/resume evidence. It remains **not ready for a matched adapter** because
+MLR-Bench task mapping, DeepSeek V4.1 model mapping, selected-task sandboxing,
+and matched telemetry acceptance tests are still pending. This is the intended
+state: retaining the unchanged upstream is useful evidence, but it is not a
+substitute for the four task-specific qualifications.
+
 Official sources:
 
 - [Sibyl Research System](https://github.com/Sibyl-Research-Team/AutoResearch-SibylSystem)
