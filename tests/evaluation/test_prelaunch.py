@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import date
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from scitaste.evaluation import (
 from scitaste.evaluation.resources import ResourceGateStatus
 
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
+V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml")
 HASH = "a" * 64
 COMMIT = "b" * 40
 
@@ -298,6 +300,20 @@ def test_loader_preserves_bytes_and_rejects_symlink(tmp_path: Path) -> None:
         load_prelaunch_manifest(link)
 
 
+def test_repository_v41_proposal_preserves_new_identity_as_a_new_protocol() -> None:
+    inspection = load_prelaunch_manifest(V41_MANIFEST_PATH)
+    manifest = inspection.manifest
+    model = manifest.lanes[0].api_model
+
+    assert manifest.protocol_id == "formal-v4-prepilot"
+    assert model is not None
+    assert model.model_id == "deepseek-flash"
+    assert model.model_revision == "DeepSeek-V4.1-Flash"
+    assert model.pricing.input_cache_miss_per_million == 0.3
+    assert model.pricing.output_per_million == 1.2
+    assert manifest.approval.approved is False
+
+
 def test_critics_expose_all_five_domains_without_authorizing_execution() -> None:
     manifest = _manifest()
     gate = inspect_prelaunch_manifest(
@@ -321,12 +337,33 @@ def test_critics_expose_all_five_domains_without_authorizing_execution() -> None
     }
 
 
-def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> None:
+def test_complete_critic_contract_is_review_ready_but_still_not_authority(
+    tmp_path: Path,
+) -> None:
     manifest = _manifest()
+    artifact_bytes = b"content-bound prelaunch evidence\n"
+    artifact_sha256 = hashlib.sha256(artifact_bytes).hexdigest()
+    artifact_paths = (
+        "assets/mlr-heldout-001.json",
+        "assets/mlr-heldout-002.json",
+        "adapters/mlr-agent.json",
+        "adapters/direct-agent.json",
+        "adapters/ai-scientist-v2.json",
+        "protocol/preregistration.md",
+        "protocol/tasks.json",
+        "protocol/failures.md",
+        "protocol/repairs.md",
+        "protocol/leakage.json",
+        "protocol/judges.md",
+    )
+    for relative in artifact_paths:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(artifact_bytes)
     mlr_agent = manifest.systems[1].model_copy(
         update={
             "adapter_preflight_ref": "adapters/mlr-agent.json",
-            "adapter_preflight_sha256": HASH,
+            "adapter_preflight_sha256": artifact_sha256,
         }
     )
     direct = PrelaunchSystem(
@@ -336,7 +373,7 @@ def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> N
         availability=ReadinessStatus.VERIFIED,
         real_implementation=True,
         adapter_preflight_ref="adapters/direct-agent.json",
-        adapter_preflight_sha256=HASH,
+        adapter_preflight_sha256=artifact_sha256,
     )
     ai_scientist = PrelaunchSystem(
         system_id="ai-scientist-v2",
@@ -346,9 +383,16 @@ def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> N
         availability=ReadinessStatus.VERIFIED,
         real_implementation=True,
         adapter_preflight_ref="adapters/ai-scientist-v2.json",
-        adapter_preflight_sha256=HASH,
+        adapter_preflight_sha256=artifact_sha256,
     )
-    second_task = manifest.tasks[0].model_copy(update={"task_id": "mlr-heldout-002"})
+    first_task = manifest.tasks[0].model_copy(update={"asset_manifest_sha256": artifact_sha256})
+    second_task = manifest.tasks[0].model_copy(
+        update={
+            "task_id": "mlr-heldout-002",
+            "selected_asset_manifest": "assets/mlr-heldout-002.json",
+            "asset_manifest_sha256": artifact_sha256,
+        }
+    )
     lane = manifest.lanes[0].model_copy(
         update={
             "system_ids": (
@@ -365,7 +409,7 @@ def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> N
     complete = manifest.model_copy(
         update={
             "systems": (manifest.systems[0], direct, mlr_agent, ai_scientist),
-            "tasks": (manifest.tasks[0], second_task),
+            "tasks": (first_task, second_task),
             "lanes": (lane,),
             "analysis": AnalysisContract(
                 primary_outcome="Blinded evidence-bearing package quality.",
@@ -376,17 +420,17 @@ def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> N
             ),
             "integrity": IntegrityContract(
                 preregistration_ref="protocol/preregistration.md",
-                preregistration_sha256=HASH,
+                preregistration_sha256=artifact_sha256,
                 task_freeze_ref="protocol/tasks.json",
-                task_freeze_sha256=HASH,
+                task_freeze_sha256=artifact_sha256,
                 failure_policy_ref="protocol/failures.md",
-                failure_policy_sha256=HASH,
+                failure_policy_sha256=artifact_sha256,
                 repair_policy_ref="protocol/repairs.md",
-                repair_policy_sha256=HASH,
+                repair_policy_sha256=artifact_sha256,
                 leakage_audit_ref="protocol/leakage.json",
-                leakage_audit_sha256=HASH,
+                leakage_audit_sha256=artifact_sha256,
                 judge_protocol_ref="protocol/judges.md",
-                judge_protocol_sha256=HASH,
+                judge_protocol_sha256=artifact_sha256,
             ),
         }
     )
@@ -397,7 +441,12 @@ def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> N
         source_tree_clean=True,
     )
 
-    review = EvaluationCriticSuite().review(complete, _admitted_corpus(), gate)
+    review = EvaluationCriticSuite().review(
+        complete,
+        _admitted_corpus(),
+        gate,
+        evidence_root=tmp_path,
+    )
 
     assert gate.ready_for_author_approval is True
     assert gate.execution_authorized is False

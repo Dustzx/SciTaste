@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+from collections.abc import Iterable
 from enum import StrEnum
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +25,7 @@ from scitaste.evaluation.resources import (
 )
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+_MAX_EVIDENCE_BYTES = 16 * 1024 * 1024
 
 
 class EvaluationCriticDomain(StrEnum):
@@ -59,6 +63,7 @@ class EvaluationCriticReport(BaseModel):
     proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     resource_corpus_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     observed_source_commit: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}$")
+    evidence_root_observed: bool
     ready_for_author_review: bool
     authorizes_execution: Literal[False] = False
     blocking_codes: tuple[str, ...]
@@ -74,15 +79,17 @@ class EvaluationCriticSuite:
         manifest: ExperimentPrelaunchManifest,
         resource_corpus: ExternalResourceCorpus,
         gate_report: PrelaunchGateReport,
+        *,
+        evidence_root: str | Path | None = None,
     ) -> EvaluationCriticReport:
         if gate_report.proposal_sha256 != manifest.proposal_sha256:
             raise ValueError("gate report does not bind the supplied prelaunch proposal")
 
         findings = (
-            *self._benchmark_fit(manifest, resource_corpus),
-            *self._baseline_applicability(manifest, resource_corpus),
-            *self._statistics(manifest),
-            *self._integrity(manifest, gate_report),
+            *self._benchmark_fit(manifest, resource_corpus, evidence_root),
+            *self._baseline_applicability(manifest, resource_corpus, evidence_root),
+            *self._statistics(manifest, evidence_root),
+            *self._integrity(manifest, gate_report, evidence_root),
             *self._resources(manifest, gate_report),
         )
         blocking_codes = tuple(
@@ -95,6 +102,7 @@ class EvaluationCriticSuite:
             proposal_sha256=manifest.proposal_sha256,
             resource_corpus_sha256=resource_corpus.semantic_sha256,
             observed_source_commit=gate_report.observed_source_commit,
+            evidence_root_observed=evidence_root is not None,
             ready_for_author_review=(gate_report.ready_for_author_approval and not blocking_codes),
             blocking_codes=blocking_codes,
             findings=findings,
@@ -104,6 +112,7 @@ class EvaluationCriticSuite:
     def _benchmark_fit(
         manifest: ExperimentPrelaunchManifest,
         resource_corpus: ExternalResourceCorpus,
+        evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         refs = tuple(f"manifest://tasks/{task.task_id}" for task in manifest.tasks)
         unready = [
@@ -116,6 +125,10 @@ class EvaluationCriticSuite:
             or task.selected_asset_manifest is None
             or task.asset_manifest_sha256 is None
         ]
+        artifact_problems = _artifact_problems(
+            evidence_root,
+            ((task.selected_asset_manifest, task.asset_manifest_sha256) for task in manifest.tasks),
+        )
         resource_blockers: list[str] = []
         for task in manifest.tasks:
             try:
@@ -128,8 +141,8 @@ class EvaluationCriticSuite:
                 resource_blockers.append(f"{task.task_id}:unknown_resource")
                 continue
             resource_blockers.extend(f"{task.task_id}:{code}" for code in report.blocker_codes)
-        if unready or resource_blockers:
-            details = sorted((*unready, *resource_blockers))
+        if unready or resource_blockers or artifact_problems:
+            details = sorted((*unready, *resource_blockers, *artifact_problems))
             return (
                 _finding(
                     EvaluationCriticDomain.BENCHMARK_FIT,
@@ -156,6 +169,7 @@ class EvaluationCriticSuite:
     def _baseline_applicability(
         manifest: ExperimentPrelaunchManifest,
         resource_corpus: ExternalResourceCorpus,
+        evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         systems = {system.system_id: system for system in manifest.systems}
         problems: list[str] = []
@@ -187,6 +201,19 @@ class EvaluationCriticSuite:
                     system.adapter_preflight_ref is None or system.adapter_preflight_sha256 is None
                 ):
                     problems.append(f"{lane.lane_id}:{system.system_id}:adapter_preflight_unbound")
+                elif system.role in {SystemRole.METHOD_COMPARATOR, SystemRole.CONTROL}:
+                    problems.extend(
+                        f"{lane.lane_id}:{system.system_id}:{problem}"
+                        for problem in _artifact_problems(
+                            evidence_root,
+                            (
+                                (
+                                    system.adapter_preflight_ref,
+                                    system.adapter_preflight_sha256,
+                                ),
+                            ),
+                        )
+                    )
                 if system.external_resource_id is not None:
                     try:
                         report = evaluate_resource_feasibility(
@@ -229,6 +256,7 @@ class EvaluationCriticSuite:
     @staticmethod
     def _statistics(
         manifest: ExperimentPrelaunchManifest,
+        evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         refs = (f"manifest://proposal/{manifest.proposal_sha256}",)
         findings: list[EvaluationCriticFinding] = []
@@ -253,6 +281,25 @@ class EvaluationCriticSuite:
                     "The formal study has no content-addressed power analysis.",
                     refs,
                     "Freeze a pilot-informed power analysis without inspecting formal outcomes.",
+                )
+            )
+        elif _artifact_problems(
+            evidence_root,
+            (
+                (
+                    manifest.analysis.power_analysis_ref,
+                    manifest.analysis.power_analysis_sha256,
+                ),
+            ),
+        ):
+            findings.append(
+                _finding(
+                    EvaluationCriticDomain.STATISTICS,
+                    "content_bound_analysis",
+                    EvaluationCriticVerdict.BLOCK,
+                    "The referenced power analysis was not verified against its declared hash.",
+                    refs,
+                    "Make the content-addressed power analysis available in the evidence root.",
                 )
             )
         else:
@@ -300,13 +347,46 @@ class EvaluationCriticSuite:
     def _integrity(
         manifest: ExperimentPrelaunchManifest,
         gate_report: PrelaunchGateReport,
+        evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         refs = (f"manifest://proposal/{manifest.proposal_sha256}",)
         problems: list[str] = []
         if manifest.integrity is None:
             problems.append("integrity_contract_missing")
-        elif manifest.human_review.required and manifest.integrity.judge_protocol_ref is None:
-            problems.append("judge_protocol_unbound")
+        else:
+            if manifest.human_review.required and manifest.integrity.judge_protocol_ref is None:
+                problems.append("judge_protocol_unbound")
+            problems.extend(
+                _artifact_problems(
+                    evidence_root,
+                    (
+                        (
+                            manifest.integrity.preregistration_ref,
+                            manifest.integrity.preregistration_sha256,
+                        ),
+                        (
+                            manifest.integrity.task_freeze_ref,
+                            manifest.integrity.task_freeze_sha256,
+                        ),
+                        (
+                            manifest.integrity.failure_policy_ref,
+                            manifest.integrity.failure_policy_sha256,
+                        ),
+                        (
+                            manifest.integrity.repair_policy_ref,
+                            manifest.integrity.repair_policy_sha256,
+                        ),
+                        (
+                            manifest.integrity.leakage_audit_ref,
+                            manifest.integrity.leakage_audit_sha256,
+                        ),
+                        (
+                            manifest.integrity.judge_protocol_ref,
+                            manifest.integrity.judge_protocol_sha256,
+                        ),
+                    ),
+                )
+            )
         if gate_report.observed_source_commit != manifest.source_commit:
             problems.append("executable_commit_unmatched")
         if gate_report.source_tree_clean is not True:
@@ -398,6 +478,55 @@ def _finding(
         evidence_refs=evidence_refs,
         proposed_action=proposed_action,
     )
+
+
+def _artifact_problems(
+    evidence_root: str | Path | None,
+    bindings: Iterable[tuple[str | None, str | None]],
+) -> list[str]:
+    pairs = tuple(bindings)
+    required = [(locator, digest) for locator, digest in pairs if locator or digest]
+    if not required:
+        return []
+    if evidence_root is None:
+        return [f"artifact_unobserved:{locator}" for locator, _ in required]
+    try:
+        root = Path(evidence_root).resolve(strict=True)
+    except (OSError, ValueError):
+        return ["evidence_root_unavailable"]
+    if not root.is_dir():
+        return ["evidence_root_not_directory"]
+
+    problems: list[str] = []
+    for locator, expected in required:
+        if locator is None or expected is None:
+            problems.append(f"artifact_binding_incomplete:{locator or 'missing_locator'}")
+            continue
+        pure = PurePosixPath(locator)
+        if (
+            pure.is_absolute()
+            or not pure.parts
+            or any(part in {"", ".", ".."} for part in pure.parts)
+        ):
+            problems.append(f"artifact_path_unsafe:{locator}")
+            continue
+        candidate = root.joinpath(*pure.parts)
+        if any(path.is_symlink() for path in (root, *candidate.parents, candidate)):
+            problems.append(f"artifact_symlink_forbidden:{locator}")
+            continue
+        try:
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(root)
+            size = resolved.stat().st_size
+        except (OSError, ValueError):
+            problems.append(f"artifact_missing_or_escaped:{locator}")
+            continue
+        if not resolved.is_file() or size > _MAX_EVIDENCE_BYTES:
+            problems.append(f"artifact_not_bounded_file:{locator}")
+            continue
+        if hashlib.sha256(resolved.read_bytes()).hexdigest() != expected:
+            problems.append(f"artifact_hash_mismatch:{locator}")
+    return problems
 
 
 __all__ = [

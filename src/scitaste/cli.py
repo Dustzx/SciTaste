@@ -2467,6 +2467,7 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
         inspection.manifest,
         corpus.corpus,
         report,
+        evidence_root=args.source_root,
     )
     payload = {
         "manifest_path": str(inspection.path),
