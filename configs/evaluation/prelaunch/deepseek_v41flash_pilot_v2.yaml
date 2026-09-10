@@ -1,0 +1,117 @@
+schema_version: "1.0"
+manifest_id: deepseek-v41flash-pilot-v2
+protocol_id: formal-v4-prepilot
+protocol_version: "2.0"
+study_scope: pilot
+scientific_question: Does explicit scientific taste improve held-out idea-to-paper research trajectories under a matched DeepSeek V4.1 Flash backbone and resource budget?
+claim_allowed: A completed clean block may establish adapter feasibility and estimate pilot variance only.
+claim_forbidden: This pilot cannot establish SciTaste superiority, ICLR readiness, population effectiveness, or an official review outcome.
+source_commit: 55e414e568489bbcee45b6bfea15c7d2183f4d9e
+require_clean_tree: true
+resource_corpus_sha256: aabf3c481edd16fb6ccb5471dd010c9d7ec73ee1c9ffda864794874b6bdab895
+systems:
+  - system_id: scitaste-native
+    role: scitaste
+    implementation_ref: scitaste@55e414e568489bbcee45b6bfea15c7d2183f4d9e
+    availability: verified
+    real_implementation: true
+  - system_id: direct-agent
+    role: control
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: mlr-agent
+    role: method_comparator
+    implementation_ref: mlr-agent@f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    external_resource_id: mlr-agent
+    availability: pending
+    real_implementation: true
+  - system_id: ai-scientist-v2
+    role: method_comparator
+    implementation_ref: ai-scientist-v2@96bd51617cfdbb494a9fc283af00fe090edfae48
+    external_resource_id: ai-scientist-v2
+    availability: pending
+    real_implementation: true
+  - system_id: autoresearchclaw
+    role: method_comparator
+    implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
+    external_resource_id: autoresearchclaw
+    availability: pending
+    real_implementation: true
+tasks:
+  - task_id: mlr-bench-pilot-block
+    benchmark_resource_id: mlr-bench
+    split: source-disjoint-pilot-to-be-frozen
+    selected_asset_manifest: null
+    asset_manifest_sha256: null
+    license_status: pending
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+lanes:
+  - lane_id: deepseek-v41-api
+    kind: api_only
+    scientific_role: matched_backbone
+    system_ids:
+      - scitaste-native
+      - direct-agent
+      - mlr-agent
+      - ai-scientist-v2
+      - autoresearchclaw
+    task_ids: [mlr-bench-pilot-block]
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 5
+    api_model:
+      provider_id: deepseek
+      endpoint: https://api.deepseek.com/chat/completions
+      interface: openai-chat-completions
+      model_id: deepseek-flash
+      model_revision: DeepSeek-V4.1-Flash
+      rolling_alias: true
+      identity_source_url: https://api-docs.deepseek.com/quick_start/pricing
+      identity_status: verified
+      api_key_env: DEEPSEEK_API_KEY
+      max_input_tokens_per_call: 100000
+      max_output_tokens_per_call: 32768
+      max_requests: 300
+      max_total_tokens: 5000000
+      max_cost: 100.0
+      pricing:
+        currency: USD
+        as_of: 2026-09-11
+        source_url: https://api-docs.deepseek.com/quick_start/pricing
+        input_cache_hit_per_million: 0.006
+        input_cache_miss_per_million: 0.3
+        output_per_million: 1.2
+        status: verified
+    gpu_resource: null
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 20.0
+retention:
+  output_root: outputs/projects/scitaste-eval-formal-v4-prepilot
+  archive_root: archives/scitaste-eval-formal-v4-prepilot
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis: null
+integrity: null
+launch_order: [deepseek-v41-api]
+stop_rules:
+  - Stop before the first paid call if the authenticated provider identity differs from deepseek-flash or the served revision cannot be recorded.
+  - Stop the complete matched block if any system changes task semantics, tools, starting evidence, repair policy, or resource ceilings.
+  - Stop on incomplete token, retry, cost, wall-time, intervention, experiment, or artifact telemetry.
+  - Stop after one clean block and request a second approval before any scale-out.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

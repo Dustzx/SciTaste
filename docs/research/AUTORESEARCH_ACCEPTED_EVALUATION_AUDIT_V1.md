@@ -280,8 +280,9 @@ framework deficiencies even if a human can repair the prose afterward.
    use-specific feasibility evidence;
 2. completed: implement a content-bound experiment-design state for E1--E5 and
    require admitted benchmark/system resources before design completion;
-3. add benchmark-fit, baseline-applicability, statistics, integrity, and
-   resource critics whose outputs are proposals rather than auto-accepted plans;
+3. completed: add benchmark-fit, baseline-applicability, statistics, integrity,
+   and resource critics whose outputs are content-bound proposals and whose
+   schema cannot authorize execution;
 4. continue from the completed read-only identity/license audit to exact task
    selection and adapter preflight; do not download or execute until the user
    approves the resulting model/data/resource manifest;

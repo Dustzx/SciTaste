@@ -1,0 +1,25 @@
+# Inert backend configuration for a project-owned internal paper review.
+# Copy to an ignored runtime file, keep live_enabled=false until the exact paper
+# packet is approved, and pass both runtime live switches for the one call.
+provider: deepseek
+base_url: https://api.deepseek.com
+model: deepseek-flash
+api_key_env: DEEPSEEK_API_KEY
+live_enabled: false
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 32768
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 0.3
+  cached_input_usd_per_million_tokens: 0.006
+  output_usd_per_million_tokens: 1.2
+  captured_at: 2026-09-11T00:00:00+08:00
+  source: https://api-docs.deepseek.com/quick_start/pricing
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+    reasoning_effort: high

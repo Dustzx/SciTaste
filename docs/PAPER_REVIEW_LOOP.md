@@ -87,8 +87,8 @@ Build an exact runtime configuration before authorizing any provider call:
 ```bash
 .venv/bin/scitaste project paper review runtime-config \
   --project-id <project-id> --review-id <review-id> \
-  --profile-set configs/model_nodes/runtime_profiles.deepseek_venue_review_v1.yaml \
-  --profile-id deepseek-v4flash-venue-review \
+  --profile-set configs/model_nodes/runtime_profiles.deepseek_v41_venue_review_v2.yaml \
+  --profile-id deepseek-v41flash-venue-review \
   --backend-config <ignored-local-backend-config.yaml> \
   --permitted-evidence-type matched-method-comparison \
   --expected-revision <revision> --output <ignored-runtime-config.json> \
@@ -112,16 +112,18 @@ identity, and a self-hash. The CLI imports it with:
   --project-id <project-id> --review-id <review-id> \
   --proposal <venue-paper-review-proposal.json> \
   --report-id <report-id> --reviewer-id <reviewer-id> \
-  --provider deepseek --model deepseek-v4-flash \
+  --provider deepseek --model deepseek-flash \
   --expected-revision <revision> --outputs-root outputs
 ```
 
-The DeepSeek review profile and inert priced backend example reserve a 32,768-
-token output ceiling for this whole-paper node. It is neither the old 2,048-token
-probe limit nor a global SciTaste setting. The backend remains
-`live_enabled=false` in Git; a local ignored runtime config and explicit live
-switches are still required. A model report may close a development round after
-verified revision, but it never satisfies independent expert review.
+The current DeepSeek V4.1 Flash review profile and inert, peak-priced backend
+example reserve a 32,768-token output ceiling for this whole-paper node. The
+retained V4 profile is historical and must not be silently relabeled as V4.1.
+This is neither the old 2,048-token probe limit nor a global SciTaste setting.
+The backend remains `live_enabled=false` in Git; a local ignored runtime config
+and explicit live switches are still required. A model report may close a
+development round after verified revision, but it never satisfies independent
+expert review.
 
 ## Lifecycle projection
 
