@@ -1,0 +1,89 @@
+schema_version: "1.2"
+artifact_kind: autoresearch-evaluation-landscape-v3
+base_source: autoresearch_evaluation_landscape_v2.yaml
+base_source_sha256: f7234081e56faa6f7250f71457518dd1b877b858aeb982a257eb3cd5d7cbe81e
+title: Accepted AutoResearch methods and separate evaluation resources
+source_document: docs/research/AUTORESEARCH_METHOD_CENSUS_CANDIDATE_V3.md
+source_document_sha256: 26ca73c5dd4db2515b034c470d420c24c3a1f3f90bf6142f6476261bedd33495
+synthesis_scope: literature-and-protocol-design-only
+corpus_scope: accepted-method-census-candidate-and-targeted-evaluation-resources
+scope_note_en: Accepted method coverage is a census candidate pending a second screen; benchmark rows remain a targeted protocol-design sample, so counts do not estimate field prevalence.
+scope_note_zh: 已接收方法覆盖目前只是待复核的普查候选；基准行仍为协议设计定向样本，因此数量不代表领域论文分布。
+freeze_decision: hold
+decision_reason_code: second-method-screen-tasks-adapters-power-and-judging-remain-open
+
+work_additions:
+  - work_id: agent-laboratory
+    name: Agent Laboratory
+    venue: Findings of EMNLP 2025
+    evaluation_unit: Human-seeded literature, experiment, and report workflow
+    scale: Model variants, autonomous and copilot conditions, researcher survey
+    comparison_anchor: AI Scientist, model backbones, and human involvement
+    contribution_type: method
+    experiment_role: system-comparator
+    bundled_artifacts: [system]
+    stage_ids: [hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, package, human, cost]
+    execution_signal: mixed
+    resource_tier: moderate
+    role: primary
+  - work_id: dolphin
+    name: Dolphin
+    venue: ACL 2025
+    evaluation_unit: Result-conditioned closed-loop idea and experiment search
+    scale: Multiple ML topics plus an MLE-bench subset
+    comparison_anchor: Input methods, search variants, and task objectives
+    contribution_type: method
+    experiment_role: system-comparator
+    bundled_artifacts: [system]
+    stage_ids: [idea, hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+  - work_id: code-scientist
+    name: CodeScientist
+    venue: Findings of ACL 2025
+    evaluation_unit: Semi-automated idea and code-experiment discovery
+    scale: Hundreds of experiments, 19 discoveries, 6 surviving multi-part review
+    comparison_anchor: External paper review, code review, and replication attempts
+    contribution_type: method
+    experiment_role: system-comparator
+    bundled_artifacts: [system, judge]
+    stage_ids: [idea, hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, progress, package, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+
+comparison_candidate_additions:
+  - candidate_id: agent-laboratory
+    name: Agent Laboratory
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: matched-task-adapter-intervention-and-telemetry-missing
+  - candidate_id: dolphin
+    name: Dolphin
+    candidate_kind: system
+    role: secondary
+    readiness: reference
+    barrier_code: task-template-equivalence-and-artifact-mapping-missing
+  - candidate_id: code-scientist
+    name: CodeScientist
+    candidate_kind: system
+    role: stretch
+    readiness: reference
+    barrier_code: semi-automated-input-and-replication-policy-unmatched
+
+planning_gate_overrides:
+  - gate_id: census
+    label_en: Systematic method census
+    label_zh: 系统性方法普查
+    state: candidate
+    reason_code: first-cross-venue-method-screen-complete-second-screen-pending
+
+open_question_overrides:
+  - question_id: methods
+    label_en: Does an independent second screen recover any additional accepted computational AutoResearch method, and which admitted systems expose executable unchanged-core artifacts?
+    label_zh: 独立二次筛查是否还能发现已接收的计算型 AutoResearch 方法，以及哪些纳入系统提供可执行且核心不变的实现？

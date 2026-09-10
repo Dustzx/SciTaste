@@ -371,6 +371,16 @@ def build_parser() -> argparse.ArgumentParser:
     project_run_begin.add_argument("--status", default="planned")
     project_run_begin.add_argument("--evidence-scope", default="engineering-only")
     project_run_begin.add_argument("--stage-path", default=None)
+    project_run_begin.add_argument("--artifact", default=None)
+    project_run_begin.add_argument(
+        "--generative-ui-projection",
+        choices=[
+            "autoresearch-evaluation-landscape-v1",
+            "autoresearch-evaluation-landscape-v2",
+            "autoresearch-evaluation-landscape-v3",
+        ],
+        default=None,
+    )
     project_run_begin.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(project_run_begin)
     project_run_begin.set_defaults(handler=_handle_project_run_begin)
@@ -1078,6 +1088,8 @@ def _handle_project_run_begin(args: argparse.Namespace) -> int:
         status=args.status,
         evidence_scope=args.evidence_scope,
         stage_path=args.stage_path,
+        artifact=args.artifact,
+        generative_ui_projection=args.generative_ui_projection,
     )
     runtime = ProjectRuntime(args.outputs_root)
     if args.dry_run:
