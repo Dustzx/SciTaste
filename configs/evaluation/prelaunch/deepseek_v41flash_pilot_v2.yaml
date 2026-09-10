@@ -6,13 +6,13 @@ study_scope: pilot
 scientific_question: Does explicit scientific taste improve held-out idea-to-paper research trajectories under a matched DeepSeek V4.1 Flash backbone and resource budget?
 claim_allowed: A completed clean block may establish adapter feasibility and estimate pilot variance only.
 claim_forbidden: This pilot cannot establish SciTaste superiority, ICLR readiness, population effectiveness, or an official review outcome.
-source_commit: 55e414e568489bbcee45b6bfea15c7d2183f4d9e
+source_commit: e1e801e53c6f4a8c4ae5196cc16903490616821c
 require_clean_tree: true
 resource_corpus_sha256: aabf3c481edd16fb6ccb5471dd010c9d7ec73ee1c9ffda864794874b6bdab895
 systems:
   - system_id: scitaste-native
     role: scitaste
-    implementation_ref: scitaste@55e414e568489bbcee45b6bfea15c7d2183f4d9e
+    implementation_ref: scitaste@e1e801e53c6f4a8c4ae5196cc16903490616821c
     availability: verified
     real_implementation: true
   - system_id: direct-agent
@@ -38,6 +38,8 @@ systems:
     external_resource_id: autoresearchclaw
     availability: pending
     real_implementation: true
+    adapter_preflight_ref: configs/evaluation/adapters/autoresearchclaw_mlr_v1.yaml
+    adapter_preflight_sha256: 7e540a2d13db63fecee7b4bfbc1a7667f7c831166cbf36879fd7ed47b4386996
 tasks:
   - task_id: iclr2025_bi_align
     benchmark_resource_id: mlr-bench
