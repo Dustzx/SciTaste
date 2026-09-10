@@ -45,11 +45,13 @@ const quickIntentLabelKeys = Object.freeze({
   "compare-latest-registered-run-records": "quick.comparison",
   "review-registered-paper-evidence": "quick.paper",
   "review-manifest-declared-next-gate": "quick.next_gate",
+  "review-autoresearch-evaluation-landscape": "quick.research_landscape",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
 const workspaceViews = Object.freeze(new Set([
   "project-progress",
+  "research-landscape",
   "project-overview",
   "run-stage-explorer",
   "paper-evidence",
@@ -667,6 +669,228 @@ function renderRunBlockers(data) {
   return container;
 }
 
+function researchLabel(item) {
+  return activeLocale === "zh-CN" ? item.label_zh : item.label_en;
+}
+
+function landscapeStatePill(state, namespace = "landscape") {
+  const pill = document.createElement("span");
+  pill.className = `landscape-pill state-${state}`;
+  appendText(pill, t(`${namespace}.${state}`));
+  return pill;
+}
+
+function renderLandscapeTable(data, works) {
+  const scroll = document.createElement("div");
+  scroll.className = "landscape-matrix-scroll";
+  const table = document.createElement("table");
+  table.className = "landscape-matrix";
+  const head = document.createElement("thead");
+  const headingRow = document.createElement("tr");
+  const workHeading = document.createElement("th");
+  workHeading.scope = "col";
+  appendText(workHeading, t("landscape.work"));
+  headingRow.appendChild(workHeading);
+  for (const stage of data.stages) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    appendText(cell, researchLabel(stage));
+    headingRow.appendChild(cell);
+  }
+  const signalHeading = document.createElement("th");
+  signalHeading.scope = "col";
+  appendText(signalHeading, t("landscape.signal"));
+  headingRow.appendChild(signalHeading);
+  head.appendChild(headingRow);
+  const body = document.createElement("tbody");
+  for (const work of works) {
+    const row = document.createElement("tr");
+    row.className = `landscape-work role-${work.role}`;
+    const identity = document.createElement("th");
+    identity.scope = "row";
+    const name = document.createElement("strong");
+    appendText(name, work.name);
+    const venue = document.createElement("small");
+    appendText(venue, work.venue);
+    identity.append(name, venue);
+    row.appendChild(identity);
+    for (const stage of data.stages) {
+      const covered = work.stage_ids.includes(stage.stage_id);
+      const cell = document.createElement("td");
+      const mark = document.createElement("span");
+      mark.className = covered ? "coverage-mark covered" : "coverage-mark";
+      mark.setAttribute("aria-label", covered
+        ? t("landscape.covered", {stage: researchLabel(stage)})
+        : t("landscape.not_covered", {stage: researchLabel(stage)}));
+      appendText(mark, covered ? "●" : "·");
+      cell.appendChild(mark);
+      row.appendChild(cell);
+    }
+    const signal = document.createElement("td");
+    const signalTag = document.createElement("span");
+    signalTag.className = `signal-tag signal-${work.execution_signal}`;
+    appendText(signalTag, t(`landscape.signal.${work.execution_signal}`));
+    const resource = document.createElement("small");
+    resource.className = "resource-tier";
+    appendText(resource, t(`landscape.resource.${work.resource_tier}`));
+    signal.append(signalTag, resource);
+    row.appendChild(signal);
+    body.appendChild(row);
+  }
+  table.append(head, body);
+  scroll.appendChild(table);
+  return scroll;
+}
+
+function renderResearchLandscape(data) {
+  const container = document.createElement("div");
+  container.className = "research-landscape";
+
+  const gate = document.createElement("section");
+  gate.className = `landscape-decision state-${data.freeze_decision}`;
+  const decisionCopy = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow dark";
+  appendText(eyebrow, t("landscape.decision.eyebrow"));
+  const heading = document.createElement("h3");
+  appendText(heading, t(`landscape.decision.${data.freeze_decision}`));
+  decisionCopy.append(eyebrow, heading);
+  const synthesis = document.createElement("div");
+  synthesis.className = "landscape-counts";
+  for (const [value, label] of [
+    [data.works.length, t("landscape.count.works")],
+    [data.stages.length, t("landscape.count.stages")],
+    [data.lenses.length, t("landscape.count.lenses")],
+  ]) {
+    const item = document.createElement("span");
+    const number = document.createElement("strong");
+    appendText(number, value);
+    const copy = document.createElement("small");
+    appendText(copy, label);
+    item.append(number, copy);
+    synthesis.appendChild(item);
+  }
+  gate.append(decisionCopy, synthesis);
+
+  const lenses = progressSection(t("landscape.lenses.title"), t("landscape.lenses.subtitle"));
+  const lensGrid = document.createElement("div");
+  lensGrid.className = "landscape-lenses";
+  for (const lens of data.lenses) {
+    const item = document.createElement("article");
+    const symbol = document.createElement("span");
+    symbol.className = "lens-symbol";
+    appendText(symbol, lens.symbol);
+    const copy = document.createElement("div");
+    const label = document.createElement("strong");
+    appendText(label, researchLabel(lens));
+    const question = document.createElement("small");
+    appendText(question, activeLocale === "zh-CN" ? lens.question_zh : lens.question_en);
+    copy.append(label, question);
+    item.append(symbol, copy);
+    lensGrid.appendChild(item);
+  }
+  lenses.appendChild(lensGrid);
+
+  const map = progressSection(t("landscape.matrix.title"), t("landscape.matrix.subtitle"));
+  const foreground = data.works.filter((work) => work.role !== "context");
+  const context = data.works.filter((work) => work.role === "context");
+  map.appendChild(renderLandscapeTable(data, foreground));
+  if (context.length > 0) {
+    const more = document.createElement("details");
+    more.className = "landscape-context";
+    const summary = document.createElement("summary");
+    appendText(summary, t("landscape.matrix.more", {count: context.length}));
+    more.append(summary, renderLandscapeTable(data, context));
+    map.appendChild(more);
+  }
+
+  const candidateSection = progressSection(
+    t("landscape.candidates.title"),
+    t("landscape.candidates.subtitle"),
+  );
+  const lanes = document.createElement("div");
+  lanes.className = "readiness-lanes";
+  for (const readiness of ["reference", "adaptation", "formal"]) {
+    const lane = document.createElement("section");
+    lane.className = `readiness-lane readiness-${readiness}`;
+    const laneHeading = document.createElement("h4");
+    appendText(laneHeading, t(`landscape.readiness.${readiness}`));
+    lane.appendChild(laneHeading);
+    for (const candidate of data.comparison_candidates.filter(
+      (item) => item.readiness === readiness,
+    )) {
+      const card = document.createElement("article");
+      const name = document.createElement("strong");
+      appendText(name, candidate.name);
+      const meta = document.createElement("small");
+      appendText(meta, `${t(`landscape.kind.${candidate.candidate_kind}`)} · ${t(`landscape.role.${candidate.role}`)}`);
+      const barrier = document.createElement("span");
+      barrier.className = "barrier-code";
+      appendText(barrier, readableCode(candidate.barrier_code));
+      card.append(name, meta, barrier);
+      lane.appendChild(card);
+    }
+    if (!lane.querySelector("article")) {
+      const empty = document.createElement("p");
+      empty.className = "lane-empty";
+      appendText(empty, t("landscape.readiness.none"));
+      lane.appendChild(empty);
+    }
+    lanes.appendChild(lane);
+  }
+  candidateSection.appendChild(lanes);
+
+  const planning = progressSection(t("landscape.gates.title"), t("landscape.gates.subtitle"));
+  const gateRail = document.createElement("ol");
+  gateRail.className = "planning-gate-rail";
+  for (const item of data.planning_gates) {
+    const node = document.createElement("li");
+    node.className = `gate-node state-${item.state}`;
+    const marker = document.createElement("span");
+    marker.className = "gate-marker";
+    marker.setAttribute("aria-hidden", "true");
+    const label = document.createElement("strong");
+    appendText(label, researchLabel(item));
+    node.append(marker, label, landscapeStatePill(item.state, "landscape.gate"));
+    gateRail.appendChild(node);
+  }
+  const unresolved = document.createElement("details");
+  unresolved.className = "landscape-open-questions";
+  const unresolvedSummary = document.createElement("summary");
+  appendText(unresolvedSummary, t("landscape.questions", {count: data.open_questions.length}));
+  const questionList = document.createElement("ol");
+  for (const question of data.open_questions) {
+    const item = document.createElement("li");
+    appendText(item, researchLabel(question));
+    questionList.appendChild(item);
+  }
+  unresolved.append(unresolvedSummary, questionList);
+  planning.append(gateRail, unresolved);
+
+  container.append(
+    gate,
+    lenses,
+    map,
+    candidateSection,
+    planning,
+    evidenceDisclosure(data.support_ref_ids, {
+      data: {
+        synthesis_scope: data.synthesis_scope,
+        source_document: data.source_document,
+        source_document_sha256: data.source_document_sha256,
+        decision_reason_code: data.decision_reason_code,
+      },
+      names: [
+        "synthesis_scope",
+        "source_document",
+        "source_document_sha256",
+        "decision_reason_code",
+      ],
+    }),
+  );
+  return container;
+}
+
 function renderProjectProgress(data) {
   const container = document.createElement("div");
   container.className = "progress-board";
@@ -851,6 +1075,7 @@ function renderProjectProgress(data) {
     compare_runs: t("progress.next.compare"),
     review_paper_evidence: t("progress.next.paper"),
     review_next_gate: t("progress.next.gate"),
+    review_research_landscape: t("progress.next.research_landscape"),
   };
   const candidateList = document.createElement("div");
   candidateList.className = "candidate-list";
@@ -932,6 +1157,7 @@ const componentRenderers = Object.freeze({
     ["event_id", "action_id", "status", "next_boundary", "execution_authority"],
   ),
   ProjectProgressBoard: renderProjectProgress,
+  ResearchLandscapeMap: renderResearchLandscape,
 });
 
 function workspaceTitle(documentValue) {

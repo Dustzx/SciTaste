@@ -96,6 +96,7 @@ class RendererDocument(BaseModel):
     catalog_version: Literal[
         "scitaste-trusted-components-v1",
         "scitaste-trusted-components-v2",
+        "scitaste-trusted-components-v3",
     ] = "scitaste-trusted-components-v1"
     shell: FixedApplicationShell
     project_id: ProjectIdentifier
@@ -149,14 +150,13 @@ def project_surface(surface: SurfaceSpec) -> RendererDocument:
     """Create a data-only renderer document from an already validated surface."""
 
     surface = SurfaceSpec.model_validate(surface.model_dump(mode="json"))
-    catalog_version = (
-        "scitaste-trusted-components-v2"
-        if any(
-            component.component == TrustedComponent.PROJECT_PROGRESS_BOARD
-            for component in surface.components
-        )
-        else "scitaste-trusted-components-v1"
-    )
+    component_kinds = {component.component for component in surface.components}
+    if TrustedComponent.RESEARCH_LANDSCAPE_MAP in component_kinds:
+        catalog_version = "scitaste-trusted-components-v3"
+    elif TrustedComponent.PROJECT_PROGRESS_BOARD in component_kinds:
+        catalog_version = "scitaste-trusted-components-v2"
+    else:
+        catalog_version = "scitaste-trusted-components-v1"
     return RendererDocument(
         catalog_version=catalog_version,
         shell=FixedApplicationShell(),

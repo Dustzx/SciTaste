@@ -1,0 +1,293 @@
+schema_version: "1.0"
+artifact_kind: autoresearch-evaluation-landscape-v1
+title: Accepted AutoResearch evaluation landscape
+source_document: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+source_document_sha256: ed58815445ee82d72df6ab7a46933bc8aa38ed312e72c6cfa83fa8d94317bcda
+synthesis_scope: literature-and-protocol-design-only
+freeze_decision: hold
+decision_reason_code: exact-tasks-adapters-and-power-remain-open
+
+stages:
+  - stage_id: idea
+    label_en: Idea
+    label_zh: 选题
+  - stage_id: proposal
+    label_en: Proposal
+    label_zh: 方案
+  - stage_id: hypothesis
+    label_en: Hypothesis
+    label_zh: 假设
+  - stage_id: design
+    label_en: Design
+    label_zh: 设计
+  - stage_id: execute
+    label_en: Execute
+    label_zh: 执行
+  - stage_id: interpret
+    label_en: Interpret
+    label_zh: 解释
+  - stage_id: paper
+    label_en: Paper
+    label_zh: 论文
+  - stage_id: review
+    label_en: Review
+    label_zh: 评审
+
+lenses:
+  - lens_id: decision
+    symbol: D
+    label_en: Decision quality
+    label_zh: 决策质量
+    question_en: Did the system choose and revise well?
+    question_zh: 系统是否作出了高质量选择与修正？
+  - lens_id: integrity
+    symbol: X
+    label_en: Experiment integrity
+    label_zh: 实验完整性
+    question_en: Did the claimed experiment actually execute?
+    question_zh: 被主张的实验是否真实执行并可核验？
+  - lens_id: progress
+    symbol: P
+    label_en: Scientific progress
+    label_zh: 科学进展
+    question_en: Did an external objective improve?
+    question_zh: 外部科学目标是否获得真实提升？
+  - lens_id: package
+    symbol: W
+    label_en: Research package
+    label_zh: 研究成品
+    question_en: Are evidence, code, and paper jointly strong?
+    question_zh: 证据、代码与论文是否共同成立？
+  - lens_id: human
+    symbol: H
+    label_en: Human calibration
+    label_zh: 人类校准
+    question_en: Is automated judging tied to expert judgment?
+    question_zh: 自动评审是否经过专家判断校准？
+  - lens_id: cost
+    symbol: C
+    label_en: Cost and intervention
+    label_zh: 成本与干预
+    question_en: What resources and human rescue were required?
+    question_zh: 消耗了多少资源与人工救援？
+
+works:
+  - work_id: mlr-bench
+    name: MLR-Bench
+    venue: NeurIPS 2025 Datasets and Benchmarks
+    evaluation_unit: Open-ended ML research tasks
+    scale: 201 tasks; narrower executable subsets
+    comparison_anchor: Frontier models, coding agents, MLR-Agent, AI Scientist-v2
+    stage_ids: [idea, proposal, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, package, human, cost]
+    execution_signal: mixed
+    resource_tier: high
+    role: primary
+  - work_id: exp-bench
+    name: EXP-Bench
+    venue: ICLR 2026
+    evaluation_unit: Paper-derived executable experiment chains
+    scale: 461 tasks from 51 papers
+    comparison_anchor: OpenHands, IterativeAgent, model backbones
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [integrity, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: primary
+  - work_id: deep-scientist
+    name: DeepScientist
+    venue: ICLR 2026
+    evaluation_unit: Frontier AI discovery programs
+    scale: About 5000 ideas and 1100 validations
+    comparison_anchor: Human state of the art, variants, public AI papers
+    stage_ids: [idea, hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, progress, package, human, cost]
+    execution_signal: executed
+    resource_tier: frontier
+    role: anchor
+  - work_id: paperbench
+    name: PaperBench
+    venue: ICML 2025
+    evaluation_unit: End-to-end paper replication
+    scale: 20 papers and 8316 rubric items
+    comparison_anchor: Frontier agents and top ML doctoral researchers
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+  - work_id: re-bench
+    name: RE-Bench
+    venue: ICML 2025
+    evaluation_unit: Open-ended ML research engineering
+    scale: 7 environments and 71 expert attempts
+    comparison_anchor: Agents and human experts across time budgets
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+  - work_id: ai-researcher
+    name: AI-Researcher
+    venue: NeurIPS 2025
+    evaluation_unit: Target-paper innovation tasks
+    scale: Scientist-Bench guided and open settings
+    comparison_anchor: Human target papers and backbone variants
+    stage_ids: [idea, hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, package, human]
+    execution_signal: mixed
+    resource_tier: high
+    role: context
+  - work_id: cycle-researcher
+    name: CycleResearcher
+    venue: ICLR 2025
+    evaluation_unit: Generated papers and review corpora
+    scale: Paper corpus and system ablations
+    comparison_anchor: Human papers, AI Scientist, training variants
+    stage_ids: [idea, paper, review]
+    lens_ids: [decision, package, human]
+    execution_signal: simulated
+    resource_tier: unreported
+    role: context
+  - work_id: mle-bench
+    name: MLE-bench
+    venue: ICLR 2025
+    evaluation_unit: Kaggle engineering competitions
+    scale: 75 competitions
+    comparison_anchor: Model-scaffold variants and human leaderboards
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: context
+  - work_id: ml-agent-bench
+    name: MLAgentBench
+    venue: ICML 2024
+    evaluation_unit: Executable ML research tasks
+    scale: 13 tasks
+    comparison_anchor: Model and agent variants
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: moderate
+    role: context
+  - work_id: asta-bench
+    name: AstaBench
+    venue: ICLR 2026 Oral
+    evaluation_unit: Components across the scientific process
+    scale: More than 2400 problems and 57 agents
+    comparison_anchor: 22 agent classes
+    stage_ids: [idea, proposal, hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, package]
+    execution_signal: mixed
+    resource_tier: high
+    role: context
+  - work_id: discovery-world
+    name: DiscoveryWorld
+    venue: NeurIPS 2024 Datasets and Benchmarks
+    evaluation_unit: Simulated scientific discovery challenges
+    scale: 120 challenges
+    comparison_anchor: Language-model agents and scaffold variants
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress]
+    execution_signal: simulated
+    resource_tier: moderate
+    role: context
+
+comparison_candidates:
+  - candidate_id: mlr-bench-tasks
+    name: MLR-Bench task source
+    candidate_kind: benchmark
+    role: primary
+    readiness: adaptation
+    barrier_code: exact-source-disjoint-executable-subset-unfrozen
+  - candidate_id: exp-bench-tasks
+    name: EXP-Bench task source
+    candidate_kind: benchmark
+    role: secondary
+    readiness: adaptation
+    barrier_code: selected-assets-and-upstream-licenses-unaudited
+  - candidate_id: scitaste-native
+    name: SciTaste Native
+    candidate_kind: system
+    role: primary
+    readiness: adaptation
+    barrier_code: external-task-contract-not-yet-qualified
+  - candidate_id: mlr-agent
+    name: MLR-Agent
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: unchanged-core-adapter-and-telemetry-missing
+  - candidate_id: ai-scientist-v2
+    name: AI Scientist-v2
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: license-acceptance-and-sandbox-missing
+  - candidate_id: autoresearchclaw
+    name: AutoResearchClaw
+    candidate_kind: system
+    role: secondary
+    readiness: adaptation
+    barrier_code: matched-task-semantics-and-telemetry-missing
+  - candidate_id: expert-panel
+    name: Blinded expert panel
+    candidate_kind: judge
+    role: primary
+    readiness: reference
+    barrier_code: rubric-sampling-and-adjudication-unfrozen
+
+planning_gates:
+  - gate_id: landscape
+    label_en: Comparison landscape
+    label_zh: 对比版图
+    state: ready
+    reason_code: accepted-work-patterns-synthesized
+  - gate_id: estimands
+    label_en: Separate estimands
+    label_zh: 分离评测目标
+    state: ready
+    reason_code: decision-integrity-progress-package-and-cost-separated
+  - gate_id: tasks
+    label_en: Exact held-out tasks
+    label_zh: 精确留出任务
+    state: blocked
+    reason_code: task-manifest-not-frozen
+  - gate_id: adapters
+    label_en: Matched adapters
+    label_zh: 匹配适配器
+    state: blocked
+    reason_code: formal-system-adapters-not-qualified
+  - gate_id: statistics
+    label_en: Power and statistics
+    label_zh: 功效与统计
+    state: blocked
+    reason_code: pilot-effect-and-variance-unobserved
+  - gate_id: judging
+    label_en: Human calibration
+    label_zh: 人类校准
+    state: blocked
+    reason_code: expert-protocol-not-frozen
+  - gate_id: resources
+    label_en: Resource manifest
+    label_zh: 资源清单
+    state: blocked
+    reason_code: exact-model-data-storage-runtime-unapproved
+
+open_questions:
+  - question_id: tasks
+    label_en: Which official MLR-Bench tasks are executable, source-disjoint, licensed, and feasible under the approved budget?
+    label_zh: 哪些 MLR-Bench 官方任务可执行、来源隔离、许可清晰且符合预算？
+  - question_id: systems
+    label_en: Which external systems can accept an equivalent task package without changing their core methods?
+    label_zh: 哪些外部系统能在不修改核心方法的前提下接收等价任务包？
+  - question_id: power
+    label_en: What pilot variance and failure rate determine tasks, seeds, and confidence intervals?
+    label_zh: 预实验的方差与失败率如何决定任务数、种子数和置信区间？
+  - question_id: judging
+    label_en: How will expert package review be sampled, blinded, calibrated, and adjudicated?
+    label_zh: 专家对完整研究包的评审应如何抽样、盲化、校准与仲裁？
+  - question_id: models
+    label_en: Which matched model and official-configuration sensitivity tracks are affordable and semantically valid?
+    label_zh: 哪些匹配模型与官方配置敏感性路线既可负担又语义有效？

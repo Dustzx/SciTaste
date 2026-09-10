@@ -126,6 +126,7 @@ def test_workspace_query_catalog_is_closed_and_rejects_client_layout() -> None:
         "run-comparison",
         "blockers",
         "pending-proposals",
+        "research-landscape",
     }
     assert validate_workspace_query(ProjectListQuery()).view == WorkspaceView.PROJECT_LIST
 

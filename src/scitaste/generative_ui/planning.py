@@ -30,6 +30,7 @@ from scitaste.generative_ui.workspace import (
     PaperEvidenceQuery,
     ProjectOverviewQuery,
     ProjectProgressQuery,
+    ResearchLandscapeQuery,
     RunComparisonQuery,
     RunStageQuery,
     WorkspaceSurfaceFactory,
@@ -333,6 +334,12 @@ class SurfaceCandidateFactory:
                     )
                 )
             )
+        elif intent.goal == IntentGoal.RESEARCH_LANDSCAPE_REVIEW:
+            surfaces.append(
+                self._workspace.build_surface(
+                    ResearchLandscapeQuery(project_id=project_id)
+                )
+            )
         return surfaces
 
 
@@ -423,6 +430,8 @@ def _groups_for(
         TrustedComponent.PAPER_PREVIEW,
     }:
         return (PlanGroup.EVIDENCE, PlanGroup.CONTEXT)
+    if component.component == TrustedComponent.RESEARCH_LANDSCAPE_MAP:
+        return (PlanGroup.PRIMARY, PlanGroup.EVIDENCE)
     if surface.purpose in {
         SurfacePurpose.PROJECT_PROGRESS,
         SurfacePurpose.WORKSPACE_RUN_COMPARISON,
@@ -461,6 +470,7 @@ _PURPOSE_VIEWS = {
     SurfacePurpose.PAPER_EVIDENCE: WorkspaceView.PAPER_EVIDENCE,
     SurfacePurpose.WORKSPACE_RUN_COMPARISON: WorkspaceView.RUN_COMPARISON,
     SurfacePurpose.BLOCKER_VIEW: WorkspaceView.BLOCKERS,
+    SurfacePurpose.RESEARCH_LANDSCAPE: WorkspaceView.RESEARCH_LANDSCAPE,
 }
 
 _GENERATED_TITLES = {
@@ -469,4 +479,5 @@ _GENERATED_TITLES = {
     IntentGoal.RUN_COMPARISON: "Generated run comparison workspace",
     IntentGoal.PAPER_EVIDENCE_REVIEW: "Generated paper evidence workspace",
     IntentGoal.NEXT_STEP_REVIEW: "Generated next-step review workspace",
+    IntentGoal.RESEARCH_LANDSCAPE_REVIEW: "Generated research landscape workspace",
 }

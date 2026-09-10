@@ -701,6 +701,11 @@ _GOAL_COMPONENT_PRIORITIES = {
         TrustedComponent.PROJECT_SUMMARY_CARD: 10,
         TrustedComponent.RUN_HEALTH: 11,
     },
+    IntentGoal.RESEARCH_LANDSCAPE_REVIEW: {
+        TrustedComponent.RESEARCH_LANDSCAPE_MAP: 0,
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 10,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 20,
+    },
 }
 
 _GOAL_SELECTED_COMPONENTS = {
@@ -734,6 +739,13 @@ _GOAL_SELECTED_COMPONENTS = {
     ),
     IntentGoal.NEXT_STEP_REVIEW: frozenset(
         {
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+        }
+    ),
+    IntentGoal.RESEARCH_LANDSCAPE_REVIEW: frozenset(
+        {
+            TrustedComponent.RESEARCH_LANDSCAPE_MAP,
             TrustedComponent.PROJECT_PROGRESS_BOARD,
             TrustedComponent.PROJECT_SUMMARY_CARD,
         }

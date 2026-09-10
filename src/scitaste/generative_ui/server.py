@@ -37,6 +37,7 @@ from scitaste.generative_ui.workspace import (
     PendingProposalsQuery,
     ProjectOverviewQuery,
     ProjectProgressQuery,
+    ResearchLandscapeQuery,
     RunComparisonQuery,
     RunStageQuery,
     UnknownWorkspaceSelectionError,
@@ -658,6 +659,8 @@ def _workspace_query(project_id: str, raw_view: str, tail: list[str]):
         return BlockerQuery(project_id=project_id, run_id=tail[1] if tail else None)
     if view is WorkspaceView.PENDING_PROPOSALS and not tail:
         return PendingProposalsQuery(project_id=project_id)
+    if view is WorkspaceView.RESEARCH_LANDSCAPE and not tail:
+        return ResearchLandscapeQuery(project_id=project_id)
     raise _HTTPProblem(
         HTTPStatus.NOT_FOUND,
         "invalid_workspace_path",

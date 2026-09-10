@@ -1067,6 +1067,315 @@ code {
   font-size: 0.86rem;
 }
 
+.research-landscape {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.landscape-decision {
+  align-items: center;
+  background: #fff3d9;
+  border: 1px solid #e1bd72;
+  border-left: 0.4rem solid #b37319;
+  border-radius: 0.6rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+}
+
+.landscape-decision.state-ready {
+  background: #e5f3e9;
+  border-color: #89b99a;
+}
+
+.landscape-decision h3 {
+  font-size: 1.12rem;
+  margin: 0.18rem 0 0;
+}
+
+.landscape-counts {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.landscape-counts > span {
+  background: rgb(255 255 255 / 62%);
+  border-radius: 0.45rem;
+  display: grid;
+  min-width: 4.4rem;
+  padding: 0.45rem;
+  text-align: center;
+}
+
+.landscape-counts strong {
+  font-size: 1.15rem;
+}
+
+.landscape-counts small,
+.landscape-lenses small,
+.readiness-lane small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.landscape-lenses {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landscape-lenses article {
+  align-items: start;
+  background: #f4f6f1;
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.65rem;
+}
+
+.landscape-lenses article > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.lens-symbol {
+  align-items: center;
+  background: var(--forest-dark);
+  border-radius: 99rem;
+  color: #fff;
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  height: 1.8rem;
+  justify-content: center;
+  width: 1.8rem;
+}
+
+.landscape-matrix-scroll {
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.landscape-matrix {
+  border-collapse: collapse;
+  font-size: 0.74rem;
+  min-width: 48rem;
+  width: 100%;
+}
+
+.landscape-matrix th,
+.landscape-matrix td {
+  border-bottom: 1px solid #e4e6df;
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+}
+
+.landscape-matrix thead th {
+  background: #eef2ec;
+  color: var(--muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.landscape-matrix th:first-child {
+  min-width: 9rem;
+  padding-left: 0.6rem;
+  text-align: left;
+}
+
+.landscape-matrix th:first-child strong,
+.landscape-matrix th:first-child small,
+.landscape-matrix td:last-child small {
+  display: block;
+}
+
+.landscape-work.role-primary th:first-child {
+  border-left: 0.28rem solid #2b7657;
+}
+
+.landscape-work.role-anchor th:first-child {
+  border-left: 0.28rem solid #587b94;
+}
+
+.coverage-mark {
+  color: #c5cac3;
+  font-size: 1.15rem;
+}
+
+.coverage-mark.covered {
+  color: #247451;
+}
+
+.signal-tag,
+.landscape-pill,
+.barrier-code {
+  border-radius: 99rem;
+  display: inline-block;
+  font-size: 0.64rem;
+  font-weight: 750;
+  padding: 0.2rem 0.42rem;
+}
+
+.signal-executed,
+.landscape-pill.state-ready {
+  background: #d7eddf;
+  color: #155237;
+}
+
+.signal-mixed,
+.landscape-pill.state-candidate {
+  background: #e2eaf0;
+  color: #36566c;
+}
+
+.signal-artifact,
+.signal-simulated,
+.landscape-pill.state-blocked {
+  background: #f5dfd9;
+  color: #7c342b;
+}
+
+.resource-tier {
+  margin-top: 0.2rem;
+}
+
+.landscape-context {
+  margin-top: 0.55rem;
+}
+
+.landscape-context > summary,
+.landscape-open-questions > summary {
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 0.35rem 0;
+}
+
+.readiness-lanes {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.readiness-lane {
+  background: #f5f6f2;
+  border-top: 0.25rem solid #a8afa8;
+  border-radius: 0.45rem;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+}
+
+.readiness-lane.readiness-adaptation {
+  border-top-color: #c78b35;
+}
+
+.readiness-lane.readiness-formal {
+  border-top-color: #2b7657;
+}
+
+.readiness-lane h4 {
+  font-size: 0.76rem;
+  margin: 0 0 0.15rem;
+  text-transform: uppercase;
+}
+
+.readiness-lane article {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.5rem;
+}
+
+.barrier-code {
+  background: #f7e7e2;
+  color: #6f382f;
+  font-weight: 600;
+  margin-top: 0.2rem;
+  width: fit-content;
+}
+
+.lane-empty {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin: 0;
+}
+
+.planning-gate-rail {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(7, minmax(5.2rem, 1fr));
+  list-style: none;
+  margin: 0;
+  overflow-x: auto;
+  padding: 0.35rem 0 0.6rem;
+}
+
+.gate-node {
+  align-items: center;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  min-width: 5.2rem;
+  position: relative;
+  text-align: center;
+}
+
+.gate-node::before {
+  background: #c9cec8;
+  content: "";
+  height: 0.16rem;
+  left: -50%;
+  position: absolute;
+  top: 0.52rem;
+  width: 100%;
+  z-index: 0;
+}
+
+.gate-node:first-child::before {
+  display: none;
+}
+
+.gate-marker {
+  background: #9fa69f;
+  border: 0.2rem solid #fff;
+  border-radius: 99rem;
+  box-shadow: 0 0 0 1px #9fa69f;
+  height: 1.05rem;
+  width: 1.05rem;
+  z-index: 1;
+}
+
+.gate-node.state-ready .gate-marker {
+  background: #287555;
+  box-shadow: 0 0 0 1px #287555;
+}
+
+.gate-node.state-blocked .gate-marker {
+  background: #a34e42;
+  box-shadow: 0 0 0 1px #a34e42;
+}
+
+.gate-node strong {
+  font-size: 0.68rem;
+}
+
+.landscape-open-questions ol {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.76rem;
+  gap: 0.35rem;
+  line-height: 1.4;
+  margin: 0.35rem 0 0;
+  padding-left: 1.4rem;
+}
+
 @media (max-width: 1050px) {
   .application-grid {
     grid-template-columns: minmax(14rem, 18rem) minmax(20rem, 1fr);
@@ -1144,5 +1453,15 @@ code {
   .candidate-button small {
     margin-left: 0;
     text-align: left;
+  }
+
+  .landscape-decision {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .landscape-lenses,
+  .readiness-lanes {
+    grid-template-columns: 1fr;
   }
 }

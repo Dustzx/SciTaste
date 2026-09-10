@@ -44,6 +44,7 @@ class TrustedComponent(StrEnum):
     RUN_BLOCKER_PANEL = "RunBlockerPanel"
     PENDING_PROPOSAL_LIST = "PendingProposalList"
     PROJECT_PROGRESS_BOARD = "ProjectProgressBoard"
+    RESEARCH_LANDSCAPE_MAP = "ResearchLandscapeMap"
 
 
 class SurfacePurpose(StrEnum):
@@ -58,6 +59,7 @@ class SurfacePurpose(StrEnum):
     BLOCKER_VIEW = "blocker_view"
     PENDING_PROPOSALS = "pending_proposals"
     PROJECT_PROGRESS = "project_progress"
+    RESEARCH_LANDSCAPE = "research_landscape"
     GENERATED_WORKSPACE = "generated_workspace"
 
 
@@ -124,5 +126,8 @@ COMPONENT_REGISTRY: dict[TrustedComponent, ComponentPolicy] = {
     TrustedComponent.PENDING_PROPOSAL_LIST: ComponentPolicy(frozenset({EvidenceKind.AUDIT_RECORD})),
     TrustedComponent.PROJECT_PROGRESS_BOARD: ComponentPolicy(
         frozenset({EvidenceKind.PROJECT_MANIFEST})
+    ),
+    TrustedComponent.RESEARCH_LANDSCAPE_MAP: ComponentPolicy(
+        frozenset({EvidenceKind.PROJECT_MANIFEST, EvidenceKind.RUN_RECORD})
     ),
 }

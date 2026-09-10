@@ -644,6 +644,14 @@ latency, tool-call, or measured-cost failure. Generated deep links name exact
 admitted surfaces retained in a bounded process-local cache and fail stale after
 restart or eviction rather than silently regenerating different content.
 
+A registered `autoresearch-evaluation-landscape-v1` projection adds Research
+Synthesis Taste to this boundary. The receiver turns one content-addressed
+literature artifact into a lifecycle matrix, separated evaluation lenses,
+comparison-readiness lanes, and a protocol-gate rail. The policy controls visual
+hierarchy, compression, and progressive disclosure without rewriting evidence.
+Its `hold` state can guide the next no-run design work but cannot freeze a
+protocol or grant download, model, GPU, human-study, or execution authority.
+
 Its evaluation layer is also data-only. Fingerprinted reports may compare the
 number of fixed source views represented in one generated composition and record
 environment-bound local latency. A dependency-free Chromium probe observes

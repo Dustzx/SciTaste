@@ -28,6 +28,7 @@ from scitaste.generative_ui.registry import (
     SurfacePurpose,
     TrustedComponent,
 )
+from scitaste.generative_ui.research_landscape import ResearchLandscapeData
 from scitaste.generative_ui.safety import (
     ProjectIdentifier,
     SafeIdentifier,
@@ -387,7 +388,16 @@ class AvailabilityNoticeData(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
     project_ref_id: SafeIdentifier
-    subject: Literal["runs", "stages", "papers", "evidence", "comparison", "blockers", "proposals"]
+    subject: Literal[
+        "runs",
+        "stages",
+        "papers",
+        "evidence",
+        "comparison",
+        "blockers",
+        "proposals",
+        "research_landscape",
+    ]
     state: Literal["empty", "unavailable"]
     reason_code: SafeIdentifier
 
@@ -759,6 +769,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "compare_runs",
         "review_paper_evidence",
         "review_next_gate",
+        "review_research_landscape",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -931,6 +942,7 @@ _COMPONENT_DATA_ADAPTERS: dict[TrustedComponent, TypeAdapter[object]] = {
     TrustedComponent.RUN_BLOCKER_PANEL: TypeAdapter(RunBlockerPanelData),
     TrustedComponent.PENDING_PROPOSAL_LIST: TypeAdapter(PendingProposalListData),
     TrustedComponent.PROJECT_PROGRESS_BOARD: TypeAdapter(ProjectProgressBoardData),
+    TrustedComponent.RESEARCH_LANDSCAPE_MAP: TypeAdapter(ResearchLandscapeData),
 }
 
 

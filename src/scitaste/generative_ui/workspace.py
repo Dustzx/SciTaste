@@ -46,6 +46,11 @@ from scitaste.generative_ui.registry import (
     SurfacePurpose,
     TrustedComponent,
 )
+from scitaste.generative_ui.research_landscape import (
+    ResearchLandscapeData,
+    find_research_landscape_run,
+    load_project_research_landscape,
+)
 from scitaste.generative_ui.safety import (
     ProjectIdentifier,
     SafeIdentifier,
@@ -81,6 +86,7 @@ class WorkspaceView(StrEnum):
     RUN_COMPARISON = "run-comparison"
     BLOCKERS = "blockers"
     PENDING_PROPOSALS = "pending-proposals"
+    RESEARCH_LANDSCAPE = "research-landscape"
 
 
 def _entry_identifier(value: str) -> str:
@@ -168,6 +174,14 @@ class PendingProposalsQuery(BaseModel):
     project_id: ProjectIdentifier
 
 
+class ResearchLandscapeQuery(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    view: Literal[WorkspaceView.RESEARCH_LANDSCAPE] = WorkspaceView.RESEARCH_LANDSCAPE
+    project_id: ProjectIdentifier
+
+
 class _ManifestCurrentFocus(BaseModel):
     """Strictly admitted subset of the optional project extension."""
 
@@ -207,7 +221,8 @@ WorkspaceQuery = Annotated[
     | PaperEvidenceQuery
     | RunComparisonQuery
     | BlockerQuery
-    | PendingProposalsQuery,
+    | PendingProposalsQuery
+    | ResearchLandscapeQuery,
     Field(discriminator="view"),
 ]
 ProjectWorkspaceQuery = (
@@ -218,6 +233,7 @@ ProjectWorkspaceQuery = (
     | RunComparisonQuery
     | BlockerQuery
     | PendingProposalsQuery
+    | ResearchLandscapeQuery
 )
 _QUERY_ADAPTER: TypeAdapter[WorkspaceQuery] = TypeAdapter(WorkspaceQuery)
 
@@ -365,8 +381,10 @@ class WorkspaceSurfaceFactory:
             surface = self._comparison_surface(parsed, snapshot, binding)
         elif isinstance(parsed, BlockerQuery):
             surface = self._blocker_surface(parsed, snapshot, binding)
-        else:
+        elif isinstance(parsed, PendingProposalsQuery):
             surface = self._pending_surface(parsed, snapshot, binding)
+        else:
+            surface = self._research_landscape_surface(parsed, snapshot, binding)
         self._confirm(snapshot, binding)
         return surface
 
@@ -571,6 +589,18 @@ class WorkspaceSurfaceFactory:
                     "target_ids": [],
                 }
             )
+        landscape_run = find_research_landscape_run(snapshot)
+        if landscape_run is not None:
+            landscape_ref = run_refs[landscape_run.run_id]
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-research-evaluation-landscape",
+                    "kind": "review_research_landscape",
+                    "label_code": "review-autoresearch-evaluation-landscape",
+                    "support_ref_ids": [project_ref.evidence_id, landscape_ref.evidence_id],
+                    "target_ids": [],
+                }
+            )
 
         component = ComponentSpec(
             component_id="project-progress-board",
@@ -621,6 +651,52 @@ class WorkspaceSurfaceFactory:
             },
         )
         return _surface(query, snapshot, binding, components=[component])
+
+    def _research_landscape_surface(
+        self,
+        query: ResearchLandscapeQuery,
+        snapshot: ProjectSnapshot,
+        binding: SnapshotBinding,
+    ) -> SurfaceSpec:
+        project_ref = _manifest_ref(binding)
+        run = find_research_landscape_run(snapshot)
+        if run is None:
+            return _surface(
+                query,
+                snapshot,
+                binding,
+                components=[
+                    _notice(
+                        project_ref,
+                        "research_landscape",
+                        "unavailable",
+                        "no-registered-research-landscape",
+                    )
+                ],
+            )
+        run_ref = _run_ref(snapshot, binding, run.run_id)
+        project_root = self._runtime.projects_root / snapshot.project_id
+        artifact = load_project_research_landscape(project_root, snapshot, run)
+        data = ResearchLandscapeData(
+            **artifact.model_dump(mode="json"),
+            project_ref_id=project_ref.evidence_id,
+            run_ref_id=run_ref.evidence_id,
+            support_ref_ids=(project_ref.evidence_id, run_ref.evidence_id),
+        )
+        return _surface(
+            query,
+            snapshot,
+            binding,
+            components=[
+                ComponentSpec(
+                    component_id="research-landscape-map",
+                    component=TrustedComponent.RESEARCH_LANDSCAPE_MAP,
+                    title="AutoResearch evaluation landscape",
+                    evidence_ref_ids=[project_ref.evidence_id, run_ref.evidence_id],
+                    data=data.model_dump(mode="json"),
+                )
+            ],
+        )
 
     def _context(self, project_id: str) -> tuple[ProjectSnapshot, SnapshotBinding]:
         validate_project_id(project_id)
@@ -1368,6 +1444,7 @@ _SURFACE_PURPOSE = {
     WorkspaceView.RUN_COMPARISON: SurfacePurpose.WORKSPACE_RUN_COMPARISON,
     WorkspaceView.BLOCKERS: SurfacePurpose.BLOCKER_VIEW,
     WorkspaceView.PENDING_PROPOSALS: SurfacePurpose.PENDING_PROPOSALS,
+    WorkspaceView.RESEARCH_LANDSCAPE: SurfacePurpose.RESEARCH_LANDSCAPE,
 }
 
 _VIEW_TITLES = {
@@ -1378,6 +1455,7 @@ _VIEW_TITLES = {
     WorkspaceView.RUN_COMPARISON: "Run comparison",
     WorkspaceView.BLOCKERS: "Run blockers",
     WorkspaceView.PENDING_PROPOSALS: "Pending proposals",
+    WorkspaceView.RESEARCH_LANDSCAPE: "Research evaluation landscape",
 }
 
 _ARTIFACT_MEDIA_TYPES = {

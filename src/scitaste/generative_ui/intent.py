@@ -52,6 +52,7 @@ class IntentGoal(StrEnum):
     RUN_COMPARISON = "run_comparison"
     PAPER_EVIDENCE_REVIEW = "paper_evidence_review"
     NEXT_STEP_REVIEW = "next_step_review"
+    RESEARCH_LANDSCAPE_REVIEW = "research_landscape_review"
 
 
 class IntentEntityRole(StrEnum):
@@ -656,6 +657,7 @@ _CANDIDATE_GOALS = {
     "compare_runs": IntentGoal.RUN_COMPARISON,
     "review_paper_evidence": IntentGoal.PAPER_EVIDENCE_REVIEW,
     "review_next_gate": IntentGoal.NEXT_STEP_REVIEW,
+    "review_research_landscape": IntentGoal.RESEARCH_LANDSCAPE_REVIEW,
 }
 
 _QUICK_LABELS = {
@@ -664,9 +666,21 @@ _QUICK_LABELS = {
     "compare_runs": "Compare the latest registered runs",
     "review_paper_evidence": "Review registered paper evidence",
     "review_next_gate": "Review the declared next gate",
+    "review_research_landscape": "Map how accepted AutoResearch work is evaluated",
 }
 
 _GOAL_TERMS = (
+    (
+        IntentGoal.RESEARCH_LANDSCAPE_REVIEW,
+        (
+            "相关工作怎么评测",
+            "实验如何对比",
+            "评测版图",
+            "研究地图",
+            "evaluation landscape",
+            "related work evaluation",
+        ),
+    ),
     (IntentGoal.RUN_COMPARISON, ("比较", "对比", "compare", "difference between")),
     (IntentGoal.BLOCKER_DIAGNOSIS, ("阻塞", "失败", "blocker", "blocked", "failed", "failure")),
     (IntentGoal.PAPER_EVIDENCE_REVIEW, ("论文", "证据", "paper", "claim", "evidence")),

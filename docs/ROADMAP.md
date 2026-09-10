@@ -172,6 +172,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 
 ## Phase 9 progress
 
+- A project-owned AutoResearch evaluation landscape now visualizes accepted
+  work by lifecycle coverage, evidence signal, resource scale, estimand, and
+  comparison readiness. It confirms that the literature synthesis is adequate
+  for choosing the next planning work, while the experiment protocol remains on
+  hold until exact held-out tasks, external adapters, pilot-based power, expert
+  calibration, and the resource manifest are resolved.
+
 - Architecture direction is now explicit: `scitaste-native` is the independent
   product default, while AutoResearchClaw is an optional baseline/compatibility
   adapter. The dependency-free native Phase 4--7 path is wired through one

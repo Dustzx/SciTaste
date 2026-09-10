@@ -17,9 +17,10 @@ never authors renderer content or authority.
 
 ## Evidence-native project workspace
 
-`WorkspaceSurfaceFactory` is the server-owned composer for eight closed views:
+`WorkspaceSurfaceFactory` is the server-owned composer for nine closed views:
 project list, project progress, project overview, run/stage explorer,
-paper/evidence, run comparison, blockers, and pending proposals. A browser may select only the
+paper/evidence, run comparison, blockers, pending proposals, and a registered
+research-evaluation landscape. A browser may select only the
 view and canonical project-owned run or paper identities defined by the
 corresponding discriminated query model. It cannot submit components, fields,
 layout, evidence, filters, prose, or renderer code.
@@ -31,7 +32,7 @@ closed. Empty projects, absent papers, unavailable stages, and missing
 comparable metrics use explicit typed availability states; the composer does not
 invent research progress or substitute model-authored explanations.
 
-The fixed receiver provides a project switcher, the seven project-scoped view
+The fixed receiver provides a project switcher, the eight project-scoped view
 controls, run and paper selection, comparison controls, freshness/provenance,
 and browser back/forward deep links. Conditional GET uses the workspace
 fingerprint as an ETag. The responsive shell and all navigation remain receiver
@@ -102,9 +103,38 @@ inspection target.
 
 Next-step entries are capabilities for later intent planning, not controller
 decisions. They can offer progress review, blocker diagnosis, comparison of the
-latest two registered runs, paper-evidence review, or review of a declared next
-gate only when their required project records exist. They contain no command or
-execution authority.
+latest two registered runs, paper-evidence review, review of a declared next
+gate, or a registered evaluation landscape only when their required project
+records exist. They contain no command or execution authority.
+
+### Research synthesis as generated visual content
+
+The `research-landscape` view prevents a prose experiment plan from becoming a
+premature protocol. It reads only a strict, project-owned
+`autoresearch-evaluation-landscape-v1` artifact declared by a registered run.
+The artifact is bounded, schema-closed, contained beneath that run, and covered
+by the run-directory hash in the current snapshot. An absent projection becomes
+an explicit unavailable state; an escaping, oversized, duplicate-key, malformed,
+or stale artifact fails closed.
+
+The receiver applies a versioned research-synthesis Taste instead of displaying
+the source audit chronologically. It keeps six estimands separate; foregrounds
+primary comparisons and resource-bearing precedents; maps work against eight
+lifecycle stages; distinguishes executed, mixed, artifact-only, and simulated
+signals; and places benchmarks, systems, and judges on a reference-to-adaptation-
+to-formal readiness ladder. Contextual benchmarks and unresolved design choices
+use progressive disclosure. No completion percentage, universal score, or
+inferred superiority appears.
+
+This Taste is a presentation and abstraction policy, not a factual rewriter. It
+chooses relationships, visual hierarchy, compression, and disclosure while
+preserving the registered synthesis bytes and evidence identities. The current
+self-development artifact therefore leads with `hold`: the literature map is
+sufficient to identify the next no-run work, but exact held-out tasks, matched
+adapters, statistical power, expert calibration, and a resource manifest remain
+blocked. The map can justify continuing experiment *planning*; it cannot
+authorize downloads, provider calls, GPU work, human recruitment, or formal
+cells.
 
 The existing `scitaste-self-development` project is a read-only self-hosting
 acceptance case. Its repository-local manifest had reached revision 203 with 40
@@ -130,8 +160,8 @@ next-gate review appear only when the current manifest and evidence binding make
 them possible. Equivalent quick and recognized free-form requests resolve to
 the same canonical `WorkspaceIntent` fingerprint.
 
-The initial deterministic resolver recognizes progress, blocker, comparison,
-paper-evidence, and next-step goals in Chinese or English. A free comparison
+The initial deterministic resolver recognizes progress, blocker, run comparison,
+research-landscape, paper-evidence, and next-step goals in Chinese or English. A free comparison
 must name exactly two registered Run IDs or returns a bounded Run candidate set.
 A paper request with multiple registered papers likewise requests
 clarification. Unknown long-tail language returns

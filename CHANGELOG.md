@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Generation as Content now projects a registered AutoResearch evaluation
+  synthesis as a compact lifecycle map, six-lens estimand palette, comparison-
+  readiness ladder, and experiment-planning gate rail. The closed artifact and
+  receiver distinguish executed, mixed, artifact, and simulated evidence;
+  foreground key precedents while progressively disclosing context; and keep the
+  main experiment on hold while exact tasks, matched adapters, power, expert
+  calibration, and resources remain unresolved. The presentation policy is
+  explicit Research Synthesis Taste and grants no execution authority.
+
 - External evaluation resources now have a tracked, content-addressed v2 corpus
   covering MLR-Bench, EXP-Bench, MLR-Agent, AI Scientist-v2, and the pinned
   AutoResearchClaw `v0.5.0`. Exact repositories, dataset revisions, code-license
