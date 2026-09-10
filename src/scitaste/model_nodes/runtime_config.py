@@ -73,6 +73,7 @@ class ModelNodeRuntimeConfig(RuntimeConfigModel):
         "ambiguous-action",
         "tool-plan",
         "structured-repair",
+        "venue-paper-review",
     ]
     request_id: str | None = Field(default=None, min_length=1)
     node_input: dict[str, JsonValue]

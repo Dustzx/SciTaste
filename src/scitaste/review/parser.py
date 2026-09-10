@@ -2,30 +2,10 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
-
 from pydantic import BaseModel, ConfigDict, Field
 
+from scitaste.schema.review import ConcernCategory, ConcernSeverity
 from scitaste.state.research_state import ReviewerConcern
-
-
-class ConcernCategory(StrEnum):
-    CLARITY = "clarity"
-    MISSING_EVIDENCE = "missing_evidence"
-    MISSING_BASELINE = "missing_baseline"
-    ANALYSIS = "analysis"
-    METHOD = "method"
-    OVERCLAIM = "overclaim"
-    ERROR = "error"
-    LIMITATION = "limitation"
-    VALIDITY = "validity"
-
-
-class ConcernSeverity(StrEnum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
 
 
 class ReviewFeedback(BaseModel):

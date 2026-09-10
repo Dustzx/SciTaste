@@ -1,0 +1,11 @@
+# Content-addressed profile set for one bounded whole-paper internal review.
+# Live execution still requires a separately live-enabled priced backend config,
+# an environment credential, and the caller's --allow-live switch.
+schema_version: "1.0"
+profile_set_id: deepseek-v4flash-venue-review-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v4flash_venue_review_v1.yaml
+    sha256: 48dbe111cb510deff04b73d8aa1ff366b2737ddfd4158764a3de4bb6359e35ee
+    profile_sha256: d28e7f48bc2924ccd68abcb92832104e539b360b8c280a736693ab4df993aa81

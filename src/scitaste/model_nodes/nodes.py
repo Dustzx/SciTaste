@@ -30,6 +30,8 @@ from scitaste.model_nodes.schemas import (
     InterpretationThreatOutput,
     ReviewSemanticInput,
     ReviewSemanticOutput,
+    VenuePaperReviewInput,
+    VenuePaperReviewProposal,
 )
 from scitaste.model_nodes.tool_intelligence import (
     EvidenceInspectPermission,
@@ -388,6 +390,55 @@ class ReviewSemanticNode(ModelNode[ReviewSemanticInput, ReviewSemanticOutput]):
         return reasons
 
     def _proposed_action_types(self, proposal: ReviewSemanticOutput) -> list[MetaAction]:
+        return [item.proposed_action_type for item in proposal.concerns]
+
+
+class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProposal]):
+    """Review exact paper content without claiming expert or conference authority."""
+
+    node_name = "venue-paper-review"
+    prompt_version = "venue-paper-review-v1"
+    system_instruction = (
+        "Review the supplied anonymous paper against the four venue questions. Return a concise "
+        "summary, concrete strengths and weaknesses, one accept/reject recommendation with one "
+        "or two key reasons, questions, and only decision-relevant typed concerns. Do not invent "
+        "claims, sections, evidence types, numeric conference scores, reviewer identity, official "
+        "authority, experiments, citations, or facts absent from the paper. This is internal "
+        "model feedback, not independent expert review."
+    )
+    input_model = VenuePaperReviewInput
+    output_model = VenuePaperReviewProposal
+
+    def _proposal_rejections(
+        self,
+        proposal: VenuePaperReviewProposal,
+        *,
+        input_data: VenuePaperReviewInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons: list[str] = []
+        if proposal.packet_sha256 != input_data.packet_sha256:
+            reasons.append("proposal targets a different venue review packet")
+        expected_packet = context.metadata.get("review_packet_sha256")
+        if expected_packet != input_data.packet_sha256:
+            reasons.append("node context does not bind the venue review packet")
+        known_claims = set(context.claim_ids)
+        known_sections = set(context.section_ids)
+        permitted_evidence = set(input_data.permitted_evidence_types)
+        for concern in proposal.concerns:
+            if set(concern.target_claim_ids) - known_claims:
+                reasons.append(f"concern {concern.concern_id!r} references unknown claims")
+            if concern.target_section is not None and concern.target_section not in known_sections:
+                reasons.append(f"concern {concern.concern_id!r} references an unknown section")
+            if set(concern.required_evidence_types) - permitted_evidence:
+                reasons.append(
+                    f"concern {concern.concern_id!r} requests an unpermitted evidence type"
+                )
+        return reasons
+
+    def _proposed_action_types(self, proposal: VenuePaperReviewProposal) -> list[MetaAction]:
         return [item.proposed_action_type for item in proposal.concerns]
 
 

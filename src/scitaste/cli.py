@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -95,7 +96,9 @@ from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
 from scitaste.model_nodes.full_workflow_tool_intelligence import (
     load_full_workflow_tool_intelligence,
 )
+from scitaste.model_nodes.openai_compatible import load_structured_openai_compatible_config
 from scitaste.model_nodes.profiles import load_model_node_profile_set
+from scitaste.model_nodes.schemas import VenuePaperReviewProposal
 from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_advisory
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.project.models import validate_entry_id
@@ -108,8 +111,14 @@ from scitaste.review import (
     import_venue_review_report,
     import_venue_review_verification,
     inspect_venue_review,
+    load_venue_review_packet,
     prepare_venue_review,
     submit_venue_review_response,
+)
+from scitaste.review.model_report import (
+    build_internal_model_review_report,
+    build_venue_paper_review_material,
+    build_venue_paper_review_runtime_config,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
@@ -495,6 +504,59 @@ def build_parser() -> argparse.ArgumentParser:
     review_import.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(review_import)
     review_import.set_defaults(handler=_handle_project_paper_review_import)
+
+    review_import_model = project_paper_review_commands.add_parser(
+        "import-model-report",
+        help="Bind proposal-only model feedback to an internal reviewer identity",
+    )
+    review_import_model.add_argument("--project-id", required=True)
+    review_import_model.add_argument("--review-id", required=True)
+    review_import_model.add_argument("--proposal", type=Path, required=True)
+    review_import_model.add_argument("--report-id", required=True)
+    review_import_model.add_argument("--reviewer-id", required=True)
+    review_import_model.add_argument("--provider", required=True)
+    review_import_model.add_argument("--model", required=True)
+    review_import_model.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_import_model)
+    review_import_model.set_defaults(handler=_handle_project_paper_review_import_model)
+
+    review_model_input = project_paper_review_commands.add_parser(
+        "model-input",
+        help="Project an exact registered paper into a model-review node input",
+    )
+    review_model_input.add_argument("--project-id", required=True)
+    review_model_input.add_argument("--review-id", required=True)
+    review_model_input.add_argument("--paper-label", default="source-markdown")
+    review_model_input.add_argument(
+        "--permitted-evidence-type",
+        action="append",
+        default=[],
+    )
+    review_model_input.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_model_input)
+    review_model_input.set_defaults(handler=_handle_project_paper_review_model_input)
+
+    review_runtime_config = project_paper_review_commands.add_parser(
+        "runtime-config",
+        help="Build a profile-bound internal-review invocation without calling a model",
+    )
+    review_runtime_config.add_argument("--project-id", required=True)
+    review_runtime_config.add_argument("--review-id", required=True)
+    review_runtime_config.add_argument("--paper-label", default="source-markdown")
+    review_runtime_config.add_argument(
+        "--permitted-evidence-type",
+        action="append",
+        default=[],
+    )
+    review_runtime_config.add_argument("--profile-set", type=Path, required=True)
+    review_runtime_config.add_argument("--profile-id", required=True)
+    review_runtime_config.add_argument("--backend-config", type=Path, required=True)
+    review_runtime_config.add_argument("--expected-revision", type=int, required=True)
+    review_runtime_config.add_argument("--seed", type=int, default=0)
+    review_runtime_config.add_argument("--output", type=Path, required=True)
+    review_runtime_config.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_runtime_config)
+    review_runtime_config.set_defaults(handler=_handle_project_paper_review_runtime_config)
 
     review_respond = project_paper_review_commands.add_parser(
         "respond", help="Bind a complete response to a registered paper revision"
@@ -1470,6 +1532,115 @@ def _handle_project_paper_review_import(args: argparse.Namespace) -> int:
         expected_revision=args.expected_revision,
     )
     _print_review_operation(snapshot, review_round, report_sha256=report.report_sha256)
+    return 0
+
+
+def _handle_project_paper_review_import_model(args: argparse.Namespace) -> int:
+    _reject_review_import_dry_run(args)
+    runtime = ProjectRuntime(args.outputs_root)
+    proposal = VenuePaperReviewProposal.model_validate_json(
+        args.proposal.read_text(encoding="utf-8"), strict=True
+    )
+    packet = load_venue_review_packet(runtime, args.project_id, args.review_id)
+    report = build_internal_model_review_report(
+        packet,
+        proposal,
+        report_id=args.report_id,
+        reviewer_id=args.reviewer_id,
+        provider=args.provider,
+        model=args.model,
+    )
+    snapshot, review_round = import_venue_review_report(
+        runtime,
+        project_id=args.project_id,
+        review_id=args.review_id,
+        report=report,
+        expected_revision=args.expected_revision,
+    )
+    _print_review_operation(snapshot, review_round, report_sha256=report.report_sha256)
+    return 0
+
+
+def _handle_project_paper_review_model_input(args: argparse.Namespace) -> int:
+    material = build_venue_paper_review_material(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        paper_label=args.paper_label,
+        permitted_evidence_types=tuple(args.permitted_evidence_type),
+    )
+    print(material.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_review_runtime_config(args: argparse.Namespace) -> int:
+    profiles = load_model_node_profile_set(args.profile_set)
+    try:
+        profile = profiles.profiles[args.profile_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown model-node profile {args.profile_id!r}") from exc
+    material = build_venue_paper_review_material(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        paper_label=args.paper_label,
+        permitted_evidence_types=tuple(args.permitted_evidence_type),
+    )
+    if material.project_revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; "
+            f"current is {material.project_revision}"
+        )
+    config = build_venue_paper_review_runtime_config(
+        material,
+        profile=profile,
+        backend_config=load_structured_openai_compatible_config(args.backend_config),
+        seed=args.seed,
+    )
+    payload = (
+        json.dumps(
+            config.model_dump(mode="json", exclude_computed_fields=True),
+            indent=2,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{args.output.name}.", suffix=".tmp", dir=args.output.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, args.output)
+    finally:
+        temporary.unlink(missing_ok=True)
+    print(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "status": "prepared",
+                "project_id": material.project_id,
+                "project_revision": material.project_revision,
+                "review_id": material.review_id,
+                "paper_text_sha256": material.node_input.paper_text_sha256,
+                "packet_sha256": material.node_input.packet_sha256,
+                "profile_id": profile.profile_id,
+                "profile_fingerprint": profile.fingerprint,
+                "profile_set_sha256": profiles.source_sha256,
+                "backend_live_enabled": config.backend.config.live_enabled,
+                "runtime_config": str(args.output),
+                "runtime_config_sha256": hashlib.sha256(payload).hexdigest(),
+                "model_called": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

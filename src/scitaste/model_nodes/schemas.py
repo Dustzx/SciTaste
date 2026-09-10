@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scitaste.evidence.interpretation import InterpretationContext, ResultRecord
-from scitaste.review.parser import ConcernCategory, ConcernSeverity
 from scitaste.schema.actions import MetaAction, ResearchAction
+from scitaste.schema.review import ConcernCategory, ConcernSeverity
 
 
 class ReviewSemanticInput(BaseModel):
@@ -60,6 +62,90 @@ class ReviewSemanticOutput(BaseModel):
         concern_ids = [item.concern_id for item in self.concerns]
         if len(concern_ids) != len(set(concern_ids)):
             raise ValueError("proposed concern ids must be unique")
+        return self
+
+
+_ICLR_REVIEW_CRITERIA = (
+    "specific_question",
+    "motivation_and_literature",
+    "claim_support_and_rigor",
+    "significance_and_community_value",
+)
+
+
+class VenuePaperReviewInput(BaseModel):
+    """Exact paper text supplied to a proposal-only venue reviewer node."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    paper_text: str = Field(min_length=1, max_length=800_000)
+    paper_text_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    venue_id: str = Field(min_length=1, max_length=100)
+    registered_claim_ids: tuple[str, ...] = Field(default=(), max_length=128)
+    permitted_evidence_types: tuple[str, ...] = Field(default=(), max_length=40)
+    criteria: tuple[str, ...] = _ICLR_REVIEW_CRITERIA
+
+    @model_validator(mode="after")
+    def input_is_content_bound(self) -> VenuePaperReviewInput:
+        if hashlib.sha256(self.paper_text.encode()).hexdigest() != self.paper_text_sha256:
+            raise ValueError("paper_text_sha256 does not match paper_text")
+        if self.criteria != _ICLR_REVIEW_CRITERIA:
+            raise ValueError("venue paper review must preserve the four ICLR questions")
+        for values, label in (
+            (self.registered_claim_ids, "registered claim"),
+            (self.permitted_evidence_types, "permitted evidence type"),
+        ):
+            if tuple(sorted(set(values))) != values:
+                raise ValueError(f"{label} values must be sorted and unique")
+        return self
+
+
+class VenueReviewCriterionProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    criterion: Literal[
+        "specific_question",
+        "motivation_and_literature",
+        "claim_support_and_rigor",
+        "significance_and_community_value",
+    ]
+    assessment: Literal["satisfied", "partially_satisfied", "not_satisfied", "uncertain"]
+    rationale: str = Field(min_length=1, max_length=16_000)
+
+
+class VenuePaperReviewProposal(BaseModel):
+    """Untrusted model content; deterministic code adds reviewer identity and hashes."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    summary: str = Field(min_length=1, max_length=16_000)
+    strengths: tuple[str, ...] = Field(min_length=1, max_length=20)
+    weaknesses: tuple[str, ...] = Field(default=(), max_length=20)
+    criteria: tuple[VenueReviewCriterionProposal, ...] = Field(min_length=4, max_length=4)
+    initial_recommendation: Literal["accept", "reject"]
+    decision_reasons: tuple[str, ...] = Field(min_length=1, max_length=2)
+    questions: tuple[str, ...] = Field(default=(), max_length=20)
+    additional_feedback: tuple[str, ...] = Field(default=(), max_length=20)
+    concerns: tuple[ReviewConcernProposal, ...] = Field(default=(), max_length=40)
+    confidence: Literal["low", "medium", "high"]
+    ethics_concern: Literal["none", "potential"] = "none"
+    ethics_explanation: str | None = Field(default=None, max_length=16_000)
+
+    @model_validator(mode="after")
+    def proposal_is_complete(self) -> VenuePaperReviewProposal:
+        if tuple(item.criterion for item in self.criteria) != _ICLR_REVIEW_CRITERIA:
+            raise ValueError("venue review proposal must assess all four questions in order")
+        concern_ids = [item.concern_id for item in self.concerns]
+        if len(concern_ids) != len(set(concern_ids)):
+            raise ValueError("venue review concern IDs must be unique")
+        if self.initial_recommendation == "reject" and not self.concerns:
+            raise ValueError("a reject recommendation requires a decision-relevant concern")
+        if self.ethics_concern == "potential" and not self.ethics_explanation:
+            raise ValueError("a potential ethics concern requires an explanation")
+        if self.ethics_concern == "none" and self.ethics_explanation is not None:
+            raise ValueError("an ethics explanation requires ethics_concern=potential")
         return self
 
 

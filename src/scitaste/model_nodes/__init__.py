@@ -43,6 +43,7 @@ from scitaste.model_nodes.nodes import (
     ReviewSemanticNode,
     StructuredRepairNode,
     ToolPlanNode,
+    VenuePaperReviewNode,
 )
 from scitaste.model_nodes.openai_compatible import (
     HttpxStructuredTransport,
@@ -155,6 +156,9 @@ from scitaste.model_nodes.schemas import (
     ReviewSemanticOutput,
     ValidityThreatKind,
     ValidityThreatProposal,
+    VenuePaperReviewInput,
+    VenuePaperReviewProposal,
+    VenueReviewCriterionProposal,
 )
 from scitaste.model_nodes.tool_benchmark import (
     ToolBenchmarkCondition,
@@ -485,6 +489,10 @@ __all__ = [
     "ToolScopeProjection",
     "ValidityThreatKind",
     "ValidityThreatProposal",
+    "VenuePaperReviewInput",
+    "VenuePaperReviewNode",
+    "VenuePaperReviewProposal",
+    "VenueReviewCriterionProposal",
     "VerifiedProjectToolHandlers",
     "VersionedNodeContext",
     "VersionedNodeInput",

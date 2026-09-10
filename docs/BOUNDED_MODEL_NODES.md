@@ -71,8 +71,18 @@ cost telemetry is never admissible.
 | Node | Typed input | Proposal only | Deterministic checks |
 |---|---|---|---|
 | `ReviewSemanticNode` | free-text review and permitted evidence types | concerns and candidate action types | known claim/section IDs, evidence types, action allowlist |
+| `VenuePaperReviewNode` | exact packet-bound anonymous paper text and the four venue questions | ICLR-style review content and typed concerns | packet/text hashes, known claims/sections, evidence types, action allowlist; no reviewer identity or numeric score |
 | `InterpretationThreatNode` | existing result and interpretation context | validity threats, alternatives, follow-up action type | known evidence IDs, action allowlist; output has no claim-status field |
 | `AmbiguousActionNode` | feasible actions and deterministic scores | ranking over supplied IDs | low-margin trigger, exact full-action match with the complete context candidate set, exact candidate coverage, candidate action allowlist |
+
+Whole-paper review uses its own content-addressed profile set,
+`runtime_profiles.deepseek_venue_review_v1.yaml`, and a separately copied local
+backend configuration. The committed backend example remains disabled. The
+project review CLI first verifies and freezes the exact paper, packet, claims,
+sections, and caller-permitted evidence vocabulary into a normal runtime config;
+it never calls the provider while constructing that config. See
+`docs/PAPER_REVIEW_LOOP.md` for the complete command sequence and authority
+boundary.
 
 The interpretation taxonomy includes confounders, alternative explanations,
 statistical uncertainty, benchmark artifacts, compute mismatch, data leakage,

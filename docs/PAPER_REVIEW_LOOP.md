@@ -50,7 +50,7 @@ Prepare a review packet without calling a model:
 .venv/bin/scitaste project paper review prepare \
   --project-id <project-id> --review-id <review-id> \
   --paper-directory <registered-paper-directory> \
-  --venue-taste-config configs/writing/venues/iclr-2027/taste.yaml \
+  --venue-taste-profile configs/writing/venues/iclr-2027/taste.yaml \
   --scope development --expected-revision <revision> \
   --outputs-root outputs --dry-run
 ```
@@ -73,6 +73,56 @@ projection creates research obligations for evidence, method, claim, or
 communication work; it does not directly mutate canonical state or close a
 concern with prose alone.
 
+## Bounded model reviewer
+
+`venue-paper-review` is a proposal-only model node for an exact anonymous paper
+packet. Its input binds the packet hash, paper-text hash, registered claims,
+known sections, permitted evidence types, and the four venue questions. Its
+output contains review content only; it cannot choose its identity, claim to be
+an expert, add a numerical conference score, call tools, modify the paper, or
+close concerns.
+
+Build an exact runtime configuration before authorizing any provider call:
+
+```bash
+.venv/bin/scitaste project paper review runtime-config \
+  --project-id <project-id> --review-id <review-id> \
+  --profile-set configs/model_nodes/runtime_profiles.deepseek_venue_review_v1.yaml \
+  --profile-id deepseek-v4flash-venue-review \
+  --backend-config <ignored-local-backend-config.yaml> \
+  --permitted-evidence-type matched-method-comparison \
+  --expected-revision <revision> --output <ignored-runtime-config.json> \
+  --outputs-root outputs
+```
+
+This operation is network-free. It verifies the registered paper bytes and
+review round, freezes the permitted evidence vocabulary in the hashed node
+input, binds the paper packet to the immutable state projection, loads a
+content-addressed profile, and writes a no-secret runtime config without
+overwriting an existing file. `model-node runtime plan` can then validate that
+config without provider access; live execution still requires every independent
+runtime switch.
+
+The deterministic adapter converts an accepted proposal into a
+`VenueReviewReport` with `reviewer_kind=internal_model`, explicit provider/model
+identity, and a self-hash. The CLI imports it with:
+
+```bash
+.venv/bin/scitaste project paper review import-model-report \
+  --project-id <project-id> --review-id <review-id> \
+  --proposal <venue-paper-review-proposal.json> \
+  --report-id <report-id> --reviewer-id <reviewer-id> \
+  --provider deepseek --model deepseek-v4-flash \
+  --expected-revision <revision> --outputs-root outputs
+```
+
+The DeepSeek review profile and inert priced backend example reserve a 32,768-
+token output ceiling for this whole-paper node. It is neither the old 2,048-token
+probe limit nor a global SciTaste setting. The backend remains
+`live_enabled=false` in Git; a local ignored runtime config and explicit live
+switches are still required. A model report may close a development round after
+verified revision, but it never satisfies independent expert review.
+
 ## Lifecycle projection
 
 `scitaste project lifecycle status` verifies the project registry and derives
@@ -92,4 +142,3 @@ paper artifacts stored under the same project cannot be combined into a false
 idea-to-paper claim. The project homepage renders the same eight gates as a
 Generation as Content lifecycle rail, backed by the exact registered evidence
 rather than a manually entered completion percentage.
-

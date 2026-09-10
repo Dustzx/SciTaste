@@ -24,6 +24,7 @@ from scitaste.review import (
     route_venue_review_to_state,
     submit_venue_review_response,
 )
+from scitaste.review.model_report import build_venue_paper_review_material
 from scitaste.state.research_state import ResearchState
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -258,6 +259,46 @@ def test_review_round_requires_response_and_original_reviewer_verification(
     assert lifecycle.gates[-1].state == "satisfied"
     assert lifecycle.independent_pre_submission_review_complete is False
     assert lifecycle.gates[0].reason_code == "native-idea-unverified"
+
+
+def test_model_review_material_is_bound_to_registered_paper_bytes(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    paper_text = "# Paper v1\r\n\r\nA content-bound claim.\r\n"
+    snapshot = _paper(runtime, _project(runtime), "paper-v1", text=paper_text)
+    _snapshot, packet, _round_record = prepare_venue_review(
+        runtime,
+        project_id="review-project",
+        paper_directory="paper-v1",
+        review_id="model-review-r1",
+        round_number=1,
+        review_scope="development",
+        venue_taste_profile=_PROFILE,
+        expected_revision=snapshot.revision,
+        select=True,
+    )
+
+    material = build_venue_paper_review_material(
+        runtime,
+        project_id="review-project",
+        review_id="model-review-r1",
+        permitted_evidence_types=("controlled-analysis", "controlled-analysis"),
+    )
+
+    assert material.review_id == "model-review-r1"
+    assert material.paper_locator == "papers/paper-v1/main.md"
+    assert material.node_input.packet_sha256 == packet.packet_sha256
+    assert material.node_input.paper_text == paper_text
+    assert material.node_input.permitted_evidence_types == ("controlled-analysis",)
+    assert material.section_ids == ()
+
+    paper_path = runtime.projects_root / "review-project" / "papers/paper-v1/main.md"
+    paper_path.write_text("# Drifted paper\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="differs from its packet"):
+        build_venue_paper_review_material(
+            runtime,
+            project_id="review-project",
+            review_id="model-review-r1",
+        )
 
 
 def test_model_identity_and_state_routing_cannot_masquerade_as_expert_evidence() -> None:

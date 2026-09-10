@@ -36,6 +36,7 @@ from scitaste.model_nodes.nodes import (
     ReviewSemanticNode,
     StructuredRepairNode,
     ToolPlanNode,
+    VenuePaperReviewNode,
 )
 from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
 from scitaste.model_nodes.replay import (
@@ -51,6 +52,8 @@ from scitaste.model_nodes.schemas import (
     InterpretationThreatOutput,
     ReviewSemanticInput,
     ReviewSemanticOutput,
+    VenuePaperReviewInput,
+    VenuePaperReviewProposal,
 )
 from scitaste.model_nodes.tool_intelligence import (
     StructuredRepairInput,
@@ -298,6 +301,11 @@ _NODE_TYPES = {
         StructuredRepairNode,
         StructuredRepairInput,
         StructuredRepairOutput,
+    ),
+    "venue-paper-review": ModelNodeRegistration(
+        VenuePaperReviewNode,
+        VenuePaperReviewInput,
+        VenuePaperReviewProposal,
     ),
 }
 

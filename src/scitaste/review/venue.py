@@ -767,6 +767,21 @@ def inspect_venue_review(
     return round_record
 
 
+def load_venue_review_packet(
+    runtime: ProjectRuntime, project_id: str, review_id: str
+) -> VenueReviewPacket:
+    """Load the exact packet only after the complete registered round verifies."""
+
+    round_record = inspect_venue_review(runtime, project_id, review_id)
+    root = runtime.projects_root / project_id / "reviews" / review_id
+    packet = VenueReviewPacket.model_validate_json(
+        _contained_file(root, round_record.packet_locator).read_text(encoding="utf-8")
+    )
+    if packet.packet_sha256 != round_record.packet_sha256:
+        raise ValueError("review packet hash differs from its verified round")
+    return packet
+
+
 def route_venue_review_to_state(
     report: VenueReviewReport,
     state: ResearchState,

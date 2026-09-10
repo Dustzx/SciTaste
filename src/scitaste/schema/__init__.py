@@ -2,5 +2,12 @@
 
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
+from scitaste.schema.review import ConcernCategory, ConcernSeverity
 
-__all__ = ["MetaAction", "ResearchAction", "ResearchDecision"]
+__all__ = [
+    "ConcernCategory",
+    "ConcernSeverity",
+    "MetaAction",
+    "ResearchAction",
+    "ResearchDecision",
+]
