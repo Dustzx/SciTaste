@@ -10,6 +10,14 @@ from scitaste.evaluation.adapter_preflight import (
     inspect_adapter_preflight,
     load_adapter_preflight_manifest,
 )
+from scitaste.evaluation.cell_plan import (
+    EvaluationCellPlan,
+    EvaluationCellResource,
+    PlannedEvaluationCell,
+    PlannedEvaluationLane,
+    compile_evaluation_cell_plan,
+    save_evaluation_cell_plan,
+)
 from scitaste.evaluation.critics import (
     EvaluationCriticDomain,
     EvaluationCriticFinding,
@@ -103,6 +111,8 @@ __all__ = [
     "DesignBlocker",
     "DesignGatePolicy",
     "DesignGateReport",
+    "EvaluationCellPlan",
+    "EvaluationCellResource",
     "EvaluationCriticDomain",
     "EvaluationCriticFinding",
     "EvaluationCriticReport",
@@ -127,6 +137,8 @@ __all__ = [
     "GpuModelResource",
     "HumanReviewResource",
     "IntegrityContract",
+    "PlannedEvaluationCell",
+    "PlannedEvaluationLane",
     "PrelaunchApproval",
     "PrelaunchBlocker",
     "PrelaunchGateReport",
@@ -153,6 +165,7 @@ __all__ = [
     "TaskSelectionInspection",
     "TaskSelectionReport",
     "attribute_failure",
+    "compile_evaluation_cell_plan",
     "evaluate_resource_feasibility",
     "inspect_adapter_preflight",
     "inspect_git_source",
@@ -162,4 +175,5 @@ __all__ = [
     "load_external_resource_corpus",
     "load_prelaunch_manifest",
     "load_task_selection_manifest",
+    "save_evaluation_cell_plan",
 ]

@@ -96,6 +96,24 @@ proposal is both ready and approved. The command itself has no execution path.
 A launch service must independently require `execution_authorized=true` and the
 same proposal hash.
 
+Expand the proposal into its exact per-system, per-task, per-seed identities
+without preparing or executing a launcher:
+
+```bash
+.venv/bin/scitaste evaluation cell-plan \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
+  --output /tmp/deepseek-v41-cell-plan.json
+```
+
+The compiler generates opaque cell and review-blind IDs, preserves declared
+matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
+and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
+blockers. Its output fixes `authorizes_execution=false` and records that no
+provider call, GPU work, or task download occurred. For the current V4.1
+proposal it produces all 50 intended cells, with zero ready for launch
+preparation; this makes the gap between a YAML cell count and an executable
+cross-framework experiment explicit.
+
 The `max_output_tokens_per_call` values in these proposals are per-experiment
 ceilings, not a global SciTaste limit. The V4.1 scope proposal reserves 32,768
 output tokens per call, 1,500 requests, and fifteen million total tokens across

@@ -62,6 +62,7 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    compile_evaluation_cell_plan,
     inspect_adapter_preflight,
     inspect_git_source,
     inspect_prelaunch_manifest,
@@ -70,6 +71,7 @@ from scitaste.evaluation import (
     load_external_resource_corpus,
     load_prelaunch_manifest,
     load_task_selection_manifest,
+    save_evaluation_cell_plan,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
@@ -844,6 +846,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(adapter_preflight)
     adapter_preflight.set_defaults(handler=_handle_evaluation_adapter_preflight)
+    cell_plan = evaluation_commands.add_parser(
+        "cell-plan",
+        help="Expand a prelaunch proposal into a content-addressed no-run cell matrix",
+    )
+    cell_plan.add_argument("--manifest", type=Path, required=True)
+    cell_plan.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="optional canonical JSON output; omitted for mutation-free inspection",
+    )
+    cell_plan.add_argument(
+        "--require-preparation-ready",
+        action="store_true",
+        help="return nonzero until every cell is ready for launch preparation",
+    )
+    _add_log_level_option(cell_plan)
+    cell_plan.set_defaults(handler=_handle_evaluation_cell_plan)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -2557,6 +2577,34 @@ def _handle_evaluation_adapter_preflight(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_adapter_ready and not report.ready_for_matched_adapter:
+        return 1
+    return 0
+
+
+def _handle_evaluation_cell_plan(args: argparse.Namespace) -> int:
+    inspection = load_prelaunch_manifest(args.manifest)
+    plan = compile_evaluation_cell_plan(inspection.manifest)
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "manifest_id": plan.manifest_id,
+        "proposal_sha256": plan.proposal_sha256,
+        "plan_sha256": plan.plan_sha256,
+        "planned_cells": len(plan.cells),
+        "ready_cells": sum(cell.ready_for_launch_preparation for cell in plan.cells),
+        "blocked_cells": sum(not cell.ready_for_launch_preparation for cell in plan.cells),
+        "ready_for_launch_preparation": plan.ready_for_launch_preparation,
+        "proposal_author_approved": plan.proposal_author_approved,
+        "authorizes_execution": plan.authorizes_execution,
+        "plan_blockers": plan.plan_blockers,
+        "no_provider_call_performed": plan.no_provider_call_performed,
+        "no_gpu_work_performed": plan.no_gpu_work_performed,
+        "no_task_download_performed": plan.no_task_download_performed,
+    }
+    if args.output is not None:
+        payload["cell_plan"] = str(save_evaluation_cell_plan(plan, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_preparation_ready and not plan.ready_for_launch_preparation:
         return 1
     return 0
 
