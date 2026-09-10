@@ -393,6 +393,9 @@ _PLACEMENT_EXPLANATIONS = {
     WorkspaceView.RUN_COMPARISON: "Included for the two runs bound by the resolved intent.",
     WorkspaceView.BLOCKERS: "Included from registered blocked or failed run evidence.",
     WorkspaceView.PENDING_PROPOSALS: "Included from verified proposal audit records.",
+    WorkspaceView.RESEARCH_LANDSCAPE: (
+        "Included from the registered literature-synthesis artifact."
+    ),
 }
 
 

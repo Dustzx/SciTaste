@@ -9,9 +9,12 @@ from pydantic import ValidationError
 from scitaste.generative_ui import (
     FreeQuestionRequest,
     IntentGoal,
+    QuickIntentRequest,
     ResearchLandscapeArtifact,
     ResearchLandscapeQuery,
     TrustedComponent,
+    WorkspaceGenerationRequest,
+    WorkspaceGenerationService,
     WorkspaceIntentResolver,
     WorkspaceSurfaceFactory,
     load_research_landscape_source,
@@ -131,6 +134,21 @@ def test_landscape_quick_and_free_intents_resolve_to_registered_map(tmp_path: Pa
     assert resolution.status == "resolved"
     assert resolution.intent is not None
     assert resolution.intent.goal == IntentGoal.RESEARCH_LANDSCAPE_REVIEW
+
+    generated = WorkspaceGenerationService(runtime).generate(
+        WorkspaceGenerationRequest(
+            quick_catalog_fingerprint=catalog.fingerprint,
+            intent_request=QuickIntentRequest(
+                project_id="landscape-project",
+                snapshot_revision=catalog.snapshot.snapshot_revision,
+                snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                quick_intent_id=descriptor.quick_intent_id,
+            ),
+        )
+    )
+    assert generated.status == "generated"
+    assert generated.renderer is not None
+    assert generated.renderer.components[0].renderer == TrustedComponent.RESEARCH_LANDSCAPE_MAP
 
 
 def test_landscape_artifact_must_remain_inside_declaring_run(tmp_path: Path) -> None:
