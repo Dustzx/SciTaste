@@ -135,7 +135,7 @@ works:
     name: Predicting Empirical AI Research Outcomes
     venue: NeurIPS 2025
     evaluation_unit: Pairwise prediction of empirical idea outcomes
-    scale: 1444 verified test pairs, 6000 training pairs, 33 unpublished pairs
+    scale: 1585 verified test pairs, 6000 training pairs, 33 unpublished pairs
     comparison_anchor: Human experts, frontier models, retrieval and tuned variants
     contribution_type: hybrid
     experiment_role: design-precedent
