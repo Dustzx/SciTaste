@@ -59,6 +59,8 @@ class PrelaunchSystem(BaseModel):
     external_resource_id: str | None = Field(default=None, pattern=_ID)
     availability: ReadinessStatus
     real_implementation: bool
+    adapter_preflight_ref: str | None = Field(default=None, max_length=1_000)
+    adapter_preflight_sha256: str | None = Field(default=None, pattern=_SHA256)
 
     @model_validator(mode="after")
     def external_methods_have_resource_identity(self) -> PrelaunchSystem:
@@ -70,6 +72,8 @@ class PrelaunchSystem(BaseModel):
             not self.real_implementation or self.implementation_ref is None
         ):
             raise ValueError("verified systems require a real pinned implementation")
+        if (self.adapter_preflight_ref is None) != (self.adapter_preflight_sha256 is None):
+            raise ValueError("adapter preflight reference and SHA-256 must be supplied together")
         return self
 
 
@@ -222,6 +226,51 @@ class RetentionContract(BaseModel):
     secrets_forbidden: Literal[True] = True
 
 
+class AnalysisContract(BaseModel):
+    """Frozen estimand and analysis identity; content is reviewed, never executed here."""
+
+    model_config = _CONFIG
+
+    primary_outcome: str = Field(min_length=1, max_length=1_000)
+    estimand: str = Field(min_length=1, max_length=2_000)
+    analysis_unit: str = Field(min_length=1, max_length=500)
+    aggregation_method: str = Field(min_length=1, max_length=1_000)
+    uncertainty_method: str = Field(min_length=1, max_length=1_000)
+    power_analysis_ref: str | None = Field(default=None, max_length=1_000)
+    power_analysis_sha256: str | None = Field(default=None, pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def power_analysis_is_content_bound(self) -> AnalysisContract:
+        if (self.power_analysis_ref is None) != (self.power_analysis_sha256 is None):
+            raise ValueError("power-analysis reference and SHA-256 must be supplied together")
+        return self
+
+
+class IntegrityContract(BaseModel):
+    """Content-bound policies preventing post-hoc repair, leakage, and silent exclusion."""
+
+    model_config = _CONFIG
+
+    preregistration_ref: str = Field(min_length=1, max_length=1_000)
+    preregistration_sha256: str = Field(pattern=_SHA256)
+    task_freeze_ref: str = Field(min_length=1, max_length=1_000)
+    task_freeze_sha256: str = Field(pattern=_SHA256)
+    failure_policy_ref: str = Field(min_length=1, max_length=1_000)
+    failure_policy_sha256: str = Field(pattern=_SHA256)
+    repair_policy_ref: str = Field(min_length=1, max_length=1_000)
+    repair_policy_sha256: str = Field(pattern=_SHA256)
+    leakage_audit_ref: str = Field(min_length=1, max_length=1_000)
+    leakage_audit_sha256: str = Field(pattern=_SHA256)
+    judge_protocol_ref: str | None = Field(default=None, max_length=1_000)
+    judge_protocol_sha256: str | None = Field(default=None, pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def optional_judge_protocol_is_content_bound(self) -> IntegrityContract:
+        if (self.judge_protocol_ref is None) != (self.judge_protocol_sha256 is None):
+            raise ValueError("judge-protocol reference and SHA-256 must be supplied together")
+        return self
+
+
 class PrelaunchApproval(BaseModel):
     model_config = _CONFIG
 
@@ -261,6 +310,8 @@ class ExperimentPrelaunchManifest(BaseModel):
     lanes: tuple[ExecutionLane, ...] = Field(min_length=1, max_length=10)
     human_review: HumanReviewResource
     retention: RetentionContract
+    analysis: AnalysisContract | None = None
+    integrity: IntegrityContract | None = None
     launch_order: tuple[str, ...] = Field(min_length=1, max_length=30)
     stop_rules: tuple[str, ...] = Field(min_length=1, max_length=30)
     approval: PrelaunchApproval = Field(default_factory=PrelaunchApproval)
@@ -545,12 +596,14 @@ def _git(cwd: Path, *arguments: str) -> str:
 
 
 __all__ = [
+    "AnalysisContract",
     "ApiModelResource",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",
     "GpuModelResource",
     "HumanReviewResource",
+    "IntegrityContract",
     "PrelaunchApproval",
     "PrelaunchBlocker",
     "PrelaunchGateReport",

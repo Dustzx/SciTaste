@@ -7,11 +7,15 @@ import pytest
 from pydantic import ValidationError
 
 from scitaste.evaluation import (
+    AnalysisContract,
     ApiModelResource,
+    EvaluationCriticDomain,
+    EvaluationCriticSuite,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     HumanReviewResource,
+    IntegrityContract,
     PrelaunchApproval,
     PrelaunchSystem,
     PrelaunchTask,
@@ -292,3 +296,111 @@ def test_loader_preserves_bytes_and_rejects_symlink(tmp_path: Path) -> None:
     assert len(loaded.file_sha256) == 64
     with pytest.raises(ValueError, match="must not be a symlink"):
         load_prelaunch_manifest(link)
+
+
+def test_critics_expose_all_five_domains_without_authorizing_execution() -> None:
+    manifest = _manifest()
+    gate = inspect_prelaunch_manifest(
+        manifest,
+        _admitted_corpus(),
+        observed_source_commit=COMMIT,
+        source_tree_clean=True,
+    )
+
+    review = EvaluationCriticSuite().review(manifest, _admitted_corpus(), gate)
+
+    assert {finding.domain for finding in review.findings} == set(EvaluationCriticDomain)
+    assert review.ready_for_author_review is False
+    assert review.authorizes_execution is False
+    assert review.no_execution_performed is True
+    assert set(review.blocking_codes) >= {
+        "baseline_applicability:real_matched_comparators",
+        "statistics:content_bound_analysis",
+        "statistics:independent_replication",
+        "integrity:frozen_temporal_integrity",
+    }
+
+
+def test_complete_critic_contract_is_review_ready_but_still_not_authority() -> None:
+    manifest = _manifest()
+    mlr_agent = manifest.systems[1].model_copy(
+        update={
+            "adapter_preflight_ref": "adapters/mlr-agent.json",
+            "adapter_preflight_sha256": HASH,
+        }
+    )
+    direct = PrelaunchSystem(
+        system_id="direct-agent",
+        role=SystemRole.CONTROL,
+        implementation_ref=f"scitaste-direct@{COMMIT}",
+        availability=ReadinessStatus.VERIFIED,
+        real_implementation=True,
+        adapter_preflight_ref="adapters/direct-agent.json",
+        adapter_preflight_sha256=HASH,
+    )
+    ai_scientist = PrelaunchSystem(
+        system_id="ai-scientist-v2",
+        role=SystemRole.METHOD_COMPARATOR,
+        implementation_ref="ai-scientist-v2@96bd51617cfdbb494a9fc283af00fe090edfae48",
+        external_resource_id="ai-scientist-v2",
+        availability=ReadinessStatus.VERIFIED,
+        real_implementation=True,
+        adapter_preflight_ref="adapters/ai-scientist-v2.json",
+        adapter_preflight_sha256=HASH,
+    )
+    second_task = manifest.tasks[0].model_copy(update={"task_id": "mlr-heldout-002"})
+    lane = manifest.lanes[0].model_copy(
+        update={
+            "system_ids": (
+                "scitaste-native",
+                "direct-agent",
+                "mlr-agent",
+                "ai-scientist-v2",
+            ),
+            "task_ids": ("mlr-heldout-001", "mlr-heldout-002"),
+            "seeds": (7, 19),
+            "planned_cells": 16,
+        }
+    )
+    complete = manifest.model_copy(
+        update={
+            "systems": (manifest.systems[0], direct, mlr_agent, ai_scientist),
+            "tasks": (manifest.tasks[0], second_task),
+            "lanes": (lane,),
+            "analysis": AnalysisContract(
+                primary_outcome="Blinded evidence-bearing package quality.",
+                estimand="Mean within-task Full SciTaste minus comparator difference.",
+                analysis_unit="task-system-seed trajectory",
+                aggregation_method="Hierarchical task-stratified mean difference.",
+                uncertainty_method="Task-clustered bootstrap confidence interval.",
+            ),
+            "integrity": IntegrityContract(
+                preregistration_ref="protocol/preregistration.md",
+                preregistration_sha256=HASH,
+                task_freeze_ref="protocol/tasks.json",
+                task_freeze_sha256=HASH,
+                failure_policy_ref="protocol/failures.md",
+                failure_policy_sha256=HASH,
+                repair_policy_ref="protocol/repairs.md",
+                repair_policy_sha256=HASH,
+                leakage_audit_ref="protocol/leakage.json",
+                leakage_audit_sha256=HASH,
+                judge_protocol_ref="protocol/judges.md",
+                judge_protocol_sha256=HASH,
+            ),
+        }
+    )
+    gate = inspect_prelaunch_manifest(
+        complete,
+        _admitted_corpus(),
+        observed_source_commit=COMMIT,
+        source_tree_clean=True,
+    )
+
+    review = EvaluationCriticSuite().review(complete, _admitted_corpus(), gate)
+
+    assert gate.ready_for_author_approval is True
+    assert gate.execution_authorized is False
+    assert review.ready_for_author_review is True
+    assert review.blocking_codes == ()
+    assert review.authorizes_execution is False

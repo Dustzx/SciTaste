@@ -1,5 +1,12 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.critics import (
+    EvaluationCriticDomain,
+    EvaluationCriticFinding,
+    EvaluationCriticReport,
+    EvaluationCriticSuite,
+    EvaluationCriticVerdict,
+)
 from scitaste.evaluation.design import (
     ApprovalRecord,
     ComparisonBlock,
@@ -20,12 +27,14 @@ from scitaste.evaluation.design import (
     attribute_failure,
 )
 from scitaste.evaluation.prelaunch import (
+    AnalysisContract,
     ApiModelResource,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     GpuModelResource,
     HumanReviewResource,
+    IntegrityContract,
     PrelaunchApproval,
     PrelaunchBlocker,
     PrelaunchGateReport,
@@ -60,6 +69,7 @@ from scitaste.evaluation.resources import (
 )
 
 __all__ = [
+    "AnalysisContract",
     "ApiModelResource",
     "ApprovalRecord",
     "ComparisonBlock",
@@ -67,6 +77,11 @@ __all__ = [
     "DesignBlocker",
     "DesignGatePolicy",
     "DesignGateReport",
+    "EvaluationCriticDomain",
+    "EvaluationCriticFinding",
+    "EvaluationCriticReport",
+    "EvaluationCriticSuite",
+    "EvaluationCriticVerdict",
     "EvaluationResourceKind",
     "EvaluationTask",
     "EvaluationTrack",
@@ -84,6 +99,7 @@ __all__ = [
     "FrameworkSpec",
     "GpuModelResource",
     "HumanReviewResource",
+    "IntegrityContract",
     "PrelaunchApproval",
     "PrelaunchBlocker",
     "PrelaunchGateReport",

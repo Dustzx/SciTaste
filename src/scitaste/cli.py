@@ -61,6 +61,7 @@ from scitaste.discovery.project_workflow import ProjectDiscoveryWorkflow
 from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
+    EvaluationCriticSuite,
     inspect_git_source,
     inspect_prelaunch_manifest,
     load_external_resource_corpus,
@@ -2462,6 +2463,11 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
         observed_source_commit=source_commit,
         source_tree_clean=source_tree_clean,
     )
+    critic_report = EvaluationCriticSuite().review(
+        inspection.manifest,
+        corpus.corpus,
+        report,
+    )
     payload = {
         "manifest_path": str(inspection.path),
         "manifest_file_sha256": inspection.file_sha256,
@@ -2469,9 +2475,12 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
         "resource_corpus_file_sha256": corpus.file_sha256,
         "resource_corpus_semantic_sha256": corpus.semantic_sha256,
         **report.model_dump(mode="json"),
+        "critic_review": critic_report.model_dump(mode="json"),
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
-    if args.require_ready and not report.execution_authorized:
+    if args.require_ready and (
+        not critic_report.ready_for_author_review or not report.execution_authorized
+    ):
         return 1
     return 0
 
