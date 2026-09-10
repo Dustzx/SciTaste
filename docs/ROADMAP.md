@@ -259,9 +259,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   evidence, pseudo baselines, unmatched comparison blocks, incomplete
   statistical review, mutable feedback protocols, and unapproved launch bytes.
   The accepted-work audit identifies MLR-Bench as the primary idea-to-paper
-  scaffold and EXP-Bench as the experiment-integrity scaffold; repository,
-  license, data, adapter, power, and resource feasibility remain the next
-  no-run gates.
+  scaffold and EXP-Bench as the experiment-integrity scaffold. A tracked v2
+  corpus now pins both benchmarks plus MLR-Agent, AI Scientist-v2, and
+  AutoResearchClaw with exact repositories, licenses, dataset revisions, and
+  use-specific deterministic gates. All are reference/code-audit eligible;
+  benchmark task-source and external comparison-system admission remain blocked
+  pending frozen task assets/licenses, adapters, mappings, sandbox/telemetry,
+  power analysis, and the user's explicit resource-manifest approval.
 
 - A content-hashed protocol covers diagnosis-friendly, clear-hypothesis,
   new-formulation, and ambiguous-direction tasks.

@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- External evaluation resources now have a tracked, content-addressed v2 corpus
+  covering MLR-Bench, EXP-Bench, MLR-Agent, AI Scientist-v2, and the pinned
+  AutoResearchClaw `v0.5.0`. Exact repositories, dataset revisions, code-license
+  hashes, custom obligations, requirements, and atomic evidence gates are
+  machine validated. Readiness is derived separately for reference, code audit,
+  benchmark tasks, and comparison systems; the experiment-design schema binds
+  the corpus hash and rechecks every external framework/task before completeness.
+  All five resources are currently reference/code-audit eligible, while no
+  formal benchmark or external-system launch is admitted.
+
 - Recursive AutoResearch evaluation design is now a typed, hash-bound contract
   rather than a prose-only plan. It separates held-out full-lifecycle,
   experiment-integrity, frontier-progress, decision, and self-development

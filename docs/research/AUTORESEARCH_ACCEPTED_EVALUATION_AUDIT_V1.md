@@ -51,6 +51,30 @@ fabricated. The snapshot must remain immutable; a future project-owned corpus
 revision should add these works, inclusion rules, acquisition hashes, license
 status, and adapter feasibility rather than silently editing the old ledger.
 
+That revision now exists as the tracked, metadata-only
+[`autoresearch_evaluation_resources_v2.yaml`](data/autoresearch_evaluation_resources_v2.yaml).
+It preserves the ignored v3 resource-disclosure ledger by locator and SHA-256
+and adds five exact official repository pins. Deterministic code derives four
+different permissions from its evidence gates:
+
+| Resource | Reference | Code audit | Benchmark task source | External comparison system |
+|---|---:|---:|---:|---:|
+| MLR-Bench | yes | yes | blocked | not applicable |
+| EXP-Bench | yes | yes | blocked | not applicable |
+| MLR-Agent | yes | yes | not applicable | blocked |
+| AI Scientist-v2 | yes | yes | not applicable | blocked |
+| AutoResearchClaw `v0.5.0` | yes | yes | not applicable | blocked |
+
+MLR-Bench and EXP-Bench still need a frozen source-disjoint executable subset,
+asset inventory, and per-task upstream-license audit. MLR-Agent still needs a
+thin unchanged-core adapter and complete mappings. AI Scientist-v2 additionally
+has a custom license with restricted-use and manuscript-disclosure obligations
+that require explicit acceptance; it must execute only in a dedicated sandbox.
+AutoResearchClaw already has a pinned unchanged-core integration and native
+artifact mapping, but its MLR/EXP task semantics, matched model mode, sandbox on
+those assets, and telemetry remain unqualified. Therefore no formal external
+run is authorized.
+
 ## What accepted work actually evaluates
 
 | Work | Accepted venue | Evaluation unit and scale | Compared against | Principal evidence | Boundary |
@@ -251,14 +275,16 @@ framework deficiencies even if a human can repair the prose afterward.
 
 ## Next no-run work
 
-1. create a new immutable accepted-evaluation corpus revision with licenses,
-   hashes, task assets, and official repository commits;
-2. implement an experiment-design state that represents E1--E5, their
-   estimands, baselines, statistics, resources, and evidence dependencies;
+1. completed: create a tracked accepted-evaluation corpus revision with official
+   repository/data pins, license hashes, capabilities, requirements, and
+   use-specific feasibility evidence;
+2. completed: implement a content-bound experiment-design state for E1--E5 and
+   require admitted benchmark/system resources before design completion;
 3. add benchmark-fit, baseline-applicability, statistics, integrity, and
    resource critics whose outputs are proposals rather than auto-accepted plans;
-4. perform read-only adapter and dataset feasibility audits for MLR-Bench,
-   EXP-Bench, AI Scientist-v2, MLR-Agent, and AutoResearchClaw;
+4. continue from the completed read-only identity/license audit to exact task
+   selection and adapter preflight; do not download or execute until the user
+   approves the resulting model/data/resource manifest;
 5. have SciTaste generate the concrete prelaunch proposal inside
    `scitaste-self-development`, then require human approval before any download,
    model call, human recruitment, API spend, or GPU run.

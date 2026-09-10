@@ -5,8 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from scitaste.evaluation.resources import (
+    ExternalResourceCorpus,
+    ResourceUse,
+    evaluate_resource_feasibility,
+)
 
 
 class FrozenModel(BaseModel):
@@ -39,6 +46,7 @@ class FrameworkSpec(FrozenModel):
     system_id: str = Field(min_length=1)
     role: FrameworkRole
     implementation_ref: str = Field(min_length=1)
+    resource_id: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     independent_from_scitaste: bool
     real_implementation: bool
     core_modified: bool = False
@@ -51,6 +59,8 @@ class FrameworkSpec(FrozenModel):
             raise ValueError("SciTaste cannot be marked independent from itself")
         if self.role == FrameworkRole.EXTERNAL and not self.independent_from_scitaste:
             raise ValueError("external systems must be independent from SciTaste")
+        if self.role == FrameworkRole.EXTERNAL and self.resource_id is None:
+            raise ValueError("external systems require an evaluation resource ID")
         return self
 
 
@@ -58,6 +68,10 @@ class EvaluationTask(FrozenModel):
     task_id: str = Field(min_length=1)
     track: EvaluationTrack
     benchmark_id: str = Field(min_length=1)
+    benchmark_resource_id: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    )
     source_group_id: str = Field(min_length=1)
     asset_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     held_out: bool
@@ -130,11 +144,12 @@ class ApprovalRecord(FrozenModel):
 
 
 class ExperimentDesignState(FrozenModel):
-    schema_version: str = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     design_id: str = Field(min_length=1)
     design_version: str = Field(min_length=1)
     protocol_id: str = Field(min_length=1)
     paper_claim: str = Field(min_length=1)
+    resource_corpus_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     frameworks: list[FrameworkSpec] = Field(min_length=1)
     tasks: list[EvaluationTask] = Field(min_length=1)
     comparison_blocks: list[ComparisonBlock] = Field(min_length=1)
@@ -186,6 +201,7 @@ class DesignGatePolicy(FrozenModel):
     require_full_lifecycle_headline: bool = True
     require_power_analysis: bool = True
     require_human_judge_validation: bool = True
+    require_resource_admission: bool = True
     min_human_reviewers: int = Field(default=2, ge=1)
 
 
@@ -211,7 +227,12 @@ class ExperimentDesignGate:
     def __init__(self, policy: DesignGatePolicy | None = None) -> None:
         self.policy = policy or DesignGatePolicy()
 
-    def evaluate(self, design: ExperimentDesignState) -> DesignGateReport:
+    def evaluate(
+        self,
+        design: ExperimentDesignState,
+        *,
+        resource_corpus: ExternalResourceCorpus | None = None,
+    ) -> DesignGateReport:
         blockers: list[DesignBlocker] = []
         frameworks = {framework.system_id: framework for framework in design.frameworks}
         tasks = {task.task_id: task for task in design.tasks}
@@ -261,6 +282,17 @@ class ExperimentDesignGate:
         headline_system_ids = {
             system_id for block in headline_blocks for system_id in block.system_ids
         }
+
+        if self.policy.require_resource_admission:
+            blockers.extend(
+                self._resource_blockers(
+                    design,
+                    headline_blocks=headline_blocks,
+                    frameworks=frameworks,
+                    tasks=tasks,
+                    resource_corpus=resource_corpus,
+                )
+            )
 
         for system_id in sorted(headline_system_ids):
             framework = frameworks[system_id]
@@ -427,6 +459,124 @@ class ExperimentDesignGate:
             blockers=blockers,
             authorization_blockers=authorization_blockers,
         )
+
+    @staticmethod
+    def _resource_blockers(
+        design: ExperimentDesignState,
+        *,
+        headline_blocks: list[ComparisonBlock],
+        frameworks: dict[str, FrameworkSpec],
+        tasks: dict[str, EvaluationTask],
+        resource_corpus: ExternalResourceCorpus | None,
+    ) -> list[DesignBlocker]:
+        if resource_corpus is None:
+            return [
+                DesignBlocker(
+                    code="missing_resource_corpus",
+                    message="the design gate requires its content-bound evaluation resource corpus",
+                )
+            ]
+        if resource_corpus.semantic_sha256 != design.resource_corpus_sha256:
+            return [
+                DesignBlocker(
+                    code="resource_corpus_hash_mismatch",
+                    message="the supplied resource corpus does not match the frozen design hash",
+                )
+            ]
+
+        blockers: list[DesignBlocker] = []
+        headline_system_ids = {
+            system_id for block in headline_blocks for system_id in block.system_ids
+        }
+        for system_id in sorted(headline_system_ids):
+            framework = frameworks[system_id]
+            if framework.role is not FrameworkRole.EXTERNAL:
+                continue
+            if framework.resource_id is None:
+                blockers.append(
+                    DesignBlocker(
+                        code="missing_framework_resource",
+                        message=f"{system_id} has no external resource binding",
+                    )
+                )
+                continue
+            try:
+                report = evaluate_resource_feasibility(
+                    resource_corpus,
+                    framework.resource_id,
+                    ResourceUse.COMPARISON_SYSTEM,
+                )
+            except ValueError:
+                blockers.append(
+                    DesignBlocker(
+                        code="unknown_framework_resource",
+                        message=(
+                            f"{system_id} references unknown evaluation resource "
+                            f"{framework.resource_id}"
+                        ),
+                    )
+                )
+                continue
+            if report.repository_commit not in framework.implementation_ref:
+                blockers.append(
+                    DesignBlocker(
+                        code="framework_pin_mismatch",
+                        message=(
+                            f"{system_id} implementation_ref does not bind admitted commit "
+                            f"{report.repository_commit}"
+                        ),
+                    )
+                )
+            if not report.eligible:
+                blockers.append(
+                    DesignBlocker(
+                        code="external_resource_not_admitted",
+                        message=(
+                            f"{system_id} is blocked for comparison_system: "
+                            f"{', '.join(report.blocker_codes)}"
+                        ),
+                    )
+                )
+
+        headline_task_ids = {task_id for block in headline_blocks for task_id in block.task_ids}
+        for task_id in sorted(headline_task_ids):
+            task = tasks[task_id]
+            if task.benchmark_resource_id is None:
+                blockers.append(
+                    DesignBlocker(
+                        code="missing_task_resource",
+                        message=f"{task_id} has no benchmark resource binding",
+                    )
+                )
+                continue
+            try:
+                report = evaluate_resource_feasibility(
+                    resource_corpus,
+                    task.benchmark_resource_id,
+                    ResourceUse.TASK_SOURCE,
+                )
+            except ValueError:
+                blockers.append(
+                    DesignBlocker(
+                        code="unknown_task_resource",
+                        message=(
+                            f"{task_id} references unknown evaluation resource "
+                            f"{task.benchmark_resource_id}"
+                        ),
+                    )
+                )
+                continue
+            if not report.eligible:
+                blockers.append(
+                    DesignBlocker(
+                        code="task_resource_not_admitted",
+                        message=(
+                            f"{task_id} is blocked for task_source: "
+                            f"{', '.join(report.blocker_codes)}"
+                        ),
+                    )
+                )
+        return blockers
 
 
 class FailureAttribution(StrEnum):

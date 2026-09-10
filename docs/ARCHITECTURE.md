@@ -40,8 +40,8 @@ returns observations and artifacts but cannot select the next global action.
   conditions, robustness/transfer metrics, paired Base comparisons, and the
   matched-budget system-study planner/auditor.
 - `evaluation`: typed recursive project, task, framework, comparison,
-  statistical, approval, and bounded failure-attribution contracts for
-  external AutoResearch studies.
+  statistical, approval, external-resource corpus/admission, and bounded
+  failure-attribution contracts for external AutoResearch studies.
 - `model_nodes`: opt-in typed semantic advice, pinned structured backends,
   exact record/replay, and project-owned pilot orchestration whose resumable
   evidence remains engineering-only until independently accepted.
@@ -1318,3 +1318,29 @@ indicate a framework limit; context and resource failures remain separate; and
 ambiguous cases remain unresolved. This prevents weak model output from hiding
 framework omissions and prevents framework failures from being assigned to a
 model without a controlled comparison.
+
+### ADR-043: External evaluation evidence has use-specific admission
+
+Status: accepted for metadata and design admission; formal execution remains blocked.
+
+A paper, repository, dataset, and runnable comparison condition are not the same
+resource state. A single “available” flag would let citation evidence silently
+become execution authority, or let a benchmark package license stand in for the
+licenses and assets of every upstream task.
+
+The `evaluation` package therefore loads one bounded, non-symlink, versioned
+YAML corpus with byte and semantic hashes. Each benchmark or system binds its
+official repository commit, publication identity, code license bytes, optional
+dataset revisions, native interfaces, resource requirements, and atomic gate
+evidence. Readiness is deterministically derived for four uses: `reference`,
+`code_audit`, `task_source`, and `comparison_system`. Missing and blocked gates
+fail closed; prose has no field that can declare formal readiness.
+
+Experiment-design schema `1.1` binds the corpus semantic hash. Every headline
+external framework binds a corpus resource and includes its admitted upstream
+commit in `implementation_ref`; every headline task binds a benchmark resource.
+The design gate re-derives feasibility before scientific completeness, and
+human approval cannot override a failed resource gate. The current v2 corpus
+permits reference and code audit of MLR-Bench, EXP-Bench, MLR-Agent, AI
+Scientist-v2, and AutoResearchClaw, but deliberately admits none for task or
+system execution yet.

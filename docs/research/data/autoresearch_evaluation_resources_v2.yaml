@@ -1,0 +1,430 @@
+schema_version: "2.0"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-10-v2
+audited_on: 2026-09-10
+authorization_scope: metadata-only-no-execution
+prior_snapshot:
+  snapshot_id: scitaste-self-development-autoresearch-resource-ledger-v3
+  locator: outputs/projects/scitaste-self-development/papers/related_work/autoresearch/resource_ledger.jsonl
+  sha256: 336ef0ceaf34600f5d389eb01bf57ff7cc6d783cb6ea245fd6b52da796acf856
+  immutable: true
+  relationship: >-
+    The ignored project snapshot remains unchanged. This tracked v2 corpus adds
+    accepted-evaluation resources and adapter feasibility; it does not replace
+    the snapshot's 36-work resource-disclosure accounting.
+
+resources:
+  - resource_id: mlr-bench
+    resource_kind: benchmark
+    official_repository: https://github.com/chchenhui/mlrbench
+    repository_commit: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    implementation_path: .
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    code_license:
+      identifier: MIT
+      scope: Repository code at the pinned commit.
+      official_url: https://github.com/chchenhui/mlrbench/blob/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/LICENSE
+      sha256: cab21a768e6483a436620ef76268be2af4b0420a92ca13eef8cbb515261d0c92
+      review_required: false
+      obligations:
+        - Preserve the copyright and permission notice in redistributed code.
+    datasets:
+      - dataset_id: mlrbench-tasks
+        official_url: https://huggingface.co/datasets/chchenhui/mlrbench-tasks
+        revision: f1a9a989d4925ff8145e70810e144130be3f8a11
+        license_identifier: MIT
+        reported_rows: 201
+        reported_size: 593 kB
+        local_copy_present: false
+    lifecycle_stages:
+      - idea
+      - proposal
+      - experiment
+      - paper
+      - end-to-end
+    native_model_interfaces:
+      - OpenAI API
+      - Anthropic API
+      - OpenRouter API
+      - Gemini API
+      - coding-agent command
+    resource_requirements:
+      - Python 3.12
+      - Hugging Face authentication for official task data
+      - task-dependent experiment environments
+      - provider credentials for selected model backbones
+    gates:
+      official_identity:
+        status: verified
+        evidence: The accepted paper and official repository name the same benchmark.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html
+      repository_pin:
+        status: verified
+        evidence: Official repository main was resolved to the recorded 40-character commit on the audit date.
+        evidence_url: https://github.com/chchenhui/mlrbench/tree/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+      publication_identity:
+        status: verified
+        evidence: Official NeurIPS proceedings list the work in the 2025 Datasets and Benchmarks Track.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html
+      code_license:
+        status: verified
+        evidence: The pinned repository license is MIT and its bytes are hashed above.
+        evidence_url: https://github.com/chchenhui/mlrbench/blob/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/LICENSE
+      dataset_pin:
+        status: verified
+        evidence: The 201-row Hugging Face dataset revision is pinned; no local copy was acquired.
+        evidence_url: https://huggingface.co/datasets/chchenhui/mlrbench-tasks/tree/f1a9a989d4925ff8145e70810e144130be3f8a11
+      dataset_license:
+        status: verified
+        evidence: The official dataset card declares MIT for the packaged benchmark metadata.
+        evidence_url: https://huggingface.co/datasets/chchenhui/mlrbench-tasks
+      source_groups:
+        status: blocked
+        evidence: A source-paper and repository-disjoint split has not been generated or frozen.
+      selected_task_manifest:
+        status: blocked
+        evidence: The exact executable end-to-end subset, strata, exclusions, and hashes remain unfrozen.
+      task_assets:
+        status: blocked
+        evidence: No task data were downloaded and per-task source assets have not been inventoried.
+      upstream_licenses:
+        status: blocked
+        evidence: The MIT benchmark package does not establish licenses for every selected task's upstream data and code.
+      executable_signal:
+        status: blocked
+        evidence: Per-task executable success signals and environment reproduction have not been verified locally.
+    notes:
+      - The dataset card records unresolved duplicate, missing, and deleted-workshop curation issues.
+      - The official repository contains 201 task packages and smaller experiment and paper evaluation subsets.
+      - Metadata verification does not authorize dataset download or benchmark execution.
+
+  - resource_id: mlr-agent
+    resource_kind: system
+    official_repository: https://github.com/chchenhui/mlrbench
+    repository_commit: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    implementation_path: mlr_agent
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    code_license:
+      identifier: MIT
+      scope: MLR-Agent implementation inside the pinned MLR-Bench repository.
+      official_url: https://github.com/chchenhui/mlrbench/blob/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/LICENSE
+      sha256: cab21a768e6483a436620ef76268be2af4b0420a92ca13eef8cbb515261d0c92
+      review_required: false
+      obligations:
+        - Preserve the copyright and permission notice in redistributed code.
+    datasets: []
+    lifecycle_stages:
+      - idea
+      - proposal
+      - experiment
+      - paper
+    native_model_interfaces:
+      - OpenAI API
+      - Anthropic API
+      - OpenRouter API
+      - Gemini API
+      - coding-agent command
+    resource_requirements:
+      - Python 3.12
+      - provider credentials
+      - task-specific executable workspace
+    gates:
+      official_identity:
+        status: verified
+        evidence: MLR-Agent is the system released and evaluated by the official MLR-Bench project.
+        evidence_url: https://github.com/chchenhui/mlrbench
+      repository_pin:
+        status: verified
+        evidence: The system implementation is bound to the recorded official repository commit.
+        evidence_url: https://github.com/chchenhui/mlrbench/tree/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+      publication_identity:
+        status: verified
+        evidence: The system is described and evaluated in the accepted MLR-Bench paper.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html
+      code_license:
+        status: verified
+        evidence: MLR-Agent is covered by the pinned repository MIT license.
+        evidence_url: https://github.com/chchenhui/mlrbench/blob/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/LICENSE
+      license_acceptance:
+        status: verified
+        evidence: MIT obligations are compatible with adapter-only comparative research, subject to notice preservation.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated adapter checkout exists yet, so an unchanged-core diff cannot be verified.
+      task_mapping:
+        status: blocked
+        evidence: The exact SciTaste-to-MLR-Agent task contract and official end-to-end subset mapping are not implemented.
+      model_mapping:
+        status: blocked
+        evidence: Matched-backbone and official-configuration modes have not been proven semantically equivalent to upstream settings.
+      sandbox:
+        status: blocked
+        evidence: The coding-agent command and generated experiment code have not passed a restricted-container review.
+      telemetry:
+        status: blocked
+        evidence: Six-dimensional calls, tokens, cost, wall time, GPU allocation, and active-use counters are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: Native Markdown, experiment, log, and review artifacts are not mapped to SciTaste evidence records.
+      failure_resume:
+        status: blocked
+        evidence: Timeout, partial-stage failure, resume, and over-budget behavior have no adapter acceptance tests.
+      disclosure_acceptance:
+        status: not_applicable
+        evidence: The MIT license adds no system-specific manuscript disclosure requirement beyond normal attribution.
+    notes:
+      - Because MLR-Agent is benchmark-associated, any home-benchmark advantage must be disclosed.
+      - No pseudo-result may replace this system while its adapter gates are blocked.
+
+  - resource_id: exp-bench
+    resource_kind: benchmark
+    official_repository: https://github.com/Just-Curieous/Curie
+    repository_commit: db1b1f56159b591515f77e03c55bf473d5c1c201
+    implementation_path: benchmark/exp_bench
+    publication_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/c411f5b2d9c55f1685e72db224ad8b0e-Abstract-Conference.html
+    accepted_venue: ICLR 2026
+    code_license:
+      identifier: MIT
+      scope: benchmark/exp_bench subtree at the pinned Curie repository commit.
+      official_url: https://github.com/Just-Curieous/Curie/blob/db1b1f56159b591515f77e03c55bf473d5c1c201/benchmark/exp_bench/LICENSE
+      sha256: 0a62482835c4f163c691561da177194cdee77fe6e132c76daf29fa6e64876376
+      review_required: true
+      obligations:
+        - Preserve the benchmark subtree copyright and permission notice.
+        - Review the distinct parent-repository license and every upstream task asset separately.
+    datasets:
+      - dataset_id: exp-bench-dataset
+        official_url: https://huggingface.co/datasets/Just-Curieous/EXP-Bench
+        revision: 5b35c4c717a9f7ddd6a255b94a462f8ca51b0668
+        license_identifier: CC-BY-4.0
+        reported_rows: 461
+        reported_size: 2.02 MB
+        local_copy_present: false
+    lifecycle_stages:
+      - hypothesis
+      - experiment-design
+      - implementation
+      - execution
+      - conclusion
+    native_model_interfaces:
+      - OpenHands agent
+      - IterativeAgent
+      - OpenAI-compatible judge
+    resource_requirements:
+      - Python 3.12.4
+      - Docker
+      - one clean container per task-model-agent cell
+      - task-dependent datasets and checkpoints
+      - multi-day wall time for broad evaluations
+    gates:
+      official_identity:
+        status: verified
+        evidence: The official ICLR paper, Curie repository, and Hugging Face dataset identify EXP-Bench.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/c411f5b2d9c55f1685e72db224ad8b0e-Abstract-Conference.html
+      repository_pin:
+        status: verified
+        evidence: The official Curie repository commit and EXP-Bench subtree are recorded.
+        evidence_url: https://github.com/Just-Curieous/Curie/tree/db1b1f56159b591515f77e03c55bf473d5c1c201/benchmark/exp_bench
+      publication_identity:
+        status: verified
+        evidence: Official ICLR proceedings list EXP-Bench as an ICLR 2026 paper.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/c411f5b2d9c55f1685e72db224ad8b0e-Abstract-Conference.html
+      code_license:
+        status: verified
+        evidence: The benchmark subtree carries a distinct MIT license whose bytes are hashed above.
+        evidence_url: https://github.com/Just-Curieous/Curie/blob/db1b1f56159b591515f77e03c55bf473d5c1c201/benchmark/exp_bench/LICENSE
+      dataset_pin:
+        status: verified
+        evidence: The official 461-row, 51-paper dataset revision is pinned; no local copy was acquired.
+        evidence_url: https://huggingface.co/datasets/Just-Curieous/EXP-Bench/tree/5b35c4c717a9f7ddd6a255b94a462f8ca51b0668
+      dataset_license:
+        status: verified
+        evidence: The official dataset card declares CC-BY-4.0 for the packaged benchmark dataset.
+        evidence_url: https://huggingface.co/datasets/Just-Curieous/EXP-Bench
+      source_groups:
+        status: blocked
+        evidence: Paper identifiers exist, but the source-disjoint pilot/formal split is not selected and frozen.
+      selected_task_manifest:
+        status: blocked
+        evidence: No powered, resource-feasible subset with exclusion reasons and hashes has been registered.
+      task_assets:
+        status: blocked
+        evidence: Source workspaces can require large external datasets and checkpoints; none were inventoried or downloaded.
+      upstream_licenses:
+        status: blocked
+        evidence: Per-task upstream code, data, and model licenses remain heterogeneous and unaudited.
+      executable_signal:
+        status: blocked
+        evidence: The V0 harness warns of frequent changes and manual dependency repair; selected cells are not reproduced.
+    notes:
+      - The dataset card says a robustness and solvability update is in progress.
+      - Benchmark metadata and subtree licensing do not grant blanket rights to upstream task assets.
+      - Metadata verification does not authorize Docker execution or dataset download.
+
+  - resource_id: ai-scientist-v2
+    resource_kind: system
+    official_repository: https://github.com/SakanaAI/AI-Scientist-v2
+    repository_commit: 96bd51617cfdbb494a9fc283af00fe090edfae48
+    implementation_path: .
+    publication_url: https://arxiv.org/abs/2504.08066
+    accepted_venue: null
+    code_license:
+      identifier: AI Scientist Source Code License v1.0
+      scope: Entire official repository at the pinned commit; custom responsible-use terms apply.
+      official_url: https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/LICENSE
+      sha256: 9c82e554a54dfcf2550b452801475a36f9cb909ede00b03e492089e4836a7462
+      review_required: true
+      obligations:
+        - Satisfy all restricted-use conditions in the custom license.
+        - Prominently disclose machine-generated or AI-Scientist-produced scientific content in resulting manuscripts.
+    datasets: []
+    lifecycle_stages:
+      - ideation
+      - preliminary-investigation
+      - experiment-search
+      - writing
+      - citation
+      - review
+    native_model_interfaces:
+      - OpenAI API
+      - Gemini API
+      - Anthropic via Amazon Bedrock
+      - Semantic Scholar API optional
+    resource_requirements:
+      - Linux
+      - NVIDIA GPU with CUDA and PyTorch
+      - Python 3.11
+      - poppler and chktex
+      - restricted execution environment for LLM-written code
+      - several provider/model roles in the official configuration
+    gates:
+      official_identity:
+        status: verified
+        evidence: The project paper and official SakanaAI repository identify AI Scientist-v2.
+        evidence_url: https://github.com/SakanaAI/AI-Scientist-v2
+      repository_pin:
+        status: verified
+        evidence: The official repository is bound to the recorded commit.
+        evidence_url: https://github.com/SakanaAI/AI-Scientist-v2/tree/96bd51617cfdbb494a9fc283af00fe090edfae48
+      publication_identity:
+        status: verified
+        evidence: The repository links the public AI Scientist-v2 manuscript; no accepted top-tier venue is claimed here.
+        evidence_url: https://arxiv.org/abs/2504.08066
+      code_license:
+        status: verified
+        evidence: The custom source-code license identity and bytes are recorded, not treated as MIT.
+        evidence_url: https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/LICENSE
+      license_acceptance:
+        status: blocked
+        evidence: Author/legal acceptance of the custom restricted-use and manuscript obligations is not registered.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated adapter checkout exists, so an unchanged-core diff cannot be verified.
+      task_mapping:
+        status: blocked
+        evidence: Equivalence between official topic templates and the frozen MLR-Bench task package is not proven.
+      model_mapping:
+        status: blocked
+        evidence: GLM-5.3-Flash is not an upstream native configuration and a matched-backbone adapter has not been reviewed.
+      sandbox:
+        status: blocked
+        evidence: Upstream explicitly executes LLM-written code; a dedicated network/filesystem/process sandbox is absent.
+      telemetry:
+        status: blocked
+        evidence: Search nodes, API calls, tokens, cost, wall time, allocated GPU time, and active GPU time are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: Native ideas, tree nodes, code, plots, TeX, PDF, citations, and reviews are not mapped to SciTaste evidence.
+      failure_resume:
+        status: blocked
+        evidence: Timeout, failed-node retention, resume, and budget-overrun adapter tests do not exist.
+      disclosure_acceptance:
+        status: blocked
+        evidence: The required paper disclosure has not been reconciled with the target manuscript and review policy.
+    notes:
+      - Upstream warns that LLM-written code can access the file system, network, and spawn processes.
+      - Source-reported runtime and API-cost examples are planning hints, not SciTaste budget measurements.
+      - No pseudo-result may replace this system while its adapter gates are blocked.
+
+  - resource_id: autoresearchclaw
+    resource_kind: system
+    official_repository: https://github.com/aiming-lab/AutoResearchClaw
+    repository_commit: 12d3fd809fa9658e91a0328c3280a0e462c78386
+    implementation_path: .
+    publication_url: https://arxiv.org/abs/2605.20025
+    accepted_venue: null
+    code_license:
+      identifier: MIT
+      scope: SciTaste's existing pinned v0.5.0 upstream submodule.
+      official_url: https://github.com/aiming-lab/AutoResearchClaw/blob/12d3fd809fa9658e91a0328c3280a0e462c78386/LICENSE
+      sha256: 4242d33ac3c0a44060197a8d4c5e1c923c613c9aadd873001dcc73389161ac99
+      review_required: false
+      obligations:
+        - Preserve the copyright and permission notice in redistributed code.
+    datasets: []
+    lifecycle_stages:
+      - idea
+      - literature
+      - planning
+      - experiment
+      - analysis
+      - writing
+      - review
+      - TeX-and-PDF
+    native_model_interfaces:
+      - Claude Code subprocess
+      - configurable search providers
+      - model-based judges
+    resource_requirements:
+      - Python 3.11 or newer
+      - provider credentials for configured agents and judges
+      - task-dependent sandboxed experiment environment
+    gates:
+      official_identity:
+        status: verified
+        evidence: Official repository and manuscript identify the same 23-stage autonomous-research system.
+        evidence_url: https://github.com/aiming-lab/AutoResearchClaw
+      repository_pin:
+        status: verified
+        evidence: SciTaste already pins upstream v0.5.0 at the recorded commit rather than current moving main.
+        evidence_url: https://github.com/aiming-lab/AutoResearchClaw/tree/12d3fd809fa9658e91a0328c3280a0e462c78386
+      publication_identity:
+        status: verified
+        evidence: The project manuscript is publicly identified; no accepted top-tier venue is claimed here.
+        evidence_url: https://arxiv.org/abs/2605.20025
+      code_license:
+        status: verified
+        evidence: The pinned v0.5.0 upstream license is MIT and its bytes are hashed above.
+        evidence_url: https://github.com/aiming-lab/AutoResearchClaw/blob/12d3fd809fa9658e91a0328c3280a0e462c78386/LICENSE
+      license_acceptance:
+        status: verified
+        evidence: MIT obligations are compatible with adapter-only comparative research, subject to notice preservation.
+      core_unmodified:
+        status: verified
+        evidence: SciTaste integrates the pinned upstream as an unchanged submodule behind a first-party adapter boundary.
+      task_mapping:
+        status: blocked
+        evidence: Equivalent MLR-Bench and EXP-Bench inputs, hidden assets, and terminal conditions are not mapped.
+      model_mapping:
+        status: blocked
+        evidence: Matched GLM-5.3-Flash and official-configuration modes have not passed semantic preflight.
+      sandbox:
+        status: blocked
+        evidence: Existing local sandbox behavior has not been qualified against selected external benchmark assets.
+      telemetry:
+        status: blocked
+        evidence: Existing counters have not been validated as complete and matched for the new external comparison.
+      artifact_mapping:
+        status: verified
+        evidence: The existing first-party adapter maps native stage artifacts without modifying upstream core content.
+      failure_resume:
+        status: verified
+        evidence: Existing study controls preserve bounded failures and resume state, pending target-task qualification.
+      disclosure_acceptance:
+        status: not_applicable
+        evidence: The MIT license adds no system-specific manuscript disclosure requirement beyond normal attribution.
+    notes:
+      - This pin is intentionally older than the moving official main branch.
+      - The local resource ledger's 25-topic ARC-Bench count must be reconciled with the current v0.5 public description before protocol freeze.
+      - Existing integration does not by itself make an external matched comparison formally ready.

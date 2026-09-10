@@ -53,6 +53,27 @@ Before an external condition can change from `disabled` to `enabled`, it needs:
 6. native artifact mapping without content fabrication;
 7. timeout, failure, resume, and budget-overrun acceptance tests.
 
+These requirements are now executable admission policy rather than a checklist
+alone. The tracked corpus
+[`research/data/autoresearch_evaluation_resources_v2.yaml`](research/data/autoresearch_evaluation_resources_v2.yaml)
+binds official repositories, exact commits, code/data license evidence, native
+interfaces, requirements, and unresolved gates. `evaluate_resource_feasibility`
+derives readiness independently for citation, code audit, benchmark-task use,
+and comparison-system use.
+
+| Resource | Exact pin | Current admitted use | Formal blocker summary |
+|---|---|---|---|
+| MLR-Bench | `f728d571…` | reference, code audit | source-disjoint executable subset, task assets, and upstream licenses are not frozen |
+| EXP-Bench | `db1b1f56…` | reference, code audit | per-task environments, data/checkpoints, licenses, and executable subset are not qualified |
+| MLR-Agent | `f728d571…` | reference, code audit | unchanged-core adapter, matched task/model mapping, sandbox, telemetry, artifacts, and recovery tests are absent |
+| AI Scientist-v2 | `96bd5161…` | reference, code audit | custom-license acceptance/disclosure, sandbox, mappings, telemetry, artifacts, and recovery tests are absent |
+| AutoResearchClaw | `12d3fd80…` (`v0.5.0`) | reference, code audit | external-benchmark task/model equivalence, target sandbox qualification, and matched telemetry remain open |
+
+Thus “present in the repository” and “formally comparable” are different
+states. In particular, the existing AutoResearchClaw wrapper and artifact
+mapping do not waive the remaining matched-comparison gates, and an unavailable
+system is never replaced by a mock outcome.
+
 AI Scientist-v2 is the earlier adapter candidate because it exposes a Python
 launch path, but its execution of LLM-written code requires a dedicated sandbox.
 Sibyl follows later because its native operating model includes Claude Code,
