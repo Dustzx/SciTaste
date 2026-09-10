@@ -392,5 +392,12 @@
   "code.current_work": "current work",
   "code.image": "image",
   "code.pdf_metadata": "PDF metadata",
-  "code.text": "text"
+  "code.text": "text",
+  "code.exact-source-disjoint-executable-subset-unfrozen": "Task split unfrozen",
+  "code.selected-assets-and-upstream-licenses-unaudited": "Asset licenses unaudited",
+  "code.external-task-contract-not-yet-qualified": "Task contract unqualified",
+  "code.unchanged-core-adapter-and-telemetry-missing": "Adapter and telemetry missing",
+  "code.license-acceptance-and-sandbox-missing": "License acceptance and sandbox missing",
+  "code.matched-task-semantics-and-telemetry-missing": "Matched semantics and telemetry missing",
+  "code.rubric-sampling-and-adjudication-unfrozen": "Review protocol unfrozen"
 }

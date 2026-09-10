@@ -148,7 +148,9 @@ def test_landscape_quick_and_free_intents_resolve_to_registered_map(tmp_path: Pa
     )
     assert generated.status == "generated"
     assert generated.renderer is not None
-    assert generated.renderer.components[0].renderer == TrustedComponent.RESEARCH_LANDSCAPE_MAP
+    assert [item.renderer for item in generated.renderer.components] == [
+        TrustedComponent.RESEARCH_LANDSCAPE_MAP
+    ]
 
 
 def test_landscape_artifact_must_remain_inside_declaring_run(tmp_path: Path) -> None:

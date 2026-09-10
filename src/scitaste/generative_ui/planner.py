@@ -746,8 +746,6 @@ _GOAL_SELECTED_COMPONENTS = {
     IntentGoal.RESEARCH_LANDSCAPE_REVIEW: frozenset(
         {
             TrustedComponent.RESEARCH_LANDSCAPE_MAP,
-            TrustedComponent.PROJECT_PROGRESS_BOARD,
-            TrustedComponent.PROJECT_SUMMARY_CARD,
         }
     ),
 }

@@ -6,7 +6,7 @@
 import {spawn} from "node:child_process";
 import {mkdtemp, mkdir, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
-import {join} from "node:path";
+import {dirname, join} from "node:path";
 
 const configuredBaseUrl = process.env.SCITASTE_UI_PROBE_URL || "http://127.0.0.1:8766";
 const token = process.env.SCITASTE_UI_PROBE_TOKEN;
@@ -14,9 +14,15 @@ const projectId = process.env.SCITASTE_UI_PROBE_PROJECT || "scitaste-self-develo
 const quickIntentId = process.env.SCITASTE_UI_PROBE_QUICK_INTENT || "review-project-progress";
 const chromeCommand = process.env.SCITASTE_CHROME || "google-chrome";
 const screenshotRoot = process.env.SCITASTE_UI_PROBE_SCREENSHOTS || "";
+const finalLocale = process.env.SCITASTE_UI_PROBE_FINAL_LOCALE || "en";
+const fullPageScreenshots = process.env.SCITASTE_UI_PROBE_FULL_PAGE === "1";
+const reportPath = process.env.SCITASTE_UI_PROBE_REPORT || "";
 
 if (!token) {
   throw new Error("SCITASTE_UI_PROBE_TOKEN is required");
+}
+if (!["en", "zh-CN"].includes(finalLocale)) {
+  throw new Error("SCITASTE_UI_PROBE_FINAL_LOCALE must be en or zh-CN");
 }
 if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId)) {
   throw new Error("SCITASTE_UI_PROBE_PROJECT is invalid");
@@ -152,11 +158,11 @@ async function main() {
       await evaluate(cdp, sessionId, `
         (() => {
           const select = document.getElementById("locale-select");
-          select.value = "en";
+          select.value = ${JSON.stringify(finalLocale)};
           select.dispatchEvent(new Event("change", {bubbles: true}));
         })()
       `);
-      await waitFor(cdp, sessionId, "document.documentElement.lang === 'en'");
+      await waitFor(cdp, sessionId, `document.documentElement.lang === ${JSON.stringify(finalLocale)}`);
       await new Promise((resolve) => setTimeout(resolve, 300));
       const localeSwitchRequests = networkRequests - beforeLocaleSwitch;
 
@@ -228,11 +234,22 @@ async function main() {
         viewports.push(layout);
         if (screenshotRoot && (width === 1440 || width === 390)) {
           await mkdir(screenshotRoot, {recursive: true});
-          const capture = await cdp.call("Page.captureScreenshot", {
+          const screenshotOptions = {
             format: "png",
             fromSurface: true,
-            captureBeyondViewport: false,
-          }, sessionId);
+            captureBeyondViewport: fullPageScreenshots,
+          };
+          if (fullPageScreenshots) {
+            const metrics = await cdp.call("Page.getLayoutMetrics", {}, sessionId);
+            screenshotOptions.clip = {
+              x: 0,
+              y: 0,
+              width: metrics.cssContentSize.width,
+              height: metrics.cssContentSize.height,
+              scale: 1,
+            };
+          }
+          const capture = await cdp.call("Page.captureScreenshot", screenshotOptions, sessionId);
           await writeFile(
             join(screenshotRoot, `generated-${quickIntentId}-${width}.png`),
             Buffer.from(capture.data, "base64"),
@@ -253,7 +270,12 @@ async function main() {
         runtime_errors: runtimeErrors,
         viewports,
       };
-      console.log(JSON.stringify(result, null, 2));
+      const serializedResult = `${JSON.stringify(result, null, 2)}\n`;
+      if (reportPath) {
+        await mkdir(dirname(reportPath), {recursive: true});
+        await writeFile(reportPath, serializedResult, "utf8");
+      }
+      console.log(serializedResult.trimEnd());
       if (
         runtimeErrors.length > 0
         || localeSwitchRequests !== 0

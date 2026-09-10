@@ -392,5 +392,12 @@
   "code.current_work": "当前工作",
   "code.image": "图像",
   "code.pdf_metadata": "PDF 元数据",
-  "code.text": "文本"
+  "code.text": "文本",
+  "code.exact-source-disjoint-executable-subset-unfrozen": "任务切分尚未冻结",
+  "code.selected-assets-and-upstream-licenses-unaudited": "任务资产许可尚未审计",
+  "code.external-task-contract-not-yet-qualified": "外部任务契约尚未验收",
+  "code.unchanged-core-adapter-and-telemetry-missing": "不改核心的适配器与遥测尚缺",
+  "code.license-acceptance-and-sandbox-missing": "许可接受与沙箱尚缺",
+  "code.matched-task-semantics-and-telemetry-missing": "匹配任务语义与遥测尚缺",
+  "code.rubric-sampling-and-adjudication-unfrozen": "评审抽样与仲裁协议尚未冻结"
 }

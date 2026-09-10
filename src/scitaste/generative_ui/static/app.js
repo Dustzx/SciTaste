@@ -826,7 +826,7 @@ function renderResearchLandscape(data) {
       appendText(meta, `${t(`landscape.kind.${candidate.candidate_kind}`)} · ${t(`landscape.role.${candidate.role}`)}`);
       const barrier = document.createElement("span");
       barrier.className = "barrier-code";
-      appendText(barrier, readableCode(candidate.barrier_code));
+      appendText(barrier, localizedCode(candidate.barrier_code));
       card.append(name, meta, barrier);
       lane.appendChild(card);
     }
@@ -1203,10 +1203,12 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   if (generated) {
     workspace.appendChild(renderGenerationSummary(documentValue));
   }
-  const title = document.createElement("h2");
-  title.className = "workspace-title";
-  appendText(title, workspaceTitle(documentValue));
-  workspace.appendChild(title);
+  if (!generated) {
+    const title = document.createElement("h2");
+    title.className = "workspace-title";
+    appendText(title, workspaceTitle(documentValue));
+    workspace.appendChild(title);
+  }
   const cards = new Map();
   for (const component of renderer.components) {
     const renderComponent = componentRenderers[component.renderer];
