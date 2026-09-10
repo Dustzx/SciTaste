@@ -111,6 +111,12 @@ def test_current_v41_proposal_compiles_exact_blocked_matrix_without_running() ->
     assert len({cell.cell_id for cell in plan.cells}) == 50
     assert len({cell.review_blind_id for cell in plan.cells}) == 50
     assert compile_evaluation_cell_plan(manifest) == plan
+    resource = plan.lanes[0].resource
+    assert resource.max_input_tokens_per_call == 100_000
+    assert resource.max_output_tokens_per_call == 32_768
+    assert resource.max_requests == 1_500
+    assert resource.max_total_tokens == 15_000_000
+    assert resource.max_cost == 100.0
 
 
 def test_fully_declared_cells_are_preparation_ready_but_never_authorized() -> None:

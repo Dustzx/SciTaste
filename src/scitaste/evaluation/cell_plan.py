@@ -48,14 +48,36 @@ class EvaluationCellResource(BaseModel):
     model_id: str | None = None
     model_revision: str | None = None
     api_key_env: str | None = None
+    max_input_tokens_per_call: int | None = Field(default=None, gt=0)
+    max_output_tokens_per_call: int | None = Field(default=None, gt=0)
+    max_requests: int | None = Field(default=None, gt=0)
+    max_total_tokens: int | None = Field(default=None, gt=0)
+    max_cost: float | None = Field(default=None, gt=0)
     host_alias: str | None = None
     checkpoint_id: str | None = None
     checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
+    max_gpu_hours: float | None = Field(default=None, gt=0)
+    max_storage_bytes: int | None = Field(default=None, gt=0)
 
     @model_validator(mode="after")
     def identity_matches_lane_kind(self) -> EvaluationCellResource:
-        api_values = (self.provider_id, self.model_id, self.api_key_env)
-        gpu_values = (self.host_alias, self.checkpoint_id, self.checkpoint_sha256)
+        api_values = (
+            self.provider_id,
+            self.model_id,
+            self.api_key_env,
+            self.max_input_tokens_per_call,
+            self.max_output_tokens_per_call,
+            self.max_requests,
+            self.max_total_tokens,
+            self.max_cost,
+        )
+        gpu_values = (
+            self.host_alias,
+            self.checkpoint_id,
+            self.checkpoint_sha256,
+            self.max_gpu_hours,
+            self.max_storage_bytes,
+        )
         if self.kind is ExecutionLaneKind.API_ONLY:
             if not all(api_values) or any(value is not None for value in gpu_values):
                 raise ValueError("API cell resources require only provider/model/key-env identity")
@@ -289,6 +311,11 @@ def _resource_for(lane: ExecutionLane) -> EvaluationCellResource:
             model_id=lane.api_model.model_id,
             model_revision=lane.api_model.model_revision,
             api_key_env=lane.api_model.api_key_env,
+            max_input_tokens_per_call=lane.api_model.max_input_tokens_per_call,
+            max_output_tokens_per_call=lane.api_model.max_output_tokens_per_call,
+            max_requests=lane.api_model.max_requests,
+            max_total_tokens=lane.api_model.max_total_tokens,
+            max_cost=lane.api_model.max_cost,
         )
     assert lane.gpu_resource is not None
     snapshot = lane.gpu_resource.model_dump(mode="json")
@@ -298,6 +325,8 @@ def _resource_for(lane: ExecutionLane) -> EvaluationCellResource:
         host_alias=lane.gpu_resource.host_alias,
         checkpoint_id=lane.gpu_resource.checkpoint_id,
         checkpoint_sha256=lane.gpu_resource.checkpoint_sha256,
+        max_gpu_hours=lane.gpu_resource.max_gpu_hours,
+        max_storage_bytes=lane.gpu_resource.max_storage_bytes,
     )
 
 

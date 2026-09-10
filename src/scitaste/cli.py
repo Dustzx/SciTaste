@@ -71,6 +71,7 @@ from scitaste.evaluation import (
     load_external_resource_corpus,
     load_prelaunch_manifest,
     load_task_selection_manifest,
+    run_live_direct_agent,
     save_evaluation_cell_plan,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
@@ -864,6 +865,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(cell_plan)
     cell_plan.set_defaults(handler=_handle_evaluation_cell_plan)
+    direct_agent_run = evaluation_commands.add_parser(
+        "direct-agent-run",
+        help="Run one exactly approved prompt-only API control cell",
+    )
+    direct_agent_run.add_argument("--invocation", type=Path, required=True)
+    direct_agent_run.add_argument("--task-root", type=Path, required=True)
+    direct_agent_run.add_argument("--backend-config", type=Path, required=True)
+    direct_agent_run.add_argument("--output", type=Path, required=True)
+    direct_agent_run.add_argument(
+        "--allow-live",
+        action="store_true",
+        help="explicitly authorize the one provider call bound by the invocation",
+    )
+    _add_log_level_option(direct_agent_run)
+    direct_agent_run.set_defaults(handler=_handle_evaluation_direct_agent_run)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -2606,6 +2622,27 @@ def _handle_evaluation_cell_plan(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_preparation_ready and not plan.ready_for_launch_preparation:
         return 1
+    return 0
+
+
+def _handle_evaluation_direct_agent_run(args: argparse.Namespace) -> int:
+    receipt = run_live_direct_agent(
+        invocation_path=args.invocation,
+        task_root=args.task_root,
+        backend_config_path=args.backend_config,
+        output_dir=args.output,
+        allow_live=args.allow_live,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                **receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

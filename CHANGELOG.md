@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- The formal evaluation path now includes a real prompt-only `direct-agent`
+  control adapter. One exact approved API cell can make one no-retry structured
+  call, retain its complete request/response and proposal bundle, and enforce
+  cell-local byte, token, latency, and cost ceilings inherited from the matched
+  plan. Retrieval, Taste, tools, execution, repair, empirical evidence, and
+  independent review are structurally absent and cannot be misreported as a
+  completed idea-to-paper result.
+
 - Generation as Content now opens without a manual credential field on loopback:
   the server establishes a Host-validated HttpOnly same-site session while
   preserving explicit bearer access for API clients. The default route is a

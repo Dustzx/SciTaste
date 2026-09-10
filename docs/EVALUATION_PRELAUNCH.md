@@ -121,13 +121,45 @@ all 50 cells. These are ceilings rather than targets and still require a
 pilot-informed adequacy check. Any change creates new proposal bytes and needs a
 new hash-bound approval.
 
+### Prompt-only control boundary
+
+SciTaste now has a real `direct-agent` control adapter rather than a name-only
+placeholder. It accepts one exact visible task package and makes exactly one
+structured provider call under a cell-local token, cost, latency, and request
+budget. Retrieval, Taste, memory, tools, code execution, experiment execution,
+repair, and independent review are structurally absent. The returned paper is
+therefore labelled a proposal: its claim statuses are fixed to
+`unsupported-until-executed`, and its receipt fixes empirical evidence,
+independent review, and complete idea-to-paper eligibility to false.
+
+An admitted call retains the exact invocation, task projection, model request,
+raw provider response, structured research package, proposal paper, self-review,
+and their SHA-256 values. Backend retries are prohibited so a one-call cell
+cannot silently consume a larger budget. The live entry point remains closed
+unless the invocation contains an exact proposal/plan/cell approval and the
+operator also supplies `--allow-live`:
+
+```bash
+.venv/bin/scitaste evaluation direct-agent-run \
+  --invocation /path/to/approved-invocation.json \
+  --task-root /path/to/frozen-task-root \
+  --backend-config /path/to/ignored-live-backend.yaml \
+  --output /path/to/empty-cell-output \
+  --allow-live
+```
+
+This is a low control condition, not the principal comparator and not a
+substitute for the native no-Taste ablation. A top-level scientific-taste claim
+still requires matched executable trajectories and the separate blinded review
+protocol.
+
 ## Remaining work before the first approved block
 
 1. Freeze a source-disjoint MLR-Bench pilot subset with asset, license, source
    group, and executable-signal hashes.
-2. Implement and validate the direct-agent control and the real external-system
-   adapters; unavailable systems remain unavailable rather than receiving a
-   pseudo-implementation.
+2. Prepare and approve exact direct-agent invocations, and implement the real
+   external-system adapters; unavailable systems remain unavailable rather than
+   receiving a pseudo-implementation.
 3. Freeze matched tools, starting information, repair policy, telemetry,
    failure handling, and statistical analysis.
 4. Secure the blinded expert rubric, reviewers, conflict checks, and
