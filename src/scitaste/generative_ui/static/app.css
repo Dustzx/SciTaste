@@ -1233,6 +1233,8 @@ code {
 .landscape-matrix-scroll {
   border: 1px solid var(--line);
   border-radius: 0.5rem;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
 }
 
@@ -1328,6 +1330,15 @@ code {
 .landscape-contribution-groups {
   display: grid;
   gap: 0.55rem;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.landscape-contribution-group {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .landscape-contribution-group > summary,
