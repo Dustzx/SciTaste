@@ -126,11 +126,12 @@ records exist. They contain no command or execution authority.
 
 The `research-landscape` view prevents a prose experiment plan from becoming a
 premature protocol. It reads only a strict, project-owned
-`autoresearch-evaluation-landscape-v1` artifact declared by a registered run.
-The artifact is bounded, schema-closed, contained beneath that run, and covered
-by the run-directory hash in the current snapshot. An absent projection becomes
-an explicit unavailable state; an escaping, oversized, duplicate-key, malformed,
-or stale artifact fails closed.
+versioned `autoresearch-evaluation-landscape-v1` through `v3` artifact declared
+by a registered run; the latest `v3` schema carries the separated contribution
+types and experiment tracks. The artifact is bounded, schema-closed, contained
+beneath that run, and covered by the run-directory hash in the current snapshot.
+An absent projection becomes an explicit unavailable state; an escaping,
+oversized, duplicate-key, malformed, or stale artifact fails closed.
 
 The receiver applies a versioned research-synthesis Taste instead of displaying
 the source audit chronologically. It keeps six estimands separate; foregrounds
