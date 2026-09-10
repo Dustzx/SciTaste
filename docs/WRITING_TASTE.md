@@ -199,6 +199,34 @@ The live profile admits up to 6,000 output tokens within an 8,192-token provider
 generation ceiling. The limit is per semantic review invocation, not a global
 development or manuscript length limit.
 
+### Evidence-grounded full-paper drafting
+
+The optional `evidence-paper-draft` node addresses long-form manuscript content
+without relaxing evidence authority. Its input is a closed projection of the
+paper question, intended contribution, claims and support states, registered
+evidence, citations, venue-required sections, material limitations, numeric
+tokens, and word budget. Its output contains a complete sectioned manuscript
+proposal and explicit claim/evidence/citation/limitation references for every
+paragraph. Deterministic admission rejects reference drift, unsupported claims
+presented as empirical findings, missing headline claims, omitted limitations,
+section-order drift, excess words, and any numeric token not authorized by the
+input.
+
+The trace sidecar retains internal identifiers for audit, while the Markdown
+renderer deliberately removes those identifiers from the paper prose. Names
+such as run IDs, scenario IDs, and internal diagnosis labels therefore have no
+reason to appear in a reader-facing manuscript unless they are intentionally
+included as scientific content. The node is still proposal-only: it does not
+run experiments, alter project state, claim independent review, or make a paper
+submission-ready. Materializing the accepted proposal into the TeX/PDF build and
+feeding review obligations into a bounded revision node are subsequent workflow
+steps.
+
+The committed `deepseek-v41flash-paper-draft` profile allows up to 32,768 output
+tokens for this long-form task. It is separate from short semantic-review
+profiles and still requires all live-execution gates; no API call is made merely
+by loading or planning the profile.
+
 ## SciTaste self-iteration
 
 The tracked SciTaste manuscript is the first dogfooding target. The initial

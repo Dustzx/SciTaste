@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 from enum import StrEnum
 from typing import Literal
 
@@ -12,6 +14,11 @@ from scitaste.writing.taste import WritingTasteDimension, WritingTasteLevel
 from scitaste.writing.venue_taste import VenueWritingTasteContext
 
 WRITING_TASTE_NODE = "writing-taste"
+EVIDENCE_PAPER_DRAFT_NODE = "evidence-paper-draft"
+_IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
+_NUMBER = re.compile(
+    r"(?<![A-Za-z0-9_.])(?:\d+(?:\.\d+)?%?)(?![A-Za-z0-9_]|\.\d)"
+)
 
 
 class WritingSemanticModel(BaseModel):
@@ -196,9 +203,225 @@ class WritingTasteReviewProposal(WritingSemanticModel):
         return values
 
 
+class PaperClaimSupport(StrEnum):
+    SUPPORTED = "supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    UNSUPPORTED = "unsupported"
+    CONTRADICTED = "contradicted"
+
+
+class EvidencePaperClaimInput(WritingSemanticModel):
+    claim_id: str = Field(pattern=_IDENTIFIER)
+    statement: str = Field(min_length=1, max_length=8_000)
+    support_status: PaperClaimSupport
+    evidence_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    headline: bool = False
+
+    @field_validator("evidence_ids")
+    @classmethod
+    def evidence_is_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper claim evidence identifiers must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def support_has_evidence(self) -> EvidencePaperClaimInput:
+        if self.support_status is not PaperClaimSupport.UNSUPPORTED and not self.evidence_ids:
+            raise ValueError("supported or contradicted paper claims require evidence")
+        return self
+
+
+class EvidencePaperEvidenceInput(WritingSemanticModel):
+    evidence_id: str = Field(pattern=_IDENTIFIER)
+    evidence_type: str = Field(min_length=1, max_length=500)
+    summary: str = Field(min_length=1, max_length=12_000)
+    provenance_locator: str = Field(min_length=1, max_length=2_000)
+
+
+class EvidencePaperCitationInput(WritingSemanticModel):
+    citation_id: str = Field(pattern=_IDENTIFIER)
+    title: str = Field(min_length=1, max_length=2_000)
+    relevance: str = Field(min_length=1, max_length=4_000)
+
+
+class EvidencePaperDraftInput(WritingSemanticModel):
+    """Closed claims, evidence, precedents, and venue duties visible to one draft call."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    manuscript_id: str = Field(pattern=_IDENTIFIER)
+    title_hint: str = Field(min_length=1, max_length=1_000)
+    target_venue: str = Field(min_length=1, max_length=500)
+    central_question: str = Field(min_length=1, max_length=8_000)
+    intended_contribution: str = Field(min_length=1, max_length=8_000)
+    claims: tuple[EvidencePaperClaimInput, ...] = Field(min_length=1, max_length=200)
+    evidence: tuple[EvidencePaperEvidenceInput, ...] = Field(default=(), max_length=500)
+    citations: tuple[EvidencePaperCitationInput, ...] = Field(default=(), max_length=500)
+    material_limitations: tuple[MaterialWritingLimitation, ...] = Field(
+        default=(), max_length=100
+    )
+    required_sections: tuple[str, ...] = Field(min_length=5, max_length=20)
+    authorized_numeric_tokens: tuple[str, ...] = Field(default=(), max_length=500)
+    maximum_words: int = Field(ge=1_000, le=30_000)
+
+    @field_validator("required_sections")
+    @classmethod
+    def sections_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not value.strip() for value in values):
+            raise ValueError("required paper sections cannot be empty")
+        if len({value.casefold() for value in values}) != len(values):
+            raise ValueError("required paper sections must be unique")
+        return values
+
+    @field_validator("authorized_numeric_tokens")
+    @classmethod
+    def numeric_tokens_are_canonical(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("authorized numeric tokens must be sorted and unique")
+        if any(_NUMBER.fullmatch(value) is None for value in values):
+            raise ValueError("authorized numeric tokens must be complete numeric tokens")
+        return values
+
+    @model_validator(mode="after")
+    def references_are_closed(self) -> EvidencePaperDraftInput:
+        claim_ids = [item.claim_id for item in self.claims]
+        evidence_ids = [item.evidence_id for item in self.evidence]
+        citation_ids = [item.citation_id for item in self.citations]
+        for values, label in (
+            (claim_ids, "claim"),
+            (evidence_ids, "evidence"),
+            (citation_ids, "citation"),
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError(f"paper-draft {label} identifiers must be unique")
+        known_evidence = set(evidence_ids)
+        if any(set(item.evidence_ids) - known_evidence for item in self.claims):
+            raise ValueError("paper claim references unknown evidence")
+        known_claims = set(claim_ids)
+        if any(set(item.affected_claim_ids) - known_claims for item in self.material_limitations):
+            raise ValueError("paper limitation references an unknown claim")
+        limitation_ids = [item.limitation_id for item in self.material_limitations]
+        if len(limitation_ids) != len(set(limitation_ids)):
+            raise ValueError("paper limitation identifiers must be unique")
+        if not any(item.headline for item in self.claims):
+            raise ValueError("paper draft requires at least one headline claim")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        payload = self.model_dump(mode="json")
+        canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+class EvidencePaperParagraphRole(StrEnum):
+    MOTIVATION = "motivation"
+    POSITIONING = "positioning"
+    METHOD = "method"
+    EMPIRICAL_RESULT = "empirical_result"
+    INTERPRETATION = "interpretation"
+    LIMITATION = "limitation"
+    CONCLUSION = "conclusion"
+
+
+class EvidencePaperParagraph(WritingSemanticModel):
+    paragraph_id: str = Field(pattern=_IDENTIFIER)
+    role: EvidencePaperParagraphRole
+    text: str = Field(min_length=1, max_length=30_000)
+    claim_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    evidence_ids: tuple[str, ...] = Field(default=(), max_length=200)
+    citation_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    limitation_ids: tuple[str, ...] = Field(default=(), max_length=100)
+
+    @field_validator("claim_ids", "evidence_ids", "citation_ids", "limitation_ids")
+    @classmethod
+    def references_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper paragraph references must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def empirical_paragraph_has_evidence(self) -> EvidencePaperParagraph:
+        if self.role is EvidencePaperParagraphRole.EMPIRICAL_RESULT and not self.evidence_ids:
+            raise ValueError("empirical paper paragraphs require registered evidence")
+        if self.limitation_ids and self.role is not EvidencePaperParagraphRole.LIMITATION:
+            raise ValueError("material limitations must remain explicit limitation paragraphs")
+        return self
+
+
+class EvidencePaperDraftSection(WritingSemanticModel):
+    section_name: str = Field(min_length=1, max_length=200)
+    paragraphs: tuple[EvidencePaperParagraph, ...] = Field(min_length=1, max_length=100)
+
+
+class EvidencePaperDraftProposal(WritingSemanticModel):
+    """Proposal-only full paper whose references remain deterministically checkable."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    input_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    title: str = Field(min_length=1, max_length=1_000)
+    abstract: EvidencePaperParagraph
+    sections: tuple[EvidencePaperDraftSection, ...] = Field(min_length=5, max_length=20)
+    retained_limitation_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    observed_numeric_tokens: tuple[str, ...] = Field(default=(), max_length=500)
+    proposal_only: Literal[True] = True
+    manuscript_mutation_authorized: Literal[False] = False
+    empirical_execution_authorized: Literal[False] = False
+
+    @field_validator("retained_limitation_ids", "observed_numeric_tokens")
+    @classmethod
+    def closed_values_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper proposal closed values must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def local_structure_is_unique(self) -> EvidencePaperDraftProposal:
+        section_names = [item.section_name for item in self.sections]
+        if len({item.casefold() for item in section_names}) != len(section_names):
+            raise ValueError("paper proposal section names must be unique")
+        paragraphs = [
+            self.abstract,
+            *(item for section in self.sections for item in section.paragraphs),
+        ]
+        paragraph_ids = [item.paragraph_id for item in paragraphs]
+        if len(paragraph_ids) != len(set(paragraph_ids)):
+            raise ValueError("paper proposal paragraph identifiers must be unique")
+        observed = tuple(sorted(set(_NUMBER.findall(self.complete_text))))
+        if observed != self.observed_numeric_tokens:
+            raise ValueError("paper proposal numeric-token inventory is incomplete")
+        return self
+
+    @property
+    def complete_text(self) -> str:
+        return "\n\n".join(
+            [
+                self.title,
+                self.abstract.text,
+                *(
+                    paragraph.text
+                    for section in self.sections
+                    for paragraph in section.paragraphs
+                ),
+            ]
+        )
+
+    @property
+    def word_count(self) -> int:
+        return len(self.complete_text.split())
+
 __all__ = [
+    "EVIDENCE_PAPER_DRAFT_NODE",
     "WRITING_TASTE_NODE",
+    "EvidencePaperCitationInput",
+    "EvidencePaperClaimInput",
+    "EvidencePaperDraftInput",
+    "EvidencePaperDraftProposal",
+    "EvidencePaperDraftSection",
+    "EvidencePaperEvidenceInput",
+    "EvidencePaperParagraph",
+    "EvidencePaperParagraphRole",
     "MaterialWritingLimitation",
+    "PaperClaimSupport",
     "SemanticWritingTasteFinding",
     "WritingRevisionAction",
     "WritingTasteReviewProposal",

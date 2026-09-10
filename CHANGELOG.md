@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Evidence-grounded full-paper drafting is now an additive bounded model node.
+  It receives only registered claims, evidence, citations, limitations, venue
+  sections, and an explicit numeric vocabulary; deterministic gates reject
+  unsupported empirical prose, reference drift, missing headline claims or
+  limitations, excess length, and invented numbers. Reader-facing Markdown
+  omits internal trace identifiers while the typed proposal retains them in a
+  sidecar. A content-addressed DeepSeek V4.1 Flash profile provides a 32,768-token
+  long-form envelope behind the existing live-execution controls.
+
 - The formal evaluation path now includes a real prompt-only `direct-agent`
   control adapter. One exact approved API cell can make one no-retry structured
   call, retain its complete request/response and proposal bundle, and enforce

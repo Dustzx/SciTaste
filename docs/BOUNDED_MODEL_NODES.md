@@ -74,6 +74,24 @@ cost telemetry is never admissible.
 | `VenuePaperReviewNode` | exact packet-bound anonymous paper text and the four venue questions | ICLR-style review content and typed concerns | packet/text hashes, known claims/sections, evidence types, action allowlist; no reviewer identity or numeric score |
 | `InterpretationThreatNode` | existing result and interpretation context | validity threats, alternatives, follow-up action type | known evidence IDs, action allowlist; output has no claim-status field |
 | `AmbiguousActionNode` | feasible actions and deterministic scores | ranking over supplied IDs | low-margin trigger, exact full-action match with the complete context candidate set, exact candidate coverage, candidate action allowlist |
+| `EvidencePaperDraftNode` | closed claims, evidence, citations, venue duties, limitations, and numeric vocabulary | complete sectioned manuscript proposal plus a reference sidecar | exact input fingerprint and section order, known references, claim--evidence bindings, headline coverage, limitation retention, word budget, and numeric-token allowlist |
+
+`EvidencePaperDraftNode` is the long-form content path, not another placeholder
+renderer. Internal claim, evidence, citation, and limitation identifiers stay in
+the typed proposal sidecar; `render_evidence_paper_markdown` emits only clean
+paper prose. An empirical paragraph requires registered evidence, an unsupported
+claim cannot be presented as a result, and every number in the generated title
+and body must occur in the input's explicit numeric vocabulary. These checks do
+not establish that the evidence itself is correct, so the draft remains a
+proposal until the ordinary paper, venue, and review gates accept its artifacts.
+
+The content-addressed DeepSeek profile
+`runtime_profiles.deepseek_v41_paper_draft_v1.yaml` gives this node a 32,768-token
+output envelope for a full manuscript. That is a per-call generation ceiling,
+not a fixed limit on normal development. Live use still requires the normal
+priced backend configuration, environment credential, exact runtime invocation,
+and explicit `--allow-live`; committed files contain no secret. Offline scripted
+execution and replay remain available for deterministic acceptance tests.
 
 Whole-paper review uses its own content-addressed profile set,
 `runtime_profiles.deepseek_venue_review_v1.yaml`, and a separately copied local
@@ -133,6 +151,9 @@ claim provider pricing, enable live access, or authorize unrestricted code or
 manuscript generation. In particular, the old 2,048-token engineering probe is
 still local to its pilot adapter configuration; the normal short profile exposes
 a 1,024-token provider envelope and an independent 512-token admission limit.
+Additive extension nodes such as Discovery, Writing Taste, and evidence-grounded
+paper drafting are registered by the runtime entry point and retain their own
+strict input/output schemas; they cannot replace a built-in node.
 
 `ModelNodeRuntime` runs beneath an already registered normal `ProjectRuntime`
 run. Before a backend can be contacted, its immutable intent binds the project

@@ -1,0 +1,11 @@
+# Content-addressed profile set for evidence-grounded full-paper drafting.
+# Live execution still requires a separately approved runtime config, priced
+# backend config, environment credential, and the caller's --allow-live switch.
+schema_version: "1.0"
+profile_set_id: deepseek-v41flash-paper-draft-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v41flash_paper_draft_v1.yaml
+    sha256: c455078baa99ba082ba142a314c2557747c39ba011a694840d45ef6374b67d00
+    profile_sha256: 2c43bfe8aa52c30240f65e17a5430951a235966360471af7254e81ac23edab5c

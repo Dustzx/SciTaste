@@ -67,14 +67,7 @@ RuntimeBackendBinding = Annotated[
 
 class ModelNodeRuntimeConfig(RuntimeConfigModel):
     schema_version: Literal["1.0"] = "1.0"
-    node_name: Literal[
-        "review-semantic",
-        "interpretation-threat",
-        "ambiguous-action",
-        "tool-plan",
-        "structured-repair",
-        "venue-paper-review",
-    ]
+    node_name: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     request_id: str | None = Field(default=None, min_length=1)
     node_input: dict[str, JsonValue]
     state_projection: ImmutableStateProjection

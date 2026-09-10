@@ -20,19 +20,13 @@ from scitaste.model_nodes.runtime import (
 )
 from scitaste.model_nodes.schemas import (
     AmbiguousActionInput,
-    AmbiguousActionOutput,
     InterpretationThreatInput,
-    InterpretationThreatOutput,
     ReviewSemanticInput,
-    ReviewSemanticOutput,
     VenuePaperReviewInput,
-    VenuePaperReviewProposal,
 )
 from scitaste.model_nodes.tool_intelligence import (
     StructuredRepairInput,
-    StructuredRepairOutput,
     ToolPlanInput,
-    ToolPlanOutput,
 )
 from scitaste.schema.actions import ResearchAction
 
@@ -88,16 +82,6 @@ _INPUT_TYPES = {
     "structured-repair": StructuredRepairInput,
     "venue-paper-review": VenuePaperReviewInput,
 }
-_OUTPUT_TYPES = {
-    "review-semantic": ReviewSemanticOutput,
-    "interpretation-threat": InterpretationThreatOutput,
-    "ambiguous-action": AmbiguousActionOutput,
-    "tool-plan": ToolPlanOutput,
-    "structured-repair": StructuredRepairOutput,
-    "venue-paper-review": VenuePaperReviewProposal,
-}
-
-
 class ModelNodeFacadeRequest(FacadeModel):
     """Complete immutable request passed from a deterministic workflow controller."""
 
@@ -107,14 +91,7 @@ class ModelNodeFacadeRequest(FacadeModel):
     invocation_id: str = Field(min_length=1)
     request_id: str | None = Field(default=None, min_length=1)
     expected_project_revision: int = Field(ge=0)
-    node_name: Literal[
-        "review-semantic",
-        "interpretation-threat",
-        "ambiguous-action",
-        "tool-plan",
-        "structured-repair",
-        "venue-paper-review",
-    ]
+    node_name: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     node_input: dict[str, JsonValue]
     state_projection: ImmutableStateProjection
     trigger: ModelNodeTrigger
@@ -128,11 +105,12 @@ class ModelNodeFacadeRequest(FacadeModel):
     def binding_is_closed(self) -> ModelNodeFacadeRequest:
         if self.state_projection.project_id != self.project_id:
             raise ValueError("state projection belongs to another project")
-        input_type = _INPUT_TYPES[self.node_name]
-        input_type.model_validate_json(
-            json.dumps(self.node_input, ensure_ascii=False, allow_nan=False),
-            strict=True,
-        )
+        input_type = _INPUT_TYPES.get(self.node_name)
+        if input_type is not None:
+            input_type.model_validate_json(
+                json.dumps(self.node_input, ensure_ascii=False, allow_nan=False),
+                strict=True,
+            )
         if self.node_name not in self.profile.allowed_node_names:
             raise ValueError("profile does not allow the selected node")
         return self
@@ -236,9 +214,11 @@ class ModelNodeFacade:
             "seed": request.seed,
         }
 
-    @staticmethod
-    def _result(node_name: str, receipt: RuntimeInvocationReceipt) -> Any:
-        output_type = _OUTPUT_TYPES[node_name]
+    def _result(self, node_name: str, receipt: RuntimeInvocationReceipt) -> Any:
+        try:
+            output_type = self.runtime.node_types[node_name].output_type
+        except KeyError as exc:  # runtime should reject this before returning a receipt
+            raise ValueError(f"unknown model node {node_name!r}") from exc
         facade_type = ModelNodeFacadeResult[output_type]
         if receipt.result is None:
             return facade_type(receipt=receipt)

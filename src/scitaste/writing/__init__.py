@@ -14,9 +14,24 @@ from scitaste.writing.argument import (
 from scitaste.writing.critics import WritingCriticSuite
 from scitaste.writing.drafter import ContractDrafter
 from scitaste.writing.narrative import NarrativeTasteReview, review_narrative
-from scitaste.writing.semantic import WritingTasteNode, writing_node_types
+from scitaste.writing.semantic import (
+    EvidencePaperDraftNode,
+    WritingTasteNode,
+    render_evidence_paper_markdown,
+    writing_node_types,
+)
 from scitaste.writing.semantic_models import (
+    EVIDENCE_PAPER_DRAFT_NODE,
+    EvidencePaperCitationInput,
+    EvidencePaperClaimInput,
+    EvidencePaperDraftInput,
+    EvidencePaperDraftProposal,
+    EvidencePaperDraftSection,
+    EvidencePaperEvidenceInput,
+    EvidencePaperParagraph,
+    EvidencePaperParagraphRole,
     MaterialWritingLimitation,
+    PaperClaimSupport,
     SemanticWritingTasteFinding,
     WritingRevisionAction,
     WritingTasteReviewProposal,
@@ -39,9 +54,19 @@ from scitaste.writing.venue_taste import (
 )
 
 __all__ = [
+    "EVIDENCE_PAPER_DRAFT_NODE",
     "ClaimPresentationContract",
     "ContractDrafter",
     "EvidenceCarrierContract",
+    "EvidencePaperCitationInput",
+    "EvidencePaperClaimInput",
+    "EvidencePaperDraftInput",
+    "EvidencePaperDraftNode",
+    "EvidencePaperDraftProposal",
+    "EvidencePaperDraftSection",
+    "EvidencePaperEvidenceInput",
+    "EvidencePaperParagraph",
+    "EvidencePaperParagraphRole",
     "MaterialLimitationContract",
     "MaterialWritingLimitation",
     "NarrativeTasteReview",
@@ -49,6 +74,7 @@ __all__ = [
     "PaperArgumentAssessment",
     "PaperArgumentContract",
     "PaperArgumentGap",
+    "PaperClaimSupport",
     "PaperEntryPointContract",
     "SectionDeliveryContract",
     "SemanticWritingTasteFinding",
@@ -68,6 +94,7 @@ __all__ = [
     "assess_writing_taste",
     "build_venue_writing_taste_context",
     "inspect_venue_writing_taste",
+    "render_evidence_paper_markdown",
     "review_narrative",
     "writing_node_types",
 ]

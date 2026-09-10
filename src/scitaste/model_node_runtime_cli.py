@@ -13,6 +13,7 @@ from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.model_nodes.runtime import ModelNodeRuntime, RuntimeOutcome
 from scitaste.model_nodes.runtime_config import load_model_node_runtime_config
 from scitaste.project import ProjectRuntime
+from scitaste.writing.semantic import writing_node_types
 
 
 def _runtime(outputs_root: Path) -> ModelNodeRuntime:
@@ -20,7 +21,7 @@ def _runtime(outputs_root: Path) -> ModelNodeRuntime:
 
     return ModelNodeRuntime(
         ProjectRuntime(outputs_root),
-        node_types=discovery_node_types(),
+        node_types={**discovery_node_types(), **writing_node_types()},
     )
 
 
