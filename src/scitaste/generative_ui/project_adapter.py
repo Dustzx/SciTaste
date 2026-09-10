@@ -98,6 +98,18 @@ class ProjectSnapshotAdapter:
                     )
                 )
 
+        for review_index, review in enumerate(snapshot.manifest.reviews, start=1):
+            refs.append(
+                self._ref(
+                    snapshot=snapshot,
+                    project_root=project_root,
+                    evidence_id=_evidence_id("review", review.round_locator),
+                    kind=EvidenceKind.REVIEW,
+                    locator=review.round_locator,
+                    label=f"Review round {review_index}",
+                )
+            )
+
         binding = SnapshotBinding.from_trusted_evidence(
             project_id=snapshot.project_id,
             snapshot_revision=snapshot.revision,

@@ -1565,6 +1565,130 @@ code {
   padding-left: 1.4rem;
 }
 
+.project-lifecycle {
+  background: linear-gradient(135deg, #f5f7f2 0%, #edf2f0 100%);
+  border: 1px solid #d8dfd8;
+}
+
+.lifecycle-header {
+  align-items: baseline;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.lifecycle-header strong {
+  color: var(--forest-dark);
+  font-size: 0.85rem;
+}
+
+.lifecycle-header small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  text-align: right;
+}
+
+.project-lifecycle-rail {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lifecycle-node {
+  align-content: start;
+  border-top: 0.18rem solid #aeb6ae;
+  display: grid;
+  gap: 0.38rem;
+  min-width: 0;
+  padding: 0.65rem 0.45rem 0;
+  position: relative;
+}
+
+.lifecycle-node::before {
+  background: #aeb6ae;
+  content: "";
+  height: 0.08rem;
+  left: -50%;
+  position: absolute;
+  right: 50%;
+  top: -0.13rem;
+}
+
+.lifecycle-node:first-child::before {
+  display: none;
+}
+
+.lifecycle-node.state-satisfied {
+  border-top-color: #287555;
+}
+
+.lifecycle-node.state-unavailable {
+  border-top-color: #a34e42;
+}
+
+.lifecycle-marker {
+  background: #f7f8f5;
+  border: 0.16rem solid #aeb6ae;
+  border-radius: 99rem;
+  height: 0.72rem;
+  margin-top: -1.12rem;
+  width: 0.72rem;
+  z-index: 1;
+}
+
+.lifecycle-node.state-satisfied .lifecycle-marker {
+  background: #287555;
+  border-color: #287555;
+}
+
+.lifecycle-node.state-unavailable .lifecycle-marker {
+  background: #a34e42;
+  border-color: #a34e42;
+}
+
+.lifecycle-node > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.lifecycle-node strong {
+  font-size: 0.67rem;
+}
+
+.lifecycle-node small {
+  color: var(--muted);
+  font-size: 0.58rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.lifecycle-state {
+  border-radius: 99rem;
+  font-size: 0.58rem;
+  font-weight: 750;
+  justify-self: start;
+  padding: 0.17rem 0.36rem;
+}
+
+.lifecycle-state.state-satisfied {
+  background: #d7eddf;
+  color: #155237;
+}
+
+.lifecycle-state.state-blocked {
+  background: #eee9d9;
+  color: #6c5a24;
+}
+
+.lifecycle-state.state-unavailable {
+  background: #f5dfd9;
+  color: #7c342b;
+}
+
 @media (max-width: 1050px) {
   .application-grid {
     grid-template-columns: minmax(14rem, 18rem) minmax(20rem, 1fr);
@@ -1652,5 +1776,41 @@ code {
   .landscape-type-grid,
   .readiness-lanes {
     grid-template-columns: 1fr;
+  }
+
+  .lifecycle-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .lifecycle-header small {
+    text-align: left;
+  }
+
+  .project-lifecycle-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .lifecycle-node {
+    border-left: 0.18rem solid #aeb6ae;
+    border-top: 0;
+    grid-template-columns: auto 1fr auto;
+    padding: 0.45rem 0 0.45rem 0.75rem;
+  }
+
+  .lifecycle-node.state-satisfied {
+    border-left-color: #287555;
+  }
+
+  .lifecycle-node.state-unavailable {
+    border-left-color: #a34e42;
+  }
+
+  .lifecycle-node::before {
+    display: none;
+  }
+
+  .lifecycle-marker {
+    margin: 0.12rem 0 0 -1.19rem;
   }
 }

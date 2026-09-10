@@ -219,6 +219,32 @@ Paper generation materializes files beneath
 All mutating commands support `--dry-run`. Dry-run validates IDs, schemas, and
 the expected revision without creating or changing files.
 
+## Paper review and lifecycle
+
+Review rounds are first-class project records beneath
+`outputs/projects/<project-id>/reviews/<review-id>/`. The registered round hash
+changes only through optimistic-revision writes; status inspection rehashes the
+packet, reports, response, verifications, and referenced paper artifacts.
+
+```bash
+.venv/bin/scitaste project paper review prepare \
+  --project-id my-research-project --review-id iclr-r1 \
+  --paper-directory <registered-paper-directory> \
+  --venue-taste-config configs/writing/venues/iclr-2027/taste.yaml \
+  --scope development --expected-revision <revision> \
+  --outputs-root outputs --dry-run
+
+.venv/bin/scitaste project lifecycle status \
+  --project-id my-research-project --outputs-root outputs
+```
+
+The lifecycle projection admits native Discovery and Evidence records only
+after their record hashes and referenced artifacts verify. A paper counts as
+idea-to-paper complete only when its own `source_run` owns both stages; merely
+placing unrelated artifacts in one project is insufficient. Review closure is
+likewise content-bound to the revised registered paper and original-reviewer
+verifications. See [`PAPER_REVIEW_LOOP.md`](PAPER_REVIEW_LOOP.md).
+
 Run selected matched-study cells inside an existing project with:
 
 ```bash

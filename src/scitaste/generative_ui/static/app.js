@@ -1025,7 +1025,12 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.stages"), data.counts.completed_stages, t("progress.metric.stages_note")),
     progressMetric(t("progress.metric.papers"), data.counts.papers_registered, t("progress.metric.papers_note")),
   );
-  container.append(hero, metrics, renderRunDistribution(data.counts));
+  container.append(
+    hero,
+    metrics,
+    renderRunDistribution(data.counts),
+    renderProjectLifecycle(data.lifecycle),
+  );
 
   const direction = progressSection(t("progress.direction.title"), t("progress.direction.subtitle"));
   const directionGrid = document.createElement("div");
@@ -1199,6 +1204,63 @@ function renderProjectProgress(data) {
   activityAndNext.appendChild(nextSteps);
   container.appendChild(activityAndNext);
   return container;
+}
+
+function renderProjectLifecycle(data) {
+  const section = progressSection(
+    t("lifecycle.title"),
+    t("lifecycle.subtitle"),
+  );
+  section.classList.add("project-lifecycle");
+  const header = document.createElement("div");
+  header.className = "lifecycle-header";
+  const state = document.createElement("strong");
+  appendText(state, t(`lifecycle.state.${data.lifecycle_state}`));
+  const authority = document.createElement("small");
+  appendText(authority, t("lifecycle.no_official_authority"));
+  header.append(state, authority);
+
+  const rail = document.createElement("ol");
+  rail.className = "project-lifecycle-rail";
+  for (const gate of data.gates) {
+    const node = document.createElement("li");
+    node.className = `lifecycle-node state-${gate.state}`;
+    const marker = document.createElement("span");
+    marker.className = "lifecycle-marker";
+    marker.setAttribute("aria-hidden", "true");
+    const copy = document.createElement("div");
+    const label = document.createElement("strong");
+    appendText(label, t(`lifecycle.gate.${gate.gate_id}`));
+    const reason = document.createElement("small");
+    appendText(reason, localizedCode(gate.reason_code));
+    copy.append(label, reason);
+    const pill = document.createElement("span");
+    pill.className = `lifecycle-state state-${gate.state}`;
+    appendText(pill, t(`lifecycle.gate_state.${gate.state}`));
+    node.append(marker, copy, pill);
+    if (gate.support_ref_ids.length > 0) {
+      node.appendChild(evidenceDisclosure(gate.support_ref_ids));
+    }
+    rail.appendChild(node);
+  }
+  section.append(header, rail, evidenceDisclosure(data.support_ref_ids, {
+    data: {
+      idea_to_paper_complete: data.idea_to_paper_complete,
+      internal_review_cycle_complete: data.internal_review_cycle_complete,
+      independent_pre_submission_review_complete:
+        data.independent_pre_submission_review_complete,
+      official_decision_authority: data.official_decision_authority,
+      scientific_effectiveness_established: data.scientific_effectiveness_established,
+    },
+    names: [
+      "idea_to_paper_complete",
+      "internal_review_cycle_complete",
+      "independent_pre_submission_review_complete",
+      "official_decision_authority",
+      "scientific_effectiveness_established",
+    ],
+  }));
+  return section;
 }
 
 const componentRenderers = Object.freeze({

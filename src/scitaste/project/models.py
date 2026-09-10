@@ -80,6 +80,41 @@ class ProjectRun(BaseModel):
         return self
 
 
+class ProjectReview(BaseModel):
+    """Content-bound pointer to one project-owned paper review round."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    review_id: str
+    paper_directory: str
+    venue_id: str = Field(min_length=1)
+    round_number: int = Field(ge=1)
+    status: str = Field(min_length=1)
+    round_locator: str
+    round_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("review_id", "paper_directory")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @field_validator("round_locator")
+    @classmethod
+    def round_locator_is_owned(cls, value: str, info: Any) -> str:
+        locator = validate_relative_locator(value, field_name=str(info.field_name))
+        parts = PurePosixPath(locator).parts
+        if len(parts) != 3 or parts[0] != "reviews" or parts[2] != "ROUND.json":
+            raise ValueError("round_locator must be reviews/<review-id>/ROUND.json")
+        validate_entry_id(parts[1], field_name="review directory")
+        return locator
+
+    @model_validator(mode="after")
+    def locator_matches_review_id(self) -> ProjectReview:
+        if PurePosixPath(self.round_locator).parts[1] != self.review_id:
+            raise ValueError("round_locator review directory must match review_id")
+        return self
+
+
 class ProjectManifest(BaseModel):
     """Primary ownership record; extension fields preserve historical manifests."""
 
@@ -97,9 +132,11 @@ class ProjectManifest(BaseModel):
     current_run: str | None = None
     completed_stages: list[int] = Field(default_factory=list)
     current_paper: str | None = None
+    current_review: str | None = None
     stage_semantics: str = "autoresearchclaw-stages"
     retrieval_eligible: bool = True
     runs: list[ProjectRun] = Field(default_factory=list)
+    reviews: list[ProjectReview] = Field(default_factory=list)
 
     @field_validator("project_id")
     @classmethod
@@ -124,6 +161,13 @@ class ProjectManifest(BaseModel):
             raise ValueError("current_paper must be papers/<paper-directory>")
         validate_entry_id(parts[1], field_name="paper directory")
         return locator
+
+    @field_validator("current_review")
+    @classmethod
+    def current_review_is_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_entry_id(value, field_name="current_review")
 
     @field_validator("completed_stages")
     @classmethod
@@ -151,6 +195,11 @@ class ProjectManifest(BaseModel):
             )
         if self.stage_semantics != "autoresearchclaw-stages" and self.completed_stages:
             raise ValueError("alternate stage semantics cannot claim AutoResearchClaw stages")
+        review_ids = [review.review_id for review in self.reviews]
+        if len(review_ids) != len(set(review_ids)):
+            raise ValueError("project review IDs must be unique")
+        if self.current_review is not None and self.current_review not in set(review_ids):
+            raise ValueError("current_review must reference a registered review")
         return self
 
 
@@ -232,10 +281,12 @@ class ProjectSnapshot(BaseModel):
     project_locator: str
     manifest: ProjectManifest
     run_locators: dict[str, str]
+    review_locators: dict[str, str] = Field(default_factory=dict)
     papers: list[ProjectPaperEntry]
     current_run_locator: str | None = None
     current_stage_locator: str | None = None
     current_paper_locator: str | None = None
+    current_review_locator: str | None = None
     warnings: list[str] = Field(default_factory=list)
 
     @field_validator(
@@ -243,6 +294,7 @@ class ProjectSnapshot(BaseModel):
         "current_run_locator",
         "current_stage_locator",
         "current_paper_locator",
+        "current_review_locator",
     )
     @classmethod
     def snapshot_locators_are_relative(cls, value: str | None) -> str | None:
@@ -258,6 +310,8 @@ class ProjectSnapshot(BaseModel):
             raise ValueError("snapshot revision must match its manifest")
         if set(self.run_locators) != {run.run_id for run in self.manifest.runs}:
             raise ValueError("snapshot run locators must cover registered runs")
+        if set(self.review_locators) != {review.review_id for review in self.manifest.reviews}:
+            raise ValueError("snapshot review locators must cover registered reviews")
         return self
 
 

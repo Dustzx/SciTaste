@@ -792,6 +792,74 @@ class ProjectProgressCandidateItem(BaseModel):
         return self
 
 
+class ProjectLifecycleGateItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    gate_id: Literal[
+        "idea",
+        "evidence",
+        "lineage",
+        "paper",
+        "submission",
+        "review",
+        "response_verification",
+        "independent_review",
+    ]
+    state: Literal["satisfied", "blocked", "unavailable"]
+    reason_code: SafeIdentifier
+    support_ref_ids: tuple[SafeIdentifier, ...] = ()
+
+    @model_validator(mode="after")
+    def evidence_matches_gate(self) -> ProjectLifecycleGateItem:
+        if self.state == "satisfied" and not self.support_ref_ids:
+            raise ValueError("a satisfied project lifecycle gate requires evidence")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project lifecycle evidence references must be unique")
+        return self
+
+
+class ProjectLifecycleSummaryData(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    lifecycle_state: Literal[
+        "discovery",
+        "evidence",
+        "paper",
+        "review",
+        "revision",
+        "internally_closed",
+        "independently_reviewed",
+    ]
+    current_paper_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    current_review_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    idea_to_paper_complete: bool
+    internal_review_cycle_complete: bool
+    independent_pre_submission_review_complete: bool
+    official_decision_authority: Literal[False] = False
+    scientific_effectiveness_established: Literal[False] = False
+    gates: tuple[ProjectLifecycleGateItem, ...] = Field(min_length=8, max_length=8)
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def lifecycle_summary_is_closed(self) -> ProjectLifecycleSummaryData:
+        expected = (
+            "idea",
+            "evidence",
+            "lineage",
+            "paper",
+            "submission",
+            "review",
+            "response_verification",
+            "independent_review",
+        )
+        if tuple(item.gate_id for item in self.gates) != expected:
+            raise ValueError("project lifecycle gates must remain in canonical order")
+        cited = {ref for item in self.gates for ref in item.support_ref_ids}
+        if cited - set(self.support_ref_ids):
+            raise ValueError("project lifecycle gate cites evidence outside its support set")
+        return self
+
+
 class ProjectProgressBoardData(BaseModel):
     """Evidence-native project status without guessed schedules or percentages."""
 
@@ -812,6 +880,7 @@ class ProjectProgressBoardData(BaseModel):
     milestone_state: Literal["available", "empty", "unavailable"]
     milestone_reason_code: SafeIdentifier
     counts: ProjectProgressCounts
+    lifecycle: ProjectLifecycleSummaryData
     current_run_id: str | None = Field(
         default=None,
         max_length=255,
@@ -841,6 +910,8 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress summary must cite the project manifest")
         if self.project_ref_id not in self.focus_ref_ids:
             raise ValueError("project progress focus must cite the project manifest")
+        if self.project_ref_id not in self.lifecycle.support_ref_ids:
+            raise ValueError("project lifecycle must cite the project manifest")
         for refs in (self.summary_ref_ids, self.focus_ref_ids, self.current_run_ref_ids):
             if len(refs) != len(set(refs)):
                 raise ValueError("project progress evidence references must be unique")

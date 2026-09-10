@@ -166,6 +166,12 @@ Run and paper registration requires the current project revision, so concurrent
 workers fail on stale state instead of overwriting one another. See
 [`docs/PROJECT_RUNTIME.md`](docs/PROJECT_RUNTIME.md).
 
+The project runtime also owns content-bound paper review rounds and an honest
+idea-to-paper-to-review projection. `scitaste project lifecycle status` reports
+eight evidence gates without inferring a percentage, while the project homepage
+renders the same gates as an interactive lifecycle rail. See
+[`docs/PAPER_REVIEW_LOOP.md`](docs/PAPER_REVIEW_LOOP.md).
+
 Generate a trusted, content-addressed project overview bundle with:
 
 ```bash
@@ -624,6 +630,14 @@ An optional whole-paper audit can be added with `--argument-contract` and
 evidence, missing reader-facing evidence carriers, entry-point scope drift, and
 content-changed artifacts. The resulting argument assessment is advisory and
 does not convert mechanical submission eligibility into scientific quality.
+
+After registration, `scitaste project paper review prepare` creates an exact
+anonymous venue packet without making a model call. Structured reports,
+responses, and original-reviewer verifications remain attached to that project
+and paper revision. Internal models, independent models, and independent experts
+have separate identities; model feedback can never satisfy the two-expert
+pre-submission gate. The complete contract is documented in
+[`docs/PAPER_REVIEW_LOOP.md`](docs/PAPER_REVIEW_LOOP.md).
 
 ## Offline Figure Loop
 

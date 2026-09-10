@@ -58,6 +58,7 @@ from scitaste.generative_ui.safety import (
     SafeText,
     Sha256,
 )
+from scitaste.lifecycle import assess_project_lifecycle
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import (
     ProjectPaperEntry,
@@ -602,6 +603,26 @@ class WorkspaceSurfaceFactory:
                 }
             )
 
+        lifecycle = assess_project_lifecycle(self._runtime, snapshot.project_id)
+        lifecycle_gates = []
+        lifecycle_ref_ids = [project_ref.evidence_id]
+        for gate in lifecycle.gates:
+            gate_ref_ids = _lifecycle_evidence_ref_ids(
+                snapshot,
+                binding,
+                gate.evidence_locators,
+            )
+            lifecycle_ref_ids.extend(gate_ref_ids)
+            lifecycle_gates.append(
+                {
+                    "gate_id": gate.gate_id,
+                    "state": gate.state,
+                    "reason_code": gate.reason_code,
+                    "support_ref_ids": gate_ref_ids,
+                }
+            )
+        evidence_ref_ids.extend(lifecycle_ref_ids)
+
         component = ComponentSpec(
             component_id="project-progress-board",
             component=TrustedComponent.PROJECT_PROGRESS_BOARD,
@@ -633,6 +654,22 @@ class WorkspaceSurfaceFactory:
                     "runs_unknown": run_states.count("unknown"),
                     "completed_stages": len(stage_rows),
                     "papers_registered": len(paper_rows),
+                },
+                "lifecycle": {
+                    "lifecycle_state": lifecycle.state,
+                    "current_paper_id": lifecycle.current_paper_directory,
+                    "current_review_id": lifecycle.current_review_id,
+                    "idea_to_paper_complete": lifecycle.idea_to_paper_complete,
+                    "internal_review_cycle_complete": (
+                        lifecycle.internal_review_cycle_complete
+                    ),
+                    "independent_pre_submission_review_complete": (
+                        lifecycle.independent_pre_submission_review_complete
+                    ),
+                    "official_decision_authority": False,
+                    "scientific_effectiveness_established": False,
+                    "gates": lifecycle_gates,
+                    "support_ref_ids": list(dict.fromkeys(lifecycle_ref_ids)),
                 },
                 "current_run_id": snapshot.manifest.current_run,
                 "current_run_ref_id": current_run_ref_id,
@@ -1189,6 +1226,34 @@ def _run_ref(snapshot: ProjectSnapshot, binding: SnapshotBinding, run_id: str) -
         EvidenceKind.RUN_RECORD,
         _project_relative(snapshot, snapshot.run_locators[run_id]),
     )
+
+
+def _lifecycle_evidence_ref_ids(
+    snapshot: ProjectSnapshot,
+    binding: SnapshotBinding,
+    locators: tuple[str, ...],
+) -> list[str]:
+    refs: list[str] = []
+    for locator in locators:
+        exact = [item for item in binding.evidence_refs if item.locator == locator]
+        if exact:
+            refs.append(exact[0].evidence_id)
+            continue
+        run_id = next(
+            (
+                run.run_id
+                for run in snapshot.manifest.runs
+                if locator.startswith(f"runs/{run.run_id}/")
+            ),
+            None,
+        )
+        if run_id is not None:
+            refs.append(_run_ref(snapshot, binding, run_id).evidence_id)
+            continue
+        raise UnknownWorkspaceSelectionError(
+            f"lifecycle evidence is not bound to the project snapshot: {locator}"
+        )
+    return list(dict.fromkeys(refs))
 
 
 def _require_run(snapshot: ProjectSnapshot, run_id: str) -> ProjectRun:

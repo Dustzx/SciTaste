@@ -17,6 +17,7 @@ from scitaste.project.models import (
     PaperManifest,
     ProjectManifest,
     ProjectPaperEntry,
+    ProjectReview,
     ProjectRun,
     ProjectSnapshot,
     content_sha256,
@@ -53,7 +54,7 @@ class ProjectRuntime:
                 raise FileExistsError(target)
             temporary = Path(tempfile.mkdtemp(prefix=".project-", dir=self.projects_root))
             try:
-                for name in ("runs", "stages", "papers"):
+                for name in ("runs", "stages", "papers", "reviews"):
                     (temporary / name).mkdir()
                 _atomic_json(temporary / "PROJECT.json", manifest.model_dump(mode="json"))
                 _atomic_text(
@@ -88,10 +89,14 @@ class ProjectRuntime:
     ) -> ProjectSnapshot:
         """Atomically update project metadata under an optimistic revision guard."""
 
-        if {"project_id", "revision", "runs"} & changes.keys():
-            raise ValueError("project identity, revision, and runs use dedicated operations")
-        if {"current_run", "current_paper"} & changes.keys():
-            raise ValueError("use select_run or select_paper to update current aliases")
+        if {"project_id", "revision", "runs", "reviews"} & changes.keys():
+            raise ValueError(
+                "project identity, revision, runs, and reviews use dedicated operations"
+            )
+        if {"current_run", "current_paper", "current_review"} & changes.keys():
+            raise ValueError(
+                "use select_run, select_paper, or select_review to update current aliases"
+            )
         project = self._project_path(project_id)
         with _locked(project / ".project.lock"):
             manifest = self._replace_manifest(
@@ -281,6 +286,110 @@ class ProjectRuntime:
             )
         return self._snapshot(project, manifest)
 
+    def register_review(
+        self,
+        project_id: str,
+        review: ProjectReview,
+        *,
+        expected_revision: int,
+    ) -> ProjectSnapshot:
+        """Register one already materialized review-round projection."""
+
+        project = self._project_path(project_id)
+        review_dir = project / "reviews" / review.review_id
+        round_path = project / review.round_locator
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            if review.review_id in {item.review_id for item in manifest.reviews}:
+                raise FileExistsError(review_dir)
+            paper_path = project / "papers" / review.paper_directory / "MANIFEST.json"
+            if not paper_path.is_file():
+                raise FileNotFoundError(paper_path)
+            if not review_dir.is_dir() or review_dir.is_symlink():
+                raise FileNotFoundError(review_dir)
+            contained_round = _contained_project_path(project, review.round_locator)
+            if contained_round != round_path.resolve(strict=True):
+                raise ValueError("review round locator does not resolve to its canonical path")
+            observed = hashlib.sha256(round_path.read_bytes()).hexdigest()
+            if observed != review.round_sha256:
+                raise ValueError("review round hash does not match the materialized record")
+            manifest = self._replace_manifest(
+                project,
+                expected_revision=expected_revision,
+                changes={"reviews": [*manifest.reviews, review]},
+            )
+        return self._snapshot(project, manifest)
+
+    def update_review(
+        self,
+        project_id: str,
+        review_id: str,
+        *,
+        expected_revision: int,
+        **changes: Any,
+    ) -> ProjectSnapshot:
+        """Update the pointer for one review after rehashing its round projection."""
+
+        validate_entry_id(review_id, field_name="review_id")
+        if {"review_id", "paper_directory", "venue_id", "round_number"} & changes.keys():
+            raise ValueError("review identity cannot be changed")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            matches = [item for item in manifest.reviews if item.review_id == review_id]
+            if not matches:
+                raise ValueError(f"unknown project review {review_id!r}")
+            payload = matches[0].model_dump(mode="json")
+            payload.update(changes)
+            updated = ProjectReview.model_validate(payload)
+            round_path = _contained_project_path(project, updated.round_locator)
+            observed = hashlib.sha256(round_path.read_bytes()).hexdigest()
+            if observed != updated.round_sha256:
+                raise ValueError("review round hash does not match the materialized record")
+            reviews = [
+                updated if item.review_id == review_id else item
+                for item in manifest.reviews
+            ]
+            manifest = self._replace_manifest(
+                project,
+                expected_revision=expected_revision,
+                changes={"reviews": reviews},
+            )
+        return self._snapshot(project, manifest)
+
+    def select_review(
+        self,
+        project_id: str,
+        review_id: str,
+        *,
+        expected_revision: int,
+    ) -> ProjectSnapshot:
+        """Select a registered review round for stable project navigation."""
+
+        validate_entry_id(review_id, field_name="review_id")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            matches = [item for item in manifest.reviews if item.review_id == review_id]
+            if not matches:
+                raise ValueError(f"unknown project review {review_id!r}")
+            round_path = _contained_project_path(project, matches[0].round_locator)
+            observed = hashlib.sha256(round_path.read_bytes()).hexdigest()
+            if observed != matches[0].round_sha256:
+                raise ValueError("registered review round hash has drifted")
+            current_alias = project / "reviews" / "current"
+            _require_replaceable_symlink(current_alias)
+            _replace_symlink(current_alias, review_id)
+            manifest = self._replace_manifest(
+                project,
+                expected_revision=expected_revision,
+                changes={"current_review": review_id},
+            )
+        return self._snapshot(project, manifest)
+
     def _project_path(self, project_id: str) -> Path:
         validate_project_id(project_id)
         return self.projects_root / project_id
@@ -339,6 +448,19 @@ class ProjectRuntime:
                 warnings.append(f"registered run is missing: {run.run_id}")
             run_locators[run.run_id] = locator
 
+        review_locators: dict[str, str] = {}
+        for review in manifest.reviews:
+            canonical = f"projects/{manifest.project_id}/{review.round_locator}"
+            try:
+                round_path = _contained_project_path(project, review.round_locator)
+                observed = hashlib.sha256(round_path.read_bytes()).hexdigest()
+                if observed != review.round_sha256:
+                    warnings.append(f"registered review hash mismatch: {review.review_id}")
+                review_locators[review.review_id] = canonical
+            except (OSError, ValueError):
+                review_locators[review.review_id] = canonical
+                warnings.append(f"registered review is missing or invalid: {review.review_id}")
+
         papers: list[ProjectPaperEntry] = []
         papers_root = project / "papers"
         if papers_root.is_dir():
@@ -380,6 +502,23 @@ class ProjectRuntime:
                 warnings.append("current_paper has no papers/current alias")
             else:
                 current_paper_locator = f"projects/{manifest.project_id}/{manifest.current_paper}"
+        current_review_locator = None
+        if manifest.current_review is not None:
+            review_link = project / "reviews" / "current"
+            review = next(
+                item for item in manifest.reviews if item.review_id == manifest.current_review
+            )
+            try:
+                _contained_project_path(project, review.round_locator)
+            except (OSError, ValueError):
+                warnings.append(f"current review is missing: {manifest.current_review}")
+            else:
+                if not _lexists(review_link):
+                    warnings.append("current_review has no reviews/current alias")
+                else:
+                    current_review_locator = (
+                        f"projects/{manifest.project_id}/reviews/{manifest.current_review}"
+                    )
 
         manifest_path = project / "PROJECT.json"
         manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
@@ -387,10 +526,12 @@ class ProjectRuntime:
             "manifest": manifest.model_dump(mode="json"),
             "manifest_sha256": manifest_sha,
             "run_locators": run_locators,
+            "review_locators": review_locators,
             "papers": [item.model_dump(mode="json") for item in papers],
             "current_run_locator": current_run_locator,
             "current_stage_locator": current_stage_locator,
             "current_paper_locator": current_paper_locator,
+            "current_review_locator": current_review_locator,
             "warnings": warnings,
         }
         return ProjectSnapshot(
@@ -401,10 +542,12 @@ class ProjectRuntime:
             project_locator=f"projects/{manifest.project_id}",
             manifest=manifest,
             run_locators=run_locators,
+            review_locators=review_locators,
             papers=papers,
             current_run_locator=current_run_locator,
             current_stage_locator=current_stage_locator,
             current_paper_locator=current_paper_locator,
+            current_review_locator=current_review_locator,
             warnings=warnings,
         )
 
@@ -417,6 +560,20 @@ def _contained_path(root: Path, locator: str) -> Path:
     except ValueError as exc:
         raise ValueError("artifact locator resolves outside its paper bundle") from exc
     return candidate
+
+
+def _contained_project_path(project: Path, locator: str) -> Path:
+    validate_relative_locator(locator, field_name="project artifact locator")
+    root = project.resolve(strict=True)
+    candidate = project / PurePosixPath(locator)
+    resolved = candidate.resolve(strict=True)
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("project artifact locator resolves outside its project") from exc
+    if candidate.is_symlink() or not resolved.is_file():
+        raise ValueError("project artifact locator must be a regular non-symlink file")
+    return resolved
 
 
 def _lexists(path: Path) -> bool:

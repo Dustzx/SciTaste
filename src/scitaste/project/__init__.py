@@ -4,6 +4,7 @@ from scitaste.project.models import (
     PaperManifest,
     ProjectManifest,
     ProjectPaperEntry,
+    ProjectReview,
     ProjectRun,
     ProjectSnapshot,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "PaperManifest",
     "ProjectManifest",
     "ProjectPaperEntry",
+    "ProjectReview",
     "ProjectRevisionConflictError",
     "ProjectRun",
     "ProjectRuntime",

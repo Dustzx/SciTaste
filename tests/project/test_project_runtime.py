@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from pydantic import ValidationError
 from scitaste.project import (
     PaperManifest,
     ProjectManifest,
+    ProjectReview,
     ProjectRevisionConflictError,
     ProjectRun,
     ProjectRuntime,
@@ -208,6 +210,66 @@ def test_register_and_select_paper_updates_project_and_global_aliases(tmp_path: 
     assert global_latest.readlink().as_posix() == (
         f"../projects/typed-project/papers/{bundle_name}"
     )
+
+
+def test_register_update_and_select_review_are_content_and_revision_guarded(
+    tmp_path: Path,
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(manifest())
+    paper_dir = runtime.projects_root / "typed-project/papers/paper-one"
+    paper_dir.mkdir(parents=True)
+    (paper_dir / "paper.md").write_text("# Paper\n", encoding="utf-8")
+    snapshot = runtime.register_paper(
+        "typed-project",
+        paper().model_copy(update={"files": {"Markdown": "paper.md"}}),
+        directory_name="paper-one",
+        expected_revision=snapshot.revision,
+    )
+    review_dir = runtime.projects_root / "typed-project/reviews/review-one"
+    review_dir.mkdir(parents=True)
+    round_path = review_dir / "ROUND.json"
+    round_path.write_text('{"status":"prepared"}\n', encoding="utf-8")
+    review = ProjectReview(
+        review_id="review-one",
+        paper_directory="paper-one",
+        venue_id="iclr-2027",
+        round_number=1,
+        status="prepared",
+        round_locator="reviews/review-one/ROUND.json",
+        round_sha256=hashlib.sha256(round_path.read_bytes()).hexdigest(),
+    )
+
+    snapshot = runtime.register_review(
+        "typed-project", review, expected_revision=snapshot.revision
+    )
+    assert snapshot.review_locators == {
+        "review-one": "projects/typed-project/reviews/review-one/ROUND.json"
+    }
+    with pytest.raises(ProjectRevisionConflictError):
+        runtime.select_review("typed-project", "review-one", expected_revision=1)
+
+    round_path.write_text('{"status":"revision-required"}\n', encoding="utf-8")
+    round_sha256 = hashlib.sha256(round_path.read_bytes()).hexdigest()
+    snapshot = runtime.update_review(
+        "typed-project",
+        "review-one",
+        expected_revision=snapshot.revision,
+        status="revision-required",
+        round_sha256=round_sha256,
+    )
+    snapshot = runtime.select_review(
+        "typed-project", "review-one", expected_revision=snapshot.revision
+    )
+    assert snapshot.manifest.current_review == "review-one"
+    assert snapshot.current_review_locator == "projects/typed-project/reviews/review-one"
+    assert (review_dir.parent / "current").readlink().as_posix() == "review-one"
+
+    round_path.write_text("drift\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="drifted"):
+        runtime.select_review(
+            "typed-project", "review-one", expected_revision=snapshot.revision
+        )
 
 
 def test_paper_registration_rejects_missing_or_escaping_artifacts(tmp_path: Path) -> None:

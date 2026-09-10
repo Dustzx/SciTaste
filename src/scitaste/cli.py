@@ -83,6 +83,7 @@ from scitaste.full_workflow import (
 )
 from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
+from scitaste.lifecycle import assess_project_lifecycle
 from scitaste.model_node_pilot_cli import register_model_node_pilot_cli
 from scitaste.model_node_runtime_cli import register_model_node_runtime_cli
 from scitaste.model_nodes.full_workflow_tool_intelligence import (
@@ -93,6 +94,17 @@ from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_adviso
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.project.models import validate_entry_id
 from scitaste.project_substrate_cli import register_project_substrate_cli
+from scitaste.review import (
+    VenueReviewReport,
+    VenueReviewResponse,
+    VenueReviewVerification,
+    build_venue_review_packet,
+    import_venue_review_report,
+    import_venue_review_verification,
+    inspect_venue_review,
+    prepare_venue_review,
+    submit_venue_review_response,
+)
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.intrinsic import (
@@ -249,6 +261,22 @@ def build_parser() -> argparse.ArgumentParser:
     project_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_status)
     project_status.set_defaults(handler=_handle_project_status)
+
+    project_lifecycle = project_commands.add_parser(
+        "lifecycle", help="Verify idea-to-paper-to-review lifecycle evidence"
+    )
+    project_lifecycle_commands = project_lifecycle.add_subparsers(
+        dest="project_lifecycle_command", required=True
+    )
+    project_lifecycle_status = project_lifecycle_commands.add_parser(
+        "status", help="Derive content-bound lifecycle gates"
+    )
+    project_lifecycle_status.add_argument("--project-id", required=True)
+    project_lifecycle_status.add_argument(
+        "--outputs-root", type=Path, default=Path("outputs")
+    )
+    _add_log_level_option(project_lifecycle_status)
+    project_lifecycle_status.set_defaults(handler=_handle_project_lifecycle_status)
 
     project_surface = project_commands.add_parser(
         "surface", help="Build trusted project interface bundles"
@@ -423,6 +451,73 @@ def build_parser() -> argparse.ArgumentParser:
     project_paper_select.add_argument("--no-global-latest", action="store_true")
     _add_project_options(project_paper_select)
     project_paper_select.set_defaults(handler=_handle_project_paper_select)
+
+    project_paper_review = project_paper_commands.add_parser(
+        "review", help="Prepare and close content-bound venue review rounds"
+    )
+    project_paper_review_commands = project_paper_review.add_subparsers(
+        dest="project_paper_review_command", required=True
+    )
+    review_prepare = project_paper_review_commands.add_parser(
+        "prepare", help="Prepare an exact paper packet without calling a reviewer"
+    )
+    review_prepare.add_argument("--project-id", required=True)
+    review_prepare.add_argument("--paper-directory", required=True)
+    review_prepare.add_argument("--review-id", required=True)
+    review_prepare.add_argument("--round-number", type=int, default=1)
+    review_prepare.add_argument(
+        "--scope",
+        choices=["development", "independent_pre_submission"],
+        default="development",
+    )
+    review_prepare.add_argument(
+        "--venue-taste-profile",
+        type=Path,
+        default=Path("configs/writing/venues/iclr-2027/taste.yaml"),
+    )
+    review_prepare.add_argument("--expected-revision", type=int, required=True)
+    review_prepare.add_argument("--select", action="store_true")
+    _add_project_options(review_prepare)
+    review_prepare.set_defaults(handler=_handle_project_paper_review_prepare)
+
+    review_import = project_paper_review_commands.add_parser(
+        "import-report", help="Import one structured reviewer report"
+    )
+    review_import.add_argument("--project-id", required=True)
+    review_import.add_argument("--review-id", required=True)
+    review_import.add_argument("--report", type=Path, required=True)
+    review_import.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_import)
+    review_import.set_defaults(handler=_handle_project_paper_review_import)
+
+    review_respond = project_paper_review_commands.add_parser(
+        "respond", help="Bind a complete response to a registered paper revision"
+    )
+    review_respond.add_argument("--project-id", required=True)
+    review_respond.add_argument("--review-id", required=True)
+    review_respond.add_argument("--response", type=Path, required=True)
+    review_respond.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_respond)
+    review_respond.set_defaults(handler=_handle_project_paper_review_respond)
+
+    review_verify = project_paper_review_commands.add_parser(
+        "verify-response", help="Import original-reviewer verification of a response"
+    )
+    review_verify.add_argument("--project-id", required=True)
+    review_verify.add_argument("--review-id", required=True)
+    review_verify.add_argument("--verification", type=Path, required=True)
+    review_verify.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_verify)
+    review_verify.set_defaults(handler=_handle_project_paper_review_verify)
+
+    review_status = project_paper_review_commands.add_parser(
+        "status", help="Rehash and inspect one registered review round"
+    )
+    review_status.add_argument("--project-id", required=True)
+    review_status.add_argument("--review-id", required=True)
+    review_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_status)
+    review_status.set_defaults(handler=_handle_project_paper_review_status)
 
     register_model_node_pilot_cli(commands)
     register_model_node_runtime_cli(commands)
@@ -752,6 +847,14 @@ def _handle_project_init(args: argparse.Namespace) -> int:
 def _handle_project_status(args: argparse.Namespace) -> int:
     snapshot = ProjectRuntime(args.outputs_root).open(args.project_id)
     print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_lifecycle_status(args: argparse.Namespace) -> int:
+    assessment = assess_project_lifecycle(
+        ProjectRuntime(args.outputs_root), args.project_id
+    )
+    print(assessment.model_dump_json(indent=2))
     return 0
 
 
@@ -1278,6 +1381,131 @@ def _handle_project_paper_select(args: argparse.Namespace) -> int:
     )
     print(snapshot.model_dump_json(indent=2))
     return 0
+
+
+def _handle_project_paper_review_prepare(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        packet = build_venue_review_packet(
+            runtime,
+            project_id=args.project_id,
+            paper_directory=args.paper_directory,
+            review_id=args.review_id,
+            round_number=args.round_number,
+            review_scope=args.scope,
+            venue_taste_profile=args.venue_taste_profile,
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1 + int(args.select),
+                    "would_call_model": False,
+                    "packet": packet.model_dump(mode="json"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, packet, review_round = prepare_venue_review(
+        runtime,
+        project_id=args.project_id,
+        paper_directory=args.paper_directory,
+        review_id=args.review_id,
+        round_number=args.round_number,
+        review_scope=args.scope,
+        venue_taste_profile=args.venue_taste_profile,
+        expected_revision=args.expected_revision,
+        select=args.select,
+    )
+    _print_review_operation(snapshot, review_round, packet_sha256=packet.packet_sha256)
+    return 0
+
+
+def _handle_project_paper_review_import(args: argparse.Namespace) -> int:
+    _reject_review_import_dry_run(args)
+    report = VenueReviewReport.model_validate_json(args.report.read_text(encoding="utf-8"))
+    snapshot, review_round = import_venue_review_report(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        report=report,
+        expected_revision=args.expected_revision,
+    )
+    _print_review_operation(snapshot, review_round, report_sha256=report.report_sha256)
+    return 0
+
+
+def _handle_project_paper_review_respond(args: argparse.Namespace) -> int:
+    _reject_review_import_dry_run(args)
+    response = VenueReviewResponse.model_validate_json(
+        args.response.read_text(encoding="utf-8")
+    )
+    snapshot, review_round = submit_venue_review_response(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        response=response,
+        expected_revision=args.expected_revision,
+    )
+    _print_review_operation(snapshot, review_round, response_sha256=response.response_sha256)
+    return 0
+
+
+def _handle_project_paper_review_verify(args: argparse.Namespace) -> int:
+    _reject_review_import_dry_run(args)
+    verification = VenueReviewVerification.model_validate_json(
+        args.verification.read_text(encoding="utf-8")
+    )
+    snapshot, review_round = import_venue_review_verification(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        verification=verification,
+        expected_revision=args.expected_revision,
+    )
+    _print_review_operation(
+        snapshot,
+        review_round,
+        verification_sha256=verification.verification_sha256,
+    )
+    return 0
+
+
+def _handle_project_paper_review_status(args: argparse.Namespace) -> int:
+    review_round = inspect_venue_review(
+        ProjectRuntime(args.outputs_root), args.project_id, args.review_id
+    )
+    print(review_round.model_dump_json(indent=2))
+    return 0
+
+
+def _reject_review_import_dry_run(args: argparse.Namespace) -> None:
+    if args.dry_run:
+        raise ValueError(
+            "review artifact imports are already validated before their atomic write; "
+            "use review status for a read-only audit"
+        )
+
+
+def _print_review_operation(snapshot: object, review_round: object, **hashes: str) -> None:
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "review_round": review_round.model_dump(mode="json"),
+                **hashes,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
 
 
 def _handle_demo(args: argparse.Namespace) -> int:

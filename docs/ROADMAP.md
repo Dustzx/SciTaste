@@ -16,6 +16,13 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
 | Phase 9 — matched-budget study | in progress | protocol/planner/runner/integrity status done; 48 exact-protocol runs and external expert review pending |
 
+The independent product path now also has a project-owned paper-review registry
+and an eight-gate lifecycle projection from native idea through independent
+pre-submission review. This closes the software control path, but the
+`scitaste-self-development` project remains scientifically incomplete until one
+paper source run binds verified native evidence and independent review artifacts
+are collected.
+
 ## Phase 2/3 progress
 
 - Done: immutable fixed-candidate fixtures for Idea, Experiment, Evidence,
