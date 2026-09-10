@@ -203,6 +203,17 @@ from scitaste.generative_ui.workspace import (
     validate_workspace_query,
     workspace_document,
 )
+from scitaste.generative_ui.workspace_store import (
+    ResearchTurnPrompt,
+    ResearchTurnRecord,
+    ResearchTurnSummary,
+    ResearchWorkspaceCatalog,
+    ResearchWorkspaceDetail,
+    ResearchWorkspaceRecord,
+    ResearchWorkspaceStore,
+    ResearchWorkspaceSummary,
+    ResearchWorkspaceTurnDocument,
+)
 
 __all__ = [
     "APPROVAL_EVIDENCE_KINDS",
@@ -306,7 +317,16 @@ __all__ = [
     "ResearchLandscapeData",
     "ResearchLandscapeQuery",
     "ResearchStage",
+    "ResearchTurnPrompt",
+    "ResearchTurnRecord",
+    "ResearchTurnSummary",
     "ResearchWork",
+    "ResearchWorkspaceCatalog",
+    "ResearchWorkspaceDetail",
+    "ResearchWorkspaceRecord",
+    "ResearchWorkspaceStore",
+    "ResearchWorkspaceSummary",
+    "ResearchWorkspaceTurnDocument",
     "ReviewerQueueData",
     "RevisionConflictError",
     "RunBlockerPanelData",

@@ -7,12 +7,15 @@ from pydantic import ValidationError
 
 from scitaste.generative_ui import (
     FreeQuestionRequest,
+    IntentGoal,
     PlanGroup,
+    QuickIntentRequest,
     StaleSurfacePlanError,
     SurfaceCandidateCatalog,
     SurfaceCandidateFactory,
     SurfacePlan,
     SurfacePlanEntry,
+    TrustedComponent,
     WorkspaceIntentResolver,
     materialize_surface_plan,
     validate_surface_plan,
@@ -122,6 +125,62 @@ def test_candidate_catalog_is_stable_and_provider_descriptors_are_data_free(
         assert "actions" not in payload
         assert "proposal" not in payload
         assert descriptor.evidence_ref_ids
+
+
+def test_large_project_candidate_catalog_is_bounded_without_losing_summaries(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    snapshot = runtime.open("planning-project")
+    for paper_index in range(2, 22):
+        directory_name = f"paper-{paper_index:02d}"
+        paper_dir = runtime.projects_root / "planning-project/papers" / directory_name
+        paper_dir.mkdir()
+        files: dict[str, str] = {}
+        for artifact_index in range(4):
+            name = f"artifact-{artifact_index}.md"
+            (paper_dir / name).write_text("# Bounded artifact\n", encoding="utf-8")
+            files[f"Artifact {artifact_index}"] = name
+        snapshot = runtime.register_paper(
+            "planning-project",
+            PaperManifest(
+                paper_id=directory_name,
+                project_id="planning-project",
+                title=f"Bounded paper {paper_index}",
+                date="2026-09-11",
+                provider="scripted",
+                model="deterministic",
+                condition="candidate-bound",
+                task="surface-planning",
+                seed=paper_index,
+                stage=18,
+                status="draft",
+                evidence_scope="engineering-only",
+                files=files,
+            ),
+            directory_name=directory_name,
+            expected_revision=snapshot.revision,
+        )
+    resolver = WorkspaceIntentResolver(runtime)
+    quick = resolver.quick_catalog("planning-project")
+    descriptor = next(item for item in quick.intents if item.goal is IntentGoal.PROGRESS_REVIEW)
+    resolution = resolver.resolve(
+        QuickIntentRequest(
+            project_id="planning-project",
+            snapshot_revision=quick.snapshot.snapshot_revision,
+            snapshot_sha256=quick.snapshot.snapshot_sha256,
+            quick_intent_id=descriptor.quick_intent_id,
+        )
+    )
+    assert resolution.intent is not None
+
+    catalog = SurfaceCandidateFactory(runtime).build(resolution.intent)
+
+    assert len(catalog.candidates) == 64
+    components = {item.component.component for item in catalog.candidates}
+    assert TrustedComponent.PROJECT_PROGRESS_BOARD in components
+    assert TrustedComponent.PROJECT_SUMMARY_CARD in components
+    assert TrustedComponent.RUN_STAGE_EXPLORER in components
 
 
 def test_materialization_reorders_but_does_not_rewrite_trusted_components(

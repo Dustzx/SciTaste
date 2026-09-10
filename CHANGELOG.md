@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- Generation as Content now opens without a manual credential field on loopback:
+  the server establishes a Host-validated HttpOnly same-site session while
+  preserving explicit bearer access for API clients. The default route is a
+  global project index, every project has an evidence-grounded home, and user
+  questions create project-owned research topics with immutable ordered turn
+  pages. Generated documents and exact receiver surfaces persist across process
+  restart; the bounded in-memory cache no longer controls history retention.
+  Large projects also bound candidate admission before planning, and the
+  deterministic progress view now favors structural summaries over exhaustive
+  paper/artifact repetition.
+
 - Generation as Content now projects a registered AutoResearch evaluation
   synthesis as a compact lifecycle map, six-lens estimand palette, comparison-
   readiness ladder, and experiment-planning gate rail. The closed artifact and

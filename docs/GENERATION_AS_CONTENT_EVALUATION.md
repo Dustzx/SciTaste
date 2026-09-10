@@ -89,14 +89,13 @@ project so audit initialization cannot modify repository outputs:
 
 ```bash
 SCITASTE_UI_PROBE_URL=http://127.0.0.1:8766 \
-SCITASTE_UI_PROBE_TOKEN="$SCITASTE_UI_TOKEN" \
 SCITASTE_UI_PROBE_PROJECT=scitaste-self-development \
 SCITASTE_UI_PROBE_QUICK_INTENT=review-project-progress \
 node tests/generative_ui/browser_response_probe.mjs
 ```
 
-The probe starts a fresh headless Chromium profile, enters the credential in the
-page, opens the real progress view, activates the requested server-issued quick
+The probe starts a fresh headless Chromium profile, establishes the automatic
+loopback session, opens the real progress view, activates the requested server-issued quick
 intent, changes locale in place, and checks 1440, 768, 390, and 320 CSS-pixel
 widths. `SCITASTE_UI_PROBE_QUICK_INTENT` defaults to
 `review-project-progress`; setting it to another available quick-intent ID makes

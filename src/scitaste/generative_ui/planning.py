@@ -44,6 +44,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_MAX_SURFACE_CANDIDATES = 64
 
 
 class PlanGroup(StrEnum):
@@ -294,7 +295,8 @@ class SurfaceCandidateFactory:
                         allowed_emphasis=tuple(PlanEmphasis),
                     )
                 )
-        return SurfaceCandidateCatalog(intent=parsed, candidates=tuple(candidates))
+        admitted = sorted(candidates, key=_candidate_admission_key)[:_MAX_SURFACE_CANDIDATES]
+        return SurfaceCandidateCatalog(intent=parsed, candidates=tuple(admitted))
 
     def _goal_surfaces(self, intent: WorkspaceIntent, snapshot) -> list[SurfaceSpec]:
         project_id = intent.snapshot.project_id
@@ -336,9 +338,7 @@ class SurfaceCandidateFactory:
             )
         elif intent.goal == IntentGoal.RESEARCH_LANDSCAPE_REVIEW:
             surfaces.append(
-                self._workspace.build_surface(
-                    ResearchLandscapeQuery(project_id=project_id)
-                )
+                self._workspace.build_surface(ResearchLandscapeQuery(project_id=project_id))
             )
         return surfaces
 
@@ -393,6 +393,24 @@ def _candidate_id(
     identity = f"{surface.surface_id}:{component.component_id}:{component.component.value}"
     digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
     return f"candidate-{surface_index:02d}-{component_index:02d}-{digest}"
+
+
+def _candidate_admission_key(candidate: SurfaceCandidate) -> tuple[int, str]:
+    """Keep structural summaries before bounded per-artifact detail."""
+
+    priority = {
+        TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
+        TrustedComponent.RESEARCH_LANDSCAPE_MAP: 0,
+        TrustedComponent.RUN_COMPARISON_PANEL: 0,
+        TrustedComponent.RUN_BLOCKER_PANEL: 0,
+        TrustedComponent.RUN_STAGE_EXPLORER: 0,
+        TrustedComponent.PROJECT_SUMMARY_CARD: 1,
+        TrustedComponent.RUN_HEALTH: 1,
+        TrustedComponent.EVIDENCE_INVENTORY: 2,
+        TrustedComponent.PAPER_PREVIEW: 3,
+        TrustedComponent.ARTIFACT_VIEWER: 4,
+    }.get(candidate.component.component, 2)
+    return priority, candidate.candidate_id
 
 
 def _scoped_action(

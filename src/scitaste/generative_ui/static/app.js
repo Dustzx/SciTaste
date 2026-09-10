@@ -8,10 +8,11 @@ import {
   withLocale,
 } from "/assets/locale.js";
 
-const tokenInput = document.getElementById("bearer-token");
-const connectButton = document.getElementById("connect");
 const projectSelect = document.getElementById("project-select");
 const loadButton = document.getElementById("load-project");
+const globalHomeButton = document.getElementById("global-home");
+const newTopicButton = document.getElementById("new-topic");
+const workspaceHistoryList = document.getElementById("workspace-history-list");
 const connectionStatus = document.getElementById("connection-status");
 const freshness = document.getElementById("freshness");
 const workspace = document.getElementById("workspace");
@@ -64,14 +65,20 @@ let currentDocument = null;
 let runCatalog = [];
 let paperCatalog = [];
 let quickIntentCatalog = null;
+let projectDiscovery = null;
 let activeProjectId = "";
+let accessReady = false;
+let researchWorkspaceCatalog = null;
+let activeResearchWorkspaceId = "";
+let activeResearchTurnId = "";
+let activeResearchWorkspace = null;
 let eventCounter = 0;
 let artifactObjectUrl = null;
 let lastProposalReceipt = null;
 let lastControllerDecision = null;
 let lastArtifactPreview = null;
 let intentResultState = {kind: "empty"};
-let connectionStatusKey = "connection.credential_required";
+let connectionStatusKey = "connection.connecting";
 let freshnessStatusKey = "freshness.none";
 let connectionStatusError = null;
 
@@ -1267,6 +1274,7 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   const placements = new Map((documentValue.placements || []).map(
     (item) => [item.component_id, item],
   ));
+  workspace.classList.remove("project-index-workspace");
   workspace.classList.toggle("generated-workspace", generated);
   workspace.replaceChildren();
   if (!preserveTransient) {
@@ -1349,6 +1357,8 @@ function renderGenerationSummary(documentValue) {
   const metadata = document.createElement("div");
   metadata.className = "generation-metadata";
   const values = [
+    [t("thread.topic"), activeResearchWorkspace?.title || t("common.missing")],
+    [t("thread.turn"), activeResearchTurnId || t("common.missing")],
     [t("generation.planner"), localizedCode(planner?.mode)],
     [t("generation.snapshot"), t("generation.revision", {
       revision: documentValue.snapshot_revision,
@@ -1670,6 +1680,10 @@ function setIntentEnabled(enabled) {
 
 function clearProjectContext(projectId = "") {
   activeProjectId = projectId;
+  researchWorkspaceCatalog = null;
+  activeResearchWorkspaceId = "";
+  activeResearchTurnId = "";
+  activeResearchWorkspace = null;
   currentDocument = null;
   quickIntentCatalog = null;
   lastProposalReceipt = null;
@@ -1704,6 +1718,75 @@ function clearProjectContext(projectId = "") {
     : t("workspace.empty"));
   workspace.appendChild(empty);
   setIntentEnabled(false);
+  newTopicButton.disabled = !projectId;
+  renderWorkspaceHistory();
+}
+
+function renderWorkspaceHistory() {
+  workspaceHistoryList.replaceChildren();
+  if (!activeProjectId) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    appendText(empty, t("thread.open_project"));
+    workspaceHistoryList.appendChild(empty);
+    return;
+  }
+  if (!researchWorkspaceCatalog) {
+    const loading = document.createElement("p");
+    loading.className = "muted";
+    appendText(loading, t("thread.loading"));
+    workspaceHistoryList.appendChild(loading);
+    return;
+  }
+  if (researchWorkspaceCatalog.workspaces.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    appendText(empty, t("thread.empty"));
+    workspaceHistoryList.appendChild(empty);
+    return;
+  }
+  const list = document.createElement("ol");
+  list.className = "workspace-history-items";
+  for (const item of researchWorkspaceCatalog.workspaces) {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = item.workspace_id === activeResearchWorkspaceId
+      ? "workspace-history-button selected"
+      : "workspace-history-button";
+    const title = document.createElement("strong");
+    appendText(title, item.title);
+    const metadata = document.createElement("small");
+    appendText(metadata, t("thread.turn_count", {count: item.revision}));
+    button.append(title, metadata);
+    button.addEventListener("click", () => loadResearchTurn({
+      project_id: activeProjectId,
+      workspace_id: item.workspace_id,
+      turn_id: item.latest_turn_id,
+    }));
+    row.appendChild(button);
+    list.appendChild(row);
+  }
+  workspaceHistoryList.appendChild(list);
+}
+
+async function loadResearchWorkspaceCatalog(projectId) {
+  const requestedProject = projectId;
+  try {
+    const catalog = await api(
+      `/api/v4/projects/${encodeURIComponent(projectId)}/workspaces`,
+    );
+    if (activeProjectId !== requestedProject) {
+      return;
+    }
+    researchWorkspaceCatalog = catalog;
+    renderWorkspaceHistory();
+  } catch (error) {
+    if (activeProjectId !== requestedProject) {
+      return;
+    }
+    showError(workspaceHistoryList, error);
+  }
 }
 
 function renderQuickIntents() {
@@ -1768,8 +1851,12 @@ async function generateWithIntent(intentRequest) {
   intentResultState = {kind: "resolving"};
   renderIntentResult();
   try {
-    const documentValue = await api(
-      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}/workspace`,
+    const base = `/api/v4/projects/${encodeURIComponent(requestedProject)}/workspaces`;
+    const path = activeResearchWorkspaceId
+      ? `${base}/${encodeURIComponent(activeResearchWorkspaceId)}/turns`
+      : base;
+    const turnDocument = await api(
+      path,
       {
         method: "POST",
         body: JSON.stringify({
@@ -1782,8 +1869,13 @@ async function generateWithIntent(intentRequest) {
     if (activeProjectId !== requestedProject) {
       return;
     }
+    activeResearchWorkspace = turnDocument.workspace;
+    activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
+    activeResearchTurnId = turnDocument.turn.turn_id;
+    const documentValue = turnDocument.turn.document;
     if (documentValue.status !== "generated") {
       renderGenerationFailure(documentValue);
+      await loadResearchWorkspaceCatalog(requestedProject);
       return;
     }
     currentDocument = documentValue;
@@ -1793,8 +1885,9 @@ async function generateWithIntent(intentRequest) {
       mode: documentValue.planning.provenance.mode,
     };
     renderIntentResult();
-    const route = generatedWorkspaceHash(documentValue);
+    const route = researchTurnHash(turnDocument);
     history.pushState({route}, "", route);
+    await loadResearchWorkspaceCatalog(requestedProject);
   } catch (error) {
     intentResultState = {kind: "error", error};
     renderIntentResult();
@@ -1858,11 +1951,56 @@ function renderIntentResult() {
   intentResult.appendChild(alert);
 }
 
+function renderProjectIndex(discovery, historyMode = "push") {
+  clearProjectContext();
+  projectDiscovery = discovery;
+  workspace.replaceChildren();
+  workspace.classList.add("project-index-workspace");
+  const header = document.createElement("section");
+  header.className = "project-index-header";
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow dark";
+  appendText(eyebrow, t("project.index.eyebrow"));
+  const title = document.createElement("h2");
+  appendText(title, t("project.index.title"));
+  const summary = document.createElement("p");
+  appendText(summary, t("project.index.summary", {count: discovery.projects.length}));
+  header.append(eyebrow, title, summary);
+  const grid = document.createElement("div");
+  grid.className = "project-index-grid";
+  for (const project of discovery.projects) {
+    const card = document.createElement("article");
+    card.className = "project-index-card";
+    const heading = document.createElement("h3");
+    appendText(heading, project.project_id);
+    const facts = fixedFields(project, ["revision", "paper_count", "has_current_run"]);
+    const open = document.createElement("button");
+    open.type = "button";
+    appendText(open, t("project.open_home"));
+    open.addEventListener("click", () => loadWorkspace(defaultQuery(project.project_id)));
+    card.append(heading, facts, open);
+    grid.appendChild(card);
+  }
+  workspace.append(header, grid);
+  workspace.setAttribute("aria-busy", "false");
+  setFreshnessStatus("freshness.project_index");
+  updateActiveView(null);
+  if (historyMode !== "none") {
+    const route = localizedHash("#/");
+    if (historyMode === "replace") {
+      history.replaceState({route}, "", route);
+    } else {
+      history.pushState({route}, "", route);
+    }
+  }
+}
+
 async function loadProjects() {
   clearProjectContext();
   setBusy(true);
   try {
     const discovery = await api("/api/v2/workspace/projects");
+    projectDiscovery = discovery;
     projectSelect.replaceChildren();
     for (const project of discovery.projects) {
       const option = document.createElement("option");
@@ -1873,24 +2011,28 @@ async function loadProjects() {
     const available = discovery.projects.length > 0;
     projectSelect.disabled = !available;
     loadButton.disabled = !available;
+    globalHomeButton.disabled = false;
     for (const button of viewButtons) {
       button.disabled = !available;
     }
-    setConnectionStatus(available ? "connection.authenticated" : "connection.no_projects");
+    setConnectionStatus(available ? "connection.ready" : "connection.no_projects");
     if (!available) {
+      renderProjectIndex(discovery, "replace");
       setBusy(false);
       return;
     }
     const deepLink = parseWorkspaceHash();
     if (deepLink && discovery.projects.some((item) => item.project_id === deepLink.project_id)) {
       projectSelect.value = deepLink.project_id;
-      if (deepLink.generation_id) {
+      if (deepLink.workspace_id) {
+        await loadResearchTurn(deepLink, "replace");
+      } else if (deepLink.generation_id) {
         await loadGeneratedWorkspace(deepLink, "replace");
       } else {
         await loadWorkspace(deepLink, "replace");
       }
     } else {
-      await loadWorkspace(defaultQuery(projectSelect.value), "replace");
+      renderProjectIndex(discovery, "replace");
     }
   } catch (error) {
     projectSelect.disabled = true;
@@ -1930,6 +2072,7 @@ async function loadWorkspace(query, historyMode = "push") {
         || quickIntentCatalog.snapshot.snapshot_sha256 !== documentValue.freshness.snapshot_sha256) {
       await loadQuickIntents(documentValue.query.project_id);
     }
+    await loadResearchWorkspaceCatalog(documentValue.query.project_id);
   } catch (error) {
     currentDocument = null;
     setBusy(false);
@@ -1955,6 +2098,9 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
     if (documentValue.status !== "generated") {
       throw uiError("error.generation_unrenderable");
     }
+    activeResearchWorkspace = null;
+    activeResearchWorkspaceId = "";
+    activeResearchTurnId = "";
     currentDocument = documentValue;
     projectSelect.value = documentValue.project_id;
     renderWorkspace(documentValue);
@@ -1970,6 +2116,56 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
     if (!quickIntentCatalog) {
       await loadQuickIntents(documentValue.project_id);
     }
+    await loadResearchWorkspaceCatalog(documentValue.project_id);
+  } catch (error) {
+    currentDocument = null;
+    setBusy(false);
+    setFreshnessStatus("freshness.generated_unverified");
+    showError(workspace, error);
+    workspace.focus({preventScroll: true});
+  }
+}
+
+async function loadResearchTurn(route, historyMode = "push") {
+  if (!validProjectId(route.project_id)
+      || !validEntryId(route.workspace_id)
+      || !validEntryId(route.turn_id)) {
+    throw uiError("error.generated_identity");
+  }
+  if (activeProjectId !== route.project_id) {
+    clearProjectContext(route.project_id);
+  }
+  setBusy(true);
+  try {
+    const turnDocument = await api(
+      `/api/v4/projects/${encodeURIComponent(route.project_id)}`
+      + `/workspaces/${encodeURIComponent(route.workspace_id)}`
+      + `/turns/${encodeURIComponent(route.turn_id)}`,
+    );
+    const documentValue = turnDocument.turn.document;
+    activeResearchWorkspace = turnDocument.workspace;
+    activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
+    activeResearchTurnId = turnDocument.turn.turn_id;
+    projectSelect.value = documentValue.project_id;
+    if (documentValue.status !== "generated") {
+      renderGenerationFailure(documentValue);
+      throw uiError("error.generation_unrenderable");
+    }
+    currentDocument = documentValue;
+    renderWorkspace(documentValue);
+    if (historyMode !== "none") {
+      const hash = researchTurnHash(turnDocument);
+      if (historyMode === "replace") {
+        history.replaceState({route: hash}, "", hash);
+      } else {
+        history.pushState({route: hash}, "", hash);
+      }
+    }
+    setConnectionStatus("connection.turn_loaded");
+    if (!quickIntentCatalog) {
+      await loadQuickIntents(documentValue.project_id);
+    }
+    await loadResearchWorkspaceCatalog(documentValue.project_id);
   } catch (error) {
     currentDocument = null;
     setBusy(false);
@@ -2074,6 +2270,14 @@ function generatedWorkspaceHash(documentValue) {
   );
 }
 
+function researchTurnHash(turnDocument) {
+  return localizedHash(
+    `#/projects/${encodeURIComponent(turnDocument.workspace.project_id)}`
+      + `/workspaces/${encodeURIComponent(turnDocument.workspace.workspace_id)}`
+      + `/turns/${encodeURIComponent(turnDocument.turn.turn_id)}`,
+  );
+}
+
 function parseWorkspaceHash() {
   const prefix = "#/projects/";
   const route = fragmentParts().route;
@@ -2090,6 +2294,12 @@ function parseWorkspaceHash() {
     return null;
   }
   const [projectId, view, marker, first, second] = parts;
+  if (view === "workspaces" && marker && first === "turns" && second && parts.length === 5) {
+    if (!validProjectId(projectId) || !validEntryId(marker) || !validEntryId(second)) {
+      return null;
+    }
+    return {project_id: projectId, workspace_id: marker, turn_id: second};
+  }
   if (view === "generated" && marker && parts.length === 3) {
     if (!validProjectId(projectId) || !validEntryId(marker)) {
       return null;
@@ -2116,7 +2326,7 @@ function parseWorkspaceHash() {
 }
 
 async function api(path, options = {}) {
-  const headers = {Authorization: `Bearer ${tokenInput.value}`};
+  const headers = {};
   const cached = responseCache.get(path);
   if ((options.method === undefined || options.method === "GET") && cached) {
     headers["If-None-Match"] = cached.etag;
@@ -2124,7 +2334,7 @@ async function api(path, options = {}) {
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  const response = await fetch(path, {...options, headers});
+  const response = await fetch(path, {...options, headers, credentials: "same-origin"});
   if (response.status === 304 && cached) {
     return cached.payload;
   }
@@ -2147,7 +2357,6 @@ async function api(path, options = {}) {
 
 function setBusy(isBusy) {
   workspace.setAttribute("aria-busy", isBusy ? "true" : "false");
-  connectButton.disabled = isBusy;
 }
 
 function showError(container, error) {
@@ -2179,6 +2388,8 @@ function rerenderForLocale() {
   }
   if (currentDocument) {
     renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+  } else if (projectDiscovery && accessReady) {
+    renderProjectIndex(projectDiscovery, "none");
   } else {
     setFreshnessStatus(freshnessStatusKey || "freshness.none");
     renderProposalResult();
@@ -2186,31 +2397,42 @@ function rerenderForLocale() {
   }
   renderQuickIntents();
   renderIntentResult();
+  renderWorkspaceHistory();
   setIntentEnabled(Boolean(quickIntentCatalog) && intentResultState.kind !== "resolving");
 }
 
 async function initializeLocalization() {
-  connectButton.disabled = true;
   localeSelect.disabled = true;
   try {
     await loadLocaleCatalogs();
     rerenderForLocale();
     replaceHashLocale();
     localeSelect.disabled = false;
-    connectButton.disabled = false;
+    await initializeAccess();
   } catch (error) {
     activeLocale = "en";
     document.documentElement.lang = "en";
     localeSelect.value = "en";
     localeSelect.disabled = true;
-    connectButton.disabled = true;
     connectionStatus.textContent = error instanceof Error
       ? error.message
       : "Interface language resources could not be verified.";
   }
 }
 
-connectButton.addEventListener("click", loadProjects);
+async function initializeAccess() {
+  setConnectionStatus("connection.connecting");
+  const response = await fetch("/session", {
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    throw uiError("error.local_session");
+  }
+  accessReady = true;
+  await loadProjects();
+}
+
 skipLink.addEventListener("click", (event) => {
   event.preventDefault();
   workspace.focus({preventScroll: false});
@@ -2220,10 +2442,20 @@ localeSelect.addEventListener("change", () => {
   replaceHashLocale();
   rerenderForLocale();
 });
-tokenInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    loadProjects();
+globalHomeButton.addEventListener("click", () => {
+  if (projectDiscovery) {
+    renderProjectIndex(projectDiscovery);
   }
+});
+newTopicButton.addEventListener("click", () => {
+  if (!activeProjectId) {
+    return;
+  }
+  activeResearchWorkspaceId = "";
+  activeResearchTurnId = "";
+  activeResearchWorkspace = null;
+  renderWorkspaceHistory();
+  loadWorkspace(defaultQuery(activeProjectId));
 });
 loadButton.addEventListener("click", () => loadWorkspace(defaultQuery(projectSelect.value)));
 projectSelect.addEventListener("change", () => {
@@ -2276,12 +2508,16 @@ window.addEventListener("popstate", () => {
     rerenderForLocale();
   }
   const route = parseWorkspaceHash();
-  if (route && tokenInput.value) {
-    if (route.generation_id) {
+  if (route && accessReady) {
+    if (route.workspace_id) {
+      loadResearchTurn(route, "none");
+    } else if (route.generation_id) {
       loadGeneratedWorkspace(route, "none");
     } else {
       loadWorkspace(route, "none");
     }
+  } else if (accessReady && projectDiscovery) {
+    renderProjectIndex(projectDiscovery, "none");
   }
 });
 

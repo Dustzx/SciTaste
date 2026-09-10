@@ -669,8 +669,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
   and focus server-issued candidates; it cannot author data, HTML, actions, URLs,
   commands, or authority. Deterministic behavior remains the offline default.
 - The `/api/v3/generative` receiver renders admitted plans as different native
-  evidence workspaces, preserves deep links within an exact bounded process
-  cache, and clears stale project state on project switches. Optional structured
+  evidence workspaces, while `/api/v4` groups them into project-owned research
+  topics and immutable turn pages. The default shell now opens on a project
+  index, each project has its own home, and exact documents/surfaces persist
+  across restart independently of the bounded in-memory cache. Loopback browsers
+  establish a protected HttpOnly session without a credential field; explicit
+  bearer clients and non-loopback gates remain supported. Optional structured
   model assistance is double-gated and requires finite byte, token, time, and
   measured-cost admission; invalid or unavailable output falls back safely.
 - A read-only evaluator now fingerprints structural view-composition proxies and

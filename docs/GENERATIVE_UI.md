@@ -514,19 +514,30 @@ The versioned same-origin JSON API is deliberately closed:
   `WorkspaceGenerationRequest` and returns a question-free
   `GeneratedWorkspaceDocument`;
 - `GET /api/v3/generative/projects/<project-id>/generations/<surface-id>`
-  revalidates and returns an exact in-memory admitted generation;
+  revalidates and returns an exact project-archived generation;
 - `POST` to that generated path plus `/events`, `/decisions`, or `/inspections`
   resolves only against the retained server-owned surface.
+- `GET /api/v4/projects/<project-id>/workspaces` lists project-owned research
+  topics without mixing them with runs or papers;
+- `POST /api/v4/projects/<project-id>/workspaces` creates one topic and its
+  first immutable turn from a `WorkspaceGenerationRequest`;
+- `GET /api/v4/projects/<project-id>/workspaces/<workspace-id>` returns the
+  ordered turn index, while `/turns/<turn-id>` returns one exact page;
+- `POST /api/v4/projects/<project-id>/workspaces/<workspace-id>/turns` appends
+  a follow-up turn without rewriting earlier turns.
 
 There is no general filesystem, artifact download, callback, tool, model, or
 executor endpoint. The controller endpoint accepts only a request/proposal
 identity and explicit approval or rejection; it cannot accept commands, tool
 arguments, or state patches. Query strings are rejected, so credentials cannot
-be passed in a query. API requests require an exact bearer authorization header,
-compared in constant time. The fixed HTML, CSS, and JavaScript shell is public
-because it contains no project state or credential; all project data remains
-behind the authenticated API. The browser retains the credential only in its
-password input and does not use local or session storage.
+be passed in a query. Explicit API bearer headers are compared in constant time.
+On loopback only, `GET /session` validates the `Host` header and installs a
+memory-only credential as an HttpOnly, `SameSite=Strict`, `/api/` cookie; cookie-
+authenticated mutations additionally require an exact same-origin `Origin`.
+The fixed shell remains public and the main interface contains no credential
+field. The browser uses neither local nor session storage. Non-loopback serving
+does not expose this bootstrap and continues to require explicit bearer access
+or a deployment-owned authentication gateway.
 
 The packaged JavaScript contains a closed receiver function for every
 `TrustedComponent`. It creates elements and text nodes with `createTextNode` or
@@ -548,19 +559,18 @@ bindings. Each epoch remains hash-chained and replayable; replay on process
 restart restores duplicate-event protection. File locking serializes concurrent
 accepted events.
 
-Serve the application with a credential sourced from an environment variable:
+Serve the loopback application without a manually managed browser credential:
 
 ```bash
-export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
 .venv/bin/scitaste ui serve --outputs-root outputs
 ```
 
-The default bind is `127.0.0.1:8765`. `--token-env NAME` selects another
-environment variable; `--token-file PATH` reads a regular non-symlink file.
-There is intentionally no plaintext token argument. A non-loopback `--host`
-fails validation unless `--i-understand-non-loopback-exposure` is also present.
-`--dry-run` validates the complete configuration and credential source without
-opening a listening socket or creating the outputs root.
+The default bind is `127.0.0.1:8765` and creates a fresh ephemeral credential at
+startup. `--token-env NAME` or `--token-file PATH` supplies an explicit shared
+credential for API clients. There is intentionally no plaintext token argument.
+A non-loopback `--host` fails unless exposure is acknowledged and an explicit
+credential exists. `--dry-run` reports only the credential source, never its
+value, and does not open a socket or create the outputs root.
 
 The offline deterministic planner is the default. Enabling the optional
 OpenAI-compatible structured planner requires two independent operator inputs:
@@ -845,16 +855,20 @@ two project identities.
 
 ## Known limitations
 
-- Generated deep links survive browser history only while the same server
-  process retains the admitted surface. Restart and least-recently-used eviction
-  intentionally return stale rather than regenerating it.
+- Project topics and turns are local, single-user records. Free questions are
+  retained as inert project-owned text so the conversation remains intelligible;
+  users should not paste credentials into a research question. The records stay
+  below ignored `outputs/projects/<project-id>/.generative-ui/workspaces/`.
+- Generated documents and exact server-owned surfaces survive restart below the
+  project archive. A later project revision keeps the historical page readable
+  but generated actions still fail closed against stale evidence.
 - The first deterministic free-question resolver is a bounded Chinese/English
   keyword classifier. Unknown phrasing needs the optional model selector; the
   model can still choose only a currently offered quick intent and cannot answer
   an arbitrary research question.
-- The browser credential remains only in the page's password input. This is a
-  loopback-first engineering receiver, not a multi-user identity or remote
-  authorization system.
+- Automatic session bootstrap is loopback-only. This remains a single-user
+  engineering receiver, not a multi-user identity or remote authorization
+  system.
 - UI audit chains detect mutation relative to the inspected chain but are not
   signatures and are not yet anchored into the project event log.
 - Automated tests use fake structured backends. The GLM-5.3-Flash configuration

@@ -95,16 +95,41 @@ class LocalServerConfig:
 
 
 class BearerCredential:
-    """Constant-time comparison for one memory-only bearer credential."""
+    """Constant-time comparison for one memory-only access credential."""
 
-    __slots__ = ("_expected",)
+    __slots__ = ("_cookie_expected", "_expected")
 
     def __init__(self, token: str) -> None:
-        self._expected = f"Bearer {_validate_token(token)}".encode()
+        validated = _validate_token(token)
+        self._expected = f"Bearer {validated}".encode()
+        self._cookie_expected = validated.encode()
 
     def accepts(self, authorization: str | None) -> bool:
         candidate = b"" if authorization is None else authorization.encode("utf-8")
         return hmac.compare_digest(candidate, self._expected)
+
+    def accepts_cookie(self, cookie: str | None) -> bool:
+        """Accept one unambiguous browser-session cookie without exposing it."""
+
+        if cookie is None:
+            return False
+        values: list[str] = []
+        for part in cookie.split(";"):
+            name, separator, value = part.strip().partition("=")
+            if separator and name == "scitaste_local_session":
+                values.append(value)
+        if len(values) != 1:
+            return False
+        try:
+            candidate = values[0].encode("ascii")
+        except UnicodeEncodeError:
+            return False
+        return hmac.compare_digest(candidate, self._cookie_expected)
+
+    def session_cookie_value(self) -> str:
+        """Return the credential only for the same-process loopback cookie writer."""
+
+        return self._cookie_expected.decode("ascii")
 
 
 class GenerativeUIHTTPServer(ThreadingHTTPServer):
@@ -117,9 +142,12 @@ class GenerativeUIHTTPServer(ThreadingHTTPServer):
         server_address: tuple[str, int],
         application: GenerativeUIApplication,
         credential: BearerCredential,
+        *,
+        session_bootstrap_enabled: bool = False,
     ) -> None:
         self.application = application
         self.credential = credential
+        self.session_bootstrap_enabled = session_bootstrap_enabled
         super().__init__(server_address, GenerativeUIRequestHandler)
 
 
@@ -161,15 +189,30 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             if method == "GET" and path in _PUBLIC_ASSETS:
                 self._serve_public_asset(path)
                 return
+            if method == "GET" and path == "/session":
+                self._bootstrap_browser_session()
+                return
             if not path.startswith("/api/"):
                 raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
             authorization = self.headers.get_all("Authorization", [])
-            if len(authorization) != 1 or not self.server.credential.accepts(authorization[0]):
+            cookies = self.headers.get_all("Cookie", [])
+            bearer_authenticated = len(authorization) == 1 and self.server.credential.accepts(
+                authorization[0]
+            )
+            cookie_authenticated = (
+                self.server.session_bootstrap_enabled
+                and not authorization
+                and len(cookies) == 1
+                and self.server.credential.accepts_cookie(cookies[0])
+            )
+            if not bearer_authenticated and not cookie_authenticated:
                 raise _HTTPProblem(
                     HTTPStatus.UNAUTHORIZED,
                     "unauthorized",
-                    "valid bearer authentication is required",
+                    "valid local authentication is required",
                 )
+            if cookie_authenticated and method not in {"GET"}:
+                self._require_same_origin()
             self._dispatch_api(method, path)
         except _HTTPProblem as exc:
             self._send_problem(exc)
@@ -267,6 +310,9 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/v3/generative/"):
             self._dispatch_generative_api(method, path)
             return
+        if path.startswith("/api/v4/projects/"):
+            self._dispatch_research_workspace_api(method, path)
+            return
         if path == "/api/v1/projects":
             if method != "GET":
                 raise _method_not_allowed("GET")
@@ -300,6 +346,58 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 self._read_json_object(),
             )
             self._send_model(HTTPStatus.OK, decision)
+            return
+        raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+
+    def _dispatch_research_workspace_api(self, method: str, path: str) -> None:
+        parts = path.strip("/").split("/")
+        prefix = ["api", "v4", "projects"]
+        if len(parts) < 5 or parts[:3] != prefix or parts[4] != "workspaces":
+            raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+        project_id = parts[3]
+        if len(parts) == 5:
+            if method == "GET":
+                catalog = self.server.application.research_workspace_catalog(project_id)
+                self._send_model(HTTPStatus.OK, catalog, etag=catalog.fingerprint)
+                return
+            if method == "POST":
+                document = self.server.application.create_research_workspace(
+                    project_id,
+                    self._read_json_object(),
+                )
+                self._send_model(HTTPStatus.CREATED, document)
+                return
+            raise _method_not_allowed("GET, POST")
+        workspace_id = parts[5]
+        if len(parts) == 6:
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            self._send_model(
+                HTTPStatus.OK,
+                self.server.application.research_workspace_detail(project_id, workspace_id),
+            )
+            return
+        if len(parts) == 7 and parts[6] == "turns":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            document = self.server.application.append_research_workspace_turn(
+                project_id,
+                workspace_id,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.CREATED, document)
+            return
+        if len(parts) == 8 and parts[6] == "turns":
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            self._send_model(
+                HTTPStatus.OK,
+                self.server.application.research_workspace_turn(
+                    project_id,
+                    workspace_id,
+                    parts[7],
+                ),
+            )
             return
         raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
 
@@ -471,6 +569,56 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
         content = files("scitaste.generative_ui").joinpath("static", asset_name).read_bytes()
         self._send_bytes(HTTPStatus.OK, content, content_type)
 
+    def _bootstrap_browser_session(self) -> None:
+        if not self.server.session_bootstrap_enabled or not self._loopback_host_header():
+            raise _HTTPProblem(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
+        self.send_response(int(HTTPStatus.NO_CONTENT))
+        self.send_header(
+            "Set-Cookie",
+            "scitaste_local_session="
+            + self.server.credential.session_cookie_value()
+            + "; HttpOnly; SameSite=Strict; Path=/api/",
+        )
+        for name, value in _SECURITY_HEADERS.items():
+            self.send_header(name, value)
+        self.end_headers()
+
+    def _loopback_host_header(self) -> bool:
+        hosts = self.headers.get_all("Host", [])
+        if len(hosts) != 1:
+            return False
+        value = hosts[0]
+        if value.startswith("["):
+            closing = value.find("]")
+            if closing < 0:
+                return False
+            host = value[1:closing]
+            port = value[closing + 1 :]
+            if port and not port.startswith(":"):
+                return False
+            port = port[1:] if port else ""
+        else:
+            host, separator, port = value.rpartition(":")
+            if not separator:
+                host, port = value, ""
+        if not _is_loopback_host(host):
+            return False
+        expected_port = int(self.server.server_address[1])
+        return not port or (port.isdecimal() and int(port) == expected_port)
+
+    def _require_same_origin(self) -> None:
+        origins = self.headers.get_all("Origin", [])
+        hosts = self.headers.get_all("Host", [])
+        if len(origins) != 1 or len(hosts) != 1:
+            raise _HTTPProblem(HTTPStatus.FORBIDDEN, "cross_origin", "same-origin request required")
+        origin = urlsplit(origins[0])
+        if origin.scheme != "http" or origin.username or origin.password:
+            raise _HTTPProblem(HTTPStatus.FORBIDDEN, "cross_origin", "same-origin request required")
+        if origin.path or origin.query or origin.fragment or origin.netloc != hosts[0]:
+            raise _HTTPProblem(HTTPStatus.FORBIDDEN, "cross_origin", "same-origin request required")
+        if not _is_loopback_host(origin.hostname or ""):
+            raise _HTTPProblem(HTTPStatus.FORBIDDEN, "cross_origin", "same-origin request required")
+
     def _send_model(
         self,
         status: HTTPStatus,
@@ -489,7 +637,7 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             separators=(",", ":"),
             sort_keys=True,
         ).encode("utf-8")
-        headers = {"ETag": f'"{etag}"', "Vary": "Authorization"} if etag else None
+        headers = {"ETag": f'"{etag}"', "Vary": "Authorization, Cookie"} if etag else None
         self._send_bytes(
             status,
             content,
@@ -504,7 +652,7 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
     def _send_not_modified(self, etag: str) -> None:
         self.send_response(int(HTTPStatus.NOT_MODIFIED))
         self.send_header("ETag", f'"{etag}"')
-        self.send_header("Vary", "Authorization")
+        self.send_header("Vary", "Authorization, Cookie")
         for name, value in _SECURITY_HEADERS.items():
             self.send_header(name, value)
         self.end_headers()
@@ -570,7 +718,12 @@ def create_http_server(
             server_type = _GenerativeUIIPv6HTTPServer
     except ValueError:
         pass
-    return server_type((config.host, config.port), application, credential)
+    return server_type(
+        (config.host, config.port),
+        application,
+        credential,
+        session_bootstrap_enabled=config.is_loopback,
+    )
 
 
 def serve_local_application(

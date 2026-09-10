@@ -145,16 +145,17 @@ def test_ui_serve_reads_regular_token_file_and_delegates_without_disclosing_secr
     assert captured["config"] == LocalServerConfig()
 
 
-def test_ui_serve_rejects_missing_short_or_symlinked_credentials(
+def test_ui_serve_creates_loopback_session_and_rejects_invalid_explicit_credentials(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys,
 ) -> None:
     base = ["ui", "serve", "--outputs-root", str(tmp_path / "outputs"), "--dry-run"]
     monkeypatch.delenv("SCITASTE_UI_TOKEN", raising=False)
-    with pytest.raises(SystemExit):
-        main(base)
-    assert "environment variable is not set" in capsys.readouterr().err
+    assert main(base) == 0
+    assert json.loads(capsys.readouterr().out)["credential_source"] == (
+        "ephemeral-loopback-session"
+    )
 
     monkeypatch.setenv("SCITASTE_UI_TOKEN", "short")
     with pytest.raises(SystemExit):

@@ -9,7 +9,6 @@ import {tmpdir} from "node:os";
 import {dirname, join} from "node:path";
 
 const configuredBaseUrl = process.env.SCITASTE_UI_PROBE_URL || "http://127.0.0.1:8766";
-const token = process.env.SCITASTE_UI_PROBE_TOKEN;
 const projectId = process.env.SCITASTE_UI_PROBE_PROJECT || "scitaste-self-development";
 const quickIntentId = process.env.SCITASTE_UI_PROBE_QUICK_INTENT || "review-project-progress";
 const chromeCommand = process.env.SCITASTE_CHROME || "google-chrome";
@@ -18,9 +17,6 @@ const finalLocale = process.env.SCITASTE_UI_PROBE_FINAL_LOCALE || "en";
 const fullPageScreenshots = process.env.SCITASTE_UI_PROBE_FULL_PAGE === "1";
 const reportPath = process.env.SCITASTE_UI_PROBE_REPORT || "";
 
-if (!token) {
-  throw new Error("SCITASTE_UI_PROBE_TOKEN is required");
-}
 if (!["en", "zh-CN"].includes(finalLocale)) {
   throw new Error("SCITASTE_UI_PROBE_FINAL_LOCALE must be en or zh-CN");
 }
@@ -102,27 +98,17 @@ async function main() {
 
       await setViewport(cdp, sessionId, 390, 844);
       const encodedProject = encodeURIComponent(projectId);
+      const navigationStartedAt = performance.now();
       await cdp.call("Page.navigate", {
         url: `${baseUrl}/#/projects/${encodedProject}/project-progress?lang=zh-CN`,
       }, sessionId);
       await waitFor(cdp, sessionId, "document.readyState === 'complete'");
-      await waitFor(cdp, sessionId, "!document.getElementById('connect').disabled");
-
-      await evaluate(cdp, sessionId, `
-        (() => {
-          document.getElementById("bearer-token").value = ${JSON.stringify(token)};
-          window.__scitasteConnectStarted = performance.now();
-          document.getElementById("connect").click();
-        })()
-      `);
       await waitFor(cdp, sessionId, `
         document.getElementById("workspace").getAttribute("aria-busy") === "false"
         && document.querySelectorAll("#quick-intents button").length > 0
         && location.hash.includes("/${encodedProject}/project-progress")
       `, 30_000);
-      const connectToFixedMs = await evaluate(cdp, sessionId, `
-        performance.now() - window.__scitasteConnectStarted
-      `);
+      const sessionToFixedMs = performance.now() - navigationStartedAt;
 
       await evaluate(cdp, sessionId, `
         (() => {
@@ -135,7 +121,8 @@ async function main() {
       `);
       await waitFor(cdp, sessionId, `
         document.getElementById("workspace").getAttribute("aria-busy") === "false"
-        && location.hash.includes("/generated/")
+        && location.hash.includes("/workspaces/")
+        && location.hash.includes("/turns/")
         && document.querySelectorAll("#workspace .component-card").length > 0
       `, 30_000);
       const quickIntentToGeneratedMs = await evaluate(cdp, sessionId, `
@@ -263,7 +250,7 @@ async function main() {
         project_id: projectId,
         quick_intent_id: quickIntentId,
         locale_switch_network_requests: localeSwitchRequests,
-        connect_to_fixed_workspace_ms: Math.round(connectToFixedMs * 1000) / 1000,
+        session_to_fixed_workspace_ms: Math.round(sessionToFixedMs * 1000) / 1000,
         quick_intent_to_generated_workspace_ms:
           Math.round(quickIntentToGeneratedMs * 1000) / 1000,
         generated_response_focus: generatedResponseFocus,

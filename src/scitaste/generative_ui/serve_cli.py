@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import re
+import secrets
 import stat
 from hashlib import sha256
 from pathlib import Path
@@ -48,7 +49,10 @@ def add_ui_commands(
         "--token-env",
         default=None,
         metavar="NAME",
-        help=f"read the bearer credential from NAME (default: {_DEFAULT_TOKEN_ENV})",
+        help=(
+            "read an explicit API bearer credential from NAME "
+            f"(default outside loopback: {_DEFAULT_TOKEN_ENV})"
+        ),
     )
     credential.add_argument(
         "--token-file",
@@ -90,6 +94,7 @@ def _handle_ui_serve(args: argparse.Namespace) -> int:
     credential, source = _load_credential(
         token_env=args.token_env,
         token_file=args.token_file,
+        allow_ephemeral=config.is_loopback,
     )
     planner, planner_summary = _load_planner(
         planner_config=args.planner_config,
@@ -125,6 +130,7 @@ def _load_credential(
     *,
     token_env: str | None,
     token_file: Path | None,
+    allow_ephemeral: bool = False,
 ) -> tuple[BearerCredential, str]:
     if token_env is not None and token_file is not None:
         raise ValueError("choose exactly one bearer credential source")
@@ -137,6 +143,8 @@ def _load_credential(
         raise ValueError("bearer credential environment-variable name is invalid")
     token = os.environ.get(name)
     if token is None:
+        if token_env is None and allow_ephemeral:
+            return BearerCredential(secrets.token_urlsafe(32)), "ephemeral-loopback-session"
         raise ValueError("bearer credential environment variable is not set")
     return BearerCredential(token), "environment"
 

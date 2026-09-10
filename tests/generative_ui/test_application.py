@@ -521,7 +521,7 @@ def test_pending_history_fails_closed_on_corrupt_audit_and_stays_project_local(
         app.current_workspace(PendingProposalsQuery(project_id="app-project"))
 
 
-def test_generated_workspace_is_retained_for_exact_actions_and_fails_stale(
+def test_generated_workspace_survives_restart_for_exact_actions_and_fails_stale(
     tmp_path: Path,
 ) -> None:
     runtime = _runtime_with_action(tmp_path)
@@ -560,8 +560,7 @@ def test_generated_workspace_is_retained_for_exact_actions_and_fails_stale(
     assert receipt.execution_authority == "none"
 
     restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
-    with pytest.raises(StaleSurfaceError, match="server process"):
-        restarted.current_generated_workspace("app-project", generation_id)
+    assert restarted.current_generated_workspace("app-project", generation_id) == document
 
     snapshot = runtime.open("app-project")
     runtime.update("app-project", expected_revision=snapshot.revision, status="paused")
@@ -569,7 +568,7 @@ def test_generated_workspace_is_retained_for_exact_actions_and_fails_stale(
         app.current_generated_workspace("app-project", generation_id)
 
 
-def test_generated_workspace_cache_is_bounded_and_evicts_oldest_exact_surface(
+def test_generated_workspace_memory_cache_is_bounded_without_losing_project_history(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -611,6 +610,55 @@ def test_generated_workspace_cache_is_bounded_and_evicts_oldest_exact_surface(
         generation_ids.append(document.renderer.surface_id)
 
     assert len(set(generation_ids)) == 3
-    with pytest.raises(StaleSurfaceError, match="server process"):
-        app.current_generated_workspace("app-project", generation_ids[0])
+    assert app.current_generated_workspace("app-project", generation_ids[0]).status == "generated"
     assert app.current_generated_workspace("app-project", generation_ids[-1]).status == "generated"
+    archive_root = runtime.projects_root / "app-project/.generative-ui/generations"
+    assert sorted(item.name for item in archive_root.iterdir()) == sorted(generation_ids)
+
+
+def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+
+    def request(index: int) -> WorkspaceGenerationRequest:
+        return WorkspaceGenerationRequest(
+            quick_catalog_fingerprint=catalog.fingerprint,
+            intent_request=QuickIntentRequest(
+                project_id="app-project",
+                snapshot_revision=catalog.snapshot.snapshot_revision,
+                snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                quick_intent_id=catalog.intents[index].quick_intent_id,
+            ),
+        )
+
+    first = app.create_research_workspace("app-project", request(0))
+    second = app.append_research_workspace_turn(
+        "app-project",
+        first.workspace.workspace_id,
+        request(0),
+    )
+
+    assert first.turn.turn_id == "turn-0001"
+    assert second.turn.turn_id == "turn-0002"
+    assert second.turn.parent_turn_id == first.turn.turn_id
+    assert second.workspace.turn_ids == ("turn-0001", "turn-0002")
+    assert second.workspace.revision == 2
+    detail = app.research_workspace_detail(
+        "app-project",
+        first.workspace.workspace_id,
+    )
+    assert [item.turn_id for item in detail.turns] == ["turn-0001", "turn-0002"]
+
+    restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
+    catalog_after_restart = restarted.research_workspace_catalog("app-project")
+    assert len(catalog_after_restart.workspaces) == 1
+    assert catalog_after_restart.workspaces[0].latest_turn_id == "turn-0002"
+    assert (
+        restarted.research_workspace_turn(
+            "app-project",
+            first.workspace.workspace_id,
+            "turn-0001",
+        ).turn
+        == first.turn
+    )

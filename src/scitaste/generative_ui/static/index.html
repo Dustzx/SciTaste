@@ -23,11 +23,6 @@
             <option value="zh-CN">简体中文</option>
           </select>
         </div>
-        <div class="credential-panel">
-          <label for="bearer-token" data-i18n="credential.label">Local bearer credential</label>
-          <input id="bearer-token" type="password" autocomplete="off" spellcheck="false">
-          <button id="connect" type="button" data-i18n="credential.connect">Connect</button>
-        </div>
       </div>
     </header>
     <div class="freshness-bar" id="freshness" role="status">
@@ -36,10 +31,20 @@
     <div class="application-grid">
       <nav class="project-nav" aria-label="Research workspace navigation" data-i18n-aria="nav.aria">
         <div class="nav-section">
+          <button id="global-home" type="button" disabled data-i18n="project.all">All projects</button>
           <label for="project-select" data-i18n="project.label">Authoritative project</label>
           <select id="project-select" disabled></select>
           <button id="load-project" type="button" disabled data-i18n="project.open">Open project</button>
-          <p id="connection-status" role="status" data-i18n="connection.credential_required">Enter the configured local credential.</p>
+          <p id="connection-status" role="status" data-i18n="connection.connecting">Opening a protected local session…</p>
+        </div>
+        <div class="nav-section workspace-history" aria-labelledby="workspace-history-heading">
+          <div class="nav-heading-row">
+            <h2 id="workspace-history-heading" data-i18n="thread.heading">Research topics</h2>
+            <button id="new-topic" type="button" disabled data-i18n="thread.new">New topic</button>
+          </div>
+          <div id="workspace-history-list">
+            <p class="muted" data-i18n="thread.open_project">Open a project to see its topics.</p>
+          </div>
         </div>
         <div class="nav-section intent-panel" aria-labelledby="intent-heading">
           <p class="eyebrow dark" data-i18n="generation.eyebrow">Generation as content</p>

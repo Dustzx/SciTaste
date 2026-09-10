@@ -110,13 +110,6 @@ fieldset:disabled {
   color: var(--forest);
 }
 
-.credential-panel {
-  align-items: center;
-  display: grid;
-  gap: 0.35rem;
-  grid-template-columns: minmax(12rem, 20rem) auto;
-}
-
 .header-controls {
   align-items: end;
   display: flex;
@@ -131,11 +124,6 @@ fieldset:disabled {
 
 .locale-panel label {
   font-size: 0.75rem;
-}
-
-.credential-panel label {
-  font-size: 0.75rem;
-  grid-column: 1 / -1;
 }
 
 input,
@@ -167,6 +155,41 @@ textarea {
   gap: 1rem;
   grid-template-columns: minmax(15rem, 19rem) minmax(22rem, 1fr) minmax(16rem, 21rem);
   padding: 1rem;
+}
+
+.workspace.project-index-workspace {
+  display: block;
+}
+
+.project-index-header {
+  background: linear-gradient(135deg, #eef7f0, #f9fbf7);
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  margin-bottom: 1rem;
+  padding: 1.2rem;
+}
+
+.project-index-header h2,
+.project-index-header p {
+  margin-bottom: 0;
+}
+
+.project-index-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.project-index-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  box-shadow: 0 0.3rem 1rem rgb(20 40 27 / 7%);
+  padding: 1rem;
+}
+
+.project-index-card h3 {
+  overflow-wrap: anywhere;
 }
 
 .project-nav,
@@ -214,6 +237,44 @@ textarea {
 .nested-section h3 {
   font-size: 0.92rem;
   margin: 0;
+}
+
+.nav-heading-row {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.workspace-history-items {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  max-height: 13rem;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.workspace-history-button {
+  background: transparent;
+  color: var(--forest);
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  width: 100%;
+}
+
+.workspace-history-button strong,
+.workspace-history-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-history-button.selected {
+  background: #dcebe1;
+  border-color: #799983;
 }
 
 .control-hint {
@@ -1530,7 +1591,6 @@ code {
     flex-direction: column;
   }
 
-  .credential-panel,
   .application-grid,
   .comparison-grid,
   .workspace.generated-workspace,

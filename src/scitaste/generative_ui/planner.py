@@ -230,7 +230,7 @@ class DeterministicWorkspacePlanner:
         configuration = {
             "algorithm": "intent-component-filter-priority-then-candidate-id",
             "max_entries": 12,
-            "version": "1.1",
+            "version": "1.2",
         }
         self.identity = PlannerIdentity(
             planner_id="deterministic-workspace-planner-v1",
@@ -709,6 +709,14 @@ _GOAL_COMPONENT_PRIORITIES = {
 }
 
 _GOAL_SELECTED_COMPONENTS = {
+    IntentGoal.PROGRESS_REVIEW: frozenset(
+        {
+            TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.RUN_BLOCKER_PANEL,
+            TrustedComponent.PROJECT_SUMMARY_CARD,
+            TrustedComponent.RUN_HEALTH,
+        }
+    ),
     IntentGoal.BLOCKER_DIAGNOSIS: frozenset(
         {
             TrustedComponent.RUN_BLOCKER_PANEL,

@@ -219,6 +219,11 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'id="quick-intents"' in index.text
     assert 'id="intent-question"' in index.text
     assert 'id="intent-form"' in index.text
+    assert 'id="bearer-token"' not in index.text
+    assert 'id="connect"' not in index.text
+    assert 'id="global-home"' in index.text
+    assert 'fetch("/session"' in script.text
+    assert "project-index-grid" in script.text
     assert "/api/v3/generative/projects/" in script.text
     assert "quick_catalog_fingerprint" in script.text
     assert english.json()["generation.accepted"].startswith("Generated from verified evidence")
@@ -258,6 +263,43 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
         assert project_clear.index(text) < project_clear.index("async function loadQuickIntents")
     workspace_load = script.text[script.text.index("async function loadWorkspace") :]
     assert workspace_load.index("resetCatalogs();") < workspace_load.index("setBusy(true);")
+
+
+def test_loopback_browser_session_is_automatic_and_same_origin_for_mutations(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with (
+        _running_server(runtime) as origin,
+        httpx.Client(
+            base_url=origin,
+            trust_env=False,
+        ) as client,
+    ):
+        poisoned = client.get("/session", headers={"Host": "attacker.example"})
+        bootstrap = client.get("/session")
+        projects = client.get("/api/v1/projects")
+        surface = client.get("/api/v1/projects/http-project/surface").json()
+        rejected = client.post(
+            "/api/v1/projects/http-project/events",
+            json=_event(surface, event_id="cookie-cross-origin"),
+        )
+        accepted = client.post(
+            "/api/v1/projects/http-project/events",
+            headers={"Origin": origin},
+            json=_event(surface, event_id="cookie-same-origin"),
+        )
+
+    assert poisoned.status_code == 404
+    assert bootstrap.status_code == 204
+    cookie = bootstrap.headers["set-cookie"]
+    assert "HttpOnly" in cookie
+    assert "SameSite=Strict" in cookie
+    assert "Path=/api/" in cookie
+    assert projects.status_code == 200
+    assert rejected.status_code == 403
+    assert rejected.json()["error"]["code"] == "cross_origin"
+    assert accepted.status_code == 202
 
 
 def test_api_requires_bearer_authentication_without_creating_project_state(tmp_path: Path) -> None:
@@ -432,6 +474,68 @@ def test_generative_api_exposes_quick_and_free_intents_through_one_safe_boundary
     assert unavailable.json()["status"] == "provider_unavailable"
     assert unavailable.json()["renderer"] is None
     assert hostile_question not in unavailable.text
+
+
+def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    with _running_server(runtime) as origin:
+        catalog_response = httpx.get(
+            origin + "/api/v3/generative/projects/http-project/intents",
+            headers=_headers(),
+        )
+        catalog = catalog_response.json()
+        request = {
+            "schema_version": "1.0",
+            "quick_catalog_fingerprint": catalog["fingerprint"],
+            "intent_request": {
+                "schema_version": "1.0",
+                "kind": "quick",
+                "project_id": "http-project",
+                "snapshot_revision": catalog["snapshot"]["snapshot_revision"],
+                "snapshot_sha256": catalog["snapshot"]["snapshot_sha256"],
+                "quick_intent_id": catalog["intents"][0]["quick_intent_id"],
+            },
+        }
+        created = httpx.post(
+            origin + "/api/v4/projects/http-project/workspaces",
+            headers=_headers(),
+            json=request,
+        )
+        first = created.json()
+        workspace_id = first["workspace"]["workspace_id"]
+        appended = httpx.post(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns",
+            headers=_headers(),
+            json=request,
+        )
+        listed = httpx.get(
+            origin + "/api/v4/projects/http-project/workspaces",
+            headers=_headers(),
+        )
+        detail = httpx.get(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
+            headers=_headers(),
+        )
+        replay = httpx.get(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns/turn-0001",
+            headers=_headers(),
+        )
+
+    assert created.status_code == 201
+    assert first["turn"]["turn_id"] == "turn-0001"
+    assert appended.status_code == 201
+    assert appended.json()["turn"]["turn_id"] == "turn-0002"
+    assert listed.status_code == 200
+    assert listed.json()["workspaces"][0]["latest_turn_id"] == "turn-0002"
+    assert detail.status_code == 200
+    assert [item["turn_id"] for item in detail.json()["turns"]] == [
+        "turn-0001",
+        "turn-0002",
+    ]
+    assert replay.status_code == 200
+    assert replay.json()["turn"] == first["turn"]
 
 
 def test_generative_api_rejects_stale_catalog_cross_project_and_unknown_replay(

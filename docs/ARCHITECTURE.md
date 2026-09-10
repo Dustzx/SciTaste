@@ -1352,3 +1352,29 @@ human approval cannot override a failed resource gate. The current v2 corpus
 permits reference and code audit of MLR-Bench, EXP-Bench, MLR-Agent, AI
 Scientist-v2, and AutoResearchClaw, but deliberately admits none for task or
 system execution yet.
+
+### ADR-044: Generated interaction is project-owned navigation, not one global chat
+
+Status: accepted for the loopback single-user interface.
+
+SciTaste opens on a portfolio index and gives every project an independent home.
+An independently initiated question creates a research workspace; follow-up
+questions append immutable turns inside that workspace. Runs, papers, topics,
+and turns remain distinct objects even when the interface links them. This avoids
+both extremes of one unbounded global chat and one disconnected chat window per
+sentence.
+
+The loopback browser no longer asks the user to copy a bearer credential into
+the main page. The server creates a memory-only credential and bootstraps an
+HttpOnly, strict same-site cookie only after validating a loopback `Host`.
+Cookie-authenticated mutations require exact same-origin provenance. Explicit
+bearer authentication remains supported for programmatic clients and mandatory
+outside loopback; the automatic session endpoint is unavailable there.
+
+Every admitted generated document and its receiver-owned surface are archived
+under the owning project's ignored `.generative-ui/` tree. The in-memory LRU is
+only a performance cache: restart and eviction do not delete navigation history.
+Topic manifests are atomically replaced, turn records are immutable, and raw
+free questions are retained only as bounded inert local text for user-visible
+continuity. They never become renderer code, model authority, or executor input
+without passing the existing intent and proposal gates.

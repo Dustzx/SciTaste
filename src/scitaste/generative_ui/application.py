@@ -10,6 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from scitaste.generative_ui.archive import GeneratedWorkspaceArchive
 from scitaste.generative_ui.audit import (
     ArtifactInspectedAudit,
     AuditIntegrityError,
@@ -51,6 +52,12 @@ from scitaste.generative_ui.workspace import (
     WorkspaceSurfaceFactory,
     validate_workspace_query,
     workspace_document,
+)
+from scitaste.generative_ui.workspace_store import (
+    ResearchWorkspaceCatalog,
+    ResearchWorkspaceDetail,
+    ResearchWorkspaceStore,
+    ResearchWorkspaceTurnDocument,
 )
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import validate_entry_id, validate_project_id
@@ -99,6 +106,8 @@ class GenerativeUIApplication:
         self._generation_service = WorkspaceGenerationService(runtime, planner=planner)
         self._snapshot_adapter = ProjectSnapshotAdapter(runtime)
         self._artifact_inspector = ArtifactInspector(runtime.projects_root)
+        self._generated_archive = GeneratedWorkspaceArchive(runtime.projects_root)
+        self._research_workspaces = ResearchWorkspaceStore(runtime.projects_root)
         self._request_lock = RLock()
         self._generated: OrderedDict[
             tuple[str, str],
@@ -174,6 +183,67 @@ class GenerativeUIApplication:
         with self._request_lock:
             return self._generation_service.quick_catalog(project_id)
 
+    def research_workspace_catalog(self, project_id: str) -> ResearchWorkspaceCatalog:
+        """List persistent research topics owned by one project."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._research_workspaces.catalog(project_id)
+
+    def research_workspace_detail(
+        self,
+        project_id: str,
+        workspace_id: str,
+    ) -> ResearchWorkspaceDetail:
+        """Return the ordered turn index for one persistent research topic."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._research_workspaces.detail(project_id, workspace_id)
+
+    def research_workspace_turn(
+        self,
+        project_id: str,
+        workspace_id: str,
+        turn_id: str,
+    ) -> ResearchWorkspaceTurnDocument:
+        """Return one exact generated turn and its current topic manifest."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._research_workspaces.turn(project_id, workspace_id, turn_id)
+
+    def create_research_workspace(
+        self,
+        project_id: str,
+        request: WorkspaceGenerationRequest | dict[str, object],
+    ) -> ResearchWorkspaceTurnDocument:
+        """Resolve an intent as the first turn of a new persistent topic."""
+
+        parsed = _generation_request(project_id, request)
+        with self._request_lock:
+            document = self.generate_workspace(project_id, parsed)
+            return self._research_workspaces.create(project_id, parsed, document)
+
+    def append_research_workspace_turn(
+        self,
+        project_id: str,
+        workspace_id: str,
+        request: WorkspaceGenerationRequest | dict[str, object],
+    ) -> ResearchWorkspaceTurnDocument:
+        """Resolve one follow-up while preserving prior immutable turns."""
+
+        parsed = _generation_request(project_id, request)
+        with self._request_lock:
+            self._research_workspaces.detail(project_id, workspace_id)
+            document = self.generate_workspace(project_id, parsed)
+            return self._research_workspaces.append(
+                project_id,
+                workspace_id,
+                parsed,
+                document,
+            )
+
     def generate_workspace(
         self,
         project_id: str,
@@ -181,20 +251,18 @@ class GenerativeUIApplication:
     ) -> GeneratedWorkspaceDocument:
         """Resolve and retain one exact generated surface for later safe interactions."""
 
-        validate_project_id(project_id)
-        parsed = (
-            request
-            if isinstance(request, WorkspaceGenerationRequest)
-            else WorkspaceGenerationRequest.model_validate(request)
-        )
-        parsed = WorkspaceGenerationRequest.model_validate(parsed.model_dump(mode="json"))
-        if parsed.intent_request.project_id != project_id:
-            raise StaleSurfaceError("generation request project_id does not match its endpoint")
+        parsed = _generation_request(project_id, request)
         with self._request_lock:
             output = self._generation_service.generate_output(parsed)
             if output.surface is not None:
                 self._open_audit(output.surface)
                 key = (project_id, output.surface.surface_id)
+                self._generated_archive.store(
+                    project_id,
+                    output.surface.surface_id,
+                    output.document,
+                    output.surface,
+                )
                 self._generated[key] = (output.document, output.surface)
                 self._generated.move_to_end(key)
                 while len(self._generated) > _MAX_RETAINED_GENERATIONS:
@@ -468,7 +536,13 @@ class GenerativeUIApplication:
         key = (project_id, generation_id)
         retained = self._generated.get(key)
         if retained is None:
-            raise StaleSurfaceError("generated surface is unavailable in this server process")
+            retained = self._generated_archive.load(project_id, generation_id)
+            if retained is None:
+                raise StaleSurfaceError("generated surface is unavailable")
+            self._generated[key] = retained
+            self._generated.move_to_end(key)
+            while len(self._generated) > _MAX_RETAINED_GENERATIONS:
+                self._generated.popitem(last=False)
         document, surface = retained
         self._generated.move_to_end(key)
         current = self._snapshot_adapter.build_binding(project_id)
@@ -503,3 +577,19 @@ class GenerativeUIApplication:
             f"{surface.snapshot.snapshot_sha256}-{surface.fingerprint}.jsonl"
         )
         return audit_root / identity
+
+
+def _generation_request(
+    project_id: str,
+    request: WorkspaceGenerationRequest | dict[str, object],
+) -> WorkspaceGenerationRequest:
+    validate_project_id(project_id)
+    parsed = (
+        request
+        if isinstance(request, WorkspaceGenerationRequest)
+        else WorkspaceGenerationRequest.model_validate(request)
+    )
+    parsed = WorkspaceGenerationRequest.model_validate(parsed.model_dump(mode="json"))
+    if parsed.intent_request.project_id != project_id:
+        raise StaleSurfaceError("generation request project_id does not match its endpoint")
+    return parsed

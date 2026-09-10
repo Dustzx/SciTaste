@@ -180,12 +180,14 @@ actions remain proposals and cannot execute tools or mutate project state.
 Serve the current authoritative projects through the receiver-owned local UI:
 
 ```bash
-export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
 .venv/bin/scitaste ui serve --outputs-root outputs
 ```
 
-The default bind is `127.0.0.1:8765`. Project APIs require the bearer credential;
-the fixed public shell contains no project state. Browser actions first produce
+The default bind is `127.0.0.1:8765`. The browser establishes a protected,
+HttpOnly loopback session automatically, so the main interface has no credential
+field. Explicit bearer credentials remain available for API clients and are
+required outside loopback. The first page is a project index; each project owns
+its home, research topics, ordered turns, runs, and papers. Browser actions first produce
 audited `proposal_pending` receipts with execution authority `none`; explicit
 approval/rejection then produces a separately audited deterministic handoff with
 `state_mutation_authorized=false`. There is no tool, executor, arbitrary file,
