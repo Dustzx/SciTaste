@@ -1,0 +1,287 @@
+# SciTaste ICLR 2027 evaluation contract
+
+Status: **proposal for author approval; no API, GPU, remote-environment, human-study,
+or formal-cell execution is authorized by this document**.
+
+Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
+The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper
+is due September 25, 2026 at 23:59 AoE. The submission must use at most nine
+main-text pages, remain double blind, and include the mandatory AI-use
+statement. This schedule makes evidence quality, not feature count, the
+critical path.
+
+## Paper contract
+
+The paper asks one central question:
+
+> Under matched information and resource budgets, does an explicit scientific
+> taste policy help autonomous research systems choose more valuable and more
+> evidence-grounded research actions than execution-centric control?
+
+The intended central claim is:
+
+> SciTaste improves the scientific value and evidence validity of autonomous
+> research trajectories by representing scientific judgment as explicit,
+> precedent-informed, critic-checked decisions over persistent research state.
+
+This claim is not yet established. Engineering tests, successful fixtures,
+paper generation, provenance preservation, and one controlled run establish
+implementation readiness only. The paper must not claim external-system
+superiority until the formal evidence below is complete.
+
+The preferred result-dependent title is **“SciTaste: Improving Autonomous
+Research through Scientific Taste.”** If the headline comparison is not
+positive and complete, use the bounded title **“SciTaste: Scientific Taste for
+Autonomous Research.”** The current word *Learning* is not justified unless the
+submitted method actually estimates or updates a learned taste policy; retrieval
+from a precedent library alone is not sufficient.
+
+## Four distinct evaluation tracks
+
+| Track | Question | Required comparison | Role in the paper |
+|---|---|---|---|
+| A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
+| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct ReAct-style agent, AutoResearchClaw, at least one second pinned external research system, SciTaste Native | headline external-validity result |
+| C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
+| D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
+
+The tracks answer different questions and must not share one aggregate score.
+In particular, the current registered 48-cell study uses the same
+AutoResearchClaw lifecycle for its four enabled conditions. It is an
+AutoResearchClaw-substrate augmentation/ablation study, not an independent
+comparison between AutoResearchClaw and SciTaste Native. Its results may support
+Track C or serve as a bridge study, but cannot be the Track B headline.
+
+## Track A: decision-level scientific taste
+
+SciTasteBench v2 must use held-out, source-disjoint cases derived from real
+research decisions rather than only authored synthetic prompts. It must cover
+at least the following decision families:
+
+1. problem selection and significance;
+2. hypothesis refinement and falsification;
+3. diagnostic experiment selection;
+4. evidence interpretation and confound detection;
+5. pivot, continue, or stop decisions;
+6. claim calibration and reviewer-concern closure.
+
+The design floor is 120 independently scored cases spanning at least three
+scientific/ML domains, with the final sample size set by a pilot-based power
+analysis before the formal split is opened. Cases derived from the same source
+paper, repository, or trajectory remain in one split to prevent leakage.
+Every formal case receives at least two independent expert labels; disagreement
+is retained and adjudicated rather than replaced by model consensus.
+
+Primary mechanism metric: expert-aligned action selection under the fixed action
+set. Secondary metrics: calibration, selective accuracy/abstention, wrong-level
+decision rate, evidence localization, and budget-weighted decision utility.
+Random or label-frequency policies and shuffled/mismatched Taste retrieval form
+negative controls so that gains cannot be attributed merely to extra context.
+
+## Track B: independent end-to-end comparison
+
+### Required systems
+
+1. **Direct/ReAct-style LM agent**: a minimal execution-capable baseline with no
+   research-specific taste memory.
+2. **AutoResearchClaw**: the pinned, unmodified external baseline through its
+   existing adapter.
+3. **A second independent research system**: AI Scientist-v2 is preferred if its
+   license, sandbox, version, task mapping, and telemetry gates pass. Agent
+   Laboratory is an acceptable predeclared alternative. Sibyl remains a stretch
+   baseline and is reported as unavailable rather than replaced by a mock if its
+   environment cannot be reproduced.
+4. **SciTaste Native**: the first-party controller, state, native executor, and
+   publication path, with no AutoResearchClaw runtime dependency.
+
+At least two independent external research systems, in addition to the direct
+agent, must pass the adapter and fairness gates before the manuscript claims
+broad external-system superiority. If only AutoResearchClaw is executable, the
+paper must narrow its claim to decision-policy and component evidence.
+
+### Tasks and repetitions
+
+The formal end-to-end floor is 12 held-out tasks across at least three task
+families and three domains, with three registered seeds per system. Four systems
+therefore imply 144 task-system-seed trajectories; adding a fifth system implies
+180. The exact task list must be frozen as a content-addressed data manifest
+before the first formal run.
+
+The existing four synthetic generators remain controlled stress tests. They do
+not satisfy the 12-task natural-transfer floor and must be reported separately.
+Candidate natural tasks must have public inputs, redistributable or precisely
+retrievable assets, an executable success signal, and enough ambiguity to make
+research decisions consequential. A task is excluded before launch if any
+system cannot receive an equivalent starting package or if its evaluation
+depends on unavailable private data.
+
+### Fairness tracks
+
+The primary **matched-backbone track** uses the same controller model revision,
+starting evidence/search snapshot, task assets, token and dollar ceilings, wall
+time, experiment count, and accelerator allocation wherever each system permits
+those controls. The planned provider model is Zhipu `glm-5.3-flash`; its exact
+endpoint identity and dated pricing evidence must be captured before approval.
+
+A separate **official-configuration sensitivity track** may run each framework
+with its authors' recommended model and settings. It is labelled as a sensitivity
+analysis and is never pooled with matched-backbone estimates.
+
+The local checkpoint
+`/media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct` is a small-model robustness
+and availability condition, not a substitute for the frontier matched-backbone
+comparison. The eight RTX 3090 GPUs may execute registered task workloads after
+approval; provider inference and experimental GPU use remain separately
+accounted resources.
+
+### Headline endpoint
+
+The single headline endpoint is condition-blinded expert preference for the
+scientific value and evidence validity of the complete research package under a
+matched budget. Reviewers receive anonymized trajectories, executable evidence,
+and papers with system-identifying metadata removed. Paper fluency alone is not
+the target.
+
+Secondary endpoints include:
+
+- evidence sufficiency and unsupported-claim rate;
+- valid, diagnostic, failed, timed-out, repaired, and discarded experiments;
+- correct pivot/stop decisions and resources before first useful signal;
+- reproducibility and reviewer-concern closure;
+- wall time, provider tokens/cost, search calls, human intervention, and
+  allocated versus active hardware use;
+- scientific value per dollar, wall hour, and active accelerator hour, each
+  reported separately rather than collapsed into one efficiency score.
+
+## Track C: causal ablation
+
+The first-party ablation family is:
+
+1. Native Base;
+2. Native + Knowledge;
+3. Native + Taste;
+4. Native + critics/evidence obligations;
+5. Full SciTaste;
+6. Full SciTaste with shuffled, wrong-domain, or temporally invalid Taste
+   precedents as a retrieval placebo.
+
+Every condition retains the same native executor and budget. This isolates
+decision-policy components from executor capability. The existing
+AutoResearchClaw/Knowledge RAG/Taste Library/Full SciTaste matrix may be retained
+as a substrate transfer study, but it cannot replace this native ablation.
+
+At least one budget-scaling slice and one second-model slice are required to test
+whether the result is a fixed-budget or single-model artifact. The local 2B
+checkpoint is suitable for the small-model slice if its preflight passes without
+changing the formal primary model.
+
+## Statistical contract
+
+- The experimental unit is a task-seed research trajectory, not a tool call,
+  generated paragraph, experiment row, or reviewer rating.
+- Systems are paired by task, seed, starting evidence, and budget block.
+- The headline comparison uses a task- and reviewer-aware paired preference
+  model; report the effect size, 95% interval, raw wins/ties/losses, and a paired
+  bootstrap sensitivity analysis.
+- Continuous secondary outcomes use hierarchical or task-blocked models with
+  task and seed effects. Binary failures remain outcomes and are not silently
+  dropped.
+- One headline hypothesis is tested. Secondary confirmatory families use a
+  prespecified multiplicity correction; all other analyses are explicitly
+  exploratory.
+- The pilot selects feasibility bounds and estimates variance only. Pilot cases
+  and trajectories do not enter formal estimates.
+- Missing, failed, over-budget, manually repaired, and human-rescued runs remain
+  visible. The protocol specifies their estimand treatment before unblinding.
+- Reviewer agreement, adjudication rate, and reviewer expertise are reported.
+
+## P0 integrity and resource gates
+
+No formal run may start until all of these gates pass:
+
+1. the runner verifies the actual SciTaste Git tree/commit, protocol bytes,
+   launcher bytes, external-system pins, task assets, model revision, and data
+   manifest rather than trusting declared metadata;
+2. a formal study cannot aggregate records from different launcher hashes;
+3. the result schema records provider calls/retries/token classes/price date,
+   allocated and sampled-active GPU time, peak memory/utilization, CPU/RAM,
+   storage, failures/repairs/discards, and human minutes;
+4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; using
+   `glm-5.3-flash` creates a new `formal-v2` protocol, IDs, blind IDs, hashes, and
+   price record rather than mutating v1;
+5. all external systems pass license, sandbox, data-equivalence, artifact, and
+   telemetry review without a pseudo-implementation;
+6. expert reviewers and the blinded adjudication process are secured before
+   scale-out;
+7. retention and archive locations are declared before using the remote 3090
+   host, whose storage headroom is limited.
+
+The current local v9 failure is an engineering recovery item. It must not be
+resumed from an unverified source tree and must not be counted as formal-v2 or
+ICLR evidence.
+
+## Scale-out and stop rules
+
+1. Freeze the proposal, task manifest, evaluation code, statistical analysis,
+   models, and budgets.
+2. Present the exact prelaunch manifest to the user and wait for explicit
+   approval.
+3. Run one complete matched block: every system on the same task and seed.
+4. Stop if any adapter breaks equivalence, telemetry is incomplete, reviewers
+   cannot be blinded, the task has no discriminating signal, or costs exceed the
+   registered ceiling.
+5. After a clean block, run a multi-task pilot that is disjoint from the formal
+   set and perform the registered power calculation.
+6. Obtain a second explicit scale-out approval before launching the formal
+   matrix.
+
+Before either approval, the user must receive one manifest naming:
+
+- every exact provider/checkpoint and revision;
+- every dataset/task asset, license, split, hash, and expected storage size;
+- every external repository commit and environment image/lock hash;
+- the complete cell count and GPU/API/human-review ceilings;
+- launch order, commands, output directories, retention policy, and stop rules;
+- the claims each block may and may not support.
+
+## ICLR 2027 go/no-go criteria
+
+An ICLR submission is scientifically defensible only if, by manuscript freeze:
+
+- Track A has held-out natural cases, expert labels, negative controls, and
+  uncertainty estimates;
+- Track B has SciTaste Native plus the direct agent and at least two real pinned
+  external systems, or the claim is explicitly narrowed before the abstract;
+- Track C separates Knowledge, Taste, critics, executor, and extra-context
+  effects;
+- the primary endpoint, task unit, power analysis, failure policy, and statistics
+  were frozen before formal results were inspected;
+- the main paper contains the principal quantitative tables/plots and failure
+  analysis rather than delegating decisive evidence to an appendix;
+- code, data manifests, raw outcome records, analysis, resource accounting, AI
+  use, ethics, and limitations are reproducible and anonymous.
+
+Passing repository tests or formatting checks is necessary software evidence but
+does not satisfy these criteria. No plan can guarantee acceptance; these gates
+are the minimum needed to make the submission answer the ICLR review questions
+about motivation, correctness, rigor, reproducibility, novelty, significance,
+and value to the community.
+
+## Deadline-critical schedule
+
+| Date (2026, Asia/Shanghai working date) | Required outcome |
+|---|---|
+| Sep 10--11 | freeze central claim, baseline candidates, P0 fixes, natural-task candidates, and author list |
+| Sep 12 | complete adapter/data/license feasibility and produce the no-run prelaunch manifest |
+| Sep 13 | author approval of exact models, data, budgets, and pilot matrix |
+| Sep 14--15 | only after approval, run matched pilot blocks and make a formal go/no-go decision |
+| Sep 16--18 | freeze a genuine title/abstract and author list; submit abstract by Sep 18 AoE |
+| Sep 16--20 | only after scale-out approval, execute complete task blocks |
+| Sep 20--22 | blinded review, adjudication, frozen statistical analysis, and resource audit |
+| Sep 22--24 | rebuild the nine-page paper around actual results; independent claim/citation/anonymity audit |
+| Sep 25 | final artifact/hash/reproducibility checks and submission by 23:59 AoE |
+
+If the external-baseline, natural-task, expert-review, or integrity gates miss
+the go/no-go point, submitting a broad superiority claim would not meet this
+contract. The appropriate response is to narrow the claim substantially or defer
+the submission rather than convert engineering evidence into scientific results.

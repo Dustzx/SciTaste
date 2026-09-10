@@ -1,8 +1,19 @@
 # Matched-budget system study
 
-Phase 9 evaluates complete research systems under one preregistered resource and
-task contract. The study harness plans and audits runs; it does not manufacture
-executor outputs or expert judgments.
+Phase 9 provides the registered study harness and the current
+AutoResearchClaw-substrate matrix. The ICLR 2027 headline design, external-system
+comparison, native causal ablation, statistical contract, and author-approval
+gates are specified separately in
+[`ICLR_2027_EVALUATION_PLAN.md`](ICLR_2027_EVALUATION_PLAN.md). The study harness
+plans and audits runs; it does not manufacture executor outputs or expert
+judgments.
+
+The registered v1 conditions below share the AutoResearchClaw Stage 8--18
+lifecycle. They test augmentation on one common execution substrate; they are
+not four independent autonomous-research frameworks. Consequently this matrix
+cannot by itself establish that SciTaste Native outperforms AutoResearchClaw or
+other external systems. That claim requires the separate external comparison in
+the ICLR evaluation contract.
 
 ## Registered matrix
 
