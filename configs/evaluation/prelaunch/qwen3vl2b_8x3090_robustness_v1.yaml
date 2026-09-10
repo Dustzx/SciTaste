@@ -1,0 +1,111 @@
+schema_version: "1.0"
+manifest_id: qwen3vl2b-8x3090-robustness-v1
+protocol_id: robustness-v1-prepilot
+protocol_version: "1.0"
+study_scope: robustness
+scientific_question: Does the scientific-taste effect persist with a small local controller when executor and resource budgets are held fixed?
+claim_allowed: A clean approved block may establish small-model and local-execution feasibility only.
+claim_forbidden: The 2B checkpoint cannot substitute for the frontier matched-backbone result or establish superiority over external systems.
+source_commit: db5e8d2e60c9cdea1fcda8722f83a979c13c4c71
+require_clean_tree: true
+resource_corpus_sha256: aabf3c481edd16fb6ccb5471dd010c9d7ec73ee1c9ffda864794874b6bdab895
+systems:
+  - system_id: native-base
+    role: ablation
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: native-knowledge
+    role: ablation
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: native-taste
+    role: ablation
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: native-critics
+    role: ablation
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: full-scitaste
+    role: scitaste
+    implementation_ref: scitaste@db5e8d2e60c9cdea1fcda8722f83a979c13c4c71:full
+    availability: verified
+    real_implementation: true
+  - system_id: shuffled-taste-placebo
+    role: ablation
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+tasks:
+  - task_id: mlr-bench-robustness-block
+    benchmark_resource_id: mlr-bench
+    split: source-disjoint-robustness-to-be-frozen
+    selected_asset_manifest: null
+    asset_manifest_sha256: null
+    license_status: pending
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+lanes:
+  - lane_id: qwen3vl2b-gpu
+    kind: gpu
+    scientific_role: small_model_robustness
+    system_ids:
+      - native-base
+      - native-knowledge
+      - native-taste
+      - native-critics
+      - full-scitaste
+      - shuffled-taste-placebo
+    task_ids: [mlr-bench-robustness-block]
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 6
+    api_model: null
+    gpu_resource:
+      host_alias: 3090-2
+      device_count: 8
+      device_name: NVIDIA GeForce RTX 3090
+      minimum_memory_mb_per_device: 24000
+      checkpoint_id: qwen3-vl-2b-instruct
+      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+      checkpoint_bytes: 4266653057
+      license_identifier: Apache-2.0
+      local_preflight_status: verified
+      remote_inventory_status: pending
+      remote_checkpoint_status: pending
+      max_gpu_hours: 8.0
+      max_storage_bytes: 53687091200
+      network_access: false
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 12.0
+retention:
+  output_root: outputs/projects/scitaste-eval-robustness-v1-prepilot
+  archive_root: archives/scitaste-eval-robustness-v1-prepilot
+  maximum_output_bytes: 53687091200
+  retain_raw_provider_responses: false
+  retain_failed_runs: true
+  secrets_forbidden: true
+launch_order: [qwen3vl2b-gpu]
+stop_rules:
+  - Do not connect to or modify the remote host until its eight-device inventory, free storage, runtime, and checkpoint transfer plan are recorded.
+  - Stop if the remote checkpoint tree differs from the registered SHA-256 or if any lane uses fewer resources without recording allocation and active use separately.
+  - Stop on sandbox, task-equivalence, telemetry, or output-retention failure.
+  - Stop after one clean block and request a second approval before scale-out.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

@@ -287,6 +287,12 @@ Before either approval, the user must receive one manifest naming:
 - launch order, commands, output directories, retention policy, and stop rules;
 - the claims each block may and may not support.
 
+The typed no-run manifest, provider-separated proposals, and current blockers
+are implemented in [`EVALUATION_PRELAUNCH.md`](EVALUATION_PRELAUNCH.md) and
+`configs/evaluation/prelaunch/`. These proposals do not authorize execution;
+their hashes must change when a pending task, adapter, model, reviewer, or remote
+resource becomes concrete.
+
 ## ICLR 2027 go/no-go criteria
 
 An ICLR submission is scientifically defensible only if, by manuscript freeze:

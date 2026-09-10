@@ -59,6 +59,12 @@ from scitaste.discovery.loop import DiscoveryLoop, load_discovery_scenario
 from scitaste.discovery.project_workflow import ProjectDiscoveryWorkflow
 from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
+from scitaste.evaluation import (
+    inspect_git_source,
+    inspect_prelaunch_manifest,
+    load_external_resource_corpus,
+    load_prelaunch_manifest,
+)
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
@@ -707,6 +713,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(benchmark_attribute)
     benchmark_attribute.set_defaults(handler=_handle_benchmark_attribute)
+
+    evaluation = commands.add_parser(
+        "evaluation", help="Evaluation design and no-run resource gates"
+    )
+    evaluation_commands = evaluation.add_subparsers(
+        dest="evaluation_command", required=True
+    )
+    prelaunch = evaluation_commands.add_parser(
+        "prelaunch", help="Inspect a hash-bound experiment resource manifest"
+    )
+    prelaunch.add_argument("--manifest", type=Path, required=True)
+    prelaunch.add_argument("--resource-corpus", type=Path, required=True)
+    prelaunch.add_argument(
+        "--source-root",
+        type=Path,
+        default=Path("."),
+        help="inspect the exact executable Git checkout (default: current repository)",
+    )
+    prelaunch.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Return a nonzero status when readiness or authorization is incomplete",
+    )
+    _add_log_level_option(prelaunch)
+    prelaunch.set_defaults(handler=_handle_evaluation_prelaunch)
 
     study = commands.add_parser("study", help="Matched-budget system-study operations")
     study_commands = study.add_subparsers(dest="study_command", required=True)
@@ -2243,6 +2274,30 @@ def _handle_benchmark_attribute(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
+    inspection = load_prelaunch_manifest(args.manifest)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    source_commit, source_tree_clean = inspect_git_source(args.source_root)
+    report = inspect_prelaunch_manifest(
+        inspection.manifest,
+        corpus.corpus,
+        observed_source_commit=source_commit,
+        source_tree_clean=source_tree_clean,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        "resource_corpus_semantic_sha256": corpus.semantic_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_ready and not report.execution_authorized:
+        return 1
     return 0
 
 

@@ -1,0 +1,115 @@
+schema_version: "1.0"
+manifest_id: zhipu-glm53flash-pilot-v1
+protocol_id: formal-v2-prepilot
+protocol_version: "1.0"
+study_scope: pilot
+scientific_question: Does explicit scientific taste improve held-out idea-to-paper research trajectories under a matched Zhipu backbone and resource budget?
+claim_allowed: No result claim is allowed until the requested model identity, pricing, tasks, systems, reviewers, and exact approval all verify.
+claim_forbidden: This proposal cannot modify Bailian formal-v1, substitute a different GLM model, or establish comparative effectiveness.
+source_commit: db5e8d2e60c9cdea1fcda8722f83a979c13c4c71
+require_clean_tree: true
+resource_corpus_sha256: aabf3c481edd16fb6ccb5471dd010c9d7ec73ee1c9ffda864794874b6bdab895
+systems:
+  - system_id: scitaste-native
+    role: scitaste
+    implementation_ref: scitaste@db5e8d2e60c9cdea1fcda8722f83a979c13c4c71
+    availability: verified
+    real_implementation: true
+  - system_id: direct-agent
+    role: control
+    implementation_ref: null
+    availability: pending
+    real_implementation: false
+  - system_id: mlr-agent
+    role: method_comparator
+    implementation_ref: mlr-agent@f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    external_resource_id: mlr-agent
+    availability: pending
+    real_implementation: true
+  - system_id: ai-scientist-v2
+    role: method_comparator
+    implementation_ref: ai-scientist-v2@96bd51617cfdbb494a9fc283af00fe090edfae48
+    external_resource_id: ai-scientist-v2
+    availability: pending
+    real_implementation: true
+  - system_id: autoresearchclaw
+    role: method_comparator
+    implementation_ref: autoresearchclaw@12d3fd809fa9658e91a0328c3280a0e462c78386
+    external_resource_id: autoresearchclaw
+    availability: pending
+    real_implementation: true
+tasks:
+  - task_id: mlr-bench-pilot-block
+    benchmark_resource_id: mlr-bench
+    split: source-disjoint-pilot-to-be-frozen
+    selected_asset_manifest: null
+    asset_manifest_sha256: null
+    license_status: pending
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+lanes:
+  - lane_id: zhipu-api
+    kind: api_only
+    scientific_role: matched_backbone
+    system_ids:
+      - scitaste-native
+      - direct-agent
+      - mlr-agent
+      - ai-scientist-v2
+      - autoresearchclaw
+    task_ids: [mlr-bench-pilot-block]
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 5
+    api_model:
+      provider_id: zhipu
+      endpoint: https://open.bigmodel.cn/api/paas/v4/chat/completions
+      interface: openai-chat-completions
+      model_id: glm-5.3-flash
+      model_revision: null
+      rolling_alias: true
+      identity_source_url: https://docs.bigmodel.cn/cn/guide/start/model-overview
+      identity_status: blocked
+      api_key_env: ZHIPU_API_KEY
+      max_input_tokens_per_call: 100000
+      max_output_tokens_per_call: 32768
+      max_requests: 300
+      max_total_tokens: 5000000
+      max_cost: 100.0
+      pricing:
+        currency: CNY
+        as_of: 2026-09-10
+        source_url: https://docs.bigmodel.cn/cn/guide/start/model-overview
+        input_cache_hit_per_million: null
+        input_cache_miss_per_million: 0.0
+        output_per_million: 0.0
+        status: blocked
+    gpu_resource: null
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 20.0
+retention:
+  output_root: outputs/projects/scitaste-eval-formal-v2-prepilot
+  archive_root: archives/scitaste-eval-formal-v2-prepilot
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+launch_order: [zhipu-api]
+stop_rules:
+  - Do not call the requested model until an official or authenticated provider record verifies its exact callable ID and returned revision.
+  - Do not infer pricing from another GLM family; freeze dated input, cache, and output prices first.
+  - Stop the complete matched block if any system changes task semantics, tools, starting evidence, repair policy, or resource ceilings.
+  - Stop after one clean block and request a second approval before any scale-out.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

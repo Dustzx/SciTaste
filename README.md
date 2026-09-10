@@ -172,6 +172,12 @@ eight evidence gates without inferring a percentage, while the project homepage
 renders the same gates as an interactive lifecycle rail. See
 [`docs/PAPER_REVIEW_LOOP.md`](docs/PAPER_REVIEW_LOOP.md).
 
+Formal evaluation resources are prepared through provider-separated, hash-bound
+no-run manifests. They distinguish method systems from Benchmark task sources,
+record API or GPU ceilings, and remain unauthorized while any task, adapter,
+model identity, remote inventory, human review, or explicit approval is missing.
+See [`docs/EVALUATION_PRELAUNCH.md`](docs/EVALUATION_PRELAUNCH.md).
+
 Generate a trusted, content-addressed project overview bundle with:
 
 ```bash

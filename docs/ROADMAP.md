@@ -23,6 +23,12 @@ pre-submission review. This closes the software control path, but the
 paper source run binds verified native evidence and independent review artifacts
 are collected.
 
+Phase 9 now has a typed prelaunch resource gate and separate DeepSeek, Zhipu,
+and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
+the accepted Benchmark subset, external/control adapters, independent reviewers,
+and explicit hash-bound launch approval are not yet complete; Zhipu model
+identity and remote GPU inventory add lane-specific blockers.
+
 ## Phase 2/3 progress
 
 - Done: immutable fixed-candidate fixtures for Idea, Experiment, Evidence,
