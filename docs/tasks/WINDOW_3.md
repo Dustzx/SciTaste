@@ -1,5 +1,68 @@
 # Window 3 Dispatch: Complete Multilingual Generative UI
 
+## Archived experiment-resource handoff — 2026-09-10
+
+Status: `audited and incorporated on 2026-09-12; evidence retained; launch
+instructions superseded`
+
+This section preserves Window 3's resource-audit handoff after the completed UI
+r5 delivery. The main window checked it against the frozen snapshot and the
+later accepted-work audit. Its resource observations are valid provenance, but
+its proposed experiment ordering is not the current launch plan and authorizes
+no execution.
+
+### Integration disposition
+
+- The ignored project assets remain the canonical evidence for this historical
+  snapshot under
+  `outputs/projects/scitaste-self-development/papers/related_work/`. They must
+  not be silently rewritten, committed, or used as if Git tracked the PDF
+  corpus.
+- The snapshot contains 64 source records, 63 hash-verified local PDFs, one
+  failed download, and 36 AutoResearch resource records graded
+  `R0/R1/R2/R3 = 4/5/11/16`, with no R4 record. These counts match
+  `SNAPSHOT.json` and describe a relevance-gated corpus, not an exhaustive
+  accepted-paper evaluation landscape.
+- The later
+  `docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md` identifies that
+  coverage limitation and is authoritative for benchmark/system selection.
+  Its tracked resource index is
+  `docs/research/data/autoresearch_evaluation_resources_v2.yaml`.
+- `docs/ICLR_2027_EVALUATION_PLAN.md` and `docs/EVALUATION_PRELAUNCH.md` are
+  authoritative for current study families, endpoint semantics, integrity
+  gates, and user approval. At audit time, project revision 298 selects
+  `deepseek-v41-package-prepilot-v6` and has no evaluation result.
+- The Bailian formal-v1, Zhipu formal-v2, and later provider-specific identities
+  remain immutable historical protocol families; a provider substitution may
+  never mutate an existing study in place.
+- Local v9 remains engineering-only recovery evidence: one failed cell and 15
+  missing cells under its historical 48-GPU-hour ceiling. It is not a headline
+  result or the next automatic gate. If recovery is explicitly approved later,
+  it must use source commit
+  `eac1178a1045b7b1c440faad9ddd22c83c277207`, the registered runtime and
+  checkpoint, the existing failure record, and explicit resume semantics.
+- No GPU/API run, dataset acquisition, external-system installation, human
+  study, or scale-out may begin from this handoff. The user must first receive
+  and approve the exact models, data, adapters, cell counts, resource ceilings,
+  retention policy, and stop rules required by the current prelaunch contract.
+
+### Frozen project-owned resource entries
+
+- `autoresearch/RESOURCE_ACCOUNTING.md` — reported resource practices and
+  disclosure gaps;
+- `autoresearch/resource_ledger.jsonl` — the 36-record R0--R3 ledger;
+- `autoresearch/EXPERIMENT_RESOURCE_PLAN.md` — the historical stratified study
+  proposal and provider-identity rule;
+- `autoresearch/resource_budget_scenarios.json` — historical formal-v1 and
+  local-v9 ceilings;
+- `autoresearch/LOCAL_3090_PREFLIGHT_2026-09-09.md` — CUDA, checkpoint, storage,
+  and recovery evidence;
+- `SNAPSHOT.json` — frozen counts and SHA-256 bindings.
+
+The original handoff verified JSON/JSONL parsing, snapshot identities, budget
+arithmetic, all 63 archived PDF hashes, and the then-current v9 cell state. It
+created no formal cell, provider spend, human study, or paper claim.
+
 ## r5 delivery: evaluation and responsive acceptance
 
 Assignment token: `W3-generative-ux-evaluation-20260908-r5`
