@@ -617,3 +617,31 @@ plan consequently assigns the causal Taste claim to matched SciTaste Native
 ablations and reserves best-native external systems for an explicitly
 model-confounded ecological comparison. This is process and defect-discovery
 evidence, not comparative effectiveness or a promotable Taste Case.
+
+## Executable-benchmark qualification changed the GPU plan (2026-09-12)
+
+The next recursive decision tested another tempting shortcut: treating an
+8×RTX 3090 host as equivalent to any benchmark GPU requirement. SciTaste
+retained all seven accepted MLRC-Bench tasks, the official code/data identities,
+and their paper-reported runtime and memory limits before selecting a subset.
+The resulting gate admitted four 16 GB tasks for metadata review and rejected
+three 48 GB tasks because the available memory is 24 GB **per device**, not one
+shared 192 GB address space.
+
+Inspection also separated capacity from executability. Temporal Action
+Localisation and Cross-Domain Meta Learning can next receive exact acquisition
+requests; Machine Unlearning and Next Product Recommendation remain blocked by
+Kaggle/AIcrowd terms, authentication, or manual evaluation. None has yet passed
+asset hashing, environment reproduction, or a baseline run. The planned
+Base/Full/mismatched-Taste contrast therefore remains a 180 GPU-hour ceiling
+with no execution authority. This self-case records a project improvement and
+a corrected experiment decision, not evidence that Scientific Taste works.
+
+The self-hashed report is registered as run
+`2026-09-12__scitaste-native__mlrc-executable-qualification-v1__seed-00` and
+selected at project revision 301. Generation as Content revalidates the report
+and presents the 7→4→2 task funnel, 180/192 GPU-hour bound, 48 GB single-device
+gap, and next review action. A Chromium walkthrough at 1440, 768, 390, and
+320 CSS pixels observed no document-level horizontal overflow, undersized
+enabled target, or browser runtime error; this is interface engineering
+evidence, not human-usability or scientific-effectiveness evidence.

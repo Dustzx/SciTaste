@@ -179,6 +179,18 @@ execute a task, call a provider, or use a GPU. This prevents an already
 downloaded prompt collection from looking like an executable benchmark merely
 because its acquisition step completed.
 
+An executable-benchmark qualification is likewise projected only from the
+canonical `runs/<run-id>/benchmark_qualification/REPORT.json` locator of a
+registered run. The receiver revalidates the report's self-hash and exact
+selected/excluded task partition before displaying it. The compact decision
+card renders the accepted-to-selected-to-first-preflight funnel, the declared
+GPU-hour ceiling, exact first acquisition-review candidates, tasks excluded by
+the single-device memory boundary, and separate metadata, acquisition, local
+preflight, and experiment gates. Its review action opens an immutable evidence
+page; it cannot acquire an asset, connect to a provider, inspect a GPU, or
+launch an experiment. The card is absent for projects without this registered
+evidence rather than showing a synthetic empty state.
+
 Every evaluation card is derived from a project-owned `EVALUATION.json` whose
 five bound artifacts are rehashed before rendering. Any record, manifest,
 resource corpus, gate, critic, or cell-plan drift fails the project surface
@@ -223,12 +235,20 @@ not make the project complete. Status mapping uses a small exact allowlist so a
 novel or compound status remains `unknown` unless its meaning is explicitly
 registered.
 
-A manual receiver check against that revision at a 1720-pixel desktop viewport
+A manual receiver check against an earlier revision at a 1720-pixel desktop viewport
 confirmed that the summary rendered without browser errors, reduced the initial
 document height from roughly 6606 to 2045 pixels, kept 19 evidence disclosures
 available, and let an `Explore next` choice reach the retained generated-view
 route. These dimensions are a visual-regression observation, not a product
 metric or progress claim.
+
+A later receiver check against project revision 301 verified the registered
+MLRC-Bench qualification at 1440-, 768-, 390-, and 320-pixel widths. The
+qualification appeared directly below the progress brief, the page retained a
+bounded viewport-height workspace, and no document-level horizontal overflow,
+browser runtime error, or sub-24-pixel enabled target was observed. These are
+interaction and layout checks only; they do not validate benchmark fitness or
+scientific effectiveness.
 
 Every visible progress row carries supporting evidence references. Run and
 paper status rows cite both `PROJECT.json` and their content-addressed run or
@@ -243,8 +263,9 @@ inspection target.
 Next-step entries are capabilities for later intent planning, not controller
 decisions. They can offer progress review, blocker diagnosis, comparison of the
 latest two registered runs, paper-evidence review, review of a declared next
-gate, a registered acquisition decision or qualification, or a registered
-evaluation landscape only when their required project records exist. They
+gate, a registered acquisition decision or qualification, a registered
+executable-benchmark qualification, or a registered evaluation landscape only
+when their required project records exist. They
 contain no command or execution authority.
 
 ### Research synthesis as generated visual content

@@ -15,7 +15,10 @@ from scitaste.evaluation import (
     ReadinessStatus,
     TaskSignalKind,
     inspect_dataset_acquisition_request,
+    inspect_executable_candidate,
     load_dataset_acquisition_request,
+    load_executable_candidate_manifest,
+    save_executable_candidate_report,
 )
 from scitaste.generative_ui import (
     IntentGoal,
@@ -428,6 +431,81 @@ def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path
 
     invalid = report.model_dump(mode="json")
     invalid["task_count"] += 1
+    report_path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(ProjectSurfaceChangedError, match="qualification is invalid"):
+        _progress(runtime)
+
+
+def test_progress_surfaces_executable_benchmark_qualification(tmp_path: Path) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "benchmark-qualification-run"
+    artifact = f"runs/{run_id}/benchmark_qualification/REPORT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="benchmark_qualification",
+        artifact=artifact,
+    )
+    inspection = load_executable_candidate_manifest(
+        "configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml"
+    )
+    report = inspect_executable_candidate(
+        inspection,
+        resource_corpus_path=("docs/research/data/autoresearch_evaluation_resources_v7.yaml"),
+        compute_catalog_path="configs/resources/compute_catalog_v2.yaml",
+    )
+    report_path = runtime.projects_root / "progress-project" / artifact
+    save_executable_candidate_report(report, report_path)
+
+    _, data = _progress(runtime)
+
+    assert data["benchmark_qualifications"] == [
+        {
+            "run_ref_id": data["benchmark_qualifications"][0]["run_ref_id"],
+            "run_id": run_id,
+            "candidate_id": report.candidate_id,
+            "proposal_sha256": report.proposal_sha256,
+            "report_sha256": report.report_sha256,
+            "report_file_sha256": data["benchmark_qualifications"][0]["report_file_sha256"],
+            "accepted_task_count": 7,
+            "selected_task_count": 4,
+            "excluded_task_count": 3,
+            "selected_task_ids": list(report.selected_task_ids),
+            "excluded_task_ids": list(report.excluded_task_ids),
+            "first_preflight_candidate_ids": [
+                "perception_temporal_action_loc",
+                "meta-learning",
+            ],
+            "planned_cells": 36,
+            "planned_gpu_hours": 180.0,
+            "formal_gpu_hour_cap": 192.0,
+            "metadata_review_ready": True,
+            "acquisition_request_ready": False,
+            "local_preflight_ready": False,
+            "experiment_ready": False,
+            "requires_additional_48gb_single_device_resource": True,
+            "integrity_blocker_codes": [],
+            "qualification_blocker_codes": [item.code for item in report.qualification_blockers],
+            "pending_qualification_codes": [item.code for item in report.pending_qualifications],
+            "authorizes_download": False,
+            "authorizes_api_calls": False,
+            "authorizes_gpu_work": False,
+            "authorizes_execution": False,
+            "external_action_performed": False,
+            "support_ref_ids": data["benchmark_qualifications"][0]["support_ref_ids"],
+        }
+    ]
+    candidate = next(
+        item
+        for item in data["next_step_candidates"]
+        if item["kind"] == "review_benchmark_qualification"
+    )
+    assert candidate["target_ids"] == [report.candidate_id]
+
+    invalid = json.loads(report_path.read_text(encoding="utf-8"))
+    invalid["planned_gpu_hours"] = 1.0
     report_path.write_text(json.dumps(invalid), encoding="utf-8")
     with pytest.raises(ProjectSurfaceChangedError, match="qualification is invalid"):
         _progress(runtime)

@@ -76,6 +76,7 @@ from scitaste.evaluation import (
     inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_dataset_acquisition_request,
+    inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
     inspect_prelaunch_manifest,
@@ -84,6 +85,7 @@ from scitaste.evaluation import (
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_dataset_acquisition_request,
+    load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
     load_prelaunch_manifest,
@@ -99,6 +101,7 @@ from scitaste.evaluation import (
     save_acquisition_gate_report,
     save_dataset_acquisition_request,
     save_evaluation_cell_plan,
+    save_executable_candidate_report,
     save_experiment_decision_dossier_report,
     summarize_evaluation_readiness,
 )
@@ -1328,6 +1331,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquired_cohort)
     acquired_cohort.set_defaults(handler=_handle_evaluation_acquired_task_cohort)
+    executable_candidate = evaluation_commands.add_parser(
+        "executable-candidate",
+        help="Qualify an objective-progress task slice against benchmark and compute pins",
+    )
+    executable_candidate.add_argument("--manifest", type=Path, required=True)
+    executable_candidate.add_argument("--resource-corpus", type=Path, required=True)
+    executable_candidate.add_argument("--compute-catalog", type=Path, required=True)
+    executable_candidate.add_argument("--output", type=Path, default=None)
+    executable_candidate.add_argument(
+        "--require-metadata-review-ready",
+        action="store_true",
+        help="return nonzero unless benchmark scope, resource pins, and arithmetic are valid",
+    )
+    executable_candidate.add_argument(
+        "--require-experiment-ready",
+        action="store_true",
+        help="return nonzero until all legal, asset, environment, and resource gates pass",
+    )
+    _add_log_level_option(executable_candidate)
+    executable_candidate.set_defaults(handler=_handle_evaluation_executable_candidate)
     task_selection = evaluation_commands.add_parser(
         "task-selection",
         help="Inspect an exact metadata-only benchmark task selection",
@@ -4024,6 +4047,24 @@ def _handle_evaluation_acquired_task_cohort(args: argparse.Namespace) -> int:
     if args.require_brief_pilot_ready and not report.ready_for_brief_only_package_prepilot:
         return 1
     if args.require_formal_task_ready and not report.ready_for_formal_empirical_task_binding:
+        return 1
+    return 0
+
+
+def _handle_evaluation_executable_candidate(args: argparse.Namespace) -> int:
+    inspection = load_executable_candidate_manifest(args.manifest)
+    report = inspect_executable_candidate(
+        inspection,
+        resource_corpus_path=args.resource_corpus,
+        compute_catalog_path=args.compute_catalog,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(save_executable_candidate_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_metadata_review_ready and not report.metadata_review_ready:
+        return 1
+    if args.require_experiment_ready and not report.experiment_ready:
         return 1
     return 0
 

@@ -25,6 +25,10 @@ from scitaste.evaluation.acquired_cohort import (
     load_acquired_task_cohort_report,
 )
 from scitaste.evaluation.acquisition import AcquisitionGateReport
+from scitaste.evaluation.executable_candidate import (
+    ExecutableCandidateReport,
+    load_executable_candidate_report,
+)
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
@@ -512,6 +516,55 @@ class WorkspaceSurfaceFactory:
             }
         qualification_rows = list(qualification_by_selection.values())
 
+        benchmark_qualification_by_candidate: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected = _executable_candidate_report_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_file_sha256 = inspected
+            run_ref = run_refs[run.run_id]
+            benchmark_qualification_by_candidate[report.candidate_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "candidate_id": report.candidate_id,
+                "proposal_sha256": report.proposal_sha256,
+                "report_sha256": report.report_sha256,
+                "report_file_sha256": report_file_sha256,
+                "accepted_task_count": report.accepted_task_count,
+                "selected_task_count": report.selected_task_count,
+                "excluded_task_count": report.excluded_task_count,
+                "selected_task_ids": list(report.selected_task_ids),
+                "excluded_task_ids": list(report.excluded_task_ids),
+                "first_preflight_candidate_ids": list(report.first_preflight_candidate_ids),
+                "planned_cells": report.planned_cells,
+                "planned_gpu_hours": report.planned_gpu_hours,
+                "formal_gpu_hour_cap": report.formal_gpu_hour_cap,
+                "metadata_review_ready": report.metadata_review_ready,
+                "acquisition_request_ready": report.acquisition_request_ready,
+                "local_preflight_ready": report.local_preflight_ready,
+                "experiment_ready": report.experiment_ready,
+                "requires_additional_48gb_single_device_resource": (
+                    report.requires_additional_48gb_single_device_resource
+                ),
+                "integrity_blocker_codes": [item.code for item in report.integrity_blockers],
+                "qualification_blocker_codes": [
+                    item.code for item in report.qualification_blockers
+                ],
+                "pending_qualification_codes": [
+                    item.code for item in report.pending_qualifications
+                ],
+                "authorizes_download": report.authorizes_download,
+                "authorizes_api_calls": report.authorizes_api_calls,
+                "authorizes_gpu_work": report.authorizes_gpu_work,
+                "authorizes_execution": report.authorizes_execution,
+                "external_action_performed": report.external_action_performed,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        benchmark_qualification_rows = list(benchmark_qualification_by_candidate.values())
+
         recent_activity = []
         for run in reversed(snapshot.manifest.runs[-10:]):
             run_ref = run_refs[run.run_id]
@@ -739,6 +792,23 @@ class WorkspaceSurfaceFactory:
                     ],
                 }
             )
+        if benchmark_qualification_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-benchmark-qualification",
+                    "kind": "review_benchmark_qualification",
+                    "label_code": "review-project-benchmark-qualification",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in benchmark_qualification_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["candidate_id"] for item in benchmark_qualification_rows],
+                }
+            )
         if attention_rows:
             next_step_candidates.append(
                 {
@@ -902,6 +972,7 @@ class WorkspaceSurfaceFactory:
                 "evaluation_results": evaluation_result_rows,
                 "acquisitions": acquisition_rows,
                 "acquisition_qualifications": qualification_rows,
+                "benchmark_qualifications": benchmark_qualification_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,
@@ -1645,6 +1716,30 @@ def _acquired_cohort_report_for_run(
         report = load_acquired_task_cohort_report(resolved)
     except (ValidationError, ValueError) as exc:
         raise ProjectSurfaceChangedError("registered acquisition qualification is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def _executable_candidate_report_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[ExecutableCandidateReport, str] | None:
+    """Read a canonical no-run executable-benchmark qualification."""
+
+    expected = f"runs/{run.run_id}/benchmark_qualification/REPORT.json"
+    if run.stage_path != "benchmark_qualification" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered benchmark qualification is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered benchmark qualification escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = load_executable_candidate_report(resolved)
+    except (ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered benchmark qualification is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
 
 

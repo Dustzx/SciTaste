@@ -58,6 +58,7 @@ const quickIntentLabelKeys = Object.freeze({
   "review-manifest-declared-next-gate": "quick.next_gate",
   "review-autoresearch-evaluation-landscape": "quick.research_landscape",
   "review-project-data-acquisition-request": "quick.data_acquisition",
+  "review-project-benchmark-qualification": "quick.benchmark_qualification",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
@@ -1267,6 +1268,9 @@ function renderProjectProgress(data) {
   const acquisitionQualifications = renderAcquisitionQualifications(
     data.acquisition_qualifications || [],
   );
+  const benchmarkQualifications = renderBenchmarkQualifications(
+    data.benchmark_qualifications || [],
+  );
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
 
@@ -1572,6 +1576,7 @@ function renderProjectProgress(data) {
     review_next_gate: t("progress.next.gate"),
     review_research_landscape: t("progress.next.research_landscape"),
     review_data_acquisition: t("progress.next.data_acquisition"),
+    review_benchmark_qualification: t("progress.next.benchmark_qualification"),
   };
   const lensDefinitions = [
     {
@@ -1580,7 +1585,12 @@ function renderProjectProgress(data) {
     },
     {
       key: "experiment",
-      kinds: ["review_data_acquisition", "review_research_landscape", "compare_runs"],
+      kinds: [
+        "review_data_acquisition",
+        "review_benchmark_qualification",
+        "review_research_landscape",
+        "compare_runs",
+      ],
     },
     {
       key: "paper",
@@ -1695,7 +1705,11 @@ function renderProjectProgress(data) {
     activity,
   );
   details.append(detailsSummary, detailContent);
-  container.append(hero, nextSteps, direction, lifecycle, details);
+  container.appendChild(hero);
+  if ((data.benchmark_qualifications || []).length > 0) {
+    container.appendChild(benchmarkQualifications);
+  }
+  container.append(nextSteps, direction, lifecycle, details);
   return container;
 }
 
@@ -1905,6 +1919,189 @@ function renderAcquisitionQualifications(items) {
           "authorizes_execution",
           "provider_call_performed",
           "gpu_work_performed",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderBenchmarkQualifications(items) {
+  const section = progressSection(
+    t("progress.benchmark_qualification.title"),
+    items.length > 0
+      ? t("progress.benchmark_qualification.subtitle", {count: items.length})
+      : t("progress.benchmark_qualification.empty"),
+  );
+  if (items.length === 0) {
+    return section;
+  }
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card benchmark-qualification-card";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.benchmark_qualification.candidate"));
+    const title = document.createElement("strong");
+    appendText(title, item.candidate_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.metadata_review_ready ? "candidate" : "failed",
+        item.metadata_review_ready
+          ? t("progress.benchmark_qualification.metadata_ready")
+          : t("progress.benchmark_qualification.metadata_blocked"),
+      ),
+    );
+
+    const funnel = document.createElement("div");
+    funnel.className = "benchmark-funnel";
+    const funnelValues = [
+      [item.accepted_task_count, t("progress.benchmark_qualification.accepted")],
+      [item.selected_task_count, t("progress.benchmark_qualification.capacity_fit")],
+      [
+        item.first_preflight_candidate_ids.length,
+        t("progress.benchmark_qualification.preflight_first"),
+      ],
+    ];
+    for (const [index, [value, copy]] of funnelValues.entries()) {
+      if (index > 0) {
+        const arrow = document.createElement("span");
+        arrow.className = "benchmark-funnel-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        appendText(arrow, "→");
+        funnel.appendChild(arrow);
+      }
+      const step = document.createElement("div");
+      step.className = "benchmark-funnel-step";
+      const count = document.createElement("strong");
+      appendText(count, String(value));
+      const stepLabel = document.createElement("small");
+      appendText(stepLabel, copy);
+      step.append(count, stepLabel);
+      funnel.appendChild(step);
+    }
+
+    const budget = document.createElement("div");
+    budget.className = "benchmark-budget";
+    const budgetCopy = document.createElement("span");
+    appendText(budgetCopy, t("progress.benchmark_qualification.budget", {
+      used: item.planned_gpu_hours,
+      cap: item.formal_gpu_hour_cap,
+    }));
+    const budgetTrack = document.createElement("div");
+    budgetTrack.className = "benchmark-budget-track";
+    const budgetFill = document.createElement("span");
+    budgetFill.style.width = `${Math.min(
+      100,
+      (item.planned_gpu_hours / item.formal_gpu_hour_cap) * 100,
+    )}%`;
+    budgetTrack.appendChild(budgetFill);
+    budget.append(budgetCopy, budgetTrack);
+
+    const groups = document.createElement("div");
+    groups.className = "benchmark-task-groups";
+    const groupDefinitions = [
+      [
+        t("progress.benchmark_qualification.first_tasks"),
+        item.first_preflight_candidate_ids,
+      ],
+      [
+        t("progress.benchmark_qualification.memory_excluded"),
+        item.excluded_task_ids,
+      ],
+    ];
+    for (const [groupLabel, taskIds] of groupDefinitions) {
+      const group = document.createElement("div");
+      const heading = document.createElement("strong");
+      appendText(heading, groupLabel);
+      const list = document.createElement("ul");
+      for (const taskId of taskIds) {
+        const row = document.createElement("li");
+        appendText(row, localizedCode(taskId));
+        list.appendChild(row);
+      }
+      group.append(heading, list);
+      groups.appendChild(group);
+    }
+
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(
+      boundary,
+      item.requires_additional_48gb_single_device_resource
+        ? t("progress.benchmark_qualification.boundary_48gb")
+        : t("progress.benchmark_qualification.boundary"),
+    );
+    const gates = document.createElement("div");
+    gates.className = "acquisition-facts";
+    for (const [ready, readyKey, blockedKey] of [
+      [
+        item.acquisition_request_ready,
+        "progress.benchmark_qualification.acquisition_ready",
+        "progress.benchmark_qualification.acquisition_blocked",
+      ],
+      [
+        item.local_preflight_ready,
+        "progress.benchmark_qualification.preflight_ready",
+        "progress.benchmark_qualification.preflight_blocked",
+      ],
+      [
+        item.experiment_ready,
+        "progress.benchmark_qualification.experiment_ready",
+        "progress.benchmark_qualification.experiment_blocked",
+      ],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(ready ? readyKey : blockedKey));
+      gates.appendChild(fact);
+    }
+
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "secondary-button acquisition-review";
+    appendText(review, t("progress.benchmark_qualification.review"));
+    review.addEventListener("click", () => requestCandidateWorkspace(
+      "review-benchmark-qualification",
+    ));
+    card.append(
+      header,
+      funnel,
+      budget,
+      groups,
+      boundary,
+      gates,
+      review,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          proposal_sha256: item.proposal_sha256,
+          report_sha256: item.report_sha256,
+          report_file_sha256: item.report_file_sha256,
+          planned_cells: item.planned_cells,
+          authorizes_download: item.authorizes_download,
+          authorizes_api_calls: item.authorizes_api_calls,
+          authorizes_gpu_work: item.authorizes_gpu_work,
+          authorizes_execution: item.authorizes_execution,
+          external_action_performed: item.external_action_performed,
+        },
+        names: [
+          "proposal_sha256",
+          "report_sha256",
+          "report_file_sha256",
+          "planned_cells",
+          "authorizes_download",
+          "authorizes_api_calls",
+          "authorizes_gpu_work",
+          "authorizes_execution",
+          "external_action_performed",
         ],
       }),
     );

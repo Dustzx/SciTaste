@@ -222,6 +222,15 @@ MLR-Bench package preference and MLRC-Bench objective progress are distinct
 estimands with separate schemas, protocols, analyses, and result tables. A
 rubric score or model-judge score cannot be relabelled as a task's objective
 value, and the two task populations are never pooled into one headline number.
+The first executable-source audit is now frozen in
+[`research/EXECUTABLE_BENCHMARK_QUALIFICATION_AUDIT_V1.md`](research/EXECUTABLE_BENCHMARK_QUALIFICATION_AUDIT_V1.md).
+It admits MLRC-Bench for metadata review, selects its four published 16 GB tasks
+against the registered 8×3090 host, and excludes the three published 48 GB
+tasks. Only Temporal Action Localisation and Cross-Domain Meta Learning may
+proceed to an exact acquisition-request review; no task is locally preflighted
+or experiment-ready. The four-task matched Base/Full/mismatched-Taste slice is
+mechanism/transfer evidence and cannot independently support a population-level
+or headline superiority claim.
 The current no-run package protocol is
 [`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md).
 The earlier DeepSeek v3, Zhipu v2, and Qwen robustness v2 manifests remain

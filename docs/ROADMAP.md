@@ -181,6 +181,18 @@ the executable signal is unverified, and held-out overlap remains pending. This
 negative qualification replaces the earlier assumption that task acquisition
 alone would make the 100-trajectory v6 matrix suitable for launch.
 
+The next objective-source gate is now concrete rather than aspirational. A v7
+resource overlay distinguishes the official MLRC-Bench executable repository
+from its earlier leaderboard/Space identity, and a no-run candidate partitions
+all seven accepted tasks against the shared compute catalog. Four published
+16 GB tasks fit one RTX 3090; three published 48 GB tasks do not. The matched
+Base/Full/mismatched-Taste slice is bounded at 36 internal run units and 180
+GPU-hours, but remains non-executable. Meta-Learning and Temporal Action
+Localisation are first in line for a content-addressed acquisition proposal;
+Kaggle and AIcrowd tasks remain blocked by terms, credentials, or manual test
+steps. This slice supplies transfer/mechanism evidence, not the complete ICLR
+claim.
+
 The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external
 systems use a separately disclosed best-native, model-confounded lane for

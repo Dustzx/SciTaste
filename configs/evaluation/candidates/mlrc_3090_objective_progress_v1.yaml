@@ -1,0 +1,165 @@
+schema_version: "1.0"
+candidate_id: mlrc-3090-objective-progress-v1
+authorization_scope: metadata-only-no-download-no-execution
+
+binding:
+  benchmark_corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v7
+  benchmark_resource_id: mlrc-bench-code
+  repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+  compute_catalog_id: scitaste-shared-compute-v2
+  compute_catalog_semantic_sha256: 895dce5ce2c743fb69d594dd71faaeae891c14e81d68f3c7ac4b605e1445b00c
+  agent_api_resource_id: deepseek-v41-flash
+  gpu_resource_id: gpu-host-3090-2
+  devices_per_cell: 1
+
+accepted_task_ids:
+  - llm-merging
+  - backdoor-trigger-recovery
+  - perception_temporal_action_loc
+  - weather_forcast
+  - machine_unlearning
+  - product-recommendation
+  - meta-learning
+
+selected_tasks:
+  - task_id: perception_temporal_action_loc
+    paper_task_name: Temporal Action Localisation
+    source_group: perception-test-challenge-2024
+    repository_path: MLAgentBench/benchmarks_base/perception_temporal_action_loc
+    source_refs:
+      - https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/perception_temporal_action_loc
+      - https://github.com/yunx-z/MLRC-Bench/blob/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/perception_temporal_action_loc/scripts/prepare.py
+      - https://github.com/google-deepmind/perception_test
+    metric: mean average precision over action classes and IoU thresholds 0.1 through 0.5
+    metric_direction: higher_is_better
+    paper_test_runtime_hours: 0.5
+    paper_gpu_memory_mb: 16000
+    data_access: public_direct
+    test_mode: local_held_out
+    input_license_status: verified
+    task_assets_status: pending
+    environment_status: pending
+    authentication_status: not_required
+    held_out_evaluation_status: verified
+    qualification_blockers:
+      - temporal-assets-not-content-pinned
+      - temporal-environment-not-reproduced
+
+  - task_id: machine_unlearning
+    paper_task_name: Machine Unlearning
+    source_group: neurips-machine-unlearning-2023
+    repository_path: MLAgentBench/benchmarks_base/machine_unlearning
+    source_refs:
+      - https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/machine_unlearning
+      - https://github.com/yunx-z/MLRC-Bench/blob/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/machine_unlearning/README.md
+      - https://www.kaggle.com/competitions/neurips-2023-machine-unlearning
+    metric: forgetting quality multiplied by retain-accuracy and test-accuracy ratios
+    metric_direction: higher_is_better
+    paper_test_runtime_hours: 0.5
+    paper_gpu_memory_mb: 16000
+    data_access: manual_terms
+    test_mode: external_manual_submission
+    input_license_status: blocked
+    task_assets_status: blocked
+    environment_status: pending
+    authentication_status: blocked
+    held_out_evaluation_status: blocked
+    qualification_blockers:
+      - kaggle-terms-not-accepted
+      - kaggle-credential-not-bound
+      - machine-unlearning-test-requires-manual-submission
+      - machine-unlearning-environment-not-reproduced
+
+  - task_id: product-recommendation
+    paper_task_name: Next Product Recommendation
+    source_group: kdd-cup-recommendation-2023
+    repository_path: MLAgentBench/benchmarks_base/product-recommendation
+    source_refs:
+      - https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/product-recommendation
+      - https://github.com/yunx-z/MLRC-Bench/blob/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/product-recommendation/scripts/prepare.py
+      - https://www.aicrowd.com/challenges/amazon-kdd-cup-23-multilingual-recommendation-challenge
+    metric: mean reciprocal rank
+    metric_direction: higher_is_better
+    paper_test_runtime_hours: 0.5
+    paper_gpu_memory_mb: 16000
+    data_access: authenticated_platform
+    test_mode: local_after_authenticated_acquisition
+    input_license_status: blocked
+    task_assets_status: blocked
+    environment_status: pending
+    authentication_status: blocked
+    held_out_evaluation_status: pending
+    qualification_blockers:
+      - aicrowd-terms-and-license-not-accepted
+      - aicrowd-credential-not-bound
+      - product-assets-not-content-pinned
+      - product-environment-not-reproduced
+
+  - task_id: meta-learning
+    paper_task_name: Cross-Domain Meta Learning
+    source_group: neurips-cross-domain-meta-learning-2022
+    repository_path: MLAgentBench/benchmarks_base/meta-learning
+    source_refs:
+      - https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/meta-learning
+      - https://github.com/yunx-z/MLRC-Bench/blob/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/meta-learning/scripts/prepare.py
+      - https://www.openml.org/search?type=data&tag=Meta_Album
+    metric: random-guess normalized balanced accuracy across any-way any-shot tasks
+    metric_direction: higher_is_better
+    paper_test_runtime_hours: 3.5
+    paper_gpu_memory_mb: 16000
+    data_access: public_registry
+    test_mode: local_held_out
+    input_license_status: verified
+    task_assets_status: pending
+    environment_status: pending
+    authentication_status: not_required
+    held_out_evaluation_status: verified
+    qualification_blockers:
+      - meta-album-assets-not-content-pinned
+      - meta-learning-environment-not-reproduced
+
+excluded_tasks:
+  - task_id: llm-merging
+    paper_task_name: LLM Merging
+    source_group: neurips-llm-merging-2024
+    repository_path: MLAgentBench/benchmarks_base/llm-merging
+    paper_gpu_memory_mb: 48000
+    exclusion_code: single-device-memory-exceeds-current-host
+    exclusion_reason: The accepted protocol uses one 48 GB device; aggregating two non-NVLink 24 GB RTX 3090 cards would change the execution semantics.
+  - task_id: backdoor-trigger-recovery
+    paper_task_name: Backdoor Trigger Recovery
+    source_group: trojan-detection-challenge-2024
+    repository_path: MLAgentBench/benchmarks_base/backdoor-trigger-recovery
+    paper_gpu_memory_mb: 48000
+    exclusion_code: single-device-memory-exceeds-current-host
+    exclusion_reason: The accepted protocol uses one 48 GB device; current registered hosts guarantee only 24 GB per device.
+  - task_id: weather_forcast
+    paper_task_name: Rainfall Prediction
+    source_group: weather4cast-2023
+    repository_path: MLAgentBench/benchmarks_base/weather_forcast
+    paper_gpu_memory_mb: 48000
+    exclusion_code: single-device-memory-exceeds-current-host
+    exclusion_reason: The accepted protocol uses one 48 GB device; current registered hosts guarantee only 24 GB per device.
+
+study_plan:
+  condition_ids:
+    - scitaste-native-base
+    - scitaste-native-full
+    - scitaste-native-mismatched-taste
+  seeds:
+    - 7
+    - 17
+    - 29
+  planned_cells: 36
+  per_cell_agent_hours: 5.0
+  planned_gpu_hours: 180.0
+  formal_gpu_hour_cap: 192.0
+  sampling_unit: task
+  evidence_role: transfer-and-mechanism
+  task_level_population_claim_authorized: false
+
+owner_preflight_approval: false
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

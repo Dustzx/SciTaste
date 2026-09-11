@@ -1741,3 +1741,32 @@ artifact. The Generation-as-Content receiver revalidates that artifact and
 shows the allowed-use partition and blockers separately from the earlier
 download-approval card. Rendering grants no new authority and cannot relabel a
 brief-only cohort as a formal task population.
+
+### ADR-057: Aggregate GPU memory cannot satisfy a single-device benchmark contract
+
+Status: accepted for objective-progress candidate qualification; no workload is
+authorized.
+
+Benchmark identity, task identity, compute capacity, and experiment authority
+are separate gates. SciTaste therefore binds an executable-source candidate to
+an immutable benchmark corpus, official repository commit, shared compute
+catalog semantic hash, API resource, GPU host, complete accepted-task
+partition, and task-specific legal/asset/environment/test statuses. A task fits
+only when its published per-device requirement is no greater than the selected
+host's guaranteed memory per device. Device counts are not multiplied to create
+fictional shared memory unless the upstream task defines and validates that
+distributed execution.
+
+The candidate arithmetic is also semantic rather than decorative: selected
+tasks × conditions × seeds must equal the internal run-unit count, and that
+count times the per-run ceiling must remain within the declared GPU-hour cap.
+This accounting cannot substitute for a pilot-based power analysis. A four-task
+slice is explicitly transfer/mechanism evidence with task as sampling unit and
+cannot authorize a broad population claim.
+
+Qualification is fail-closed. Metadata review may pass while acquisition,
+preflight, and execution remain false. Platform terms, interactive credentials,
+manual submissions, missing file hashes, unbuilt environments, unverified
+provider/host observations, and absent 48 GB devices remain visible. The report
+and CLI carry literal false authority fields and perform no network, provider,
+SSH, or GPU action.

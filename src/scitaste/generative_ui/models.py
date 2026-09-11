@@ -1005,6 +1005,75 @@ class ProjectProgressAcquisitionQualificationItem(BaseModel):
         return self
 
 
+class ProjectProgressBenchmarkQualificationItem(BaseModel):
+    """One no-run benchmark/compute compatibility decision."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    candidate_id: SafeIdentifier
+    proposal_sha256: Sha256
+    report_sha256: Sha256
+    report_file_sha256: Sha256
+    accepted_task_count: int = Field(gt=0)
+    selected_task_count: int = Field(gt=0)
+    excluded_task_count: int = Field(ge=0)
+    selected_task_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    excluded_task_ids: tuple[SafeIdentifier, ...] = ()
+    first_preflight_candidate_ids: tuple[SafeIdentifier, ...] = ()
+    planned_cells: int = Field(gt=0)
+    planned_gpu_hours: float = Field(gt=0)
+    formal_gpu_hour_cap: float = Field(gt=0)
+    metadata_review_ready: bool
+    acquisition_request_ready: bool
+    local_preflight_ready: bool
+    experiment_ready: bool
+    requires_additional_48gb_single_device_resource: bool
+    integrity_blocker_codes: tuple[SafeIdentifier, ...] = ()
+    qualification_blocker_codes: tuple[SafeIdentifier, ...] = ()
+    pending_qualification_codes: tuple[SafeIdentifier, ...] = ()
+    authorizes_download: Literal[False] = False
+    authorizes_api_calls: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    external_action_performed: Literal[False] = False
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def benchmark_qualification_is_consistent(
+        self,
+    ) -> ProjectProgressBenchmarkQualificationItem:
+        if self.selected_task_count != len(self.selected_task_ids):
+            raise ValueError("benchmark selected-task count differs from its inventory")
+        if self.excluded_task_count != len(self.excluded_task_ids):
+            raise ValueError("benchmark excluded-task count differs from its inventory")
+        if self.accepted_task_count != self.selected_task_count + self.excluded_task_count:
+            raise ValueError("benchmark accepted tasks must equal selected plus excluded")
+        task_ids = (*self.selected_task_ids, *self.excluded_task_ids)
+        if len(task_ids) != len(set(task_ids)):
+            raise ValueError("benchmark qualification task IDs must be unique")
+        if not set(self.first_preflight_candidate_ids) <= set(self.selected_task_ids):
+            raise ValueError("first-preflight tasks must belong to the selected task set")
+        if self.planned_gpu_hours > self.formal_gpu_hour_cap:
+            raise ValueError("benchmark qualification exceeds its GPU-hour cap")
+        if self.metadata_review_ready and self.integrity_blocker_codes:
+            raise ValueError(
+                "metadata-ready benchmark qualification cannot retain integrity blockers"
+            )
+        if self.experiment_ready and (
+            not self.local_preflight_ready
+            or self.qualification_blocker_codes
+            or self.pending_qualification_codes
+        ):
+            raise ValueError("experiment-ready benchmark qualification retains unresolved gates")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("benchmark qualification must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("benchmark qualification references must be unique")
+        return self
+
+
 class ProjectProgressCandidateItem(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
@@ -1017,6 +1086,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_next_gate",
         "review_research_landscape",
         "review_data_acquisition",
+        "review_benchmark_qualification",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -1168,6 +1238,7 @@ class ProjectProgressBoardData(BaseModel):
     evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
     acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
+    benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -1223,6 +1294,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.evaluation_results,
             *self.acquisitions,
             *self.acquisition_qualifications,
+            *self.benchmark_qualifications,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,
@@ -1254,6 +1326,10 @@ class ProjectProgressBoardData(BaseModel):
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):
             raise ValueError("project progress acquisition qualification IDs must be unique")
+
+        benchmark_ids = [item.candidate_id for item in self.benchmark_qualifications]
+        if len(benchmark_ids) != len(set(benchmark_ids)):
+            raise ValueError("project progress benchmark qualification IDs must be unique")
 
         stages = [item.stage for item in self.stages]
         if stages != sorted(set(stages)):

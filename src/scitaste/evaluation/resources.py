@@ -136,7 +136,7 @@ class ExternalEvaluationResource(FrozenModel):
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal["2.0", "2.1", "2.2", "2.3"] = "2.0"
+    schema_version: Literal["2.0", "2.1", "2.2", "2.3", "2.4"] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -179,7 +179,7 @@ class ExternalResourceOverride(FrozenModel):
 class ExternalResourceCorpusOverlay(FrozenModel):
     """Content-addressed additive or evidence-only revision over one prior corpus."""
 
-    schema_version: Literal["2.1", "2.2", "2.3"] = "2.1"
+    schema_version: Literal["2.1", "2.2", "2.3", "2.4"] = "2.1"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -298,7 +298,7 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
         raise ValueError("evaluation resource corpus must be UTF-8") from exc
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
-    if payload.get("schema_version") in {"2.1", "2.2", "2.3"} and "base_source" in payload:
+    if payload.get("schema_version") in {"2.1", "2.2", "2.3", "2.4"} and "base_source" in payload:
         corpus = _compose_external_resource_overlay(resolved, payload)
     else:
         corpus = ExternalResourceCorpus.model_validate(payload)
@@ -328,7 +328,12 @@ def _compose_external_resource_overlay(
     if hashlib.sha256(base_path.read_bytes()).hexdigest() != overlay.base_source_sha256:
         raise ValueError("evaluation resource overlay base hash has drifted")
     base = load_external_resource_corpus(base_path).corpus
-    expected_base = {"2.1": "2.0", "2.2": "2.1", "2.3": "2.2"}[overlay.schema_version]
+    expected_base = {
+        "2.1": "2.0",
+        "2.2": "2.1",
+        "2.3": "2.2",
+        "2.4": "2.3",
+    }[overlay.schema_version]
     if base.schema_version != expected_base:
         raise ValueError(
             f"evaluation resource {overlay.schema_version} overlay must extend schema "

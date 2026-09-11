@@ -1188,6 +1188,99 @@ fieldset {
   justify-self: start;
 }
 
+.benchmark-qualification-card {
+  border-left-color: #587b94;
+}
+
+.benchmark-funnel {
+  align-items: center;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+}
+
+.benchmark-funnel-step {
+  align-items: center;
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid #d8dfd4;
+  border-radius: 0.55rem;
+  display: flex;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.5rem;
+}
+
+.benchmark-funnel-step strong {
+  color: var(--forest);
+  font-size: 1.3rem;
+}
+
+.benchmark-funnel-step small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.benchmark-funnel-arrow {
+  color: #718279;
+  font-weight: 800;
+}
+
+.benchmark-budget {
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 700;
+  gap: 0.3rem;
+}
+
+.benchmark-budget-track {
+  background: #dfe6df;
+  border-radius: 99rem;
+  height: 0.45rem;
+  overflow: hidden;
+}
+
+.benchmark-budget-track span {
+  background: linear-gradient(90deg, #4f7f67, #b38b3f);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.benchmark-task-groups {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.benchmark-task-groups > div {
+  background: rgb(255 255 255 / 58%);
+  border-radius: 0.5rem;
+  min-width: 0;
+  padding: 0.55rem;
+}
+
+.benchmark-task-groups strong {
+  font-size: 0.72rem;
+}
+
+.benchmark-task-groups ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+}
+
+.benchmark-task-groups li {
+  background: #e8eeea;
+  border-radius: 99rem;
+  font-size: 0.66rem;
+  overflow-wrap: anywhere;
+  padding: 0.22rem 0.4rem;
+}
+
 @media (max-width: 960px) {
   .evaluation-gate-rail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1196,6 +1289,27 @@ fieldset {
 
 @media (max-width: 480px) {
   .evaluation-gate-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .benchmark-funnel {
+    gap: 0.3rem;
+  }
+
+  .benchmark-funnel-arrow {
+    display: none;
+  }
+
+  .benchmark-funnel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .benchmark-funnel-step {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .benchmark-task-groups {
     grid-template-columns: minmax(0, 1fr);
   }
 }

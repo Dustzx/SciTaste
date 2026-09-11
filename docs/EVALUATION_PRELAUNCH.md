@@ -165,6 +165,28 @@ The result contains:
 - separate readiness and exact-hash author-approval verdicts;
 - `no_execution_performed=true`.
 
+Qualify the exact objective-progress task slice against the current API/GPU
+catalog without acquiring data or launching a task:
+
+```bash
+.venv/bin/scitaste evaluation executable-candidate \
+  --manifest configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v7.yaml \
+  --compute-catalog configs/resources/compute_catalog_v2.yaml \
+  --require-metadata-review-ready
+```
+
+The current v1 candidate accepts all seven official MLRC-Bench task identities,
+selects four 16 GB tasks for a mechanism/transfer study, excludes three 48 GB
+tasks from the 24 GB-per-device host, and nominates only Temporal Action
+Localisation and Cross-Domain Meta Learning for the first acquisition-request
+review. Its declared 4 tasks × 3 conditions × 3 seeds totals 36 internal run
+units and at most 180 GPU-hours under the 192 GPU-hour ceiling. The command
+deliberately fails `--require-experiment-ready`: exact acquisition allowlists,
+task bytes, upstream-license closure, environments, baselines, and held-out
+reproduction are not yet complete, and the four-task slice cannot support a
+benchmark-wide generalization claim.
+
 ## Project-owned proposal bundles
 
 The global `configs/evaluation/prelaunch/` files are reusable proposal sources,
@@ -329,9 +351,11 @@ protocol.
 
 1. Select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
    exact acquired inputs; freeze output package hashes, reviewer blinding, and
-   runtime policy. Do not promote these broad prompts to empirical tasks.
-   Separately qualify EXP-Bench, MLRC-Bench, or another fixed executable source
-   before proposing any evidence-valid or objective-progress lane.
+   runtime policy. Do not promote these broad prompts to empirical tasks. The
+   separate MLRC-Bench metadata qualification is complete: prepare an exact,
+   no-execution acquisition request for only Cross-Domain Meta Learning and
+   Temporal Action Localisation, then reproduce each baseline and held-out path
+   before a formal objective-progress proposal.
 2. Materialize the v2 claim architecture as two proposals: a matched
    within-SciTaste causal lane and a separately labelled best-native external
    lane with model effects acknowledged. Then prepare exact direct-agent
@@ -348,10 +372,10 @@ protocol.
    revision. For DeepSeek, perform an
    authenticated identity preflight immediately before launch because the API
    name is a rolling alias.
-6. For the GPU lane, review the recorded remote inventory, define the checkpoint
-   transfer/archive plan within the remaining 59 GB, then transfer and verify the
-   copied tree hash only after approval. No task data currently fits inside that
-   authorization.
+6. For the GPU lane, independently re-probe the owner-reported approximately
+   200 GB free storage and eight devices, then calculate the two candidate task
+   packages before any transfer. The current 24 GB-per-device guarantee admits
+   the four 16 GB MLRC tasks only; it cannot emulate the three 48 GB tasks.
 7. Present the regenerated exact manifests and their proposal hashes to the
    project owner. Run one matched block only after explicit approval; require a
    second approval for scale-out.

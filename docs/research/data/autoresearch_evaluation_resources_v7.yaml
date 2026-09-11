@@ -1,0 +1,94 @@
+schema_version: "2.4"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v7
+audited_on: 2026-09-12
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v6.yaml
+base_source_sha256: 8a2ff439cb1a073f7187751dc80e2101877ed805e080ee5199d866a590436dfa
+
+resources_additions:
+  - resource_id: mlrc-bench-code
+    resource_kind: benchmark
+    official_repository: https://github.com/yunx-z/MLRC-Bench
+    repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+    implementation_path: MLAgentBench
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    code_license:
+      identifier: MIT
+      scope: Root repository license at the pinned commit; vendored components and competition-derived assets retain their own terms.
+      official_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      sha256: 002c2696d92b5c8cf956c11072baa58eaf9f6ade995c031ea635c6a1ee342ad1
+      review_required: true
+      obligations:
+        - Preserve the MIT license and copyright notice for covered code.
+        - Resolve the placeholder copyright notice before redistributing a derived bundle.
+        - Audit licenses of vendored code and every competition asset separately.
+    datasets:
+      - dataset_id: mlrc-bench-hf-metadata
+        official_url: https://huggingface.co/datasets/yunx-z/MLRC-Bench/tree/6ba0e2efb8397879ff5390335c6ba36482a66831
+        revision: 6ba0e2efb8397879ff5390335c6ba36482a66831
+        license_identifier: CC-BY-4.0
+        reported_rows: 7
+        reported_size: metadata package only; executable competition assets remain external
+        local_copy_present: false
+    lifecycle_stages:
+      - method-proposal
+      - repository-level-implementation
+      - development-execution
+      - hidden-test-execution
+      - objective-scoring
+    native_model_interfaces:
+      - benchmark-defined language-agent interface
+      - repository-level editable methods directory
+      - task-specific local or platform evaluation
+    resource_requirements:
+      - one 16 GB GPU for four accepted tasks
+      - one 48 GB GPU for three accepted tasks
+      - up to five agent hours per trial except the rainfall task
+      - provider credentials for the selected language agent
+      - competition-specific datasets licenses and platform credentials
+    gates:
+      official_identity:
+        status: verified
+        evidence: The official NeurIPS paper identifies the seven-task MLRC-Bench and links its public code and leaderboard.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      repository_pin:
+        status: verified
+        evidence: The official yunx-z/MLRC-Bench repository was resolved to the recorded 40-character commit on 2026-09-12.
+        evidence_url: https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6
+      publication_identity:
+        status: verified
+        evidence: NeurIPS proceedings list MLRC-Bench in the 2025 Datasets and Benchmarks Track.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      code_license:
+        status: verified
+        evidence: Root MIT text is content-bound by SHA-256; legal review remains required because its copyright fields are placeholders and subcomponents have separate terms.
+        evidence_url: https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/LICENSE
+      dataset_pin:
+        status: verified
+        evidence: The official seven-row Hugging Face metadata package is pinned independently from executable task assets.
+        evidence_url: https://huggingface.co/datasets/yunx-z/MLRC-Bench/tree/6ba0e2efb8397879ff5390335c6ba36482a66831
+      dataset_license:
+        status: blocked
+        evidence: CC-BY-4.0 covers the metadata package but does not establish rights for every underlying competition dataset.
+      source_groups:
+        status: verified
+        evidence: The accepted paper identifies seven distinct competition tasks; the candidate manifest preserves one source group per task.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/file/82c96f3c90741ef2c9b248e65d9b5db0-Paper-Datasets_and_Benchmarks_Track.pdf
+      selected_task_manifest:
+        status: verified
+        evidence: configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml freezes all seven accepted tasks as four selected and three memory-excluded entries with file SHA-256 ac7595a6f66bde172f59a04cea9d4e173802d46b05e30d05ecbf233b0a2f8379.
+        evidence_url: https://github.com/yunx-z/MLRC-Bench/tree/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base
+      task_assets:
+        status: blocked
+        evidence: No selected task dataset or checkpoint has been acquired into a content-addressed SciTaste task package.
+      upstream_licenses:
+        status: blocked
+        evidence: Kaggle and AIcrowd terms remain unaccepted; public Meta-Album and Perception Test assets still require exact per-file license and hash manifests.
+      executable_signal:
+        status: blocked
+        evidence: Objective metrics are implemented upstream, but no selected task environment has passed a pinned local baseline and hidden-test reproduction.
+    notes:
+      - This code identity supplements rather than rewrites the historical mlrc-bench leaderboard/Space record.
+      - The four-task 3090 slice is transfer-and-mechanism evidence; four task sampling units do not independently justify a broad population claim.
+      - No repository clone, data acquisition, environment creation, API call, GPU work, or benchmark execution occurred in this audit.

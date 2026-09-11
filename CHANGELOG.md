@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- A no-run executable-benchmark qualifier now binds the official MLRC-Bench
+  code/data identities to the shared API/GPU catalog, preserves all seven
+  accepted tasks, selects four published 16-GB tasks, and excludes three
+  published 48-GB tasks from the 24-GB-per-device RTX 3090 hosts. It validates
+  the Base/Full/mismatched-Taste arithmetic and 192-GPU-hour cap while exposing
+  legal, asset, environment, authentication, hidden-test, and task-sampling
+  limits. Metadata review can pass without granting download, API, GPU, or
+  execution authority.
+
 - API and GPU resources are now operationally explicit inside the shared
   resource directory. The Zhipu manifest uses the executable backend's
   `ZAI_API_KEY` binding, and the remote 8×RTX 3090 manifest records its SSH

@@ -15,7 +15,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: a867084332c8d3d44876129b036b5da7c177e197879909a8751542473f4df32c
+    sha256: 26d49231ec40f36ecae4273d29b7890633ce6eb3e1732499d1f21c63edfbb715
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3
