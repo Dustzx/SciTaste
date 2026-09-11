@@ -233,9 +233,9 @@ project; then stores hashes and a no-execution boundary in `PROJECT.json`.
 ```bash
 .venv/bin/scitaste project evaluation register-prelaunch \
   --project-id my-research-project \
-  --evaluation-id deepseek-v41-package-prepilot-v4 \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v4.yaml \
+  --evaluation-id deepseek-v4-package-prepilot-v5 \
+  --manifest configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v5.yaml \
   --source-root /path/to/exact-clean-executable-checkout --evidence-root . \
   --expected-revision <revision> --select --outputs-root outputs
 ```
@@ -256,8 +256,8 @@ them through a separate immutable registry transition:
 ```bash
 .venv/bin/scitaste project evaluation register-result \
   --project-id my-research-project \
-  --evaluation-id deepseek-v41-formal \
-  --result-id deepseek-v41-formal-r1 \
+  --evaluation-id deepseek-v4-formal \
+  --result-id deepseek-v4-formal-r1 \
   --result-set outputs/projects/my-research-project/runs/<run>/RESULT_SET.json \
   --expected-revision <revision> --select --outputs-root outputs --dry-run
 
@@ -281,7 +281,7 @@ A new paper can bind the currently selected complete formal result explicitly:
   --directory-name <new-paper-directory> --run-id <revision-run> \
   --invocation-id <accepted-revision-invocation> \
   --bibliography <verified-references.bib> \
-  --evaluation-result-id deepseek-v41-formal-r1 \
+  --evaluation-result-id deepseek-v4-formal-r1 \
   --expected-revision <revision> --outputs-root outputs
 ```
 

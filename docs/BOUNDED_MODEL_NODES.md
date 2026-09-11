@@ -88,7 +88,7 @@ not establish that the evidence itself is correct, so the draft remains a
 proposal until the ordinary paper, venue, and review gates accept its artifacts.
 
 The content-addressed DeepSeek profile
-`runtime_profiles.deepseek_v41_paper_draft_v1.yaml` gives this node a 32,768-token
+`runtime_profiles.deepseek_v4_paper_draft_v2.yaml` gives this node a 32,768-token
 output envelope for a full manuscript. That is a per-call generation ceiling,
 not a fixed limit on normal development. Live use still requires the normal
 priced backend configuration, environment credential, exact runtime invocation,

@@ -16,7 +16,7 @@ from scitaste.evaluation import (
 )
 
 MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml")
-CURRENT_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
+CURRENT_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml")
 HASH = "a" * 64
 
 
@@ -120,7 +120,7 @@ def test_current_v41_proposal_compiles_exact_blocked_matrix_without_running() ->
     assert resource.max_cost == 100.0
 
 
-def test_package_preference_v41_proposal_compiles_two_seed_no_run_matrix() -> None:
+def test_package_preference_v4_proposal_compiles_two_seed_no_run_matrix() -> None:
     manifest = load_prelaunch_manifest(CURRENT_MANIFEST_PATH).manifest
 
     plan = compile_evaluation_cell_plan(manifest)

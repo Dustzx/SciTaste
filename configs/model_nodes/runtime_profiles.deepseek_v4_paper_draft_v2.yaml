@@ -1,0 +1,11 @@
+# Content-addressed profile set for a bounded full-paper proposal using the
+# official DeepSeek V4 Flash callable identity. Live execution still requires
+# a separately enabled priced backend, environment credential, and --allow-live.
+schema_version: "1.0"
+profile_set_id: deepseek-v4flash-paper-draft-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v4flash_paper_draft_v2.yaml
+    sha256: a6eded5877fa2159a7d4578d2ba5b83dc644b8f2a8ccd72ce002c1a9d2754d10
+    profile_sha256: fd1ca76b136c64e927c50def5670d49957b2c65ad522b1204b8e429677155f44

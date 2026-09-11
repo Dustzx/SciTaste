@@ -1,0 +1,11 @@
+# Content-addressed profile set for a bounded paper revision using the official
+# DeepSeek V4 Flash callable identity. It cannot manufacture experimental
+# evidence or close reviewer concerns without registered closure proofs.
+schema_version: "1.0"
+profile_set_id: deepseek-v4flash-paper-revision-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v4flash_paper_revision_v2.yaml
+    sha256: 7dd3f91f75739d1a5e7278cce65153fd1b9f0160ab165299a9d94d31d381f5a8
+    profile_sha256: 7d80ce4454992f7f2aca0f2d703ed7e681f7e357e53e4dfce9d2cfa59e7ddfbb

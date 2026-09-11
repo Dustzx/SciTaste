@@ -490,11 +490,12 @@ def test_evidence_paper_draft_schema_requires_exact_numeric_inventory() -> None:
 
 def test_deepseek_paper_draft_profile_is_content_addressed_and_full_length() -> None:
     loaded = load_model_node_profile_set(
-        "configs/model_nodes/runtime_profiles.deepseek_v41_paper_draft_v1.yaml"
+        "configs/model_nodes/runtime_profiles.deepseek_v4_paper_draft_v2.yaml"
     )
 
-    profile = loaded.profiles["deepseek-v41flash-paper-draft"]
+    profile = loaded.profiles["deepseek-v4flash-paper-draft"]
     assert profile.allowed_node_names == ("evidence-paper-draft",)
+    assert profile.model == "deepseek-v4-flash"
     assert profile.generation.max_output_tokens == 32_768
     assert profile.admission.max_output_tokens == 32_768
     assert profile.admission.allowed_tool_names == []
@@ -527,8 +528,8 @@ def test_evidence_paper_draft_runs_through_registered_facade_extension(
         expected_revision=0,
     )
     profile = load_model_node_profile_set(
-        "configs/model_nodes/runtime_profiles.deepseek_v41_paper_draft_v1.yaml"
-    ).profiles["deepseek-v41flash-paper-draft"]
+        "configs/model_nodes/runtime_profiles.deepseek_v4_paper_draft_v2.yaml"
+    ).profiles["deepseek-v4flash-paper-draft"]
     policy = NodePolicy(
         policy_id="paper-draft-facade-test",
         enabled=True,
@@ -656,8 +657,8 @@ def test_accepted_paper_draft_builds_registered_tex_pdf_and_trace(
         expected_revision=0,
     )
     profile = load_model_node_profile_set(
-        "configs/model_nodes/runtime_profiles.deepseek_v41_paper_draft_v1.yaml"
-    ).profiles["deepseek-v41flash-paper-draft"]
+        "configs/model_nodes/runtime_profiles.deepseek_v4_paper_draft_v2.yaml"
+    ).profiles["deepseek-v4flash-paper-draft"]
     policy = NodePolicy(
         policy_id="paper-draft-build-test",
         enabled=True,
@@ -768,7 +769,7 @@ def test_accepted_paper_draft_builds_registered_tex_pdf_and_trace(
     assert built.revision == snapshot.revision + 1
     assert paper.title == "Scientific Taste for Autonomous Research"
     assert paper.provider == "deepseek"
-    assert paper.model == "deepseek-flash"
+    assert paper.model == "deepseek-v4-flash"
     assert paper.files["paper-draft-trace"] == "PAPER_DRAFT_TRACE.json"
     assert paper.model_extra["paper_draft_invocation_id"] == "paper-draft-build"
     assert (bundle / "main.md").is_file()

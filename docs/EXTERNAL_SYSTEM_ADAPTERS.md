@@ -102,7 +102,7 @@ its schema always fixes `authorizes_execution=false` and
 The current AutoResearchClaw static report observes the exact clean
 `12d3fd80…` upstream and verifies the existing artifact mapping and
 failure/resume evidence. It remains **not ready for a matched adapter** because
-MLR-Bench task mapping, DeepSeek V4.1 model mapping, selected-task sandboxing,
+MLR-Bench task mapping, official DeepSeek V4 Flash model mapping, selected-task sandboxing,
 and matched telemetry acceptance tests are still pending. This is the intended
 state: retaining the unchanged upstream is useful evidence, but it is not a
 substitute for the four task-specific qualifications.

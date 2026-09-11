@@ -251,8 +251,8 @@ with `PAPER_REVISION_TRACE.json`. The author response and original-reviewer
 verification must bind that same trace and closure proof; the revised prose is
 never itself treated as empirical evidence.
 
-The committed `deepseek-v41flash-paper-draft` and
-`deepseek-v41flash-paper-revision` profiles each allow up to 32,768 output tokens
+The committed `deepseek-v4flash-paper-draft` and
+`deepseek-v4flash-paper-revision` profiles each allow up to 32,768 output tokens
 for their distinct long-form tasks. They are separate from short semantic-review
 profiles and still require all live-execution gates; no API call is made merely
 by loading or planning either profile.

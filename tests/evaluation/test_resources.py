@@ -182,6 +182,62 @@ def test_v22_overlay_can_rev_evidence_without_replacing_resource_identity(
     )
 
 
+def test_v23_overlay_extends_v22_without_replacing_resource_identity(
+    tmp_path: Path,
+) -> None:
+    source_root = Path("docs/research/data")
+    for name in (
+        "autoresearch_evaluation_resources_v2.yaml",
+        "autoresearch_evaluation_resources_v3.yaml",
+        "autoresearch_evaluation_resources_v4.yaml",
+    ):
+        shutil.copyfile(source_root / name, tmp_path / name)
+    base_v4 = tmp_path / "autoresearch_evaluation_resources_v4.yaml"
+    overlay = tmp_path / "resources-v5.yaml"
+    overlay.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "2.3",
+                "corpus_id": "accepted-autoresearch-evaluation-resources-test-v5",
+                "audited_on": "2026-09-11",
+                "authorization_scope": "metadata-only-no-execution",
+                "base_source": base_v4.name,
+                "base_source_sha256": hashlib.sha256(base_v4.read_bytes()).hexdigest(),
+                "resource_overrides": [
+                    {
+                        "resource_id": "mlr-agent",
+                        "gates": {
+                            "model_mapping": {
+                                "status": "blocked",
+                                "evidence": (
+                                    "Corrected provider identity; adapter preflight "
+                                    "remains pending."
+                                ),
+                            }
+                        },
+                        "notes_append": [
+                            "Provider evidence revision; resource identity unchanged."
+                        ],
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    corpus = load_external_resource_corpus(overlay).corpus
+    base = load_external_resource_corpus(base_v4).corpus
+    before = next(item for item in base.resources if item.resource_id == "mlr-agent")
+    after = next(item for item in corpus.resources if item.resource_id == "mlr-agent")
+
+    assert corpus.schema_version == "2.3"
+    assert after.repository_commit == before.repository_commit
+    assert after.official_repository == before.official_repository
+    assert after.gates[ResourceGateName.MODEL_MAPPING].status is ResourceGateStatus.BLOCKED
+    assert after.notes[-1] == "Provider evidence revision; resource identity unchanged."
+
+
 def test_v22_overlay_rejects_unknown_resource_override(tmp_path: Path) -> None:
     base_v2 = tmp_path / CORPUS_PATH.name
     base_v3 = tmp_path / V3_CORPUS_PATH.name

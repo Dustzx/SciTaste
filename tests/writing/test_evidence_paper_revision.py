@@ -372,11 +372,12 @@ def test_revision_integrates_only_project_proved_experiment_evidence() -> None:
 
 def test_deepseek_paper_revision_profile_is_content_addressed_and_tool_free() -> None:
     loaded = load_model_node_profile_set(
-        "configs/model_nodes/runtime_profiles.deepseek_v41_paper_revision_v1.yaml"
+        "configs/model_nodes/runtime_profiles.deepseek_v4_paper_revision_v2.yaml"
     )
 
-    profile = loaded.profiles["deepseek-v41flash-paper-revision"]
+    profile = loaded.profiles["deepseek-v4flash-paper-revision"]
     assert profile.allowed_node_names == (EVIDENCE_PAPER_REVISION_NODE,)
+    assert profile.model == "deepseek-v4-flash"
     assert profile.generation.max_output_tokens == 32_768
     assert profile.admission.max_output_tokens == 32_768
     assert profile.admission.allowed_tool_names == []

@@ -14,7 +14,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
-| Phase 9 — matched-budget study | in progress | protocol/planner/runner/integrity status done; 48 exact-protocol runs and external expert review pending |
+| Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 The independent product path now also has a project-owned paper-review registry
 and an eight-gate lifecycle projection from native idea through independent
@@ -53,11 +53,18 @@ the current draft and its prior reviews therefore stay correctly unbound.
 
 The homepage now compresses repeated proposal diagnostics into seven stable
 decision gates while retaining the exact codes underneath. For the current
-DeepSeek prepilot, the API identity, dated pricing, and declared runtime budget
+DeepSeek v5 prepilot, the public API identity, dated pricing, and declared runtime budget
 are ready, while task qualification, comparator adapters, analysis/replication,
 integrity, blinded review, and owner approval remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
+
+The earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` identity was contradicted
+by the provider's official model catalog and pricing page. It remains preserved
+inside historical proposal bytes only. The current immutable v5 proposal uses
+`deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`, the official dated prices, and a
+new resource-corpus overlay; no result or launch authority is inherited from
+the superseded proposal.
 
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without

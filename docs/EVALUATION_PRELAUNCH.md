@@ -24,24 +24,27 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource currently named | Planned first block | Current state |
 |---|---|---|---:|---|
-| `formal-v4-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | current schema-v1.1 no-run proposal; independent expert preference is primary and a model judge is secondary; task bytes, adapters, reviewers, clean executable checkout, and approval remain blocked |
+| `formal-v5-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-v4-flash`, currently documented release `DeepSeek-V4-Flash-0731` | 5 systems × 10 official tasks × 2 seeds = 100 cells | current schema-v1.1 no-run proposal; independent expert preference is primary and a model judge is secondary; task bytes, adapters, reviewers, clean executable checkout, authenticated served identity, and approval remain blocked |
+| `formal-v4-package-prepilot` | historical package-preference proposal with an invalid provider identity | non-official pair `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; endpoint semantics are correct but the provider identity and prices are not, so it must not be approved or launched |
 | `formal-v4-accepted-method-prepilot` | historical API scope with an invalid endpoint/task binding | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; v3 incorrectly treated the MLR-Bench open-ended package rubric as objective task progress and must not be approved or launched |
 | `formal-v4-prepilot` | historical API scope proposal | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | immutable history; included preprint comparators and lacked replication plus analysis/integrity contracts |
-| `formal-v3-prepilot` | historical API proposal | retired DeepSeek V4 API identity, temporarily compatibility-routed by the provider | 5 system × task × seed cells | immutable history; do not launch or edit into V4.1 evidence |
+| `formal-v3-prepilot` | historical API proposal | earlier DeepSeek V4 API identity | 5 system × task × seed cells | immutable history; do not edit it into current evidence |
 | `formal-v2-accepted-method-prepilot` | historical Zhipu scope with the same invalid endpoint/task binding | Zhipu `glm-5.3-flash`, documented version `GLM-5.3-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; rebuild as a separate schema-v1.1 package-preference proposal after exact pricing is resolved rather than editing or silently falling back from DeepSeek |
 | `formal-v2-prepilot` | historical Zhipu scope proposal | Zhipu `glm-5.3-flash` | 5 system × task × seed cells | immutable history; do not edit into the accepted-method proposal |
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-DeepSeek released V4.1 Flash on 2026-09-10. Its official callable identifier is
-now `deepseek-flash`; legacy V4 identifiers are temporarily routed to the new
-model. SciTaste therefore retains the earlier `formal-v4` proposals as history
-and creates `formal-v4-package-prepilot` for the accepted-system, two-seed
-package-preference design. The new proposal records the documented V4.1 identity and published peak prices
-as conservative cost bounds. Because `deepseek-flash` is a rolling alias, an
-authenticated identity observation is still mandatory immediately before an approved call. See the official [release
-notice](https://deepseek.com/news/deepseek-v4-1-flash/) and [dated model and
-pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
+DeepSeek's official documentation currently exposes callable ID
+`deepseek-v4-flash`, with the change log identifying the served release as
+`DeepSeek-V4-Flash-0731`. The model-and-pricing table lists $0.0028/M cached
+input tokens, $0.14/M uncached input tokens, and $0.28/M output tokens. No
+official source supports the previously recorded `deepseek-flash` /
+`DeepSeek-V4.1-Flash` pair. SciTaste therefore retains all earlier proposal
+bytes as non-launchable history and creates `formal-v5-package-prepilot` with
+the corrected identity and pricing. Because the callable ID remains a rolling
+alias, an authenticated identity observation is still mandatory immediately
+before an approved call. See the official [change log](https://api-docs.deepseek.com/updates/)
+and [dated model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
 The official Zhipu model page now names callable ID `glm-5.3-flash`, version
 `GLM-5.3-Flash`, 1M context, and 128K maximum output. The proposal therefore
@@ -72,7 +75,7 @@ every task as `research_package_review`. Its starting brief bytes are not
 present, downstream/runtime asset licenses and executable signals remain
 pending, and it authorizes neither download nor execution. The content-bound
 package protocol at
-`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md`
+`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md`
 freezes independent blinded expert preference as primary and a model judge as
 secondary. Objective progress remains a separate lane for a benchmark such as
 qualified MLRC-Bench; the two estimates are never pooled.
@@ -83,8 +86,8 @@ Inspect any proposal without provider or GPU access:
 
 ```bash
 .venv/bin/scitaste evaluation prelaunch \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v4.yaml \
+  --manifest configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v5.yaml \
   --source-root /path/to/exact-clean-executable-checkout \
   --evidence-root /path/to/proposal-and-protocol-checkout
 ```
@@ -111,9 +114,9 @@ it as its current experiment plan:
 ```bash
 .venv/bin/scitaste project evaluation register-prelaunch \
   --project-id scitaste-self-development \
-  --evaluation-id deepseek-v41-package-prepilot-v4 \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v4.yaml \
+  --evaluation-id deepseek-v4-package-prepilot-v5 \
+  --manifest configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v5.yaml \
   --source-root . --evidence-root . \
   --expected-revision <current-project-revision> --select \
   --outputs-root outputs
@@ -198,21 +201,21 @@ without preparing or executing a launcher:
 
 ```bash
 .venv/bin/scitaste evaluation cell-plan \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml \
-  --output /tmp/deepseek-v41-cell-plan.json
+  --manifest configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml \
+  --output /tmp/deepseek-v4-cell-plan.json
 ```
 
 The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. The current v4 proposal
+provider call, GPU work, or task download occurred. The current v5 proposal
 produces 100 intended two-seed cells; none is launch-ready while task and
 accepted-system adapter gates remain open. This makes the gap between a YAML
 cell count and an executable cross-framework experiment explicit.
 
 The `max_output_tokens_per_call` values in these proposals are per-experiment
-ceilings, not a global SciTaste limit. The current V4.1 proposal reserves 32,768
+ceilings, not a global SciTaste limit. The current V4 proposal reserves 32,768
 output tokens per call, 1,500 requests, and fifteen million total tokens across
 all 100 candidate cells. These are ceilings rather than targets and still require a
 pilot-informed adequacy check. Any change creates new proposal bytes and needs a

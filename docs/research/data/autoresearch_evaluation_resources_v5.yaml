@@ -1,0 +1,47 @@
+schema_version: "2.3"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-11-v5
+audited_on: 2026-09-11
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v4.yaml
+base_source_sha256: a4e670cc3de1c0dd07784b8d5acd3043bd6e4c4643b80105c81e0a7ffffee4d8
+
+resource_overrides:
+  - resource_id: mlr-agent
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          Official DeepSeek documentation names the callable API model
+          deepseek-v4-flash and the currently documented served release
+          DeepSeek-V4-Flash-0731. The pinned MLR-Agent implementation has not
+          yet passed an unchanged-core mapping to that rolling alias.
+        evidence_url: https://api-docs.deepseek.com/updates/
+    notes_append:
+      - The earlier DeepSeek-V4.1-Flash label was not an official provider identity and is retained only in historical proposal bytes.
+
+  - resource_id: agent-laboratory
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          Official DeepSeek documentation names the callable API model
+          deepseek-v4-flash and the currently documented served release
+          DeepSeek-V4-Flash-0731. The pinned Agent Laboratory implementation
+          has not yet passed an unchanged-core mapping to that rolling alias.
+        evidence_url: https://api-docs.deepseek.com/updates/
+    notes_append:
+      - The earlier DeepSeek-V4.1-Flash label was not an official provider identity and is retained only in historical proposal bytes.
+
+  - resource_id: tiny-scientist
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          Official DeepSeek documentation names the callable API model
+          deepseek-v4-flash and the currently documented served release
+          DeepSeek-V4-Flash-0731. TinyScientist remains blocked first by its
+          conflicting release-license declarations and has not been qualified
+          through its LiteLLM path against that rolling alias.
+        evidence_url: https://api-docs.deepseek.com/updates/
+    notes_append:
+      - The provider identity was corrected without changing TinyScientist's unresolved license or adapter status.

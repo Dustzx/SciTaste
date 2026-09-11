@@ -189,7 +189,7 @@ estimands with separate schemas, protocols, analyses, and result tables. A
 rubric score or model-judge score cannot be relabelled as a task's objective
 value, and the two task populations are never pooled into one headline number.
 The current no-run package protocol is
-[`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md).
+[`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md).
 The earlier DeepSeek v3, Zhipu v2, and Qwen robustness v2 manifests remain
 immutable design history because they bound MLR-Bench briefs to an objective-
 progress endpoint; none is eligible for launch or formal evidence.
@@ -205,7 +205,8 @@ package or if evaluation depends on unavailable private data.
 The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
-those controls. DeepSeek `deepseek-flash` / documented `DeepSeek-V4.1-Flash`
+those controls. DeepSeek `deepseek-v4-flash` / currently documented
+`DeepSeek-V4-Flash-0731`
 and Zhipu `glm-5.3-flash` are separate provider proposals with separate hashes,
 pricing, served-identity attestations, cells, and approvals. They are never
 silent fallbacks and their estimates are never pooled as one backbone.
@@ -295,8 +296,8 @@ No formal run may start until all of these gates pass:
    allocated and sampled-active GPU time, peak memory/utilization, CPU/RAM,
    storage, failures/repairs/discards, and human minutes;
 4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
-   `glm-5.3-flash` uses the separate `formal-v2` family and DeepSeek V4.1 Flash
-   uses the separate `formal-v4` family, each with new IDs, blind IDs, hashes,
+   `glm-5.3-flash` uses the separate `formal-v2` family and the corrected
+   DeepSeek V4 Flash proposal uses `formal-v5`, each with new IDs, blind IDs, hashes,
    and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and
    telemetry review without a pseudo-implementation;

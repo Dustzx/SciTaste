@@ -260,18 +260,18 @@ def test_runtime_config_builder_binds_profile_packet_and_internal_authority() ->
     }
 
 
-def test_v41_review_profile_uses_current_callable_id_and_peak_pricing() -> None:
+def test_v4_review_profile_uses_official_callable_id_and_pricing() -> None:
     profiles = load_model_node_profile_set(
-        ROOT / "configs/model_nodes/runtime_profiles.deepseek_v41_venue_review_v2.yaml"
+        ROOT / "configs/model_nodes/runtime_profiles.deepseek_venue_review_v1.yaml"
     )
-    profile = profiles.profiles["deepseek-v41flash-venue-review"]
+    profile = profiles.profiles["deepseek-v4flash-venue-review"]
     backend = load_structured_openai_compatible_config(
-        ROOT / "configs/model_nodes/deepseek_v41flash.priced_20260911.example.yaml"
+        ROOT / "configs/model_nodes/deepseek_v4flash.priced_20260910.example.yaml"
     )
 
-    assert profile.model == "deepseek-flash"
+    assert profile.model == "deepseek-v4-flash"
     assert profile.generation.max_output_tokens == 32_768
-    assert backend.model == "deepseek-flash"
+    assert backend.model == "deepseek-v4-flash"
     assert backend.live_enabled is False
-    assert backend.pricing.input_usd_per_million_tokens == 0.3
-    assert backend.pricing.output_usd_per_million_tokens == 1.2
+    assert backend.pricing.input_usd_per_million_tokens == 0.14
+    assert backend.pricing.output_usd_per_million_tokens == 0.28

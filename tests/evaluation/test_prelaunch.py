@@ -39,6 +39,8 @@ V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v
 CURRENT_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v3.yaml")
 PACKAGE_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v4.yaml")
 PACKAGE_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
+OFFICIAL_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v5.yaml")
+OFFICIAL_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml")
 CURRENT_MANIFEST_PATHS = (
     Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
     Path("configs/evaluation/prelaunch/zhipu_glm53flash_pilot_v2.yaml"),
@@ -444,8 +446,8 @@ def test_current_api_headline_set_uses_accepted_methods_not_preprint_substitutes
 
 
 def test_package_preference_proposal_cannot_be_relabelled_as_objective_progress() -> None:
-    manifest = load_prelaunch_manifest(PACKAGE_MANIFEST_PATH).manifest
-    corpus = load_external_resource_corpus(PACKAGE_CORPUS_PATH).corpus
+    manifest = load_prelaunch_manifest(OFFICIAL_MANIFEST_PATH).manifest
+    corpus = load_external_resource_corpus(OFFICIAL_CORPUS_PATH).corpus
     gate = inspect_prelaunch_manifest(
         manifest,
         corpus,
@@ -475,6 +477,21 @@ def test_package_preference_proposal_cannot_be_relabelled_as_objective_progress(
     assert any(
         "tiny-scientist:blocked_gate:code_license" in blocker.code for blocker in gate.blockers
     )
+
+
+def test_official_deepseek_proposal_uses_documented_callable_identity_and_prices() -> None:
+    manifest = load_prelaunch_manifest(OFFICIAL_MANIFEST_PATH).manifest
+    model = manifest.lanes[0].api_model
+
+    assert manifest.protocol_id == "formal-v5-package-prepilot"
+    assert model is not None
+    assert model.model_id == "deepseek-v4-flash"
+    assert model.model_revision == "DeepSeek-V4-Flash-0731"
+    assert model.pricing.input_cache_hit_per_million == 0.0028
+    assert model.pricing.input_cache_miss_per_million == 0.14
+    assert model.pricing.output_per_million == 0.28
+    assert model.max_cost == 20.0
+    assert manifest.approval.approved is False
 
 
 def test_critics_expose_all_five_domains_without_authorizing_execution() -> None:

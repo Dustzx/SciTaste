@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- The evaluation resource ledger now supports evidence-only v2.3 overlays, and
+  the current DeepSeek package-preference proposal uses the provider-documented
+  `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` identity and dated prices.
+  Earlier V4.1-labelled proposal and model-profile bytes remain readable as
+  non-launchable history. New content-addressed V4 Flash profiles cover venue
+  review, full-paper drafting, and reviewer-driven revision without embedding a
+  credential or authorizing a call.
+
 - API and GPU evaluations now share a project-owned result-admission path.
   Cell records bind the exact proposal, plan, resource, telemetry, outcome, and
   artifact bytes; formal headline evidence additionally requires real matched
@@ -64,7 +72,7 @@ semantic versioning.
   treatments must cite exactly the new registered evidence in revised
   paragraphs. The node cannot write files, run experiments, submit a response,
   close review, or impersonate the original reviewer. A separate content-
-  addressed DeepSeek V4.1 Flash profile provides the long-form envelope without
+  addressed DeepSeek V4 Flash profile provides the long-form envelope without
   enabling live execution by itself. Accepted revisions can now pass through
   `project paper build-revision` into Stage 19 Markdown/TeX/PDF bundles with a
   self-hashed `PAPER_REVISION_TRACE.json`. The trace revalidates the source
@@ -94,7 +102,7 @@ semantic versioning.
   unsupported empirical prose, reference drift, missing headline claims or
   limitations, excess length, and invented numbers. Reader-facing Markdown
   omits internal trace identifiers while the typed proposal retains them in a
-  sidecar. A content-addressed DeepSeek V4.1 Flash profile provides a 32,768-token
+  sidecar. A content-addressed DeepSeek V4 Flash profile provides a 32,768-token
   long-form envelope behind the existing live-execution controls. Accepted
   ledger entries can now flow through `project paper build-draft` into a
   registered Markdown/TeX/PDF venue bundle with deterministic BibTeX citation
