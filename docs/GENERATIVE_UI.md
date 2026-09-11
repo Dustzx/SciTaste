@@ -207,8 +207,16 @@ Candidate readiness is rendered separately for systems and for benchmarks or
 judges, so an adapted benchmark cannot visually imply an adapted baseline
 system. Publication status and execution readiness are orthogonal: archival
 acceptance cannot waive an adapter gate, and a runnable preprint cannot enter
-the headline system lane. The v4 schema requires at least two accepted external
+the headline system lane. The v5 schema requires at least two accepted external
 headline candidates while keeping preprint-only systems in sensitivity analysis.
+
+The current v5 synthesis contains 13 method, 6 hybrid, and 15
+benchmark/evaluation entries. Its primary page does not present these as a
+single ranked list: it renders the three contribution lanes separately, then
+derives a system-comparator track and an evaluation-infrastructure track from
+their declared artifacts. The counts are corpus diagnostics only. Because the
+third screen still found material accepted methods, the map keeps the literature
+freeze on `hold` and points to a fourth saturation screen.
 
 This Taste is a presentation and abstraction policy, not a factual rewriter. It
 chooses relationships, visual hierarchy, compression, and disclosure while

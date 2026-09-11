@@ -1,0 +1,182 @@
+schema_version: "1.4"
+artifact_kind: autoresearch-evaluation-landscape-v5
+base_source: autoresearch_evaluation_landscape_v4.yaml
+base_source_sha256: 1b1c8a7b1db8de8c9368c5a3ce7b513f4a7d4dd0e290671a16f3e4813b518a57
+title: AutoResearch methods, hybrids, and evaluation infrastructure after a third independent screen
+source_document: docs/research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md
+source_document_sha256: 94bfa5d5bcc43b709b4aa9e72b199146cd03f8fdfb640069a34ef03d401b540b
+synthesis_scope: literature-and-protocol-design-only
+corpus_scope: accepted-method-census-third-screen-and-targeted-evaluation-resources
+scope_note_en: The third screen recovered four accepted method systems, one hybrid, and three evaluation works; the corpus remains unsaturated and contribution counts cannot estimate field prevalence.
+scope_note_zh: 第三轮筛查新增四个已接收方法系统、一个混合工作和三个评测工作；语料仍未饱和，分类数量不能用于推断领域论文分布。
+prevalence_inference: not-estimable
+freeze_decision: hold
+decision_reason_code: fourth-saturation-screen-and-executable-admission-remain-open
+
+work_additions:
+  - work_id: virtual-scientists
+    name: Virtual Scientists (VIRSCI)
+    venue: ACL 2025
+    evaluation_unit: Multi-agent generation, evaluation, and revision of scientific ideas
+    scale: Scientific ideation with model and human evaluation plus collaboration ablations
+    comparison_anchor: Single-agent and multi-agent ideation systems, role and interaction variants
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, proposal, review]
+    lens_ids: [decision, human, cost]
+    execution_signal: artifact
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: auto-discovery
+    name: AutoDiscovery
+    venue: NeurIPS 2025
+    evaluation_unit: Open-ended question selection and discovery using Bayesian surprise
+    scale: Fixed-budget exploration tasks with discovery-yield comparisons
+    comparison_anchor: Diversity and interestingness policies under matched budgets
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, hypothesis, interpret]
+    lens_ids: [decision, progress, cost]
+    execution_signal: mixed
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: tiny-scientist
+    name: TinyScientist
+    venue: EMNLP 2025 System Demonstrations
+    evaluation_unit: Interactive and extensible end-to-end research-agent workflows
+    scale: Open-source web and package implementation spanning the research lifecycle
+    comparison_anchor: Representative research-agent pipelines and component demonstrations
+    contribution_type: method
+    experiment_role: system-comparator
+    bundled_artifacts: [system]
+    stage_ids: [idea, proposal, hypothesis, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, progress, package, human, cost]
+    execution_signal: mixed
+    resource_tier: high
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: headline-candidate
+  - work_id: quest2data-agent
+    name: Quest2DataAgent
+    venue: EMNLP 2025 System Demonstrations
+    evaluation_unit: Research-question-driven scientific data collection and quality evaluation
+    scale: Ecology and polymer-materials deployments with human evaluation
+    comparison_anchor: Manual collection and tool-assisted baselines
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [proposal, design, execute, interpret]
+    lens_ids: [decision, integrity, package, human, cost]
+    execution_signal: executed
+    resource_tier: moderate
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: safe-scientist
+    name: SafeScientist and SciSafetyBench
+    venue: EMNLP 2025
+    evaluation_unit: Safety-aware scientific workflow and high-risk task evaluation
+    scale: 240 scientific-risk tasks, 30 tools, and 120 tool-risk tasks across six domains
+    comparison_anchor: Conventional AI-scientist frameworks, attack methods, and safety ablations
+    contribution_type: hybrid
+    experiment_role: design-precedent
+    bundled_artifacts: [system, benchmark, dataset, judge]
+    stage_ids: [idea, proposal, design, execute, interpret, paper, review]
+    lens_ids: [decision, integrity, package, human, cost]
+    execution_signal: mixed
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: heureka-bench
+    name: HeurekaBench
+    venue: ICLR 2026
+    evaluation_unit: Open-ended experimental-data research questions grounded in studies and code
+    scale: Single-cell biology workflows constructed and verified from published studies
+    comparison_anchor: Single-cell agents, open and closed backbones, and critic-module variants
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset, judge]
+    stage_ids: [design, execute, interpret]
+    lens_ids: [decision, integrity, progress, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: llm-speedrunning-benchmark
+    name: Automated LLM Speedrunning Benchmark
+    venue: NeurIPS 2025 Datasets and Benchmarks
+    evaluation_unit: Reproducing and improving NanoGPT training under an objective signal
+    scale: Repeated bounded optimization attempts with executable performance measurement
+    comparison_anchor: Model agents and known NanoGPT improvement trajectories
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: ai-research-plagiarism-audit
+    name: All That Glitters is Not Novel
+    venue: ACL 2025
+    evaluation_unit: Expert plagiarism and overlap audit of AI-generated research documents
+    scale: 50 documents reviewed by 13 experts with source-author cross-checks
+    comparison_anchor: Expert similarity judgments and automated plagiarism detectors
+    contribution_type: benchmark
+    experiment_role: design-precedent
+    bundled_artifacts: [benchmark, dataset, judge]
+    stage_ids: [idea, paper, review]
+    lens_ids: [decision, integrity, human]
+    execution_signal: executed
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: design-precedent
+
+comparison_candidate_additions:
+  - candidate_id: tiny-scientist
+    name: TinyScientist
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: exact-license-pin-adapter-telemetry-and-task-equivalence-missing
+    publication_status: accepted-archival
+    evaluation_track: headline-system
+  - candidate_id: heureka-bench-tasks
+    name: HeurekaBench task source
+    candidate_kind: benchmark
+    role: secondary
+    readiness: reference
+    barrier_code: exact-assets-licenses-scoring-and-domain-cost-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: plagiarism-audit
+    name: Expert plagiarism and overlap audit
+    candidate_kind: judge
+    role: secondary
+    readiness: reference
+    barrier_code: blind-sampling-rubric-conflict-and-adjudication-unfrozen
+    publication_status: accepted-archival
+    evaluation_track: judge-source
+
+planning_gate_overrides:
+  - gate_id: census
+    label_en: Systematic method and evaluation census
+    label_zh: 系统性方法与评测普查
+    state: candidate
+    reason_code: third-screen-found-material-additions-fourth-saturation-screen-pending
+
+open_question_overrides:
+  - question_id: methods
+    label_en: Does the fourth official-proceedings and citation screen add no high-impact eligible method or evaluation work, and which accepted headline systems pass exact license and unchanged-core adapter audits?
+    label_zh: 第四轮官方论文集与引文筛查是否不再发现高影响方法或评测工作，以及哪些已接收主比较系统能通过精确许可与核心不变适配器审计？

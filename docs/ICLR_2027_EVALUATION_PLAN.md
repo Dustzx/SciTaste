@@ -60,17 +60,18 @@ headline effect estimate.
 The accepted-literature basis and the resulting evaluation-stack decision are
 recorded in
 [`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md).
-The independent second screen and its non-saturation decision are recorded in
-[`research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md`](research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md).
-Until a third screen satisfies the declared stopping rule, this is a candidate
-comparison inventory rather than a frozen census.
+The independent third screen and its non-saturation decision are recorded in
+[`research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md`](research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md).
+It recovered additional accepted methods and evaluation resources, so a fourth
+screen is still required before the declared stopping rule can be assessed.
+This remains a candidate comparison inventory rather than a frozen census.
 
 ## Four distinct evaluation tracks
 
 | Track | Question | Required comparison | Role in the paper |
 |---|---|---|---|
 | A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
-| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, accepted MLR-Agent, AI-Researcher, Agent Laboratory, and SciTaste Native; preprint systems only in sensitivity analysis | headline external-validity result |
+| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, accepted MLR-Agent, AI-Researcher, Agent Laboratory, TinyScientist, and SciTaste Native; preprint systems only in sensitivity analysis | headline external-validity result |
 | C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
