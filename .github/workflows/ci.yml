@@ -40,6 +40,24 @@ jobs:
       - name: Lint
         run: python -m ruff check .
       - name: Run test suite with coverage
-        run: python -m pytest --cov=scitaste --cov-report=term-missing
+        id: tests
+        continue-on-error: true
+        run: >-
+          python -m pytest --cov=scitaste --cov-report=term-missing
+          --junitxml=/tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+      - name: Publish test failure annotations
+        if: steps.tests.outcome == 'failure'
+        run: >-
+          python .github/scripts/report_pytest_failures.py
+          /tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+      - name: Retain failed test report
+        if: always() && steps.tests.outcome == 'failure'
+        uses: actions/upload-artifact@v6
+        with:
+          name: pytest-python-${{ matrix.python-version }}
+          path: /tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+          if-no-files-found: error
+          retention-days: 7
       - name: Run installed CLI smoke test
+        if: steps.tests.outcome == 'success'
         run: scitaste run demo --output /tmp/scitaste-demo --seed 7
