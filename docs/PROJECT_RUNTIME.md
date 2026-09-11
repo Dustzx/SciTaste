@@ -191,10 +191,20 @@ selecting a run:
 .venv/bin/scitaste project run begin \
   --project-id my-research-project \
   --run-id 2026-09-04__local-qwen__full-scitaste__seed-07 \
-  --provider local --model qwen3-vl-4b \
+  --provider local --model qwen3-vl-2b \
   --condition full_scitaste --seed 7 \
   --stage-path upstream_run --expected-revision 0 \
   --outputs-root outputs
+
+.venv/bin/scitaste project run update \
+  --project-id my-research-project \
+  --run-id 2026-09-04__local-qwen__full-scitaste__seed-07 \
+  --status failed --failure-code provider-timeout \
+  --failure-invocation-id review-001 \
+  --failure-receipt-sha256 <receipt-sha256> \
+  --backend-may-have-started --cost-status unknown \
+  --retry-policy new-run-and-renewed-approval \
+  --expected-revision 1 --outputs-root outputs
 
 .venv/bin/scitaste project run select \
   --project-id my-research-project \
@@ -219,8 +229,11 @@ Paper generation materializes files beneath
   --expected-revision 3 --outputs-root outputs
 ```
 
-All mutating commands support `--dry-run`. Dry-run validates IDs, schemas, and
-the expected revision without creating or changing files.
+`project run update` is the ordinary recovery path for terminal status and
+bounded failure metadata; it cannot change run identity, and failure fields are
+rejected for a non-failed status. All mutating commands support `--dry-run`.
+Dry-run validates IDs, schemas, and the expected revision without creating or
+changing files.
 
 ## Project-owned experiment proposals
 

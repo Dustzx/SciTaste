@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import tempfile
 from datetime import date
@@ -491,6 +492,32 @@ def build_parser() -> argparse.ArgumentParser:
     project_run_begin.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(project_run_begin)
     project_run_begin.set_defaults(handler=_handle_project_run_begin)
+    project_run_update = project_run_commands.add_parser(
+        "update", help="Update one registered run's status and bounded failure metadata"
+    )
+    project_run_update.add_argument("--project-id", required=True)
+    project_run_update.add_argument("--run-id", required=True)
+    project_run_update.add_argument("--status", required=True)
+    project_run_update.add_argument("--evidence-scope", default=None)
+    project_run_update.add_argument("--artifact", default=None)
+    project_run_update.add_argument("--superseded-by", default=None)
+    project_run_update.add_argument("--failure-code", default=None)
+    project_run_update.add_argument("--failure-invocation-id", default=None)
+    project_run_update.add_argument("--failure-receipt-sha256", default=None)
+    project_run_update.add_argument(
+        "--backend-may-have-started",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
+    project_run_update.add_argument(
+        "--cost-status",
+        choices=["known", "unknown", "not-started"],
+        default=None,
+    )
+    project_run_update.add_argument("--retry-policy", default=None)
+    project_run_update.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_run_update)
+    project_run_update.set_defaults(handler=_handle_project_run_update)
     project_run_select = project_run_commands.add_parser("select", help="Select a current run")
     project_run_select.add_argument("--project-id", required=True)
     project_run_select.add_argument("--run-id", required=True)
@@ -1617,6 +1644,74 @@ def _handle_project_run_begin(args: argparse.Namespace) -> int:
         args.project_id,
         run,
         expected_revision=args.expected_revision,
+    )
+    print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_run_update(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    if snapshot.revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+        )
+    try:
+        registered = next(
+            item for item in snapshot.manifest.runs if item.run_id == args.run_id
+        )
+    except StopIteration as exc:
+        raise ValueError(f"unknown project run {args.run_id!r}") from exc
+    optional = {
+        "evidence_scope": args.evidence_scope,
+        "artifact": args.artifact,
+        "superseded_by": args.superseded_by,
+        "failure_code": args.failure_code,
+        "failure_invocation_id": args.failure_invocation_id,
+        "failure_receipt_sha256": args.failure_receipt_sha256,
+        "backend_may_have_started": args.backend_may_have_started,
+        "cost_status": args.cost_status,
+        "retry_policy": args.retry_policy,
+    }
+    changes = {
+        "status": args.status,
+        **{key: value for key, value in optional.items() if value is not None},
+    }
+    if args.failure_receipt_sha256 is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", args.failure_receipt_sha256
+    ):
+        raise ValueError("failure receipt SHA-256 must be 64 lowercase hexadecimal characters")
+    failure_fields = {
+        "failure_code",
+        "failure_invocation_id",
+        "failure_receipt_sha256",
+        "backend_may_have_started",
+        "cost_status",
+        "retry_policy",
+    }
+    if failure_fields & changes.keys() and not args.status.startswith("failed"):
+        raise ValueError("failure metadata requires a failed run status")
+    updated = ProjectRun.model_validate(
+        {**registered.model_dump(mode="json"), **changes}
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "run": updated.model_dump(mode="json"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = runtime.update_run(
+        args.project_id,
+        args.run_id,
+        expected_revision=args.expected_revision,
+        **changes,
     )
     print(snapshot.model_dump_json(indent=2))
     return 0

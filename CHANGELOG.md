@@ -7,6 +7,10 @@ semantic versioning.
 
 ### Added
 
+- Project run status and bounded provider-failure metadata can now be updated
+  through an optimistic-revision CLI operation with dry-run support, avoiding
+  one-off manifest edits when a review or experiment call terminates.
+
 - SciTasteBench v2 now has a natural-case curation and human-label boundary.
   Cases bind rehash-verified natural sources, source groups, and matched/placebo
   precedent provenance but contain no answer; at least two conflict-cleared

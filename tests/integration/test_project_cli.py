@@ -62,6 +62,44 @@ def test_project_cli_creates_registers_selects_and_reads_snapshot(tmp_path, caps
     begun = json.loads(capsys.readouterr().out)
     assert begun["revision"] == 1
 
+    update = [
+        "project",
+        "run",
+        "update",
+        "--project-id",
+        "cli-project",
+        "--run-id",
+        run_id,
+        "--status",
+        "failed",
+        "--failure-code",
+        "provider-timeout",
+        "--failure-invocation-id",
+        "review-invocation-001",
+        "--failure-receipt-sha256",
+        "1" * 64,
+        "--backend-may-have-started",
+        "--cost-status",
+        "unknown",
+        "--retry-policy",
+        "new-run-and-renewed-approval",
+        "--expected-revision",
+        "1",
+        "--outputs-root",
+        str(outputs),
+    ]
+    assert main([*update, "--dry-run"]) == 0
+    planned_update = json.loads(capsys.readouterr().out)
+    assert planned_update["status"] == "planned"
+    assert planned_update["next_revision"] == 2
+    assert planned_update["run"]["backend_may_have_started"] is True
+    assert main(update) == 0
+    updated = json.loads(capsys.readouterr().out)
+    assert updated["revision"] == 2
+    registered = next(item for item in updated["manifest"]["runs"] if item["run_id"] == run_id)
+    assert registered["status"] == "failed"
+    assert registered["failure_code"] == "provider-timeout"
+
     assert (
         main(
             [
@@ -73,7 +111,7 @@ def test_project_cli_creates_registers_selects_and_reads_snapshot(tmp_path, caps
                 "--run-id",
                 run_id,
                 "--expected-revision",
-                "1",
+                "2",
                 "--outputs-root",
                 str(outputs),
             ]
@@ -81,7 +119,7 @@ def test_project_cli_creates_registers_selects_and_reads_snapshot(tmp_path, caps
         == 0
     )
     selected = json.loads(capsys.readouterr().out)
-    assert selected["revision"] == 2
+    assert selected["revision"] == 3
     assert selected["manifest"]["current_run"] == run_id
 
     assert (
