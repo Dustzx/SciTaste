@@ -4,7 +4,7 @@ paper_id: scitaste-iclr2027-submission-draft-v6
 archetype: empirical-system
 central_question: Under matched information and resource budgets, does explicit scientific taste improve the scientific value and evidence validity of autonomous research?
 central_answer: SciTaste implements explicit precedent-informed scientific decisions over persistent research state, but the headline improvement claim remains unestablished until the registered external package-preference, objective-progress, ablation, and independent-review evidence is complete.
-manuscript_sha256: 68e208cfeb6a637508a6176b085c2011416aed30f0d9f721b9e8c11f5d43a0f5
+manuscript_sha256: 2fec58422d6351bd92c7bdfe5c3f701e5cb013490f1038b6dacb5de08293b592
 required_entry_points:
 - title
 - abstract
@@ -187,4 +187,4 @@ material_limitations:
   - claim-bounded-completion
   disclosed_in:
   - Limitations
-contract_sha256: 9f4496264c7c1c17a5821cead096b0809ae7df86c09b2b88068a1459214eb046
+contract_sha256: 43b6555c7c70744ccffc95eca729c39ee43609cf660d1230eb8ef5bea42dbd8a

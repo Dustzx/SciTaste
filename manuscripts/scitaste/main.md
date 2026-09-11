@@ -374,26 +374,20 @@ per-family scores, temporal or domain slices, paraphrase consistency, and paired
 changes relative to Base. Self-development examples are excluded from headline
 scores.
 
-The third level separates an end-to-end research-package comparison from an
-objective-progress benchmark. The registered API prepilot crosses SciTaste
-Native, a prompt-only direct control, and three accepted-system candidates with
-ten MLR-Bench workshop-derived research briefs and two seeds, producing 100
-planned trajectories. MLR-Bench supplies open-ended briefs and rubric-based
-research-quality assessment rather than a fixed objective score per task. The
-single primary endpoint is therefore condition-blinded expert pairwise
-preference for scientific value and evidence validity of the complete idea,
-experiment trace, evidence, and paper package. A model judge is secondary and
-cannot replace independent reviewers. The proposal is currently blocked on task
-bytes and held-out checks, real external adapters, reviewer recruitment, and
-exact author approval; no trajectory has been launched.
+The third level separates research-package preference from objective progress.
+The registered API prepilot crosses SciTaste Native, a prompt-only control, and
+three accepted-system candidates with ten MLR-Bench workshop-derived briefs and
+two seeds (100 planned trajectories). Because these open-ended tasks have rubric
+assessments rather than fixed task scores, the primary endpoint is blinded expert
+preference for scientific value and evidence validity of the complete package;
+a model judge is secondary. Task bytes and held-out checks, external adapters,
+reviewers, and author approval remain blocked, and no trajectory has launched.
 
-A separate objective-progress lane will use only tasks with a fixed scorer,
-starting value, target anchor, and failure floor, such as qualified MLRC-Bench
-tasks. Its results will not be pooled with MLR-Bench package preference. Native
-Base, Knowledge, Taste, critics, Full SciTaste, and shuffled-Taste placebo
-conditions form a separate causal ablation on a common execution substrate. The
-local Qwen3-VL-2B and eight-RTX-3090 plan is a small-model or experiment-workload
-robustness lane, not a substitute for the matched frontier-model comparison.
+A separate lane admits only fixed-scorer tasks, such as qualified MLRC-Bench,
+and is never pooled with package preference. Native Base, Knowledge, Taste,
+critics, Full SciTaste, and shuffled-Taste placebo form the causal ablation. The
+Qwen3-VL-2B/eight-RTX-3090 plan is robustness evidence, not a frontier-backbone
+substitute.
 
 The design emphasizes matched comparisons. Systems must not receive different
 starting briefs, hidden information, tool access, model revisions, or retry
@@ -485,15 +479,11 @@ of 16 for majority vote, 0 for confidence-weighted vote, and 3 for the
 position-aware probe, with a registered cross-method balanced accuracy of
 0.923182.
 
-The run also exercised fail-closed behavior. Strict gates detected missing-stage
-resume behavior, condition-first and seed-scoped metric formats, incorrect
-packet totals, negated statistical language, internal identifier leakage,
-missing figures, and stale failure descriptions. The corrected adapter retained
-those historical failures. A replacement Full run preserved the experiment
-matrix while reducing selected-experiment runtime; direct continuation after the
-fix excludes its duration from comparison with Base. The four resulting papers
-establish that all cells can reach Stage 18 under the registered workflow. Paper
-quality and the effect of Taste remain outcomes for the matched-budget study.
+Strict gates retained failures involving resume state, metric formats, packet
+totals, statistical language, internal identifiers, and missing figures. A
+replacement Full run preserved the experiment matrix, but manual continuation
+excludes its duration from comparison with Base. Thus the four papers establish
+workflow completion only; paper quality and the effect of Taste remain open.
 
 ## Scope of the findings
 
