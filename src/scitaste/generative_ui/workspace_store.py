@@ -6,12 +6,23 @@ import json
 import os
 import secrets
 import stat
+import unicodedata
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
+from fcntl import LOCK_EX, LOCK_SH, LOCK_UN, flock
 from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from scitaste.generative_ui.audit import AuditIntegrityError
 from scitaste.generative_ui.generation import (
@@ -81,6 +92,7 @@ class ResearchWorkspaceRecord(BaseModel):
     created_at: datetime
     updated_at: datetime
     revision: int = Field(ge=1)
+    metadata_revision: int = Field(default=0, ge=0)
     latest_turn_id: SafeIdentifier
     turn_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=10_000)
 
@@ -92,6 +104,32 @@ class ResearchWorkspaceRecord(BaseModel):
             raise ValueError("workspace revision must match its unique turn sequence")
         if self.updated_at < self.created_at:
             raise ValueError("workspace update time cannot precede creation")
+        return self
+
+
+class ResearchWorkspaceRenameRequest(BaseModel):
+    """Optimistic, metadata-only rename of one project-owned research topic."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    expected_metadata_revision: int = Field(ge=0)
+    expected_title: str = Field(min_length=1, max_length=120)
+    title: str = Field(min_length=1, max_length=120)
+
+    @field_validator("expected_title", "title", mode="before")
+    @classmethod
+    def titles_are_safe_single_lines(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        if any(unicodedata.category(character).startswith("C") for character in value):
+            raise ValueError("research workspace titles cannot contain control characters")
+        return " ".join(value.split())
+
+    @model_validator(mode="after")
+    def title_changes(self) -> ResearchWorkspaceRenameRequest:
+        if self.title == self.expected_title:
+            raise ValueError("research workspace rename must change the title")
         return self
 
 
@@ -114,6 +152,7 @@ class ResearchWorkspaceSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     revision: int = Field(ge=1)
+    metadata_revision: int = Field(default=0, ge=0)
     latest_turn_id: SafeIdentifier
     latest_status: str = Field(min_length=1, max_length=64)
 
@@ -164,6 +203,10 @@ class IncompatibleResearchTurnError(ValueError):
         self.summary = summary
 
 
+class StaleResearchWorkspaceError(ValueError):
+    """A metadata edit targeted an older turn sequence or topic title."""
+
+
 class ResearchWorkspaceStore:
     """Append-only turns with an atomically replaced project-local index."""
 
@@ -177,39 +220,40 @@ class ResearchWorkspaceStore:
         document: GeneratedWorkspaceDocument,
     ) -> ResearchWorkspaceTurnDocument:
         root = self._root(project_id, create=True)
-        for _ in range(8):
-            workspace_id = f"workspace-{secrets.token_hex(8)}"
-            directory = root / workspace_id
-            try:
-                directory.mkdir(mode=0o700)
-                break
-            except FileExistsError:
-                continue
-        else:  # pragma: no cover - cryptographic collision defense
-            raise AuditIntegrityError("could not allocate a research workspace identity")
-        now = datetime.now(UTC)
-        turn = _turn_record(
-            project_id=project_id,
-            workspace_id=workspace_id,
-            ordinal=1,
-            parent_turn_id=None,
-            created_at=now,
-            request=request,
-            document=document,
-        )
-        workspace = ResearchWorkspaceRecord(
-            project_id=project_id,
-            workspace_id=workspace_id,
-            title=_workspace_title(turn.prompt.text),
-            created_at=now,
-            updated_at=now,
-            revision=1,
-            latest_turn_id=turn.turn_id,
-            turn_ids=(turn.turn_id,),
-        )
-        _write_immutable(directory / f"{turn.turn_id}.json", _model_bytes(turn))
-        _replace_regular(directory / "workspace.json", _model_bytes(workspace))
-        return ResearchWorkspaceTurnDocument(workspace=workspace, turn=turn)
+        with _workspace_lock(root, exclusive=True):
+            for _ in range(8):
+                workspace_id = f"workspace-{secrets.token_hex(8)}"
+                directory = root / workspace_id
+                try:
+                    directory.mkdir(mode=0o700)
+                    break
+                except FileExistsError:
+                    continue
+            else:  # pragma: no cover - cryptographic collision defense
+                raise AuditIntegrityError("could not allocate a research workspace identity")
+            now = datetime.now(UTC)
+            turn = _turn_record(
+                project_id=project_id,
+                workspace_id=workspace_id,
+                ordinal=1,
+                parent_turn_id=None,
+                created_at=now,
+                request=request,
+                document=document,
+            )
+            workspace = ResearchWorkspaceRecord(
+                project_id=project_id,
+                workspace_id=workspace_id,
+                title=_workspace_title(turn.prompt.text),
+                created_at=now,
+                updated_at=now,
+                revision=1,
+                latest_turn_id=turn.turn_id,
+                turn_ids=(turn.turn_id,),
+            )
+            _write_immutable(directory / f"{turn.turn_id}.json", _model_bytes(turn))
+            _replace_regular(directory / "workspace.json", _model_bytes(workspace))
+            return ResearchWorkspaceTurnDocument(workspace=workspace, turn=turn)
 
     def append(
         self,
@@ -218,69 +262,77 @@ class ResearchWorkspaceStore:
         request: WorkspaceGenerationRequest,
         document: GeneratedWorkspaceDocument,
     ) -> ResearchWorkspaceTurnDocument:
-        directory = self._workspace_directory(project_id, workspace_id)
-        workspace = self._load_workspace(directory)
-        if workspace.project_id != project_id:
-            raise AuditIntegrityError("research workspace belongs to another project")
-        now = datetime.now(UTC)
-        ordinal = workspace.revision + 1
-        turn = _turn_record(
-            project_id=project_id,
-            workspace_id=workspace_id,
-            ordinal=ordinal,
-            parent_turn_id=workspace.latest_turn_id,
-            created_at=now,
-            request=request,
-            document=document,
-        )
-        updated = workspace.model_copy(
-            update={
-                "updated_at": now,
-                "revision": ordinal,
-                "latest_turn_id": turn.turn_id,
-                "turn_ids": (*workspace.turn_ids, turn.turn_id),
-            }
-        )
-        updated = ResearchWorkspaceRecord.model_validate(updated.model_dump(mode="json"))
-        _write_immutable(directory / f"{turn.turn_id}.json", _model_bytes(turn))
-        _replace_regular(directory / "workspace.json", _model_bytes(updated))
-        return ResearchWorkspaceTurnDocument(workspace=updated, turn=turn)
+        root = self._root(project_id, create=False)
+        with _workspace_lock(root, exclusive=True):
+            directory = self._workspace_directory(project_id, workspace_id)
+            workspace = self._load_workspace(directory)
+            if workspace.project_id != project_id:
+                raise AuditIntegrityError("research workspace belongs to another project")
+            now = datetime.now(UTC)
+            ordinal = workspace.revision + 1
+            turn = _turn_record(
+                project_id=project_id,
+                workspace_id=workspace_id,
+                ordinal=ordinal,
+                parent_turn_id=workspace.latest_turn_id,
+                created_at=now,
+                request=request,
+                document=document,
+            )
+            updated = workspace.model_copy(
+                update={
+                    "updated_at": now,
+                    "revision": ordinal,
+                    "latest_turn_id": turn.turn_id,
+                    "turn_ids": (*workspace.turn_ids, turn.turn_id),
+                }
+            )
+            updated = ResearchWorkspaceRecord.model_validate(updated.model_dump(mode="json"))
+            _write_immutable(directory / f"{turn.turn_id}.json", _model_bytes(turn))
+            _replace_regular(directory / "workspace.json", _model_bytes(updated))
+            return ResearchWorkspaceTurnDocument(workspace=updated, turn=turn)
 
     def catalog(self, project_id: str) -> ResearchWorkspaceCatalog:
         root = self._root(project_id, create=False)
         if not root.exists():
             return ResearchWorkspaceCatalog(project_id=project_id, workspaces=())
-        summaries: list[ResearchWorkspaceSummary] = []
-        for directory in root.iterdir():
-            if directory.is_symlink() or not directory.is_dir():
-                continue
-            try:
-                validate_entry_id(directory.name, field_name="workspace_id")
-                workspace = self._load_workspace(directory)
-                latest = self._load_turn_summary(directory, workspace.latest_turn_id)
-            except (AuditIntegrityError, ValueError) as exc:
-                raise AuditIntegrityError(
-                    "research workspace catalog contains invalid state"
-                ) from exc
-            summaries.append(
-                ResearchWorkspaceSummary(
-                    workspace_id=workspace.workspace_id,
-                    title=workspace.title,
-                    created_at=workspace.created_at,
-                    updated_at=workspace.updated_at,
-                    revision=workspace.revision,
-                    latest_turn_id=workspace.latest_turn_id,
-                    latest_status=latest.status,
+        with _workspace_lock(root, exclusive=False):
+            summaries: list[ResearchWorkspaceSummary] = []
+            for directory in root.iterdir():
+                if directory.is_symlink() or not directory.is_dir():
+                    continue
+                try:
+                    validate_entry_id(directory.name, field_name="workspace_id")
+                    workspace = self._load_workspace(directory)
+                    latest = self._load_turn_summary(directory, workspace.latest_turn_id)
+                except (AuditIntegrityError, ValueError) as exc:
+                    raise AuditIntegrityError(
+                        "research workspace catalog contains invalid state"
+                    ) from exc
+                summaries.append(
+                    ResearchWorkspaceSummary(
+                        workspace_id=workspace.workspace_id,
+                        title=workspace.title,
+                        created_at=workspace.created_at,
+                        updated_at=workspace.updated_at,
+                        revision=workspace.revision,
+                        metadata_revision=workspace.metadata_revision,
+                        latest_turn_id=workspace.latest_turn_id,
+                        latest_status=latest.status,
+                    )
                 )
-            )
-        summaries.sort(key=lambda item: (item.updated_at, item.workspace_id), reverse=True)
-        return ResearchWorkspaceCatalog(project_id=project_id, workspaces=tuple(summaries))
+            summaries.sort(key=lambda item: (item.updated_at, item.workspace_id), reverse=True)
+            return ResearchWorkspaceCatalog(project_id=project_id, workspaces=tuple(summaries))
 
     def detail(self, project_id: str, workspace_id: str) -> ResearchWorkspaceDetail:
-        directory = self._workspace_directory(project_id, workspace_id)
-        workspace = self._load_workspace(directory)
-        turns = tuple(self._load_turn_summary(directory, turn_id) for turn_id in workspace.turn_ids)
-        return ResearchWorkspaceDetail(workspace=workspace, turns=turns)
+        root = self._root(project_id, create=False)
+        with _workspace_lock(root, exclusive=False):
+            directory = self._workspace_directory(project_id, workspace_id)
+            workspace = self._load_workspace(directory)
+            turns = tuple(
+                self._load_turn_summary(directory, turn_id) for turn_id in workspace.turn_ids
+            )
+            return ResearchWorkspaceDetail(workspace=workspace, turns=turns)
 
     def turn(
         self,
@@ -288,13 +340,48 @@ class ResearchWorkspaceStore:
         workspace_id: str,
         turn_id: str,
     ) -> ResearchWorkspaceTurnDocument:
-        directory = self._workspace_directory(project_id, workspace_id)
-        workspace = self._load_workspace(directory)
-        validate_entry_id(turn_id, field_name="turn_id")
-        if turn_id not in workspace.turn_ids:
-            raise FileNotFoundError("research turn was not found")
-        turn = self._load_turn(directory, turn_id)
-        return ResearchWorkspaceTurnDocument(workspace=workspace, turn=turn)
+        root = self._root(project_id, create=False)
+        with _workspace_lock(root, exclusive=False):
+            directory = self._workspace_directory(project_id, workspace_id)
+            workspace = self._load_workspace(directory)
+            validate_entry_id(turn_id, field_name="turn_id")
+            if turn_id not in workspace.turn_ids:
+                raise FileNotFoundError("research turn was not found")
+            turn = self._load_turn(directory, turn_id)
+            return ResearchWorkspaceTurnDocument(workspace=workspace, turn=turn)
+
+    def rename(
+        self,
+        project_id: str,
+        workspace_id: str,
+        request: ResearchWorkspaceRenameRequest,
+    ) -> ResearchWorkspaceRecord:
+        """Replace topic metadata without changing any immutable turn page."""
+
+        root = self._root(project_id, create=False)
+        with _workspace_lock(root, exclusive=True):
+            directory = self._workspace_directory(project_id, workspace_id)
+            workspace = self._load_workspace(directory)
+            if workspace.project_id != project_id:
+                raise AuditIntegrityError("research workspace belongs to another project")
+            if (
+                workspace.metadata_revision != request.expected_metadata_revision
+                or workspace.title != request.expected_title
+            ):
+                raise StaleResearchWorkspaceError(
+                    "research workspace changed before its rename was applied"
+                )
+            updated = ResearchWorkspaceRecord.model_validate(
+                workspace.model_copy(
+                    update={
+                        "title": request.title,
+                        "updated_at": datetime.now(UTC),
+                        "metadata_revision": workspace.metadata_revision + 1,
+                    }
+                ).model_dump(mode="json")
+            )
+            _replace_regular(directory / "workspace.json", _model_bytes(updated))
+            return updated
 
     def _root(self, project_id: str, *, create: bool) -> Path:
         validate_project_id(project_id)
@@ -499,6 +586,30 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
+@contextmanager
+def _workspace_lock(root: Path, *, exclusive: bool) -> Iterator[None]:
+    """Coordinate workspace readers and writers across local server processes."""
+
+    if root.is_symlink() or not root.is_dir():
+        raise AuditIntegrityError("research workspace root is invalid")
+    path = root / ".workspace.lock"
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    if not hasattr(os, "O_NOFOLLOW") and path.is_symlink():
+        raise AuditIntegrityError("research workspace lock cannot be a symbolic link")
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except OSError as exc:
+        raise AuditIntegrityError("research workspace lock is unavailable") from exc
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise AuditIntegrityError("research workspace lock is not a regular file")
+        flock(descriptor, LOCK_EX if exclusive else LOCK_SH)
+        yield
+    finally:
+        flock(descriptor, LOCK_UN)
+        os.close(descriptor)
+
+
 def _write_immutable(path: Path, content: bytes) -> None:
     if path.is_symlink():
         raise AuditIntegrityError("research turn files cannot be symbolic links")
@@ -559,7 +670,9 @@ __all__ = [
     "ResearchWorkspaceCatalog",
     "ResearchWorkspaceDetail",
     "ResearchWorkspaceRecord",
+    "ResearchWorkspaceRenameRequest",
     "ResearchWorkspaceStore",
     "ResearchWorkspaceSummary",
     "ResearchWorkspaceTurnDocument",
+    "StaleResearchWorkspaceError",
 ]

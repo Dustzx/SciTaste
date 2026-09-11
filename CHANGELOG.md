@@ -7,6 +7,12 @@ semantic versioning.
 
 ### Added
 
+- Project research topics can now be renamed without changing immutable turn
+  pages or stable deep links, using a separate optimistic metadata revision and
+  project-local cross-process file locks. The browser adds title-only topic
+  filtering, explicit empty/conflict states, and bilingual controls; neither
+  operation invokes a model or changes project evidence.
+
 - Evidence-grounded full-paper drafting is now an additive bounded model node.
   It receives only registered claims, evidence, citations, limitations, venue
   sections, and an explicit numeric vocabulary; deterministic gates reject

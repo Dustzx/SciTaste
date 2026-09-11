@@ -56,6 +56,8 @@ from scitaste.generative_ui.workspace import (
 from scitaste.generative_ui.workspace_store import (
     ResearchWorkspaceCatalog,
     ResearchWorkspaceDetail,
+    ResearchWorkspaceRecord,
+    ResearchWorkspaceRenameRequest,
     ResearchWorkspaceStore,
     ResearchWorkspaceTurnDocument,
 )
@@ -212,6 +214,24 @@ class GenerativeUIApplication:
         validate_project_id(project_id)
         with self._request_lock:
             return self._research_workspaces.turn(project_id, workspace_id, turn_id)
+
+    def rename_research_workspace(
+        self,
+        project_id: str,
+        workspace_id: str,
+        request: ResearchWorkspaceRenameRequest | dict[str, object],
+    ) -> ResearchWorkspaceRecord:
+        """Rename one topic while preserving its immutable question pages."""
+
+        validate_project_id(project_id)
+        validate_entry_id(workspace_id, field_name="workspace_id")
+        parsed = (
+            request
+            if isinstance(request, ResearchWorkspaceRenameRequest)
+            else ResearchWorkspaceRenameRequest.model_validate(request)
+        )
+        with self._request_lock:
+            return self._research_workspaces.rename(project_id, workspace_id, parsed)
 
     def create_research_workspace(
         self,

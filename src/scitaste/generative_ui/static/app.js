@@ -12,6 +12,8 @@ const projectSelect = document.getElementById("project-select");
 const loadButton = document.getElementById("load-project");
 const globalHomeButton = document.getElementById("global-home");
 const newTopicButton = document.getElementById("new-topic");
+const topicSearch = document.getElementById("topic-search");
+const topicManagementStatus = document.getElementById("topic-management-status");
 const workspaceHistoryList = document.getElementById("workspace-history-list");
 const connectionStatus = document.getElementById("connection-status");
 const freshness = document.getElementById("freshness");
@@ -69,6 +71,7 @@ let projectDiscovery = null;
 let activeProjectId = "";
 let accessReady = false;
 let researchWorkspaceCatalog = null;
+let topicSearchQuery = "";
 let activeResearchWorkspaceId = "";
 let activeResearchTurnId = "";
 let activeResearchWorkspace = null;
@@ -79,6 +82,7 @@ let lastProposalReceipt = null;
 let lastControllerDecision = null;
 let lastArtifactPreview = null;
 let intentResultState = {kind: "empty"};
+let topicManagementState = {kind: "empty"};
 let connectionStatusKey = "connection.connecting";
 let freshnessStatusKey = "freshness.none";
 let connectionStatusError = null;
@@ -1841,6 +1845,8 @@ function setIntentEnabled(enabled) {
 function clearProjectContext(projectId = "") {
   activeProjectId = projectId;
   researchWorkspaceCatalog = null;
+  topicSearchQuery = "";
+  topicSearch.value = "";
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
@@ -1851,6 +1857,7 @@ function clearProjectContext(projectId = "") {
   lastControllerDecision = null;
   lastArtifactPreview = null;
   intentResultState = {kind: "empty"};
+  topicManagementState = {kind: "empty"};
   responseCache.clear();
   resetCatalogs();
   intentQuestion.value = "";
@@ -1880,7 +1887,24 @@ function clearProjectContext(projectId = "") {
   workspace.appendChild(empty);
   setIntentEnabled(false);
   newTopicButton.disabled = !projectId;
+  topicSearch.disabled = !projectId;
+  renderTopicManagementStatus();
   renderWorkspaceHistory();
+}
+
+function renderTopicManagementStatus() {
+  topicManagementStatus.replaceChildren();
+  if (topicManagementState.kind === "empty") {
+    return;
+  }
+  if (topicManagementState.kind === "error") {
+    showError(topicManagementStatus, topicManagementState.error);
+    return;
+  }
+  const message = document.createElement("p");
+  message.className = "muted";
+  appendText(message, t("thread.renamed"));
+  topicManagementStatus.appendChild(message);
 }
 
 function renderWorkspaceHistory() {
@@ -1906,9 +1930,31 @@ function renderWorkspaceHistory() {
     workspaceHistoryList.appendChild(empty);
     return;
   }
+  const normalizedSearch = topicSearchQuery.trim().toLocaleLowerCase(activeLocale);
+  const filteredWorkspaces = normalizedSearch
+    ? researchWorkspaceCatalog.workspaces.filter((item) => (
+      item.title.toLocaleLowerCase(activeLocale).includes(normalizedSearch)
+    ))
+    : researchWorkspaceCatalog.workspaces;
+  const visibleWorkspaces = [...filteredWorkspaces];
+  const activeItem = researchWorkspaceCatalog.workspaces.find(
+    (item) => item.workspace_id === activeResearchWorkspaceId,
+  );
+  if (activeItem && !visibleWorkspaces.some(
+    (item) => item.workspace_id === activeResearchWorkspaceId,
+  )) {
+    visibleWorkspaces.unshift(activeItem);
+  }
+  if (filteredWorkspaces.length === 0 && !activeItem) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    appendText(empty, t("thread.no_match"));
+    workspaceHistoryList.appendChild(empty);
+    return;
+  }
   const list = document.createElement("ol");
   list.className = "workspace-history-items";
-  for (const item of researchWorkspaceCatalog.workspaces) {
+  for (const item of visibleWorkspaces) {
     const row = document.createElement("li");
     row.className = "workspace-history-topic";
     const button = document.createElement("button");
@@ -1929,7 +1975,16 @@ function renderWorkspaceHistory() {
       workspace_id: item.workspace_id,
       turn_id: item.latest_turn_id,
     }));
-    row.appendChild(button);
+    const actions = document.createElement("div");
+    actions.className = "workspace-history-actions";
+    const renameButton = document.createElement("button");
+    renameButton.type = "button";
+    renameButton.className = "workspace-history-rename";
+    renameButton.setAttribute("aria-label", t("thread.rename_aria", {title: item.title}));
+    appendText(renameButton, t("thread.rename"));
+    renameButton.addEventListener("click", () => renameResearchWorkspace(item));
+    actions.append(button, renameButton);
+    row.appendChild(actions);
     if (item.workspace_id === activeResearchWorkspaceId
         && activeResearchWorkspaceDetail?.workspace.workspace_id === item.workspace_id) {
       const turns = document.createElement("ol");
@@ -1962,6 +2017,51 @@ function renderWorkspaceHistory() {
     list.appendChild(row);
   }
   workspaceHistoryList.appendChild(list);
+}
+
+async function renameResearchWorkspace(item) {
+  const proposed = window.prompt(t("thread.rename_prompt"), item.title);
+  if (proposed === null) {
+    return;
+  }
+  const title = proposed.trim();
+  if (!title || title === item.title) {
+    return;
+  }
+  try {
+    const renamed = await api(
+      `/api/v4/projects/${encodeURIComponent(activeProjectId)}`
+        + `/workspaces/${encodeURIComponent(item.workspace_id)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          expected_metadata_revision: item.metadata_revision,
+          expected_title: item.title,
+          title,
+        }),
+      },
+    );
+    if (activeResearchWorkspaceId === renamed.workspace_id) {
+      activeResearchWorkspace = renamed;
+      if (activeResearchWorkspaceDetail) {
+        activeResearchWorkspaceDetail = {
+          ...activeResearchWorkspaceDetail,
+          workspace: renamed,
+        };
+      }
+    }
+    topicManagementState = {kind: "renamed"};
+    renderTopicManagementStatus();
+    await loadResearchWorkspaceCatalog(activeProjectId);
+  } catch (error) {
+    await loadResearchWorkspaceCatalog(activeProjectId);
+    if (activeResearchWorkspaceId === item.workspace_id) {
+      await loadResearchWorkspaceDetail(activeProjectId, item.workspace_id);
+    }
+    topicManagementState = {kind: "error", error};
+    renderTopicManagementStatus();
+  }
 }
 
 async function loadResearchWorkspaceCatalog(projectId) {
@@ -2627,6 +2727,7 @@ function rerenderForLocale() {
   }
   renderQuickIntents();
   renderIntentResult();
+  renderTopicManagementStatus();
   renderWorkspaceHistory();
   setIntentEnabled(Boolean(quickIntentCatalog) && intentResultState.kind !== "resolving");
 }
@@ -2681,12 +2782,20 @@ newTopicButton.addEventListener("click", () => {
   if (!activeProjectId) {
     return;
   }
+  topicSearchQuery = "";
+  topicSearch.value = "";
+  topicManagementState = {kind: "empty"};
+  renderTopicManagementStatus();
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
   activeResearchWorkspaceDetail = null;
   renderWorkspaceHistory();
   loadWorkspace(defaultQuery(activeProjectId));
+});
+topicSearch.addEventListener("input", () => {
+  topicSearchQuery = topicSearch.value;
+  renderWorkspaceHistory();
 });
 loadButton.addEventListener("click", () => loadWorkspace(defaultQuery(projectSelect.value)));
 projectSelect.addEventListener("change", () => {

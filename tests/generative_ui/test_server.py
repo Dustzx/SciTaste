@@ -523,6 +523,40 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
             origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
             headers=_headers(),
         )
+        renamed = httpx.patch(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "expected_metadata_revision": 0,
+                "expected_title": first["workspace"]["title"],
+                "title": "HTTP conversation title",
+            },
+        )
+        stale_rename = httpx.patch(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "expected_metadata_revision": 0,
+                "expected_title": first["workspace"]["title"],
+                "title": "Stale title",
+            },
+        )
+        unsafe_rename = httpx.patch(
+            origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}",
+            headers=_headers(),
+            json={
+                "schema_version": "1.0",
+                "expected_metadata_revision": 1,
+                "expected_title": "HTTP conversation title",
+                "title": "unsafe\nconversation title",
+            },
+        )
+        listed_after_rename = httpx.get(
+            origin + "/api/v4/projects/http-project/workspaces",
+            headers=_headers(),
+        )
         replay = httpx.get(
             origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns/turn-0001",
             headers=_headers(),
@@ -559,6 +593,17 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
     assert appended.json()["turn"]["turn_id"] == "turn-0002"
     assert listed.status_code == 200
     assert listed.json()["workspaces"][0]["latest_turn_id"] == "turn-0002"
+    assert renamed.status_code == 200
+    assert renamed.json()["title"] == "HTTP conversation title"
+    assert renamed.json()["metadata_revision"] == 1
+    assert stale_rename.status_code == 409
+    assert stale_rename.json()["error"]["code"] == "stale_workspace"
+    assert unsafe_rename.status_code == 400
+    assert unsafe_rename.json()["error"]["code"] == "invalid_request"
+    assert listed_after_rename.json()["workspaces"][0]["title"] == (
+        "HTTP conversation title"
+    )
+    assert listed_after_rename.headers["etag"] != listed.headers["etag"]
     assert detail.status_code == 200
     assert [item["turn_id"] for item in detail.json()["turns"]] == [
         "turn-0001",

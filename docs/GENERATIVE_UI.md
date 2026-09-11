@@ -54,6 +54,20 @@ its ordered page list, so earlier questions are navigable without relying on
 browser history. This is a project workspace model, not one disconnected chat
 window per sentence.
 
+Topic management is metadata-only. A user may rename a topic through an
+optimistic `metadata_revision` check and filter the current project's topic
+titles with a literal, case-insensitive browser search. Renaming preserves every
+immutable turn byte and deep link; title filtering does not search prompt or
+generated-document contents and does not call a model. Project-local shared and
+exclusive file locks coordinate readers, appends, creation, and renames across
+local server processes. A stale rename returns a conflict and reloads current
+metadata instead of overwriting it.
+
+The current follow-up route provides persistent conversational organization, but
+the generator still resolves each turn against the current authoritative project
+snapshot rather than replaying prior turn prose as model context. It must not yet
+be described as an unconstrained context-carrying chat agent.
+
 The browser shell contains no credential field. Loopback use establishes an
 ephemeral HttpOnly session automatically; a remote deployment must enforce
 identity and project access outside the content surface, through an explicit
@@ -562,6 +576,8 @@ The versioned same-origin JSON API is deliberately closed:
   first immutable turn from a `WorkspaceGenerationRequest`;
 - `GET /api/v4/projects/<project-id>/workspaces/<workspace-id>` returns the
   ordered turn index, while `/turns/<turn-id>` returns one exact page;
+- `PATCH /api/v4/projects/<project-id>/workspaces/<workspace-id>` renames only
+  topic metadata using exact prior-title and metadata-revision preconditions;
 - `POST /api/v4/projects/<project-id>/workspaces/<workspace-id>/turns` appends
   a follow-up turn without rewriting earlier turns.
 

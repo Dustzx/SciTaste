@@ -136,6 +136,16 @@ select {
   width: 100%;
 }
 
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 textarea {
   resize: vertical;
 }
@@ -259,6 +269,21 @@ textarea {
 .workspace-history-topic {
   display: grid;
   gap: 0.3rem;
+}
+
+.workspace-history-actions {
+  align-items: stretch;
+  display: grid;
+  gap: 0.3rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.workspace-history-rename {
+  align-self: stretch;
+  background: #eef5f0;
+  color: var(--forest);
+  font-size: 0.72rem;
+  padding: 0.35rem 0.45rem;
 }
 
 .workspace-history-button {

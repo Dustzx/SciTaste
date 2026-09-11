@@ -43,7 +43,10 @@ from scitaste.generative_ui.workspace import (
     UnknownWorkspaceSelectionError,
     WorkspaceView,
 )
-from scitaste.generative_ui.workspace_store import IncompatibleResearchTurnError
+from scitaste.generative_ui.workspace_store import (
+    IncompatibleResearchTurnError,
+    StaleResearchWorkspaceError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _MAX_EVENT_BYTES = 64 * 1024
@@ -279,6 +282,14 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                     "archived research turn requires an older renderer schema",
                 )
             )
+        except StaleResearchWorkspaceError:
+            self._send_problem(
+                _HTTPProblem(
+                    HTTPStatus.CONFLICT,
+                    "stale_workspace",
+                    "research topic changed before the edit was applied",
+                )
+            )
         except FileNotFoundError:
             self._send_problem(
                 _HTTPProblem(HTTPStatus.NOT_FOUND, "project_not_found", "project was not found")
@@ -379,13 +390,23 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             raise _method_not_allowed("GET, POST")
         workspace_id = parts[5]
         if len(parts) == 6:
-            if method != "GET":
-                raise _method_not_allowed("GET")
-            self._send_model(
-                HTTPStatus.OK,
-                self.server.application.research_workspace_detail(project_id, workspace_id),
-            )
-            return
+            if method == "GET":
+                self._send_model(
+                    HTTPStatus.OK,
+                    self.server.application.research_workspace_detail(project_id, workspace_id),
+                )
+                return
+            if method == "PATCH":
+                self._send_model(
+                    HTTPStatus.OK,
+                    self.server.application.rename_research_workspace(
+                        project_id,
+                        workspace_id,
+                        self._read_json_object(),
+                    ),
+                )
+                return
+            raise _method_not_allowed("GET, PATCH")
         if len(parts) == 7 and parts[6] == "turns":
             if method != "POST":
                 raise _method_not_allowed("POST")

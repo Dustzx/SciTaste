@@ -21,7 +21,9 @@ from scitaste.generative_ui import (
     ProposalControlledAudit,
     ProposalControllerRequest,
     QuickIntentRequest,
+    ResearchWorkspaceStore,
     RunStageQuery,
+    StaleResearchWorkspaceError,
     StaleSurfaceError,
     SurfaceAuditLog,
     SurfaceEvent,
@@ -663,6 +665,112 @@ def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path)
         ).turn
         == first.turn
     )
+
+
+def test_research_workspace_rename_preserves_turn_bytes_and_survives_restart(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    request = WorkspaceGenerationRequest(
+        quick_catalog_fingerprint=catalog.fingerprint,
+        intent_request=QuickIntentRequest(
+            project_id="app-project",
+            snapshot_revision=catalog.snapshot.snapshot_revision,
+            snapshot_sha256=catalog.snapshot.snapshot_sha256,
+            quick_intent_id=catalog.intents[0].quick_intent_id,
+        ),
+    )
+    created = app.create_research_workspace("app-project", request)
+    turn_path = (
+        runtime.projects_root
+        / "app-project/.generative-ui/workspaces"
+        / created.workspace.workspace_id
+        / "turn-0001.json"
+    )
+    original_turn_bytes = turn_path.read_bytes()
+
+    renamed = app.rename_research_workspace(
+        "app-project",
+        created.workspace.workspace_id,
+        {
+            "schema_version": "1.0",
+            "expected_metadata_revision": 0,
+            "expected_title": created.workspace.title,
+            "title": "A clearer scientific question",
+        },
+    )
+
+    assert renamed.title == "A clearer scientific question"
+    assert renamed.metadata_revision == 1
+    assert renamed.revision == 1
+    assert renamed.turn_ids == ("turn-0001",)
+    assert turn_path.read_bytes() == original_turn_bytes
+    with pytest.raises(StaleResearchWorkspaceError):
+        app.rename_research_workspace(
+            "app-project",
+            created.workspace.workspace_id,
+            {
+                "schema_version": "1.0",
+                "expected_metadata_revision": 0,
+                "expected_title": created.workspace.title,
+                "title": "A stale overwrite",
+            },
+        )
+    assert turn_path.read_bytes() == original_turn_bytes
+
+    restarted = GenerativeUIApplication(ProjectRuntime(runtime.outputs_root))
+    listed = restarted.research_workspace_catalog("app-project")
+    assert listed.workspaces[0].title == "A clearer scientific question"
+    assert listed.workspaces[0].metadata_revision == 1
+    appended = restarted.append_research_workspace_turn(
+        "app-project",
+        created.workspace.workspace_id,
+        request,
+    )
+    assert appended.workspace.title == "A clearer scientific question"
+    assert appended.workspace.metadata_revision == 1
+    assert appended.workspace.revision == 2
+    assert turn_path.read_bytes() == original_turn_bytes
+
+
+def test_research_workspace_store_serializes_cross_instance_appends(tmp_path: Path) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    request = WorkspaceGenerationRequest(
+        quick_catalog_fingerprint=catalog.fingerprint,
+        intent_request=QuickIntentRequest(
+            project_id="app-project",
+            snapshot_revision=catalog.snapshot.snapshot_revision,
+            snapshot_sha256=catalog.snapshot.snapshot_sha256,
+            quick_intent_id=catalog.intents[0].quick_intent_id,
+        ),
+    )
+    created = app.create_research_workspace("app-project", request)
+    stores = [ResearchWorkspaceStore(runtime.projects_root) for _ in range(2)]
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(
+            pool.map(
+                lambda store: store.append(
+                    "app-project",
+                    created.workspace.workspace_id,
+                    request,
+                    created.turn.document,
+                ),
+                stores,
+            )
+        )
+
+    assert {item.turn.turn_id for item in results} == {"turn-0002", "turn-0003"}
+    detail = app.research_workspace_detail(
+        "app-project",
+        created.workspace.workspace_id,
+    )
+    assert detail.workspace.revision == 3
+    assert detail.workspace.turn_ids == ("turn-0001", "turn-0002", "turn-0003")
 
 
 def test_known_legacy_turn_is_isolated_without_breaking_project_topic_catalog(

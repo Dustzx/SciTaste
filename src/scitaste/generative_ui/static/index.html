@@ -42,6 +42,16 @@
             <h2 id="workspace-history-heading" data-i18n="thread.heading">Research topics</h2>
             <button id="new-topic" type="button" disabled data-i18n="thread.new">New topic</button>
           </div>
+          <label class="visually-hidden" for="topic-search" data-i18n="thread.search_label">Search topics</label>
+          <input
+            id="topic-search"
+            type="search"
+            maxlength="120"
+            disabled
+            placeholder="Search topic titles"
+            data-i18n-placeholder="thread.search_placeholder"
+          >
+          <div id="topic-management-status" role="status" aria-live="polite"></div>
           <div id="workspace-history-list">
             <p class="muted" data-i18n="thread.open_project">Open a project to see its topics.</p>
           </div>

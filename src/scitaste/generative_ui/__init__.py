@@ -213,9 +213,11 @@ from scitaste.generative_ui.workspace_store import (
     ResearchWorkspaceCatalog,
     ResearchWorkspaceDetail,
     ResearchWorkspaceRecord,
+    ResearchWorkspaceRenameRequest,
     ResearchWorkspaceStore,
     ResearchWorkspaceSummary,
     ResearchWorkspaceTurnDocument,
+    StaleResearchWorkspaceError,
 )
 
 __all__ = [
@@ -330,6 +332,7 @@ __all__ = [
     "ResearchWorkspaceCatalog",
     "ResearchWorkspaceDetail",
     "ResearchWorkspaceRecord",
+    "ResearchWorkspaceRenameRequest",
     "ResearchWorkspaceStore",
     "ResearchWorkspaceSummary",
     "ResearchWorkspaceTurnDocument",
@@ -344,6 +347,7 @@ __all__ = [
     "SnapshotBinding",
     "StageTimelineData",
     "StaleIntentRequestError",
+    "StaleResearchWorkspaceError",
     "StaleSurfaceError",
     "StaleSurfacePlanError",
     "StructuredWorkspacePlanner",
