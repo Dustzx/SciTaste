@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scitaste.project import ProjectReview, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import (
     PaperManifest,
+    ProjectPaperEntry,
     content_sha256,
     validate_entry_id,
     validate_relative_locator,
@@ -24,6 +25,12 @@ from scitaste.review.parser import ReviewFeedback, parse_feedback
 from scitaste.review.routing import ReviewActionRouter
 from scitaste.state.research_state import ResearchState
 from scitaste.writing.argument import load_paper_argument_contract
+from scitaste.writing.paper_draft_materialization import PaperDraftTrace
+from scitaste.writing.revision_trace import PaperRevisionTrace
+from scitaste.writing.semantic_models import (
+    PaperRevisionRequirement,
+    PaperRevisionTreatmentMode,
+)
 from scitaste.writing.venue_taste import inspect_venue_writing_taste
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -209,15 +216,60 @@ class ReviewConcernResolution(BaseModel):
 
     concern_id: str = Field(pattern=_SAFE_ID)
     disposition: Literal["addressed", "contested", "accepted_limitation"]
+    resolution_basis: (
+        Literal[
+            "prose_revision",
+            "registered_evidence",
+            "registered_experiment",
+            "contested",
+            "accepted_limitation",
+        ]
+        | None
+    ) = None
     response: str = Field(min_length=1, max_length=_MAX_TEXT)
+    closure_proof_sha256: str | None = Field(default=None, pattern=_SHA256)
+    evidence_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    experiment_ids: tuple[str, ...] = Field(default=(), max_length=32)
     evidence_sha256: dict[str, str] = Field(default_factory=dict, max_length=32)
 
     @model_validator(mode="after")
     def evidence_hashes_are_valid(self) -> ReviewConcernResolution:
+        expected_disposition = {
+            "prose_revision": "addressed",
+            "registered_evidence": "addressed",
+            "registered_experiment": "addressed",
+            "contested": "contested",
+            "accepted_limitation": "accepted_limitation",
+        }
+        if (
+            self.resolution_basis is not None
+            and expected_disposition[self.resolution_basis] != self.disposition
+        ):
+            raise ValueError("resolution basis differs from its disposition")
+        if tuple(sorted(set(self.evidence_ids))) != self.evidence_ids:
+            raise ValueError("resolution evidence IDs must be sorted and unique")
+        if tuple(sorted(set(self.experiment_ids))) != self.experiment_ids:
+            raise ValueError("resolution experiment IDs must be sorted and unique")
         for locator, digest in self.evidence_sha256.items():
             validate_relative_locator(locator, field_name="resolution evidence")
             if not _is_sha256(digest):
                 raise ValueError("resolution evidence hashes must be SHA-256 values")
+        if self.resolution_basis == "prose_revision" and (
+            self.closure_proof_sha256 or self.evidence_ids or self.experiment_ids
+        ):
+            raise ValueError("a prose revision cannot claim evidence or experiment closure")
+        if self.resolution_basis == "registered_evidence" and (
+            self.closure_proof_sha256 is None or not self.evidence_ids or self.experiment_ids
+        ):
+            raise ValueError("registered evidence resolution requires proof and evidence only")
+        if self.resolution_basis == "registered_experiment" and (
+            self.closure_proof_sha256 is None or not self.evidence_ids or not self.experiment_ids
+        ):
+            raise ValueError("registered experiment resolution requires proof and identities")
+        if self.resolution_basis in {"contested", "accepted_limitation"} and (
+            self.closure_proof_sha256 or self.evidence_ids or self.experiment_ids
+        ):
+            raise ValueError("non-addressed resolution cannot claim evidence closure")
         return self
 
 
@@ -232,6 +284,7 @@ class VenueReviewResponse(BaseModel):
     source_report_sha256: tuple[str, ...] = Field(min_length=1, max_length=_MAX_REPORTS)
     revised_paper_directory: str = Field(pattern=_SAFE_ID)
     revised_paper_manifest_sha256: str = Field(pattern=_SHA256)
+    revision_trace_sha256: str | None = Field(default=None, pattern=_SHA256)
     resolutions: tuple[ReviewConcernResolution, ...] = Field(default=(), max_length=320)
     response_sha256: str = Field(pattern=_SHA256)
 
@@ -242,8 +295,25 @@ class VenueReviewResponse(BaseModel):
         concern_ids = [item.concern_id for item in self.resolutions]
         if len(concern_ids) != len(set(concern_ids)):
             raise ValueError("review response concern IDs must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"response_sha256"}))
-        if self.response_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"response_sha256"})
+        expected = content_sha256(payload)
+        legacy = dict(payload)
+        legacy.pop("revision_trace_sha256", None)
+        legacy["resolutions"] = [
+            {
+                key: value
+                for key, value in item.items()
+                if key
+                not in {
+                    "resolution_basis",
+                    "closure_proof_sha256",
+                    "evidence_ids",
+                    "experiment_ids",
+                }
+            }
+            for item in legacy["resolutions"]
+        ]
+        if self.response_sha256 not in {expected, content_sha256(legacy)}:
             raise ValueError("venue review response hash mismatch")
         return self
 
@@ -264,6 +334,7 @@ class ReviewConcernVerification(BaseModel):
 
     concern_id: str = Field(pattern=_SAFE_ID)
     status: Literal["closed", "open"]
+    closure_proof_sha256: str | None = Field(default=None, pattern=_SHA256)
     rationale: str = Field(min_length=1, max_length=_MAX_TEXT)
 
 
@@ -290,8 +361,14 @@ class VenueReviewVerification(BaseModel):
         concern_ids = [item.concern_id for item in self.concerns]
         if len(concern_ids) != len(set(concern_ids)):
             raise ValueError("verification concern IDs must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"verification_sha256"}))
-        if self.verification_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"verification_sha256"})
+        expected = content_sha256(payload)
+        legacy = dict(payload)
+        legacy["concerns"] = [
+            {key: value for key, value in item.items() if key != "closure_proof_sha256"}
+            for item in legacy["concerns"]
+        ]
+        if self.verification_sha256 not in {expected, content_sha256(legacy)}:
             raise ValueError("venue review verification hash mismatch")
         return self
 
@@ -592,6 +669,12 @@ def import_venue_review_report(
         raise FileExistsError(root / "reports" / f"{report.report_id}.json")
     if report.reviewer.reviewer_id in {item.reviewer.reviewer_id for item in reports.values()}:
         raise ValueError("one reviewer may submit only one report per round")
+    existing_concern_ids = {
+        concern.concern_id for admitted in reports.values() for concern in admitted.concerns
+    }
+    incoming_concern_ids = {concern.concern_id for concern in report.concerns}
+    if existing_concern_ids & incoming_concern_ids:
+        raise ValueError("review concern IDs must be unique across the complete round")
     if len(reports) >= _MAX_REPORTS:
         raise ValueError("review round report limit reached")
     report_path = root / "reports" / f"{report.report_id}.json"
@@ -649,6 +732,13 @@ def submit_venue_review_response(
         raise ValueError("revised paper manifest hash mismatch")
     if expected_concerns and revised.manifest_sha256 == packet.paper_manifest_sha256:
         raise ValueError("a concern-bearing response must reference a new paper revision")
+    _verify_response_closure(
+        runtime.projects_root / project_id,
+        packet=packet,
+        reports=reports,
+        revised=revised,
+        response=response,
+    )
     _verify_resolution_evidence(
         runtime.projects_root / project_id,
         response.resolutions,
@@ -705,10 +795,33 @@ def import_venue_review_verification(
         raise ValueError("verification targets a different review response")
     if verification.revised_paper_manifest_sha256 != response.revised_paper_manifest_sha256:
         raise ValueError("verification targets a different revised paper")
+    revised = _paper_entry(snapshot, response.revised_paper_directory)
+    trace = _verify_response_closure(
+        runtime.projects_root / project_id,
+        packet=packet,
+        reports=reports,
+        revised=revised,
+        response=response,
+    )
     expected_concerns = {item.concern_id for item in report.concerns}
     observed_concerns = {item.concern_id for item in verification.concerns}
     if observed_concerns != expected_concerns:
         raise ValueError("verification must cover every concern from its source report")
+    resolutions = {item.concern_id: item for item in response.resolutions}
+    concerns = {item.concern_id: item for item in report.concerns}
+    for item in verification.concerns:
+        resolution = resolutions[item.concern_id]
+        requirement = _review_requirement(concerns[item.concern_id])
+        expected_proof = (
+            trace.closure_proof_sha256.get(item.concern_id)
+            if resolution.disposition == "addressed"
+            and requirement is not PaperRevisionRequirement.TEXT_ONLY
+            else None
+        )
+        if item.status == "closed" and item.closure_proof_sha256 != expected_proof:
+            raise ValueError("closed verification must bind the exact closure proof")
+        if item.status == "open" and item.closure_proof_sha256 is not None:
+            raise ValueError("an open verification cannot claim closure proof")
     verifications = _load_verifications(root, current)
     if report.report_id in verifications:
         raise FileExistsError(root / "verifications" / f"{report.report_id}.json")
@@ -755,6 +868,31 @@ def inspect_venue_review(
     reports = _load_reports(root, round_record)
     response = _load_response(root, round_record)
     verifications = _load_verifications(root, round_record)
+    if response is not None:
+        revised = _paper_entry(snapshot, response.revised_paper_directory)
+        trace = _verify_response_closure(
+            runtime.projects_root / project_id,
+            packet=packet,
+            reports=reports,
+            revised=revised,
+            response=response,
+        )
+        resolutions = {item.concern_id: item for item in response.resolutions}
+        report_by_id = {
+            item.concern_id: item for report in reports.values() for item in report.concerns
+        }
+        for verification in verifications.values():
+            for item in verification.concerns:
+                resolution = resolutions[item.concern_id]
+                requirement = _review_requirement(report_by_id[item.concern_id])
+                expected_proof = (
+                    trace.closure_proof_sha256.get(item.concern_id)
+                    if resolution.disposition == "addressed"
+                    and requirement is not PaperRevisionRequirement.TEXT_ONLY
+                    else None
+                )
+                if item.status == "closed" and item.closure_proof_sha256 != expected_proof:
+                    raise ValueError("stored verification lacks its exact closure proof")
     projected = _project_round(packet, reports, response=response, verifications=verifications)
     if projected.model_dump(mode="json") != round_record.model_dump(mode="json"):
         raise ValueError("review round projection does not match its immutable artifacts")
@@ -976,10 +1114,22 @@ def _paper_artifact_hashes(root: Path, paper: PaperManifest) -> dict[str, str]:
 
 def _paper_claim_ids(root: Path, paper: PaperManifest) -> tuple[str, ...]:
     locator = paper.files.get("paper-argument-contract")
-    if locator is None:
-        return ()
-    contract = load_paper_argument_contract(_contained_file(root, locator))
-    return tuple(sorted(item.claim_id for item in contract.claims))
+    if locator is not None:
+        contract = load_paper_argument_contract(_contained_file(root, locator))
+        return tuple(sorted(item.claim_id for item in contract.claims))
+    revision_locator = paper.files.get("paper-revision-trace")
+    if revision_locator is not None:
+        trace = PaperRevisionTrace.model_validate_json(
+            _contained_file(root, revision_locator).read_text(encoding="utf-8")
+        )
+        return trace.claim_ids
+    draft_locator = paper.files.get("paper-draft-trace")
+    if draft_locator is not None:
+        trace = PaperDraftTrace.model_validate_json(
+            _contained_file(root, draft_locator).read_text(encoding="utf-8")
+        )
+        return trace.claim_ids
+    return ()
 
 
 def _paper_entry(snapshot: ProjectSnapshot, directory_name: str):
@@ -991,6 +1141,136 @@ def _paper_entry(snapshot: ProjectSnapshot, directory_name: str):
     if entry is None:
         raise ValueError(f"unknown revised project paper {directory_name!r}")
     return entry
+
+
+def _verify_response_closure(
+    project_root: Path,
+    *,
+    packet: VenueReviewPacket,
+    reports: dict[str, VenueReviewReport],
+    revised: ProjectPaperEntry,
+    response: VenueReviewResponse,
+) -> PaperRevisionTrace:
+    locator = revised.manifest.files.get("paper-revision-trace")
+    if locator is None:
+        raise ValueError("review response requires a registered paper revision trace")
+    trace_path = _contained_file(
+        project_root,
+        (Path("papers") / revised.directory_name / PurePosixPath(locator)).as_posix(),
+    )
+    trace = PaperRevisionTrace.model_validate_json(trace_path.read_text(encoding="utf-8"))
+    if response.revision_trace_sha256 != trace.record_sha256:
+        raise ValueError("review response must bind the exact paper revision trace")
+    if (
+        trace.project_id != packet.project_id
+        or trace.review_id != packet.review_id
+        or trace.source_paper_directory != packet.paper_directory
+        or trace.source_paper_manifest_sha256 != packet.paper_manifest_sha256
+        or trace.review_packet_sha256 != packet.packet_sha256
+        or trace.target_manuscript_id != revised.directory_name
+    ):
+        raise ValueError("paper revision trace differs from its review and paper identities")
+    report_hashes = tuple(sorted(item.report_sha256 for item in reports.values()))
+    if trace.source_report_sha256s != report_hashes:
+        raise ValueError("paper revision trace does not bind every admitted report")
+    expected_concerns = {
+        item.concern_id: item for report in reports.values() for item in report.concerns
+    }
+    if set(trace.concern_ids) != set(expected_concerns):
+        raise ValueError("paper revision trace concern set differs from the review round")
+
+    source_trace_path = _contained_file(project_root, trace.source_trace_locator)
+    if _file_sha256(source_trace_path) != trace.source_trace_file_sha256:
+        raise ValueError("paper revision source trace file hash mismatch")
+    if trace.source_trace_kind == "paper_draft":
+        source_trace = PaperDraftTrace.model_validate_json(
+            source_trace_path.read_text(encoding="utf-8")
+        )
+    else:
+        source_trace = PaperRevisionTrace.model_validate_json(
+            source_trace_path.read_text(encoding="utf-8")
+        )
+    if source_trace.record_sha256 != trace.source_trace_record_sha256:
+        raise ValueError("paper revision source trace record hash mismatch")
+
+    manuscript_locator = revised.manifest.files.get("source-markdown")
+    bibliography_locator = revised.manifest.files.get("bibliography")
+    if manuscript_locator is None or bibliography_locator is None:
+        raise ValueError("revised paper lacks source manuscript or bibliography")
+    revised_root = Path("papers") / revised.directory_name
+    if (
+        _file_sha256(_contained_file(project_root, (revised_root / manuscript_locator).as_posix()))
+        != trace.manuscript_sha256
+    ):
+        raise ValueError("revised manuscript differs from its paper revision trace")
+    if (
+        _file_sha256(
+            _contained_file(project_root, (revised_root / bibliography_locator).as_posix())
+        )
+        != trace.bibliography_sha256
+    ):
+        raise ValueError("revised bibliography differs from its paper revision trace")
+
+    resolutions = {item.concern_id: item for item in response.resolutions}
+    for concern_id, concern in expected_concerns.items():
+        resolution = resolutions[concern_id]
+        if resolution.resolution_basis is None:
+            raise ValueError("review response resolution lacks a typed resolution basis")
+        if resolution.disposition != "addressed":
+            continue
+        if concern_id in trace.blocked_concern_ids:
+            raise ValueError("an evidence-blocked concern cannot be marked addressed")
+        requirement = _review_requirement(concern)
+        mode = trace.treatment_modes[concern_id]
+        if requirement is PaperRevisionRequirement.TEXT_ONLY:
+            if (
+                resolution.resolution_basis != "prose_revision"
+                or mode is not PaperRevisionTreatmentMode.PROSE_REVISION
+                or resolution.closure_proof_sha256 is not None
+                or resolution.evidence_ids
+                or resolution.experiment_ids
+            ):
+                raise ValueError("text-only concern must bind one prose revision treatment")
+            continue
+        expected_basis = (
+            "registered_experiment"
+            if requirement is PaperRevisionRequirement.EXPERIMENT
+            else "registered_evidence"
+        )
+        expected_mode = (
+            PaperRevisionTreatmentMode.EXPERIMENT_INTEGRATED
+            if requirement is PaperRevisionRequirement.EXPERIMENT
+            else PaperRevisionTreatmentMode.EVIDENCE_INTEGRATED
+        )
+        if resolution.resolution_basis != expected_basis or mode is not expected_mode:
+            raise ValueError("hard concern resolution differs from its revision treatment")
+        if resolution.closure_proof_sha256 != trace.closure_proof_sha256.get(concern_id):
+            raise ValueError("hard concern must bind its exact state-derived closure proof")
+        if resolution.evidence_ids != trace.closure_evidence_ids.get(concern_id):
+            raise ValueError("hard concern evidence IDs differ from its closure proof")
+        if resolution.experiment_ids != trace.closure_experiment_ids.get(concern_id):
+            raise ValueError("hard concern experiment IDs differ from its closure proof")
+    return trace
+
+
+def _review_requirement(feedback: ReviewFeedback) -> PaperRevisionRequirement:
+    if feedback.requires_new_experiment or feedback.category in {
+        "missing_evidence",
+        "missing_baseline",
+        "validity",
+    }:
+        return PaperRevisionRequirement.EXPERIMENT
+    if (
+        feedback.requires_new_evidence
+        or feedback.required_evidence_types
+        or feedback.category
+        in {
+            "analysis",
+            "method",
+        }
+    ):
+        return PaperRevisionRequirement.EVIDENCE
+    return PaperRevisionRequirement.TEXT_ONLY
 
 
 def _verify_resolution_evidence(

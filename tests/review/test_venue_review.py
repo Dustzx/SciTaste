@@ -6,20 +6,15 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from scitaste.lifecycle import assess_project_lifecycle
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRuntime
 from scitaste.review import (
     ReviewConcernResolution,
-    ReviewConcernVerification,
     ReviewerIdentity,
     ReviewFeedback,
     VenueCriterionAssessment,
     VenueReviewReport,
     VenueReviewResponse,
-    VenueReviewVerification,
     import_venue_review_report,
-    import_venue_review_verification,
-    inspect_venue_review,
     prepare_venue_review,
     route_venue_review_to_state,
     submit_venue_review_response,
@@ -100,6 +95,8 @@ def _report(
     report_id: str,
     reviewer_id: str,
     concern_id: str,
+    target_claim_ids: tuple[str, ...] = (),
+    requires_new_experiment: bool = False,
 ) -> VenueReviewReport:
     return VenueReviewReport.create(
         report_id=report_id,
@@ -125,7 +122,9 @@ def _report(
                 category="missing_evidence",
                 severity="high",
                 text="Add evidence that distinguishes the alternative explanation.",
+                target_claim_ids=list(target_claim_ids),
                 requires_new_evidence=True,
+                requires_new_experiment=requires_new_experiment,
                 required_evidence_types=["controlled analysis"],
             ),
         ),
@@ -133,31 +132,7 @@ def _report(
     )
 
 
-def _verification(
-    report: VenueReviewReport,
-    response: VenueReviewResponse,
-) -> VenueReviewVerification:
-    return VenueReviewVerification.create(
-        verification_id=f"verify-{report.report_id}",
-        source_report_sha256=report.report_sha256,
-        response_sha256=response.response_sha256,
-        revised_paper_manifest_sha256=response.revised_paper_manifest_sha256,
-        reviewer_id=report.reviewer.reviewer_id,
-        concerns=tuple(
-            ReviewConcernVerification(
-                concern_id=concern.concern_id,
-                status="closed",
-                rationale="The revised paper now exposes the requested controlled analysis.",
-            )
-            for concern in report.concerns
-        ),
-        final_recommendation="accept",
-        changed_from_initial=True,
-        change_reason="The decision-relevant evidence gap was closed in the revision.",
-    )
-
-
-def test_review_round_requires_response_and_original_reviewer_verification(
+def test_review_round_rejects_manuscript_bytes_as_new_evidence(
     tmp_path: Path,
 ) -> None:
     runtime = ProjectRuntime(tmp_path / "outputs")
@@ -231,34 +206,57 @@ def test_review_round_requires_response_and_original_reviewer_verification(
             for concern in report.concerns
         ),
     )
-    snapshot, round_record = submit_venue_review_response(
-        runtime,
-        project_id="review-project",
-        review_id="iclr-round-1",
-        response=response,
-        expected_revision=snapshot.revision,
-    )
-    assert round_record.status == "response_submitted"
-    assert round_record.internal_review_complete is False
-
-    for report in reports:
-        snapshot, round_record = import_venue_review_verification(
+    with pytest.raises(ValueError, match="paper revision trace"):
+        submit_venue_review_response(
             runtime,
             project_id="review-project",
             review_id="iclr-round-1",
-            verification=_verification(report, response),
+            expected_revision=snapshot.revision,
+            response=response,
+        )
+
+
+def test_review_round_rejects_duplicate_concern_ids_across_reports(tmp_path: Path) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = _paper(runtime, _project(runtime), "paper-v1", text="# Paper v1\n")
+    snapshot, packet, _round = prepare_venue_review(
+        runtime,
+        project_id="review-project",
+        paper_directory="paper-v1",
+        review_id="duplicate-concern-round",
+        round_number=1,
+        review_scope="independent_pre_submission",
+        venue_taste_profile=_PROFILE,
+        expected_revision=snapshot.revision,
+    )
+    first = _report(
+        packet.packet_sha256,
+        report_id="report-first",
+        reviewer_id="expert-first",
+        concern_id="shared-concern",
+    )
+    snapshot, _round = import_venue_review_report(
+        runtime,
+        project_id="review-project",
+        review_id="duplicate-concern-round",
+        report=first,
+        expected_revision=snapshot.revision,
+    )
+    duplicate = _report(
+        packet.packet_sha256,
+        report_id="report-second",
+        reviewer_id="expert-second",
+        concern_id="shared-concern",
+    )
+
+    with pytest.raises(ValueError, match="unique across the complete round"):
+        import_venue_review_report(
+            runtime,
+            project_id="review-project",
+            review_id="duplicate-concern-round",
+            report=duplicate,
             expected_revision=snapshot.revision,
         )
-    assert round_record.status == "independent_pre_submission_review_complete"
-    assert round_record.independent_expert_report_count == 2
-    assert round_record.independent_pre_submission_review_complete is True
-    assert round_record.official_decision_authority is False
-    assert round_record.scientific_quality_established is False
-    assert inspect_venue_review(runtime, "review-project", "iclr-round-1") == round_record
-    lifecycle = assess_project_lifecycle(runtime, "review-project")
-    assert lifecycle.gates[-1].state == "satisfied"
-    assert lifecycle.independent_pre_submission_review_complete is False
-    assert lifecycle.gates[0].reason_code == "native-idea-unverified"
 
 
 def test_model_review_material_is_bound_to_registered_paper_bytes(tmp_path: Path) -> None:

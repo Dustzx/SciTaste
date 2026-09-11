@@ -19,6 +19,7 @@ from scitaste.writing.paper_draft_materialization import (
     PaperDraftTrace,
     materialize_accepted_paper_draft,
 )
+from scitaste.writing.revision_trace import PaperRevisionTrace
 from scitaste.writing.semantic import (
     EvidencePaperDraftNode,
     EvidencePaperRevisionNode,
@@ -104,6 +105,7 @@ __all__ = [
     "PaperRevisionEvidenceProofItem",
     "PaperRevisionExperimentProofItem",
     "PaperRevisionRequirement",
+    "PaperRevisionTrace",
     "PaperRevisionTreatment",
     "PaperRevisionTreatmentMode",
     "SectionDeliveryContract",

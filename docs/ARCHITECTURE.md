@@ -1378,3 +1378,24 @@ Topic manifests are atomically replaced, turn records are immutable, and raw
 free questions are retained only as bounded inert local text for user-visible
 continuity. They never become renderer code, model authority, or executor input
 without passing the existing intent and proposal gates.
+
+### ADR-045: Review closure is a state-derived proof, not a manuscript assertion
+
+Status: accepted for project-owned paper revision and pre-submission review.
+
+A reviewer request for evidence cannot be closed by adding a sentence to the
+paper or hashing that paper as “evidence.” `evidence-paper-revision` remains a
+proposal-only semantic node. Its accepted output crosses into a reader-facing
+paper only through deterministic materialization, which replays the runtime
+ledger, source paper trace, exact packet and reports, project-owned opening and
+closing states, new evidence relations, completed experiment record, and result
+bytes.
+
+The materialized Stage 19 bundle retains `PAPER_REVISION_TRACE.json`. Each
+author-response resolution declares whether it is prose-only, registered
+evidence, registered experiment, contested, or an accepted limitation. An
+addressed hard concern must bind the trace's exact closure proof and identities;
+the original reviewer must bind the same proof when closing it. Round status
+inspection repeats the checks rather than trusting stored status. Models may
+draft a revision or review, but cannot create evidence, certify their own
+closure, impersonate an independent expert, or issue an official venue decision.

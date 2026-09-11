@@ -82,6 +82,34 @@ is blocked. Even a proof-backed revision is only a manuscript proposal: review
 closure still requires a registered new paper, an author response, and exact
 verification by the original reviewer.
 
+An accepted revision is materialized without another model call:
+
+```bash
+.venv/bin/scitaste project paper build-revision \
+  --project-id <project-id> --review-id <review-id> \
+  --directory-name <new-paper-directory> \
+  --run-id <revision-run-id> --invocation-id <accepted-invocation-id> \
+  --bibliography <verified-references.bib> --stage 19 \
+  --expected-revision <revision> --outputs-root outputs
+```
+
+This command replays the model-node ledger and current admission rules; binds
+the source paper trace, packet, every report, target manuscript, and
+bibliography; and rehashes each closure proof's project-owned opening/closing
+`ResearchState` plus completed experiment result. It emits
+`PAPER_REVISION_TRACE.json` beside the reader-facing Markdown, TeX, and PDF.
+A proof lacking project-relative state locators remains usable only as advisory
+node input and cannot cross this materialization gate.
+
+Each `addressed` response resolution declares one basis: `prose_revision`,
+`registered_evidence`, or `registered_experiment`. Hard concerns must name the
+exact trace-bound proof, evidence IDs, and experiment IDs. `contested` and
+`accepted_limitation` remain legitimate response dispositions but cannot claim
+evidence closure. When an original reviewer marks a hard concern closed, its
+verification must bind that same proof hash. Round inspection repeats these
+checks, so an older or manually edited response cannot retain a false closed
+status.
+
 ## Bounded model reviewer
 
 `venue-paper-review` is a proposal-only model node for an exact anonymous paper

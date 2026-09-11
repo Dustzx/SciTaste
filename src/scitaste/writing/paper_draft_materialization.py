@@ -54,6 +54,7 @@ class PaperDraftTrace(BaseModel):
     state_snapshot_id: str
     state_revision: int = Field(ge=0)
     proposal_sha256: str = Field(pattern=_SHA256)
+    claim_ids: tuple[str, ...] = ()
     renderer_version: Literal["evidence-paper-markdown-v2"] = _RENDERER_VERSION
     manuscript_sha256: str = Field(pattern=_SHA256)
     bibliography_sha256: str = Field(pattern=_SHA256)
@@ -76,10 +77,15 @@ class PaperDraftTrace(BaseModel):
         validate_project_id(self.project_id)
         validate_entry_id(self.run_id, field_name="run_id")
         validate_entry_id(self.invocation_id, field_name="invocation_id")
+        if tuple(sorted(set(self.claim_ids))) != self.claim_ids:
+            raise ValueError("paper-draft claim IDs must be sorted and unique")
         if tuple(sorted(set(self.bibliography_keys))) != self.bibliography_keys:
             raise ValueError("paper-draft bibliography keys must be sorted and unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
-        if self.record_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"record_sha256"})
+        expected = content_sha256(payload)
+        legacy = dict(payload)
+        legacy.pop("claim_ids", None)
+        if self.record_sha256 not in {expected, content_sha256(legacy)}:
             raise ValueError("paper-draft trace hash mismatch")
         return self
 
@@ -185,6 +191,7 @@ def materialize_accepted_paper_draft(
         state_snapshot_id=entry.intent.context.state_snapshot_id,
         state_revision=entry.intent.state_revision,
         proposal_sha256=content_sha256(proposal),
+        claim_ids=tuple(sorted(item.claim_id for item in input_data.claims)),
         manuscript_sha256=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
         bibliography_sha256=hashlib.sha256(bibliography.encode("utf-8")).hexdigest(),
         bibliography_keys=bibliography_keys,

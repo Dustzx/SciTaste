@@ -149,6 +149,9 @@ from scitaste.writing.manuscript_quality import (
     assess_manuscript,
 )
 from scitaste.writing.paper_draft_materialization import materialize_accepted_paper_draft
+from scitaste.writing.paper_revision_materialization import (
+    materialize_accepted_paper_revision,
+)
 from scitaste.writing.taste import assess_writing_taste
 from scitaste.writing.venue import assess_venue_submission, inspect_venue_template
 from scitaste.writing.venue_taste import (
@@ -494,14 +497,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[item.value for item in PaperArchetype],
         default=None,
     )
-    project_paper_build_draft.add_argument(
-        "--asset-root", type=Path, action="append", default=[]
-    )
+    project_paper_build_draft.add_argument("--asset-root", type=Path, action="append", default=[])
     project_paper_build_draft.add_argument("--argument-contract", type=Path, default=None)
     project_paper_build_draft.add_argument("--argument-state", type=Path, default=None)
-    project_paper_build_draft.add_argument(
-        "--argument-artifact-root", type=Path, default=None
-    )
+    project_paper_build_draft.add_argument("--argument-artifact-root", type=Path, default=None)
     project_paper_build_draft.add_argument("--source-run", default=None)
     project_paper_build_draft.add_argument("--provider", default=None)
     project_paper_build_draft.add_argument("--model", default=None)
@@ -519,6 +518,52 @@ def build_parser() -> argparse.ArgumentParser:
     project_paper_build_draft.add_argument("--no-global-latest", action="store_true")
     _add_project_options(project_paper_build_draft)
     project_paper_build_draft.set_defaults(handler=_handle_project_paper_build_draft)
+    project_paper_build_revision = project_paper_commands.add_parser(
+        "build-revision",
+        help="Build a venue paper from one accepted evidence-paper-revision ledger entry",
+    )
+    project_paper_build_revision.add_argument("--project-id", required=True)
+    project_paper_build_revision.add_argument("--directory-name", required=True)
+    project_paper_build_revision.add_argument("--review-id", required=True)
+    project_paper_build_revision.add_argument("--run-id", required=True)
+    project_paper_build_revision.add_argument("--invocation-id", required=True)
+    project_paper_build_revision.add_argument("--bibliography", type=Path, required=True)
+    project_paper_build_revision.add_argument(
+        "--venue-config",
+        type=Path,
+        default=Path("configs/writing/venues/iclr-2027/submission.yaml"),
+    )
+    project_paper_build_revision.add_argument("--venue-taste-profile", type=Path, default=None)
+    project_paper_build_revision.add_argument(
+        "--paper-archetype",
+        choices=[item.value for item in PaperArchetype],
+        default=None,
+    )
+    project_paper_build_revision.add_argument(
+        "--asset-root", type=Path, action="append", default=[]
+    )
+    project_paper_build_revision.add_argument("--argument-contract", type=Path, default=None)
+    project_paper_build_revision.add_argument("--argument-state", type=Path, default=None)
+    project_paper_build_revision.add_argument("--argument-artifact-root", type=Path, default=None)
+    project_paper_build_revision.add_argument("--source-run", default=None)
+    project_paper_build_revision.add_argument("--provider", default=None)
+    project_paper_build_revision.add_argument("--model", default=None)
+    project_paper_build_revision.add_argument(
+        "--condition", default="reviewer-driven-paper-revision"
+    )
+    project_paper_build_revision.add_argument("--task", default="project-model-revised-manuscript")
+    project_paper_build_revision.add_argument("--seed", type=int, default=0)
+    project_paper_build_revision.add_argument("--stage", type=int, default=19)
+    project_paper_build_revision.add_argument(
+        "--evidence-scope",
+        default="model-revised-from-registered-review-and-evidence",
+    )
+    project_paper_build_revision.add_argument("--date", default=date.today().isoformat())
+    project_paper_build_revision.add_argument("--expected-revision", type=int, required=True)
+    project_paper_build_revision.add_argument("--select", action="store_true")
+    project_paper_build_revision.add_argument("--no-global-latest", action="store_true")
+    _add_project_options(project_paper_build_revision)
+    project_paper_build_revision.set_defaults(handler=_handle_project_paper_build_revision)
     project_paper_select = project_paper_commands.add_parser(
         "select", help="Select a current project paper"
     )
@@ -1374,6 +1419,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                     "would_register": True,
                     "would_select": args.select,
                     "paper_draft_trace": getattr(args, "_paper_draft_trace", None),
+                    "paper_revision_trace": getattr(args, "_paper_revision_trace", None),
                 },
                 indent=2,
                 ensure_ascii=False,
@@ -1413,6 +1459,11 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             draft_trace_target = temporary / "PAPER_DRAFT_TRACE.json"
             shutil.copyfile(draft_trace_source, draft_trace_target)
             paths.append(draft_trace_target)
+        revision_trace_source = getattr(args, "_paper_revision_trace_source", None)
+        if revision_trace_source is not None:
+            revision_trace_target = temporary / "PAPER_REVISION_TRACE.json"
+            shutil.copyfile(revision_trace_source, revision_trace_target)
+            paths.append(revision_trace_target)
         files = _venue_paper_file_map(paths, root=temporary)
         argument_metadata = (
             {
@@ -1433,6 +1484,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             if venue_taste_context is not None
             else {}
         )
+        revision_metadata = getattr(args, "_paper_revision_manifest_metadata", {})
         paper = PaperManifest(
             paper_id=args.directory_name,
             project_id=args.project_id,
@@ -1454,10 +1506,14 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             submission_assessment_sha256=assessment.record_sha256,
             manuscript_assessment_sha256=manuscript_assessment.record_sha256,
             writing_taste_assessment_sha256=writing_taste_preflight.record_sha256,
-            eligible_for_submission=assessment.eligible_for_submission,
+            eligible_for_submission=(
+                assessment.eligible_for_submission
+                and revision_metadata.get("paper_revision_all_concerns_proof_complete", True)
+            ),
             **argument_metadata,
             **venue_taste_metadata,
             **getattr(args, "_paper_draft_manifest_metadata", {}),
+            **revision_metadata,
         )
         os.replace(temporary, target)
         moved = True
@@ -1512,12 +1568,58 @@ def _handle_project_paper_build_draft(args: argparse.Namespace) -> int:
             _paper_draft_trace_source=materialized.trace_path,
             _paper_draft_manifest_metadata={
                 "paper_draft_invocation_id": args.invocation_id,
-                "paper_draft_ledger_entry_sha256": (
-                    materialized.trace.ledger_entry_sha256
-                ),
+                "paper_draft_ledger_entry_sha256": (materialized.trace.ledger_entry_sha256),
                 "paper_draft_trace_sha256": materialized.trace.record_sha256,
                 "paper_draft_input_fingerprint": materialized.trace.input_fingerprint,
                 "paper_draft_proposal_sha256": materialized.trace.proposal_sha256,
+            },
+        )
+        return _handle_project_paper_build(argparse.Namespace(**delegated))
+
+
+def _handle_project_paper_build_revision(args: argparse.Namespace) -> int:
+    """Materialize one accepted reviewer-driven revision through venue paper build."""
+
+    runtime = ProjectRuntime(args.outputs_root)
+    with tempfile.TemporaryDirectory(prefix="scitaste-paper-revision-") as temporary_root:
+        materialized = materialize_accepted_paper_revision(
+            runtime,
+            project_id=args.project_id,
+            review_id=args.review_id,
+            run_id=args.run_id,
+            invocation_id=args.invocation_id,
+            bibliography_path=args.bibliography,
+            target_dir=Path(temporary_root) / "source",
+            expected_project_revision=args.expected_revision,
+        )
+        if materialized.input_data.target_manuscript_id != args.directory_name:
+            raise ValueError("paper-revision target_manuscript_id must match the paper directory")
+        delegated = vars(args).copy()
+        delegated.update(
+            source=materialized.manuscript_path,
+            bibliography=materialized.bibliography_path,
+            source_run=args.source_run or args.run_id,
+            provider=args.provider or materialized.trace.provider,
+            model=args.model or materialized.trace.model,
+            _paper_revision_trace=materialized.trace.model_dump(mode="json"),
+            _paper_revision_trace_source=materialized.trace_path,
+            _paper_revision_manifest_metadata={
+                "paper_revision_review_id": args.review_id,
+                "paper_revision_invocation_id": args.invocation_id,
+                "paper_revision_source_paper_directory": (
+                    materialized.trace.source_paper_directory
+                ),
+                "paper_revision_source_manifest_sha256": (
+                    materialized.trace.source_paper_manifest_sha256
+                ),
+                "paper_revision_ledger_entry_sha256": (materialized.trace.ledger_entry_sha256),
+                "paper_revision_trace_sha256": materialized.trace.record_sha256,
+                "paper_revision_input_fingerprint": materialized.trace.input_fingerprint,
+                "paper_revision_proposal_sha256": (materialized.trace.revision_proposal_sha256),
+                "paper_revision_blocked_concern_ids": list(materialized.trace.blocked_concern_ids),
+                "paper_revision_all_concerns_proof_complete": (
+                    materialized.trace.all_concerns_proof_complete
+                ),
             },
         )
         return _handle_project_paper_build(argparse.Namespace(**delegated))
@@ -1534,6 +1636,7 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         "MANUSCRIPT_ASSESSMENT.json": "manuscript-assessment",
         "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
         "PAPER_DRAFT_TRACE.json": "paper-draft-trace",
+        "PAPER_REVISION_TRACE.json": "paper-revision-trace",
         "VENUE_TASTE_CONTEXT.json": "venue-taste-context",
         "PAPER_ARGUMENT_CONTRACT.yaml": "paper-argument-contract",
         "PAPER_ARGUMENT_ASSESSMENT.json": "paper-argument-assessment",

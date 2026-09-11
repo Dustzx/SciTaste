@@ -16,7 +16,14 @@ semantic versioning.
   paragraphs. The node cannot write files, run experiments, submit a response,
   close review, or impersonate the original reviewer. A separate content-
   addressed DeepSeek V4.1 Flash profile provides the long-form envelope without
-  enabling live execution by itself.
+  enabling live execution by itself. Accepted revisions can now pass through
+  `project paper build-revision` into Stage 19 Markdown/TeX/PDF bundles with a
+  self-hashed `PAPER_REVISION_TRACE.json`. The trace revalidates the source
+  draft/revision ledger, exact review packet and reports, project-owned opening
+  and closing states, new evidence, and completed experiment bytes. Author
+  responses and original-reviewer verifications must bind the same proof;
+  manuscript prose and arbitrary file hashes cannot impersonate new evidence.
+  Concern IDs are unique across a complete review round.
 
 - Project conversations now expose an explicit bounded-context control. A
   follow-up may select either no history or the latest eight immutable turns;

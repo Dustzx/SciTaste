@@ -735,8 +735,9 @@ identity and remote GPU inventory add lane-specific blockers.
   blocked unless a later project state supplies a self-hashed closure proof.
   Proof-backed treatments must cite the exact new evidence; the node has no
   manuscript mutation, empirical execution, response-submission, or review-
-  closure authority. Deterministic revision materialization and original-
-  reviewer verification remain the next integration gate.
+  closure authority. Done: accepted revisions now materialize into registered
+  Stage 19 bundles with a self-hashed trace, and author/original-reviewer records
+  must bind the exact state-derived proof before a hard concern can close.
 - A typed argument contract now joins central question/answer, registered
   claims, reciprocal evidence, reader-facing carriers, section delivery,
   high-attention entry points, and material limitations without treating a

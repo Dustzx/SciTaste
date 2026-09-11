@@ -19,9 +19,7 @@ EVIDENCE_PAPER_DRAFT_NODE = "evidence-paper-draft"
 EVIDENCE_PAPER_REVISION_NODE = "evidence-paper-revision"
 _IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
 _BIBTEX_KEY = r"^[A-Za-z][A-Za-z0-9_:-]*$"
-_NUMBER = re.compile(
-    r"(?<![A-Za-z0-9_.])(?:\d+(?:\.\d+)?%?)(?![A-Za-z0-9_]|\.\d)"
-)
+_NUMBER = re.compile(r"(?<![A-Za-z0-9_.])(?:\d+(?:\.\d+)?%?)(?![A-Za-z0-9_]|\.\d)")
 
 
 class WritingSemanticModel(BaseModel):
@@ -260,9 +258,7 @@ class EvidencePaperDraftInput(WritingSemanticModel):
     claims: tuple[EvidencePaperClaimInput, ...] = Field(min_length=1, max_length=200)
     evidence: tuple[EvidencePaperEvidenceInput, ...] = Field(default=(), max_length=500)
     citations: tuple[EvidencePaperCitationInput, ...] = Field(default=(), max_length=500)
-    material_limitations: tuple[MaterialWritingLimitation, ...] = Field(
-        default=(), max_length=100
-    )
+    material_limitations: tuple[MaterialWritingLimitation, ...] = Field(default=(), max_length=100)
     required_sections: tuple[str, ...] = Field(min_length=5, max_length=20)
     authorized_numeric_tokens: tuple[str, ...] = Field(default=(), max_length=500)
     maximum_words: int = Field(ge=1_000, le=30_000)
@@ -404,11 +400,7 @@ class EvidencePaperDraftProposal(WritingSemanticModel):
             [
                 self.title,
                 self.abstract.text,
-                *(
-                    paragraph.text
-                    for section in self.sections
-                    for paragraph in section.paragraphs
-                ),
+                *(paragraph.text for section in self.sections for paragraph in section.paragraphs),
             ]
         )
 
@@ -510,6 +502,8 @@ class PaperRevisionClosureProof(WritingSemanticModel):
     schema_version: Literal["1.0"] = "1.0"
     proof_id: str = Field(pattern=_IDENTIFIER)
     concern_id: str = Field(pattern=_IDENTIFIER)
+    opened_state_locator: str | None = Field(default=None, min_length=1, max_length=1_000)
+    closed_state_locator: str | None = Field(default=None, min_length=1, max_length=1_000)
     opened_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     closed_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     opened_revision: int = Field(ge=0)
@@ -528,6 +522,8 @@ class PaperRevisionClosureProof(WritingSemanticModel):
 
     @model_validator(mode="after")
     def proof_is_new_and_self_hashed(self) -> PaperRevisionClosureProof:
+        if (self.opened_state_locator is None) != (self.closed_state_locator is None):
+            raise ValueError("revision closure proof state locators must appear together")
         if self.closed_revision <= self.opened_revision:
             raise ValueError("revision closure proof requires a later state revision")
         if self.closed_state_sha256 == self.opened_state_sha256:
@@ -541,13 +537,15 @@ class PaperRevisionClosureProof(WritingSemanticModel):
         if set(evidence_ids) & set(self.evidence_ids_at_open):
             raise ValueError("revision closure proof evidence must be new")
         if {
-            item.experiment_id
-            for item in self.new_evidence
-            if item.experiment_id is not None
+            item.experiment_id for item in self.new_evidence if item.experiment_id is not None
         } - set(experiment_ids):
             raise ValueError("revision evidence references an unproved experiment")
-        expected = _content_sha256(self.model_dump(mode="json", exclude={"proof_sha256"}))
-        if self.proof_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"proof_sha256"})
+        expected = _content_sha256(payload)
+        legacy_expected = _content_sha256(
+            {key: value for key, value in payload.items() if value is not None}
+        )
+        if self.proof_sha256 not in {expected, legacy_expected}:
             raise ValueError("revision closure proof hash mismatch")
         return self
 
@@ -611,9 +609,7 @@ class EvidencePaperRevisionInput(WritingSemanticModel):
         concern_ids = [item.concern_id for item in self.concerns]
         if len(concern_ids) != len(set(concern_ids)):
             raise ValueError("paper revision concern identifiers must be unique")
-        if {item.source_report_sha256 for item in self.concerns} - set(
-            self.source_report_sha256s
-        ):
+        if {item.source_report_sha256 for item in self.concerns} - set(self.source_report_sha256s):
             raise ValueError("paper revision concern references an unbound report")
         known_claims = {item.claim_id for item in self.target_draft_input.claims}
         if any(set(item.target_claim_ids) - known_claims for item in self.concerns):
@@ -626,9 +622,7 @@ class EvidencePaperRevisionInput(WritingSemanticModel):
             raise ValueError("paper revision concern references an unknown target section")
         proof_ids = [item.proof_id for item in self.closure_proofs]
         proof_concerns = [item.concern_id for item in self.closure_proofs]
-        if len(proof_ids) != len(set(proof_ids)) or len(proof_concerns) != len(
-            set(proof_concerns)
-        ):
+        if len(proof_ids) != len(set(proof_ids)) or len(proof_concerns) != len(set(proof_concerns)):
             raise ValueError("paper revision closure proofs must be unique")
         concerns = {item.concern_id: item for item in self.concerns}
         target_evidence = {item.evidence_id: item for item in self.target_draft_input.evidence}

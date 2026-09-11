@@ -244,6 +244,12 @@ from a later project state; proof-backed revisions must integrate exactly the
 new evidence into named revised paragraphs. The proposal never calls a tool,
 writes a manuscript, submits a response, or closes review. Deterministic
 materialization and the original reviewer remain separate downstream gates.
+`project paper build-revision` now supplies the first gate: it revalidates the
+accepted revision ledger and exact review inputs, verifies state-derived
+evidence and completed experiment bytes, and produces a Stage 19 venue bundle
+with `PAPER_REVISION_TRACE.json`. The author response and original-reviewer
+verification must bind that same trace and closure proof; the revised prose is
+never itself treated as empirical evidence.
 
 The committed `deepseek-v41flash-paper-draft` and
 `deepseek-v41flash-paper-revision` profiles each allow up to 32,768 output tokens

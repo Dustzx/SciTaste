@@ -230,12 +230,24 @@ packet, reports, response, verifications, and referenced paper artifacts.
 .venv/bin/scitaste project paper review prepare \
   --project-id my-research-project --review-id iclr-r1 \
   --paper-directory <registered-paper-directory> \
-  --venue-taste-config configs/writing/venues/iclr-2027/taste.yaml \
+  --venue-taste-profile configs/writing/venues/iclr-2027/taste.yaml \
   --scope development --expected-revision <revision> \
   --outputs-root outputs --dry-run
 
 .venv/bin/scitaste project lifecycle status \
   --project-id my-research-project --outputs-root outputs
+```
+
+After an accepted reviewer-driven revision model-node entry, materialize and
+register its Stage 19 paper without another model call:
+
+```bash
+.venv/bin/scitaste project paper build-revision \
+  --project-id my-research-project --review-id iclr-r1 \
+  --directory-name <new-paper-directory> --run-id <revision-run> \
+  --invocation-id <accepted-revision-invocation> \
+  --bibliography <verified-references.bib> --expected-revision <revision> \
+  --outputs-root outputs
 ```
 
 The lifecycle projection admits native Discovery and Evidence records only

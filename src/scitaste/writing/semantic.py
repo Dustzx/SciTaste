@@ -111,9 +111,7 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
             if unknown_evidence:
                 reasons.append(f"paragraph {paragraph.paragraph_id!r} references unknown evidence")
             if unknown_citations:
-                reasons.append(
-                    f"paragraph {paragraph.paragraph_id!r} references unknown citations"
-                )
+                reasons.append(f"paragraph {paragraph.paragraph_id!r} references unknown citations")
             if unknown_limitations:
                 reasons.append(
                     f"paragraph {paragraph.paragraph_id!r} references unknown limitations"
@@ -215,9 +213,7 @@ class EvidencePaperRevisionNode(
         source_context = NodeContext.model_validate(
             context.model_copy(
                 update={
-                    "claim_ids": [
-                        item.claim_id for item in input_data.source_draft_input.claims
-                    ],
+                    "claim_ids": [item.claim_id for item in input_data.source_draft_input.claims],
                     "evidence_ids": [
                         item.evidence_id for item in input_data.source_draft_input.evidence
                     ],
@@ -272,9 +268,7 @@ class EvidencePaperRevisionNode(
                 )
             unknown_targets = set(treatment.target_paragraph_ids) - set(revised_paragraphs)
             if unknown_targets:
-                reasons.append(
-                    f"concern {concern_id!r} targets an unknown revised paragraph"
-                )
+                reasons.append(f"concern {concern_id!r} targets an unknown revised paragraph")
             if expected_mode is PaperRevisionTreatmentMode.PROSE_REVISION:
                 if not treatment.target_paragraph_ids:
                     reasons.append(f"concern {concern_id!r} has no proposed prose edit")
@@ -283,8 +277,7 @@ class EvidencePaperRevisionNode(
                         f"text-only concern {concern_id!r} claims evidence or experiment authority"
                     )
                 if treatment.target_paragraph_ids and not any(
-                    source_paragraphs.get(paragraph_id)
-                    != revised_paragraphs.get(paragraph_id)
+                    source_paragraphs.get(paragraph_id) != revised_paragraphs.get(paragraph_id)
                     for paragraph_id in treatment.target_paragraph_ids
                 ):
                     reasons.append(f"concern {concern_id!r} does not change its target prose")
@@ -320,9 +313,7 @@ class EvidencePaperRevisionNode(
                         f"concern {concern_id!r} does not integrate proved evidence into prose"
                     )
 
-        if paper_draft_proposal_sha256(
-            proposal.revised_draft
-        ) == paper_draft_proposal_sha256(
+        if paper_draft_proposal_sha256(proposal.revised_draft) == paper_draft_proposal_sha256(
             input_data.prior_proposal
         ):
             reasons.append("paper revision leaves the source proposal unchanged")
@@ -411,10 +402,13 @@ def render_evidence_paper_markdown(
 
 def _identifier_occurs(text: str, identifier: str) -> bool:
     boundary = r"A-Za-z0-9_.:-"
-    return re.search(
-        rf"(?<![{boundary}]){re.escape(identifier)}(?![{boundary}])",
-        text,
-    ) is not None
+    return (
+        re.search(
+            rf"(?<![{boundary}]){re.escape(identifier)}(?![{boundary}])",
+            text,
+        )
+        is not None
+    )
 
 
 class WritingTasteNode(ModelNode[WritingTasteSemanticInput, WritingTasteReviewProposal]):
