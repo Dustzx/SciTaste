@@ -65,10 +65,10 @@ def _approved_request(tmp_path: Path) -> DatasetAcquisitionRequest:
     )
 
 
-def test_repository_request_is_exact_review_ready_and_unapproved() -> None:
-    request = load_dataset_acquisition_request(REQUEST_PATH).request
+def test_repository_request_is_exact_review_ready_and_unapproved(tmp_path: Path) -> None:
+    request = _isolated_request(tmp_path)
 
-    report = inspect_dataset_acquisition_request(request, workspace_root=".")
+    report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
 
     assert report.item_count == 10
     assert report.maximum_total_bytes == 10 * 1024 * 1024
@@ -166,10 +166,10 @@ def test_request_rejects_unpinned_hosts_paths_and_false_budget_arithmetic() -> N
         DatasetAcquisitionRequest.model_validate(payload)
 
 
-def test_gate_report_rejects_internally_inconsistent_summaries() -> None:
+def test_gate_report_rejects_internally_inconsistent_summaries(tmp_path: Path) -> None:
     report = inspect_dataset_acquisition_request(
-        load_dataset_acquisition_request(REQUEST_PATH).request,
-        workspace_root=".",
+        _isolated_request(tmp_path),
+        workspace_root=tmp_path,
     )
     mutations = (
         ("item_count", report.item_count + 1, "item count"),
@@ -408,6 +408,9 @@ def test_acquisition_cli_materializes_only_a_no_network_report(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     output = tmp_path / "REPORT.json"
+    request = _isolated_request(tmp_path)
+    manifest = tmp_path / "request.yaml"
+    save_dataset_acquisition_request(request, manifest)
 
     assert (
         main(
@@ -415,9 +418,9 @@ def test_acquisition_cli_materializes_only_a_no_network_report(
                 "evaluation",
                 "acquisition-request",
                 "--manifest",
-                str(REQUEST_PATH),
+                str(manifest),
                 "--workspace-root",
-                ".",
+                str(tmp_path),
                 "--require-review-ready",
                 "--output",
                 str(output),

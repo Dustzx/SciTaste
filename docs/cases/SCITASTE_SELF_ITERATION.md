@@ -591,3 +591,21 @@ checkpoint hashes to `47f9c0e0...`, while the older GPU proposal freezes
 This iteration therefore produced both a reusable resource-management feature
 and a concrete self-case demonstrating why infrastructure identity belongs in
 the research evidence chain.
+
+## Real task acquisition changed the experiment plan (2026-09-12)
+
+The next self-iteration exercised SciTaste's acquisition path instead of
+reasoning only from benchmark metadata. The project owner approved the exact
+download-only request, and SciTaste atomically acquired ten pinned MLR-Bench
+research briefs. Their receipt covers 31,345 bytes; no content entered the
+Knowledge or Taste libraries and no model, GPU, or experiment ran.
+
+Inspection of the real bytes falsified an implicit planning assumption. The
+files are broad workshop topic descriptions, not frozen empirical tasks: they
+contain no task-specific data, starter code, environment, or objective score.
+A new content-bound cohort inspector now allows stagewise and brief-only package
+prepilots while blocking formal empirical and objective-progress use. The paper
+plan consequently assigns the causal Taste claim to matched SciTaste Native
+ablations and reserves best-native external systems for an explicitly
+model-confounded ecological comparison. This is process and defect-discovery
+evidence, not comparative effectiveness or a promotable Taste Case.

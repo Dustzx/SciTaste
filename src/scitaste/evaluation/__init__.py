@@ -1,5 +1,14 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.acquired_cohort import (
+    AcquiredCohortFinding,
+    AcquiredTaskCohortReport,
+    AcquiredTaskQualification,
+    AcquiredTaskUse,
+    inspect_acquired_task_cohort,
+    load_acquired_task_cohort_report,
+    save_acquired_task_cohort_report,
+)
 from scitaste.evaluation.acquisition import (
     AcquiredItemReceipt,
     AcquisitionApproval,
@@ -229,7 +238,11 @@ from scitaste.evaluation.task_selection import (
 )
 
 __all__ = [
+    "AcquiredCohortFinding",
     "AcquiredItemReceipt",
+    "AcquiredTaskCohortReport",
+    "AcquiredTaskQualification",
+    "AcquiredTaskUse",
     "AcquisitionApproval",
     "AcquisitionEvidenceBinding",
     "AcquisitionFetcher",
@@ -389,6 +402,7 @@ __all__ = [
     "compile_evaluation_cell_plan",
     "evaluate_resource_feasibility",
     "execute_direct_agent",
+    "inspect_acquired_task_cohort",
     "inspect_adapter_contract",
     "inspect_adapter_preflight",
     "inspect_dataset_acquisition_request",
@@ -398,6 +412,7 @@ __all__ = [
     "inspect_prelaunch_manifest",
     "inspect_task_package",
     "inspect_task_selection",
+    "load_acquired_task_cohort_report",
     "load_adapter_contract_manifest",
     "load_adapter_preflight_manifest",
     "load_dataset_acquisition_receipt",
@@ -417,6 +432,7 @@ __all__ = [
     "publish_project_evaluation",
     "publish_project_evaluation_result",
     "run_live_direct_agent",
+    "save_acquired_task_cohort_report",
     "save_acquisition_gate_report",
     "save_dataset_acquisition_request",
     "save_evaluation_cell_plan",

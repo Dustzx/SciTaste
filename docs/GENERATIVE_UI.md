@@ -168,6 +168,17 @@ control. If immutable history contains several reports for the same request ID,
 the latest manifest entry supplies the current card while every earlier run
 remains visible in project activity.
 
+A post-download qualification appears only through the separately registered
+`runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
+rechecks the report's embedded semantic hash, exact task and byte arithmetic,
+scientific-use partition, path containment, and size before rendering it. Its
+card distinguishes brief/package-prepilot eligibility from formal empirical
+and objective-progress eligibility and displays the exact blocker codes. It
+also preserves the negative authority facts: qualification cannot ingest data,
+execute a task, call a provider, or use a GPU. This prevents an already
+downloaded prompt collection from looking like an executable benchmark merely
+because its acquisition step completed.
+
 Every evaluation card is derived from a project-owned `EVALUATION.json` whose
 five bound artifacts are rehashed before rendering. Any record, manifest,
 resource corpus, gate, critic, or cell-plan drift fails the project surface
@@ -232,9 +243,9 @@ inspection target.
 Next-step entries are capabilities for later intent planning, not controller
 decisions. They can offer progress review, blocker diagnosis, comparison of the
 latest two registered runs, paper-evidence review, review of a declared next
-gate, a registered acquisition decision, or a registered evaluation landscape
-only when their required project records exist. They contain no command or
-execution authority.
+gate, a registered acquisition decision or qualification, or a registered
+evaluation landscape only when their required project records exist. They
+contain no command or execution authority.
 
 ### Research synthesis as generated visual content
 

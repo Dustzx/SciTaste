@@ -164,6 +164,23 @@ all six roles under `outputs/resources/projects/`. The local hash is
 `47f9c0e0...`, not the `8e95e5f6...` frozen in the older GPU proposal, so the
 formal plan remains blocked against silent checkpoint substitution.
 
+The first approved benchmark-source acquisition has now completed without
+model or GPU use. Ten MLR-Bench workshop briefs were atomically downloaded from
+the pinned repository commit, and a new cohort inspector revalidates request,
+approval, receipt, task set, files, sizes, and hashes before classifying their
+scientific uses. The actual 31,345-byte cohort is ready for stagewise and
+brief-only package prepilots, but formal empirical and objective-progress use is
+blocked because every item lacks frozen runtime assets and objective scores,
+the executable signal is unverified, and held-out overlap remains pending. This
+negative qualification replaces the earlier assumption that task acquisition
+alone would make the 100-trajectory v6 matrix suitable for launch.
+
+The central estimand is correspondingly narrowed: randomized, matched-model
+SciTaste Native ablations supply the causal Taste effect; accepted external
+systems use a separately disclosed best-native, model-confounded lane for
+ecological validity. An executable EXP-Bench/MLRC-Bench-style population remains
+the next data gate before any title-level evidence-validity claim.
+
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without
 interpreting their counts as field prevalence. The newly recovered ICLR 2026

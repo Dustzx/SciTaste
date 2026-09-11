@@ -1264,6 +1264,9 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.acquisitions"), data.counts.acquisition_requests || 0, t("progress.metric.acquisitions_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
+  const acquisitionQualifications = renderAcquisitionQualifications(
+    data.acquisition_qualifications || [],
+  );
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
 
@@ -1683,6 +1686,7 @@ function renderProjectProgress(data) {
   detailContent.className = "progress-evidence-vault-content";
   detailContent.append(
     acquisitions,
+    acquisitionQualifications,
     metrics,
     distribution,
     evaluations,
@@ -1790,6 +1794,117 @@ function renderAcquisitionRequests(items) {
           "authorizes_ingestion",
           "authorizes_execution",
           "no_dataset_file_created",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderAcquisitionQualifications(items) {
+  const section = progressSection(
+    t("progress.qualification.title"),
+    items.length > 0
+      ? t("progress.qualification.subtitle", {count: items.length})
+      : t("progress.qualification.empty"),
+  );
+  if (items.length === 0) {
+    return section;
+  }
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  const stateMap = {
+    "invalid-acquisition": "failed",
+    "brief-only-pilot-candidate": "candidate",
+    "formal-empirical-task-candidate": "observed_completed",
+  };
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.scientific_disposition}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.qualification.cohort"));
+    const title = document.createElement("strong");
+    appendText(title, item.selection_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        stateMap[item.scientific_disposition] || "unknown",
+        t(`progress.qualification.status.${item.scientific_disposition}`),
+      ),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const value of [
+      t("progress.qualification.items", {count: item.task_count}),
+      t("progress.qualification.bytes", {size: formatByteCeiling(item.observed_total_bytes)}),
+      item.ready_for_brief_only_package_prepilot
+        ? t("progress.qualification.brief_ready")
+        : t("progress.qualification.brief_blocked"),
+      item.ready_for_formal_empirical_task_binding
+        ? t("progress.qualification.formal_ready")
+        : t("progress.qualification.formal_blocked"),
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, value);
+      facts.appendChild(fact);
+    }
+
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.qualification.boundary"));
+    const blockers = document.createElement("ul");
+    blockers.className = "acquisition-restrictions";
+    const blockerCodes = [
+      ...item.formal_task_blocker_codes,
+      ...item.objective_progress_blocker_codes,
+    ];
+    for (const code of blockerCodes) {
+      const blocker = document.createElement("li");
+      appendText(blocker, localizedCode(code));
+      blockers.appendChild(blocker);
+    }
+
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "secondary-button acquisition-review";
+    appendText(review, t("progress.qualification.review"));
+    review.addEventListener("click", () => requestCandidateWorkspace(
+      "review-data-acquisition-request",
+    ));
+    card.append(
+      header,
+      facts,
+      boundary,
+      blockers,
+      review,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          request_sha256: item.request_sha256,
+          receipt_sha256: item.receipt_sha256,
+          report_sha256: item.report_sha256,
+          report_file_sha256: item.report_file_sha256,
+          authorizes_ingestion: item.authorizes_ingestion,
+          authorizes_execution: item.authorizes_execution,
+          provider_call_performed: item.provider_call_performed,
+          gpu_work_performed: item.gpu_work_performed,
+        },
+        names: [
+          "request_sha256",
+          "receipt_sha256",
+          "report_sha256",
+          "report_file_sha256",
+          "authorizes_ingestion",
+          "authorizes_execution",
+          "provider_call_performed",
+          "gpu_work_performed",
         ],
       }),
     );

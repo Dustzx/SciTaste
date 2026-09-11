@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Added a post-acquisition cohort inspector that revalidates approved requests,
+  atomic receipts, exact local bytes, licenses, task sets, and scientific-use
+  boundaries. The first real MLR-Bench ten-brief acquisition is correctly
+  eligible for stagewise/package prepilots while remaining blocked for formal
+  empirical and objective-progress claims. Registered qualification reports
+  now appear on the Generation-as-Content project page with their exact
+  readiness partition and blocker codes.
+
 - Shared resources now use a hash-indexed v2 directory rather than only one
   inline catalog. Independent manifests explicitly cover DeepSeek V4.1 Flash,
   Zhipu GLM-5.3-Flash, blocked historical Bailian Qwen3.8-Max, the local 1×3090,

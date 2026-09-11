@@ -1609,8 +1609,8 @@ acquisition, paper mutation, or review self-certification.
 
 ### ADR-053: Acquisition approval and data movement are separate transactions
 
-Status: accepted for bounded source acquisition; the current request remains
-unapproved and unexecuted.
+Status: accepted for bounded source acquisition; the first ten-brief request
+has completed under exact-hash owner approval.
 
 A review-ready source allowlist is not permission to move data, and a signed
 download decision is not permission to ingest or execute it. SciTaste therefore
@@ -1708,3 +1708,33 @@ its source and record are immutable and bound to the catalog semantic hash.
 A later allocation layer must atomically lease devices or API quota, reject
 overlapping reservations, bind the lease into a project proposal, and reconcile
 measured usage back to both the shared resource and project ledgers.
+
+### ADR-056: Acquired starting briefs do not imply executable research tasks
+
+Status: accepted after the first real MLR-Bench source acquisition.
+
+An atomic download receipt proves byte identity and authorization scope. It
+does not prove that the content supplies an empirical environment, objective
+score, held-out population, or evidence-valid idea-to-paper endpoint. SciTaste
+therefore adds a post-acquisition cohort inspector between movement and
+task-package admission.
+
+The inspector closes the task set over the selection, approved request, and
+receipt; rehashes every local file; rejects missing, extra, symlinked, resized,
+or modified bytes; and partitions each task's allowed scientific uses. It
+distinguishes stagewise idea/proposal pilots, brief-only package prepilots,
+formal empirical trajectories, and objective-progress tasks. Readiness in one
+partition cannot satisfy another, and the report cannot authorize ingestion,
+execution, provider calls, or GPU work.
+
+The first real cohort validates this boundary. All ten official MLR-Bench
+workshop briefs are exact and licensed as starting inputs, but none includes
+runtime assets or a fixed objective score. They remain useful for low-cost
+rubric and package-review calibration while being structurally barred from the
+paper's empirical evidence-validity and objective-progress claims.
+
+A project may register the self-hashed qualification as a canonical run
+artifact. The Generation-as-Content receiver revalidates that artifact and
+shows the allowed-use partition and blockers separately from the earlier
+download-approval card. Rendering grants no new authority and cannot relabel a
+brief-only cohort as a formal task population.

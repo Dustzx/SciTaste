@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from scitaste.evaluation import (
+    AcquiredCohortFinding,
+    AcquiredTaskCohortReport,
+    AcquiredTaskQualification,
+    AcquiredTaskUse,
+    ReadinessStatus,
+    TaskSignalKind,
     inspect_dataset_acquisition_request,
     load_dataset_acquisition_request,
 )
@@ -69,6 +76,70 @@ def _progress(runtime: ProjectRuntime):
         if item.renderer == TrustedComponent.PROJECT_PROGRESS_BOARD
     )
     return document, component.data
+
+
+def _brief_only_cohort_report() -> AcquiredTaskCohortReport:
+    task = AcquiredTaskQualification(
+        task_id="brief-one",
+        source_group="workshop-brief",
+        source_url="https://example.test/brief-one.md",
+        source_revision="1" * 40,
+        relative_path="brief-one.md",
+        byte_size=42,
+        sha256="1" * 64,
+        license_identifier="MIT",
+        license_status=ReadinessStatus.VERIFIED,
+        signal_kind=TaskSignalKind.RESEARCH_PACKAGE_REVIEW,
+        objective_task_score_available=False,
+        runtime_assets_included=False,
+        exact_bytes_verified=True,
+        eligible_uses=(
+            AcquiredTaskUse.STAGEWISE_IDEA_PROPOSAL,
+            AcquiredTaskUse.BRIEF_ONLY_PACKAGE_PREPILOT,
+        ),
+        blocked_uses=(
+            AcquiredTaskUse.EMPIRICAL_IDEA_TO_PAPER,
+            AcquiredTaskUse.OBJECTIVE_PROGRESS,
+        ),
+    )
+    return AcquiredTaskCohortReport(
+        selection_id="brief-only-selection",
+        selection_file_sha256="2" * 64,
+        selection_proposal_sha256="3" * 64,
+        request_id="brief-only-request",
+        request_file_sha256="4" * 64,
+        request_sha256="5" * 64,
+        receipt_file_sha256="6" * 64,
+        receipt_sha256="7" * 64,
+        task_count=1,
+        observed_total_bytes=42,
+        exact_task_set_verified=True,
+        exact_bytes_verified=True,
+        all_starting_input_licenses_verified=True,
+        package_review_signal_declared=True,
+        runtime_assets_present=False,
+        objective_scores_present=False,
+        held_out_audit_status=ReadinessStatus.PENDING,
+        ready_for_stagewise_pilot=True,
+        ready_for_brief_only_package_prepilot=True,
+        ready_for_formal_empirical_task_binding=False,
+        ready_for_objective_progress_binding=False,
+        scientific_disposition="brief-only-pilot-candidate",
+        tasks=(task,),
+        integrity_blockers=(),
+        formal_task_blockers=(
+            AcquiredCohortFinding(
+                code="runtime-assets-absent",
+                message="the acquired brief has no frozen runtime assets",
+            ),
+        ),
+        objective_progress_blockers=(
+            AcquiredCohortFinding(
+                code="objective-score-absent",
+                message="the acquired brief has no objective score",
+            ),
+        ),
+    )
 
 
 def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Path) -> None:
@@ -237,12 +308,14 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
         stage_path="acquisition",
         artifact=artifact,
     )
-    report = inspect_dataset_acquisition_request(
-        load_dataset_acquisition_request(
-            "configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml"
-        ).request,
-        workspace_root=".",
-    )
+    request = load_dataset_acquisition_request(
+        "configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml"
+    ).request
+    for binding in request.evidence:
+        destination = tmp_path / binding.path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(binding.path, destination)
+    report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
     report_path = runtime.projects_root / "progress-project" / artifact
     report_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
 
@@ -300,6 +373,63 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
     invalid["item_count"] += 1
     report_path.write_text(json.dumps(invalid), encoding="utf-8")
     with pytest.raises(ProjectSurfaceChangedError, match="acquisition report is invalid"):
+        _progress(runtime)
+
+
+def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "qualification-run"
+    artifact = f"runs/{run_id}/acquisition_qualification/REPORT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="acquisition_qualification",
+        artifact=artifact,
+    )
+    report = _brief_only_cohort_report()
+    report_path = runtime.projects_root / "progress-project" / artifact
+    report_path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    _, data = _progress(runtime)
+
+    assert data["acquisition_qualifications"] == [
+        {
+            "run_ref_id": data["acquisition_qualifications"][0]["run_ref_id"],
+            "run_id": run_id,
+            "selection_id": report.selection_id,
+            "request_sha256": report.request_sha256,
+            "receipt_sha256": report.receipt_sha256,
+            "report_sha256": report.report_sha256,
+            "report_file_sha256": data["acquisition_qualifications"][0]["report_file_sha256"],
+            "scientific_disposition": "brief-only-pilot-candidate",
+            "task_count": 1,
+            "observed_total_bytes": 42,
+            "exact_task_set_verified": True,
+            "exact_bytes_verified": True,
+            "ready_for_stagewise_pilot": True,
+            "ready_for_brief_only_package_prepilot": True,
+            "ready_for_formal_empirical_task_binding": False,
+            "ready_for_objective_progress_binding": False,
+            "formal_task_blocker_codes": ["runtime-assets-absent"],
+            "objective_progress_blocker_codes": ["objective-score-absent"],
+            "authorizes_ingestion": False,
+            "authorizes_execution": False,
+            "provider_call_performed": False,
+            "gpu_work_performed": False,
+            "support_ref_ids": data["acquisition_qualifications"][0]["support_ref_ids"],
+        }
+    ]
+    candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "review_data_acquisition"
+    )
+    assert candidate["target_ids"] == [report.selection_id]
+
+    invalid = report.model_dump(mode="json")
+    invalid["task_count"] += 1
+    report_path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(ProjectSurfaceChangedError, match="qualification is invalid"):
         _progress(runtime)
 
 

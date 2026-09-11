@@ -20,6 +20,10 @@ from pydantic import (
     model_validator,
 )
 
+from scitaste.evaluation.acquired_cohort import (
+    AcquiredTaskCohortReport,
+    load_acquired_task_cohort_report,
+)
 from scitaste.evaluation.acquisition import AcquisitionGateReport
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.generative_ui.audit import (
@@ -463,6 +467,51 @@ class WorkspaceSurfaceFactory:
             }
         acquisition_rows = list(acquisition_by_request.values())
 
+        qualification_by_selection: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected = _acquired_cohort_report_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_file_sha256 = inspected
+            run_ref = run_refs[run.run_id]
+            qualification_by_selection[report.selection_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "selection_id": report.selection_id,
+                "request_sha256": report.request_sha256,
+                "receipt_sha256": report.receipt_sha256,
+                "report_sha256": report.report_sha256,
+                "scientific_disposition": report.scientific_disposition,
+                "task_count": report.task_count,
+                "observed_total_bytes": report.observed_total_bytes,
+                "exact_task_set_verified": report.exact_task_set_verified,
+                "exact_bytes_verified": report.exact_bytes_verified,
+                "ready_for_stagewise_pilot": report.ready_for_stagewise_pilot,
+                "ready_for_brief_only_package_prepilot": (
+                    report.ready_for_brief_only_package_prepilot
+                ),
+                "ready_for_formal_empirical_task_binding": (
+                    report.ready_for_formal_empirical_task_binding
+                ),
+                "ready_for_objective_progress_binding": (
+                    report.ready_for_objective_progress_binding
+                ),
+                "formal_task_blocker_codes": [item.code for item in report.formal_task_blockers],
+                "objective_progress_blocker_codes": [
+                    item.code for item in report.objective_progress_blockers
+                ],
+                "authorizes_ingestion": report.authorizes_ingestion,
+                "authorizes_execution": report.authorizes_execution,
+                "provider_call_performed": report.provider_call_performed,
+                "gpu_work_performed": report.gpu_work_performed,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+                "report_file_sha256": report_file_sha256,
+            }
+        qualification_rows = list(qualification_by_selection.values())
+
         recent_activity = []
         for run in reversed(snapshot.manifest.runs[-10:]):
             run_ref = run_refs[run.run_id]
@@ -669,7 +718,7 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
-        if acquisition_rows:
+        if acquisition_rows or qualification_rows:
             next_step_candidates.append(
                 {
                     "candidate_id": "review-data-acquisition-request",
@@ -680,10 +729,14 @@ class WorkspaceSurfaceFactory:
                             [
                                 project_ref.evidence_id,
                                 *(item["run_ref_id"] for item in acquisition_rows),
+                                *(item["run_ref_id"] for item in qualification_rows),
                             ]
                         )
                     ),
-                    "target_ids": [item["request_id"] for item in acquisition_rows],
+                    "target_ids": [
+                        *(item["request_id"] for item in acquisition_rows),
+                        *(item["selection_id"] for item in qualification_rows),
+                    ],
                 }
             )
         if attention_rows:
@@ -848,6 +901,7 @@ class WorkspaceSurfaceFactory:
                 "evaluations": evaluation_rows,
                 "evaluation_results": evaluation_result_rows,
                 "acquisitions": acquisition_rows,
+                "acquisition_qualifications": qualification_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,
@@ -1567,6 +1621,30 @@ def _acquisition_report_for_run(
         report = AcquisitionGateReport.model_validate_json(raw)
     except ValidationError as exc:
         raise ProjectSurfaceChangedError("registered acquisition report is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def _acquired_cohort_report_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[AcquiredTaskCohortReport, str] | None:
+    """Read a canonical post-download qualification from its registered run."""
+
+    expected = f"runs/{run.run_id}/acquisition_qualification/REPORT.json"
+    if run.stage_path != "acquisition_qualification" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered acquisition qualification is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered acquisition qualification escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = load_acquired_task_cohort_report(resolved)
+    except (ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered acquisition qualification is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
 
 

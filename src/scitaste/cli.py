@@ -72,6 +72,7 @@ from scitaste.evaluation import (
     EvaluationCriticSuite,
     approve_dataset_acquisition_request,
     compile_evaluation_cell_plan,
+    inspect_acquired_task_cohort,
     inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_dataset_acquisition_request,
@@ -94,6 +95,7 @@ from scitaste.evaluation import (
     publish_project_evaluation,
     publish_project_evaluation_result,
     run_live_direct_agent,
+    save_acquired_task_cohort_report,
     save_acquisition_gate_report,
     save_dataset_acquisition_request,
     save_evaluation_cell_plan,
@@ -1305,6 +1307,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquisition_download)
     acquisition_download.set_defaults(handler=_handle_evaluation_acquisition_download)
+    acquired_cohort = evaluation_commands.add_parser(
+        "acquired-task-cohort",
+        help="Classify acquired benchmark briefs without treating them as executable tasks",
+    )
+    acquired_cohort.add_argument("--selection", type=Path, required=True)
+    acquired_cohort.add_argument("--approved-request", type=Path, required=True)
+    acquired_cohort.add_argument("--receipt", type=Path, required=True)
+    acquired_cohort.add_argument("--workspace-root", type=Path, default=Path("."))
+    acquired_cohort.add_argument("--output", type=Path, default=None)
+    acquired_cohort.add_argument(
+        "--require-brief-pilot-ready",
+        action="store_true",
+        help="return nonzero unless exact acquired briefs support a bounded prepilot",
+    )
+    acquired_cohort.add_argument(
+        "--require-formal-task-ready",
+        action="store_true",
+        help="return nonzero unless empirical assets and held-out evidence support formal binding",
+    )
+    _add_log_level_option(acquired_cohort)
+    acquired_cohort.set_defaults(handler=_handle_evaluation_acquired_task_cohort)
     task_selection = evaluation_commands.add_parser(
         "task-selection",
         help="Inspect an exact metadata-only benchmark task selection",
@@ -3984,6 +4007,24 @@ def _handle_evaluation_acquisition_download(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_acquired_task_cohort(args: argparse.Namespace) -> int:
+    report = inspect_acquired_task_cohort(
+        selection_path=args.selection,
+        approved_request_path=args.approved_request,
+        receipt_path=args.receipt,
+        workspace_root=args.workspace_root,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(save_acquired_task_cohort_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_brief_pilot_ready and not report.ready_for_brief_only_package_prepilot:
+        return 1
+    if args.require_formal_task_ready and not report.ready_for_formal_empirical_task_binding:
+        return 1
     return 0
 
 

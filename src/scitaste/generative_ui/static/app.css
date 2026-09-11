@@ -1132,6 +1132,18 @@ fieldset {
   border-left-color: #247549;
 }
 
+.acquisition-card.status-brief-only-pilot-candidate {
+  border-left-color: #8a7d2d;
+}
+
+.acquisition-card.status-formal-empirical-task-candidate {
+  border-left-color: #247549;
+}
+
+.acquisition-card.status-invalid-acquisition {
+  border-left-color: var(--danger);
+}
+
 .acquisition-card .compact-row-header strong {
   display: block;
   overflow-wrap: anywhere;

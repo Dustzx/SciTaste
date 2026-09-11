@@ -1,0 +1,62 @@
+schema_version: "1.0"
+inventory_id: mlr-bench-ten-brief-acquisition-inventory-v1
+observed_on: 2026-09-12
+project_id: scitaste-self-development
+selection_id: mlr-bench-official-ten-candidate-v2
+request_id: mlr-bench-official-ten-briefs-v1
+request_sha256: f1333432cb0585105ec4d6274e7d78b2d7d0694141256483467887ea6d27cc69
+approved_request_file_sha256: 3acda094339e64d343a55969b68453bf00666d68940ed6edcc2e72bab154e7fc
+receipt_sha256: 96975fdea75cd00c9496bb7625d4045a2a31d005cb4f0a5144f7e0d274e2c3b8
+receipt_file_sha256: b524a4c34bc81fe006692200b97e5f7df4dc3cc18cfc92744da53128f53bca07
+qualification_report_sha256: 5595436d39804f978f6f8678664684b31ef2d437352a8fc17747f86a985d57da
+qualification_report_file_sha256: 5efebda26082b661ec53fd1666ad383ba1b3006ff07b2e890c0bee99f42c24b6
+repository_commit: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+source_host: raw.githubusercontent.com
+item_count: 10
+total_bytes: 31345
+raw_bytes_committed: false
+authorization_scope: downloaded-for-local-qualification-only
+authorizes_ingestion: false
+authorizes_execution: false
+scientific_disposition: brief-only-pilot-candidate
+ready_for_stagewise_pilot: true
+ready_for_brief_only_package_prepilot: true
+ready_for_formal_empirical_task_binding: false
+ready_for_objective_progress_binding: false
+formal_task_blockers:
+  - held-out-audit-pending
+  - runtime-assets-absent
+  - executable-signal-unverified
+objective_progress_blockers:
+  - objective-score-absent
+items:
+  - task_id: iclr2025_bi_align
+    byte_size: 2955
+    sha256: a83c1a24956b7c2136ef4fc39cbbc64c9f041a975ba58fbff3c36ac8cf78f95a
+  - task_id: iclr2025_buildingtrust
+    byte_size: 1798
+    sha256: 12f8807e217cf4e70060f2ba9c317c347523b863392e8c45789ae4c3985f8a7e
+  - task_id: iclr2025_data_problems
+    byte_size: 3285
+    sha256: e6d7e7a6ce51f15779510620a0ab7ea1f72e32b0ae5267497cf158499c1eb3c1
+  - task_id: iclr2025_dl4c
+    byte_size: 2186
+    sha256: 5546e6883672b46cf898f080412cb236209de2cf2ff5589f6345c833de7e028c
+  - task_id: iclr2025_mldpr
+    byte_size: 2495
+    sha256: 8dfbb19f3e3112ac09dd8c13a16a411636f22fcdd9cdc1f39bf2ca43fb32bd29
+  - task_id: iclr2025_question
+    byte_size: 1812
+    sha256: 72b42429b5b047dd0c52d5ad2d5100915df5e989d5a02f20671b0707c58f20c5
+  - task_id: iclr2025_scope
+    byte_size: 3243
+    sha256: 52797661b6777df1f7582757132a815f02af5ead3952723e68c064d843c6401d
+  - task_id: iclr2025_scsl
+    byte_size: 6510
+    sha256: db41c531ba6a5fd94f1e493cc201ee7328141c707910aebccfebbd8c3d05ed0c
+  - task_id: iclr2025_verifai
+    byte_size: 3846
+    sha256: 3e88aec8f4053271d65922182c1c48252c4c1eafba01cf924e738dd840b773eb
+  - task_id: iclr2025_wsl
+    byte_size: 3215
+    sha256: ffa1c5d074bfe0b62992826fb4825da5eab2828b09e1e97fe9f8054f52f60a0f

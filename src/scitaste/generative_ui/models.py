@@ -945,6 +945,66 @@ class ProjectProgressAcquisitionItem(BaseModel):
         return self
 
 
+class ProjectProgressAcquisitionQualificationItem(BaseModel):
+    """One content-bound statement about an acquired cohort's valid uses."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    selection_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_sha256: Sha256
+    receipt_sha256: Sha256
+    report_sha256: Sha256
+    report_file_sha256: Sha256
+    scientific_disposition: Literal[
+        "invalid-acquisition",
+        "brief-only-pilot-candidate",
+        "formal-empirical-task-candidate",
+    ]
+    task_count: int = Field(gt=0)
+    observed_total_bytes: int = Field(ge=0)
+    exact_task_set_verified: bool
+    exact_bytes_verified: bool
+    ready_for_stagewise_pilot: bool
+    ready_for_brief_only_package_prepilot: bool
+    ready_for_formal_empirical_task_binding: bool
+    ready_for_objective_progress_binding: bool
+    formal_task_blocker_codes: tuple[SafeIdentifier, ...] = ()
+    objective_progress_blocker_codes: tuple[SafeIdentifier, ...] = ()
+    authorizes_ingestion: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    provider_call_performed: Literal[False] = False
+    gpu_work_performed: Literal[False] = False
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def qualification_state_is_closed(self) -> ProjectProgressAcquisitionQualificationItem:
+        if self.scientific_disposition == "invalid-acquisition" and self.exact_bytes_verified:
+            raise ValueError("invalid acquisition qualification cannot claim exact bytes")
+        if self.scientific_disposition == "formal-empirical-task-candidate" and not (
+            self.ready_for_formal_empirical_task_binding
+        ):
+            raise ValueError("formal acquisition disposition requires formal task readiness")
+        if self.ready_for_formal_empirical_task_binding and not (
+            self.ready_for_brief_only_package_prepilot
+        ):
+            raise ValueError("formal task readiness requires brief-package readiness")
+        if self.ready_for_objective_progress_binding and not (
+            self.ready_for_formal_empirical_task_binding
+        ):
+            raise ValueError("objective readiness requires formal empirical readiness")
+        if self.ready_for_formal_empirical_task_binding and self.formal_task_blocker_codes:
+            raise ValueError("formally ready acquisition cannot retain formal blockers")
+        if self.ready_for_objective_progress_binding and self.objective_progress_blocker_codes:
+            raise ValueError("objective-ready acquisition cannot retain objective blockers")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("project acquisition qualification must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project acquisition qualification references must be unique")
+        return self
+
+
 class ProjectProgressCandidateItem(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
@@ -1107,6 +1167,7 @@ class ProjectProgressBoardData(BaseModel):
     evaluations: tuple[ProjectProgressEvaluationItem, ...] = ()
     evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
     acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
+    acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -1161,6 +1222,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.evaluations,
             *self.evaluation_results,
             *self.acquisitions,
+            *self.acquisition_qualifications,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,
@@ -1188,6 +1250,10 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress acquisition request IDs must be unique")
         if self.counts.acquisition_requests != len(self.acquisitions):
             raise ValueError("project progress acquisition count must match its rows")
+
+        qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
+        if len(qualification_ids) != len(set(qualification_ids)):
+            raise ValueError("project progress acquisition qualification IDs must be unique")
 
         stages = [item.stage for item in self.stages]
         if stages != sorted(set(stages)):

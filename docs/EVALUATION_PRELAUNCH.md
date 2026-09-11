@@ -327,14 +327,15 @@ protocol.
 
 ## Remaining work before the first approved block
 
-1. Freeze a source-disjoint MLR-Bench package-review pilot subset with starting
-   brief bytes, licenses, source groups, runtime acquisition rules, and output
-   package hashes. Separately qualify MLRC-Bench or another fixed-scorer source
-   before proposing any objective-progress lane.
-2. Choose a common backbone actually supported across at least two accepted
-   external methods, or preregister a separately labelled best-native-system
-   design with model effects acknowledged; create a new immutable proposal for
-   that decision. Then prepare exact direct-agent invocations and implement only
+1. Select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
+   exact acquired inputs; freeze output package hashes, reviewer blinding, and
+   runtime policy. Do not promote these broad prompts to empirical tasks.
+   Separately qualify EXP-Bench, MLRC-Bench, or another fixed executable source
+   before proposing any evidence-valid or objective-progress lane.
+2. Materialize the v2 claim architecture as two proposals: a matched
+   within-SciTaste causal lane and a separately labelled best-native external
+   lane with model effects acknowledged. Then prepare exact direct-agent
+   invocations and implement only
    adapters whose static contracts pass. Unavailable systems remain unavailable
    rather than receiving a pseudo-implementation.
 3. Instantiate the package-preference protocol with common tools, repair
