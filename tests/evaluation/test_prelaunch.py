@@ -33,6 +33,12 @@ from scitaste.evaluation.resources import ResourceGateStatus
 
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
 V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml")
+CURRENT_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v3.yaml")
+CURRENT_MANIFEST_PATHS = (
+    Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
+    Path("configs/evaluation/prelaunch/zhipu_glm53flash_pilot_v2.yaml"),
+    Path("configs/evaluation/prelaunch/qwen3vl2b_8x3090_robustness_v2.yaml"),
+)
 HASH = "a" * 64
 COMMIT = "b" * 40
 
@@ -315,6 +321,46 @@ def test_repository_v41_proposal_preserves_new_identity_as_a_new_protocol() -> N
     assert manifest.lanes[0].planned_cells == 50
     assert manifest.lanes[0].api_model.max_total_tokens == 15_000_000
     assert manifest.approval.approved is False
+
+
+def test_current_proposals_bind_analysis_integrity_and_keep_execution_closed() -> None:
+    corpus = load_external_resource_corpus(CURRENT_CORPUS_PATH).corpus
+    expected_cells = {
+        "deepseek-v41flash-pilot-v3": 100,
+        "zhipu-glm53flash-pilot-v2": 100,
+        "qwen3vl2b-8x3090-robustness-v2": 24,
+    }
+
+    for path in CURRENT_MANIFEST_PATHS:
+        manifest = load_prelaunch_manifest(path).manifest
+        gate = inspect_prelaunch_manifest(
+            manifest,
+            corpus,
+            observed_source_commit=manifest.source_commit,
+            source_tree_clean=True,
+        )
+        review = EvaluationCriticSuite().review(manifest, corpus, gate, evidence_root=".")
+
+        assert gate.planned_cells == expected_cells[manifest.manifest_id]
+        assert manifest.analysis is not None
+        assert manifest.integrity is not None
+        assert manifest.approval.approved is False
+        assert gate.execution_authorized is False
+        assert review.authorizes_execution is False
+        assert "statistics:content_bound_analysis" not in review.blocking_codes
+        assert "statistics:independent_replication" not in review.blocking_codes
+        assert "integrity:frozen_temporal_integrity" not in review.blocking_codes
+
+
+def test_current_api_headline_set_uses_accepted_methods_not_preprint_substitutes() -> None:
+    accepted = {"mlr-agent", "agent-laboratory", "ai-researcher"}
+    for path in CURRENT_MANIFEST_PATHS[:2]:
+        manifest = load_prelaunch_manifest(path).manifest
+        systems = {system.system_id for system in manifest.systems}
+
+        assert systems == {"scitaste-native", "direct-agent", *accepted}
+        assert systems.isdisjoint({"ai-scientist-v2", "autoresearchclaw"})
+        assert sum(system.role is SystemRole.METHOD_COMPARATOR for system in manifest.systems) == 3
 
 
 def test_critics_expose_all_five_domains_without_authorizing_execution() -> None:

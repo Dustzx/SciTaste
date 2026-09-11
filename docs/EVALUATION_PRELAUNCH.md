@@ -8,8 +8,8 @@ SciTaste keeps three experimental objects separate:
 
 | Object | Examples | What it determines |
 |---|---|---|
-| research method/system | SciTaste Native, MLR-Agent, AI Scientist-v2, AutoResearchClaw, direct agent | who is compared |
-| benchmark/task source | MLR-Bench, EXP-Bench | where and on what evidence the systems are evaluated |
+| research method/system | SciTaste Native, accepted MLR-Agent, Agent Laboratory, AI-Researcher, TinyScientist, and the direct agent; preprints only in sensitivity analysis | who is compared |
+| benchmark/task source | MLR-Bench, MLRC-Bench, EXP-Bench, HeurekaBench, AAAR-1.0 | where and on what evidence the systems are evaluated |
 | review/judge protocol | blinded experts, adjudication, calibrated model judge | how the outputs are judged |
 
 A Benchmark repository cannot satisfy a method-comparator gate, and a method
@@ -24,18 +24,21 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource currently named | Planned first block | Current state |
 |---|---|---|---:|---|
-| `formal-v4-prepilot` | API matched-backbone feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | current scope proposal; blocked on task qualification, adapters, replication, analysis/integrity contracts, reviewers, and approval |
+| `formal-v4-accepted-method-prepilot` | API matched-backbone feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | current no-run proposal; analysis/integrity are bound, while task qualification, three accepted-system adapters, reviewers, clean executable checkout, and approval remain blocked |
+| `formal-v4-prepilot` | historical API scope proposal | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | immutable history; included preprint comparators and lacked replication plus analysis/integrity contracts |
 | `formal-v3-prepilot` | historical API proposal | retired DeepSeek V4 API identity, temporarily compatibility-routed by the provider | 5 system × task × seed cells | immutable history; do not launch or edit into V4.1 evidence |
-| `formal-v2-prepilot` | API matched-backbone feasibility | Zhipu `glm-5.3-flash`, documented version `GLM-5.3-Flash` | 5 system × task × seed cells | official identity verified; blocked on dated exact pricing, authenticated served revision, tasks, adapters, reviewers, and approval |
-| `robustness-v1-prepilot` | local small-model robustness | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablation × task × seed cells | blocked on ablation adapters, task subset, remote inventory/checkpoint, reviewers, and approval |
+| `formal-v2-accepted-method-prepilot` | API matched-backbone feasibility | Zhipu `glm-5.3-flash`, documented version `GLM-5.3-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | separate current no-run proposal; additionally blocked on dated exact pricing and authenticated served identity |
+| `formal-v2-prepilot` | historical Zhipu scope proposal | Zhipu `glm-5.3-flash` | 5 system × task × seed cells | immutable history; do not edit into the accepted-method proposal |
+| `robustness-v2-multitask-prepilot` | local small-model robustness | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | current no-run proposal; blocked on real ablation bindings, task qualification, remote inventory/checkpoint, reviewers, and approval |
+| `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
 DeepSeek released V4.1 Flash on 2026-09-10. Its official callable identifier is
 now `deepseek-flash`; legacy V4 identifiers are temporarily routed to the new
-model. SciTaste therefore created `formal-v4-prepilot` rather than rewriting the
-V4 proposal. The new proposal records the documented V4.1 identity and the
-published peak prices as conservative cost bounds. Because `deepseek-flash` is
-a rolling alias, an authenticated identity observation is still mandatory
-immediately before an approved call. See the official [release
+model. SciTaste therefore retains `formal-v4-prepilot` as history and creates
+`formal-v4-accepted-method-prepilot` for the accepted-system, two-seed design.
+The new proposal records the documented V4.1 identity and published peak prices
+as conservative cost bounds. Because `deepseek-flash` is a rolling alias, an
+authenticated identity observation is still mandatory immediately before an approved call. See the official [release
 notice](https://deepseek.com/news/deepseek-v4-1-flash/) and [dated model and
 pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
@@ -53,16 +56,19 @@ model. The remote machine has not been contacted, so GPU count, free storage,
 runtime compatibility, and remote checkpoint presence remain pending. The 2B
 model is a robustness condition, not a replacement for a frontier API backbone.
 
-The V4.1 proposal now names the exact ten-task MLR-Bench Appendix A population
-used by the accepted benchmark for experimentation, writing, and end-to-end
-evaluation. It contains seven Trustworthy AI, two LLM/VLM, and one ML Theory
-task. This preserves direct comparability but is not a broad field sample. The
-metadata-only selection is tracked in
+The current V4.1 and GLM-5.3-Flash proposals name the same exact ten-task
+MLR-Bench Appendix A candidate population used by the accepted benchmark for
+experimentation, writing, and end-to-end evaluation. It contains seven
+Trustworthy AI, two LLM/VLM, and one ML Theory task. This preserves direct
+comparability but is not a broad field sample. The metadata-only selection is tracked in
 `research/data/mlr_bench_official_ten_candidate_v1.yaml`; its task bytes are not
 present, its upstream licenses and executable signals remain pending, and it
-authorizes neither download nor execution. One seed yields a scope/preflight
-block, not a variance estimate; the statistics critic therefore continues to
-block author review until a multi-seed pilot is frozen.
+authorizes neither download nor execution. Two declared seeds remove the
+one-seed design defect, but do not make the tasks or systems eligible. The
+content-bound governance protocol at
+`research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md` now freezes
+the pilot estimand, aggregation, uncertainty, task-freeze, failure, repair,
+leakage, judge, provider-separation, and approval rules.
 
 ## Machine gate
 
@@ -70,8 +76,8 @@ Inspect any proposal without provider or GPU access:
 
 ```bash
 .venv/bin/scitaste evaluation prelaunch \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v3.yaml \
   --source-root /path/to/exact-clean-executable-checkout \
   --evidence-root /path/to/proposal-and-protocol-checkout
 ```
@@ -98,9 +104,9 @@ it as its current experiment plan:
 ```bash
 .venv/bin/scitaste project evaluation register-prelaunch \
   --project-id scitaste-self-development \
-  --evaluation-id deepseek-v41-prepilot \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
+  --evaluation-id deepseek-v41-accepted-prepilot-v3 \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v3.yaml \
   --source-root . --evidence-root . \
   --expected-revision <current-project-revision> --select \
   --outputs-root outputs
@@ -185,7 +191,7 @@ without preparing or executing a launcher:
 
 ```bash
 .venv/bin/scitaste evaluation cell-plan \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml \
   --output /tmp/deepseek-v41-cell-plan.json
 ```
 
@@ -193,15 +199,15 @@ The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. For the current V4.1
-proposal it produces all 50 intended cells, with zero ready for launch
-preparation; this makes the gap between a YAML cell count and an executable
-cross-framework experiment explicit.
+provider call, GPU work, or task download occurred. The current v3 proposal
+produces 100 intended two-seed cells; none is launch-ready while task and
+accepted-system adapter gates remain open. This makes the gap between a YAML
+cell count and an executable cross-framework experiment explicit.
 
 The `max_output_tokens_per_call` values in these proposals are per-experiment
-ceilings, not a global SciTaste limit. The V4.1 scope proposal reserves 32,768
+ceilings, not a global SciTaste limit. The current V4.1 proposal reserves 32,768
 output tokens per call, 1,500 requests, and fifteen million total tokens across
-all 50 cells. These are ceilings rather than targets and still require a
+all 100 candidate cells. These are ceilings rather than targets and still require a
 pilot-informed adequacy check. Any change creates new proposal bytes and needs a
 new hash-bound approval.
 
@@ -244,8 +250,9 @@ protocol.
 2. Prepare and approve exact direct-agent invocations, and implement the real
    external-system adapters; unavailable systems remain unavailable rather than
    receiving a pseudo-implementation.
-3. Freeze matched tools, starting information, repair policy, telemetry,
-   failure handling, and statistical analysis.
+3. Instantiate the frozen governance protocol with task-specific starting
+   anchors, failure floors, common tools, repair budget, telemetry, and the
+   later pilot-informed formal power analysis.
 4. Secure the blinded expert rubric, reviewers, conflict checks, and
    adjudication path.
 5. For Zhipu, resolve exact dated pricing and record the authenticated served

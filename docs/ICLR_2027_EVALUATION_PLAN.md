@@ -123,7 +123,11 @@ negative controls so that gains cannot be attributed merely to extra context.
 4. **Agent Laboratory**: the accepted Findings of EMNLP 2025 system, if its
    MIT-licensed pinned implementation passes the same matched-task and telemetry
    gates.
-5. **SciTaste Native**: the first-party controller, state, native executor, and
+5. **TinyScientist**: the accepted EMNLP 2025 system-demonstration framework,
+   if its exact code/license identity and an unchanged-core matched-task adapter
+   pass. Its accepted status makes it a candidate, not an automatically usable
+   baseline.
+6. **SciTaste Native**: the first-party controller, state, native executor, and
    publication path, with no AutoResearchClaw runtime dependency.
 
 At least two **accepted archival** independent external research systems, in

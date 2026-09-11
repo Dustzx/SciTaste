@@ -1,0 +1,230 @@
+schema_version: "1.0"
+manifest_id: zhipu-glm53flash-pilot-v2
+protocol_id: formal-v2-accepted-method-prepilot
+protocol_version: "2.0"
+study_scope: pilot
+scientific_question: Does SciTaste Native improve held-out objective research progress against real accepted AutoResearch systems under a matched GLM-5.3-Flash backbone and resource budget?
+claim_allowed: A completed clean block may establish provider-specific adapter feasibility and estimate task-by-seed pilot variance only.
+claim_forbidden: This proposal cannot modify Bailian formal-v1, substitute another GLM model, pool with DeepSeek, or establish comparative effectiveness.
+source_commit: d1bcdf1976c4519d6f4f3da887f4923c8c1d254b
+require_clean_tree: true
+resource_corpus_sha256: 10819f44436f555f7e0d5dcc435b8a949120f8ab721fd87880266d0a4ec2a813
+systems:
+  - system_id: scitaste-native
+    role: scitaste
+    implementation_ref: scitaste@d1bcdf1976c4519d6f4f3da887f4923c8c1d254b
+    availability: verified
+    real_implementation: true
+  - system_id: direct-agent
+    role: control
+    implementation_ref: scitaste-direct-agent@603195a6c37bacd7009ed9402cbd1eba4d9c71db
+    availability: verified
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/adapters/direct_agent_mlr_v1.yaml
+    adapter_preflight_sha256: 3450153c30d8c4832c62008ae03fe4a929021158675503091e83408c3e3bbd43
+  - system_id: mlr-agent
+    role: method_comparator
+    implementation_ref: mlr-agent@f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    external_resource_id: mlr-agent
+    availability: pending
+    real_implementation: true
+  - system_id: agent-laboratory
+    role: method_comparator
+    implementation_ref: agent-laboratory@d9017d90e329112d2a80b7712f37ee9094d2cd27
+    external_resource_id: agent-laboratory
+    availability: pending
+    real_implementation: true
+  - system_id: ai-researcher
+    role: method_comparator
+    implementation_ref: ai-researcher@f9a6f8480860c193afff600eeffe3defcee8a978
+    external_resource_id: ai-researcher
+    availability: pending
+    real_implementation: true
+tasks:
+  - task_id: iclr2025_bi_align
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_buildingtrust
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_data_problems
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_dl4c
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_mldpr
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_question
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_scope
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_scsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_verifai
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+  - task_id: iclr2025_wsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v1.yaml
+    asset_manifest_sha256: 8055563cde68a8a85dcc55a798b71e000661b74ae40552652e295e9d4926282f
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+lanes:
+  - lane_id: zhipu-glm53flash-api
+    kind: api_only
+    scientific_role: matched_backbone
+    system_ids:
+      - scitaste-native
+      - direct-agent
+      - mlr-agent
+      - agent-laboratory
+      - ai-researcher
+    task_ids:
+      - iclr2025_bi_align
+      - iclr2025_buildingtrust
+      - iclr2025_data_problems
+      - iclr2025_dl4c
+      - iclr2025_mldpr
+      - iclr2025_question
+      - iclr2025_scope
+      - iclr2025_scsl
+      - iclr2025_verifai
+      - iclr2025_wsl
+    seeds: [7, 19]
+    repetitions: 1
+    planned_cells: 100
+    api_model:
+      provider_id: zhipu
+      endpoint: https://open.bigmodel.cn/api/paas/v4/chat/completions
+      interface: openai-chat-completions
+      model_id: glm-5.3-flash
+      model_revision: GLM-5.3-Flash
+      rolling_alias: true
+      identity_source_url: https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash
+      identity_status: verified
+      api_key_env: ZHIPU_API_KEY
+      max_input_tokens_per_call: 100000
+      max_output_tokens_per_call: 32768
+      max_requests: 1500
+      max_total_tokens: 15000000
+      max_cost: 100.0
+      pricing:
+        currency: CNY
+        as_of: 2026-09-11
+        source_url: https://open.bigmodel.cn/pricing
+        input_cache_hit_per_million: null
+        input_cache_miss_per_million: 0.0
+        output_per_million: 0.0
+        status: blocked
+    gpu_resource: null
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 20.0
+retention:
+  output_root: outputs/projects/scitaste-eval-formal-v2-accepted-prepilot
+  archive_root: archives/scitaste-eval-formal-v2-accepted-prepilot
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: Task-normalized final objective progress with failed or invalid cells assigned the preregistered task floor.
+  estimand: Equally task-weighted paired mean difference between SciTaste Native and the strongest admitted accepted external method within each matched task-by-seed block; pilot use is variance estimation only.
+  analysis_unit: One matched task-by-seed block with every preregistered system retained intention-to-run.
+  aggregation_method: Average seeds within task and then average tasks equally; report direct and each-system contrasts separately with Holm correction.
+  uncertainty_method: Task-stratified paired bootstrap 95 percent interval plus paired sign-flip test when the admitted task count permits.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+integrity:
+  preregistration_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  preregistration_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+  task_freeze_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  task_freeze_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+  failure_policy_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  failure_policy_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+  repair_policy_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  repair_policy_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+  leakage_audit_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  leakage_audit_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+  judge_protocol_ref: docs/research/protocols/AUTORESEARCH_MATCHED_PREPILOT_GOVERNANCE_V1.md
+  judge_protocol_sha256: c408ee0ead024b5232f85bee89d2d0af781506e78b74a37635170c67d3842339
+launch_order: [zhipu-glm53flash-api]
+stop_rules:
+  - Stop before the first paid call unless an authenticated response records the official glm-5.3-flash callable and served identity.
+  - Stop until dated input, cache, and output pricing is recorded from an official source; relative-price claims and zero placeholders are not prices.
+  - Stop unless at least two accepted external method systems pass unchanged-core adapter, license, task-equivalence, telemetry, sandbox, artifact, and failure-resume gates.
+  - Stop the complete matched block if any system changes task semantics, tools, starting evidence, repair policy, or resource ceilings.
+  - Stop after one clean block and request a second approval before any scale-out.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null
