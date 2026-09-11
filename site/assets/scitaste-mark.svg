@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">SciTaste mark</title>
+  <desc id="desc">Several research paths meet at a compass and one evidence-backed path continues.</desc>
+  <g fill="none" stroke="#a65d2e" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 17h8c6 0 8 10 16 15" stroke-width="2.6"/>
+    <path d="M8 32h24" stroke-width="2.6"/>
+    <path d="M8 47h8c6 0 8-10 16-15" stroke-width="2.6"/>
+    <circle cx="32" cy="32" r="5.5" stroke-width="2.6"/>
+    <path d="M35.8 28.2 48 16" stroke-width="3.2"/>
+    <path d="m44.5 16 3.5 0 0 3.5" stroke-width="2.6"/>
+    <circle cx="8" cy="17" r="2.2" fill="#fffaf3" stroke-width="2.2"/>
+    <circle cx="8" cy="32" r="2.2" fill="#fffaf3" stroke-width="2.2"/>
+    <circle cx="8" cy="47" r="2.2" fill="#fffaf3" stroke-width="2.2"/>
+  </g>
+</svg>

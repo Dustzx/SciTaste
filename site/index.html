@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="SciTaste is an independent autonomous-research system that turns scientific taste into explicit, evidence-bound research decisions."
+    >
+    <meta name="theme-color" content="#fbfaf7">
+    <title>SciTaste — Scientific Taste for Autonomous Research</title>
+    <link rel="icon" href="assets/scitaste-mark.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <div class="nav-shell">
+        <a class="brand" href="#top" aria-label="SciTaste home">
+          <img src="assets/scitaste-mark.svg" alt="" width="30" height="30">
+          <span>SciTaste</span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+          <span class="sr-only">Toggle navigation</span>
+          <span></span><span></span>
+        </button>
+        <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+          <a href="#taste">Taste</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#interface">Interface</a>
+          <a href="#research">Research</a>
+          <a class="nav-github" href="https://github.com/Dustzx/SciTaste">GitHub ↗</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section id="top" class="hero section-shell">
+        <div class="hero-art reveal">
+          <img
+            src="assets/scitaste-lineage.webp"
+            width="1472"
+            height="600"
+            alt="Evidence sources converge at a scientific compass, then continue through experiment, paper, and review."
+          >
+        </div>
+        <p class="eyebrow reveal">Open-source research system · Research preview</p>
+        <h1 class="reveal">Autonomous research needs judgment, not just generation.</h1>
+        <p class="hero-copy reveal">
+          SciTaste turns scientific taste into explicit research decisions: what to do next,
+          why it is worth doing, what evidence could change course, and when to stop.
+        </p>
+        <div class="hero-actions reveal">
+          <a class="button button-primary" href="#quickstart">Get started</a>
+          <a class="button" href="https://github.com/Dustzx/SciTaste">View source</a>
+          <a class="text-link" href="#research">Research status <span>→</span></a>
+        </div>
+        <ul class="hero-facts reveal" aria-label="Project facts">
+          <li>Independent native runtime</li>
+          <li>Offline-first</li>
+          <li>Python 3.11+</li>
+          <li>MIT licensed</li>
+        </ul>
+      </section>
+
+      <div class="section-rule" aria-hidden="true"></div>
+
+      <section id="taste" class="page-section section-shell">
+        <div class="section-intro reveal">
+          <p class="eyebrow">Scientific Taste</p>
+          <h2>Quality becomes a decision policy.</h2>
+          <p>
+            High-quality papers, reviews, revisions, and outcomes are not treated as passages
+            to imitate. SciTaste separates factual knowledge from decision precedent, then uses
+            verified Taste Cases to judge candidate actions against evidence, uncertainty,
+            scientific value, and remaining budget.
+          </p>
+        </div>
+
+        <div class="taste-layout">
+          <div class="taste-map reveal" aria-label="Scientific Taste decision map">
+            <div class="source-stack">
+              <span>papers</span><span>reviews</span><span>revisions</span>
+            </div>
+            <div class="map-arrow" aria-hidden="true">→</div>
+            <div class="map-node">
+              <small>abstract</small>
+              <strong>Taste cases</strong>
+              <span>decision · context · outcome</span>
+            </div>
+            <div class="map-arrow" aria-hidden="true">→</div>
+            <div class="map-node map-node-dark">
+              <small>rank</small>
+              <strong>Next action</strong>
+              <span>value · evidence · cost</span>
+            </div>
+          </div>
+
+          <dl class="taste-criteria reveal">
+            <div><dt>Scientific value</dt><dd>Will the action materially improve the research?</dd></div>
+            <div><dt>Information gain</dt><dd>Which uncertainty or failure mode can it resolve?</dd></div>
+            <div><dt>Precedent</dt><dd>What verified decisions transfer to this stage and context?</dd></div>
+            <div><dt>Feasibility</dt><dd>Does it fit the evidence, time, compute, and API budget?</dd></div>
+          </dl>
+        </div>
+
+        <div class="innovation-grid">
+          <article class="innovation-card reveal">
+            <span class="card-index">01</span>
+            <h3>Scientific Taste</h3>
+            <p>Decision intelligence for selecting, revising, pivoting, or stopping research.</p>
+            <a href="https://github.com/Dustzx/SciTaste/blob/main/docs/INNOVATION_MAP.md">Read the concept →</a>
+          </article>
+          <article class="innovation-card reveal">
+            <span class="card-index">02</span>
+            <h3>Generation as Content</h3>
+            <p>Evidence-bound interfaces generated around the question, project, and current state.</p>
+            <a href="https://github.com/Dustzx/SciTaste/blob/main/docs/GENERATIVE_UI.md">Explore the interface →</a>
+          </article>
+          <article class="innovation-card reveal">
+            <span class="card-index">03</span>
+            <h3>Tool Intelligence</h3>
+            <p>Bounded model nodes make rigid tools adaptive without inheriting execution authority.</p>
+            <a href="https://github.com/Dustzx/SciTaste/blob/main/docs/TOOL_INTELLIGENCE.md">Inspect the boundary →</a>
+          </article>
+        </div>
+      </section>
+
+      <div class="section-rule" aria-hidden="true"></div>
+
+      <section id="workflow" class="page-section section-shell">
+        <div class="section-intro reveal">
+          <p class="eyebrow">One nonlinear research state</p>
+          <h2>From a question to a reviewed paper—and back when evidence demands it.</h2>
+        </div>
+
+        <div class="workflow-rail reveal" aria-label="SciTaste research workflow">
+          <article>
+            <span>01</span>
+            <h3>Discover</h3>
+            <p>Landscape, hypothesis, diagnostic probe, reformulation, and idea portfolio.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Evidence</h3>
+            <p>Claim graphs, gap planning, controlled experiments, contradiction, and pivot.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Communicate</h3>
+            <p>Evidence-bound narrative, venue taste, figures, TeX, PDF, and artifact lineage.</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Review</h3>
+            <p>Structured concerns become revision or new-evidence obligations—not cosmetic edits.</p>
+          </article>
+        </div>
+        <p class="loop-note reveal">
+          <span aria-hidden="true">↶</span>
+          Review, negative results, and stable contradictions can route the project back to evidence
+          collection or hypothesis reformulation while preserving the full trajectory.
+        </p>
+      </section>
+
+      <section id="interface" class="interface-section">
+        <div class="section-shell interface-grid">
+          <div class="interface-copy reveal">
+            <p class="eyebrow">Generation as Content</p>
+            <h2>The interface follows the research question.</h2>
+            <p>
+              Every project has a stable home. Every topic owns a conversation. Every question
+              produces an immutable, deep-linked evidence surface assembled from a closed component
+              registry. The model may propose a layout; it cannot invent project state or execute a tool.
+            </p>
+            <ul class="check-list">
+              <li>No credential field on the loopback homepage</li>
+              <li>Project homes, multiple conversations, and immutable turns</li>
+              <li>Responsive evidence views with deterministic fallback</li>
+              <li>Explicit proposal, approval, and execution boundaries</li>
+            </ul>
+          </div>
+
+          <div class="workspace-mock reveal" role="img" aria-label="Conceptual view of the SciTaste project workspace">
+            <div class="mock-topbar">
+              <div class="mock-brand"><img src="assets/scitaste-mark.svg" alt=""> SciTaste</div>
+              <span>local · evidence bound</span>
+            </div>
+            <div class="mock-body">
+              <aside>
+                <small>PROJECT</small>
+                <strong>Self development</strong>
+                <small>CONVERSATIONS</small>
+                <span class="active">Experiment landscape</span>
+                <span>Paper readiness</span>
+                <span>Acquisition decision</span>
+              </aside>
+              <div class="mock-content">
+                <div class="mock-heading">
+                  <div><small>CURRENT QUESTION</small><strong>What evidence is missing?</strong></div>
+                  <span>turn 03</span>
+                </div>
+                <div class="lifecycle-mini" aria-label="Lifecycle gate example">
+                  <span class="done">Idea</span><span class="current">Evidence</span><span>Paper</span><span>Review</span>
+                </div>
+                <div class="mock-cards">
+                  <article><small>BLOCKER</small><strong>Native evidence unverified</strong><span>2 bound sources</span></article>
+                  <article><small>NEXT DECISION</small><strong>Review exact task package</strong><span>no execution authority</span></article>
+                </div>
+                <div class="mock-source">Evidence: project snapshot · current paper · evaluation request</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="page-section section-shell">
+        <div class="section-intro reveal">
+          <p class="eyebrow">Quick start</p>
+          <h2>Run the offline path first.</h2>
+          <p>No API key, model download, or external research framework is required.</p>
+        </div>
+
+        <div class="code-shell reveal">
+          <div class="code-label">
+            <span>Terminal</span>
+            <button type="button" data-copy-button>Copy</button>
+          </div>
+          <pre><code data-copy-source>git clone https://github.com/Dustzx/SciTaste.git
+cd SciTaste
+python3.11 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+
+# Run a deterministic trajectory and its checks
+.venv/bin/scitaste run demo --output outputs/demo --seed 7
+.venv/bin/pytest
+
+# Open the credential-free local project workspace
+.venv/bin/scitaste ui serve --outputs-root outputs</code></pre>
+        </div>
+        <div class="section-actions reveal">
+          <a class="button button-primary" href="https://github.com/Dustzx/SciTaste#quick-start">Installation</a>
+          <a class="button" href="https://github.com/Dustzx/SciTaste/blob/main/docs/FULL_WORKFLOW.md">Full workflow</a>
+          <a class="button" href="https://github.com/Dustzx/SciTaste/blob/main/docs/API_PROVIDERS.md">Model backends</a>
+        </div>
+      </section>
+
+      <div class="section-rule" aria-hidden="true"></div>
+
+      <section id="architecture" class="page-section section-shell">
+        <div class="section-intro reveal">
+          <p class="eyebrow">Architecture</p>
+          <h2>Proposal is not authority.</h2>
+          <p>
+            SciTaste owns the state, candidate actions, ranking, transition, and project lineage.
+            Executors return bounded observations; model nodes return typed proposals.
+          </p>
+        </div>
+        <div class="architecture-grid reveal">
+          <article><h3>ResearchState</h3><p>Persistent claims, evidence, uncertainty, budget, and revision identity.</p></article>
+          <article><h3>Taste controller</h3><p>Ranks only feasible candidate actions and records rejected alternatives.</p></article>
+          <article><h3>Native executor</h3><p>Runs admitted work in project-owned, content-bound boundaries.</p></article>
+          <article><h3>Dual memory</h3><p>Knowledge documents and Taste Cases keep different schemas and gates.</p></article>
+          <article><h3>Communication loop</h3><p>Claims resolve to evidence before paper, figure, or reviewer closure.</p></article>
+          <article><h3>Optional adapters</h3><p>External systems—including AutoResearchClaw—remain replaceable baselines.</p></article>
+        </div>
+      </section>
+
+      <section id="research" class="research-section">
+        <div class="section-shell research-grid">
+          <div class="research-copy reveal">
+            <p class="eyebrow">Targeting ICLR 2027</p>
+            <h2>SciTaste: Improving Autonomous Research through Scientific Taste</h2>
+            <p>
+              The implementation and venue-format pipeline are substantial. The title-level
+              effectiveness claim is not yet established: formal matched-system experiments,
+              verified native evidence lineage, and independent expert review remain pending.
+            </p>
+            <div class="research-actions">
+              <a class="button button-primary" href="https://github.com/Dustzx/SciTaste/blob/main/manuscripts/scitaste/main.md">Read tracked manuscript</a>
+              <a class="text-link" href="https://github.com/Dustzx/SciTaste/blob/main/docs/ICLR_2027_EVALUATION_PLAN.md">Evaluation plan →</a>
+            </div>
+          </div>
+          <div class="status-card reveal">
+            <div><span class="status-dot complete"></span><strong>Software control plane</strong><small>implemented and offline tested</small></div>
+            <div><span class="status-dot complete"></span><strong>ICLR paper builder</strong><small>venue-formatted draft and packet path</small></div>
+            <div><span class="status-dot pending"></span><strong>Formal effectiveness study</strong><small>protocol prepared; results pending</small></div>
+            <div><span class="status-dot pending"></span><strong>Independent review</strong><small>packet prepared; expert review pending</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta section-shell reveal">
+        <img src="assets/scitaste-mark.svg" alt="" width="64" height="64">
+        <h2>Build research that can explain its next decision.</h2>
+        <p>Start offline, inspect the trajectory, then opt into only the models and resources you approve.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/Dustzx/SciTaste">View on GitHub</a>
+          <a class="button" href="https://github.com/Dustzx/SciTaste/blob/main/docs/ROADMAP.md">Roadmap</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-shell">
+        <span>SciTaste © 2026 · MIT License</span>
+        <div><a href="https://github.com/Dustzx/SciTaste">GitHub</a><a href="https://github.com/Dustzx/SciTaste/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/Dustzx/SciTaste/blob/main/docs/ARCHITECTURE.md">Architecture</a></div>
+      </div>
+    </footer>
+  </body>
+</html>
