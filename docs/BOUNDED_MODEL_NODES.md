@@ -330,8 +330,9 @@ The whole-paper venue reviewer additionally specializes its output schema per
 invocation. Only the packet's registered claim and section IDs, the explicitly
 permitted evidence types, and the policy's allowed action types appear in that
 schema. Category/action mismatch is checked again after parsing. This is a
-generation aid plus deterministic admission boundary; it is not semantic repair
-of a rejected review.
+generation aid plus deterministic admission boundary; experiment/evidence flags
+are also tied to the routed action. It is not semantic repair of a rejected
+review.
 
 The committed
 `configs/model_nodes/zhipu_glm53_flash.example.yaml` pins the general prepaid

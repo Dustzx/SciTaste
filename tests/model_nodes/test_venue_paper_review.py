@@ -174,20 +174,27 @@ def test_venue_paper_node_and_internal_report_keep_authority_separate() -> None:
         "registered_section_ids": ["experiments"],
         "permitted_evidence_types": ["matched-baseline"],
         "allowed_action_types": ["ADD_BASELINE"],
+        "category_action_map": {"missing_baseline": "ADD_BASELINE"},
         "reference_rule": (
             "Use only listed identifiers. Use [] or null when no listed identifier applies."
         ),
         "action_rule": (
             "Use only an allowed action and preserve the deterministic category/action map."
         ),
+        "evidence_flag_rules": [
+            "requires_new_experiment=true requires requires_new_evidence=true.",
+            (
+                "ADD_EXPERIMENT, ADD_BASELINE, and REVISE_METHOD concerns require both "
+                "requires_new_experiment=true and requires_new_evidence=true."
+            ),
+            "All other allowed actions require requires_new_experiment=false.",
+        ],
     }
     definitions = result.request.output_schema["$defs"]
     concern = definitions["ReviewConcernProposal"]
     assert concern["properties"]["target_claim_ids"]["items"]["enum"] == ["claim-1"]
     assert concern["properties"]["target_section"]["anyOf"][0]["enum"] == ["experiments"]
-    assert concern["properties"]["required_evidence_types"]["items"]["enum"] == [
-        "matched-baseline"
-    ]
+    assert concern["properties"]["required_evidence_types"]["items"]["enum"] == ["matched-baseline"]
     assert definitions["MetaAction"]["enum"] == ["ADD_BASELINE"]
     missing_baseline = next(
         item
@@ -197,6 +204,13 @@ def test_venue_paper_node_and_internal_report_keep_authority_separate() -> None:
     assert missing_baseline["then"]["properties"]["proposed_action_type"]["const"] == (
         "ADD_BASELINE"
     )
+    assert missing_baseline["then"]["properties"]["requires_new_evidence"]["const"] is True
+    assert missing_baseline["then"]["properties"]["requires_new_experiment"]["const"] is True
+    assert set(missing_baseline["then"]["required"]) == {
+        "proposed_action_type",
+        "requires_new_evidence",
+        "requires_new_experiment",
+    }
     report = build_internal_model_review_report(
         packet,
         result.proposal,
@@ -251,9 +265,7 @@ def test_venue_paper_node_rejects_action_that_conflicts_with_concern_category() 
     )
 
     assert result.status is NodeResultStatus.REJECTED
-    assert any(
-        "action does not match its category" in item for item in result.rejection_reasons
-    )
+    assert any("action does not match its category" in item for item in result.rejection_reasons)
 
 
 def test_venue_paper_schema_closes_empty_identifier_vocabularies() -> None:
@@ -264,8 +276,6 @@ def test_venue_paper_schema_closes_empty_identifier_vocabularies() -> None:
     concern = proposal["concerns"][0]
     concern["target_claim_ids"] = []
     concern["target_section"] = None
-    concern["requires_new_evidence"] = False
-    concern["requires_new_experiment"] = False
     concern["required_evidence_types"] = []
 
     result = VenuePaperReviewNode().run(

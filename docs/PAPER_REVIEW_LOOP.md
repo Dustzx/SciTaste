@@ -169,8 +169,10 @@ The v2 reviewer prompt carries a closed-world contract in both the request
 payload and generated JSON Schema. Claim IDs, section IDs, evidence types, and
 action types are restricted to the exact current packet/policy vocabularies;
 empty vocabularies permit only `[]` or `null`. A concern's category must also
-match the deterministic review-action route. Schema-valid but invented names
-therefore remain untrusted and fail closed rather than entering a paper round.
+match the deterministic review-action route, and experiment-producing actions
+must carry coherent experiment/evidence flags. Schema-valid but invented or
+internally contradictory concerns therefore remain untrusted and fail closed
+rather than entering a paper round.
 
 ## Lifecycle projection
 

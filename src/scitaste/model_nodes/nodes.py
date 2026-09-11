@@ -428,20 +428,34 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
             seed=seed,
             profile=profile,
         )
-        allowed_actions = tuple(
-            sorted({item.value for item in policy.allowed_action_types})
-        )
+        allowed_actions = tuple(sorted({item.value for item in policy.allowed_action_types}))
+        from scitaste.review.routing import ReviewActionRouter
+
+        category_action_map = {
+            category: action.value
+            for category, action in sorted(ReviewActionRouter.ROUTES.items())
+            if action.value in allowed_actions
+        }
         closed_world_contract = {
             "registered_claim_ids": list(context.claim_ids),
             "registered_section_ids": list(context.section_ids),
             "permitted_evidence_types": list(input_data.permitted_evidence_types),
             "allowed_action_types": list(allowed_actions),
+            "category_action_map": category_action_map,
             "reference_rule": (
                 "Use only listed identifiers. Use [] or null when no listed identifier applies."
             ),
             "action_rule": (
                 "Use only an allowed action and preserve the deterministic category/action map."
             ),
+            "evidence_flag_rules": [
+                "requires_new_experiment=true requires requires_new_evidence=true.",
+                (
+                    "ADD_EXPERIMENT, ADD_BASELINE, and REVISE_METHOD concerns require both "
+                    "requires_new_experiment=true and requires_new_evidence=true."
+                ),
+                "All other allowed actions require requires_new_experiment=false.",
+            ],
         }
         input_payload = deepcopy(request.input_payload)
         input_payload["closed_world_contract"] = closed_world_contract
@@ -477,6 +491,11 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
         permitted_evidence = set(input_data.permitted_evidence_types)
         from scitaste.review.routing import ReviewActionRouter
 
+        experiment_actions = {
+            MetaAction.ADD_EXPERIMENT,
+            MetaAction.ADD_BASELINE,
+            MetaAction.REVISE_METHOD,
+        }
         for concern in proposal.concerns:
             if set(concern.target_claim_ids) - known_claims:
                 reasons.append(f"concern {concern.concern_id!r} references unknown claims")
@@ -488,8 +507,16 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
                 )
             expected_action = ReviewActionRouter.ROUTES.get(concern.category.value)
             if concern.proposed_action_type is not expected_action:
+                reasons.append(f"concern {concern.concern_id!r} action does not match its category")
+            if expected_action in experiment_actions and not (
+                concern.requires_new_experiment and concern.requires_new_evidence
+            ):
                 reasons.append(
-                    f"concern {concern.concern_id!r} action does not match its category"
+                    f"concern {concern.concern_id!r} experiment action lacks evidence flags"
+                )
+            if expected_action not in experiment_actions and concern.requires_new_experiment:
+                reasons.append(
+                    f"concern {concern.concern_id!r} non-experiment action requests an experiment"
                 )
         return reasons
 
@@ -528,21 +555,54 @@ def _closed_venue_review_schema(
 
     from scitaste.review.routing import ReviewActionRouter
 
-    concern["allOf"] = [
+    experiment_actions = {
+        MetaAction.ADD_EXPERIMENT,
+        MetaAction.ADD_BASELINE,
+        MetaAction.REVISE_METHOD,
+    }
+    category_contracts: list[dict[str, object]] = []
+    for category, action in sorted(ReviewActionRouter.ROUTES.items()):
+        if action.value not in action_types:
+            continue
+        then_properties: dict[str, object] = {
+            "proposed_action_type": {"const": action.value},
+        }
+        required = ["proposed_action_type"]
+        if action in experiment_actions:
+            then_properties.update(
+                {
+                    "requires_new_evidence": {"const": True},
+                    "requires_new_experiment": {"const": True},
+                }
+            )
+            required.extend(["requires_new_evidence", "requires_new_experiment"])
+        else:
+            then_properties["requires_new_experiment"] = {"const": False}
+        category_contracts.append(
+            {
+                "if": {
+                    "properties": {"category": {"const": category}},
+                    "required": ["category"],
+                },
+                "then": {
+                    "properties": then_properties,
+                    "required": required,
+                },
+            },
+        )
+    category_contracts.append(
         {
             "if": {
-                "properties": {"category": {"const": category}},
-                "required": ["category"],
+                "properties": {"requires_new_experiment": {"const": True}},
+                "required": ["requires_new_experiment"],
             },
             "then": {
-                "properties": {
-                    "proposed_action_type": {"const": action.value},
-                }
+                "properties": {"requires_new_evidence": {"const": True}},
+                "required": ["requires_new_evidence"],
             },
         }
-        for category, action in sorted(ReviewActionRouter.ROUTES.items())
-        if action.value in action_types
-    ]
+    )
+    concern["allOf"] = category_contracts
     return closed
 
 
