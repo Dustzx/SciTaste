@@ -1653,6 +1653,42 @@ code {
   margin-top: 0.14rem;
 }
 
+.landscape-work-classification,
+.candidate-evidence-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+  margin-top: 0.24rem;
+}
+
+.landscape-evidence-tag {
+  background: #eceee9;
+  border-radius: 99rem;
+  color: #4a554e;
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 750;
+  padding: 0.16rem 0.34rem;
+}
+
+.landscape-evidence-tag.evidence-accepted-archival,
+.landscape-evidence-tag.track-headline-system {
+  background: #d7eddf;
+  color: #155237;
+}
+
+.landscape-evidence-tag.evidence-preprint-only,
+.landscape-evidence-tag.track-sensitivity-system {
+  background: #f5dfd9;
+  color: #7c342b;
+}
+
+.landscape-evidence-tag.track-task-source,
+.landscape-evidence-tag.track-judge-source {
+  background: #e2eaf0;
+  color: #36566c;
+}
+
 .landscape-work.role-primary th:first-child {
   border-left: 0.28rem solid #2b7657;
 }

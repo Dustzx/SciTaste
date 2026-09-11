@@ -60,13 +60,17 @@ headline effect estimate.
 The accepted-literature basis and the resulting evaluation-stack decision are
 recorded in
 [`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md).
+The independent second screen and its non-saturation decision are recorded in
+[`research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md`](research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md).
+Until a third screen satisfies the declared stopping rule, this is a candidate
+comparison inventory rather than a frozen census.
 
 ## Four distinct evaluation tracks
 
 | Track | Question | Required comparison | Role in the paper |
 |---|---|---|---|
 | A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
-| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, MLR-Agent, AI Scientist-v2, compatible AutoResearchClaw, SciTaste Native | headline external-validity result |
+| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, accepted MLR-Agent, AI-Researcher, Agent Laboratory, and SciTaste Native; preprint systems only in sensitivity analysis | headline external-validity result |
 | C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
@@ -111,19 +115,27 @@ negative controls so that gains cannot be attributed merely to extra context.
    research-specific taste memory.
 2. **MLR-Agent**: the official agent scaffold associated with the accepted
    MLR-Bench lifecycle, if its version, license, and environment pass.
-3. **AI Scientist-v2**: a real pinned external system, if its license, sandbox,
-   task mapping, and telemetry gates pass. It remains unavailable if those gates
-   fail; no mock implementation may replace it.
-4. **AutoResearchClaw**: an additional pinned, unmodified external system only
-   where its existing adapter can preserve the same task semantics and budget.
+3. **AI-Researcher**: the accepted NeurIPS 2025 end-to-end system, if explicit
+   code-licensing, unchanged-core, sandbox, task, model, artifact, failure, and
+   telemetry gates pass. Its current absence of an identified root license is a
+   blocker, not permission to imitate the system.
+4. **Agent Laboratory**: the accepted Findings of EMNLP 2025 system, if its
+   MIT-licensed pinned implementation passes the same matched-task and telemetry
+   gates.
 5. **SciTaste Native**: the first-party controller, state, native executor, and
    publication path, with no AutoResearchClaw runtime dependency.
 
-At least two independent external research systems, in addition to the direct
-agent, must pass the adapter and fairness gates before the manuscript claims
-broad external-system superiority. Agent Laboratory may be a predeclared
-fallback only after a separate applicability review. Sibyl remains a stretch
-baseline and is reported as unavailable rather than replaced by a mock.
+At least two **accepted archival** independent external research systems, in
+addition to the direct agent, must pass the adapter and fairness gates before
+the manuscript claims broad external-system superiority. Publication status and
+execution readiness are independent: acceptance cannot waive adapter gates, and
+a runnable preprint cannot satisfy this archival-evidence minimum.
+
+**AI Scientist-v2** and **AutoResearchClaw** remain real pinned sensitivity
+systems if their respective license, sandbox, task, model, artifact, failure,
+and telemetry gates pass. They do not occupy headline external-system slots
+because neither has an accepted archival publication in the current audited
+corpus. Sibyl remains unavailable rather than receiving a mock implementation.
 
 ### Accepted-benchmark task stack and repetitions
 
@@ -142,7 +154,14 @@ an accepted-benchmark design. It is replaced by this evidence stack:
    source-stratified subset to measure hypothesis, design, implementation,
    execution, conclusion, and conjunctive full success. Its size follows a
    no-formal-data pilot and resource calculation.
-4. **Bounded frontier-progress cases**: optionally test two or three external
+4. **MLRC-Bench objective-progress population**: qualify its seven accepted
+   competition tasks and use objective metrics to test proposal and
+   implementation progress against human leaderboard anchors. Exact code,
+   task-data licenses, assets, and source-disjoint splits must pass before use.
+5. **AAAR-1.0 decision/review population**: use a frozen subset of experiment-
+   design and paper-weakness tasks as secondary mechanism and reviewer-capacity
+   evidence, not as an end-to-end replacement.
+6. **Bounded frontier-progress cases**: optionally test two or three external
    open-ended objectives against human or strong public baselines. Treat these
    as a high-cost case series, not a population estimate.
 
@@ -157,8 +176,10 @@ package or if evaluation depends on unavailable private data.
 The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
-those controls. The planned provider model is Zhipu `glm-5.3-flash`; its exact
-endpoint identity and dated pricing evidence must be captured before approval.
+those controls. DeepSeek `deepseek-flash` / documented `DeepSeek-V4.1-Flash`
+and Zhipu `glm-5.3-flash` are separate provider proposals with separate hashes,
+pricing, served-identity attestations, cells, and approvals. They are never
+silent fallbacks and their estimates are never pooled as one backbone.
 
 A separate **official-configuration sensitivity track** may run each framework
 with its authors' recommended model and settings. It is labelled as a sensitivity
@@ -244,9 +265,10 @@ No formal run may start until all of these gates pass:
 3. the result schema records provider calls/retries/token classes/price date,
    allocated and sampled-active GPU time, peak memory/utilization, CPU/RAM,
    storage, failures/repairs/discards, and human minutes;
-4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; using
-   `glm-5.3-flash` creates a new `formal-v2` protocol, IDs, blind IDs, hashes, and
-   price record rather than mutating v1;
+4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
+   `glm-5.3-flash` uses the separate `formal-v2` family and DeepSeek V4.1 Flash
+   uses the separate `formal-v4` family, each with new IDs, blind IDs, hashes,
+   and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and
    telemetry review without a pseudo-implementation;
 6. expert reviewers and the blinded adjudication process are secured before
@@ -299,8 +321,9 @@ An ICLR submission is scientifically defensible only if, by manuscript freeze:
 
 - Track A has held-out natural cases, expert labels, negative controls, and
   uncertainty estimates;
-- Track B has SciTaste Native plus the direct agent and at least two real pinned
-  external systems, or the claim is explicitly narrowed before the abstract;
+- Track B has SciTaste Native plus the direct agent and at least two accepted
+  archival, real, pinned external systems, or the claim is explicitly narrowed
+  before the abstract; preprint sensitivity systems do not satisfy this count;
 - Track C separates Knowledge, Taste, critics, executor, and extra-context
   effects;
 - the primary endpoint, task unit, power analysis, failure policy, and statistics

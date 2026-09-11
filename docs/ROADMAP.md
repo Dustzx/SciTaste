@@ -59,6 +59,15 @@ integrity, blinded review, and owner approval remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
+The research-landscape v4 second screen now separates 26 relevance-gated works
+into method, hybrid, and benchmark contributions without interpreting their
+counts as field prevalence. It independently records publication evidence and
+experiment eligibility: accepted MLR-Agent, AI-Researcher, and Agent Laboratory
+are headline adapter candidates, while preprint-only AI Scientist-v2 and
+AutoResearchClaw are sensitivity candidates. The census remains in progress
+because the second screen recovered material additions; a third saturation
+screen and exact adapters/licenses remain open.
+
 ## Phase 2/3 progress
 
 - Done: immutable fixed-candidate fixtures for Idea, Experiment, Evidence,

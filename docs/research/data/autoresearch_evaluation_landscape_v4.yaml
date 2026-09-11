@@ -1,0 +1,292 @@
+schema_version: "1.3"
+artifact_kind: autoresearch-evaluation-landscape-v4
+base_source: autoresearch_evaluation_landscape_v3.yaml
+base_source_sha256: f2b400e880d6102b2dc3d881765dde32bfb2dd791a74f201a39dd4ac4933fae0
+title: Accepted AutoResearch methods, hybrids, and evaluation resources after an independent second screen
+source_document: docs/research/AUTORESEARCH_METHOD_CENSUS_SECOND_SCREEN_V4.md
+source_document_sha256: 165ee12f76f6dff9f1c1cfe0712b8e4624fdad974bf912822bf2326d9c7e67d3
+synthesis_scope: literature-and-protocol-design-only
+corpus_scope: accepted-method-census-second-screen-and-targeted-evaluation-resources
+scope_note_en: The second method screen recovered material additions, so the corpus is not saturated; method, hybrid, and benchmark counts describe this screened set and cannot estimate field prevalence.
+scope_note_zh: 第二轮方法筛查仍发现重要新增工作，说明语料尚未饱和；方法、混合与基准数量只描述当前筛查集，不能用于推断领域论文分布。
+prevalence_inference: not-estimable
+freeze_decision: hold
+decision_reason_code: third-saturation-screen-tasks-adapters-statistics-and-judging-remain-open
+
+work_additions:
+  - work_id: research-agent
+    name: ResearchAgent
+    venue: NAACL 2025
+    evaluation_unit: Literature-grounded research problem, method, and experiment-design ideas
+    scale: Publications across multiple disciplines with iterative model reviewers and human evaluation
+    comparison_anchor: Retrieval variants, reviewer feedback, model judgments, and human preferences
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, hypothesis, design, review]
+    lens_ids: [decision, human, cost]
+    execution_signal: artifact
+    resource_tier: moderate
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: bio-discovery-agent
+    name: BioDiscoveryAgent
+    venue: ICLR 2025
+    evaluation_unit: Closed-loop genetic perturbation experiment selection and outcome reasoning
+    scale: Multiple biological datasets, models, tool variants, and sequential experiment rounds
+    comparison_anchor: Bayesian optimization, random selection, model variants, and tool ablations
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: mixed
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: moose-chem
+    name: MOOSE-Chem
+    venue: ICLR 2025
+    evaluation_unit: Chemistry inspiration retrieval, hypothesis composition, and hypothesis ranking
+    scale: 51 high-impact 2024 chemistry papers annotated by chemistry researchers
+    comparison_anchor: Ground-truth inspirations and hypotheses, retrieval variants, and expert evaluation
+    contribution_type: hybrid
+    experiment_role: design-precedent
+    bundled_artifacts: [system, benchmark, dataset, judge]
+    stage_ids: [idea, hypothesis, review]
+    lens_ids: [decision, integrity, human, cost]
+    execution_signal: artifact
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: research-town
+    name: ResearchTown
+    venue: ICML 2025
+    evaluation_unit: Simulated paper reading, writing, reviewing, and interdisciplinary ideation
+    scale: Multi-researcher agent-data graphs plus ResearchBench node-masking tasks
+    comparison_anchor: Human graph targets, simulation variants, and similarity-based prediction
+    contribution_type: hybrid
+    experiment_role: design-precedent
+    bundled_artifacts: [system, benchmark, dataset]
+    stage_ids: [idea, paper, review]
+    lens_ids: [decision, package, human, cost]
+    execution_signal: simulated
+    resource_tier: moderate
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: design-precedent
+  - work_id: mlrc-bench
+    name: MLRC-Bench
+    venue: NeurIPS 2025 Datasets and Benchmarks
+    evaluation_unit: Open ML research competition method proposal and implementation
+    scale: Seven competition tasks with objective metrics and human leaderboard anchors
+    comparison_anchor: Language-agent scaffolds, model variants, baseline scores, and top human scores
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [idea, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: aaar-1-0
+    name: AAAR-1.0
+    venue: ICML 2025
+    evaluation_unit: Equation inference, experiment design, and paper weakness identification
+    scale: Research-specific benchmark tasks evaluated across proprietary and open models
+    comparison_anchor: Model families, task metrics, and researcher-oriented criteria
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [design, paper, review]
+    lens_ids: [decision, integrity, package, human, cost]
+    execution_signal: artifact
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: mm-agent
+    name: MM-Agent and MM-Bench
+    venue: NeurIPS 2025
+    evaluation_unit: Open-ended mathematical problem formulation, computation, and report generation
+    scale: 111 modeling problems across ten domains and eight task types
+    comparison_anchor: Baseline agents, expert solutions, task metrics, and official competition outcomes
+    contribution_type: hybrid
+    experiment_role: design-precedent
+    bundled_artifacts: [system, benchmark, dataset]
+    stage_ids: [hypothesis, design, execute, interpret, paper]
+    lens_ids: [decision, integrity, progress, package, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: frame
+    name: FRAME
+    venue: Findings of ACL 2025
+    evaluation_unit: Feedback-refined medical paper generation and future-direction synthesis
+    scale: A corpus derived from 4287 medical papers with automated and human assessment
+    comparison_anchor: Model variants, conventional generation, metrics, and human judgment
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, paper, review]
+    lens_ids: [decision, package, human, cost]
+    execution_signal: artifact
+    resource_tier: moderate
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: design-precedent
+
+work_classification_overrides:
+  - {work_id: cycle-researcher, publication_status: accepted-archival, comparison_scope: stage-specific}
+  - {work_id: deep-scientist, publication_status: accepted-archival, comparison_scope: domain-boundary}
+  - {work_id: ai-research-agents, publication_status: accepted-archival, comparison_scope: stage-specific}
+  - {work_id: ai-researcher, publication_status: accepted-archival, comparison_scope: headline-candidate}
+  - {work_id: empirical-outcome-prediction, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: mlr-bench, publication_status: accepted-archival, comparison_scope: task-source}
+  - {work_id: exp-bench, publication_status: accepted-archival, comparison_scope: task-source}
+  - {work_id: paperbench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: re-bench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: mle-bench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: ml-agent-bench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: asta-bench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: discovery-world, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: science-agent-bench, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: llm-research-ideas, publication_status: accepted-archival, comparison_scope: design-precedent}
+  - {work_id: agent-laboratory, publication_status: accepted-archival, comparison_scope: headline-candidate}
+  - {work_id: dolphin, publication_status: accepted-archival, comparison_scope: sensitivity-only}
+  - {work_id: code-scientist, publication_status: accepted-archival, comparison_scope: sensitivity-only}
+
+comparison_candidate_overrides:
+  - candidate_id: mlr-bench-tasks
+    name: MLR-Bench task source
+    candidate_kind: benchmark
+    role: primary
+    readiness: adaptation
+    barrier_code: exact-source-disjoint-executable-subset-unfrozen
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: exp-bench-tasks
+    name: EXP-Bench task source
+    candidate_kind: benchmark
+    role: secondary
+    readiness: adaptation
+    barrier_code: selected-assets-and-upstream-licenses-unaudited
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: scitaste-native
+    name: SciTaste Native
+    candidate_kind: system
+    role: primary
+    readiness: adaptation
+    barrier_code: external-task-contract-not-yet-qualified
+    publication_status: first-party
+    evaluation_track: headline-system
+  - candidate_id: mlr-agent
+    name: MLR-Agent
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: unchanged-core-adapter-and-telemetry-missing
+    publication_status: accepted-archival
+    evaluation_track: headline-system
+  - candidate_id: ai-scientist-v2
+    name: AI Scientist-v2
+    candidate_kind: system
+    role: secondary
+    readiness: reference
+    barrier_code: preprint-license-acceptance-and-sandbox-missing
+    publication_status: preprint-only
+    evaluation_track: sensitivity-system
+  - candidate_id: autoresearchclaw
+    name: AutoResearchClaw
+    candidate_kind: system
+    role: secondary
+    readiness: adaptation
+    barrier_code: preprint-matched-task-semantics-and-telemetry-missing
+    publication_status: preprint-only
+    evaluation_track: sensitivity-system
+  - candidate_id: expert-panel
+    name: Blinded expert panel
+    candidate_kind: judge
+    role: primary
+    readiness: reference
+    barrier_code: rubric-sampling-and-adjudication-unfrozen
+    publication_status: protocol-only
+    evaluation_track: judge-source
+  - candidate_id: agent-laboratory
+    name: Agent Laboratory
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: matched-task-adapter-intervention-and-telemetry-missing
+    publication_status: accepted-archival
+    evaluation_track: headline-system
+  - candidate_id: dolphin
+    name: Dolphin
+    candidate_kind: system
+    role: secondary
+    readiness: reference
+    barrier_code: task-template-equivalence-and-artifact-mapping-missing
+    publication_status: accepted-archival
+    evaluation_track: sensitivity-system
+  - candidate_id: code-scientist
+    name: CodeScientist
+    candidate_kind: system
+    role: stretch
+    readiness: reference
+    barrier_code: semi-automated-input-and-replication-policy-unmatched
+    publication_status: accepted-archival
+    evaluation_track: sensitivity-system
+
+comparison_candidate_additions:
+  - candidate_id: ai-researcher
+    name: AI-Researcher
+    candidate_kind: system
+    role: primary
+    readiness: reference
+    barrier_code: accepted-code-pinned-license-adapter-and-telemetry-missing
+    publication_status: accepted-archival
+    evaluation_track: headline-system
+  - candidate_id: direct-agent
+    name: Direct prompt-only agent
+    candidate_kind: system
+    role: secondary
+    readiness: adaptation
+    barrier_code: matched-executable-task-invocations-unfrozen
+    publication_status: baseline
+    evaluation_track: headline-system
+  - candidate_id: mlrc-bench-tasks
+    name: MLRC-Bench task source
+    candidate_kind: benchmark
+    role: primary
+    readiness: reference
+    barrier_code: exact-competition-assets-licenses-and-scoring-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: aaar-tasks
+    name: AAAR-1.0 task source
+    candidate_kind: benchmark
+    role: secondary
+    readiness: reference
+    barrier_code: exact-task-assets-licenses-and-scoring-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+
+planning_gate_overrides:
+  - gate_id: census
+    label_en: Systematic method census
+    label_zh: 系统性方法普查
+    state: candidate
+    reason_code: second-screen-found-material-additions-third-saturation-screen-pending
+
+open_question_overrides:
+  - question_id: methods
+    label_en: Does the third official-proceedings and citation screen add no high-impact eligible work, and which accepted headline systems pass exact license and unchanged-core adapter audits?
+    label_zh: 第三轮官方论文集与引文筛查是否不再发现高影响合格工作，以及哪些已接收的主比较系统能通过精确许可与核心不变适配器审计？

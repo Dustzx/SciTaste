@@ -24,9 +24,9 @@ from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
 _SOURCE = (
     Path(__file__).resolve().parents[2]
-    / "docs/research/data/autoresearch_evaluation_landscape_v3.yaml"
+    / "docs/research/data/autoresearch_evaluation_landscape_v4.yaml"
 )
-_V2_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v2.yaml")
+_V3_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v3.yaml")
 _LEGACY_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v1.yaml")
 
 
@@ -55,7 +55,7 @@ def _runtime(tmp_path: Path, *, projection: bool = True) -> ProjectRuntime:
             status="complete",
             evidence_scope="literature-and-protocol-design-only",
             artifact=artifact,
-            generative_ui_projection="autoresearch-evaluation-landscape-v3",
+            generative_ui_projection="autoresearch-evaluation-landscape-v4",
         ),
         expected_revision=snapshot.revision,
     )
@@ -73,25 +73,43 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
 
     assert artifact.synthesis_scope == "literature-and-protocol-design-only"
     assert artifact.freeze_decision == "hold"
-    assert artifact.schema_version == "1.2"
+    assert artifact.schema_version == "1.3"
     assert artifact.corpus_scope == (
-        "accepted-method-census-candidate-and-targeted-evaluation-resources"
+        "accepted-method-census-second-screen-and-targeted-evaluation-resources"
     )
     assert artifact.prevalence_inference == "not-estimable"
-    assert len(artifact.works) == 18
+    assert len(artifact.works) == 26
     assert {item.role for item in artifact.works} == {"primary", "anchor", "context"}
     assert {item.contribution_type for item in artifact.works} == {
         "method",
         "benchmark",
         "hybrid",
     }
-    assert sum(item.contribution_type == "method" for item in artifact.works) == 6
-    assert sum(item.contribution_type == "hybrid" for item in artifact.works) == 2
-    assert sum(item.contribution_type == "benchmark" for item in artifact.works) == 10
+    assert sum(item.contribution_type == "method" for item in artifact.works) == 9
+    assert sum(item.contribution_type == "hybrid" for item in artifact.works) == 5
+    assert sum(item.contribution_type == "benchmark" for item in artifact.works) == 12
+    assert {item.publication_status for item in artifact.works} == {"accepted-archival"}
     assert not any(item.readiness == "formal" for item in artifact.comparison_candidates)
-    assert {"agent-laboratory", "dolphin", "code-scientist"}.issubset(
+    assert {"agent-laboratory", "dolphin", "code-scientist", "ai-researcher"}.issubset(
         {item.candidate_id for item in artifact.comparison_candidates}
     )
+    headline = {
+        item.candidate_id
+        for item in artifact.comparison_candidates
+        if item.evaluation_track == "headline-system"
+    }
+    assert headline == {
+        "scitaste-native",
+        "direct-agent",
+        "mlr-agent",
+        "agent-laboratory",
+        "ai-researcher",
+    }
+    assert {
+        item.candidate_id
+        for item in artifact.comparison_candidates
+        if item.publication_status == "preprint-only"
+    } == {"ai-scientist-v2", "autoresearchclaw"}
     census = next(item for item in artifact.planning_gates if item.gate_id == "census")
     assert census.state == "candidate"
 
@@ -109,11 +127,14 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
             and {"benchmark", "judge", "dataset"} & set(item.bundled_artifacts)
         )
     }
-    assert len(system_sources) == 8
-    assert len(evaluation_sources) == 12
+    assert len(system_sources) == 14
+    assert len(evaluation_sources) == 17
     assert system_sources & evaluation_sources == {
         "ai-researcher",
         "empirical-outcome-prediction",
+        "moose-chem",
+        "research-town",
+        "mm-agent",
     }
 
     payload = artifact.model_dump(mode="json")
@@ -175,6 +196,32 @@ def test_ready_landscape_requires_both_formal_experiment_tracks() -> None:
         ResearchLandscapeArtifact.model_validate(payload)
 
 
+def test_preprint_system_cannot_enter_the_headline_track() -> None:
+    payload = load_research_landscape_source(_SOURCE).model_dump(mode="json")
+    candidate = next(
+        item
+        for item in payload["comparison_candidates"]
+        if item["candidate_id"] == "ai-scientist-v2"
+    )
+    candidate["evaluation_track"] = "headline-system"
+
+    with pytest.raises(ValidationError, match="headline system must be accepted"):
+        ResearchLandscapeArtifact.model_validate(payload)
+
+
+def test_v4_requires_two_accepted_external_headline_candidates() -> None:
+    payload = load_research_landscape_source(_SOURCE).model_dump(mode="json")
+    for candidate in payload["comparison_candidates"]:
+        if (
+            candidate["evaluation_track"] == "headline-system"
+            and candidate["publication_status"] == "accepted-archival"
+        ):
+            candidate["evaluation_track"] = "sensitivity-system"
+
+    with pytest.raises(ValidationError, match="two accepted external headline"):
+        ResearchLandscapeArtifact.model_validate(payload)
+
+
 def test_legacy_landscape_remains_readable_but_explicitly_unclassified() -> None:
     artifact = load_research_landscape_source(_LEGACY_SOURCE)
 
@@ -183,11 +230,11 @@ def test_legacy_landscape_remains_readable_but_explicitly_unclassified() -> None
     assert {item.contribution_type for item in artifact.works} == {"unclassified"}
 
 
-def test_v3_overlay_is_bound_to_the_exact_v2_base(tmp_path: Path) -> None:
+def test_v4_overlay_is_bound_to_the_exact_v3_base(tmp_path: Path) -> None:
     overlay = tmp_path / _SOURCE.name
-    base = tmp_path / _V2_SOURCE.name
+    base = tmp_path / _V3_SOURCE.name
     shutil.copyfile(_SOURCE, overlay)
-    shutil.copyfile(_V2_SOURCE, base)
+    shutil.copyfile(_V3_SOURCE, base)
     base.write_text(base.read_text(encoding="utf-8") + "\n# drift\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="base hash has drifted"):
@@ -281,7 +328,7 @@ def test_landscape_artifact_must_remain_inside_declaring_run(tmp_path: Path) -> 
             status="complete",
             evidence_scope="engineering-only",
             artifact="PROJECT.json",
-            generative_ui_projection="autoresearch-evaluation-landscape-v3",
+            generative_ui_projection="autoresearch-evaluation-landscape-v4",
         ),
         expected_revision=snapshot.revision,
     )

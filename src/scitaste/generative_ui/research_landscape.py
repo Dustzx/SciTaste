@@ -19,13 +19,17 @@ _CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_PROJECTION_KIND = "autoresearch-evaluation-landscape-v3"
+_PROJECTION_KIND = "autoresearch-evaluation-landscape-v4"
 _PROJECTION_KINDS = frozenset(
     {
         "autoresearch-evaluation-landscape-v1",
         "autoresearch-evaluation-landscape-v2",
+        "autoresearch-evaluation-landscape-v3",
         _PROJECTION_KIND,
     }
+)
+_OVERLAY_PROJECTION_KINDS = frozenset(
+    {"autoresearch-evaluation-landscape-v3", "autoresearch-evaluation-landscape-v4"}
 )
 _MAX_ARTIFACT_BYTES = 256 * 1024
 
@@ -70,6 +74,15 @@ class ResearchWork(BaseModel):
     execution_signal: Literal["executed", "mixed", "artifact", "simulated"]
     resource_tier: Literal["desktop", "moderate", "high", "frontier", "unreported"]
     role: Literal["primary", "anchor", "context"]
+    publication_status: Literal["accepted-archival", "preprint-only", "unverified"] = "unverified"
+    comparison_scope: Literal[
+        "headline-candidate",
+        "sensitivity-only",
+        "stage-specific",
+        "task-source",
+        "design-precedent",
+        "domain-boundary",
+    ] = "design-precedent"
 
     @model_validator(mode="after")
     def contribution_and_experiment_roles_are_separate(self) -> ResearchWork:
@@ -94,6 +107,14 @@ class ResearchWork(BaseModel):
             self.contribution_type not in {"benchmark", "hybrid"} or "benchmark" not in artifacts
         ):
             raise ValueError("only a benchmark or hybrid benchmark can be a task source")
+        if self.comparison_scope == "headline-candidate" and (
+            self.contribution_type not in {"method", "hybrid"} or "system" not in artifacts
+        ):
+            raise ValueError("a headline candidate must expose a method or hybrid system")
+        if self.comparison_scope == "task-source" and (
+            self.contribution_type not in {"benchmark", "hybrid"} or "benchmark" not in artifacts
+        ):
+            raise ValueError("a task-source scope must expose a benchmark artifact")
         return self
 
 
@@ -106,6 +127,58 @@ class ComparisonCandidate(BaseModel):
     role: Literal["primary", "secondary", "stretch"]
     readiness: Literal["reference", "adaptation", "formal"]
     barrier_code: SafeIdentifier
+    publication_status: Literal[
+        "accepted-archival",
+        "preprint-only",
+        "first-party",
+        "baseline",
+        "protocol-only",
+        "unverified",
+    ] = "unverified"
+    evaluation_track: Literal[
+        "headline-system",
+        "sensitivity-system",
+        "task-source",
+        "judge-source",
+        "design-only",
+    ] = "design-only"
+
+    @model_validator(mode="after")
+    def publication_and_experiment_tracks_are_orthogonal(self) -> ComparisonCandidate:
+        if self.evaluation_track in {"headline-system", "sensitivity-system"} and (
+            self.candidate_kind != "system"
+        ):
+            raise ValueError("a system evaluation track requires a system candidate")
+        if self.evaluation_track == "task-source" and self.candidate_kind != "benchmark":
+            raise ValueError("a task-source evaluation track requires a benchmark candidate")
+        if self.evaluation_track == "judge-source" and self.candidate_kind != "judge":
+            raise ValueError("a judge-source evaluation track requires a judge candidate")
+        if self.evaluation_track == "headline-system" and self.publication_status not in {
+            "accepted-archival",
+            "first-party",
+            "baseline",
+        }:
+            raise ValueError(
+                "a headline system must be accepted, first-party, or a declared baseline"
+            )
+        return self
+
+
+class ResearchWorkClassificationOverride(BaseModel):
+    """Add experiment eligibility to one work inherited from a prior artifact."""
+
+    model_config = _CONFIG
+
+    work_id: SafeIdentifier
+    publication_status: Literal["accepted-archival", "preprint-only"]
+    comparison_scope: Literal[
+        "headline-candidate",
+        "sensitivity-only",
+        "stage-specific",
+        "task-source",
+        "design-precedent",
+        "domain-boundary",
+    ]
 
 
 class PlanningGate(BaseModel):
@@ -131,11 +204,12 @@ class ResearchLandscapeArtifact(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.3"
     artifact_kind: Literal[
         "autoresearch-evaluation-landscape-v1",
         "autoresearch-evaluation-landscape-v2",
         "autoresearch-evaluation-landscape-v3",
+        "autoresearch-evaluation-landscape-v4",
     ] = _PROJECTION_KIND
     title: SafeText
     source_document: SafeLocator
@@ -144,6 +218,7 @@ class ResearchLandscapeArtifact(BaseModel):
     corpus_scope: Literal[
         "targeted-evaluation-precedents",
         "accepted-method-census-candidate-and-targeted-evaluation-resources",
+        "accepted-method-census-second-screen-and-targeted-evaluation-resources",
     ] = "targeted-evaluation-precedents"
     scope_note_en: SafeText = (
         "Selected evaluation precedents; counts do not estimate publication prevalence."
@@ -154,8 +229,8 @@ class ResearchLandscapeArtifact(BaseModel):
     decision_reason_code: SafeIdentifier
     stages: tuple[ResearchStage, ...] = Field(min_length=4, max_length=8)
     lenses: tuple[EvaluationLens, ...] = Field(min_length=3, max_length=6)
-    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=24)
-    comparison_candidates: tuple[ComparisonCandidate, ...] = Field(min_length=2, max_length=12)
+    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=36)
+    comparison_candidates: tuple[ComparisonCandidate, ...] = Field(min_length=2, max_length=16)
     planning_gates: tuple[PlanningGate, ...] = Field(min_length=4, max_length=8)
     open_questions: tuple[ResearchQuestion, ...] = Field(min_length=1, max_length=6)
 
@@ -165,6 +240,7 @@ class ResearchLandscapeArtifact(BaseModel):
             "1.0": "autoresearch-evaluation-landscape-v1",
             "1.1": "autoresearch-evaluation-landscape-v2",
             "1.2": "autoresearch-evaluation-landscape-v3",
+            "1.3": "autoresearch-evaluation-landscape-v4",
         }
         if self.artifact_kind != expected_pair[self.schema_version]:
             raise ValueError("research landscape schema and artifact kind must match")
@@ -198,7 +274,7 @@ class ResearchLandscapeArtifact(BaseModel):
         if not any(item.role == "primary" for item in self.works):
             raise ValueError("research landscape requires a primary comparison work")
         contribution_types = {item.contribution_type for item in self.works}
-        if self.schema_version in {"1.1", "1.2"}:
+        if self.schema_version in {"1.1", "1.2", "1.3"}:
             if "unclassified" in contribution_types:
                 raise ValueError("classified research works require an explicit contribution type")
             if not {"method", "benchmark", "hybrid"}.issubset(contribution_types):
@@ -219,6 +295,32 @@ class ResearchLandscapeArtifact(BaseModel):
             "accepted-method-census-candidate-and-targeted-evaluation-resources"
         ):
             raise ValueError("v3 landscape must disclose its mixed census/resource scope")
+        if self.schema_version == "1.3":
+            if self.corpus_scope != (
+                "accepted-method-census-second-screen-and-targeted-evaluation-resources"
+            ):
+                raise ValueError("v4 landscape must disclose its second-screen scope")
+            if any(item.publication_status == "unverified" for item in self.works):
+                raise ValueError("v4 research works require explicit publication status")
+            if any(
+                item.publication_status == "unverified" or item.evaluation_track == "design-only"
+                for item in self.comparison_candidates
+            ):
+                raise ValueError("v4 comparison candidates require explicit evidence tracks")
+            headline_external = {
+                item.candidate_id
+                for item in self.comparison_candidates
+                if item.evaluation_track == "headline-system"
+                and item.publication_status == "accepted-archival"
+            }
+            if len(headline_external) < 2:
+                raise ValueError("v4 requires at least two accepted external headline candidates")
+            if any(
+                item.publication_status == "preprint-only"
+                and item.evaluation_track != "sensitivity-system"
+                for item in self.comparison_candidates
+            ):
+                raise ValueError("preprint-only systems must remain sensitivity candidates")
         if self.freeze_decision == "ready" and any(
             item.state != "ready" for item in self.planning_gates
         ):
@@ -255,23 +357,35 @@ class ResearchLandscapeOverlay(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.2"] = "1.2"
-    artifact_kind: Literal["autoresearch-evaluation-landscape-v3"] = _PROJECTION_KIND
+    schema_version: Literal["1.2", "1.3"] = "1.3"
+    artifact_kind: Literal[
+        "autoresearch-evaluation-landscape-v3",
+        "autoresearch-evaluation-landscape-v4",
+    ] = _PROJECTION_KIND
     base_source: SafeLocator
     base_source_sha256: Sha256
     title: SafeText
     source_document: SafeLocator
     source_document_sha256: Sha256
     synthesis_scope: Literal["literature-and-protocol-design-only"]
-    corpus_scope: Literal["accepted-method-census-candidate-and-targeted-evaluation-resources"]
+    corpus_scope: Literal[
+        "accepted-method-census-candidate-and-targeted-evaluation-resources",
+        "accepted-method-census-second-screen-and-targeted-evaluation-resources",
+    ]
     scope_note_en: SafeText
     scope_note_zh: SafeText
     prevalence_inference: Literal["not-estimable"]
     freeze_decision: Literal["hold", "candidate", "ready"]
     decision_reason_code: SafeIdentifier
     work_additions: tuple[ResearchWork, ...] = Field(min_length=1, max_length=12)
+    work_classification_overrides: tuple[ResearchWorkClassificationOverride, ...] = Field(
+        default=(), max_length=36
+    )
     comparison_candidate_additions: tuple[ComparisonCandidate, ...] = Field(
         default=(), max_length=8
+    )
+    comparison_candidate_overrides: tuple[ComparisonCandidate, ...] = Field(
+        default=(), max_length=16
     )
     planning_gate_overrides: tuple[PlanningGate, ...] = Field(default=(), max_length=8)
     open_question_overrides: tuple[ResearchQuestion, ...] = Field(default=(), max_length=6)
@@ -281,8 +395,16 @@ class ResearchLandscapeOverlay(BaseModel):
         for label, values in (
             ("work", [item.work_id for item in self.work_additions]),
             (
+                "work classification",
+                [item.work_id for item in self.work_classification_overrides],
+            ),
+            (
                 "comparison candidate",
                 [item.candidate_id for item in self.comparison_candidate_additions],
+            ),
+            (
+                "comparison candidate override",
+                [item.candidate_id for item in self.comparison_candidate_overrides],
             ),
             ("planning gate", [item.gate_id for item in self.planning_gate_overrides]),
             ("open question", [item.question_id for item in self.open_question_overrides]),
@@ -299,7 +421,7 @@ def load_research_landscape_source(path: str | Path) -> ResearchLandscapeArtifac
     payload = yaml.safe_load(source.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("research landscape source must be an object")
-    if payload.get("artifact_kind") == _PROJECTION_KIND and "base_source" in payload:
+    if payload.get("artifact_kind") in _OVERLAY_PROJECTION_KINDS and "base_source" in payload:
         return _compose_research_landscape_overlay(source, payload)
     return ResearchLandscapeArtifact.model_validate(payload)
 
@@ -322,8 +444,9 @@ def _compose_research_landscape_overlay(
     if hashlib.sha256(base_path.read_bytes()).hexdigest() != overlay.base_source_sha256:
         raise ValueError("research landscape overlay base hash has drifted")
     base = load_research_landscape_source(base_path)
-    if base.schema_version != "1.1":
-        raise ValueError("v3 research landscape overlay must extend a v2 full source")
+    expected_base = {"1.2": "1.1", "1.3": "1.2"}[overlay.schema_version]
+    if base.schema_version != expected_base:
+        raise ValueError(f"{overlay.artifact_kind} overlay must extend schema {expected_base}")
 
     values = base.model_dump(mode="json")
     values.update(
@@ -346,6 +469,18 @@ def _compose_research_landscape_overlay(
         *values["works"],
         *(item.model_dump(mode="json") for item in overlay.work_additions),
     ]
+    values["works"] = _merge_by_id(
+        values["works"],
+        overlay.work_classification_overrides,
+        identity="work_id",
+        label="work classification",
+    )
+    values["comparison_candidates"] = _replace_by_id(
+        values["comparison_candidates"],
+        overlay.comparison_candidate_overrides,
+        identity="candidate_id",
+        label="comparison candidate",
+    )
     values["comparison_candidates"] = [
         *values["comparison_candidates"],
         *(item.model_dump(mode="json") for item in overlay.comparison_candidate_additions),
@@ -363,6 +498,28 @@ def _compose_research_landscape_overlay(
         label="open question",
     )
     return ResearchLandscapeArtifact.model_validate(values)
+
+
+def _merge_by_id(
+    base_items: object,
+    overrides: tuple[BaseModel, ...],
+    *,
+    identity: str,
+    label: str,
+) -> list[object]:
+    if not isinstance(base_items, list):  # pragma: no cover - base schema guarantees this
+        raise ValueError(f"research landscape base {label} collection is invalid")
+    override_map = {getattr(item, identity): item.model_dump(mode="json") for item in overrides}
+    known = {item[identity] for item in base_items if isinstance(item, dict)}
+    unknown = set(override_map) - known
+    if unknown:
+        raise ValueError(f"research landscape overlay references unknown {label} IDs")
+    return [
+        {**item, **override_map[item[identity]]}
+        if isinstance(item, dict) and item.get(identity) in override_map
+        else item
+        for item in base_items
+    ]
 
 
 def _replace_by_id(

@@ -1,0 +1,231 @@
+schema_version: "2.1"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-11-v3
+audited_on: 2026-09-11
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v2.yaml
+base_source_sha256: 8a0f671acb86702a865c21f8ff6e46463c9acf0450be1d612b804a5a20d63526
+
+resources_additions:
+  - resource_id: agent-laboratory
+    resource_kind: system
+    official_repository: https://github.com/SamuelSchmidgall/AgentLaboratory
+    repository_commit: d9017d90e329112d2a80b7712f37ee9094d2cd27
+    implementation_path: .
+    publication_url: https://aclanthology.org/2025.findings-emnlp.320/
+    accepted_venue: Findings of EMNLP 2025
+    code_license:
+      identifier: MIT
+      scope: Official repository source code at the pinned commit.
+      official_url: https://github.com/SamuelSchmidgall/AgentLaboratory/blob/d9017d90e329112d2a80b7712f37ee9094d2cd27/LICENSE
+      sha256: bf38a159d01e82d58f986c2d6dd06e03ba0b9cd59a6d286dd94109aac358e583
+      review_required: false
+      obligations:
+        - Preserve the copyright and permission notice in redistributed code.
+    datasets: []
+    lifecycle_stages:
+      - literature-review
+      - experimentation
+      - report-writing
+      - human-feedback
+    native_model_interfaces:
+      - OpenAI API
+      - Anthropic API
+      - locally configured inference backend
+    resource_requirements:
+      - Python environment from the pinned requirements
+      - provider credentials for the selected language model
+      - task-specific datasets and experiment dependencies
+      - TeX-capable report environment
+    gates:
+      official_identity:
+        status: verified
+        evidence: The archival paper and official repository identify the same Agent Laboratory system.
+        evidence_url: https://aclanthology.org/2025.findings-emnlp.320/
+      repository_pin:
+        status: verified
+        evidence: Official repository HEAD was resolved to the recorded 40-character commit on the audit date.
+        evidence_url: https://github.com/SamuelSchmidgall/AgentLaboratory/tree/d9017d90e329112d2a80b7712f37ee9094d2cd27
+      publication_identity:
+        status: verified
+        evidence: ACL Anthology lists the system as a Findings of EMNLP 2025 archival paper.
+        evidence_url: https://aclanthology.org/2025.findings-emnlp.320/
+      code_license:
+        status: verified
+        evidence: The pinned repository contains an MIT license whose exact bytes are hashed above.
+        evidence_url: https://github.com/SamuelSchmidgall/AgentLaboratory/blob/d9017d90e329112d2a80b7712f37ee9094d2cd27/LICENSE
+      license_acceptance:
+        status: verified
+        evidence: MIT terms are compatible with adapter-only comparative research subject to notice preservation.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated checkout and unchanged-core diff have been prepared.
+      task_mapping:
+        status: blocked
+        evidence: The official workflow has not been mapped to one equivalent frozen MLR-Bench or MLRC-Bench task package.
+      model_mapping:
+        status: blocked
+        evidence: Matched DeepSeek V4.1 Flash and GLM-5.3-Flash controller mappings have not been qualified against upstream behavior.
+      sandbox:
+        status: blocked
+        evidence: Experiment-code, filesystem, process, and network boundaries have not passed review.
+      telemetry:
+        status: blocked
+        evidence: Calls, token classes, retries, cost, wall time, experiments, intervention, GPU allocation, and active use are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: Literature, code, experiment, report, and feedback artifacts are not mapped into project-owned evidence records.
+      failure_resume:
+        status: blocked
+        evidence: Timeout, partial-phase failure, retry, resume, and over-budget behavior have no adapter acceptance tests.
+      disclosure_acceptance:
+        status: not_applicable
+        evidence: No system-specific manuscript disclosure obligation beyond normal attribution was identified in the MIT license.
+    notes:
+      - Archival acceptance and a permissive license do not establish matched-task comparability.
+      - No code was cloned, installed, or executed during this metadata audit.
+
+  - resource_id: ai-researcher
+    resource_kind: system
+    official_repository: https://github.com/HKUDS/AI-Researcher
+    repository_commit: f9a6f8480860c193afff600eeffe3defcee8a978
+    implementation_path: .
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/0d904d300a105809a2114d727851e759-Abstract-Conference.html
+    accepted_venue: NeurIPS 2025 Main Conference Spotlight
+    code_license: null
+    datasets: []
+    lifecycle_stages:
+      - literature-review
+      - hypothesis-generation
+      - algorithm-implementation
+      - experiment-validation
+      - result-analysis
+      - manuscript-generation
+    native_model_interfaces:
+      - LiteLLM-compatible provider
+      - OpenRouter API
+      - GitHub model API
+      - Docker experiment environment
+    resource_requirements:
+      - Python 3.11
+      - Docker
+      - Playwright
+      - provider credentials
+      - task-dependent GPU access
+    gates:
+      official_identity:
+        status: verified
+        evidence: The official NeurIPS proceedings and repository identify the same AI-Researcher system and Scientist-Bench.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/0d904d300a105809a2114d727851e759-Abstract-Conference.html
+      repository_pin:
+        status: verified
+        evidence: Official repository HEAD was resolved to the recorded 40-character commit on the audit date.
+        evidence_url: https://github.com/HKUDS/AI-Researcher/tree/f9a6f8480860c193afff600eeffe3defcee8a978
+      publication_identity:
+        status: verified
+        evidence: Official NeurIPS proceedings list AI-Researcher in the 2025 Main Conference.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/0d904d300a105809a2114d727851e759-Abstract-Conference.html
+      code_license:
+        status: blocked
+        evidence: No root LICENSE, LICENSE.md, or LICENSE.txt file was present at the pinned official commit; public source visibility is not a reuse license.
+      license_acceptance:
+        status: blocked
+        evidence: Code use cannot be approved until the authors provide or identify applicable license terms.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated checkout and unchanged-core diff have been prepared.
+      task_mapping:
+        status: blocked
+        evidence: Scientist-Bench inputs have not been shown equivalent to the frozen SciTaste comparison task package.
+      model_mapping:
+        status: blocked
+        evidence: The upstream multi-model roles have not been mapped to a matched single-backbone protocol without changing method semantics.
+      sandbox:
+        status: blocked
+        evidence: Docker, generated code, browser, network, and filesystem boundaries require a dedicated security review.
+      telemetry:
+        status: blocked
+        evidence: Calls, tokens, cost, wall time, generated experiments, retries, interventions, allocated GPU, and active GPU use are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: Ideas, code, experiment state, validation results, paper, and reviews are not mapped to immutable SciTaste evidence records.
+      failure_resume:
+        status: blocked
+        evidence: Partial-run identity, retry, timeout, resume, and over-budget semantics have no adapter acceptance tests.
+      disclosure_acceptance:
+        status: blocked
+        evidence: Manuscript and artifact disclosure obligations cannot be determined before licensing is resolved.
+    notes:
+      - The accepted paper makes AI-Researcher a high-priority headline candidate, not a formal-ready one.
+      - No repository clone, container pull, installation, or execution occurred during this metadata audit.
+
+  - resource_id: mlrc-bench
+    resource_kind: benchmark
+    official_repository: https://huggingface.co/spaces/launch/MLRC_Bench
+    repository_commit: e63f04d232a43ebf17f36354eade38b2b25ea3f2
+    implementation_path: .
+    publication_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    code_license: null
+    datasets:
+      - dataset_id: mlrc-bench-space
+        official_url: https://huggingface.co/spaces/launch/MLRC_Bench/tree/e63f04d232a43ebf17f36354eade38b2b25ea3f2
+        revision: e63f04d232a43ebf17f36354eade38b2b25ea3f2
+        license_identifier: unverified
+        reported_rows: 7
+        reported_size: repository size unverified
+        local_copy_present: false
+    lifecycle_stages:
+      - method-proposal
+      - implementation
+      - experiment-execution
+      - objective-scoring
+    native_model_interfaces:
+      - benchmark-defined language-agent interface
+      - task-specific executable environment
+    resource_requirements:
+      - seven competition-specific task environments
+      - task datasets and baseline implementations
+      - provider credentials for selected agents
+      - task-dependent accelerator resources
+    gates:
+      official_identity:
+        status: verified
+        evidence: The accepted benchmark paper points to the official MLRC-Bench leaderboard and code Space.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      repository_pin:
+        status: verified
+        evidence: The official Hugging Face Space HEAD was resolved to the recorded commit on the audit date.
+        evidence_url: https://huggingface.co/spaces/launch/MLRC_Bench/tree/e63f04d232a43ebf17f36354eade38b2b25ea3f2
+      publication_identity:
+        status: verified
+        evidence: Official NeurIPS proceedings list MLRC-Bench in the 2025 Datasets and Benchmarks Track.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/hash/82c96f3c90741ef2c9b248e65d9b5db0-Abstract-Datasets_and_Benchmarks_Track.html
+      code_license:
+        status: blocked
+        evidence: An exact code license has not been located and hashed at the pinned Space revision.
+      dataset_pin:
+        status: verified
+        evidence: The official seven-task Space revision is pinned; no task bytes were acquired.
+        evidence_url: https://huggingface.co/spaces/launch/MLRC_Bench/tree/e63f04d232a43ebf17f36354eade38b2b25ea3f2
+      dataset_license:
+        status: blocked
+        evidence: The Space revision does not yet establish the license of every competition task, dataset, and baseline.
+      source_groups:
+        status: blocked
+        evidence: A source- and competition-disjoint pilot/formal split has not been frozen.
+      selected_task_manifest:
+        status: blocked
+        evidence: No exact task subset, strata, exclusions, versions, and hashes are registered.
+      task_assets:
+        status: blocked
+        evidence: No benchmark or competition assets were downloaded or inventoried locally.
+      upstream_licenses:
+        status: blocked
+        evidence: Competition-specific code, data, checkpoints, and leaderboard terms remain unaudited.
+      executable_signal:
+        status: blocked
+        evidence: Objective scoring is reported by the paper, but no selected task has been reproduced in a controlled SciTaste environment.
+    notes:
+      - Objective competition metrics make this a high-value task source once legal and executable gates pass.
+      - The 9.3 percent human-gap result is a literature observation, not a SciTaste result.
+      - Metadata inspection did not authorize task download or execution.

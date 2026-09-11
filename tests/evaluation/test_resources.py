@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -18,11 +19,68 @@ from scitaste.evaluation import (
 )
 
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
+V3_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v3.yaml")
 
 
 @pytest.fixture(scope="module")
 def corpus() -> ExternalResourceCorpus:
     return load_external_resource_corpus(CORPUS_PATH).corpus
+
+
+@pytest.fixture(scope="module")
+def v3_corpus() -> ExternalResourceCorpus:
+    return load_external_resource_corpus(V3_CORPUS_PATH).corpus
+
+
+def test_v3_adds_accepted_headline_and_objective_benchmark_candidates(
+    v3_corpus: ExternalResourceCorpus,
+) -> None:
+    resources = {item.resource_id: item for item in v3_corpus.resources}
+
+    assert v3_corpus.schema_version == "2.1"
+    assert set(resources) - {
+        "ai-scientist-v2",
+        "autoresearchclaw",
+        "exp-bench",
+        "mlr-agent",
+        "mlr-bench",
+    } == {"agent-laboratory", "ai-researcher", "mlrc-bench"}
+    assert resources["agent-laboratory"].accepted_venue == "Findings of EMNLP 2025"
+    assert resources["agent-laboratory"].code_license is not None
+    assert resources["agent-laboratory"].code_license.identifier == "MIT"
+    assert resources["ai-researcher"].code_license is None
+    assert resources["mlrc-bench"].datasets[0].reported_rows == 7
+
+
+def test_missing_license_is_a_blocker_not_a_pseudo_license(
+    v3_corpus: ExternalResourceCorpus,
+) -> None:
+    reference = evaluate_resource_feasibility(
+        v3_corpus,
+        "ai-researcher",
+        ResourceUse.REFERENCE,
+    )
+    comparison = evaluate_resource_feasibility(
+        v3_corpus,
+        "ai-researcher",
+        ResourceUse.COMPARISON_SYSTEM,
+    )
+
+    assert reference.eligible is False
+    assert "blocked_gate:code_license" in reference.blocker_codes
+    assert comparison.eligible is False
+    assert "blocked_gate:license_acceptance" in comparison.blocker_codes
+
+
+def test_v3_overlay_is_bound_to_the_exact_v2_source(tmp_path: Path) -> None:
+    overlay = tmp_path / V3_CORPUS_PATH.name
+    base = tmp_path / CORPUS_PATH.name
+    shutil.copyfile(V3_CORPUS_PATH, overlay)
+    shutil.copyfile(CORPUS_PATH, base)
+    base.write_text(base.read_text(encoding="utf-8") + "\n# drift\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="overlay base hash has drifted"):
+        load_external_resource_corpus(overlay)
 
 
 def test_tracked_corpus_has_exact_audited_resources_and_pins(
@@ -219,6 +277,16 @@ def test_schema_rejects_benchmark_without_dataset(corpus: ExternalResourceCorpus
     payload["resources"][0]["datasets"] = []
 
     with pytest.raises(ValidationError, match="benchmark resources require"):
+        ExternalResourceCorpus.model_validate(payload)
+
+
+def test_schema_rejects_verified_license_gate_without_license_evidence(
+    corpus: ExternalResourceCorpus,
+) -> None:
+    payload = corpus.model_dump(mode="json")
+    payload["resources"][0]["code_license"] = None
+
+    with pytest.raises(ValidationError, match="requires license evidence"):
         ExternalResourceCorpus.model_validate(payload)
 
 

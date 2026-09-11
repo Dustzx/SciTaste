@@ -729,7 +729,16 @@ function renderLandscapeTable(data, works) {
     const use = document.createElement("small");
     use.className = "landscape-work-use";
     appendText(use, t(`landscape.use.${work.experiment_role}`));
-    identity.append(name, venue, use);
+    const classification = document.createElement("span");
+    classification.className = "landscape-work-classification";
+    const publication = document.createElement("span");
+    publication.className = `landscape-evidence-tag evidence-${work.publication_status}`;
+    appendText(publication, t(`landscape.publication.${work.publication_status}`));
+    const scope = document.createElement("span");
+    scope.className = `landscape-evidence-tag scope-${work.comparison_scope}`;
+    appendText(scope, t(`landscape.scope.${work.comparison_scope}`));
+    classification.append(publication, scope);
+    identity.append(name, venue, use, classification);
     row.appendChild(identity);
     for (const stage of data.stages) {
       const covered = work.stage_ids.includes(stage.stage_id);
@@ -910,10 +919,19 @@ function renderCandidateReadiness(data) {
         appendText(name, candidate.name);
         const meta = document.createElement("small");
         appendText(meta, `${t(`landscape.kind.${candidate.candidate_kind}`)} · ${t(`landscape.role.${candidate.role}`)}`);
+        const evidence = document.createElement("div");
+        evidence.className = "candidate-evidence-tags";
+        const publication = document.createElement("span");
+        publication.className = `landscape-evidence-tag evidence-${candidate.publication_status}`;
+        appendText(publication, t(`landscape.publication.${candidate.publication_status}`));
+        const track = document.createElement("span");
+        track.className = `landscape-evidence-tag track-${candidate.evaluation_track}`;
+        appendText(track, t(`landscape.evaluation.${candidate.evaluation_track}`));
+        evidence.append(publication, track);
         const barrier = document.createElement("span");
         barrier.className = "barrier-code";
         appendText(barrier, localizedCode(candidate.barrier_code));
-        card.append(name, meta, barrier);
+        card.append(name, meta, evidence, barrier);
         lane.appendChild(card);
       }
       if (!lane.querySelector("article")) {

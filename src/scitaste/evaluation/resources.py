@@ -104,7 +104,7 @@ class ExternalEvaluationResource(FrozenModel):
     implementation_path: str = Field(default=".", min_length=1, max_length=500)
     publication_url: str = Field(min_length=1, max_length=2_000)
     accepted_venue: str | None = Field(default=None, max_length=200)
-    code_license: ResourceLicense
+    code_license: ResourceLicense | None
     datasets: tuple[DatasetPin, ...] = Field(default=(), max_length=20)
     lifecycle_stages: tuple[str, ...] = Field(min_length=1, max_length=30)
     native_model_interfaces: tuple[str, ...] = Field(default=(), max_length=30)
@@ -126,11 +126,17 @@ class ExternalEvaluationResource(FrozenModel):
                 raise ValueError(f"{label} must be unique")
         if self.resource_kind is EvaluationResourceKind.BENCHMARK and not self.datasets:
             raise ValueError("benchmark resources require an immutable dataset pin")
+        code_license_gate = self.gates.get(ResourceGateName.CODE_LICENSE)
+        if self.code_license is None and (
+            code_license_gate is not None
+            and code_license_gate.status is ResourceGateStatus.VERIFIED
+        ):
+            raise ValueError("a verified code-license gate requires license evidence")
         return self
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal["2.0"] = "2.0"
+    schema_version: Literal["2.0", "2.1"] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -152,6 +158,25 @@ class ExternalResourceCorpus(FrozenModel):
             separators=(",", ":"),
         )
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+class ExternalResourceCorpusOverlay(FrozenModel):
+    """Content-addressed additive metadata revision over one prior corpus."""
+
+    schema_version: Literal["2.1"] = "2.1"
+    corpus_id: str = Field(pattern=_RESOURCE_ID)
+    audited_on: date
+    authorization_scope: Literal["metadata-only-no-execution"]
+    base_source: str = Field(min_length=1, max_length=500)
+    base_source_sha256: str = Field(pattern=_SHA256)
+    resources_additions: tuple[ExternalEvaluationResource, ...] = Field(min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def additions_are_unique(self) -> ExternalResourceCorpusOverlay:
+        resource_ids = [item.resource_id for item in self.resources_additions]
+        if len(resource_ids) != len(set(resource_ids)):
+            raise ValueError("evaluation resource overlay IDs must be unique")
+        return self
 
 
 class ResourceCorpusInspection(FrozenModel):
@@ -247,12 +272,49 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
         raise ValueError("evaluation resource corpus must be UTF-8") from exc
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
-    corpus = ExternalResourceCorpus.model_validate(payload)
+    if payload.get("schema_version") == "2.1" and "base_source" in payload:
+        corpus = _compose_external_resource_overlay(resolved, payload)
+    else:
+        corpus = ExternalResourceCorpus.model_validate(payload)
     return ResourceCorpusInspection(
         path=resolved,
         file_sha256=hashlib.sha256(raw).hexdigest(),
         semantic_sha256=corpus.semantic_sha256,
         corpus=corpus,
+    )
+
+
+def _compose_external_resource_overlay(
+    source: Path, payload: dict[str, object]
+) -> ExternalResourceCorpus:
+    overlay = ExternalResourceCorpusOverlay.model_validate(payload)
+    source_root = source.parent
+    base_candidate = source_root / overlay.base_source
+    if base_candidate.is_symlink():
+        raise ValueError("evaluation resource overlay base must not be a symlink")
+    base_path = base_candidate.resolve(strict=True)
+    try:
+        base_path.relative_to(source_root)
+    except ValueError as exc:
+        raise ValueError("evaluation resource overlay base escapes its source directory") from exc
+    if not base_path.is_file():
+        raise ValueError("evaluation resource overlay base must be a regular file")
+    if hashlib.sha256(base_path.read_bytes()).hexdigest() != overlay.base_source_sha256:
+        raise ValueError("evaluation resource overlay base hash has drifted")
+    base = load_external_resource_corpus(base_path).corpus
+    if base.schema_version != "2.0":
+        raise ValueError("evaluation resource v2.1 overlay must extend schema 2.0")
+    known = {item.resource_id for item in base.resources}
+    additions = {item.resource_id for item in overlay.resources_additions}
+    if known & additions:
+        raise ValueError("evaluation resource overlay cannot replace existing resources")
+    return ExternalResourceCorpus(
+        schema_version=overlay.schema_version,
+        corpus_id=overlay.corpus_id,
+        audited_on=overlay.audited_on,
+        authorization_scope=overlay.authorization_scope,
+        prior_snapshot=base.prior_snapshot,
+        resources=(*base.resources, *overlay.resources_additions),
     )
 
 

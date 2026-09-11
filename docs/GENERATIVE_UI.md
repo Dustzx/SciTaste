@@ -180,9 +180,9 @@ records exist. They contain no command or execution authority.
 
 The `research-landscape` view prevents a prose experiment plan from becoming a
 premature protocol. It reads only a strict, project-owned
-versioned `autoresearch-evaluation-landscape-v1` through `v3` artifact declared
-by a registered run; the latest `v3` schema carries the separated contribution
-types and experiment tracks. The artifact is bounded, schema-closed, contained
+versioned `autoresearch-evaluation-landscape-v1` through `v4` artifact declared
+by a registered run; the latest `v4` schema carries separated contribution
+types, publication evidence, and experiment tracks. The artifact is bounded, schema-closed, contained
 beneath that run, and covered by the run-directory hash in the current snapshot.
 An absent projection becomes an explicit unavailable state; an escaping,
 oversized, duplicate-key, malformed, or stale artifact fails closed.
@@ -205,7 +205,10 @@ schema fixes prevalence inference to `not-estimable`, because the method side is
 a census candidate while evaluation resources are a targeted design sample.
 Candidate readiness is rendered separately for systems and for benchmarks or
 judges, so an adapted benchmark cannot visually imply an adapted baseline
-system.
+system. Publication status and execution readiness are orthogonal: archival
+acceptance cannot waive an adapter gate, and a runnable preprint cannot enter
+the headline system lane. The v4 schema requires at least two accepted external
+headline candidates while keeping preprint-only systems in sensitivity analysis.
 
 This Taste is a presentation and abstraction policy, not a factual rewriter. It
 chooses relationships, visual hierarchy, compression, and disclosure while
@@ -217,12 +220,12 @@ blocked. The map can justify continuing experiment *planning*; it cannot
 authorize downloads, provider calls, GPU work, human recruitment, or formal
 cells.
 
-On 2026-09-11 the two-track projection was exercised through the real local
+On 2026-09-11 the earlier v3 two-track projection was exercised through the real local
 receiver against the registered `scitaste-self-development` landscape. The
 generated Chinese workspace showed eight screened system-track sources, twelve
 screened evaluation-track sources, seven registered system candidates, three
 registered evaluation candidates, and zero formal-ready candidates in either
-track. Those overlapping source counts are classification outputs, not paper
+track. Those overlapping source counts are historical v3 classification outputs, not paper
 prevalence or experiment results. Headless Chromium at 1440, 768, 390, and 320
 CSS pixels found no document-level horizontal overflow, undersized enabled
 target, locale-switch request, or runtime error after the tablet track layout
