@@ -119,6 +119,15 @@ decision rate, evidence localization, and budget-weighted decision utility.
 Random or label-frequency policies and shuffled/mismatched Taste retrieval form
 negative controls so that gains cannot be attributed merely to extra context.
 
+The executable curation contract is now implemented. It keeps preferred actions
+out of natural case records, admits only conflict-cleared human labels, preserves
+primary disagreement with explicit tie adjudication, binds source/rubric/Taste
+corpus hashes, and fails before compilation unless the formal population floor
+passes. Declared and reversed action orders are separate repeated-measure arms.
+No natural case population or expert annotation has yet been collected, so this
+is protocol readiness rather than Track A evidence. See
+[`research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
+
 ## Track B: independent end-to-end comparison
 
 ### Required systems

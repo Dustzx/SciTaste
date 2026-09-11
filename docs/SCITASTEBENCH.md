@@ -4,6 +4,14 @@ SciTasteBench is an evaluation subsystem, not the SciTaste control framework. It
 depends only on the fixed-candidate backend contract and can fail independently
 without blocking research-state execution.
 
+Version 1 remains a synthetic engineering acceptance suite. It is useful for
+testing metrics and condition isolation but is not publication-effectiveness
+evidence. Version 2 has a separate human-labelled curation boundary: natural
+cases contain no answer, source groups are disjoint from the evaluated Taste
+precedents, rubric and precedent corpora are content-addressed, and at least two
+independent human labels are compiled into the hidden expert distribution.
+Model-generated labels are structurally inadmissible.
+
 ## Version 1 protocol
 
 The initial suite contains eight independent synthetic decisions across all six
@@ -20,6 +28,11 @@ Each case is evaluated under five isolated conditions:
 | `taste_library` | retrieved decision principle only |
 | `taste_critics` | independent critic feedback only |
 | `full_scitaste` | knowledge, taste, critics, and controller state |
+
+Formal v2 adds `taste_placebo`, which supplies mismatched source-disjoint Taste
+precedents. It also runs declared and reversed candidate order as separate
+content-bound arms. The order arms are repeated measurements of the same case,
+not additional sample size.
 
 The condition name and augmentation content are part of the request fingerprint.
 Exact recordings therefore cannot be replayed under a different condition.
@@ -80,6 +93,22 @@ matching config, and use `--record` to preserve exact request/response pairs.
 Tests and default commands never contact a provider or load a checkpoint.
 Generated reports remain ignored; only aggregate acceptance manifests and hashes
 are committed.
+
+Inspect and compile a natural v2 curation package with:
+
+```bash
+.venv/bin/scitaste benchmark curate \
+  --package /path/to/curation.yaml \
+  --evidence-root /path/to/frozen-evidence \
+  --output /path/to/scitastebench_v2.yaml
+```
+
+Compilation fails closed on missing or drifted natural-source/rubric/Taste
+corpus bytes, inconsistent rubric versions, fewer than two labels, duplicate
+reviewers, unnecessary or unresolved adjudication, source-group leakage, or
+the formal 120-case/three-domain/six-family floor. The full scientific and GPU
+contract is in
+[`SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
 
 ## Capability-boundary diagnostics
 

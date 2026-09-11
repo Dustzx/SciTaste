@@ -18,6 +18,7 @@ from scitaste.benchmark.models import (
     BenchmarkReport,
     BenchmarkResult,
     BenchmarkSuite,
+    CandidateOrder,
     ConditionComparison,
     ConditionReport,
     TransferAxis,
@@ -28,9 +29,16 @@ from scitaste.taste.intrinsic import BackendProtocolError, TasteTask
 class SciTasteBenchRunner:
     """Measure intrinsic and externally augmented taste on fixed candidate pairs."""
 
-    def __init__(self, backend: PreferenceBackend, *, seed: int = 0) -> None:
+    def __init__(
+        self,
+        backend: PreferenceBackend,
+        *,
+        seed: int = 0,
+        candidate_order: CandidateOrder = CandidateOrder.DECLARED,
+    ) -> None:
         self.backend = backend
         self.seed = seed
+        self.candidate_order = candidate_order
 
     def evaluate(
         self,
@@ -72,6 +80,7 @@ class SciTasteBenchRunner:
             backend=next(iter(backends)),
             model=next(iter(models)),
             seed=self.seed,
+            candidate_order=self.candidate_order,
             conditions=condition_reports,
             comparisons_to_base=comparisons,
             excluded_headline_case_ids=excluded_headline_case_ids,
@@ -96,7 +105,11 @@ class SciTasteBenchRunner:
         results: list[BenchmarkResult] = []
         case_by_id = {case.case_id: case for case in suite.cases}
         for case in suite.cases:
-            request = case.to_request(condition, seed=self.seed)
+            request = case.to_request(
+                condition,
+                seed=self.seed,
+                candidate_order=self.candidate_order,
+            )
             response = self.backend.rank(request)
             candidate_ids = set(case.action_roles)
             if response.request_id != request.request_id:
@@ -115,6 +128,7 @@ class SciTasteBenchRunner:
                 BenchmarkResult(
                     case_id=case.case_id,
                     condition=condition,
+                    candidate_order=self.candidate_order,
                     task=case.task,
                     selected_action_id=response.selected_action_id,
                     selected_role=case.action_roles[response.selected_action_id],
@@ -166,13 +180,17 @@ def load_benchmark_suite(path: str | Path) -> BenchmarkSuite:
 def scripted_selections(
     suite: BenchmarkSuite,
     conditions: list[BenchmarkCondition] | None = None,
+    *,
+    candidate_order: CandidateOrder = CandidateOrder.DECLARED,
 ) -> dict[str, str]:
     selected_conditions = conditions or suite.conditions
     selections: dict[str, str] = {}
     for case in suite.cases:
         for condition in selected_conditions:
             try:
-                selections[case.request_id(condition)] = case.scripted_selections[condition]
+                selections[case.request_id(condition, candidate_order)] = (
+                    case.scripted_selections[condition]
+                )
             except KeyError as exc:
                 raise ValueError(
                     f"scripted selection missing for {case.case_id!r} / {condition.value!r}"
@@ -194,6 +212,7 @@ def save_benchmark_report(report: BenchmarkReport, output_dir: str | Path) -> di
         "backend": report.backend,
         "model": report.model,
         "seed": report.seed,
+        "candidate_order": report.candidate_order.value,
         "report": report_path.name,
         "report_sha256": hashlib.sha256(content.encode()).hexdigest(),
         "headline_case_count": report.conditions[BenchmarkCondition.BASE].headline.count,

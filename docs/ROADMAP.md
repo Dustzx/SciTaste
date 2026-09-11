@@ -13,7 +13,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
-| Phase 8 — SciTasteBench | done | intrinsic/augmented evaluation is controlled and reproducible |
+| Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
+| Phase 8.1 — SciTasteBench v2 | in progress | 120+ source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced local/API results |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 The independent product path now also has a project-owned paper-review registry

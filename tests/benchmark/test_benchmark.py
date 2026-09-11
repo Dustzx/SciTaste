@@ -19,6 +19,7 @@ from scitaste.benchmark import (
 from scitaste.taste.intrinsic import BackendProtocolError, TasteTask
 
 SUITE_PATH = "configs/benchmark/scitastebench_v1.yaml"
+V1_SEMANTIC_SHA256 = "bbf4811a70a8625d8012c3e6cb6c7a0c99e9a7ead570f2504906e33377e291bf"
 
 
 def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
@@ -36,6 +37,7 @@ def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
     assert case.critic_feedback in full.decision_context
     assert case.controller_context in full.decision_context
     assert base.fingerprint != full.fingerprint
+    assert suite.sha256 == V1_SEMANTIC_SHA256
 
     knowledge = case.to_request(BenchmarkCondition.KNOWLEDGE_RAG, seed=7)
     taste = case.to_request(BenchmarkCondition.TASTE_LIBRARY, seed=7)
@@ -47,6 +49,20 @@ def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
     assert case.critic_feedback in critics.decision_context
     assert case.controller_context not in critics.decision_context
 
+
+def test_suite_hash_canonicalizes_unordered_transfer_axes() -> None:
+    suite = load_benchmark_suite(SUITE_PATH)
+    case = suite.cases[6]
+    assert len(case.transfer_axes) == 2
+
+    reversed_storage = case.model_copy(
+        update={"transfer_axes": set(reversed(tuple(case.transfer_axes)))}
+    )
+    rebuilt = suite.model_copy(
+        update={"cases": [*suite.cases[:6], reversed_storage, *suite.cases[7:]]}
+    )
+
+    assert rebuilt.sha256 == V1_SEMANTIC_SHA256
 
 def test_offline_benchmark_measures_augmented_delta_and_robustness() -> None:
     suite = load_benchmark_suite(SUITE_PATH)

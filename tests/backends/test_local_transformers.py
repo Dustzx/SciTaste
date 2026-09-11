@@ -150,6 +150,26 @@ def test_committed_qwen3vl2b_config_pins_the_selected_local_snapshot(
     )
 
 
+def test_scitastebench_qwen3vl2b_config_binds_the_observed_tree_and_device(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    model_dir = tmp_path / "Qwen3-VL-2B-Instruct"
+    monkeypatch.setenv("SCITASTE_LOCAL_MODEL_PATH", str(model_dir))
+    monkeypatch.setenv("SCITASTE_LOCAL_DEVICE", "cuda:7")
+
+    config = load_local_transformers_config(
+        "configs/backends/local_transformers_qwen3vl2b_scitastebench_v1.yaml"
+    )
+
+    assert config.model_path == model_dir
+    assert config.device == "cuda:7"
+    assert config.model_revision == "local-tree-8e95e5f6"
+    assert config.checkpoint_sha256 == (
+        "8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1"
+    )
+
+
 def test_local_checkpoint_hash_binds_names_sizes_and_bytes(tmp_path) -> None:
     checkpoint = tmp_path / "checkpoint"
     checkpoint.mkdir()

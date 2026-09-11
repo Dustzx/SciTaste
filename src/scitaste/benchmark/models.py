@@ -19,6 +19,18 @@ class BenchmarkCondition(StrEnum):
     TASTE_LIBRARY = "taste_library"
     TASTE_CRITICS = "taste_critics"
     FULL_SCITASTE = "full_scitaste"
+    TASTE_PLACEBO = "taste_placebo"
+
+
+class BenchmarkEvidenceTier(StrEnum):
+    SYNTHETIC_ACCEPTANCE = "synthetic_acceptance"
+    NATURAL_PILOT = "natural_pilot"
+    FORMAL = "formal"
+
+
+class CandidateOrder(StrEnum):
+    DECLARED = "declared"
+    REVERSED = "reversed"
 
 
 class TransferAxis(StrEnum):
@@ -48,9 +60,24 @@ class BenchmarkCase(BaseModel):
     style_group: str | None = None
     paraphrase_group: str | None = None
     knowledge_context: str = ""
+    knowledge_evidence_ids: tuple[str, ...] = ()
     taste_principle: str = ""
+    taste_precedent_ids: tuple[str, ...] = ()
+    taste_precedent_source_group_ids: tuple[str, ...] = ()
+    placebo_taste_principle: str = ""
+    placebo_precedent_ids: tuple[str, ...] = ()
+    placebo_precedent_source_group_ids: tuple[str, ...] = ()
     critic_feedback: str = ""
     controller_context: str = ""
+    source_group_id: str | None = None
+    source_ref: str | None = None
+    source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    primary_label_count: int | None = Field(default=None, ge=2)
+    primary_label_agreement: float | None = Field(default=None, ge=0, le=1)
+    annotation_manifest_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    prompt_version: str = Field(default="scitastebench-v1", min_length=1, max_length=100)
     headline_eligible: bool = True
     self_referential: bool = False
     scripted_selections: dict[BenchmarkCondition, str] = Field(default_factory=dict)
@@ -77,29 +104,71 @@ class BenchmarkCase(BaseModel):
             raise ValueError("scripted selections must be candidates")
         if self.self_referential and self.headline_eligible:
             raise ValueError("self-referential cases cannot be headline eligible")
+        provenance_groups = (
+            self.taste_precedent_source_group_ids,
+            self.placebo_precedent_source_group_ids,
+        )
+        if any(len(values) != len(set(values)) for values in provenance_groups):
+            raise ValueError("benchmark precedent source-group ids must be unique")
+        if len(self.knowledge_evidence_ids) != len(set(self.knowledge_evidence_ids)):
+            raise ValueError("benchmark knowledge evidence ids must be unique")
+        if len(self.taste_precedent_ids) != len(set(self.taste_precedent_ids)):
+            raise ValueError("benchmark taste precedent ids must be unique")
+        if len(self.placebo_precedent_ids) != len(set(self.placebo_precedent_ids)):
+            raise ValueError("benchmark placebo precedent ids must be unique")
+        if set(self.taste_precedent_ids) & set(self.placebo_precedent_ids):
+            raise ValueError("matched and placebo Taste precedents must be disjoint")
+        if self.source_group_id is not None and self.source_group_id in {
+            *self.taste_precedent_source_group_ids,
+            *self.placebo_precedent_source_group_ids,
+        }:
+            raise ValueError("benchmark source group cannot enter its Taste context")
         return self
 
-    def request_id(self, condition: BenchmarkCondition) -> str:
-        return f"{self.case_id}::{condition.value}"
+    def request_id(
+        self,
+        condition: BenchmarkCondition,
+        candidate_order: CandidateOrder = CandidateOrder.DECLARED,
+    ) -> str:
+        suffix = "" if candidate_order is CandidateOrder.DECLARED else "::reversed"
+        return f"{self.case_id}::{condition.value}{suffix}"
 
-    def to_request(self, condition: BenchmarkCondition, *, seed: int) -> PreferenceRequest:
+    def to_request(
+        self,
+        condition: BenchmarkCondition,
+        *,
+        seed: int,
+        candidate_order: CandidateOrder = CandidateOrder.DECLARED,
+    ) -> PreferenceRequest:
         sections = [self.decision_context]
         if condition in {BenchmarkCondition.KNOWLEDGE_RAG, BenchmarkCondition.FULL_SCITASTE}:
             sections.append(f"Retrieved knowledge:\n{self.knowledge_context}")
         if condition in {BenchmarkCondition.TASTE_LIBRARY, BenchmarkCondition.FULL_SCITASTE}:
             sections.append(f"Retrieved taste principle:\n{self.taste_principle}")
+        if condition is BenchmarkCondition.TASTE_PLACEBO:
+            sections.append(
+                f"Retrieved taste principle:\n{self.placebo_taste_principle}"
+            )
         if condition in {BenchmarkCondition.TASTE_CRITICS, BenchmarkCondition.FULL_SCITASTE}:
             sections.append(f"Independent critic feedback:\n{self.critic_feedback}")
         if condition == BenchmarkCondition.FULL_SCITASTE:
             sections.append(f"Controller state:\n{self.controller_context}")
         return PreferenceRequest(
-            request_id=self.request_id(condition),
+            request_id=self.request_id(condition, candidate_order),
             task=self.task.value,
             stage=self.stage,
             decision_context="\n\n".join(sections),
-            candidate_actions=self.candidate_actions,
+            candidate_actions=(
+                self.candidate_actions
+                if candidate_order is CandidateOrder.DECLARED
+                else list(reversed(self.candidate_actions))
+            ),
             seed=seed,
-            prompt_version=f"scitastebench-v1/{condition.value}",
+            prompt_version=(
+                f"{self.prompt_version}/{condition.value}"
+                if candidate_order is CandidateOrder.DECLARED
+                else f"{self.prompt_version}/{condition.value}/reversed"
+            ),
         )
 
 
@@ -109,6 +178,12 @@ class BenchmarkSuite(BaseModel):
     suite_id: str
     version: str
     description: str
+    evidence_tier: BenchmarkEvidenceTier = BenchmarkEvidenceTier.SYNTHETIC_ACCEPTANCE
+    annotation_manifest_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    precedent_corpus_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    precedent_source_group_ids: tuple[str, ...] = ()
     conditions: list[BenchmarkCondition]
     cases: list[BenchmarkCase] = Field(min_length=1)
 
@@ -124,11 +199,83 @@ class BenchmarkSuite(BaseModel):
             raise ValueError("benchmark case ids must be unique")
         if not any(case.headline_eligible for case in self.cases):
             raise ValueError("suite must contain at least one headline-eligible case")
+        if self.evidence_tier is BenchmarkEvidenceTier.FORMAL:
+            headline = [case for case in self.cases if case.headline_eligible]
+            if len(headline) < 120:
+                raise ValueError("formal SciTasteBench requires at least 120 headline cases")
+            if len({case.domain for case in headline}) < 3:
+                raise ValueError("formal SciTasteBench requires at least three domains")
+            if {case.task for case in headline} != set(TasteTask):
+                raise ValueError("formal SciTasteBench must cover every taste decision family")
+            if BenchmarkCondition.TASTE_PLACEBO not in self.conditions:
+                raise ValueError("formal SciTasteBench requires a mismatched-Taste placebo")
+            if self.annotation_manifest_sha256 is None or self.precedent_corpus_sha256 is None:
+                raise ValueError("formal SciTasteBench requires annotation and precedent hashes")
+            if not self.precedent_source_group_ids or len(self.precedent_source_group_ids) != len(
+                set(self.precedent_source_group_ids)
+            ):
+                raise ValueError("formal SciTasteBench requires unique precedent source groups")
+            if {case.source_group_id for case in headline} & set(
+                self.precedent_source_group_ids
+            ):
+                raise ValueError("formal case and precedent source groups must be disjoint")
+            if any(
+                case.source_group_id is None
+                or case.source_ref is None
+                or case.source_sha256 is None
+                or case.primary_label_count is None
+                or case.annotation_manifest_sha256 != self.annotation_manifest_sha256
+                or case.prompt_version != "scitastebench-v2"
+                or not case.placebo_taste_principle
+                or not case.knowledge_evidence_ids
+                or not case.taste_precedent_ids
+                or not case.taste_precedent_source_group_ids
+                or not case.placebo_precedent_ids
+                or not case.placebo_precedent_source_group_ids
+                or case.self_referential
+                or case.scripted_selections
+                for case in headline
+            ):
+                raise ValueError(
+                    "formal SciTasteBench cases require natural-source, human-label, placebo, "
+                    "and v2 protocol bindings"
+                )
         return self
 
     @property
     def sha256(self) -> str:
         payload = self.model_dump(mode="json")
+        for case in payload["cases"]:
+            observed = set(case["transfer_axes"])
+            case["transfer_axes"] = [
+                axis.value for axis in TransferAxis if axis.value in observed
+            ]
+        if self.version == "1.0":
+            for field in (
+                "evidence_tier",
+                "annotation_manifest_sha256",
+                "precedent_corpus_sha256",
+                "precedent_source_group_ids",
+            ):
+                payload.pop(field, None)
+            additive_case_fields = (
+                "knowledge_evidence_ids",
+                "taste_precedent_ids",
+                "taste_precedent_source_group_ids",
+                "placebo_taste_principle",
+                "placebo_precedent_ids",
+                "placebo_precedent_source_group_ids",
+                "source_group_id",
+                "source_ref",
+                "source_sha256",
+                "primary_label_count",
+                "primary_label_agreement",
+                "annotation_manifest_sha256",
+                "prompt_version",
+            )
+            for case in payload["cases"]:
+                for field in additive_case_fields:
+                    case.pop(field, None)
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -138,6 +285,7 @@ class BenchmarkResult(BaseModel):
 
     case_id: str
     condition: BenchmarkCondition
+    candidate_order: CandidateOrder = CandidateOrder.DECLARED
     task: TasteTask
     selected_action_id: str
     selected_role: str
@@ -217,6 +365,7 @@ class BenchmarkReport(BaseModel):
     backend: str
     model: str
     seed: int
+    candidate_order: CandidateOrder = CandidateOrder.DECLARED
     conditions: dict[BenchmarkCondition, ConditionReport]
     comparisons_to_base: dict[BenchmarkCondition, ConditionComparison]
     excluded_headline_case_ids: list[str]
@@ -235,6 +384,7 @@ class CrossModelCapabilityComparison(BaseModel):
     suite_id: str
     suite_sha256: str
     seed: int
+    candidate_order: CandidateOrder = CandidateOrder.DECLARED
     primary_backend: str
     primary_model: str
     comparator_backend: str

@@ -52,6 +52,32 @@ def test_benchmark_cli_dry_run_does_not_write(tmp_path) -> None:
     assert not output.exists()
 
 
+def test_benchmark_cli_runs_a_separate_reversed_candidate_order_arm(tmp_path) -> None:
+    output = tmp_path / "reversed"
+
+    assert (
+        main(
+            [
+                "benchmark",
+                "run",
+                "--backend",
+                "scripted",
+                "--candidate-order",
+                "reversed",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+
+    report = json.loads((output / "benchmark_report.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output / "benchmark_manifest.json").read_text(encoding="utf-8"))
+    assert report["candidate_order"] == "reversed"
+    assert manifest["candidate_order"] == "reversed"
+    assert report["conditions"]["base"]["results"][0]["candidate_order"] == "reversed"
+
+
 def test_benchmark_cli_records_and_exactly_replays_selected_conditions(tmp_path) -> None:
     recording = tmp_path / "benchmark.jsonl"
     first = tmp_path / "first"

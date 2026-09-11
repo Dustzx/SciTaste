@@ -1,0 +1,12 @@
+provider: local-transformers
+model_path: ${SCITASTE_LOCAL_MODEL_PATH}
+model_id: Qwen/Qwen3-VL-2B-Instruct
+model_revision: local-tree-8e95e5f6
+checkpoint_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+architecture: Qwen3VLForConditionalGeneration
+device: ${SCITASTE_LOCAL_DEVICE}
+dtype: bfloat16
+max_new_tokens: 256
+max_context_tokens: 16384
+max_retries: 1
+require_cuda: true

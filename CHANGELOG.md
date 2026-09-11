@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- SciTasteBench v2 now has a natural-case curation and human-label boundary.
+  Cases bind rehash-verified natural sources, source groups, and matched/placebo
+  precedent provenance but contain no answer; at least two conflict-cleared
+  human labels under one exact rubric version and tie-only adjudication are
+  required before compilation. Formal suites fail below 120 cases, three
+  domains, six decision families, a mismatched-Taste control, or content-bound
+  rubric and precedent corpora. Benchmark runs also preserve
+  declared versus reversed candidate order as distinct repeated-measure arms.
+
 - Remote GPU readiness can now be supported by a typed, content-addressed,
   read-only host inventory instead of an unchecked `verified` label. The first
   8 × RTX 3090 inventory records device UUIDs and memory, driver/runtime tools,
@@ -667,6 +676,9 @@ semantic versioning.
 
 ### Fixed
 
+- SciTasteBench semantic hashes now canonicalize unordered transfer axes, so
+  identical suites retain the historical v1 hash across Python processes and
+  hash seeds instead of intermittently producing a second identity.
 - Output catalog discovery now reads the canonical `surface_fingerprint` binding
   from a generated surface's renderer while retaining legacy in-surface
   `fingerprint` compatibility, so current project interfaces no longer appear as

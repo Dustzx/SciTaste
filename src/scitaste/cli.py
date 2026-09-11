@@ -27,6 +27,7 @@ from scitaste.backends.replay import RecordingBackend, ReplayBackend
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.benchmark import (
     BenchmarkCondition,
+    CandidateOrder,
     MatchedStudyEvaluator,
     MatchedStudyPlanner,
     MatchedStudyRunner,
@@ -35,15 +36,19 @@ from scitaste.benchmark import (
     SciTasteBenchRunner,
     SystemCondition,
     compare_model_boundaries,
+    compile_curated_suite,
     discover_study_result_paths,
+    inspect_curation_package,
     inspect_study_matrix,
     load_benchmark_report,
     load_benchmark_suite,
+    load_curation_package,
     load_study_launch_config,
     load_study_protocol,
     load_study_results,
     save_benchmark_report,
     save_boundary_comparison,
+    save_curated_suite,
     save_study_matrix_status,
     save_study_plan,
     save_study_report,
@@ -966,7 +971,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     benchmark_run.add_argument("--replay", type=Path, default=None)
     benchmark_run.add_argument("--record", type=Path, default=None)
+    benchmark_run.add_argument(
+        "--candidate-order",
+        choices=[item.value for item in CandidateOrder],
+        default=CandidateOrder.DECLARED.value,
+        help="Fixed candidate ordering; formal v2 runs require separate declared and reversed arms",
+    )
     benchmark_run.set_defaults(handler=_handle_benchmark_run)
+    benchmark_curate = benchmark_commands.add_parser(
+        "curate", help="Inspect or compile a human-labelled SciTasteBench v2 package"
+    )
+    benchmark_curate.add_argument("--package", type=Path, required=True)
+    benchmark_curate.add_argument("--evidence-root", type=Path, required=True)
+    benchmark_curate.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Write the compiled suite only when every curation gate passes",
+    )
+    _add_log_level_option(benchmark_curate)
+    benchmark_curate.set_defaults(handler=_handle_benchmark_curate)
     benchmark_attribute = benchmark_commands.add_parser(
         "attribute", help="Separate model-specific misses from SciTaste regressions"
     )
@@ -2988,6 +3012,7 @@ def _handle_figure_build(args: argparse.Namespace) -> int:
 
 def _handle_benchmark_run(args: argparse.Namespace) -> int:
     suite = load_benchmark_suite(args.suite)
+    candidate_order = CandidateOrder(args.candidate_order)
     conditions = (
         [BenchmarkCondition(condition) for condition in args.condition]
         if args.condition
@@ -3003,13 +3028,20 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
                     "case_count": len(suite.cases),
                     "headline_case_count": sum(case.headline_eligible for case in suite.cases),
                     "conditions": [condition.value for condition in conditions],
+                    "candidate_order": candidate_order.value,
                 },
                 indent=2,
             )
         )
         return 0
     if args.backend == "scripted":
-        backend = ScriptedPreferenceBackend(scripted_selections(suite, conditions))
+        backend = ScriptedPreferenceBackend(
+            scripted_selections(
+                suite,
+                conditions,
+                candidate_order=candidate_order,
+            )
+        )
     elif args.backend == "replay":
         if args.replay is None:
             raise ValueError("--backend replay requires --replay PATH")
@@ -3028,7 +3060,11 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
         )
     if args.record:
         backend = RecordingBackend(backend, args.record)
-    report = SciTasteBenchRunner(backend, seed=args.seed).evaluate(suite, conditions=conditions)
+    report = SciTasteBenchRunner(
+        backend,
+        seed=args.seed,
+        candidate_order=candidate_order,
+    ).evaluate(suite, conditions=conditions)
     manifest = save_benchmark_report(report, args.output)
     base = report.conditions[BenchmarkCondition.BASE].headline
     print(
@@ -3037,6 +3073,7 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
                 "suite_id": report.suite_id,
                 "backend": report.backend,
                 "model": report.model,
+                "candidate_order": report.candidate_order.value,
                 "base_pairwise_accuracy": base.pairwise_accuracy,
                 "comparisons_to_base": {
                     condition.value: comparison.model_dump(mode="json")
@@ -3049,6 +3086,29 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _handle_benchmark_curate(args: argparse.Namespace) -> int:
+    inspection = load_curation_package(args.package)
+    report = inspect_curation_package(
+        inspection.package,
+        evidence_root=args.evidence_root,
+    )
+    payload: dict[str, object] = {
+        "package_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+        "compiled_suite": None,
+        "no_model_call_performed": True,
+        "no_gpu_work_performed": True,
+    }
+    if args.output is not None and report.ready_to_compile:
+        suite = compile_curated_suite(
+            inspection.package,
+            evidence_root=args.evidence_root,
+        )
+        payload["compiled_suite"] = save_curated_suite(suite, args.output)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0 if report.ready_to_compile else 1
 
 
 def _handle_benchmark_attribute(args: argparse.Namespace) -> int:

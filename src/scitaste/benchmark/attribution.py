@@ -90,6 +90,8 @@ def compare_model_boundaries(
         raise ValueError("cross-model attribution requires the same benchmark suite hash")
     if primary.seed != comparator.seed:
         raise ValueError("cross-model attribution requires the same benchmark seed")
+    if primary.candidate_order is not comparator.candidate_order:
+        raise ValueError("cross-model attribution requires the same candidate order")
     if primary.capability_boundary is None or comparator.capability_boundary is None:
         raise ValueError("cross-model attribution requires paired Base and Full conditions")
 
@@ -120,6 +122,7 @@ def compare_model_boundaries(
         suite_id=primary.suite_id,
         suite_sha256=primary.suite_sha256,
         seed=primary.seed,
+        candidate_order=primary.candidate_order,
         primary_backend=primary.backend,
         primary_model=primary.model,
         comparator_backend=comparator.backend,
