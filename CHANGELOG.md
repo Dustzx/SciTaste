@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Acquired benchmark tasks now cross a dedicated content-addressed admission
+  boundary before they may appear in an experiment proposal. The new
+  `evaluation task-package` inspection binds one metadata-only selection, exact
+  local file inventory, owner-approved acquisition receipt, input-license,
+  held-out/source-disjoint, executable-signal, review-endpoint, and runtime
+  policy evidence. It rejects path escapes, symlinks, extra files, hash drift,
+  and cross-task substitution; inspection performs no network access and can
+  authorize neither download nor execution.
+
 - The current no-run idea-to-paper package-preference proposal is now
   `formal-v6-package-prepilot`, pinned to official callable ID
   `deepseek-flash`, served version `DeepSeek-V4.1-Flash`, conservative peak

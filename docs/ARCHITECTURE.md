@@ -1495,3 +1495,30 @@ remain readable; absence of invocation provenance is preserved rather than
 silently rewritten. This boundary establishes internal critique provenance but
 does not make a model reviewer independent, expert, or an official venue
 decision authority.
+
+### ADR-049: Benchmark metadata and executable task bytes are separate gates
+
+Status: accepted for task-package qualification; no acquisition or experiment
+is implied.
+
+A URL, repository commit, dataset revision, and task ID establish a candidate
+scope but do not establish which bytes a system received. Conversely, finding a
+local `task.md` does not prove its origin, license, independence from the parent
+project, terminal signal, or allowed runtime acquisition. Treating either form
+as an admitted task would make matched-system claims unauditable.
+
+SciTaste therefore adds one local-inspection-only task-package manifest between
+selection and prelaunch. It binds the metadata selection by both file and
+semantic hash, one selected task identity, the complete bounded local file
+inventory, owner approval and acquisition receipt, and content-addressed
+evidence for license, acquisition, held-out/source-disjoint status, executable
+signal, blinded-review endpoint, and runtime policy. Inspection follows no
+symlinks, rejects undeclared bytes and drift, performs no network access, and
+cannot authorize either acquisition or execution.
+
+Qualification and ledger admission remain distinct. A clean local package may
+propose updates to the selection and external-resource corpus, but it is not
+prelaunch-bindable until those authoritative records carry the verified task
+and task-source gates. The experiment proposal must then bind the admitted
+package bytes, and explicit hash-bound owner approval remains a later launch
+gate.

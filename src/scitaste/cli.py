@@ -74,10 +74,12 @@ from scitaste.evaluation import (
     inspect_adapter_preflight,
     inspect_git_source,
     inspect_prelaunch_manifest,
+    inspect_task_package,
     inspect_task_selection,
     load_adapter_preflight_manifest,
     load_external_resource_corpus,
     load_prelaunch_manifest,
+    load_task_package_manifest,
     load_task_selection_manifest,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
@@ -1092,6 +1094,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(task_selection)
     task_selection.set_defaults(handler=_handle_evaluation_task_selection)
+    task_package = evaluation_commands.add_parser(
+        "task-package",
+        help="Inspect already-acquired benchmark task bytes without downloading or running them",
+    )
+    task_package.add_argument("--manifest", type=Path, required=True)
+    task_package.add_argument("--selection", type=Path, required=True)
+    task_package.add_argument("--resource-corpus", type=Path, required=True)
+    task_package.add_argument("--source-root", type=Path, default=Path("."))
+    task_package.add_argument(
+        "--require-binding-ready",
+        action="store_true",
+        help="Return nonzero until the package, selection, and resource gates allow binding",
+    )
+    _add_log_level_option(task_package)
+    task_package.set_defaults(handler=_handle_evaluation_task_package)
     adapter_preflight = evaluation_commands.add_parser(
         "adapter-preflight",
         help="Inspect a pinned external-system adapter without running it",
@@ -3342,6 +3359,31 @@ def _handle_evaluation_task_selection(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_scope_ready and not report.ready_for_owner_scope_review:
+        return 1
+    return 0
+
+
+def _handle_evaluation_task_package(args: argparse.Namespace) -> int:
+    inspection = load_task_package_manifest(args.manifest)
+    selection = load_task_selection_manifest(args.selection)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    report = inspect_task_package(
+        inspection.manifest,
+        selection,
+        corpus.corpus,
+        source_root=args.source_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "selection_path": str(selection.path),
+        "selection_file_sha256": selection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_binding_ready and not report.ready_for_prelaunch_binding:
         return 1
     return 0
 

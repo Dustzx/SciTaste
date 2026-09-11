@@ -99,11 +99,36 @@ report may propose verified requirement evidence for a future corpus revision;
 its schema always fixes `authorizes_execution=false` and
 `no_execution_performed=true`.
 
+## Task-package qualification
+
+Task metadata is not executable input. After a project owner separately
+approves acquisition, every already-present benchmark package must pass a
+second, read-only boundary:
+
+```bash
+.venv/bin/scitaste evaluation task-package \
+  --manifest /path/to/task-package.yaml \
+  --selection docs/research/data/mlr_bench_official_ten_candidate_v2.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v6.yaml \
+  --source-root .
+```
+
+The manifest binds exactly one selected task, its complete local inventory, the
+selection and upstream pins, owner approval and acquisition receipt, and six
+content-addressed qualifications: input license, acquisition, held-out audit,
+executable signal, review endpoint, and runtime policy. The inspector rejects
+unregistered files, symlinks, path escape, byte drift, and cross-selection task
+substitution. A clean report can propose a resource-ledger revision; it becomes
+prelaunch-bindable only after the selection and resource corpus carry the same
+verified evidence. It always reports `authorizes_download=false` and
+`authorizes_execution=false`.
+
 The current AutoResearchClaw static report observes the exact clean
 `12d3fd80…` upstream and verifies the existing artifact mapping and
 failure/resume evidence. It remains **not ready for a matched adapter** because
-MLR-Bench task mapping, official DeepSeek V4 Flash model mapping, selected-task sandboxing,
-and matched telemetry acceptance tests are still pending. This is the intended
+MLR-Bench task mapping, official DeepSeek V4.1 Flash model mapping,
+selected-task sandboxing, and matched telemetry acceptance tests are still
+pending. This is the intended
 state: retaining the unchanged upstream is useful evidence, but it is not a
 substitute for the four task-specific qualifications.
 

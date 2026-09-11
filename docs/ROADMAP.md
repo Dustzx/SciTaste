@@ -64,6 +64,15 @@ open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
+Task qualification now has a real boundary between the metadata-only candidate
+list and a prelaunch task. An already acquired package must bind the exact
+selection, every local byte, owner approval and acquisition receipt, license,
+held-out/source-disjoint audit, review-capable terminal signal, and a no-runtime-
+acquisition policy. The inspector is read-only and non-authorizing. The current
+MLR-Bench ten-task selection has no such admitted package yet, so this closes a
+software-control gap without clearing the experimental task gate or consuming
+resources.
+
 DeepSeek's official model catalog changed on 2026-09-11: callable ID
 `deepseek-flash` now names `DeepSeek-V4.1-Flash`, while legacy
 `deepseek-v4-flash` calls are explicitly compatibility-routed to V4.1. The
