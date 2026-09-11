@@ -39,8 +39,10 @@ retains the initial brief, literature evidence, idea decisions, proposal,
 commands, code, experiment inputs and outputs, failed attempts, final paper,
 resource telemetry, and intervention ledger.
 
-The matched lane contains SciTaste Native, a direct execution-capable agent, and
-only real pinned external systems. At least two external systems backed by
+The matched lane contains SciTaste Native, a deliberately bounded direct-agent
+control, and only real pinned external systems. The direct agent is a low
+prompt-only control and is not presented as an execution-capable research
+system. At least two external systems backed by
 accepted archival papers must pass licensing, unchanged-core, task-equivalence,
 model, sandbox, telemetry, artifact, and failure-resume gates before a broad
 external-system claim is eligible. Unavailable systems receive no imitation or

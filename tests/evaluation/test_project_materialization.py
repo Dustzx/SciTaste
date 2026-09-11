@@ -19,6 +19,8 @@ from scitaste.generative_ui import (
 from scitaste.project import ProjectManifest, ProjectRuntime
 
 CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
+PACKAGE_CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v4.yaml")
+PACKAGE_PROPOSAL = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
 PROPOSALS = {
     "deepseek-v41-prepilot": (
         Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml"),
@@ -87,6 +89,27 @@ def test_api_and_gpu_proposals_prepare_exact_no_run_resources() -> None:
     gpu = prepared["qwen3vl2b-robustness"].bundle.gpu_resources
     assert len(gpu) == 1
     assert gpu[0].startswith("3090-2/8xNVIDIA GeForce RTX 3090/qwen3-vl-2b-instruct")
+
+
+def test_package_preference_proposal_materializes_as_blocked_no_run_evidence() -> None:
+    prepared = prepare_project_evaluation(
+        project_id="evaluation-project",
+        evaluation_id="deepseek-v41-package-prepilot-v4",
+        manifest_path=PACKAGE_PROPOSAL,
+        resource_corpus_path=PACKAGE_CORPUS,
+        source_root=Path("."),
+        evidence_root=Path("."),
+    )
+
+    assert prepared.bundle.planned_cells == 100
+    assert prepared.bundle.status == "blocked"
+    assert prepared.bundle.ready_for_author_review is False
+    assert prepared.bundle.execution_authorized is False
+    assert prepared.bundle.no_execution_performed is True
+    cell_plan = json.loads(prepared.artifact_payloads["CELL_PLAN.json"])
+    assert cell_plan["authorizes_execution"] is False
+    assert cell_plan["no_provider_call_performed"] is True
+    assert cell_plan["no_task_download_performed"] is True
 
 
 def test_project_publication_is_atomic_content_bound_and_visible_on_home(

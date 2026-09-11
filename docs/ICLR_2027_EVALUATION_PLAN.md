@@ -158,14 +158,17 @@ corpus. Sibyl remains unavailable rather than receiving a mock implementation.
 The earlier 12-task natural-transfer floor was a planning heuristic rather than
 an accepted-benchmark design. It is replaced by this evidence stack:
 
-1. **MLR-Bench stagewise population**: evaluate idea and proposal decisions on
-   all feasible official tasks or a powered, source-stratified, frozen subset no
-   smaller than 120 cases.
+1. **MLR-Bench stagewise population**: evaluate idea and proposal decisions with
+   the benchmark's research-quality rubric on all feasible official tasks or a
+   powered, source-stratified, frozen subset no smaller than 120 cases. This is
+   rubric evidence, not fixed objective progress.
 2. **MLR-Bench end-to-end population**: begin with the benchmark's official
-   executable subset for matched idea-to-paper runs. The exact system/task/seed
-   count follows adapter feasibility and pilot power analysis. Four systems on
-   ten tasks with three seeds would yield 120 trajectories, but this is a
-   planning reference rather than authorization.
+   ten workshop-derived research briefs for matched idea-to-paper runs. The
+   primary signal is blinded expert preference over complete research packages;
+   MLR-Judge is secondary. The exact system/task/seed count follows adapter
+   feasibility and pilot power analysis. Four systems on ten tasks with three
+   seeds would yield 120 trajectories, but this is a planning reference rather
+   than authorization.
 3. **EXP-Bench experiment-integrity population**: use a preregistered,
    source-stratified subset to measure hypothesis, design, implementation,
    execution, conclusion, and conjunctive full success. Its size follows a
@@ -180,6 +183,16 @@ an accepted-benchmark design. It is replaced by this evidence stack:
 6. **Bounded frontier-progress cases**: optionally test two or three external
    open-ended objectives against human or strong public baselines. Treat these
    as a high-cost case series, not a population estimate.
+
+MLR-Bench package preference and MLRC-Bench objective progress are distinct
+estimands with separate schemas, protocols, analyses, and result tables. A
+rubric score or model-judge score cannot be relabelled as a task's objective
+value, and the two task populations are never pooled into one headline number.
+The current no-run package protocol is
+[`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V2.md).
+The earlier DeepSeek v3, Zhipu v2, and Qwen robustness v2 manifests remain
+immutable design history because they bound MLR-Bench briefs to an objective-
+progress endpoint; none is eligible for launch or formal evidence.
 
 The existing four synthetic generators remain controlled stress tests. They do
 not satisfy external validity and must be reported separately. Every formal
@@ -296,6 +309,10 @@ No formal run may start until all of these gates pass:
    external task;
 9. formal tasks are separate project records, and an L0 product change after a
    block begins creates a new protocol rather than silently replacing its cells.
+10. every formal manifest uses machine-checked endpoint semantics: package-
+    preference tasks require independent blinded human review, while objective-
+    progress tasks must expose a fixed objective score. A model judge cannot be
+    the primary judge of the package-preference headline endpoint.
 
 The current local v9 failure is an engineering recovery item. It must not be
 resumed from an unverified source tree and must not be counted as formal-v2 or

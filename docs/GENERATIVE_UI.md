@@ -180,8 +180,8 @@ records exist. They contain no command or execution authority.
 
 The `research-landscape` view prevents a prose experiment plan from becoming a
 premature protocol. It reads only a strict, project-owned
-versioned `autoresearch-evaluation-landscape-v1` through `v4` artifact declared
-by a registered run; the latest `v4` schema carries separated contribution
+versioned `autoresearch-evaluation-landscape-v1` through `v6` artifact declared
+by a registered run; the latest `v6` schema carries separated contribution
 types, publication evidence, and experiment tracks. The artifact is bounded, schema-closed, contained
 beneath that run, and covered by the run-directory hash in the current snapshot.
 An absent projection becomes an explicit unavailable state; an escaping,

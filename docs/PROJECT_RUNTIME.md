@@ -233,9 +233,9 @@ project; then stores hashes and a no-execution boundary in `PROJECT.json`.
 ```bash
 .venv/bin/scitaste project evaluation register-prelaunch \
   --project-id my-research-project \
-  --evaluation-id deepseek-v41-accepted-prepilot-v3 \
-  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml \
-  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v3.yaml \
+  --evaluation-id deepseek-v41-package-prepilot-v4 \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v4.yaml \
   --source-root /path/to/exact-clean-executable-checkout --evidence-root . \
   --expected-revision <revision> --select --outputs-root outputs
 ```

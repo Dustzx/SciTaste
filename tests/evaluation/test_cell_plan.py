@@ -16,7 +16,7 @@ from scitaste.evaluation import (
 )
 
 MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml")
-CURRENT_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml")
+CURRENT_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
 HASH = "a" * 64
 
 
@@ -120,7 +120,7 @@ def test_current_v41_proposal_compiles_exact_blocked_matrix_without_running() ->
     assert resource.max_cost == 100.0
 
 
-def test_accepted_method_v41_proposal_compiles_two_seed_no_run_matrix() -> None:
+def test_package_preference_v41_proposal_compiles_two_seed_no_run_matrix() -> None:
     manifest = load_prelaunch_manifest(CURRENT_MANIFEST_PATH).manifest
 
     plan = compile_evaluation_cell_plan(manifest)
@@ -130,6 +130,8 @@ def test_accepted_method_v41_proposal_compiles_two_seed_no_run_matrix() -> None:
     assert plan.lanes[0].blocked_cells == 100
     assert "protocol:analysis-contract-missing" not in plan.plan_blockers
     assert "protocol:integrity-contract-missing" not in plan.plan_blockers
+    assert manifest.primary_endpoint.value == "blinded_package_preference"
+    assert all(task.signal_kind.value == "research_package_review" for task in manifest.tasks)
     assert plan.authorizes_execution is False
     assert plan.no_provider_call_performed is True
     assert plan.no_gpu_work_performed is True

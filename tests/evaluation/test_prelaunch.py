@@ -37,6 +37,8 @@ from scitaste.evaluation.resources import ResourceGateStatus
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
 V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml")
 CURRENT_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v3.yaml")
+PACKAGE_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v4.yaml")
+PACKAGE_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
 CURRENT_MANIFEST_PATHS = (
     Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
     Path("configs/evaluation/prelaunch/zhipu_glm53flash_pilot_v2.yaml"),
@@ -439,6 +441,40 @@ def test_current_api_headline_set_uses_accepted_methods_not_preprint_substitutes
         assert systems == {"scitaste-native", "direct-agent", *accepted}
         assert systems.isdisjoint({"ai-scientist-v2", "autoresearchclaw"})
         assert sum(system.role is SystemRole.METHOD_COMPARATOR for system in manifest.systems) == 3
+
+
+def test_package_preference_proposal_cannot_be_relabelled_as_objective_progress() -> None:
+    manifest = load_prelaunch_manifest(PACKAGE_MANIFEST_PATH).manifest
+    corpus = load_external_resource_corpus(PACKAGE_CORPUS_PATH).corpus
+    gate = inspect_prelaunch_manifest(
+        manifest,
+        corpus,
+        observed_source_commit=manifest.source_commit,
+        source_tree_clean=True,
+    )
+    review = EvaluationCriticSuite().review(manifest, corpus, gate, evidence_root=".")
+
+    assert manifest.schema_version == "1.1"
+    assert manifest.primary_endpoint is ScientificEndpointKind.BLINDED_PACKAGE_PREFERENCE
+    assert manifest.automated_judge_role is AutomatedJudgeRole.SECONDARY_DIAGNOSTIC
+    assert all(
+        task.signal_kind is TaskSignalKind.RESEARCH_PACKAGE_REVIEW for task in manifest.tasks
+    )
+    assert "objective progress" not in manifest.analysis.primary_outcome.lower()
+    assert {system.system_id for system in manifest.systems} == {
+        "scitaste-native",
+        "direct-agent",
+        "mlr-agent",
+        "agent-laboratory",
+        "tiny-scientist",
+    }
+    assert gate.planned_cells == 100
+    assert gate.ready_for_author_approval is False
+    assert gate.execution_authorized is False
+    assert review.authorizes_execution is False
+    assert any(
+        "tiny-scientist:blocked_gate:code_license" in blocker.code for blocker in gate.blockers
+    )
 
 
 def test_critics_expose_all_five_domains_without_authorizing_execution() -> None:

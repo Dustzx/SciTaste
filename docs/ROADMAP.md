@@ -322,13 +322,15 @@ citation/resource screen and exact adapters/licenses remain open.
   evidence, pseudo baselines, unmatched comparison blocks, incomplete
   statistical review, mutable feedback protocols, and unapproved launch bytes.
   The accepted-work audit identifies MLR-Bench as the primary idea-to-paper
-  scaffold and EXP-Bench as the experiment-integrity scaffold. A tracked v2
-  corpus now pins both benchmarks plus MLR-Agent, AI Scientist-v2, and
-  AutoResearchClaw with exact repositories, licenses, dataset revisions, and
-  use-specific deterministic gates. All are reference/code-audit eligible;
-  benchmark task-source and external comparison-system admission remain blocked
-  pending frozen task assets/licenses, adapters, mappings, sandbox/telemetry,
-  power analysis, and the user's explicit resource-manifest approval.
+  scaffold and EXP-Bench as the experiment-integrity scaffold. A tracked v4
+  resource corpus adds TinyScientist and preserves its unresolved release-license
+  conflict as a blocker. Endpoint schema v1.1 now prevents MLR-Bench's open-ended
+  research-package rubric from being relabelled as objective progress: complete
+  packages use blinded expert preference, while MLRC-Bench or another qualified
+  fixed-scorer source forms a separate objective lane. Benchmark task-source and
+  external comparison-system admission remain blocked pending frozen task bytes
+  and licenses, adapters, mappings, sandbox/telemetry, power analysis, and the
+  user's explicit resource-manifest approval.
 
 - A content-hashed protocol covers diagnosis-friendly, clear-hypothesis,
   new-formulation, and ambiguous-direction tasks.
