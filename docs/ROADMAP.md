@@ -73,6 +73,16 @@ MLR-Bench ten-task selection has no such admitted package yet, so this closes a
 software-control gap without clearing the experimental task gate or consuming
 resources.
 
+Static translation contracts now expose a harder comparator result before
+implementation effort or API spend: at their pinned commits, neither MLR-Agent
+nor Agent Laboratory supports the complete `deepseek-flash` /
+`DeepSeek-V4.1-Flash` task-and-model envelope without unmatched model roles or
+unreviewed semantic translation. The current v6 proposal therefore remains
+useful immutable feasibility evidence but cannot become the matched external
+block merely by writing wrappers. A new proposal must either select a genuinely
+common backbone or disclose a best-native-system comparison with model effects
+confounded; the choice is an author-level scientific-design decision.
+
 DeepSeek's official model catalog changed on 2026-09-11: callable ID
 `deepseek-flash` now names `DeepSeek-V4.1-Flash`, while legacy
 `deepseek-v4-flash` calls are explicitly compatibility-routed to V4.1. The

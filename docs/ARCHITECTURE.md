@@ -1522,3 +1522,32 @@ prelaunch-bindable until those authoritative records carry the verified task
 and task-source gates. The experiment proposal must then bind the admitted
 package bytes, and explicit hash-bound owner approval remains a later launch
 gate.
+
+### ADR-050: External adapter feasibility precedes checkout and implementation
+
+Status: accepted for static external-comparator translation review; runtime
+adapters remain blocked.
+
+An accepted research system and a pinned repository are necessary but not
+sufficient comparison evidence. Before spending resources on a checkout or
+wrapper, SciTaste records whether one selected task/model envelope can be
+represented through the upstream system's native entrypoint without changing
+its core. The static contract binds the upstream commit, shell-free argv shape,
+credential allowlist, task and all-role model semantics, forbidden changes, six
+adapter requirements, exact official source URLs, and a local audit hash.
+
+This layer is intentionally earlier than adapter preflight. It neither imports
+nor downloads upstream code, and even a clean result only permits implementation
+and a later clean-checkout preflight. Pending evidence does not become verified;
+a blocked native mismatch cannot be hidden by a compatibility alias or by
+substituting a different coding agent. Both report schemas fix execution
+authority to false.
+
+For the current DeepSeek V4.1 package prepilot, exact-commit inspection finds
+MLR-Agent and Agent Laboratory blocked on task/model/sandbox/telemetry mapping,
+with artifact and recovery qualification pending. This means the proposal's
+matched-external-comparator premise is infeasible as written. A common native
+backbone can preserve the matched estimand, while a best-native-system design
+answers a different, model-confounded systems question. Either change requires
+a new immutable experiment proposal and author decision; no runtime adapter may
+silently choose between them.

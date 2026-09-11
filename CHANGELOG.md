@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- External method comparators now have a static, content-addressed translation
+  contract before any upstream checkout or executable adapter is accepted. Two
+  exact-commit audits show that MLR-Agent and Agent Laboratory cannot currently
+  serve as unchanged-core, fully matched `DeepSeek-V4.1-Flash` comparators:
+  task/model/sandbox/telemetry mappings are blocked and artifact/recovery work
+  remains pending. The contracts preserve these as real unavailable conditions,
+  reject unsafe shell templates and unpinned evidence, and never download or
+  run upstream code.
+
 - Acquired benchmark tasks now cross a dedicated content-addressed admission
   boundary before they may appear in an experiment proposal. The new
   `evaluation task-package` inspection binds one metadata-only selection, exact

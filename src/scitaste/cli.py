@@ -71,11 +71,13 @@ from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_c
 from scitaste.evaluation import (
     EvaluationCriticSuite,
     compile_evaluation_cell_plan,
+    inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_git_source,
     inspect_prelaunch_manifest,
     inspect_task_package,
     inspect_task_selection,
+    load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_external_resource_corpus,
     load_prelaunch_manifest,
@@ -1123,6 +1125,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(adapter_preflight)
     adapter_preflight.set_defaults(handler=_handle_evaluation_adapter_preflight)
+    adapter_contract = evaluation_commands.add_parser(
+        "adapter-contract",
+        help="Inspect external-system task/model translation feasibility without execution",
+    )
+    adapter_contract.add_argument("--manifest", type=Path, required=True)
+    adapter_contract.add_argument("--resource-corpus", type=Path, required=True)
+    adapter_contract.add_argument("--source-root", type=Path, default=Path("."))
+    adapter_contract.add_argument(
+        "--require-upstream-preflight-ready",
+        action="store_true",
+        help="Return nonzero until the translation can proceed to a local upstream preflight",
+    )
+    _add_log_level_option(adapter_contract)
+    adapter_contract.set_defaults(handler=_handle_evaluation_adapter_contract)
     cell_plan = evaluation_commands.add_parser(
         "cell-plan",
         help="Expand a prelaunch proposal into a content-addressed no-run cell matrix",
@@ -3405,6 +3421,27 @@ def _handle_evaluation_adapter_preflight(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_adapter_ready and not report.ready_for_matched_adapter:
+        return 1
+    return 0
+
+
+def _handle_evaluation_adapter_contract(args: argparse.Namespace) -> int:
+    inspection = load_adapter_contract_manifest(args.manifest)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    report = inspect_adapter_contract(
+        inspection.manifest,
+        corpus.corpus,
+        source_root=args.source_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_upstream_preflight_ready and not report.ready_for_upstream_preflight:
         return 1
     return 0
 

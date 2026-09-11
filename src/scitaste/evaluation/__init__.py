@@ -1,5 +1,17 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.adapter_contract import (
+    AdapterContractEvidence,
+    AdapterContractFinding,
+    AdapterContractInspection,
+    AdapterContractReport,
+    AdapterInvocationContract,
+    AdapterModelTranslation,
+    AdapterTaskTranslation,
+    ExternalAdapterContractManifest,
+    inspect_adapter_contract,
+    load_adapter_contract_manifest,
+)
 from scitaste.evaluation.adapter_preflight import (
     AdapterPreflightFinding,
     AdapterPreflightInspection,
@@ -172,11 +184,18 @@ from scitaste.evaluation.task_selection import (
 )
 
 __all__ = [
+    "AdapterContractEvidence",
+    "AdapterContractFinding",
+    "AdapterContractInspection",
+    "AdapterContractReport",
+    "AdapterInvocationContract",
+    "AdapterModelTranslation",
     "AdapterPreflightFinding",
     "AdapterPreflightInspection",
     "AdapterPreflightReport",
     "AdapterRequirement",
     "AdapterRequirementEvidence",
+    "AdapterTaskTranslation",
     "AnalysisContract",
     "ApiModelResource",
     "ApprovalRecord",
@@ -229,6 +248,7 @@ __all__ = [
     "ExperimentDesignGate",
     "ExperimentDesignState",
     "ExperimentPrelaunchManifest",
+    "ExternalAdapterContractManifest",
     "ExternalAdapterPreflightManifest",
     "ExternalEvaluationResource",
     "ExternalResourceCorpus",
@@ -292,12 +312,14 @@ __all__ = [
     "compile_evaluation_cell_plan",
     "evaluate_resource_feasibility",
     "execute_direct_agent",
+    "inspect_adapter_contract",
     "inspect_adapter_preflight",
     "inspect_evaluation_results",
     "inspect_git_source",
     "inspect_prelaunch_manifest",
     "inspect_task_package",
     "inspect_task_selection",
+    "load_adapter_contract_manifest",
     "load_adapter_preflight_manifest",
     "load_direct_agent_invocation",
     "load_direct_agent_task",

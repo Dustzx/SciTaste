@@ -221,6 +221,17 @@ produces 100 intended two-seed cells; none is launch-ready while task and
 accepted-system adapter gates remain open. This makes the gap between a YAML
 cell count and an executable cross-framework experiment explicit.
 
+Static exact-commit translation review has now resolved one ambiguity inside
+that open adapter gate. MLR-Agent and Agent Laboratory are real method
+candidates, but their pinned releases cannot provide an unchanged-core, fully
+matched `deepseek-flash` / `DeepSeek-V4.1-Flash` trajectory under the current
+task and coding-role contract. Their content-addressed adapter contracts remain
+blocked before upstream checkout or runtime implementation. Consequently v6
+must not be approved as written. Preserving v6 as immutable evidence avoids
+silently weakening “matched backbone”; choosing a common natively supported
+backbone or a separately disclosed best-native-system design requires a new
+proposal.
+
 The `max_output_tokens_per_call` values in these proposals are per-experiment
 ceilings, not a global SciTaste limit. The current V4.1 proposal reserves 32,768
 output tokens per call, 1,500 requests, and fifteen million total tokens across
@@ -266,9 +277,12 @@ protocol.
    brief bytes, licenses, source groups, runtime acquisition rules, and output
    package hashes. Separately qualify MLRC-Bench or another fixed-scorer source
    before proposing any objective-progress lane.
-2. Prepare and approve exact direct-agent invocations, and implement the real
-   external-system adapters; unavailable systems remain unavailable rather than
-   receiving a pseudo-implementation.
+2. Choose a common backbone actually supported across at least two accepted
+   external methods, or preregister a separately labelled best-native-system
+   design with model effects acknowledged; create a new immutable proposal for
+   that decision. Then prepare exact direct-agent invocations and implement only
+   adapters whose static contracts pass. Unavailable systems remain unavailable
+   rather than receiving a pseudo-implementation.
 3. Instantiate the package-preference protocol with common tools, repair
    budget, telemetry, blinded artifacts, and the later pilot-informed formal
    power analysis. Starting anchors and failure floors belong only to the

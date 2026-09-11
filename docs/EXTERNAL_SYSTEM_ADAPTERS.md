@@ -123,6 +123,37 @@ prelaunch-bindable only after the selection and resource corpus carry the same
 verified evidence. It always reports `authorizes_download=false` and
 `authorizes_execution=false`.
 
+## Static translation feasibility
+
+Before cloning a candidate system or writing a runtime wrapper, SciTaste can
+inspect whether the selected task/model envelope is representable by its native
+interface:
+
+```bash
+.venv/bin/scitaste evaluation adapter-contract \
+  --manifest configs/evaluation/adapters/mlr_agent_deepseek_v41_contract_v1.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v6.yaml \
+  --source-root .
+```
+
+This contract binds the exact external-system commit, shell-free native argv
+shape, task and model translation semantics, allowed credentials, six adapter
+requirements, official pinned sources, and a local audit hash. It is earlier
+than `adapter-preflight`: even a fully verified translation must still pass a
+clean local upstream checkout, first-party adapter hash, sandbox, telemetry,
+artifact, and failure/resume acceptance tests.
+
+The current MLR-Agent and Agent Laboratory contracts deliberately fail this
+earlier gate for the DeepSeek V4.1 proposal. MLR-Agent lists a different
+OpenRouter DeepSeek V3 model and delegates coding to another agent family;
+Agent Laboratory documents `deepseek-chat`/DeepSeek V3 and accepts task meaning
+through a research-topic/YAML interface rather than exact starting bytes. Both
+also need matched sandbox and telemetry qualification. These findings are
+recorded in
+[`EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md`](research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md).
+They block this exact matched-backbone design; they do not score either external
+system and do not justify a pseudo-implementation.
+
 The current AutoResearchClaw static report observes the exact clean
 `12d3fd80…` upstream and verifies the existing artifact mapping and
 failure/resume evidence. It remains **not ready for a matched adapter** because

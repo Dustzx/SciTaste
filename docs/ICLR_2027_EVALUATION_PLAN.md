@@ -161,6 +161,15 @@ the manuscript claims broad external-system superiority. Publication status and
 execution readiness are independent: acceptance cannot waive adapter gates, and
 a runnable preprint cannot satisfy this archival-evidence minimum.
 
+The 2026-09-11 exact-commit translation audit found that the current DeepSeek
+V4.1 proposal cannot yet satisfy this rule: MLR-Agent and Agent Laboratory do
+not natively expose the same callable model across all research/coding roles,
+and their selected-task mappings are not losslessly admitted. They remain valid
+candidate systems, but v6 is a blocked feasibility proposal rather than the
+formal matched block. A common-backbone or explicitly confounded best-native
+comparison must be frozen in a new proposal; wrapper code cannot retroactively
+make the current design matched.
+
 **AI Scientist-v2** and **AutoResearchClaw** remain real pinned sensitivity
 systems if their respective license, sandbox, task, model, artifact, failure,
 and telemetry gates pass. They do not occupy headline external-system slots
