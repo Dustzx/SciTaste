@@ -210,16 +210,9 @@ def test_deterministic_planner_puts_blocker_diagnosis_before_compact_context(
     assert selected[0].component.component.value == "RunBlockerPanel"
     assert [item.component.component.value for item in selected] == [
         "RunBlockerPanel",
-        "ProjectProgressBoard",
-        "ProjectSummaryCard",
+        "EvidenceGraph",
     ]
     assert outcome.plan.entries[0].emphasis == "featured"
-    progress_index = next(
-        index
-        for index, item in enumerate(selected)
-        if item.component.component.value == "ProjectProgressBoard"
-    )
-    assert outcome.plan.entries[progress_index].emphasis == "compact"
 
 
 def test_model_classification_can_only_select_a_server_issued_intent(tmp_path: Path) -> None:

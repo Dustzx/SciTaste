@@ -1634,3 +1634,38 @@ gate. Actual acquisition still requires the project's explicit exact-hash
 decision. Task-package qualification, runtime preflight, experiment launch,
 result selection, paper evidence binding, and independent review remain later
 authority boundaries.
+
+### ADR-054: Generated project pages use progressive disclosure and inline intervention
+
+Status: accepted for the local Generation-as-Content receiver.
+
+An evidence-complete project snapshot can contain dozens of runs and proposals,
+but presenting every registered record at once is not a useful research
+decision surface. The receiver therefore separates the decision layer from the
+evidence vault. A generated progress page selects only a project decision brief
+and a bounded heterogeneous evidence graph. Detailed run, acquisition,
+evaluation, result, blocker, milestone, and activity views remain available
+behind one native disclosure or through focused follow-up pages. This is a
+presentation projection over the same validated bytes, not lossy evidence
+admission.
+
+The graph is server-composed and closed over content-addressed snapshot records;
+the browser may only draw local SVG primitives and select an existing node.
+Further exploration submits a bounded progress question and persists the result
+as another immutable turn in the same project conversation. It cannot invent a
+new evidence reference or change research state.
+
+The permanent inspector rail is removed from the visual layout because an empty
+control surface competes with decision content. The logical v1 shell region is
+retained for archive-fingerprint compatibility, while proposal decisions and
+artifact previews are rendered inline only after an explicit action. Approval
+still produces only the existing deterministic, non-executable handoff; the
+model and browser gain no tool or state-mutation authority.
+
+The same presentation boundary places project selection, conversation history,
+fixed views, and advanced selectors in a toggleable left drawer. The question
+composer belongs below the evidence workspace, not inside navigation. A project
+home exposes four recurring research-room launchers, each backed by a current
+server-issued next-step candidate; it does not pre-create empty or inferred
+conversations. These rules are receiver layout policy and introduce no new
+state, evidence, or execution authority.

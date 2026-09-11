@@ -18,8 +18,8 @@ const workspaceHistoryList = document.getElementById("workspace-history-list");
 const connectionStatus = document.getElementById("connection-status");
 const freshness = document.getElementById("freshness");
 const workspace = document.getElementById("workspace");
-const proposalResult = document.getElementById("proposal-result");
-const artifactResult = document.getElementById("artifact-result");
+let proposalResult = null;
+let artifactResult = null;
 const viewButtons = Array.from(document.querySelectorAll(".view-button"));
 const runSelect = document.getElementById("run-select");
 const openRunButton = document.getElementById("open-run");
@@ -37,6 +37,9 @@ const generateWorkspaceButton = document.getElementById("generate-workspace");
 const intentResult = document.getElementById("intent-result");
 const localeSelect = document.getElementById("locale-select");
 const skipLink = document.querySelector(".skip-link");
+const drawerToggle = document.getElementById("drawer-toggle");
+const projectDrawer = document.getElementById("project-drawer");
+const drawerBackdrop = document.getElementById("drawer-backdrop");
 
 const localeAssetPaths = Object.freeze({
   en: "/assets/locales/en.json",
@@ -84,11 +87,47 @@ let artifactObjectUrl = null;
 let lastProposalReceipt = null;
 let lastControllerDecision = null;
 let lastArtifactPreview = null;
+let lastProposalError = null;
+let lastArtifactError = null;
 let intentResultState = {kind: "empty"};
 let topicManagementState = {kind: "empty"};
 let connectionStatusKey = "connection.connecting";
 let freshnessStatusKey = "freshness.none";
 let connectionStatusError = null;
+const compactNavigation = window.matchMedia("(max-width: 900px)");
+let drawerOpen = !compactNavigation.matches;
+
+document.body.classList.toggle("drawer-closed", !drawerOpen);
+projectDrawer.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
+drawerToggle.setAttribute("aria-expanded", drawerOpen ? "true" : "false");
+
+function renderDrawerState({focus = false} = {}) {
+  document.body.classList.toggle("drawer-closed", !drawerOpen);
+  projectDrawer.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
+  drawerToggle.setAttribute("aria-expanded", drawerOpen ? "true" : "false");
+  const labelKey = drawerOpen ? "nav.close" : "nav.open";
+  drawerToggle.dataset.i18n = labelKey;
+  drawerToggle.textContent = hasTranslation(labelKey)
+    ? t(labelKey)
+    : drawerOpen ? "Close project navigation" : "Open project navigation";
+  drawerBackdrop.setAttribute("aria-label", hasTranslation("nav.close")
+    ? t("nav.close")
+    : "Close project navigation");
+  if (focus && drawerOpen) {
+    projectDrawer.focus({preventScroll: true});
+  }
+}
+
+function setDrawerOpen(open, options = {}) {
+  drawerOpen = Boolean(open);
+  renderDrawerState(options);
+}
+
+function closeDrawerOnMobile() {
+  if (compactNavigation.matches) {
+    setDrawerOpen(false);
+  }
+}
 
 function browserLocale() {
   return String(navigator.language || "en").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
@@ -661,7 +700,7 @@ function renderRunBlockers(data) {
   appendText(summary, t("blocker.summary", {count: data.blockers.length}));
   const list = document.createElement("div");
   list.className = "generated-blocker-list";
-  for (const blocker of data.blockers) {
+  function blockerCard(blocker) {
     const item = document.createElement("article");
     item.className = "generated-blocker-item";
     const header = document.createElement("div");
@@ -691,7 +730,23 @@ function renderRunBlockers(data) {
       data: {run_id: blocker.run_id, source_locator: blocker.source_locator},
       names: ["run_id", "source_locator"],
     }));
-    list.appendChild(item);
+    return item;
+  }
+  for (const blocker of data.blockers.slice(0, 3)) {
+    list.appendChild(blockerCard(blocker));
+  }
+  if (data.blockers.length > 3) {
+    const more = document.createElement("details");
+    more.className = "more-blockers";
+    const moreSummary = document.createElement("summary");
+    appendText(moreSummary, t("blocker.more", {count: data.blockers.length - 3}));
+    const moreList = document.createElement("div");
+    moreList.className = "generated-blocker-list";
+    for (const blocker of data.blockers.slice(3)) {
+      moreList.appendChild(blockerCard(blocker));
+    }
+    more.append(moreSummary, moreList);
+    list.appendChild(more);
   }
   container.append(summary, list);
   return container;
@@ -1164,13 +1219,9 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.results"), data.counts.evaluation_results_registered, t("progress.metric.results_note")),
     progressMetric(t("progress.metric.acquisitions"), data.counts.acquisition_requests || 0, t("progress.metric.acquisitions_note")),
   );
-  container.append(
-    hero,
-    renderAcquisitionRequests(data.acquisitions || []),
-    metrics,
-    renderRunDistribution(data.counts),
-    renderProjectLifecycle(data.lifecycle),
-  );
+  const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
+  const distribution = renderRunDistribution(data.counts);
+  const lifecycle = renderProjectLifecycle(data.lifecycle);
 
   const direction = progressSection(t("progress.direction.title"), t("progress.direction.subtitle"));
   const directionGrid = document.createElement("div");
@@ -1218,7 +1269,6 @@ function renderProjectProgress(data) {
     directionGrid.appendChild(currentRun);
   }
   direction.appendChild(directionGrid);
-  container.appendChild(direction);
 
   const evaluations = progressSection(
     t("progress.evaluations.title"),
@@ -1325,7 +1375,6 @@ function renderProjectProgress(data) {
     }
     evaluations.appendChild(evaluationGrid);
   }
-  container.appendChild(evaluations);
 
   const evaluationResults = progressSection(
     t("progress.results.title"),
@@ -1395,7 +1444,6 @@ function renderProjectProgress(data) {
     }
     evaluationResults.appendChild(resultGrid);
   }
-  container.appendChild(evaluationResults);
 
   const standing = document.createElement("div");
   standing.className = "progress-columns";
@@ -1433,10 +1481,7 @@ function renderProjectProgress(data) {
     }));
   }
   standing.appendChild(milestones);
-  container.appendChild(standing);
 
-  const activityAndNext = document.createElement("div");
-  activityAndNext.className = "progress-columns lower-grid";
   const activity = progressSection(
     t("progress.activity.title"),
     t("progress.activity.subtitle", {count: data.activity_total}),
@@ -1468,8 +1513,6 @@ function renderProjectProgress(data) {
     appendText(truncated, t("progress.activity.truncated"));
     activity.appendChild(truncated);
   }
-  activityAndNext.appendChild(activity);
-
   const nextSteps = progressSection(
     t("progress.next.title"),
     t("progress.next.subtitle"),
@@ -1483,22 +1526,83 @@ function renderProjectProgress(data) {
     review_research_landscape: t("progress.next.research_landscape"),
     review_data_acquisition: t("progress.next.data_acquisition"),
   };
+  const lensDefinitions = [
+    {
+      key: "progress",
+      kinds: ["review_progress", "review_next_gate"],
+    },
+    {
+      key: "experiment",
+      kinds: ["review_data_acquisition", "review_research_landscape", "compare_runs"],
+    },
+    {
+      key: "paper",
+      kinds: ["review_paper_evidence"],
+    },
+    {
+      key: "risk",
+      kinds: ["diagnose_blockers", "review_next_gate"],
+    },
+  ];
   const candidateList = document.createElement("div");
-  candidateList.className = "candidate-list";
-  for (const candidate of data.next_step_candidates) {
+  candidateList.className = "candidate-list research-lens-grid";
+  function candidateButton(candidate, lensKey = "") {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "candidate-button";
+    button.className = lensKey
+      ? "candidate-button research-lens-button"
+      : "candidate-button";
     const label = document.createElement("strong");
-    appendText(label, candidateLabels[candidate.kind] || readableCode(candidate.label_code));
-    const note = document.createElement("small");
-    appendText(note, t("progress.next.meta", {
-      targets: countMessage("common.targets", candidate.target_ids.length),
-      evidence: countMessage("common.records", candidate.support_ref_ids.length),
-    }));
-    button.append(label, note);
+    appendText(label, lensKey
+      ? t(`progress.lens.${lensKey}.title`)
+      : candidateLabels[candidate.kind] || readableCode(candidate.label_code));
+    if (lensKey) {
+      const body = document.createElement("span");
+      body.className = "research-lens-description";
+      appendText(body, t(`progress.lens.${lensKey}.body`));
+      const current = document.createElement("small");
+      appendText(current, t("progress.lens.current", {
+        path: candidateLabels[candidate.kind] || readableCode(candidate.label_code),
+      }));
+      button.append(label, body, current);
+    } else {
+      const note = document.createElement("small");
+      appendText(note, t("progress.next.meta", {
+        targets: countMessage("common.targets", candidate.target_ids.length),
+        evidence: countMessage("common.records", candidate.support_ref_ids.length),
+      }));
+      button.append(label, note);
+    }
     button.addEventListener("click", () => requestCandidateWorkspace(candidate.candidate_id));
-    candidateList.appendChild(button);
+    return button;
+  }
+  const primaryCandidateIds = new Set();
+  for (const lens of lensDefinitions) {
+    const candidate = data.next_step_candidates.find((item) => (
+      !primaryCandidateIds.has(item.candidate_id) && lens.kinds.includes(item.kind)
+    ));
+    if (candidate) {
+      primaryCandidateIds.add(candidate.candidate_id);
+      candidateList.appendChild(candidateButton(candidate, lens.key));
+    }
+  }
+  const remainingCandidates = data.next_step_candidates.filter(
+    (candidate) => !primaryCandidateIds.has(candidate.candidate_id),
+  );
+  if (remainingCandidates.length > 0) {
+    const more = document.createElement("details");
+    more.className = "more-candidates";
+    const moreSummary = document.createElement("summary");
+    appendText(moreSummary, t("progress.next.more", {
+      count: remainingCandidates.length,
+    }));
+    const remainder = document.createElement("div");
+    remainder.className = "candidate-list";
+    for (const candidate of remainingCandidates) {
+      remainder.appendChild(candidateButton(candidate));
+    }
+    more.append(moreSummary, remainder);
+    candidateList.appendChild(more);
   }
   nextSteps.appendChild(candidateList);
 
@@ -1519,8 +1623,31 @@ function renderProjectProgress(data) {
     appendText(availability, t("progress.availability.no_paper"));
   }
   nextSteps.appendChild(availability);
-  activityAndNext.appendChild(nextSteps);
-  container.appendChild(activityAndNext);
+  const details = document.createElement("details");
+  details.className = "progress-evidence-vault";
+  const detailsSummary = document.createElement("summary");
+  const detailsTitle = document.createElement("strong");
+  appendText(detailsTitle, t("progress.details.title"));
+  const detailsBody = document.createElement("small");
+  appendText(detailsBody, t("progress.details.body", {
+    runs: data.counts.runs_registered,
+    evaluations: data.counts.evaluations_registered,
+    blockers: attentionCount,
+  }));
+  detailsSummary.append(detailsTitle, detailsBody);
+  const detailContent = document.createElement("div");
+  detailContent.className = "progress-evidence-vault-content";
+  detailContent.append(
+    acquisitions,
+    metrics,
+    distribution,
+    evaluations,
+    evaluationResults,
+    standing,
+    activity,
+  );
+  details.append(detailsSummary, detailContent);
+  container.append(hero, nextSteps, direction, lifecycle, details);
   return container;
 }
 
@@ -1665,7 +1792,11 @@ function renderProjectLifecycle(data) {
     }
     rail.appendChild(node);
   }
-  section.append(header, rail, evidenceDisclosure(data.support_ref_ids, {
+  const gateDetails = document.createElement("details");
+  gateDetails.className = "lifecycle-gate-details";
+  const gateSummary = document.createElement("summary");
+  appendText(gateSummary, t("lifecycle.show_gates", {count: data.gates.length}));
+  gateDetails.append(gateSummary, rail, evidenceDisclosure(data.support_ref_ids, {
     data: {
       idea_to_paper_complete: data.idea_to_paper_complete,
       internal_review_cycle_complete: data.internal_review_cycle_complete,
@@ -1688,7 +1819,144 @@ function renderProjectLifecycle(data) {
       "scientific_effectiveness_established",
     ],
   }));
+  section.append(header, gateDetails);
   return section;
+}
+
+function renderEvidenceGraph(data) {
+  const container = document.createElement("div");
+  container.className = "evidence-graph-workspace";
+  const instructions = document.createElement("p");
+  instructions.className = "evidence-graph-instructions";
+  appendText(instructions, t("graph.instructions"));
+
+  const namespace = "http://www.w3.org/2000/svg";
+  const width = 760;
+  const height = 420;
+  const canvas = document.createElementNS(namespace, "svg");
+  canvas.classList.add("evidence-graph-canvas");
+  canvas.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", t("graph.aria", {
+    nodes: data.nodes.length,
+    edges: data.edges.length,
+  }));
+
+  const positions = new Map();
+  data.nodes.forEach((node, index) => {
+    if (index === 0) {
+      positions.set(node.evidence_ref_id, {x: width / 2, y: height / 2});
+      return;
+    }
+    const count = Math.max(1, data.nodes.length - 1);
+    const angle = ((index - 1) / count) * Math.PI * 2 - Math.PI / 2;
+    positions.set(node.evidence_ref_id, {
+      x: width / 2 + Math.cos(angle) * 285,
+      y: height / 2 + Math.sin(angle) * 150,
+    });
+  });
+
+  for (const edge of data.edges) {
+    const source = positions.get(edge.source_ref_id);
+    const target = positions.get(edge.target_ref_id);
+    const line = document.createElementNS(namespace, "line");
+    line.classList.add("evidence-graph-edge");
+    line.setAttribute("x1", source.x);
+    line.setAttribute("y1", source.y);
+    line.setAttribute("x2", target.x);
+    line.setAttribute("y2", target.y);
+    const edgeTitle = document.createElementNS(namespace, "title");
+    appendText(edgeTitle, readableCode(edge.relation));
+    line.appendChild(edgeTitle);
+    canvas.appendChild(line);
+  }
+
+  const detail = document.createElement("section");
+  detail.className = "evidence-graph-detail";
+  detail.setAttribute("aria-live", "polite");
+  const graphNodes = new Map();
+
+  function selectNode(node) {
+    for (const graphNode of graphNodes.values()) {
+      graphNode.classList.remove("selected");
+      graphNode.setAttribute("aria-pressed", "false");
+    }
+    const selected = graphNodes.get(node.evidence_ref_id);
+    selected.classList.add("selected");
+    selected.setAttribute("aria-pressed", "true");
+    detail.replaceChildren();
+    const heading = document.createElement("h3");
+    appendText(heading, node.label);
+    const kind = document.createElement("p");
+    appendText(kind, `${t("graph.kind")}: ${localizedCode(node.kind)}`);
+    const reference = document.createElement("code");
+    appendText(reference, node.evidence_ref_id);
+    const explore = document.createElement("button");
+    explore.type = "button";
+    explore.className = "evidence-graph-explore";
+    appendText(explore, t("graph.explore"));
+    explore.addEventListener("click", () => exploreEvidenceNode(node));
+    detail.append(heading, kind, reference, explore);
+  }
+
+  for (const node of data.nodes) {
+    const position = positions.get(node.evidence_ref_id);
+    const group = document.createElementNS(namespace, "g");
+    group.classList.add("evidence-graph-node", `graph-kind-${node.kind}`);
+    group.setAttribute("role", "button");
+    group.setAttribute("tabindex", "0");
+    group.setAttribute("aria-pressed", "false");
+    group.setAttribute("aria-label", t("graph.node_aria", {
+      label: node.label,
+      kind: localizedCode(node.kind),
+    }));
+    group.setAttribute("transform", `translate(${position.x} ${position.y})`);
+    const circle = document.createElementNS(namespace, "circle");
+    circle.setAttribute("r", node.kind === "project_manifest" ? "45" : "34");
+    const label = document.createElementNS(namespace, "text");
+    label.setAttribute("y", "4");
+    const compact = node.label.length > 20 ? `${node.label.slice(0, 19)}…` : node.label;
+    appendText(label, compact);
+    const title = document.createElementNS(namespace, "title");
+    appendText(title, node.label);
+    group.append(circle, label, title);
+    group.addEventListener("click", () => selectNode(node));
+    group.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectNode(node);
+      }
+    });
+    graphNodes.set(node.evidence_ref_id, group);
+    canvas.appendChild(group);
+  }
+
+  const initial = document.createElement("p");
+  initial.className = "muted";
+  appendText(initial, t("graph.select"));
+  detail.appendChild(initial);
+  container.append(instructions, canvas, detail);
+  return container;
+}
+
+function exploreEvidenceNode(node) {
+  if (!quickIntentCatalog || quickIntentCatalog.snapshot.project_id !== currentProjectId()) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  generateWithIntent({
+    schema_version: "1.0",
+    kind: "free_question",
+    project_id: quickIntentCatalog.snapshot.project_id,
+    snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+    snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+    question: t("graph.explore_question", {
+      label: node.label,
+      kind: readableCode(node.kind),
+      evidence: node.evidence_ref_id,
+    }),
+  });
 }
 
 const componentRenderers = Object.freeze({
@@ -1701,12 +1969,7 @@ const componentRenderers = Object.freeze({
   RunHealth: renderRunHealth,
   BudgetMeter: (data) => fixedRows(data.resources, ["resource", "used", "limit", "unit"]),
   DecisionComparison: (data) => fixedFields(data, Object.keys(data)),
-  EvidenceGraph: (data) => {
-    const container = document.createElement("div");
-    container.appendChild(fixedRows(data.nodes, ["kind", "label", "evidence_ref_id"]));
-    container.appendChild(fixedRows(data.edges, ["relation", "source_ref_id", "target_ref_id"]));
-    return container;
-  },
+  EvidenceGraph: renderEvidenceGraph,
   ClaimMatrix: (data) => fixedRows(
     data.claims,
     ["statement", "status", "claim_ref_id", "evidence_ref_ids"],
@@ -1754,7 +2017,7 @@ function placementExplanation(placement) {
 }
 
 function actionLabel(action) {
-  const key = `action.${action.proposal?.payload?.kind}`;
+  const key = `action.${action.proposal_kind}`;
   return hasTranslation(key) ? t(key) : action.label;
 }
 
@@ -1771,9 +2034,9 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     lastProposalReceipt = null;
     lastControllerDecision = null;
     lastArtifactPreview = null;
+    lastProposalError = null;
+    lastArtifactError = null;
   }
-  renderProposalResult();
-  renderArtifactResult();
   if (generated) {
     workspace.appendChild(renderGenerationSummary(documentValue));
   }
@@ -1791,6 +2054,7 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     }
     const card = document.createElement("section");
     card.className = "component-card";
+    card.classList.add(`component-${component.renderer.replaceAll(/([a-z])([A-Z])/g, "$1-$2").toLowerCase()}`);
     const placement = placements.get(component.component_id);
     if (placement) {
       card.classList.add(`plan-group-${placement.group}`);
@@ -1821,10 +2085,12 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     }
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "proposal-action-button";
     appendText(button, actionLabel(action));
     button.addEventListener("click", () => submitAction(action));
     actions.appendChild(button);
   }
+  renderInteractionWorkbench();
   updateCatalogs(documentValue);
   updateFreshness(documentValue);
   updateActiveView(generated ? null : documentValue.query.view);
@@ -2014,9 +2280,11 @@ async function submitAction(action) {
     });
     lastProposalReceipt = receipt;
     lastControllerDecision = null;
+    lastProposalError = null;
     renderProposalResult();
   } catch (error) {
-    showError(proposalResult, error);
+    lastProposalError = error;
+    renderProposalResult();
   }
 }
 
@@ -2037,31 +2305,34 @@ async function inspectArtifact(artifactRefId) {
     snapshot_sha256: renderer.snapshot.snapshot_sha256,
     artifact_ref_id: artifactRefId,
   };
-  artifactResult.setAttribute("aria-busy", "true");
+  lastArtifactError = null;
   try {
     const preview = await api(interactionPath("inspections"), {
       method: "POST",
       body: JSON.stringify(event),
     });
-    renderArtifactPreview(preview);
+    lastArtifactPreview = preview;
+    renderArtifactResult();
   } catch (error) {
     clearArtifactPreview();
-    showError(artifactResult, error);
-  } finally {
-    artifactResult.setAttribute("aria-busy", "false");
+    lastArtifactError = error;
+    renderArtifactResult();
   }
 }
 
 function renderProposalResult() {
-  proposalResult.replaceChildren();
-  if (!lastProposalReceipt) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    appendText(empty, t("inspector.proposal_none"));
-    proposalResult.appendChild(empty);
+  renderInteractionWorkbench();
+}
+
+function renderProposalContent() {
+  if (!proposalResult) return;
+  if (lastProposalError) {
+    proposalResult.dataset.state = "error";
+    showError(proposalResult, lastProposalError);
     return;
   }
   if (lastControllerDecision) {
+    proposalResult.dataset.state = lastControllerDecision.status;
     const outcome = document.createElement("p");
     outcome.className = "proposal-explanation";
     appendText(outcome, t("inspector.controller_recorded"));
@@ -2077,6 +2348,7 @@ function renderProposalResult() {
     );
     return;
   }
+  proposalResult.dataset.state = lastProposalReceipt.status;
   const explanation = document.createElement("p");
   explanation.className = "proposal-explanation";
   explanation.textContent = t("inspector.proposal_recorded");
@@ -2120,9 +2392,11 @@ async function submitControllerDecision(requestedDecision) {
       method: "POST",
       body: JSON.stringify(request),
     });
+    lastProposalError = null;
     renderProposalResult();
   } catch (error) {
-    showError(proposalResult, error);
+    lastProposalError = error;
+    renderProposalResult();
   }
 }
 
@@ -2134,7 +2408,7 @@ function clearArtifactPreview({forget = true} = {}) {
   if (forget) {
     lastArtifactPreview = null;
   }
-  artifactResult.replaceChildren();
+  if (artifactResult) artifactResult.replaceChildren();
 }
 
 function interactionPath(operation) {
@@ -2150,22 +2424,12 @@ function interactionPath(operation) {
 }
 
 function renderArtifactResult() {
-  if (lastArtifactPreview) {
-    renderArtifactPreview(lastArtifactPreview, {remember: false});
-    return;
-  }
-  clearArtifactPreview({forget: false});
-  const empty = document.createElement("p");
-  empty.className = "muted";
-  appendText(empty, t("inspector.evidence_none"));
-  artifactResult.appendChild(empty);
+  renderInteractionWorkbench();
 }
 
-function renderArtifactPreview(preview, {remember = true} = {}) {
+function renderArtifactPreview(preview) {
+  if (!artifactResult) return;
   clearArtifactPreview({forget: false});
-  if (remember) {
-    lastArtifactPreview = preview;
-  }
   const metadata = fixedFields(preview.receipt, [
     "media_type",
     "byte_length",
@@ -2199,6 +2463,67 @@ function renderArtifactPreview(preview, {remember = true} = {}) {
   artifactResult.appendChild(source);
 }
 
+function renderInteractionWorkbench() {
+  document.getElementById("interaction-workbench")?.remove();
+  proposalResult = null;
+  artifactResult = null;
+  const hasProposal = Boolean(
+    lastProposalReceipt || lastControllerDecision || lastProposalError,
+  );
+  const hasArtifact = Boolean(lastArtifactPreview || lastArtifactError);
+  if (!hasProposal && !hasArtifact) return;
+
+  const workbench = document.createElement("section");
+  workbench.id = "interaction-workbench";
+  workbench.className = "interaction-workbench";
+  const header = document.createElement("header");
+  header.className = "interaction-workbench-header";
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow dark";
+  appendText(eyebrow, t("workbench.eyebrow"));
+  const heading = document.createElement("h2");
+  appendText(heading, t("workbench.title"));
+  const body = document.createElement("p");
+  appendText(body, t("workbench.body"));
+  header.append(eyebrow, heading, body);
+
+  const grid = document.createElement("div");
+  grid.className = "interaction-workbench-grid";
+  if (hasProposal) {
+    const panel = document.createElement("section");
+    panel.className = "interaction-workbench-panel proposal-panel";
+    const panelHeading = document.createElement("h3");
+    appendText(panelHeading, t("inspector.proposal_title"));
+    const panelBody = document.createElement("p");
+    appendText(panelBody, t("inspector.proposal_body"));
+    proposalResult = document.createElement("div");
+    proposalResult.id = "proposal-result";
+    proposalResult.setAttribute("role", "status");
+    panel.append(panelHeading, panelBody, proposalResult);
+    grid.appendChild(panel);
+  }
+  if (hasArtifact) {
+    const panel = document.createElement("section");
+    panel.className = "interaction-workbench-panel artifact-panel";
+    const panelHeading = document.createElement("h3");
+    appendText(panelHeading, t("inspector.evidence_title"));
+    const panelBody = document.createElement("p");
+    appendText(panelBody, t("inspector.evidence_body"));
+    artifactResult = document.createElement("div");
+    artifactResult.id = "artifact-result";
+    artifactResult.setAttribute("role", "status");
+    panel.append(panelHeading, panelBody, artifactResult);
+    grid.appendChild(panel);
+  }
+  workbench.append(header, grid);
+  workspace.appendChild(workbench);
+  renderProposalContent();
+  if (artifactResult) {
+    if (lastArtifactError) showError(artifactResult, lastArtifactError);
+    else if (lastArtifactPreview) renderArtifactPreview(lastArtifactPreview);
+  }
+}
+
 function setIntentEnabled(enabled) {
   intentQuestion.disabled = !enabled;
   generateWorkspaceButton.disabled = !enabled;
@@ -2224,6 +2549,8 @@ function clearProjectContext(projectId = "") {
   lastProposalReceipt = null;
   lastControllerDecision = null;
   lastArtifactPreview = null;
+  lastProposalError = null;
+  lastArtifactError = null;
   intentResultState = {kind: "empty"};
   topicManagementState = {kind: "empty"};
   responseCache.clear();
@@ -3098,6 +3425,7 @@ function showError(container, error) {
 
 function rerenderForLocale() {
   localizeStaticShell();
+  renderDrawerState();
   if (connectionStatusError) {
     showError(connectionStatus, connectionStatusError);
   } else {
@@ -3154,6 +3482,22 @@ async function initializeAccess() {
 skipLink.addEventListener("click", (event) => {
   event.preventDefault();
   workspace.focus({preventScroll: false});
+});
+drawerToggle.addEventListener("click", () => {
+  setDrawerOpen(!drawerOpen, {focus: !drawerOpen});
+});
+drawerBackdrop.addEventListener("click", () => setDrawerOpen(false));
+projectDrawer.addEventListener("click", (event) => {
+  if (event.target.closest("button")) {
+    closeDrawerOnMobile();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && drawerOpen
+      && compactNavigation.matches) {
+    setDrawerOpen(false);
+    drawerToggle.focus({preventScroll: true});
+  }
 });
 localeSelect.addEventListener("change", () => {
   activeLocale = normalizeLocale(localeSelect.value);

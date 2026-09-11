@@ -213,6 +213,9 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'return {view: "project-progress"' in script.text
     assert 'data-view="project-progress"' in index.text
     assert 'id="workspace-history-list"' in index.text
+    assert 'class="inspector"' not in index.text
+    assert "EvidenceGraph: renderEvidenceGraph" in script.text
+    assert 'workbench.id = "interaction-workbench"' in script.text
     assert "loadResearchWorkspaceDetail" in script.text
     assert 'className = "workspace-turn-items"' in script.text
     assert "history.pushState" in script.text
@@ -220,6 +223,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'headers["If-None-Match"]' in script.text
     assert 'class="skip-link"' in index.text
     assert 'aria-label="Research workspace navigation"' in index.text
+    assert 'id="drawer-toggle"' in index.text
+    assert 'aria-controls="project-drawer"' in index.text
+    assert 'id="project-drawer"' in index.text
+    assert 'class="content-column"' in index.text
+    assert 'class="conversation-composer"' in index.text
+    assert index.text.index('id="workspace"') < index.text.index('id="intent-form"')
     assert 'aria-busy="false"' in index.text
     assert 'id="quick-intents"' in index.text
     assert 'id="intent-question"' in index.text
@@ -248,6 +257,9 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert ".generated-blocker-list" in stylesheet.text
     assert "@media (max-width: 1050px)" in stylesheet.text
     assert ".workspace.generated-workspace" in stylesheet.text
+    assert "body.drawer-closed .project-nav" in stylesheet.text
+    assert ".research-lens-grid" in stylesheet.text
+    assert "setDrawerOpen(!drawerOpen" in script.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
     assert "workspace.focus({preventScroll: true})" in script.text

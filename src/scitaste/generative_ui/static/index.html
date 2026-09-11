@@ -16,6 +16,14 @@
         <p class="header-summary" data-i18n="brand.summary">Generated views are typed evidence, never executable code.</p>
       </div>
       <div class="header-controls">
+        <button
+          id="drawer-toggle"
+          class="drawer-toggle"
+          type="button"
+          aria-controls="project-drawer"
+          aria-expanded="true"
+          data-i18n="nav.close"
+        >Close project navigation</button>
         <div class="locale-panel">
           <label for="locale-select" data-i18n="locale.label">Interface language</label>
           <select id="locale-select" aria-label="Interface language" data-i18n-aria="locale.label">
@@ -29,7 +37,7 @@
       <span data-i18n="freshness.none">No authoritative project view loaded.</span>
     </div>
     <div class="application-grid">
-      <nav class="project-nav" aria-label="Research workspace navigation" data-i18n-aria="nav.aria">
+      <nav id="project-drawer" class="project-nav" aria-label="Research workspace navigation" data-i18n-aria="nav.aria" tabindex="-1">
         <div class="nav-section">
           <button id="global-home" type="button" disabled data-i18n="project.all">All projects</button>
           <label for="project-select" data-i18n="project.label">Authoritative project</label>
@@ -54,37 +62,6 @@
           <div id="topic-management-status" role="status" aria-live="polite"></div>
           <div id="workspace-history-list">
             <p class="muted" data-i18n="thread.open_project">Open a project to see its topics.</p>
-          </div>
-        </div>
-        <div class="nav-section intent-panel" aria-labelledby="intent-heading">
-          <p class="eyebrow dark" data-i18n="generation.eyebrow">Generation as content</p>
-          <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
-          <p class="control-hint" data-i18n="generation.description">Choose an evidence-derived prompt or ask a bounded free question.</p>
-          <div id="quick-intents" class="quick-intents" role="group" aria-label="Evidence-derived quick intents" data-i18n-aria="generation.quick_aria">
-            <p class="muted" data-i18n="quick.open_project">Open a project to load applicable prompts.</p>
-          </div>
-          <form id="intent-form">
-            <div class="conversation-context-control">
-              <label for="conversation-context-mode" data-i18n="thread.context_label">Conversation context</label>
-              <select id="conversation-context-mode" disabled>
-                <option value="recent" data-i18n="thread.context_recent">Use up to 8 recent turns</option>
-                <option value="none" data-i18n="thread.context_none">Use this question only</option>
-              </select>
-              <p class="control-hint" data-i18n="thread.context_hint">Only verified prior questions are shared with an optional intent planner; generated prose is excluded.</p>
-            </div>
-            <label for="intent-question" data-i18n="generation.free_question">Free question</label>
-            <textarea
-              id="intent-question"
-              maxlength="1000"
-              rows="3"
-              disabled
-              placeholder="Ask about progress, blockers, runs, papers, or next steps"
-              data-i18n-placeholder="generation.placeholder"
-            ></textarea>
-            <button id="generate-workspace" type="submit" disabled data-i18n="generation.submit">Generate evidence workspace</button>
-          </form>
-          <div id="intent-result" role="status" aria-live="polite">
-            <p class="muted" data-i18n="generation.none">No generated workspace requested.</p>
           </div>
         </div>
         <div class="nav-section" aria-labelledby="view-heading">
@@ -118,24 +95,48 @@
           </fieldset>
         </div>
       </nav>
-      <main id="workspace" class="workspace" aria-live="polite" aria-busy="false" tabindex="-1">
-        <p class="empty-state" data-i18n="workspace.empty">No trusted project workspace is loaded.</p>
-      </main>
-      <aside class="inspector" aria-label="Proposal and evidence inspector" data-i18n-aria="inspector.aria">
-        <p class="eyebrow dark" data-i18n="inspector.proposal_eyebrow">Proposal boundary</p>
-        <h2 data-i18n="inspector.proposal_title">Controlled proposal decision</h2>
-        <p data-i18n="inspector.proposal_body">Review recorded advice, then explicitly authorize a bounded handoff or reject it.</p>
-        <div id="proposal-result" role="status">
-          <p class="muted" data-i18n="inspector.proposal_none">No proposal has been submitted from this view.</p>
-        </div>
-        <hr>
-        <p class="eyebrow dark" data-i18n="inspector.evidence_eyebrow">Evidence preview</p>
-        <h2 data-i18n="inspector.evidence_title">Verified artifact only</h2>
-        <p data-i18n="inspector.evidence_body">Preview is read-only, bounded, and rehashed. Markdown and HTML-like bytes remain inert source.</p>
-        <div id="artifact-result" role="status">
-          <p class="muted" data-i18n="inspector.evidence_none">Select Inspect preview on a visible paper artifact.</p>
-        </div>
-      </aside>
+      <button id="drawer-backdrop" class="drawer-backdrop" type="button" aria-label="Close project navigation" data-i18n-aria="nav.close"></button>
+      <div class="content-column">
+        <main id="workspace" class="workspace" aria-live="polite" aria-busy="false" tabindex="-1">
+          <p class="empty-state" data-i18n="workspace.empty">No trusted project workspace is loaded.</p>
+        </main>
+        <section class="conversation-composer" aria-labelledby="intent-heading">
+          <div class="composer-heading">
+            <div>
+              <p class="eyebrow dark" data-i18n="generation.eyebrow">Generation as content</p>
+              <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
+            </div>
+            <p class="control-hint" data-i18n="generation.description">Choose an evidence-derived prompt or ask a bounded free question.</p>
+          </div>
+          <div id="quick-intents" class="quick-intents" role="group" aria-label="Evidence-derived quick intents" data-i18n-aria="generation.quick_aria">
+            <p class="muted" data-i18n="quick.open_project">Open a project to load applicable prompts.</p>
+          </div>
+          <form id="intent-form">
+            <div class="conversation-context-control">
+              <label for="conversation-context-mode" data-i18n="thread.context_label">Conversation context</label>
+              <select id="conversation-context-mode" disabled>
+                <option value="recent" data-i18n="thread.context_recent">Use up to 8 recent turns</option>
+                <option value="none" data-i18n="thread.context_none">Use this question only</option>
+              </select>
+            </div>
+            <div class="composer-question">
+              <label for="intent-question" data-i18n="generation.free_question">Free question</label>
+              <textarea
+                id="intent-question"
+                maxlength="1000"
+                rows="2"
+                disabled
+                placeholder="Ask about progress, blockers, runs, papers, or next steps"
+                data-i18n-placeholder="generation.placeholder"
+              ></textarea>
+            </div>
+            <button id="generate-workspace" type="submit" disabled data-i18n="generation.submit">Generate evidence workspace</button>
+          </form>
+          <div id="intent-result" role="status" aria-live="polite">
+            <p class="muted" data-i18n="generation.none">No generated workspace requested.</p>
+          </div>
+        </section>
+      </div>
     </div>
   </body>
 </html>

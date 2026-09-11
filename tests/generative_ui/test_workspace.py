@@ -219,6 +219,29 @@ def test_run_stage_view_explains_registered_outcomes_and_stage_outputs(tmp_path:
     assert document.renderer.actions[0].requires_approval is True
 
 
+def test_project_progress_exposes_a_bounded_heterogeneous_evidence_graph(
+    tmp_path: Path,
+) -> None:
+    document = WorkspaceSurfaceFactory(_runtime(tmp_path)).build(
+        ProjectProgressQuery(project_id="workspace-project")
+    )
+    graph = _component(document, TrustedComponent.EVIDENCE_GRAPH)
+
+    assert 1 < len(graph.data["nodes"]) <= 24
+    assert len(graph.data["edges"]) <= 64
+    assert {item["kind"] for item in graph.data["nodes"]} >= {
+        "project_manifest",
+        "run_record",
+        "paper",
+        "stage_record",
+    }
+    assert all(
+        edge["source_ref_id"] in graph.evidence_ref_ids
+        and edge["target_ref_id"] in graph.evidence_ref_ids
+        for edge in graph.data["edges"]
+    )
+
+
 def test_paper_evidence_view_lists_exact_hashes_and_supported_artifacts(tmp_path: Path) -> None:
     document = WorkspaceSurfaceFactory(_runtime(tmp_path)).build(
         PaperEvidenceQuery(project_id="workspace-project", paper_id="paper-one")

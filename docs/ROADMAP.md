@@ -49,6 +49,22 @@ conversations, and one immutable generated page per user question. Conversation
 context is explicit and bounded; model/API credentials remain deployment
 configuration and never belong to a project page.
 
+Its current progress response is now deliberately layered rather than a long
+registry dump. The project home leads from the decision brief into four
+evidence-bound research rooms—direction, experiments/evaluation, paper/review,
+and risks/decisions—without creating a conversation until one is opened. The
+generated response contains the brief and a bounded 12-node heterogeneous
+evidence graph. The complete run, acquisition,
+evaluation, blocker, milestone, and activity records remain available in a
+default-collapsed evidence vault or focused follow-up pages. Graph-node
+exploration creates another immutable turn in the same conversation. Proposal
+approval/rejection and artifact previews appear inline only after a user action;
+the previous permanently empty right rail is no longer rendered. Project and
+history navigation now occupy a toggleable drawer, while the question composer
+sits horizontally below the scrollable evidence workspace. This closes a
+navigation and intervention engineering gate, not a human-usability or
+research-quality claim.
+
 The project home also promotes a canonical data-acquisition gate out of the run
 history into an evidence-bound decision card. The current MLR-Bench ten-brief
 request is therefore visible with its exact hash, 10 MiB ceiling, allowed host,

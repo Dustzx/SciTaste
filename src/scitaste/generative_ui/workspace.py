@@ -853,7 +853,106 @@ class WorkspaceSurfaceFactory:
                 "next_step_candidates": next_step_candidates,
             },
         )
-        return _surface(query, snapshot, binding, components=[component])
+        graph_nodes: list[dict[str, object]] = [
+            {
+                "evidence_ref_id": project_ref.evidence_id,
+                "kind": project_ref.kind.value,
+                "label": snapshot.manifest.title,
+            }
+        ]
+        graph_edges: list[dict[str, str]] = []
+
+        def connect_to_project(ref_id: str, kind: str, label: str, relation: str) -> None:
+            if any(node["evidence_ref_id"] == ref_id for node in graph_nodes):
+                return
+            graph_nodes.append(
+                {"evidence_ref_id": ref_id, "kind": kind, "label": label}
+            )
+            graph_edges.append(
+                {
+                    "source_ref_id": project_ref.evidence_id,
+                    "target_ref_id": ref_id,
+                    "relation": relation,
+                }
+            )
+
+        for row in recent_activity[:5]:
+            connect_to_project(
+                str(row["run_ref_id"]),
+                EvidenceKind.RUN_RECORD.value,
+                f"Run · {row['run_id']}",
+                "registers-run",
+            )
+        for row in sorted(paper_rows, key=lambda item: not bool(item["selected"]))[:2]:
+            connect_to_project(
+                str(row["paper_ref_id"]),
+                EvidenceKind.PAPER.value,
+                f"Paper · {row['title']}",
+                "registers-paper",
+            )
+        selected_evaluations = sorted(
+            evaluation_rows,
+            key=lambda item: not bool(item["selected"]),
+        )[:4]
+        selected_evaluation_refs: dict[str, str] = {}
+        for row in selected_evaluations:
+            ref_id = str(row["evaluation_ref_id"])
+            selected_evaluation_refs[str(row["evaluation_id"])] = ref_id
+            connect_to_project(
+                ref_id,
+                EvidenceKind.EVALUATION.value,
+                f"Evaluation · {row['evaluation_id']}",
+                "declares-evaluation",
+            )
+        for row in sorted(
+            evaluation_result_rows,
+            key=lambda item: not bool(item["selected"]),
+        )[:3]:
+            result_ref_id = str(row["result_ref_id"])
+            connect_to_project(
+                result_ref_id,
+                EvidenceKind.EVALUATION_RESULT.value,
+                f"Result · {row['result_id']}",
+                "registers-result",
+            )
+            evaluation_ref_id = selected_evaluation_refs.get(str(row["evaluation_id"]))
+            if evaluation_ref_id is not None:
+                graph_edges[-1] = {
+                    "source_ref_id": evaluation_ref_id,
+                    "target_ref_id": result_ref_id,
+                    "relation": "reports-result",
+                }
+        if stage_rows:
+            stage_ref_id = str(stage_rows[0]["stage_ref_id"])
+            connect_to_project(
+                stage_ref_id,
+                EvidenceKind.STAGE_RECORD.value,
+                "Completed stage history",
+                "contains-stage-history",
+            )
+
+        evidence_graph = ComponentSpec(
+            component_id="project-evidence-graph",
+            component=TrustedComponent.EVIDENCE_GRAPH,
+            title="Project evidence graph",
+            evidence_ref_ids=[str(node["evidence_ref_id"]) for node in graph_nodes],
+            data={"nodes": graph_nodes, "edges": graph_edges},
+        )
+        actions = []
+        if snapshot.manifest.current_run is not None:
+            actions.append(
+                _run_approval_action(
+                    run_refs[snapshot.manifest.current_run],
+                    component_id=component.component_id,
+                )
+            )
+        return _surface(
+            query,
+            snapshot,
+            binding,
+            components=[component, evidence_graph],
+            actions=actions,
+        )
 
     def _research_landscape_surface(
         self,
@@ -1630,10 +1729,14 @@ def _compared_run(run: ProjectRun, ref: EvidenceRef) -> dict[str, object]:
     }
 
 
-def _run_approval_action(run_ref: EvidenceRef) -> ActionBinding:
+def _run_approval_action(
+    run_ref: EvidenceRef,
+    *,
+    component_id: str = "run-stage-explorer",
+) -> ActionBinding:
     return ActionBinding(
         action_id=f"request-run-{_identity_suffix(run_ref.evidence_id)}",
-        component_id="run-stage-explorer",
+        component_id=component_id,
         label="Request selected run approval",
         proposal=ActionProposal(
             payload=RequestApprovalPayload(

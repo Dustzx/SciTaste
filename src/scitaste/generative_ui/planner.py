@@ -736,6 +736,7 @@ def _deterministic_entry(candidate: SurfaceCandidate, index: int) -> SurfacePlan
 _GOAL_COMPONENT_PRIORITIES = {
     IntentGoal.PROGRESS_REVIEW: {
         TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
+        TrustedComponent.EVIDENCE_GRAPH: 5,
         TrustedComponent.RUN_STAGE_EXPLORER: 10,
         TrustedComponent.STAGE_TIMELINE: 11,
         TrustedComponent.RUN_BLOCKER_PANEL: 20,
@@ -771,6 +772,7 @@ _GOAL_COMPONENT_PRIORITIES = {
     },
     IntentGoal.NEXT_STEP_REVIEW: {
         TrustedComponent.PROJECT_PROGRESS_BOARD: 0,
+        TrustedComponent.EVIDENCE_GRAPH: 5,
         TrustedComponent.PROJECT_SUMMARY_CARD: 10,
         TrustedComponent.RUN_HEALTH: 11,
     },
@@ -785,17 +787,13 @@ _GOAL_SELECTED_COMPONENTS = {
     IntentGoal.PROGRESS_REVIEW: frozenset(
         {
             TrustedComponent.PROJECT_PROGRESS_BOARD,
-            TrustedComponent.RUN_BLOCKER_PANEL,
-            TrustedComponent.PROJECT_SUMMARY_CARD,
-            TrustedComponent.RUN_HEALTH,
+            TrustedComponent.EVIDENCE_GRAPH,
         }
     ),
     IntentGoal.BLOCKER_DIAGNOSIS: frozenset(
         {
             TrustedComponent.RUN_BLOCKER_PANEL,
-            TrustedComponent.BLOCKER_LIST,
-            TrustedComponent.PROJECT_PROGRESS_BOARD,
-            TrustedComponent.PROJECT_SUMMARY_CARD,
+            TrustedComponent.EVIDENCE_GRAPH,
         }
     ),
     IntentGoal.RUN_COMPARISON: frozenset(
@@ -821,6 +819,7 @@ _GOAL_SELECTED_COMPONENTS = {
     IntentGoal.NEXT_STEP_REVIEW: frozenset(
         {
             TrustedComponent.PROJECT_PROGRESS_BOARD,
+            TrustedComponent.EVIDENCE_GRAPH,
             TrustedComponent.PROJECT_SUMMARY_CARD,
         }
     ),

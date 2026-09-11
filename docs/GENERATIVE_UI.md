@@ -44,6 +44,16 @@ also clears the prior quick-intent catalog, free-question value, generated
 layout, proposal result, artifact preview, response cache, and current document
 before any newly selected project is rendered.
 
+Project selection, conversation history, fixed views, and advanced evidence
+selectors live in a receiver-owned drawer. It is open by default on a desktop,
+closed by default as an overlay on a narrow screen, and can always be toggled
+from the header without persistence or a model call. Questions are not placed
+in that navigation tree: the quick prompts, bounded-context selector, free
+question, and submit control form one horizontal composer beneath the main
+workspace. The workspace and composer share a viewport-height content column,
+so evidence scrolls inside the workspace while the current interaction remains
+available below it.
+
 The navigation hierarchy is deliberately four-level: the portfolio index lists
 all registered projects; each project opens to its stable `project-progress`
 home; a first question creates a project-owned research conversation; and every
@@ -98,17 +108,33 @@ paper state, blocked/failed run attention, exact no-run API/GPU proposal
 resources, canonical no-network data-acquisition decisions, and
 evidence-supported next-step candidates.
 
-The browser renders this baseline as an executive evidence summary rather than
-a serialized field inspector. It leads with one categorical status statement,
-nine exact record-count tiles, and a run-outcome composition strip; follows with
-the current focus, selected run, next evidence gate, blockers and decision
-timeline; shows registered experiment readiness as compact resource cards; and
-bounds recent activity to four initially visible rows. Raw
-evidence IDs, full run IDs, locators and secondary status fields remain
-available through native collapsed disclosure controls. This changes only the
-receiver-owned presentation: all visible summary values are deterministic
-functions of the validated `ProjectProgressBoardData`, and no browser prose is
-fed back as research evidence.
+The browser renders this baseline as a layered decision brief rather than a
+serialized field inspector. Its always-visible layer contains one categorical
+status statement followed by four canonical research-room launchers: project
+direction, experiments and evaluation, paper and review, and risks and
+decisions. Each launcher is bound to a currently available server-issued
+candidate and creates a conversation page only after the user selects it; the
+home does not fabricate four placeholder conversations. Current
+focus/run/next gate, a collapsed lifecycle conclusion, and a compact
+evidence-vault summary follow those launchers. The
+nine exact record counts, run distribution, acquisition requests, full
+evaluation cards, result cards, blockers, milestones, and recent activity remain
+in that default-collapsed vault. Generated progress responses select only the
+progress brief and a project evidence graph instead of repeating generic
+summary, run-health, and blocker cards. Raw evidence IDs, full run IDs, locators,
+and secondary status fields remain available through native disclosures. This
+changes only receiver-owned presentation: all visible values are deterministic
+functions of validated component data, and no browser prose is fed back as
+research evidence.
+
+The project graph contains at most 24 nodes and 64 edges; the current progress
+composer uses at most 12 nodes spanning the project manifest, five recent runs,
+two papers, four evaluation proposals, three results, and one stage-history
+record where those records exist. Each node kind and ID is revalidated against
+the immutable snapshot. The receiver draws only local SVG primitives. Selecting
+a node reveals its evidence identity; an explicit exploration button creates a
+bounded progress question and another immutable page in the same conversation.
+It does not treat graph layout, labels, or selection as new research evidence.
 
 An acquisition run appears as a decision card only when it registers the exact
 `runs/<run-id>/acquisition/REPORT.json` locator under the canonical
@@ -150,9 +176,9 @@ Consequently, a completed robustness result, an old paper, or a self-review
 cannot be presented as a formal paper-level effectiveness result.
 
 The canonical progress summary and a generated workspace have distinct roles.
-`project-progress` is the stable, reproducible landing view. The left-side quick
-prompts, free-question form, and the progress view's `Explore next` buttons all
-cross the same typed intent endpoint to request a goal-specific generated
+`project-progress` is the stable, reproducible landing view. The bottom quick
+prompts and free-question composer, together with the progress view's four core
+research-room launchers, all cross the same typed intent endpoint to request a goal-specific generated
 arrangement. Thus the user gets a useful synthesis before asking anything and a
 visibly recomposed component workspace after expressing an intent. The latter
 is generation-as-content; it remains a selection and arrangement of
@@ -837,9 +863,16 @@ document pins `scitaste-research-shell` with fixed `header`, `project_nav`,
 `workspace`, and `inspector` regions. Generated components can populate only the
 `workspace` region and must still name a trusted native renderer.
 
-The packaged local receiver implements those four regions directly. Its assets
-are build-time package data rather than generated project output and reference
-no remote script, stylesheet, font, or renderer.
+The logical `inspector` name remains in the v1 shell contract so archived
+documents preserve their fingerprints. The packaged browser no longer renders
+a permanent right-hand inspector: proposal decisions and artifact previews are
+materialized as an inline workspace panel only after an explicit action, and no
+empty hint rail occupies the project page. Likewise, the visual project
+navigation is a toggleable drawer and the question composer is a bottom content
+surface; these visual placements do not change the archived logical region
+names. The other receiver assets are
+build-time package data rather than generated project output and reference no
+remote script, stylesheet, font, or renderer.
 
 The projected action metadata contains an action ID, presentation hint, proposal
 kind, and approval flag. It deliberately omits the server-owned proposal payload

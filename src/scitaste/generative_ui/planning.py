@@ -404,6 +404,7 @@ def _candidate_admission_key(candidate: SurfaceCandidate) -> tuple[int, str]:
         TrustedComponent.RUN_COMPARISON_PANEL: 0,
         TrustedComponent.RUN_BLOCKER_PANEL: 0,
         TrustedComponent.RUN_STAGE_EXPLORER: 0,
+        TrustedComponent.EVIDENCE_GRAPH: 1,
         TrustedComponent.PROJECT_SUMMARY_CARD: 1,
         TrustedComponent.RUN_HEALTH: 1,
         TrustedComponent.EVIDENCE_INVENTORY: 2,
@@ -450,6 +451,8 @@ def _groups_for(
         return (PlanGroup.EVIDENCE, PlanGroup.CONTEXT)
     if component.component == TrustedComponent.RESEARCH_LANDSCAPE_MAP:
         return (PlanGroup.PRIMARY, PlanGroup.EVIDENCE)
+    if component.component == TrustedComponent.EVIDENCE_GRAPH:
+        return (PlanGroup.EVIDENCE, PlanGroup.CONTEXT)
     if surface.purpose in {
         SurfacePurpose.PROJECT_PROGRESS,
         SurfacePurpose.WORKSPACE_RUN_COMPARISON,

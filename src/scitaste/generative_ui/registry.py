@@ -107,7 +107,9 @@ COMPONENT_REGISTRY: dict[TrustedComponent, ComponentPolicy] = {
     TrustedComponent.DECISION_COMPARISON: ComponentPolicy(
         frozenset({EvidenceKind.DECISION, EvidenceKind.RUN_RECORD})
     ),
-    TrustedComponent.EVIDENCE_GRAPH: ComponentPolicy(frozenset({EvidenceKind.EVIDENCE_RECORD})),
+    # Every graph node is independently checked against its declared evidence
+    # kind, so a project-level graph may safely connect heterogeneous records.
+    TrustedComponent.EVIDENCE_GRAPH: ComponentPolicy(frozenset()),
     TrustedComponent.CLAIM_MATRIX: ComponentPolicy(
         frozenset({EvidenceKind.CLAIM, EvidenceKind.EVIDENCE_RECORD})
     ),

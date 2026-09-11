@@ -296,8 +296,8 @@ class EvidenceGraphEdge(BaseModel):
 class EvidenceGraphData(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
-    nodes: tuple[EvidenceGraphNode, ...] = Field(min_length=1)
-    edges: tuple[EvidenceGraphEdge, ...] = ()
+    nodes: tuple[EvidenceGraphNode, ...] = Field(min_length=1, max_length=24)
+    edges: tuple[EvidenceGraphEdge, ...] = Field(default=(), max_length=64)
 
     @model_validator(mode="after")
     def graph_is_closed(self) -> EvidenceGraphData:

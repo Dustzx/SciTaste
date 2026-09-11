@@ -17,6 +17,8 @@ const screenshotRoot = process.env.SCITASTE_UI_PROBE_SCREENSHOTS || "";
 const finalLocale = process.env.SCITASTE_UI_PROBE_FINAL_LOCALE || "en";
 const fullPageScreenshots = process.env.SCITASTE_UI_PROBE_FULL_PAGE === "1";
 const reportPath = process.env.SCITASTE_UI_PROBE_REPORT || "";
+const exploreGraph = process.env.SCITASTE_UI_PROBE_EXPLORE_GRAPH === "1";
+const controlProposal = process.env.SCITASTE_UI_PROBE_CONTROL_PROPOSAL === "1";
 
 if (!["en", "zh-CN"].includes(finalLocale)) {
   throw new Error("SCITASTE_UI_PROBE_FINAL_LOCALE must be en or zh-CN");
@@ -113,6 +115,31 @@ async function main() {
         && location.hash.includes("/${encodedProject}/project-progress")
       `, 30_000);
       const sessionToFixedMs = performance.now() - navigationStartedAt;
+      const projectHomeShell = await evaluate(cdp, sessionId, `(() => {
+        const workspace = document.getElementById("workspace");
+        const composer = document.querySelector(".conversation-composer");
+        return {
+          mobile_drawer_default_closed:
+            document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "false",
+          composer_follows_workspace: Boolean(
+            workspace.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING
+          ),
+          research_lens_count: document.querySelectorAll(".research-lens-button").length,
+        };
+      })()`);
+      await evaluate(cdp, sessionId, `document.getElementById("drawer-toggle").click()`);
+      await waitFor(cdp, sessionId, `
+        document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "true"
+        && getComputedStyle(document.getElementById("project-drawer")).position === "fixed"
+        && getComputedStyle(document.getElementById("drawer-backdrop")).display !== "none"
+      `);
+      projectHomeShell.mobile_drawer_opens_as_overlay = await evaluate(cdp, sessionId, `
+        document.getElementById("project-drawer").getBoundingClientRect().width < window.innerWidth
+      `);
+      await evaluate(cdp, sessionId, `document.getElementById("drawer-backdrop").click()`);
+      await waitFor(cdp, sessionId, `
+        document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "false"
+      `);
 
       await evaluate(cdp, sessionId, `
         (() => {
@@ -144,14 +171,62 @@ async function main() {
         })()
       `);
 
+      let evidenceGraphExploration = {tested: false};
+      if (exploreGraph) {
+        await waitFor(cdp, sessionId, `
+          document.querySelectorAll(".evidence-graph-node").length > 1
+          && document.querySelectorAll(".workspace-turn-button").length > 0
+        `, 30_000);
+        const graphStart = await evaluate(cdp, sessionId, `({
+          workspace_id: location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || "",
+          turn_id: location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "",
+          turn_count: document.querySelectorAll(".workspace-turn-button").length,
+          node_count: document.querySelectorAll(".evidence-graph-node").length,
+        })`);
+        await evaluate(cdp, sessionId, `
+          document.querySelectorAll(".evidence-graph-node")[1].dispatchEvent(
+            new MouseEvent("click", {bubbles: true}),
+          )
+        `);
+        await waitFor(cdp, sessionId, `
+          document.querySelector(".evidence-graph-node.selected")
+          && document.querySelector(".evidence-graph-explore")
+        `);
+        await evaluate(cdp, sessionId, `
+          document.querySelector(".evidence-graph-explore").click()
+        `);
+        await waitFor(cdp, sessionId, `
+          document.getElementById("workspace").getAttribute("aria-busy") === "false"
+          && location.hash.includes("/workspaces/${graphStart.workspace_id}/turns/")
+          && (location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "")
+            !== ${JSON.stringify(graphStart.turn_id)}
+          && document.querySelectorAll(".workspace-turn-button").length
+            === ${graphStart.turn_count + 1}
+        `, 30_000);
+        evidenceGraphExploration = await evaluate(cdp, sessionId, `({
+          tested: true,
+          node_count: ${graphStart.node_count},
+          workspace_id_preserved:
+            (location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || "")
+              === ${JSON.stringify(graphStart.workspace_id)},
+          turn_count_increment:
+            document.querySelectorAll(".workspace-turn-button").length
+              - ${graphStart.turn_count},
+          generated_followup_present:
+            document.querySelectorAll(".evidence-graph-node").length > 1,
+        })`);
+      }
+
       let topicNavigation = {tested: false};
       if (followupQuickIntentId) {
         await waitFor(cdp, sessionId, `
-          document.querySelectorAll(".workspace-turn-button").length === 1
+          document.querySelectorAll(".workspace-turn-button").length > 0
         `);
-        const firstWorkspaceId = await evaluate(cdp, sessionId, `
-          location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || ""
-        `);
+        const firstTopicState = await evaluate(cdp, sessionId, `({
+          workspace_id: location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || "",
+          turn_id: location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "",
+          turn_count: document.querySelectorAll(".workspace-turn-button").length,
+        })`);
         await evaluate(cdp, sessionId, `
           (() => {
             const button = [...document.querySelectorAll("#quick-intents button")]
@@ -161,17 +236,22 @@ async function main() {
           })()
         `);
         await waitFor(cdp, sessionId, `
-          location.hash.includes("/turns/turn-0002")
-          && document.querySelectorAll(".workspace-turn-button").length === 2
+          (location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "")
+            !== ${JSON.stringify(firstTopicState.turn_id)}
+          && document.querySelectorAll(".workspace-turn-button").length
+            === ${firstTopicState.turn_count + 1}
         `, 30_000);
         topicNavigation = await evaluate(cdp, sessionId, `
           (() => {
             const workspaceId = location.hash.match(/\\/workspaces\\/([^/]+)\\/turns\\//)?.[1] || "";
             return {
               tested: true,
-              workspace_id_preserved: workspaceId === ${JSON.stringify(firstWorkspaceId)},
+              workspace_id_preserved: workspaceId === ${JSON.stringify(firstTopicState.workspace_id)},
               active_turn_id: location.hash.match(/\\/turns\\/([^?]+)/)?.[1] || "",
               turn_page_count: document.querySelectorAll(".workspace-turn-button").length,
+              turn_count_increment:
+                document.querySelectorAll(".workspace-turn-button").length
+                  - ${firstTopicState.turn_count},
             };
           })()
         `);
@@ -199,7 +279,16 @@ async function main() {
       ]) {
         await setViewport(cdp, sessionId, width, height);
         await evaluate(cdp, sessionId, `
-          document.getElementById("workspace").scrollIntoView({block: "start"})
+          (() => {
+            const toggle = document.getElementById("drawer-toggle");
+            const desiredOpen = ${width > 900};
+            if ((toggle.getAttribute("aria-expanded") === "true") !== desiredOpen) {
+              toggle.click();
+            }
+            const workspace = document.getElementById("workspace");
+            workspace.focus({preventScroll: true});
+            workspace.scrollIntoView({block: "start"});
+          })()
         `);
         await new Promise((resolve) => setTimeout(resolve, 100));
         const layout = await evaluate(cdp, sessionId, `
@@ -252,6 +341,16 @@ async function main() {
                 return rect.bottom > 0 && rect.top < window.innerHeight;
               })(),
               workspace_has_focus: document.activeElement === document.getElementById("workspace"),
+              composer_below_workspace: (() => {
+                const workspaceRect = document.getElementById("workspace").getBoundingClientRect();
+                const composerRect = document.querySelector(".conversation-composer")
+                  .getBoundingClientRect();
+                return composerRect.top >= workspaceRect.bottom - 1;
+              })(),
+              composer_visible: (() => {
+                const rect = document.querySelector(".conversation-composer").getBoundingClientRect();
+                return rect.bottom > 0 && rect.top < window.innerHeight;
+              })(),
             };
           })()
         `);
@@ -281,16 +380,48 @@ async function main() {
         }
       }
 
+      let intervention = {tested: false};
+      if (controlProposal) {
+        await setViewport(cdp, sessionId, 1440, 1000);
+        await waitFor(cdp, sessionId, `
+          document.getElementById("workspace").getAttribute("aria-busy") === "false"
+          && document.querySelector(".proposal-action-button")
+        `, 30_000);
+        await evaluate(cdp, sessionId, `
+          document.querySelector(".proposal-action-button").click()
+        `);
+        await waitFor(cdp, sessionId, `
+          document.querySelector("#proposal-result[data-state='proposal_pending']")
+          && document.querySelectorAll("#proposal-result .component-actions button").length === 2
+          && !document.querySelector("aside.inspector")
+        `, 30_000);
+        await evaluate(cdp, sessionId, `
+          document.querySelectorAll("#proposal-result .component-actions button")[1].click()
+        `);
+        await waitFor(cdp, sessionId, `
+          document.querySelector("#proposal-result[data-state='rejected']")
+        `, 30_000);
+        intervention = await evaluate(cdp, sessionId, `({
+          tested: true,
+          right_sidebar_absent: !document.querySelector("aside.inspector"),
+          inline_workbench_present: Boolean(document.getElementById("interaction-workbench")),
+          recorded_state: document.getElementById("proposal-result")?.dataset.state || "",
+        })`);
+      }
+
       const result = {
         measurement_kind: "automated-browser-engineering-probe",
         interpretation_boundary: "not-human-usability-or-scientific-effectiveness",
         project_id: projectId,
         quick_intent_id: quickIntentId,
+        project_home_shell: projectHomeShell,
         locale_switch_network_requests: localeSwitchRequests,
         session_to_fixed_workspace_ms: Math.round(sessionToFixedMs * 1000) / 1000,
         quick_intent_to_generated_workspace_ms:
           Math.round(quickIntentToGeneratedMs * 1000) / 1000,
         generated_response_focus: generatedResponseFocus,
+        evidence_graph_exploration: evidenceGraphExploration,
+        intervention,
         topic_navigation: topicNavigation,
         runtime_errors: runtimeErrors,
         viewports,
@@ -304,17 +435,32 @@ async function main() {
       if (
         runtimeErrors.length > 0
         || localeSwitchRequests !== 0
+        || !projectHomeShell.mobile_drawer_default_closed
+        || !projectHomeShell.mobile_drawer_opens_as_overlay
+        || !projectHomeShell.composer_follows_workspace
+        || projectHomeShell.research_lens_count !== 4
         || !generatedResponseFocus.workspace_visible
         || !generatedResponseFocus.workspace_has_focus
-        || (topicNavigation.tested && (
-          !topicNavigation.workspace_id_preserved || topicNavigation.turn_page_count !== 2
+        || (evidenceGraphExploration.tested && (
+          !evidenceGraphExploration.workspace_id_preserved
+          || evidenceGraphExploration.turn_count_increment !== 1
+          || !evidenceGraphExploration.generated_followup_present
         ))
-        || Math.abs(generatedResponseFocus.workspace_top) > 1
+        || (intervention.tested && (
+          !intervention.right_sidebar_absent
+          || !intervention.inline_workbench_present
+          || intervention.recorded_state !== "rejected"
+        ))
+        || (topicNavigation.tested && (
+          !topicNavigation.workspace_id_preserved || topicNavigation.turn_count_increment !== 1
+        ))
         || viewports.some((item) =>
           item.horizontal_overflow
           || item.small_targets.length > 0
           || !item.workspace_visible
-          || !item.workspace_has_focus)
+          || !item.workspace_has_focus
+          || !item.composer_below_workspace
+          || !item.composer_visible)
       ) {
         process.exitCode = 1;
       }

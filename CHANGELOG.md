@@ -7,6 +7,23 @@ semantic versioning.
 
 ### Added
 
+- Generation-as-Content now generates a bounded heterogeneous evidence graph
+  from each project's manifest, recent runs, papers, stage history, evaluation
+  proposals, and registered results. Selecting a graph node exposes its exact
+  evidence identity and can create one further immutable page in the same
+  research conversation. Project-progress pages now use a decision brief plus
+  a default-collapsed evidence vault instead of expanding every run and
+  evaluation, and generated progress responses admit only the brief and graph.
+  The permanent right inspector has been removed from the browser layout;
+  proposal decisions and verified artifact previews appear inline only after an
+  explicit action. The proposal controller remains non-executable and audited.
+  Project selection, conversation history, fixed views, and advanced evidence
+  controls now live in a toggleable left drawer; the free-question composer is
+  a horizontal surface below the scrollable workspace. The project home exposes
+  four evidence-bound research-room launchers for direction,
+  experiments/evaluation, paper/review, and risks/decisions, creating a
+  conversation page only when selected.
+
 - Dataset acquisition now has separate hash-confirmed approval and explicit
   download commands. Approval creates an immutable derivative without network
   access; download rechecks all evidence and authority, rejects redirects,

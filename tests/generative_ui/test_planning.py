@@ -179,6 +179,7 @@ def test_large_project_candidate_catalog_is_bounded_without_losing_summaries(
     assert len(catalog.candidates) == 64
     components = {item.component.component for item in catalog.candidates}
     assert TrustedComponent.PROJECT_PROGRESS_BOARD in components
+    assert TrustedComponent.EVIDENCE_GRAPH in components
     assert TrustedComponent.PROJECT_SUMMARY_CARD in components
     assert TrustedComponent.RUN_STAGE_EXPLORER in components
 
