@@ -1,5 +1,5 @@
 ## Title
-SciTaste: Learning Scientific Taste for Autonomous Research Decision Making
+SciTaste: Improving Autonomous Research through Scientific Taste
 
 # Abstract
 
@@ -17,13 +17,14 @@ Hypothesis--Probe--Reformulate loop governs discovery; evidence and reviewer
 loops preserve support, contradiction, uncertainty, and open obligations; and
 communication contracts bind claims to narrative, prose, and figures. Flexible
 model outputs remain proposal-only behind deterministic schema, budget,
-provenance, and execution gates. Across 961 unit and integration tests, a native
+provenance, and execution gates. Across 1,134 unit and integration tests, a native
 end-to-end fixture, content-bound local GPU inference, and one four-condition
 controlled task, the implementation preserves action ownership, evidence
 lineage, failure history, and publication provenance. These results establish an
-auditable research-control substrate. A registered 48-cell matched-budget study
-with blinded expert review provides the separate test of whether Taste-guided
-control improves research yield.
+evidence-grounded research-control substrate. A registered 100-trajectory
+idea-to-paper prepilot separately specifies matched accepted-system comparisons
+and condition-blinded expert preference over scientific value and evidence
+validity. It has not been run and establishes no effectiveness result.
 
 # Introduction
 
@@ -69,9 +70,8 @@ which presentation choice makes the evidence legible. It does not mean a scalar
 paper score or an unconstrained language-model opinion. SciTaste v1 is
 training-free. It combines explicit decision criteria, stage-aware retrieval of
 provenance-bearing decision precedents, independent critics, and deterministic
-admission. The title's word *learning* names the broader program of improving
-scientific decision policy from accumulated precedents; in the current system,
-that improvement is nonparametric retrieval rather than weight training.
+admission. Accumulated precedents change later decisions through explicit,
+provenance-bearing selection rather than weight training.
 
 The framework contributes four implementation-level ideas. First, it makes
 research decisions, not task execution, the stable abstraction of an autonomous
@@ -85,15 +85,17 @@ by claim/evidence contracts, figures are planned around reader takeaways, and
 generated interfaces expose only components grounded in the current project
 snapshot.
 
-The evaluation separates two questions. RQ1 asks whether the implementation
+The evaluation separates three questions. RQ1 asks whether the implementation
 enforces action ownership, evidence provenance, bounded execution, and
 publication contracts. RQ2 asks whether the four registered conditions can
 complete the same controlled research task and retain comparable artifacts.
-Artifact tests and the controlled task answer these integration questions. The
-48-cell matched-budget study and blinded expert review address the subsequent
-causal question of whether Taste-guided control improves research yield. Keeping
-these questions separate prevents engineering completion from being counted as
-scientific-effectiveness evidence.
+Artifact tests and the controlled task answer these integration questions. RQ3
+asks whether independent experts prefer SciTaste Native's complete research
+packages to those of real accepted AutoResearch systems under matched budgets;
+a separate fixed-scorer lane tests objective progress. Both RQ3 lanes remain
+unexecuted. Keeping these questions separate prevents engineering completion or
+a model-judge rubric score from being counted as scientific-effectiveness
+evidence.
 
 ![SciTaste control loop. Canonical scientific state is projected into a closed action set; the Taste Controller selects one action; bounded workers return a typed result; and deterministic admission alone may commit the next state. The diagram explains authority boundaries and is not an effectiveness result.](assets/fig1-scitaste-control.pdf)
 
@@ -372,26 +374,36 @@ per-family scores, temporal or domain slices, paraphrase consistency, and paired
 changes relative to Base. Self-development examples are excluded from headline
 scores.
 
-The third level is an end-to-end matched-budget study. The registered core design
-crosses four task families, four system conditions, and three seeds, producing
-48 cells. Conditions are Base/compatibility execution, Knowledge RAG, Taste
-Library, and Full SciTaste. Each cell pins the repository commit, model revision,
-task assets, retrieval snapshot, resource envelope, and output contract. The
-runner records API tokens and cost, wall and GPU time, search and experiment
-counts, retries, intervention, and stage artifacts. Outcome measures include
-valid experiment rate, evidence completeness, unsupported-claim rate, useful
-pivot frequency, paper quality, reproducibility, and independent expert
-preference.
+The third level separates an end-to-end research-package comparison from an
+objective-progress benchmark. The registered API prepilot crosses SciTaste
+Native, a prompt-only direct control, and three accepted-system candidates with
+ten MLR-Bench workshop-derived research briefs and two seeds, producing 100
+planned trajectories. MLR-Bench supplies open-ended briefs and rubric-based
+research-quality assessment rather than a fixed objective score per task. The
+single primary endpoint is therefore condition-blinded expert pairwise
+preference for scientific value and evidence validity of the complete idea,
+experiment trace, evidence, and paper package. A model judge is secondary and
+cannot replace independent reviewers. The proposal is currently blocked on task
+bytes and held-out checks, real external adapters, reviewer recruitment, and
+exact author approval; no trajectory has been launched.
 
-The design emphasizes matched comparisons. Conditions must not receive different
-task definitions, hidden web access, or extra retry budgets. Knowledge context
-and Taste precedents remain isolated so their effects can be attributed. Failed
-or unavailable integrations are reported as unavailable rather than replaced by
-a surrogate implementation. A run that required manual continuation after an
-adapter fix can provide engineering evidence but cannot enter duration or
-intervention comparisons. Final acceptance requires all registered cells to run
-from pinned commits without manual continuation and requires blinded external
-review.
+A separate objective-progress lane will use only tasks with a fixed scorer,
+starting value, target anchor, and failure floor, such as qualified MLRC-Bench
+tasks. Its results will not be pooled with MLR-Bench package preference. Native
+Base, Knowledge, Taste, critics, Full SciTaste, and shuffled-Taste placebo
+conditions form a separate causal ablation on a common execution substrate. The
+local Qwen3-VL-2B and eight-RTX-3090 plan is a small-model or experiment-workload
+robustness lane, not a substitute for the matched frontier-model comparison.
+
+The design emphasizes matched comparisons. Systems must not receive different
+starting briefs, hidden information, tool access, model revisions, or retry
+budgets. Knowledge context and Taste precedents remain isolated in the ablation
+so their effects can be attributed. Failed or unavailable integrations are
+reported as unavailable rather than replaced by a surrogate implementation. A
+run that required manual continuation after an adapter fix can provide
+engineering evidence but cannot enter duration or intervention comparisons.
+Final acceptance requires every admitted cell to run from pinned commits without
+manual continuation and requires blinded external review.
 
 # Evaluation Results
 
@@ -401,16 +413,18 @@ single quality score.
 
 | Carrier | Supported conclusion; excluded inference |
 |---|---|
-| Contract suite (83% combined coverage) | Tested control and provenance contracts hold; scientific decisions are not thereby better |
+| Contract suite (1,134 tests; last registered combined coverage 83%) | Tested control and provenance contracts hold; scientific decisions are not thereby better |
 | ICLR 2027 venue build | Implemented mechanical checks pass; acceptance, novelty, and correctness are not assessed |
 | Native Full Workflow fixture (three replicates, delta 0.1) | The bounded experiment-to-paper path runs with provenance; general research yield is untested |
 | RTX 3090 Qwen3-VL-2B run (4.27 GB peak) | One registered multimodal boundary executes; model quality and portability are untested |
-| Four-condition single task | All conditions produce paper artifacts; causal comparison awaits the full matrix and blinded review |
+| Four-condition single task | All conditions produce paper artifacts; causal and external-system comparisons remain unexecuted |
+| 100-trajectory API prepilot contract | Systems, tasks, budgets, failure rules, and the expert-preference endpoint are explicit; no effectiveness result exists before execution and review |
 
 ## RQ1: Does SciTaste enforce its control and provenance contracts?
 
-Across 961 unit and integration tests, SciTaste reaches 83 percent combined
-statement and branch coverage. The suite
+Across 1,134 unit and integration tests, the repository passes its complete
+contract suite; the last separately registered coverage run reported 83 percent
+combined statement and branch coverage. The suite
 includes model backend and replay behavior, research state transitions, the six
 decision families, project ownership, nonlinear discovery, evidence routing,
 writing and review, figure generation, benchmark planning, local-model transport,
@@ -463,7 +477,7 @@ execution authority are distinct gates.
 ## RQ2: Can the registered conditions complete one controlled research task?
 
 One frozen diagnosis task has completed all four Phase 9 conditions through
-experiment, analysis, manuscript packaging, and peer review using a Zhipu model.
+experiment, analysis, manuscript packaging, and internal workflow review using a Zhipu model.
 The task executes a registered 1,944-packet, three-seed factorial matrix. Across
 the four conditions, the retained executions consumed 499,524 cumulative wire
 tokens. The selected experiment reports method-specific failure-boundary counts
@@ -494,19 +508,23 @@ papers under isolated conditions.
 
 These observations establish implementation readiness, provenance preservation,
 and completion of one controlled task. The causal effectiveness question requires
-the complete 48-cell matrix and blinded expert paper judgments; several cells and
-optional external systems remain pending. The paper therefore assigns the
-reported measurements to integration and failure-recovery claims, while reserving
-the research-yield claim for its registered comparative evidence.
+the held-out package-preference comparison, the objective-progress lane, native
+ablations, and blinded expert judgments; all formal cells and external-system
+adapters remain pending. The paper therefore assigns the reported measurements
+to integration and failure-recovery claims, while reserving the research-yield
+claim for future registered comparative evidence.
 
 # Limitations
 
 The most important limitation is empirical completeness. A single task and a
 small synthetic decision suite cannot establish broad scientific judgment. The
-registered tasks must be executed across models, conditions, and seeds without
-manual continuation. External reviewers must evaluate papers and trajectories
-without seeing condition labels. Until then, any estimate of research-yield gain
-would mix framework effects with task, model, and adapter effects.
+MLR-Bench starting briefs must be frozen and audited as held out, real accepted-
+system adapters must pass unchanged-core and resource-equivalence checks, and
+every admitted trajectory must execute without manual continuation. External
+reviewers must evaluate complete packages without seeing system, provider,
+model, or condition labels. A separate qualified benchmark must supply the
+objective-progress signal. Until then, any estimate of research-yield gain would
+mix framework effects with task, model, adapter, and judge effects.
 
 Scientific taste is also difficult to operationalize. The transparent v1
 criteria improve auditability but may reflect the designers' preferences and may
@@ -552,10 +570,11 @@ evidence graph, reviewer obligations, communication contracts, and bounded
 execution architecture make nonlinear research choices visible and testable.
 Artifact validation and a four-condition single-task run establish system
 readiness, complete experiment-to-paper execution, and recoverable failure
-boundaries. The registered matched-budget matrix now provides the decisive test
-of the broader hypothesis: its completion and blinded expert judgments will
-determine whether Taste-guided control improves research yield under a fixed
-budget.
+boundaries. The registered 100-trajectory package-preference prepilot specifies
+one decisive external-system test of the broader hypothesis without claiming
+its result. Its completion, the separate objective-progress and native-ablation
+lanes, and blinded expert judgments will determine whether Taste-guided control
+improves research yield under a fixed budget.
 
 # AI Use Statement
 
@@ -587,8 +606,9 @@ model and provider identities, token and cost telemetry, stage artifacts,
 interventions, and failure histories under project-owned manifests. The reported
 engineering checks are backed by executable tests and self-hashed acceptance
 records. The current causal evaluation is deliberately described as incomplete:
-the paper specifies the frozen matched-budget matrix and exclusion rules so that
-the headline hypothesis can be assessed only after every required cell and
-blinded expert judgment is available. Hardware- and provider-specific results
+the paper specifies provider-separated, endpoint-matched prelaunch contracts and
+exclusion rules so that the headline hypothesis can be assessed only after every
+required cell and blinded expert judgment is available. Hardware- and provider-
+specific results
 remain scoped to their recorded environments rather than asserted as universally
 reproducible.

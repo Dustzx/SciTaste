@@ -1,7 +1,7 @@
 # SciTaste framework manuscript
 
-`main.md` is the tracked source for **SciTaste: Learning Scientific Taste for
-Autonomous Research Decision Making**. `references.bib` contains its primary
+`main.md` is the tracked source for **SciTaste: Improving Autonomous Research
+through Scientific Taste**. `references.bib` contains its primary
 references. `argument_contract.yaml` binds the draft's paper-level question,
 claims, evidence carriers, entry points, and material limitations to registered
 research evidence. `assets/fig1-scitaste-control.drawio` is the editable source

@@ -1,10 +1,10 @@
 schema_version: '1.0'
 project_id: scitaste-self-development
-paper_id: scitaste-iclr2027-submission-draft-v4
+paper_id: scitaste-iclr2027-submission-draft-v6
 archetype: empirical-system
-central_question: Can a research framework keep scientific action selection, evidence admission, and publication provenance explicit while delegating bounded work to models and executors?
-central_answer: SciTaste provides that auditable control substrate in the implemented and registered settings; whether Taste-guided control improves research yield remains a separate pending effectiveness question.
-manuscript_sha256: a51abeb20775a04415dd87e3ce9809c48bd64381146138488813cc79d23dd3f1
+central_question: Under matched information and resource budgets, does explicit scientific taste improve the scientific value and evidence validity of autonomous research?
+central_answer: SciTaste implements explicit precedent-informed scientific decisions over persistent research state, but the headline improvement claim remains unestablished until the registered external package-preference, objective-progress, ablation, and independent-review evidence is complete.
+manuscript_sha256: 68e208cfeb6a637508a6176b085c2011416aed30f0d9f721b9e8c11f5d43a0f5
 required_entry_points:
 - title
 - abstract
@@ -171,7 +171,7 @@ sections:
   - carrier-result-boundaries
 material_limitations:
 - limitation_id: limitation-effectiveness-pending
-  statement: The current evidence does not establish that Taste-guided control improves research yield; the registered matched-budget cells and blinded expert review remain incomplete.
+  statement: The current evidence does not establish that Taste-guided control improves research yield; the external package-preference, objective-progress, native-ablation, and blinded expert-review evidence remain incomplete.
   affected_claim_ids:
   - claim-bounded-completion
   disclosed_in:
@@ -187,4 +187,4 @@ material_limitations:
   - claim-bounded-completion
   disclosed_in:
   - Limitations
-contract_sha256: 7e3b2b14f7a35284c156f0db705ba258413de9d7bed694c0f41d51d2481f5859
+contract_sha256: 9f4496264c7c1c17a5821cead096b0809ae7df86c09b2b88068a1459214eb046
