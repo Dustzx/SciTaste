@@ -1224,8 +1224,14 @@ def _verify_response_closure(
         source_trace = PaperDraftTrace.model_validate_json(
             source_trace_path.read_text(encoding="utf-8")
         )
-    else:
+    elif trace.source_trace_kind == "paper_revision":
         source_trace = PaperRevisionTrace.model_validate_json(
+            source_trace_path.read_text(encoding="utf-8")
+        )
+    else:
+        from scitaste.writing.paper_adoption import ProjectPaperAdoptionBundle
+
+        source_trace = ProjectPaperAdoptionBundle.model_validate_json(
             source_trace_path.read_text(encoding="utf-8")
         )
     if source_trace.record_sha256 != trace.source_trace_record_sha256:

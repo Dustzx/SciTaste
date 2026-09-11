@@ -82,6 +82,46 @@ is blocked. Even a proof-backed revision is only a manuscript proposal: review
 closure still requires a registered new paper, an author response, and exact
 verification by the original reviewer.
 
+An already registered, substantive venue paper does not have to be regenerated
+to enter this loop. First adopt its exact Markdown, bibliography, and
+whole-paper argument contract as a semantic source:
+
+```bash
+.venv/bin/scitaste project paper adopt-for-revision \
+  --project-id <project-id> --paper-directory <paper-directory> \
+  --run-id <adoption-run-id> --source-commit <40-character-commit> \
+  --expected-revision <revision> --outputs-root outputs --dry-run
+```
+
+The adopter detaches renderer-owned citation commands, binds every cited key to
+the registered bibliography, maps contract claims and material limitations,
+and then replays current semantic draft admission. It preserves normalized
+reader-facing prose exactly while deliberately assigning zero evidence and
+marking every adopted claim unsupported. Removing `--dry-run` publishes the
+self-hashed source input and proposal as a zero-model-call project run; it does
+not rewrite the paper or establish scientific effectiveness.
+
+Compile the exact revision-node input after reports have been admitted:
+
+```bash
+.venv/bin/scitaste project paper review revision-input \
+  --project-id <project-id> --review-id <review-id> \
+  --source-adoption-run-id <adoption-run-id> \
+  --target-manuscript-id <new-paper-directory> \
+  --evaluation-evidence-run-id <optional-formal-evidence-run> \
+  --expected-revision <revision> --output <new-revision-input.json> \
+  --outputs-root outputs
+```
+
+This read-only compiler rehashes the adopted paper and complete review round,
+normalizes only exact section-label spellings such as `evaluation-results` to
+`Evaluation Results`, and partitions concerns into text-only, proof-backed, or
+blocked sets. Formal evidence is admitted only through a previously verified
+evaluation-to-research-state transition from the same review round. Numeric
+tokens become writable only when they already occur in the source paper or in
+an admitted evidence summary. The optional output is created exclusively and
+is never overwritten.
+
 An accepted revision is materialized without another model call:
 
 ```bash
@@ -94,7 +134,8 @@ An accepted revision is materialized without another model call:
 ```
 
 This command replays the model-node ledger and current admission rules; binds
-the source paper trace, packet, every report, target manuscript, and
+the source paper draft, revision, or deterministic adoption trace, packet,
+every report, target manuscript, and
 bibliography; and rehashes each closure proof's project-owned opening/closing
 `ResearchState` plus completed experiment result. It emits
 `PAPER_REVISION_TRACE.json` beside the reader-facing Markdown, TeX, and PDF.

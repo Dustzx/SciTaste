@@ -173,7 +173,13 @@ from scitaste.writing.manuscript_quality import (
     RESEARCH_WORKING_DRAFT_MINIMUM_WORDS,
     assess_manuscript,
 )
+from scitaste.writing.paper_adoption import (
+    inspect_project_paper_adoption,
+    prepare_project_paper_adoption,
+    publish_project_paper_adoption,
+)
 from scitaste.writing.paper_draft_materialization import materialize_accepted_paper_draft
+from scitaste.writing.paper_revision_context import prepare_project_paper_revision_context
 from scitaste.writing.paper_revision_materialization import (
     materialize_accepted_paper_revision,
 )
@@ -715,6 +721,28 @@ def build_parser() -> argparse.ArgumentParser:
     _add_project_options(project_paper_select)
     project_paper_select.set_defaults(handler=_handle_project_paper_select)
 
+    project_paper_adopt = project_paper_commands.add_parser(
+        "adopt-for-revision",
+        help="Adopt exact registered prose as a no-evidence semantic revision source",
+    )
+    project_paper_adopt.add_argument("--project-id", required=True)
+    project_paper_adopt.add_argument("--paper-directory", required=True)
+    project_paper_adopt.add_argument("--run-id", required=True)
+    project_paper_adopt.add_argument("--source-commit", required=True)
+    project_paper_adopt.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_paper_adopt)
+    project_paper_adopt.set_defaults(handler=_handle_project_paper_adopt_for_revision)
+
+    project_paper_adoption_status = project_paper_commands.add_parser(
+        "adoption-status",
+        help="Reparse and rehash one registered-paper semantic adoption",
+    )
+    project_paper_adoption_status.add_argument("--project-id", required=True)
+    project_paper_adoption_status.add_argument("--run-id", required=True)
+    project_paper_adoption_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_paper_adoption_status)
+    project_paper_adoption_status.set_defaults(handler=_handle_project_paper_adoption_status)
+
     project_paper_review = project_paper_commands.add_parser(
         "review", help="Prepare and close content-bound venue review rounds"
     )
@@ -908,6 +936,26 @@ def build_parser() -> argparse.ArgumentParser:
     review_closure_proofs.set_defaults(
         handler=_handle_project_paper_review_evaluation_closure_proofs
     )
+
+    review_revision_input = project_paper_review_commands.add_parser(
+        "revision-input",
+        help="Compile exact adopted prose, reports, and admitted evidence for revision",
+    )
+    review_revision_input.add_argument("--project-id", required=True)
+    review_revision_input.add_argument("--review-id", required=True)
+    review_revision_input.add_argument("--source-adoption-run-id", required=True)
+    review_revision_input.add_argument("--target-manuscript-id", required=True)
+    review_revision_input.add_argument("--evaluation-evidence-run-id", action="append", default=[])
+    review_revision_input.add_argument("--expected-revision", type=int, required=True)
+    review_revision_input.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional new file receiving only the typed revision-node input",
+    )
+    review_revision_input.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_revision_input)
+    review_revision_input.set_defaults(handler=_handle_project_paper_review_revision_input)
 
     register_model_node_pilot_cli(commands)
     register_model_node_runtime_cli(commands)
@@ -2348,6 +2396,60 @@ def _handle_project_paper_select(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_project_paper_adopt_for_revision(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    prepared = prepare_project_paper_adoption(
+        runtime,
+        project_id=args.project_id,
+        paper_directory=args.paper_directory,
+        run_id=args.run_id,
+        source_commit=args.source_commit,
+        expected_revision=args.expected_revision,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": args.expected_revision + 2,
+                    "would_call_model": False,
+                    "would_generate_or_mutate_prose": False,
+                    "scientific_evidence_established": False,
+                    "adoption": prepared.bundle.model_dump(mode="json"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, bundle = publish_project_paper_adoption(
+        runtime,
+        prepared=prepared,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "adoption": bundle.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_adoption_status(args: argparse.Namespace) -> int:
+    bundle = inspect_project_paper_adoption(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+        args.run_id,
+    )
+    print(bundle.model_dump_json(indent=2))
+    return 0
+
+
 def _handle_project_paper_review_prepare(args: argparse.Namespace) -> int:
     runtime = ProjectRuntime(args.outputs_root)
     if args.dry_run:
@@ -2709,6 +2811,41 @@ def _handle_project_paper_review_evaluation_closure_proofs(
     print(
         json.dumps(
             {"closure_proofs": [item.model_dump(mode="json") for item in proofs]},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_revision_input(args: argparse.Namespace) -> int:
+    evidence_run_ids = tuple(sorted(args.evaluation_evidence_run_id))
+    if len(evidence_run_ids) != len(set(evidence_run_ids)):
+        raise ValueError("evaluation-evidence run IDs must be unique")
+    prepared = prepare_project_paper_revision_context(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        source_adoption_run_id=args.source_adoption_run_id,
+        target_manuscript_id=args.target_manuscript_id,
+        expected_revision=args.expected_revision,
+        evaluation_evidence_run_ids=evidence_run_ids,
+    )
+    output = None
+    if args.output is not None:
+        output = args.output.expanduser().resolve()
+        with output.open("x", encoding="utf-8") as handle:
+            handle.write(prepared.input_data.model_dump_json(indent=2) + "\n")
+    print(
+        json.dumps(
+            {
+                "status": "prepared",
+                "would_call_model": False,
+                "would_execute_experiment": False,
+                "context": prepared.bundle.model_dump(mode="json"),
+                "revision_input": prepared.input_data.model_dump(mode="json"),
+                "input_output": str(output) if output is not None else None,
+            },
             indent=2,
             ensure_ascii=False,
         )

@@ -28,7 +28,7 @@ class PaperRevisionTrace(BaseModel):
     review_id: str
     source_paper_directory: str
     source_paper_manifest_sha256: str = Field(pattern=_SHA256)
-    source_trace_kind: Literal["paper_draft", "paper_revision"]
+    source_trace_kind: Literal["paper_adoption", "paper_draft", "paper_revision"]
     source_trace_locator: str
     source_trace_file_sha256: str = Field(pattern=_SHA256)
     source_trace_record_sha256: str = Field(pattern=_SHA256)

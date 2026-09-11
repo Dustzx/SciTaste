@@ -579,6 +579,7 @@ class EvidencePaperRevisionInput(WritingSemanticModel):
 
     schema_version: Literal["1.0"] = "1.0"
     source_paper_directory: str = Field(pattern=_IDENTIFIER)
+    source_adoption_run_id: str | None = Field(default=None, pattern=_IDENTIFIER)
     target_manuscript_id: str = Field(pattern=_IDENTIFIER)
     source_paper_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     review_packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

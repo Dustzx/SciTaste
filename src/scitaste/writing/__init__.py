@@ -14,10 +14,23 @@ from scitaste.writing.argument import (
 from scitaste.writing.critics import WritingCriticSuite
 from scitaste.writing.drafter import ContractDrafter
 from scitaste.writing.narrative import NarrativeTasteReview, review_narrative
+from scitaste.writing.paper_adoption import (
+    PreparedProjectPaperAdoption,
+    ProjectPaperAdoptionBundle,
+    inspect_project_paper_adoption,
+    load_project_paper_adoption_source,
+    prepare_project_paper_adoption,
+    publish_project_paper_adoption,
+)
 from scitaste.writing.paper_draft_materialization import (
     MaterializedPaperDraft,
     PaperDraftTrace,
     materialize_accepted_paper_draft,
+)
+from scitaste.writing.paper_revision_context import (
+    PreparedProjectPaperRevisionContext,
+    ProjectPaperRevisionContextBundle,
+    prepare_project_paper_revision_context,
 )
 from scitaste.writing.revision_trace import PaperRevisionTrace
 from scitaste.writing.scientific_evidence import (
@@ -114,6 +127,10 @@ __all__ = [
     "PaperRevisionTrace",
     "PaperRevisionTreatment",
     "PaperRevisionTreatmentMode",
+    "PreparedProjectPaperAdoption",
+    "PreparedProjectPaperRevisionContext",
+    "ProjectPaperAdoptionBundle",
+    "ProjectPaperRevisionContextBundle",
     "SectionDeliveryContract",
     "SemanticWritingTasteFinding",
     "VenueWritingTasteContext",
@@ -131,10 +148,15 @@ __all__ = [
     "assess_paper_argument",
     "assess_writing_taste",
     "build_venue_writing_taste_context",
+    "inspect_project_paper_adoption",
     "inspect_venue_writing_taste",
+    "load_project_paper_adoption_source",
     "materialize_accepted_paper_draft",
     "materialize_paper_scientific_evidence",
     "paper_draft_proposal_sha256",
+    "prepare_project_paper_adoption",
+    "prepare_project_paper_revision_context",
+    "publish_project_paper_adoption",
     "render_evidence_paper_markdown",
     "require_selected_scientific_evidence",
     "review_narrative",

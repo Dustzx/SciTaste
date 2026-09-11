@@ -136,6 +136,7 @@ def materialize_accepted_paper_revision(
         runtime,
         project_id=project_id,
         paper=source,
+        input_data=input_data,
     )
     if source_binding.input_fingerprint != input_data.source_draft_input.fingerprint:
         raise ValueError("paper revision source input differs from its paper trace")
@@ -262,10 +263,42 @@ def _verify_source_trace(
     *,
     project_id: str,
     paper: ProjectPaperEntry,
+    input_data: EvidencePaperRevisionInput,
 ) -> _SourceTraceBinding:
     paper_root = project_runtime.projects_root / project_id / "papers" / paper.directory_name
     markdown = _paper_file(paper_root, paper, "source-markdown")
     bibliography = _paper_file(paper_root, paper, "bibliography")
+    if input_data.source_adoption_run_id is not None:
+        from scitaste.writing.paper_adoption import load_project_paper_adoption_source
+
+        bundle, source_input, source_proposal = load_project_paper_adoption_source(
+            project_runtime,
+            project_id,
+            input_data.source_adoption_run_id,
+        )
+        if (
+            bundle.paper_directory != paper.directory_name
+            or bundle.paper_manifest_sha256 != paper.manifest_sha256
+            or source_input != input_data.source_draft_input
+            or source_proposal != input_data.prior_proposal
+        ):
+            raise ValueError("source paper adoption differs from the revision input")
+        trace_path = (
+            project_runtime.projects_root
+            / project_id
+            / "runs"
+            / bundle.run_id
+            / "paper_adoption"
+            / "MANIFEST.json"
+        )
+        return _SourceTraceBinding(
+            kind="paper_adoption",
+            locator=(Path("runs") / bundle.run_id / "paper_adoption/MANIFEST.json").as_posix(),
+            file_sha256=_file_sha256(trace_path),
+            record_sha256=bundle.record_sha256,
+            input_fingerprint=bundle.source_input_fingerprint,
+            proposal_sha256=bundle.source_proposal_sha256,
+        )
     if "paper-revision-trace" in paper.manifest.files:
         trace_path = _paper_file(paper_root, paper, "paper-revision-trace")
         trace = PaperRevisionTrace.model_validate_json(trace_path.read_text(encoding="utf-8"))
