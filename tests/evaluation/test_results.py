@@ -44,12 +44,14 @@ from scitaste.generative_ui import (
 )
 from scitaste.lifecycle import assess_project_lifecycle
 from scitaste.project import (
+    PaperManifest,
     ProjectEvaluationArtifact,
     ProjectEvaluationBundle,
     ProjectManifest,
     ProjectRuntime,
 )
 from scitaste.project.models import content_sha256
+from scitaste.writing import materialize_paper_scientific_evidence
 
 SHA = "a" * 64
 
@@ -786,3 +788,98 @@ def test_result_set_must_be_project_owned(tmp_path: Path) -> None:
             evaluation_id="formal-evaluation",
             result_set_path=detached,
         )
+
+
+def test_paper_binding_reverifies_selected_result_and_every_paper_artifact(
+    tmp_path: Path,
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    runtime.create(
+        ProjectManifest(
+            project_id="result-project",
+            title="Result project",
+            research_direction="Bind exact scientific evidence into a paper.",
+            status="active",
+        )
+    )
+    manifest = _formal_manifest()
+    _publish_formal_evaluation(runtime, manifest)
+    project_root = runtime.projects_root / "result-project"
+    results = _result_set(project_root, manifest)
+    result_set_path = project_root / "runs/formal/RESULT_SET.json"
+    result_set_path.parent.mkdir(parents=True, exist_ok=True)
+    result_set_path.write_text(results.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    prepared = prepare_project_evaluation_result(
+        runtime,
+        project_id="result-project",
+        result_id="formal-result-r1",
+        evaluation_id="formal-evaluation",
+        result_set_path=result_set_path,
+    )
+    snapshot = publish_project_evaluation_result(
+        runtime,
+        prepared,
+        expected_revision=1,
+        select=True,
+    )
+
+    paper_root = project_root / "papers/formal-paper-v1"
+    paper_root.mkdir(parents=True)
+    manuscript = paper_root / "main.md"
+    manuscript.write_text("# Scientific Taste\n\nRegistered formal results.\n", encoding="utf-8")
+    materialized = materialize_paper_scientific_evidence(
+        runtime,
+        project_id="result-project",
+        paper_id="formal-paper-v1",
+        result_id="formal-result-r1",
+        paper_root=paper_root,
+        artifact_paths=(manuscript,),
+    )
+    paper = PaperManifest(
+        paper_id="formal-paper-v1",
+        project_id="result-project",
+        title="Scientific Taste",
+        date="2026-09-11",
+        provider="scitaste-native",
+        model="deterministic-writer",
+        condition="formal-result-bound-paper",
+        task="heldout-task",
+        seed=7,
+        stage=18,
+        status="venue-submission-draft",
+        evidence_scope="formal-matched-backbone-result",
+        files={
+            "source-markdown": "main.md",
+            "scientific-evidence-binding": materialized.path.name,
+        },
+        scientific_evidence=materialized.binding,
+    )
+    snapshot = runtime.register_paper(
+        "result-project",
+        paper,
+        directory_name="formal-paper-v1",
+        expected_revision=snapshot.revision,
+    )
+    snapshot = runtime.select_paper(
+        "result-project",
+        "formal-paper-v1",
+        expected_revision=snapshot.revision,
+        global_latest=False,
+    )
+
+    assert runtime.open_paper("result-project", "formal-paper-v1") == paper
+    lifecycle = assess_project_lifecycle(runtime, "result-project")
+    assert lifecycle.scientific_evidence_complete is True
+    assert lifecycle.paper_scientific_evidence_bound is True
+    assert lifecycle.top_venue_evidence_loop_complete is False
+
+    manuscript.write_text("# Drifted paper\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="artifacts differ"):
+        runtime.open_paper("result-project", "formal-paper-v1")
+    assert (
+        assess_project_lifecycle(
+            runtime,
+            "result-project",
+        ).paper_scientific_evidence_bound
+        is False
+    )

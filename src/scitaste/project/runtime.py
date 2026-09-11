@@ -15,6 +15,7 @@ from typing import Any
 
 from scitaste.project.models import (
     PaperManifest,
+    PaperScientificEvidenceBinding,
     ProjectEvaluation,
     ProjectEvaluationBundle,
     ProjectEvaluationResult,
@@ -268,6 +269,7 @@ class ProjectRuntime:
                 artifact = _contained_path(paper_dir, locator)
                 if not artifact.is_file():
                     raise FileNotFoundError(artifact)
+            _verify_paper_bundle(project, paper_dir, paper, manifest)
             _atomic_json(manifest_path, paper.model_dump(mode="json"))
             manifest = self._replace_manifest(
                 project,
@@ -296,6 +298,7 @@ class ProjectRuntime:
         with _locked(global_lock), _locked(project / ".project.lock"):
             manifest = self._load_manifest(project)
             self._require_revision(manifest, expected_revision)
+            _verify_paper_bundle(project, paper_dir, paper, manifest)
             current_alias = project / "papers" / "current"
             _require_replaceable_symlink(current_alias)
             latest_alias = self.outputs_root / "papers" / "latest"
@@ -314,6 +317,20 @@ class ProjectRuntime:
                 changes={"current_paper": f"papers/{directory_name}"},
             )
         return self._snapshot(project, manifest)
+
+    def open_paper(self, project_id: str, directory_name: str) -> PaperManifest:
+        """Open one paper only after revalidating its files and result binding."""
+
+        validate_entry_id(directory_name, field_name="paper directory")
+        project = self._project_path(project_id)
+        paper_dir = project / "papers" / directory_name
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            paper = self._load_paper(paper_dir / "MANIFEST.json")
+            if paper.project_id != project_id:
+                raise ValueError("paper belongs to another project")
+            _verify_paper_bundle(project, paper_dir, paper, manifest)
+        return paper
 
     def register_review(
         self,
@@ -824,6 +841,7 @@ class ProjectRuntime:
                     paper = self._load_paper(path)
                     if paper.project_id != manifest.project_id:
                         raise ValueError("paper manifest belongs to another project")
+                    _verify_paper_bundle(project, path.parent, paper, manifest)
                     raw = path.read_bytes()
                     papers.append(
                         ProjectPaperEntry(
@@ -936,6 +954,94 @@ class ProjectRuntime:
             current_evaluation_result_locator=current_evaluation_result_locator,
             warnings=warnings,
         )
+
+
+def _verify_paper_bundle(
+    project: Path,
+    paper_dir: Path,
+    paper: PaperManifest,
+    manifest: ProjectManifest,
+) -> None:
+    binding = paper.scientific_evidence
+    if binding is None:
+        return
+    artifact_hashes: dict[str, str] = {}
+    for locator in paper.files.values():
+        artifact = _paper_regular_file(paper_dir, locator)
+        artifact_hashes[locator] = _file_sha256(artifact)
+    binding_locator = paper.files["scientific-evidence-binding"]
+    recorded = PaperScientificEvidenceBinding.model_validate_json(
+        _paper_regular_file(paper_dir, binding_locator).read_bytes()
+    )
+    if recorded != binding:
+        raise ValueError("paper scientific-evidence sidecar differs from its manifest")
+    entry = next(
+        (item for item in manifest.evaluation_results if item.result_id == binding.result_id),
+        None,
+    )
+    if entry is None:
+        raise ValueError("paper scientific evidence references an unknown result")
+    result = _verified_evaluation_result_record(project, entry)
+    evaluation = _verified_evaluation_bundle(project, manifest, result.evaluation_id)
+    _verify_evaluation_result_bundle(
+        project,
+        (project / entry.record_locator).parent,
+        result,
+        evaluation,
+    )
+    expected_result = (
+        result.evaluation_id,
+        result.result_id,
+        result.bundle_sha256,
+        result.result_set_sha256,
+        result.assessment_sha256,
+        result.scientific_evidence_complete,
+        result.headline_eligible,
+        result.scientific_effectiveness_established,
+    )
+    recorded_result = (
+        binding.evaluation_id,
+        binding.result_id,
+        binding.result_bundle_sha256,
+        binding.result_set_sha256,
+        binding.assessment_sha256,
+        binding.scientific_evidence_complete,
+        binding.headline_eligible,
+        binding.scientific_effectiveness_established,
+    )
+    if recorded_result != expected_result:
+        raise ValueError("paper scientific evidence differs from its verified result")
+    expected_artifacts = {
+        locator: digest for locator, digest in artifact_hashes.items() if locator != binding_locator
+    }
+    if binding.bound_artifact_sha256 != expected_artifacts:
+        raise ValueError("paper artifacts differ from their scientific-evidence binding")
+
+
+def _paper_regular_file(root: Path, locator: str) -> Path:
+    validate_relative_locator(locator, field_name="paper file")
+    physical_root = root.resolve(strict=True)
+    current = physical_root
+    for part in PurePosixPath(locator).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("paper file cannot traverse a symbolic link")
+    resolved = current.resolve(strict=True)
+    try:
+        resolved.relative_to(physical_root)
+    except ValueError as exc:
+        raise ValueError("paper file escapes its bundle") from exc
+    if not resolved.is_file():
+        raise ValueError("paper file must be regular")
+    return resolved
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _contained_path(root: Path, locator: str) -> Path:

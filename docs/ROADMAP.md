@@ -46,6 +46,10 @@ identity, budgets, artifacts, evidence class, blind reviews, and preregistered
 contrasts. No formal SciTaste result has been produced or registered yet, and a
 paper becomes top-venue evidence-complete only after a new paper revision binds
 the exact selected result and an independent review closes against that paper.
+That paper transition is now implemented as an explicit build option and a
+self-hashed sidecar covering all paper artifacts. It remains unexercised by the
+SciTaste self-development paper because no approved formal result exists yet;
+the current draft and its prior reviews therefore stay correctly unbound.
 
 The homepage now compresses repeated proposal diagnostics into seven stable
 decision gates while retaining the exact codes underneath. For the current

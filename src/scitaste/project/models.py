@@ -545,6 +545,73 @@ class ProjectManifest(BaseModel):
         return self
 
 
+class PaperScientificEvidenceBinding(BaseModel):
+    """Self-hashed proof that one paper bundle incorporates one admitted result."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    paper_id: str
+    evaluation_id: str
+    result_id: str
+    result_bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    result_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    assessment_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    scientific_evidence_complete: Literal[True] = True
+    headline_eligible: Literal[True] = True
+    scientific_effectiveness_established: bool
+    bound_artifact_sha256: dict[str, str] = Field(min_length=1, max_length=500)
+    binding_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("project_id")
+    @classmethod
+    def project_id_is_safe(cls, value: str) -> str:
+        return validate_project_id(value)
+
+    @field_validator("paper_id", "evaluation_id", "result_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @field_validator("bound_artifact_sha256")
+    @classmethod
+    def artifact_bindings_are_closed(cls, values: dict[str, str]) -> dict[str, str]:
+        normalized: dict[str, str] = {}
+        for locator, digest in values.items():
+            normalized_locator = validate_relative_locator(
+                locator,
+                field_name="paper scientific-evidence artifact",
+            )
+            if len(digest) != 64 or any(
+                character not in "0123456789abcdef" for character in digest
+            ):
+                raise ValueError("paper scientific-evidence artifact hashes must be SHA-256")
+            normalized[normalized_locator] = digest
+        if len(normalized) != len(values):
+            raise ValueError("paper scientific-evidence artifact locators must be unique")
+        return dict(sorted(normalized.items()))
+
+    @model_validator(mode="after")
+    def binding_is_self_hashed(self) -> PaperScientificEvidenceBinding:
+        expected = content_sha256(self.model_dump(mode="json", exclude={"binding_sha256"}))
+        if self.binding_sha256 != expected:
+            raise ValueError("paper scientific-evidence binding hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> PaperScientificEvidenceBinding:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("binding_sha256", None)
+        unsigned = cls.model_construct(binding_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            binding_sha256=content_sha256(
+                unsigned.model_dump(mode="json", exclude={"binding_sha256"})
+            ),
+        )
+
+
 class PaperManifest(BaseModel):
     """Reader-facing paper bundle registered beneath exactly one project."""
 
@@ -566,6 +633,7 @@ class PaperManifest(BaseModel):
     publication_ready: bool = False
     source_run: str | None = None
     files: dict[str, str] = Field(default_factory=dict)
+    scientific_evidence: PaperScientificEvidenceBinding | None = None
 
     @field_validator("paper_id")
     @classmethod
@@ -595,6 +663,23 @@ class PaperManifest(BaseModel):
         if len(set(normalized.values())) != len(normalized):
             raise ValueError("paper file locators must be unique")
         return normalized
+
+    @model_validator(mode="after")
+    def scientific_evidence_matches_manifest(self) -> PaperManifest:
+        binding = self.scientific_evidence
+        locator = self.files.get("scientific-evidence-binding")
+        if binding is None:
+            if locator is not None:
+                raise ValueError("paper evidence-binding file requires a typed binding")
+            return self
+        if locator is None:
+            raise ValueError("paper scientific evidence requires its binding file")
+        if binding.project_id != self.project_id or binding.paper_id != self.paper_id:
+            raise ValueError("paper scientific-evidence identity differs from its manifest")
+        expected_artifacts = set(self.files.values()) - {locator}
+        if set(binding.bound_artifact_sha256) != expected_artifacts:
+            raise ValueError("paper scientific-evidence binding must cover every other paper file")
+        return self
 
 
 class ProjectPaperEntry(BaseModel):

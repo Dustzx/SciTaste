@@ -162,6 +162,14 @@ contrast against at least two independent method comparators must verify. A
 pilot, synthetic run, internal review, missing cell, drifted artifact, or GPU
 small-model robustness lane cannot establish the headline claim.
 
+Result registration still does not alter an existing manuscript. A subsequent
+`project paper build|build-draft|build-revision --evaluation-result-id <id>`
+must materialize a new paper with a self-hashed
+`SCIENTIFIC_EVIDENCE_BINDING.json`. It binds every other paper artifact plus the
+exact result bundle, result set, and deterministic assessment. The review packet
+then hashes that sidecar with the rest of the paper. This ordering prevents a
+pre-result draft or pre-result review from inheriting scientific completeness.
+
 The critic review is explicitly advisory: its schema fixes
 `authorizes_execution=false`. `ready_for_author_review` becomes true only when
 all five critic domains and the resource gate have no blockers. Even then, only

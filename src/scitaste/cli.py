@@ -157,6 +157,10 @@ from scitaste.writing.paper_draft_materialization import materialize_accepted_pa
 from scitaste.writing.paper_revision_materialization import (
     materialize_accepted_paper_revision,
 )
+from scitaste.writing.scientific_evidence import (
+    materialize_paper_scientific_evidence,
+    require_selected_scientific_evidence,
+)
 from scitaste.writing.taste import assess_writing_taste
 from scitaste.writing.venue import assess_venue_submission, inspect_venue_template
 from scitaste.writing.venue_taste import (
@@ -195,6 +199,17 @@ def _add_project_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     parser.add_argument("--dry-run", action="store_true")
     _add_log_level_option(parser)
+
+
+def _add_paper_scientific_evidence_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--evaluation-result-id",
+        default=None,
+        help=(
+            "Bind the complete currently selected evaluation result into a new immutable "
+            "paper sidecar"
+        ),
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -545,6 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--evidence-scope",
         default="venue-compliance-only-no-scientific-effectiveness-claim",
     )
+    _add_paper_scientific_evidence_option(project_paper_build)
     project_paper_build.add_argument("--date", default=date.today().isoformat())
     project_paper_build.add_argument("--expected-revision", type=int, required=True)
     project_paper_build.add_argument("--select", action="store_true")
@@ -586,6 +602,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--evidence-scope",
         default="model-drafted-from-registered-evidence-no-effectiveness-claim",
     )
+    _add_paper_scientific_evidence_option(project_paper_build_draft)
     project_paper_build_draft.add_argument("--date", default=date.today().isoformat())
     project_paper_build_draft.add_argument("--expected-revision", type=int, required=True)
     project_paper_build_draft.add_argument("--select", action="store_true")
@@ -632,6 +649,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--evidence-scope",
         default="model-revised-from-registered-review-and-evidence",
     )
+    _add_paper_scientific_evidence_option(project_paper_build_revision)
     project_paper_build_revision.add_argument("--date", default=date.today().isoformat())
     project_paper_build_revision.add_argument("--expected-revision", type=int, required=True)
     project_paper_build_revision.add_argument("--select", action="store_true")
@@ -1654,6 +1672,16 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
     source_run = args.source_run or snapshot.manifest.current_run
     if source_run is not None and source_run not in snapshot.run_locators:
         raise ValueError(f"unknown project run {source_run!r}")
+    evaluation_result_id = getattr(args, "evaluation_result_id", None)
+    scientific_result = (
+        require_selected_scientific_evidence(
+            runtime,
+            project_id=args.project_id,
+            result_id=evaluation_result_id,
+        )
+        if evaluation_result_id is not None
+        else None
+    )
     source = args.source.resolve(strict=True)
     bibliography = args.bibliography.resolve(strict=True)
     if not source.is_file() or not bibliography.is_file():
@@ -1719,6 +1747,20 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
                     "would_select": args.select,
                     "paper_draft_trace": getattr(args, "_paper_draft_trace", None),
                     "paper_revision_trace": getattr(args, "_paper_revision_trace", None),
+                    "scientific_evidence_binding": (
+                        {
+                            "result_id": scientific_result.result_id,
+                            "evaluation_id": scientific_result.evaluation_id,
+                            "result_bundle_sha256": scientific_result.bundle_sha256,
+                            "assessment_sha256": scientific_result.assessment_sha256,
+                            "scientific_effectiveness_established": (
+                                scientific_result.scientific_effectiveness_established
+                            ),
+                            "would_bind_all_materialized_paper_artifacts": True,
+                        }
+                        if scientific_result is not None
+                        else None
+                    ),
                 },
                 indent=2,
                 ensure_ascii=False,
@@ -1763,6 +1805,18 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             revision_trace_target = temporary / "PAPER_REVISION_TRACE.json"
             shutil.copyfile(revision_trace_source, revision_trace_target)
             paths.append(revision_trace_target)
+        scientific_evidence = None
+        if evaluation_result_id is not None:
+            materialized_evidence = materialize_paper_scientific_evidence(
+                runtime,
+                project_id=args.project_id,
+                paper_id=args.directory_name,
+                result_id=evaluation_result_id,
+                paper_root=temporary,
+                artifact_paths=tuple(paths),
+            )
+            paths.append(materialized_evidence.path)
+            scientific_evidence = materialized_evidence.binding
         files = _venue_paper_file_map(paths, root=temporary)
         argument_metadata = (
             {
@@ -1800,6 +1854,7 @@ def _handle_project_paper_build(args: argparse.Namespace) -> int:
             publication_ready=False,
             source_run=source_run,
             files=files,
+            scientific_evidence=scientific_evidence,
             venue_id=assessment.venue_id,
             template_fingerprint=assessment.template_fingerprint,
             submission_assessment_sha256=assessment.record_sha256,
@@ -1936,6 +1991,7 @@ def _venue_paper_file_map(paths: list[Path], *, root: Path) -> dict[str, str]:
         "WRITING_TASTE_ASSESSMENT.json": "writing-taste-assessment",
         "PAPER_DRAFT_TRACE.json": "paper-draft-trace",
         "PAPER_REVISION_TRACE.json": "paper-revision-trace",
+        "SCIENTIFIC_EVIDENCE_BINDING.json": "scientific-evidence-binding",
         "VENUE_TASTE_CONTEXT.json": "venue-taste-context",
         "PAPER_ARGUMENT_CONTRACT.yaml": "paper-argument-contract",
         "PAPER_ARGUMENT_ASSESSMENT.json": "paper-argument-assessment",

@@ -245,17 +245,21 @@ def _scientific_evidence_status(
     effectiveness = complete and result.scientific_effectiveness_established
     if not complete or paper_directory is None:
         return result_id, complete, effectiveness, False
-    paper = next(
-        (item for item in snapshot.papers if item.directory_name == paper_directory),
-        None,
-    )
-    if paper is None:
+    if not any(item.directory_name == paper_directory for item in snapshot.papers):
         return result_id, complete, effectiveness, False
-    extra = paper.manifest.model_extra or {}
+    try:
+        paper = runtime.open_paper(snapshot.project_id, paper_directory)
+    except (OSError, ValueError):
+        return result_id, complete, effectiveness, False
+    binding = paper.scientific_evidence
+    if binding is None:
+        return result_id, complete, effectiveness, False
     bound = (
-        extra.get("evaluation_result_id") == result.result_id
-        and extra.get("evaluation_result_bundle_sha256") == result.bundle_sha256
-        and extra.get("evaluation_assessment_sha256") == result.assessment_sha256
+        binding.result_id == result.result_id
+        and binding.evaluation_id == result.evaluation_id
+        and binding.result_bundle_sha256 == result.bundle_sha256
+        and binding.result_set_sha256 == result.result_set_sha256
+        and binding.assessment_sha256 == result.assessment_sha256
     )
     return result_id, complete, effectiveness, bound
 

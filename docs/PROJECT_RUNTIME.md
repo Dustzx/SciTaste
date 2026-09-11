@@ -273,6 +273,26 @@ eligibility, and observed effectiveness remain separate derived values. Pilot
 or robustness results may be complete without establishing the paper's headline
 claim.
 
+A new paper can bind the currently selected complete formal result explicitly:
+
+```bash
+.venv/bin/scitaste project paper build-revision \
+  --project-id my-research-project --review-id iclr-r1 \
+  --directory-name <new-paper-directory> --run-id <revision-run> \
+  --invocation-id <accepted-revision-invocation> \
+  --bibliography <verified-references.bib> \
+  --evaluation-result-id deepseek-v41-formal-r1 \
+  --expected-revision <revision> --outputs-root outputs
+```
+
+The same option is available on `paper build` and `paper build-draft`. It writes
+`SCIENTIFIC_EVIDENCE_BINDING.json` only for the currently selected,
+headline-eligible result. The self-hashed record binds the result bundle,
+result set, assessment, and every other materialized paper artifact by SHA-256.
+Changing the manuscript, PDF, bibliography, trace, figure, or result bytes makes
+the paper fail reopening and review preparation. Omitting the option leaves the
+paper explicitly unbound; old papers are never upgraded by inference.
+
 ## Paper review and lifecycle
 
 Review rounds are first-class project records beneath

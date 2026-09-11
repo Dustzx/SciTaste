@@ -20,6 +20,11 @@ from scitaste.writing.paper_draft_materialization import (
     materialize_accepted_paper_draft,
 )
 from scitaste.writing.revision_trace import PaperRevisionTrace
+from scitaste.writing.scientific_evidence import (
+    MaterializedPaperScientificEvidence,
+    materialize_paper_scientific_evidence,
+    require_selected_scientific_evidence,
+)
 from scitaste.writing.semantic import (
     EvidencePaperDraftNode,
     EvidencePaperRevisionNode,
@@ -92,6 +97,7 @@ __all__ = [
     "MaterialLimitationContract",
     "MaterialWritingLimitation",
     "MaterializedPaperDraft",
+    "MaterializedPaperScientificEvidence",
     "NarrativeTasteReview",
     "PaperArchetype",
     "PaperArgumentAssessment",
@@ -127,8 +133,10 @@ __all__ = [
     "build_venue_writing_taste_context",
     "inspect_venue_writing_taste",
     "materialize_accepted_paper_draft",
+    "materialize_paper_scientific_evidence",
     "paper_draft_proposal_sha256",
     "render_evidence_paper_markdown",
+    "require_selected_scientific_evidence",
     "review_narrative",
     "writing_node_types",
 ]

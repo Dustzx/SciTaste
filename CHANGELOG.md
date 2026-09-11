@@ -17,6 +17,11 @@ semantic versioning.
   Registered result bundles appear on the project home and feed separate
   lifecycle facts for scientific-evidence completeness, paper binding, and the
   final pre-submission evidence/review loop.
+  Venue paper builds may now explicitly bind the currently selected complete
+  result through `SCIENTIFIC_EVIDENCE_BINDING.json`. The self-hashed sidecar
+  covers the exact result/assessment identities and every other paper artifact;
+  paper opening, selection, review preparation, and lifecycle projection fail
+  closed after result or manuscript drift. Existing papers remain unbound.
 
 - Generated workspace identities now bind an explicit receiver-envelope
   contract and the exact materialized surface. Additive project-home schema

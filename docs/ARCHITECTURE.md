@@ -1461,3 +1461,12 @@ or local-small-model robustness evidence cannot pass that gate. Even a valid
 formal project result affects a paper only when a newly materialized paper
 manifest binds the exact result and assessment hashes; independent review must
 then close against that paper before the top-venue evidence loop is complete.
+
+The binding is a physical `SCIENTIFIC_EVIDENCE_BINDING.json`, not optional
+manifest prose. It is self-hashed and covers the exact result bundle, result
+set, assessment, and every other paper artifact. `ProjectRuntime` rehashes this
+proof during paper registration, opening, selection, project snapshot creation,
+and lifecycle inspection. Review preparation already hashes every declared paper
+file, so reviewers necessarily receive a packet tied to the same proof. Older
+papers remain readable but cannot satisfy this gate without a newly materialized
+revision.
