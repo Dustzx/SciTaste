@@ -119,8 +119,10 @@ normalizes only exact section-label spellings such as `evaluation-results` to
 blocked sets. Formal evidence is admitted only through a previously verified
 evaluation-to-research-state transition from the same review round. Numeric
 tokens become writable only when they already occur in the source paper or in
-an admitted evidence summary. The optional output is created exclusively and
-is never overwritten.
+an admitted evidence summary. The source title is immutable unless a separate
+typed input explicitly authorizes title revision; the project compiler keeps
+that authority disabled. The optional output is created exclusively and is
+never overwritten.
 
 An accepted revision is materialized without another model call:
 

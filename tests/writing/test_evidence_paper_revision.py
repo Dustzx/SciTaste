@@ -272,6 +272,25 @@ def test_revision_rejects_unknown_target_paragraph_and_no_op_edit() -> None:
     assert any("source proposal unchanged" in item for item in result.rejection_reasons)
 
 
+def test_revision_rejects_unauthorized_title_change() -> None:
+    node_input = _revision_input((_concern("clarity-one"),))
+    payload = _payload_for(node_input)
+    revised = payload["revised_draft"]
+    assert isinstance(revised, dict)
+    revised["title"] = "An Unapproved Replacement Title"
+
+    result = EvidencePaperRevisionNode().run(
+        node_input,
+        context=_context(node_input),
+        backend=_backend(payload),
+        policy=_policy(),
+        request_id="paper-revision-one",
+    )
+
+    assert result.status is NodeResultStatus.REJECTED
+    assert any("source title" in item for item in result.rejection_reasons)
+
+
 def test_revision_skips_model_call_when_every_concern_awaits_evidence() -> None:
     node_input = _revision_input(
         (

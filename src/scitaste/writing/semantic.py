@@ -209,6 +209,11 @@ class EvidencePaperRevisionNode(
             reasons.append("paper revision targets a different review packet")
         if proposal.source_report_sha256s != input_data.source_report_sha256s:
             reasons.append("paper revision does not bind every source report")
+        if (
+            not input_data.title_revision_authorized
+            and proposal.revised_draft.title != input_data.prior_proposal.title
+        ):
+            reasons.append("paper revision changes the source title without authorization")
 
         source_context = NodeContext.model_validate(
             context.model_copy(

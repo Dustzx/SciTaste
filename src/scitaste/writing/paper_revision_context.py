@@ -299,6 +299,7 @@ def prepare_project_paper_revision_context(
         source_paper_manifest_sha256=adoption.paper_manifest_sha256,
         review_packet_sha256=packet.packet_sha256,
         source_report_sha256s=tuple(sorted(report_hashes)),
+        title_revision_authorized=False,
         source_draft_input=source_input,
         target_draft_input=target_input,
         prior_proposal=source_proposal,

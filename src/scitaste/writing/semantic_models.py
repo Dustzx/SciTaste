@@ -584,6 +584,7 @@ class EvidencePaperRevisionInput(WritingSemanticModel):
     source_paper_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     review_packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_report_sha256s: tuple[str, ...] = Field(min_length=1, max_length=8)
+    title_revision_authorized: bool = False
     source_draft_input: EvidencePaperDraftInput
     target_draft_input: EvidencePaperDraftInput
     prior_proposal: EvidencePaperDraftProposal
