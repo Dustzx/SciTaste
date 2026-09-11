@@ -1,0 +1,15 @@
+schema_version: "1.0"
+adapter_id: direct-agent-mlr-v1
+source_commit: 603195a6c37bacd7009ed9402cbd1eba4d9c71db
+implementation_ref: src/scitaste/evaluation/direct_agent.py
+system_role: prompt-only-lower-bound
+core_policy: one matched model agent receives the frozen task package and common tool budget without SciTaste knowledge, taste, critics, or orchestration
+task_contract: exact task assets, scorer, starting evidence, tool allowlist, repair budget, and ceilings are inherited unchanged from the approved lane
+telemetry_contract:
+  - provider request and response identity
+  - input, cache-hit, cache-miss, reasoning, and output tokens when exposed
+  - cost, wall time, retries, failures, and interventions
+  - experiment commands, artifacts, scorer outputs, and final research package
+failure_contract: failures and budget exhaustion remain registered intention-to-run cells and receive the task failure floor
+execution_authorized: false
+preflight_status: interface-bound-task-assets-pending
