@@ -1,0 +1,15 @@
+schema_version: "1.0"
+observation_id: qwen3vl2b-local-probe-20260912-v1
+resource_id: qwen3-vl-2b-local-47f9c0e0
+resource_kind: model_checkpoint
+observed_at: 2026-09-12T04:04:00+08:00
+method: automated_probe
+status: verified
+observed_checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+observed_checkpoint_bytes: 4266653057
+destination_present: true
+notes:
+  - Full-byte local directory hashing matched the separately declared checkpoint resource.
+  - This verifies identity and presence only; no model loading or GPU workload was performed.
+credentials_recorded: false
+observation_only: true

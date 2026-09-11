@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Shared resources now use a hash-indexed v2 directory rather than only one
+  inline catalog. Independent manifests explicitly cover DeepSeek V4.1 Flash,
+  Zhipu GLM-5.3-Flash, blocked historical Bailian Qwen3.8-Max, the local 1×3090,
+  the remote 8×3090 host, and the current Qwen3-VL-2B checkpoint. A project
+  binding assigns all six to `scitaste-self-development`; catalog migration
+  preserves prior observations and registry identity without deleting history.
+
 - A project-superordinate compute registry now separates stable, secret-free
   API/GPU definitions in `configs/resources/` from changing local observations
   in `outputs/resources/`. Its CLI validates content-bound host evidence,

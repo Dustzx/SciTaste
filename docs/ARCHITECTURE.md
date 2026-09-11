@@ -1699,7 +1699,12 @@ capacity are distinct fields rather than prose aliases.
 
 Catalog inspection and observation registration perform no provider call,
 remote login, project mutation, reservation, or workload. They cannot authorize
-an experiment. A later allocation layer must atomically lease devices or API
-quota, reject overlapping reservations, bind the lease into a project proposal,
-and reconcile measured usage back to both the shared resource and project
-ledgers.
+an experiment. The v2 catalog is a small hash-index over independent API, GPU
+host, and checkpoint manifests. Catalog advancement archives the predecessor
+registry and refuses to orphan observations. A typed project binding names each
+resource role without copying infrastructure into the project evidence tree;
+its source and record are immutable and bound to the catalog semantic hash.
+
+A later allocation layer must atomically lease devices or API quota, reject
+overlapping reservations, bind the lease into a project proposal, and reconcile
+measured usage back to both the shared resource and project ledgers.

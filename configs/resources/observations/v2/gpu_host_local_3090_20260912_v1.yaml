@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: gpu-local-probe-20260912-v1
+resource_id: gpu-host-local-3090
+resource_kind: gpu_host
+observed_at: 2026-09-12T04:04:00+08:00
+method: automated_probe
+status: verified
+available_storage_bytes: 155972894720
+available_storage_gb_reported: null
+observed_device_count: 1
+observed_device_name: NVIDIA GeForce RTX 3090
+notes:
+  - Read-only local probe; no GPU workload or filesystem mutation was performed.
+  - The content-bound inventory separately records UUID, driver, free VRAM, runtime, and checkpoint identity.
+credentials_recorded: false
+observation_only: true

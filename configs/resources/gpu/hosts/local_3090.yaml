@@ -1,0 +1,16 @@
+schema_version: "1.0"
+resource:
+  kind: gpu_host
+  resource_id: gpu-host-local-3090
+  host_alias: local-3090
+  location: local
+  access_profile: local-process
+  connection_alias: null
+  device_count: 1
+  device_name: NVIDIA GeForce RTX 3090
+  minimum_memory_mb_per_device: 24000
+  baseline_inventory_ref: docs/research/data/gpu_host_local_3090_inventory_v1.yaml
+  baseline_inventory_sha256: 1307642098fb4ba7aa48534a6ec915cd8ddf8ed7e66d910621f2ec56c2fe7f8b
+  baseline_observed_at: 2026-09-12T04:04:00+08:00
+  availability: verified
+  availability_reason: Read-only local inventory verified one GPU, current free VRAM, storage, runtime, and checkpoint hash.

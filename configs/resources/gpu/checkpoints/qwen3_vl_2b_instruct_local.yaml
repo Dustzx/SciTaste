@@ -1,0 +1,19 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-vl-2b-local-47f9c0e0
+  model_id: Qwen/Qwen3-VL-2B-Instruct
+  model_revision: local-tree-47f9c0e0
+  local_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  checkpoint_bytes: 4266653057
+  format: Hugging Face safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-local-3090
+    - gpu-host-3090-2
+  evidence_ref: docs/research/data/gpu_host_local_3090_inventory_v1.yaml
+  evidence_sha256: 1307642098fb4ba7aa48534a6ec915cd8ddf8ed7e66d910621f2ec56c2fe7f8b
+  observed_at: 2026-09-12T04:04:00+08:00
+  availability: verified
+  availability_reason: The current local tree was rehashed in full; remote host presence remains a separate observation.

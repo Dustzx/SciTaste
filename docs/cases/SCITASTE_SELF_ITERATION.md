@@ -573,3 +573,21 @@ superiority.
 Future milestones can add cases to this series, but a successful implementation
 must never be converted automatically into a retrieval-eligible Taste Case. That
 promotion requires a separate outcome review and human verification.
+
+# Shared compute-resource integration (2026-09-12)
+
+The self-development case exposed a project-management gap: API endpoints, GPU
+hosts, and local checkpoints were named inside individual experiment configs but
+were not explicitly reusable infrastructure above projects. SciTaste now uses a
+hash-indexed `configs/resources/` catalog and a sibling `outputs/resources/`
+runtime. The `scitaste-self-development` binding names DeepSeek as primary API,
+Zhipu as a separate robustness API, Bailian as blocked historical provenance,
+the local 1×3090 for development, the remote 8×3090 for scale-out, and the
+current Qwen3-VL-2B tree as a checkpoint resource.
+
+The exercise also found a scientifically relevant mismatch: the current local
+checkpoint hashes to `47f9c0e0...`, while the older GPU proposal freezes
+`8e95e5f6...`. SciTaste records both identities and blocks silent substitution.
+This iteration therefore produced both a reusable resource-management feature
+and a concrete self-case demonstrating why infrastructure identity belongs in
+the research evidence chain.

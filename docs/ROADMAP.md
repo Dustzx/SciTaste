@@ -154,6 +154,16 @@ latter remains `reported` until an automated host refresh verifies exact bytes.
 This inventory layer neither reserves capacity nor authorizes work; concurrent
 allocation and usage roll-up remain the next scheduler boundary.
 
+The resource layer now has an explicit hash-indexed v2 topology. Three API
+manifests distinguish the current DeepSeek primary candidate, the pending Zhipu
+robustness candidate, and unavailable-but-preserved Bailian history. Two GPU
+host manifests distinguish the verified local 1×3090 from the reported remote
+8×3090 pool, and a separate checkpoint manifest binds the current local
+Qwen3-VL-2B full-tree hash. `scitaste-self-development` has a typed binding to
+all six roles under `outputs/resources/projects/`. The local hash is
+`47f9c0e0...`, not the `8e95e5f6...` frozen in the older GPU proposal, so the
+formal plan remains blocked against silent checkpoint substitution.
+
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without
 interpreting their counts as field prevalence. The newly recovered ICLR 2026

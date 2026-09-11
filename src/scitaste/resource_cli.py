@@ -9,6 +9,7 @@ from pathlib import Path
 from scitaste.resources import (
     ComputeResourceRuntime,
     inspect_compute_resource_catalog,
+    inspect_project_resource_binding,
 )
 
 
@@ -34,6 +35,14 @@ def register_resource_cli(commands: argparse._SubParsersAction[argparse.Argument
     initialize.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     initialize.set_defaults(handler=_handle_resource_init)
 
+    update_catalog = resource_commands.add_parser(
+        "update-catalog",
+        help="Advance the registry to a new content-bound catalog without deleting history",
+    )
+    _add_catalog_options(update_catalog)
+    update_catalog.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    update_catalog.set_defaults(handler=_handle_resource_update_catalog)
+
     observe = resource_commands.add_parser(
         "observe",
         help="Register one typed resource observation without executing a workload",
@@ -43,6 +52,25 @@ def register_resource_cli(commands: argparse._SubParsersAction[argparse.Argument
     observe.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(observe)
     observe.set_defaults(handler=_handle_resource_observe)
+
+    inspect_binding = resource_commands.add_parser(
+        "inspect-project-binding",
+        help="Validate one project's explicit API/GPU/checkpoint resource binding",
+    )
+    inspect_binding.add_argument("--catalog", type=Path, required=True)
+    inspect_binding.add_argument("--binding", type=Path, required=True)
+    _add_log_level_option(inspect_binding)
+    inspect_binding.set_defaults(handler=_handle_resource_inspect_project_binding)
+
+    bind_project = resource_commands.add_parser(
+        "bind-project",
+        help="Register one exact project resource binding in outputs/resources",
+    )
+    bind_project.add_argument("--catalog", type=Path, required=True)
+    bind_project.add_argument("--binding", type=Path, required=True)
+    bind_project.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(bind_project)
+    bind_project.set_defaults(handler=_handle_resource_bind_project)
 
     status = resource_commands.add_parser(
         "status",
@@ -104,6 +132,52 @@ def _handle_resource_observe(args: argparse.Namespace) -> int:
         json.dumps(
             {
                 "status": "registered-resource-observation",
+                "record": record.model_dump(mode="json"),
+                "secret_values_loaded": False,
+                "remote_probe_performed": False,
+                "workload_executed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_resource_update_catalog(args: argparse.Namespace) -> int:
+    runtime = ComputeResourceRuntime(args.outputs_root)
+    snapshot = runtime.update_catalog(args.catalog, evidence_root=args.evidence_root)
+    print(
+        json.dumps(
+            {
+                "status": "updated-shared-resource-catalog",
+                "registry_root": str(runtime.root),
+                "registry": snapshot.model_dump(mode="json"),
+                "observations_preserved": True,
+                "secret_values_loaded": False,
+                "remote_probe_performed": False,
+                "workload_executed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_resource_inspect_project_binding(args: argparse.Namespace) -> int:
+    inspection = inspect_project_resource_binding(args.catalog, args.binding)
+    print(inspection.model_dump_json(indent=2))
+    return 0 if inspection.valid else 1
+
+
+def _handle_resource_bind_project(args: argparse.Namespace) -> int:
+    runtime = ComputeResourceRuntime(args.outputs_root)
+    record = runtime.register_project_binding(args.catalog, args.binding)
+    print(
+        json.dumps(
+            {
+                "status": "registered-project-resource-binding",
                 "record": record.model_dump(mode="json"),
                 "secret_values_loaded": False,
                 "remote_probe_performed": False,

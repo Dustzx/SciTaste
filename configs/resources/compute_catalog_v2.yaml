@@ -1,0 +1,27 @@
+schema_version: "1.1"
+catalog_id: scitaste-shared-compute-v2
+resource_refs:
+  - resource_id: deepseek-v41-flash
+    kind: api_model
+    locator: api/deepseek_v41_flash.yaml
+    sha256: 51f08f352f3c98be9f40095710233fa1ae5a6284d58c71f4fecbb9ddabcb2b79
+  - resource_id: zhipu-glm53-flash
+    kind: api_model
+    locator: api/zhipu_glm53_flash.yaml
+    sha256: 322d307a3a49e44442971ae84dfd3450b8f59936feeff829ea984dfa0801b6fb
+  - resource_id: bailian-qwen38-max
+    kind: api_model
+    locator: api/bailian_qwen38_max.yaml
+    sha256: 3bb2757dc050eb4cf58c53e96693309e018491c57e4bf0c0c87580d24c987a37
+  - resource_id: gpu-host-local-3090
+    kind: gpu_host
+    locator: gpu/hosts/local_3090.yaml
+    sha256: 2fd430698bbc3b3225870c5f2ae0a5cde67b753ff52f811d237cceeba38d750a
+  - resource_id: gpu-host-3090-2
+    kind: gpu_host
+    locator: gpu/hosts/remote_3090_2.yaml
+    sha256: d6c6cd300bc8eedf356387c2317120b55484f85933c58491e2ba3066fdc8c4a9
+  - resource_id: qwen3-vl-2b-local-47f9c0e0
+    kind: model_checkpoint
+    locator: gpu/checkpoints/qwen3_vl_2b_instruct_local.yaml
+    sha256: 746013252f7dcc9bf182b833c6f1cd47f210aaa649c511fb3830f548568fffcf

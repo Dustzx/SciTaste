@@ -1,0 +1,63 @@
+schema_version: "1.0"
+binding_set_id: scitaste-self-development-resources-v1
+project_id: scitaste-self-development
+catalog_id: scitaste-shared-compute-v2
+catalog_semantic_sha256: ac60485c17ddf2205aefbc6d422383a53ad9ff8e4e13b95b1b261e9f509f9abc
+bindings:
+  - binding_id: primary-api-deepseek
+    resource_id: deepseek-v41-flash
+    expected_kind: api_model
+    role: primary-api
+    priority: 1
+    status: reported
+    purpose: Candidate primary API for new matched-backbone or direct-agent pilot proposals after the comparison design is frozen.
+    required_for:
+      - api-end-to-end-pilot
+      - internal-paper-review
+  - binding_id: robustness-api-zhipu
+    resource_id: zhipu-glm53-flash
+    expected_kind: api_model
+    role: robustness-api
+    priority: 1
+    status: pending
+    purpose: Separate provider robustness slice; never a silent fallback or pooled with the DeepSeek estimate.
+    required_for:
+      - provider-robustness
+  - binding_id: historical-api-bailian
+    resource_id: bailian-qwen38-max
+    expected_kind: api_model
+    role: historical-api
+    priority: 1
+    status: blocked
+    purpose: Preserve prior Qwen3.8-Max run provenance while the account remains unavailable because of arrearage.
+    required_for:
+      - historical-replay
+  - binding_id: development-gpu-local
+    resource_id: gpu-host-local-3090
+    expected_kind: gpu_host
+    role: development-gpu
+    priority: 1
+    status: verified
+    purpose: One-card local implementation, loading, and bounded pilot preflight.
+    required_for:
+      - local-model-preflight
+  - binding_id: scaleout-gpu-remote
+    resource_id: gpu-host-3090-2
+    expected_kind: gpu_host
+    role: scaleout-gpu
+    priority: 1
+    status: reported
+    purpose: Eight-card scale-out host after exact storage, runtime, and checkpoint presence are reverified.
+    required_for:
+      - gpu-mechanism-pilot
+      - powered-gpu-formal
+  - binding_id: local-checkpoint-qwen3vl2b
+    resource_id: qwen3-vl-2b-local-47f9c0e0
+    expected_kind: model_checkpoint
+    role: gpu-checkpoint
+    priority: 1
+    status: verified
+    purpose: Current full-tree local Qwen3-VL-2B snapshot; new proposals must bind 47f9c0e0 rather than silently inheriting the older 8e95e5f6 hash.
+    required_for:
+      - local-model-preflight
+      - gpu-mechanism-pilot

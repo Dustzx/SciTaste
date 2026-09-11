@@ -1,0 +1,16 @@
+schema_version: "1.0"
+resource:
+  kind: gpu_host
+  resource_id: gpu-host-3090-2
+  host_alias: 3090-2
+  location: remote
+  access_profile: operator-managed-ssh
+  connection_alias: 3090-2
+  device_count: 8
+  device_name: NVIDIA GeForce RTX 3090
+  minimum_memory_mb_per_device: 24000
+  baseline_inventory_ref: docs/research/data/gpu_host_3090_2_inventory_v1.yaml
+  baseline_inventory_sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
+  baseline_observed_at: 2026-09-11T05:56:39Z
+  availability: reported
+  availability_reason: Eight GPUs were previously verified; the owner now reports about 200 GB free, pending a fresh authenticated probe.

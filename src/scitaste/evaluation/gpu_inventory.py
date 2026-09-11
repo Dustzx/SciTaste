@@ -85,7 +85,7 @@ class GpuHostInventory(BaseModel):
     host_alias: str = Field(pattern=_ID)
     hostname: str = Field(min_length=1, max_length=255)
     observed_at: datetime
-    observation_method: Literal["read-only-ssh"]
+    observation_method: Literal["read-only-ssh", "read-only-local"]
     devices: tuple[GpuInventoryDevice, ...] = Field(min_length=1, max_length=64)
     root_storage: GpuStorageInventory
     runtime: GpuRuntimeInventory
