@@ -63,12 +63,15 @@ integrity, blinded review, and owner approval remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
-The earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` identity was contradicted
-by the provider's official model catalog and pricing page. It remains preserved
-inside historical proposal bytes only. The current immutable v5 proposal uses
-`deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`, the official dated prices, and a
-new resource-corpus overlay; no result or launch authority is inherited from
-the superseded proposal.
+DeepSeek's official model catalog changed on 2026-09-11: callable ID
+`deepseek-flash` now names `DeepSeek-V4.1-Flash`, while legacy
+`deepseek-v4-flash` calls are explicitly compatibility-routed to V4.1. The
+current v5 proposal therefore remains an immutable V4-era no-run artifact and
+cannot authorize a V4.1 study. A new V4.1 proposal must carry the new identity,
+peak/off-peak pricing rule, resource overlay, authenticated served observation,
+and owner approval before any formal cell is run. The internal-review profile
+can be used independently because review feedback is advisory rather than an
+experiment result.
 
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without

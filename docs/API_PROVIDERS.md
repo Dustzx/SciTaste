@@ -1,6 +1,6 @@
 # API provider strategy
 
-Verified: 2026-09-05. Prices and model availability change; always re-check the
+Verified: 2026-09-11. Prices and model availability change; always re-check the
 linked official page before purchasing credits or fixing an experiment manifest.
 
 ## Recommended deployment
@@ -97,6 +97,14 @@ correctly rejected it as unknown-cost before writing or executing source. The
 candidate was also syntactically invalid. This is retained negative engineering
 evidence, not a reason to invent a zero price, silently repair code, or bypass
 admission.
+
+DeepSeek's official catalog changed again on 2026-09-11. The current callable
+ID is `deepseek-flash`, the displayed version is `DeepSeek-V4.1-Flash`, and the
+provider says legacy `deepseek-v4-flash` requests are routed to V4.1. New calls
+therefore use a new V4.1 profile and conservative peak-hour price ceiling; old
+V4 profiles, proposals, and responses remain immutable historical conditions.
+Every record keeps the requested identifier and provider-returned identifier
+separate.
 
 An existing local Qwen checkpoint can instead run without a server or API key:
 

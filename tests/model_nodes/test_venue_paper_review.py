@@ -167,6 +167,36 @@ def test_venue_paper_node_and_internal_report_keep_authority_separate() -> None:
 
     assert result.status is NodeResultStatus.ACCEPTED
     assert result.proposal is not None
+    assert result.request.prompt_version == "venue-paper-review-v2"
+    contract = result.request.input_payload["closed_world_contract"]
+    assert contract == {
+        "registered_claim_ids": ["claim-1"],
+        "registered_section_ids": ["experiments"],
+        "permitted_evidence_types": ["matched-baseline"],
+        "allowed_action_types": ["ADD_BASELINE"],
+        "reference_rule": (
+            "Use only listed identifiers. Use [] or null when no listed identifier applies."
+        ),
+        "action_rule": (
+            "Use only an allowed action and preserve the deterministic category/action map."
+        ),
+    }
+    definitions = result.request.output_schema["$defs"]
+    concern = definitions["ReviewConcernProposal"]
+    assert concern["properties"]["target_claim_ids"]["items"]["enum"] == ["claim-1"]
+    assert concern["properties"]["target_section"]["anyOf"][0]["enum"] == ["experiments"]
+    assert concern["properties"]["required_evidence_types"]["items"]["enum"] == [
+        "matched-baseline"
+    ]
+    assert definitions["MetaAction"]["enum"] == ["ADD_BASELINE"]
+    missing_baseline = next(
+        item
+        for item in concern["allOf"]
+        if item["if"]["properties"]["category"]["const"] == "missing_baseline"
+    )
+    assert missing_baseline["then"]["properties"]["proposed_action_type"]["const"] == (
+        "ADD_BASELINE"
+    )
     report = build_internal_model_review_report(
         packet,
         result.proposal,
@@ -197,6 +227,61 @@ def test_venue_paper_node_rejects_packet_or_claim_drift() -> None:
     assert result.proposal is None
     assert any("different venue review packet" in item for item in result.rejection_reasons)
     assert any("unknown claims" in item for item in result.rejection_reasons)
+
+
+def test_venue_paper_node_rejects_action_that_conflicts_with_concern_category() -> None:
+    packet = _packet()
+    proposal = _proposal(packet.packet_sha256)
+    proposal["concerns"][0]["proposed_action_type"] = "CLARIFY_EXISTING_TEXT"
+    policy = _policy().model_copy(
+        update={
+            "allowed_action_types": [
+                MetaAction.ADD_BASELINE,
+                MetaAction.CLARIFY_EXISTING_TEXT,
+            ]
+        }
+    )
+
+    result = VenuePaperReviewNode().run(
+        _input(packet),
+        context=_context(packet),
+        backend=_backend("category-action-drift", proposal),
+        policy=policy,
+        request_id="category-action-drift",
+    )
+
+    assert result.status is NodeResultStatus.REJECTED
+    assert any(
+        "action does not match its category" in item for item in result.rejection_reasons
+    )
+
+
+def test_venue_paper_schema_closes_empty_identifier_vocabularies() -> None:
+    packet = _packet()
+    node_input = _input(packet).model_copy(update={"permitted_evidence_types": ()})
+    context = _context(packet).model_copy(update={"claim_ids": [], "section_ids": []})
+    proposal = _proposal(packet.packet_sha256)
+    concern = proposal["concerns"][0]
+    concern["target_claim_ids"] = []
+    concern["target_section"] = None
+    concern["requires_new_evidence"] = False
+    concern["requires_new_experiment"] = False
+    concern["required_evidence_types"] = []
+
+    result = VenuePaperReviewNode().run(
+        node_input,
+        context=context,
+        backend=_backend("closed-empty-vocabularies", proposal),
+        policy=_policy(),
+        request_id="closed-empty-vocabularies",
+    )
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    definitions = result.request.output_schema["$defs"]
+    properties = definitions["ReviewConcernProposal"]["properties"]
+    assert properties["target_claim_ids"]["maxItems"] == 0
+    assert properties["target_section"]["anyOf"] == [{"type": "null"}]
+    assert properties["required_evidence_types"]["maxItems"] == 0
 
 
 def test_internal_report_builder_rejects_cross_packet_proposal() -> None:
@@ -260,7 +345,7 @@ def test_runtime_config_builder_binds_profile_packet_and_internal_authority() ->
     }
 
 
-def test_v4_review_profile_uses_official_callable_id_and_pricing() -> None:
+def test_historical_v4_review_profile_remains_replayable() -> None:
     profiles = load_model_node_profile_set(
         ROOT / "configs/model_nodes/runtime_profiles.deepseek_venue_review_v1.yaml"
     )
@@ -275,3 +360,21 @@ def test_v4_review_profile_uses_official_callable_id_and_pricing() -> None:
     assert backend.live_enabled is False
     assert backend.pricing.input_usd_per_million_tokens == 0.14
     assert backend.pricing.output_usd_per_million_tokens == 0.28
+
+
+def test_v41_review_profile_uses_current_official_callable_id_and_peak_price_ceiling() -> None:
+    profiles = load_model_node_profile_set(
+        ROOT / "configs/model_nodes/runtime_profiles.deepseek_v41_venue_review_v2.yaml"
+    )
+    profile = profiles.profiles["deepseek-v41flash-venue-review"]
+    backend = load_structured_openai_compatible_config(
+        ROOT / "configs/model_nodes/deepseek_v41flash.priced_20260911.example.yaml"
+    )
+
+    assert profile.model == "deepseek-flash"
+    assert profile.generation.max_output_tokens == 32_768
+    assert backend.model == "deepseek-flash"
+    assert backend.live_enabled is False
+    assert backend.pricing.input_usd_per_million_tokens == 0.3
+    assert backend.pricing.cached_input_usd_per_million_tokens == 0.006
+    assert backend.pricing.output_usd_per_million_tokens == 1.2

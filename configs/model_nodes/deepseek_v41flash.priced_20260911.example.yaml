@@ -1,4 +1,6 @@
 # Inert backend configuration for a project-owned internal paper review.
+# The rates are the conservative peak-hour ceilings published on 2026-09-11;
+# off-peak calls may cost less, but admission never assumes the discount.
 # Copy to an ignored runtime file, keep live_enabled=false until the exact paper
 # packet is approved, and pass both runtime live switches for the one call.
 provider: deepseek

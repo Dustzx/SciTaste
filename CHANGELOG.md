@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Whole-paper model review now sends an invocation-specific closed-world JSON
+  Schema for registered claim/section identifiers, permitted evidence types,
+  and allowed actions, and rejects concern categories whose proposed actions
+  conflict with deterministic routing. The current DeepSeek profile is again
+  `deepseek-flash` / `DeepSeek-V4.1-Flash` after the provider's 2026-09-11
+  catalog update; requested and returned model identities remain separately
+  recorded, while all earlier V4/V4.1 proposal and run bytes remain history.
+
 - A metadata-only SciTasteBench v2 source screen separates AAAR, ARIES,
   OpenReview comments, and MLR-Bench by evidence role, license scope, source
   revision, and remaining admission gates. A companion decision brief fixes the

@@ -316,13 +316,22 @@ call can establish adapter and schema behavior, but can never pass the cost gate
 or support an effectiveness claim.
 
 The exact decoded provider response body and its SHA-256 are retained together.
-The provider's returned model identity is retained verbatim when present, so a
-silent alias or fallback becomes a policy rejection. The adapter never executes
+The requested model remains in the fingerprinted request and the provider's
+returned model identity remains verbatim in the response, so the two cannot be
+silently collapsed. A returned alias or fallback is rejected unless a new
+runtime policy itself pins that returned identifier. The adapter never executes
 provider tool calls: supported function-call structures become
 `ToolCallProposal` values for later deterministic review, while unknown tool
 types and malformed arguments fail closed. Transport retries are bounded to the
 configured count and apply only to transport failures, HTTP 429, and HTTP 5xx;
 HTTP 4xx and malformed semantic responses are not retried.
+
+The whole-paper venue reviewer additionally specializes its output schema per
+invocation. Only the packet's registered claim and section IDs, the explicitly
+permitted evidence types, and the policy's allowed action types appear in that
+schema. Category/action mismatch is checked again after parsing. This is a
+generation aid plus deterministic admission boundary; it is not semantic repair
+of a rejected review.
 
 The committed
 `configs/model_nodes/zhipu_glm53_flash.example.yaml` pins the general prepaid

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC
+from copy import deepcopy
 from decimal import Decimal
 from typing import Generic, TypeVar, cast
 
@@ -397,7 +398,7 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
     """Review exact paper content without claiming expert or conference authority."""
 
     node_name = "venue-paper-review"
-    prompt_version = "venue-paper-review-v1"
+    prompt_version = "venue-paper-review-v2"
     system_instruction = (
         "Review the supplied anonymous paper against the four venue questions. Return a concise "
         "summary, concrete strengths and weaknesses, one accept/reject recommendation with one "
@@ -408,6 +409,53 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
     )
     input_model = VenuePaperReviewInput
     output_model = VenuePaperReviewProposal
+
+    def _build_request(
+        self,
+        input_data: VenuePaperReviewInput,
+        *,
+        context: NodeContext,
+        policy: NodePolicy,
+        request_id: str,
+        seed: int,
+        profile: ModelNodeProfile | None = None,
+    ) -> StructuredModelRequest:
+        request = super()._build_request(
+            input_data,
+            context=context,
+            policy=policy,
+            request_id=request_id,
+            seed=seed,
+            profile=profile,
+        )
+        allowed_actions = tuple(
+            sorted({item.value for item in policy.allowed_action_types})
+        )
+        closed_world_contract = {
+            "registered_claim_ids": list(context.claim_ids),
+            "registered_section_ids": list(context.section_ids),
+            "permitted_evidence_types": list(input_data.permitted_evidence_types),
+            "allowed_action_types": list(allowed_actions),
+            "reference_rule": (
+                "Use only listed identifiers. Use [] or null when no listed identifier applies."
+            ),
+            "action_rule": (
+                "Use only an allowed action and preserve the deterministic category/action map."
+            ),
+        }
+        input_payload = deepcopy(request.input_payload)
+        input_payload["closed_world_contract"] = closed_world_contract
+        output_schema = _closed_venue_review_schema(
+            request.output_schema,
+            claim_ids=tuple(context.claim_ids),
+            section_ids=tuple(context.section_ids),
+            evidence_types=tuple(input_data.permitted_evidence_types),
+            action_types=allowed_actions,
+        )
+        values = request.model_dump(mode="python", exclude={"fingerprint"})
+        values["input_payload"] = input_payload
+        values["output_schema"] = output_schema
+        return StructuredModelRequest.model_validate(values, strict=True)
 
     def _proposal_rejections(
         self,
@@ -427,6 +475,8 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
         known_claims = set(context.claim_ids)
         known_sections = set(context.section_ids)
         permitted_evidence = set(input_data.permitted_evidence_types)
+        from scitaste.review.routing import ReviewActionRouter
+
         for concern in proposal.concerns:
             if set(concern.target_claim_ids) - known_claims:
                 reasons.append(f"concern {concern.concern_id!r} references unknown claims")
@@ -436,10 +486,93 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
                 reasons.append(
                     f"concern {concern.concern_id!r} requests an unpermitted evidence type"
                 )
+            expected_action = ReviewActionRouter.ROUTES.get(concern.category.value)
+            if concern.proposed_action_type is not expected_action:
+                reasons.append(
+                    f"concern {concern.concern_id!r} action does not match its category"
+                )
         return reasons
 
     def _proposed_action_types(self, proposal: VenuePaperReviewProposal) -> list[MetaAction]:
         return [item.proposed_action_type for item in proposal.concerns]
+
+
+def _closed_venue_review_schema(
+    schema: dict[str, object],
+    *,
+    claim_ids: tuple[str, ...],
+    section_ids: tuple[str, ...],
+    evidence_types: tuple[str, ...],
+    action_types: tuple[str, ...],
+) -> dict[str, object]:
+    """Bind free-form review references to this invocation's exact vocabularies."""
+
+    closed = deepcopy(schema)
+    definitions = closed.get("$defs")
+    if not isinstance(definitions, dict):  # pragma: no cover - controlled Pydantic schema
+        raise ValueError("venue review output schema has no definitions")
+    concern = definitions.get("ReviewConcernProposal")
+    if not isinstance(concern, dict):  # pragma: no cover - controlled Pydantic schema
+        raise ValueError("venue review output schema has no concern definition")
+    properties = concern.get("properties")
+    if not isinstance(properties, dict):  # pragma: no cover - controlled Pydantic schema
+        raise ValueError("venue review concern schema has no properties")
+
+    _close_array_items(properties, "target_claim_ids", claim_ids)
+    _close_nullable_string(properties, "target_section", section_ids)
+    _close_array_items(properties, "required_evidence_types", evidence_types)
+    action_definition = definitions.get("MetaAction")
+    if not isinstance(action_definition, dict):  # pragma: no cover
+        raise ValueError("venue review output schema has no action definition")
+    action_definition["enum"] = list(action_types)
+
+    from scitaste.review.routing import ReviewActionRouter
+
+    concern["allOf"] = [
+        {
+            "if": {
+                "properties": {"category": {"const": category}},
+                "required": ["category"],
+            },
+            "then": {
+                "properties": {
+                    "proposed_action_type": {"const": action.value},
+                }
+            },
+        }
+        for category, action in sorted(ReviewActionRouter.ROUTES.items())
+        if action.value in action_types
+    ]
+    return closed
+
+
+def _close_array_items(
+    properties: dict[str, object],
+    field_name: str,
+    values: tuple[str, ...],
+) -> None:
+    field = properties[field_name]
+    if not isinstance(field, dict):  # pragma: no cover - controlled Pydantic schema
+        raise ValueError(f"venue review field {field_name!r} has an invalid schema")
+    if values:
+        field["items"] = {"enum": list(values), "type": "string"}
+    else:
+        field["maxItems"] = 0
+
+
+def _close_nullable_string(
+    properties: dict[str, object],
+    field_name: str,
+    values: tuple[str, ...],
+) -> None:
+    field = properties[field_name]
+    if not isinstance(field, dict):  # pragma: no cover - controlled Pydantic schema
+        raise ValueError(f"venue review field {field_name!r} has an invalid schema")
+    field["anyOf"] = (
+        [{"enum": list(values), "type": "string"}, {"type": "null"}]
+        if values
+        else [{"type": "null"}]
+    )
 
 
 class InterpretationThreatNode(ModelNode[InterpretationThreatInput, InterpretationThreatOutput]):
