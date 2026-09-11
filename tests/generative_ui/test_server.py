@@ -607,9 +607,7 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
     assert stale_rename.json()["error"]["code"] == "stale_workspace"
     assert unsafe_rename.status_code == 400
     assert unsafe_rename.json()["error"]["code"] == "invalid_request"
-    assert listed_after_rename.json()["workspaces"][0]["title"] == (
-        "HTTP conversation title"
-    )
+    assert listed_after_rename.json()["workspaces"][0]["title"] == ("HTTP conversation title")
     assert listed_after_rename.headers["etag"] != listed.headers["etag"]
     assert detail.status_code == 200
     assert [item["turn_id"] for item in detail.json()["turns"]] == [

@@ -285,9 +285,7 @@ class GenerativeUIApplication:
 
         parsed = _generation_request(project_id, request)
         if parsed.context_turn_ids:
-            raise ValueError(
-                "standalone generation cannot select project conversation turns"
-            )
+            raise ValueError("standalone generation cannot select project conversation turns")
         with self._request_lock:
             return self._generate_workspace(project_id, parsed, context=None)
 
@@ -315,9 +313,7 @@ class GenerativeUIApplication:
             self._generated.move_to_end(key)
             while len(self._generated) > _MAX_RETAINED_GENERATIONS:
                 self._generated.popitem(last=False)
-        return GeneratedWorkspaceDocument.model_validate(
-            output.document.model_dump(mode="json")
-        )
+        return GeneratedWorkspaceDocument.model_validate(output.document.model_dump(mode="json"))
 
     def current_generated_workspace(
         self,

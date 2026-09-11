@@ -64,6 +64,7 @@ class ProjectLifecycleAssessment(BaseModel):
     project_snapshot_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     current_paper_directory: str | None = None
     current_review_id: str | None = None
+    current_evaluation_result_id: str | None = None
     state: Literal[
         "discovery",
         "evidence",
@@ -77,8 +78,11 @@ class ProjectLifecycleAssessment(BaseModel):
     idea_to_paper_complete: bool
     internal_review_cycle_complete: bool
     independent_pre_submission_review_complete: bool
+    scientific_evidence_complete: bool
+    paper_scientific_evidence_bound: bool
+    top_venue_evidence_loop_complete: bool
     official_decision_authority: Literal[False] = False
-    scientific_effectiveness_established: Literal[False] = False
+    scientific_effectiveness_established: bool = False
     record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -98,6 +102,17 @@ class ProjectLifecycleAssessment(BaseModel):
         independent = idea_to_paper and by_id["independent_review"].state == "satisfied"
         if self.independent_pre_submission_review_complete != independent:
             raise ValueError("independent review verdict disagrees with lifecycle gates")
+        if self.paper_scientific_evidence_bound and not self.scientific_evidence_complete:
+            raise ValueError("a paper cannot bind incomplete scientific evidence")
+        expected_top_venue_loop = (
+            independent
+            and self.scientific_evidence_complete
+            and self.paper_scientific_evidence_bound
+        )
+        if self.top_venue_evidence_loop_complete != expected_top_venue_loop:
+            raise ValueError("top-venue evidence loop verdict disagrees with its proofs")
+        if self.scientific_effectiveness_established and not self.scientific_evidence_complete:
+            raise ValueError("scientific effectiveness requires complete evidence")
         expected = content_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
         if self.record_sha256 != expected:
             raise ValueError("project lifecycle assessment hash mismatch")
@@ -144,6 +159,12 @@ def assess_project_lifecycle(
     review_gate, response_gate, independent_gate, review_id, review_status = _review_gates(
         runtime, snapshot, paper_directory
     )
+    (
+        evaluation_result_id,
+        scientific_evidence_complete,
+        scientific_effectiveness_established,
+        paper_scientific_evidence_bound,
+    ) = _scientific_evidence_status(runtime, snapshot, paper_directory)
     gates = (
         _stage_gate(
             "idea",
@@ -190,14 +211,53 @@ def assess_project_lifecycle(
         project_snapshot_sha256=snapshot.snapshot_sha256,
         current_paper_directory=paper_directory,
         current_review_id=review_id,
+        current_evaluation_result_id=evaluation_result_id,
         state=state,
         gates=gates,
         idea_to_paper_complete=idea_to_paper,
         internal_review_cycle_complete=internal,
         independent_pre_submission_review_complete=independent,
+        scientific_evidence_complete=scientific_evidence_complete,
+        paper_scientific_evidence_bound=paper_scientific_evidence_bound,
+        top_venue_evidence_loop_complete=(
+            independent and scientific_evidence_complete and paper_scientific_evidence_bound
+        ),
         official_decision_authority=False,
-        scientific_effectiveness_established=False,
+        scientific_effectiveness_established=scientific_effectiveness_established,
     )
+
+
+def _scientific_evidence_status(
+    runtime: ProjectRuntime,
+    snapshot: ProjectSnapshot,
+    paper_directory: str | None,
+) -> tuple[str | None, bool, bool, bool]:
+    """Admit only the selected, fully reverified result and an exact paper binding."""
+
+    result_id = snapshot.manifest.current_evaluation_result
+    if result_id is None:
+        return None, False, False, False
+    try:
+        result = runtime.open_evaluation_result(snapshot.project_id, result_id)
+    except (OSError, ValueError):
+        return result_id, False, False, False
+    complete = result.scientific_evidence_complete and result.headline_eligible
+    effectiveness = complete and result.scientific_effectiveness_established
+    if not complete or paper_directory is None:
+        return result_id, complete, effectiveness, False
+    paper = next(
+        (item for item in snapshot.papers if item.directory_name == paper_directory),
+        None,
+    )
+    if paper is None:
+        return result_id, complete, effectiveness, False
+    extra = paper.manifest.model_extra or {}
+    bound = (
+        extra.get("evaluation_result_id") == result.result_id
+        and extra.get("evaluation_result_bundle_sha256") == result.bundle_sha256
+        and extra.get("evaluation_assessment_sha256") == result.assessment_sha256
+    )
+    return result_id, complete, effectiveness, bound
 
 
 def _verified_native_stages(

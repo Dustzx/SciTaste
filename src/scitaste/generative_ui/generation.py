@@ -340,9 +340,7 @@ class WorkspaceGenerationService:
             {
                 "request_fingerprint": parsed.fingerprint,
                 "conversation_context_sha256": (
-                    conversation_context.fingerprint
-                    if conversation_context is not None
-                    else None
+                    conversation_context.fingerprint if conversation_context is not None else None
                 ),
             }
         )
@@ -350,8 +348,7 @@ class WorkspaceGenerationService:
             materialized.surface.model_copy(
                 update={
                     "surface_id": (
-                        f"generated-{resolution.intent.goal.value}-"
-                        f"{generation_fingerprint[:16]}"
+                        f"generated-{resolution.intent.goal.value}-{generation_fingerprint[:16]}"
                     )
                 }
             ).model_dump(mode="json")
@@ -371,9 +368,7 @@ class WorkspaceGenerationService:
                 snapshot_sha256=resolution.snapshot_sha256,
                 context_turn_ids=parsed.context_turn_ids,
                 conversation_context_sha256=(
-                    conversation_context.fingerprint
-                    if conversation_context is not None
-                    else None
+                    conversation_context.fingerprint if conversation_context is not None else None
                 ),
                 intent=resolution.intent,
                 classification=classification,

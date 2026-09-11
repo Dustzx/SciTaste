@@ -150,9 +150,7 @@ def _payload_for(
             experiment_ids: list[str] = []
         elif proof is None:
             mode = (
-                "pending_experiment"
-                if concern.requirement == "experiment"
-                else "pending_evidence"
+                "pending_experiment" if concern.requirement == "experiment" else "pending_evidence"
             )
             targets = []
             evidence_ids = []

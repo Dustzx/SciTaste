@@ -84,6 +84,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "completed_stages": 0,
         "papers_registered": 0,
         "evaluations_registered": 0,
+        "evaluation_results_registered": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -137,6 +138,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "completed_stages": 0,
         "papers_registered": 0,
         "evaluations_registered": 0,
+        "evaluation_results_registered": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"

@@ -224,8 +224,7 @@ def _long_form_input_and_payload() -> tuple[EvidencePaperDraftInput, dict[str, o
     ]
     node_input = EvidencePaperDraftInput.model_validate(source)
     substantive = (
-        "The evidence-grounded system keeps scientific claims within the registered boundary. "
-        * 75
+        "The evidence-grounded system keeps scientific claims within the registered boundary. " * 75
     ).strip()
     payload = {
         "schema_version": "1.0",
@@ -390,9 +389,7 @@ def test_evidence_paper_draft_accepts_complete_reference_closed_manuscript() -> 
         "writing-taste",
     }
     markdown = render_evidence_paper_markdown(result.proposal, input_data=node_input)
-    assert markdown.startswith(
-        "## Title\nScientific Taste for Autonomous Research\n\n## Abstract"
-    )
+    assert markdown.startswith("## Title\nScientific Taste for Autonomous Research\n\n## Abstract")
     assert "# Results\n\nThe registered paired score was 0.81." in markdown
     assert "\\citep{prior2026}" in markdown
     assert "claim-main" not in markdown
@@ -469,9 +466,7 @@ def test_evidence_paper_draft_rejects_omitted_limitations_and_reference_drift() 
     )
 
     assert result.status is NodeResultStatus.REJECTED
-    assert "paper proposal omitted or invented a material limitation" in (
-        result.rejection_reasons
-    )
+    assert "paper proposal omitted or invented a material limitation" in (result.rejection_reasons)
     assert "paper proposal does not state every material limitation explicitly" in (
         result.rejection_reasons
     )
@@ -575,15 +570,13 @@ def test_evidence_paper_draft_runs_through_registered_facade_extension(
         name=profile.provider,
         model=profile.model,
         replies={
-            "paper-draft-facade": ScriptedStructuredReply(
-                output_payload=_payload(node_input)
-            )
+            "paper-draft-facade": ScriptedStructuredReply(output_payload=_payload(node_input))
         },
     )
 
-    result = ModelNodeFacade(
-        ModelNodeRuntime(project, node_types=writing_node_types())
-    ).execute(request, backend=backend)
+    result = ModelNodeFacade(ModelNodeRuntime(project, node_types=writing_node_types())).execute(
+        request, backend=backend
+    )
 
     assert result.result is not None
     assert result.result.status is NodeResultStatus.ACCEPTED
@@ -709,9 +702,9 @@ def test_accepted_paper_draft_builds_registered_tex_pdf_and_trace(
             "paper-draft-build": ScriptedStructuredReply(output_payload=payload),
         },
     )
-    result = ModelNodeFacade(
-        ModelNodeRuntime(project, node_types=writing_node_types())
-    ).execute(request, backend=backend)
+    result = ModelNodeFacade(ModelNodeRuntime(project, node_types=writing_node_types())).execute(
+        request, backend=backend
+    )
     assert result.result is not None
     assert result.result.status is NodeResultStatus.ACCEPTED
 

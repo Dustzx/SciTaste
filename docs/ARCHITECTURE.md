@@ -1433,3 +1433,31 @@ derives seven stable decision domains without deleting the original
 diagnostics. The projection is deterministic and self-hashed. Unrecognized
 future codes are assigned to the temporal-integrity domain and disclosed, so a
 new validator cannot silently disappear behind an outdated interface.
+
+### ADR-047: Scientific results cross a separate project-owned admission gate
+
+Status: accepted for API/GPU result registration; no formal run is implied.
+
+Launcher completion, scientific evidence completeness, headline-analysis
+eligibility, and effectiveness are different facts. SciTaste therefore does not
+promote a run directory or an aggregate score directly into paper evidence. A
+versioned result set binds every cell to the exact proposal, expanded plan,
+resource corpus, execution telemetry, real or synthetic evidence class, and
+content-addressed artifacts. External condition-blinded reviews and
+preregistered primary contrasts are explicit typed records rather than prose.
+
+`ProjectRuntime` copies an already existing result set into an immutable
+`evaluation-results/<result-id>/` bundle only after deterministic inspection.
+It replays that inspection whenever the result is opened, selected, projected
+through Generation as Content, or queried by the lifecycle. Selecting a result
+also selects its owning evaluation; selecting an incompatible evaluation clears
+the current result instead of leaving a misleading cross-protocol alias.
+
+A formal matched-backbone headline requires an authorized ready proposal, real
+successful cells, budget compliance, valid external attested blind reviews, one
+SciTaste condition, at least two independent method comparators, and every
+required preregistered contrast. Pilot, synthetic, internal-review, incomplete,
+or local-small-model robustness evidence cannot pass that gate. Even a valid
+formal project result affects a paper only when a newly materialized paper
+manifest binds the exact result and assessment hashes; independent review must
+then close against that paper before the top-venue evidence loop is complete.

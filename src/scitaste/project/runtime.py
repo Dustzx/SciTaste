@@ -17,6 +17,8 @@ from scitaste.project.models import (
     PaperManifest,
     ProjectEvaluation,
     ProjectEvaluationBundle,
+    ProjectEvaluationResult,
+    ProjectEvaluationResultBundle,
     ProjectManifest,
     ProjectPaperEntry,
     ProjectReview,
@@ -29,6 +31,7 @@ from scitaste.project.models import (
 )
 
 _MAX_EVALUATION_ARTIFACT_BYTES = 16 * 1024 * 1024
+_MAX_EVALUATION_RESULT_RECORD_BYTES = 64 * 1024 * 1024
 
 
 class ProjectRevisionConflictError(ValueError):
@@ -58,7 +61,14 @@ class ProjectRuntime:
                 raise FileExistsError(target)
             temporary = Path(tempfile.mkdtemp(prefix=".project-", dir=self.projects_root))
             try:
-                for name in ("runs", "stages", "papers", "reviews", "evaluations"):
+                for name in (
+                    "runs",
+                    "stages",
+                    "papers",
+                    "reviews",
+                    "evaluations",
+                    "evaluation-results",
+                ):
                     (temporary / name).mkdir()
                 _atomic_json(temporary / "PROJECT.json", manifest.model_dump(mode="json"))
                 _atomic_text(
@@ -93,7 +103,14 @@ class ProjectRuntime:
     ) -> ProjectSnapshot:
         """Atomically update project metadata under an optimistic revision guard."""
 
-        if {"project_id", "revision", "runs", "reviews", "evaluations"} & changes.keys():
+        if {
+            "project_id",
+            "revision",
+            "runs",
+            "reviews",
+            "evaluations",
+            "evaluation_results",
+        } & changes.keys():
             raise ValueError(
                 "project identity, revision, runs, reviews, and evaluations use dedicated "
                 "operations"
@@ -103,10 +120,11 @@ class ProjectRuntime:
             "current_paper",
             "current_review",
             "current_evaluation",
+            "current_evaluation_result",
         } & changes.keys():
             raise ValueError(
-                "use select_run, select_paper, select_review, or select_evaluation to update "
-                "current aliases"
+                "use select_run, select_paper, select_review, select_evaluation, or "
+                "select_evaluation_result to update current aliases"
             )
         project = self._project_path(project_id)
         with _locked(project / ".project.lock"):
@@ -508,10 +526,28 @@ class ProjectRuntime:
             current_alias = project / "evaluations" / "current"
             _require_replaceable_symlink(current_alias)
             _replace_symlink(current_alias, evaluation_id)
+            selected_result = next(
+                (
+                    item
+                    for item in manifest.evaluation_results
+                    if item.result_id == manifest.current_evaluation_result
+                ),
+                None,
+            )
+            keep_result = bool(selected_result and selected_result.evaluation_id == evaluation_id)
+            if not keep_result:
+                result_alias = project / "evaluation-results" / "current"
+                _require_replaceable_symlink(result_alias)
+                result_alias.unlink(missing_ok=True)
             manifest = self._replace_manifest(
                 project,
                 expected_revision=expected_revision,
-                changes={"current_evaluation": evaluation_id},
+                changes={
+                    "current_evaluation": evaluation_id,
+                    "current_evaluation_result": (
+                        manifest.current_evaluation_result if keep_result else None
+                    ),
+                },
             )
         return self._snapshot(project, manifest)
 
@@ -542,6 +578,139 @@ class ProjectRuntime:
             _require_evaluation_entry_matches_bundle(entry, bundle)
             _verify_evaluation_bundle(record_path.parent, bundle)
         return bundle
+
+    def publish_evaluation_result(
+        self,
+        project_id: str,
+        bundle: ProjectEvaluationResultBundle,
+        *,
+        artifact_payloads: dict[str, bytes],
+        expected_revision: int,
+    ) -> ProjectSnapshot:
+        """Atomically publish one verified result without mutating its proposal."""
+
+        if bundle.project_id != project_id:
+            raise ValueError("evaluation result project_id must match the owning project")
+        expected_locators = {item.locator for item in bundle.files.values()}
+        if set(artifact_payloads) != expected_locators:
+            raise ValueError("evaluation-result payloads must exactly cover bound files")
+        for label, binding in bundle.files.items():
+            payload = artifact_payloads[binding.locator]
+            if not payload or len(payload) > _MAX_EVALUATION_RESULT_RECORD_BYTES:
+                raise ValueError(f"evaluation-result file {label!r} has an invalid size")
+            if len(payload) != binding.size_bytes:
+                raise ValueError(f"evaluation-result file {label!r} size mismatch")
+            if hashlib.sha256(payload).hexdigest() != binding.sha256:
+                raise ValueError(f"evaluation-result file {label!r} hash mismatch")
+
+        project = self._project_path(project_id)
+        results_root = project / "evaluation-results"
+        result_dir = results_root / bundle.result_id
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            evaluation = _verified_evaluation_bundle(project, manifest, bundle.evaluation_id)
+            if evaluation.proposal_sha256 != bundle.proposal_sha256:
+                raise ValueError("evaluation result binds a different proposal")
+            if bundle.result_id in {
+                item.result_id for item in manifest.evaluation_results
+            } or _lexists(result_dir):
+                raise FileExistsError(result_dir)
+            _verify_evaluation_result_evidence(project, bundle)
+            results_root.mkdir(parents=True, exist_ok=True)
+            temporary = Path(tempfile.mkdtemp(prefix=".evaluation-result-", dir=results_root))
+            published = False
+            try:
+                for locator, payload in artifact_payloads.items():
+                    _atomic_bytes(temporary / PurePosixPath(locator), payload)
+                record_bytes = _json_bytes(bundle.model_dump(mode="json"))
+                _atomic_bytes(temporary / "RESULT.json", record_bytes)
+                _verify_evaluation_result_bundle(project, temporary, bundle, evaluation)
+                os.replace(temporary, result_dir)
+                published = True
+                entry = _evaluation_result_entry(bundle, record_bytes)
+                manifest = self._replace_manifest(
+                    project,
+                    expected_revision=expected_revision,
+                    changes={"evaluation_results": [*manifest.evaluation_results, entry]},
+                )
+            except BaseException:
+                shutil.rmtree(result_dir if published else temporary, ignore_errors=True)
+                raise
+        return self._snapshot(project, manifest)
+
+    def open_evaluation_result(
+        self,
+        project_id: str,
+        result_id: str,
+    ) -> ProjectEvaluationResultBundle:
+        """Open one result only after revalidating proposal, records, and evidence."""
+
+        validate_entry_id(result_id, field_name="result_id")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            entry = next(
+                (item for item in manifest.evaluation_results if item.result_id == result_id),
+                None,
+            )
+            if entry is None:
+                raise ValueError(f"unknown project evaluation result {result_id!r}")
+            bundle = _verified_evaluation_result_record(project, entry)
+            evaluation = _verified_evaluation_bundle(project, manifest, bundle.evaluation_id)
+            _verify_evaluation_result_bundle(
+                project,
+                (project / entry.record_locator).parent,
+                bundle,
+                evaluation,
+            )
+            _require_evaluation_result_entry_matches_bundle(entry, bundle)
+        return bundle
+
+    def select_evaluation_result(
+        self,
+        project_id: str,
+        result_id: str,
+        *,
+        expected_revision: int,
+    ) -> ProjectSnapshot:
+        """Select one verified result for project-home and lifecycle projection."""
+
+        validate_entry_id(result_id, field_name="result_id")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            self._require_revision(manifest, expected_revision)
+            entry = next(
+                (item for item in manifest.evaluation_results if item.result_id == result_id),
+                None,
+            )
+            if entry is None:
+                raise ValueError(f"unknown project evaluation result {result_id!r}")
+            bundle = _verified_evaluation_result_record(project, entry)
+            evaluation = _verified_evaluation_bundle(project, manifest, bundle.evaluation_id)
+            _verify_evaluation_result_bundle(
+                project,
+                (project / entry.record_locator).parent,
+                bundle,
+                evaluation,
+            )
+            _require_evaluation_result_entry_matches_bundle(entry, bundle)
+            evaluation_alias = project / "evaluations" / "current"
+            current_alias = project / "evaluation-results" / "current"
+            _require_replaceable_symlink(evaluation_alias)
+            _require_replaceable_symlink(current_alias)
+            _replace_symlink(evaluation_alias, bundle.evaluation_id)
+            _replace_symlink(current_alias, result_id)
+            manifest = self._replace_manifest(
+                project,
+                expected_revision=expected_revision,
+                changes={
+                    "current_evaluation": bundle.evaluation_id,
+                    "current_evaluation_result": result_id,
+                },
+            )
+        return self._snapshot(project, manifest)
 
     def _project_path(self, project_id: str) -> Path:
         validate_project_id(project_id)
@@ -633,6 +802,18 @@ class ProjectRuntime:
                     f"registered evaluation is missing or invalid: {evaluation.evaluation_id}"
                 )
 
+        evaluation_result_locators: dict[str, str] = {}
+        for result in manifest.evaluation_results:
+            canonical = f"projects/{manifest.project_id}/{result.record_locator}"
+            evaluation_result_locators[result.result_id] = canonical
+            try:
+                bundle = _verified_evaluation_result_record(project, result)
+                _require_evaluation_result_entry_matches_bundle(result, bundle)
+            except (OSError, ValueError):
+                warnings.append(
+                    f"registered evaluation result is missing or invalid: {result.result_id}"
+                )
+
         papers: list[ProjectPaperEntry] = []
         papers_root = project / "papers"
         if papers_root.is_dir():
@@ -702,6 +883,20 @@ class ProjectRuntime:
                 current_evaluation_locator = (
                     f"projects/{manifest.project_id}/evaluations/{manifest.current_evaluation}"
                 )
+        current_evaluation_result_locator = None
+        if manifest.current_evaluation_result is not None:
+            result_link = project / "evaluation-results" / "current"
+            if manifest.current_evaluation_result not in evaluation_result_locators:
+                warnings.append(
+                    f"current evaluation result is missing: {manifest.current_evaluation_result}"
+                )
+            elif not _lexists(result_link):
+                warnings.append("current_evaluation_result has no evaluation-results/current alias")
+            else:
+                current_evaluation_result_locator = (
+                    f"projects/{manifest.project_id}/evaluation-results/"
+                    f"{manifest.current_evaluation_result}"
+                )
 
         manifest_path = project / "PROJECT.json"
         manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
@@ -711,12 +906,14 @@ class ProjectRuntime:
             "run_locators": run_locators,
             "review_locators": review_locators,
             "evaluation_locators": evaluation_locators,
+            "evaluation_result_locators": evaluation_result_locators,
             "papers": [item.model_dump(mode="json") for item in papers],
             "current_run_locator": current_run_locator,
             "current_stage_locator": current_stage_locator,
             "current_paper_locator": current_paper_locator,
             "current_review_locator": current_review_locator,
             "current_evaluation_locator": current_evaluation_locator,
+            "current_evaluation_result_locator": current_evaluation_result_locator,
             "warnings": warnings,
         }
         return ProjectSnapshot(
@@ -729,12 +926,14 @@ class ProjectRuntime:
             run_locators=run_locators,
             review_locators=review_locators,
             evaluation_locators=evaluation_locators,
+            evaluation_result_locators=evaluation_result_locators,
             papers=papers,
             current_run_locator=current_run_locator,
             current_stage_locator=current_stage_locator,
             current_paper_locator=current_paper_locator,
             current_review_locator=current_review_locator,
             current_evaluation_locator=current_evaluation_locator,
+            current_evaluation_result_locator=current_evaluation_result_locator,
             warnings=warnings,
         )
 
@@ -814,6 +1013,203 @@ def _require_evaluation_entry_matches_bundle(
         or bundle.no_execution_performed != entry.no_execution_performed
     ):
         raise ValueError("registered evaluation summary does not match its bundle")
+
+
+def _verified_evaluation_bundle(
+    project: Path,
+    manifest: ProjectManifest,
+    evaluation_id: str,
+) -> ProjectEvaluationBundle:
+    entry = next(
+        (item for item in manifest.evaluations if item.evaluation_id == evaluation_id),
+        None,
+    )
+    if entry is None:
+        raise ValueError(f"unknown project evaluation {evaluation_id!r}")
+    record_path = _contained_project_path(project, entry.record_locator)
+    raw = record_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != entry.record_sha256:
+        raise ValueError("registered evaluation record has drifted")
+    bundle = ProjectEvaluationBundle.model_validate_json(raw)
+    if bundle.project_id != manifest.project_id:
+        raise ValueError("registered evaluation belongs to another project")
+    _require_evaluation_entry_matches_bundle(entry, bundle)
+    _verify_evaluation_bundle(record_path.parent, bundle)
+    return bundle
+
+
+def _evaluation_result_entry(
+    bundle: ProjectEvaluationResultBundle,
+    record_bytes: bytes,
+) -> ProjectEvaluationResult:
+    return ProjectEvaluationResult(
+        result_id=bundle.result_id,
+        evaluation_id=bundle.evaluation_id,
+        status=bundle.status,
+        planned_cells=bundle.planned_cells,
+        verified_records=bundle.verified_records,
+        succeeded_cells=bundle.succeeded_cells,
+        failed_cells=bundle.failed_cells,
+        missing_cells=bundle.missing_cells,
+        invalid_cells=bundle.invalid_cells,
+        scientific_evidence_complete=bundle.scientific_evidence_complete,
+        headline_eligible=bundle.headline_eligible,
+        scientific_effectiveness_established=(bundle.scientific_effectiveness_established),
+        record_locator=f"evaluation-results/{bundle.result_id}/RESULT.json",
+        record_sha256=hashlib.sha256(record_bytes).hexdigest(),
+    )
+
+
+def _verified_evaluation_result_record(
+    project: Path,
+    entry: ProjectEvaluationResult,
+) -> ProjectEvaluationResultBundle:
+    record_path = _contained_project_path(project, entry.record_locator)
+    if record_path.stat().st_size > _MAX_EVALUATION_RESULT_RECORD_BYTES:
+        raise ValueError("registered evaluation-result record exceeds its size limit")
+    raw = record_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != entry.record_sha256:
+        raise ValueError("registered evaluation-result record has drifted")
+    bundle = ProjectEvaluationResultBundle.model_validate_json(raw)
+    _require_evaluation_result_entry_matches_bundle(entry, bundle)
+    return bundle
+
+
+def _verify_evaluation_result_bundle(
+    project: Path,
+    directory: Path,
+    bundle: ProjectEvaluationResultBundle,
+    evaluation: ProjectEvaluationBundle,
+) -> None:
+    from scitaste.evaluation.cell_plan import load_evaluation_cell_plan
+    from scitaste.evaluation.prelaunch import load_prelaunch_manifest
+    from scitaste.evaluation.results import (
+        EvaluationOutcomeAssessment,
+        EvaluationResultSet,
+        inspect_evaluation_results,
+    )
+
+    for label, binding in bundle.files.items():
+        artifact = _contained_path(directory, binding.locator)
+        if artifact.is_symlink() or not artifact.is_file():
+            raise ValueError(f"evaluation-result file {label!r} must be regular")
+        raw = artifact.read_bytes()
+        if len(raw) != binding.size_bytes:
+            raise ValueError(f"evaluation-result file {label!r} size mismatch")
+        if hashlib.sha256(raw).hexdigest() != binding.sha256:
+            raise ValueError(f"evaluation-result file {label!r} hash mismatch")
+    _verify_evaluation_result_evidence(project, bundle)
+
+    evaluation_dir = project / "evaluations" / evaluation.evaluation_id
+    manifest_path = evaluation_dir / evaluation.files["prelaunch_manifest"].locator
+    cell_plan_path = evaluation_dir / evaluation.files["cell_plan"].locator
+    manifest = load_prelaunch_manifest(manifest_path).manifest
+    plan = load_evaluation_cell_plan(cell_plan_path)
+    result_path = directory / bundle.files["result_set"].locator
+    assessment_path = directory / bundle.files["assessment"].locator
+    results = EvaluationResultSet.model_validate_json(result_path.read_bytes())
+    recorded = EvaluationOutcomeAssessment.model_validate_json(assessment_path.read_bytes())
+    observed = inspect_evaluation_results(
+        manifest,
+        plan,
+        results,
+        project_root=project,
+        project_id=bundle.project_id,
+        evaluation_id=bundle.evaluation_id,
+        execution_authorized=evaluation.execution_authorized,
+    )
+    if recorded != observed:
+        raise ValueError("evaluation-result assessment differs from current verification")
+    expected = (
+        evaluation.proposal_sha256,
+        plan.plan_sha256,
+        results.result_set_sha256,
+        observed.assessment_sha256,
+        observed.status,
+        observed.planned_cells,
+        observed.verified_records,
+        observed.succeeded_cells,
+        observed.failed_cells,
+        observed.missing_cells,
+        observed.invalid_cells,
+        observed.valid_external_reviews,
+        observed.scientific_evidence_complete,
+        observed.headline_eligible,
+        observed.scientific_effectiveness_established,
+        observed.blocker_codes,
+    )
+    actual = (
+        bundle.proposal_sha256,
+        bundle.plan_sha256,
+        bundle.result_set_sha256,
+        bundle.assessment_sha256,
+        bundle.status,
+        bundle.planned_cells,
+        bundle.verified_records,
+        bundle.succeeded_cells,
+        bundle.failed_cells,
+        bundle.missing_cells,
+        bundle.invalid_cells,
+        bundle.valid_external_reviews,
+        bundle.scientific_evidence_complete,
+        bundle.headline_eligible,
+        bundle.scientific_effectiveness_established,
+        bundle.blocker_codes,
+    )
+    if actual != expected:
+        raise ValueError("evaluation-result bundle summary differs from verified evidence")
+
+
+def _verify_evaluation_result_evidence(
+    project: Path,
+    bundle: ProjectEvaluationResultBundle,
+) -> None:
+    for binding in bundle.evidence:
+        path = _contained_project_path(project, binding.locator)
+        if path.stat().st_size != binding.size_bytes:
+            raise ValueError(f"evaluation-result evidence size mismatch: {binding.locator}")
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != binding.sha256:
+            raise ValueError(f"evaluation-result evidence hash mismatch: {binding.locator}")
+
+
+def _require_evaluation_result_entry_matches_bundle(
+    entry: ProjectEvaluationResult,
+    bundle: ProjectEvaluationResultBundle,
+) -> None:
+    expected = (
+        bundle.result_id,
+        bundle.evaluation_id,
+        bundle.status,
+        bundle.planned_cells,
+        bundle.verified_records,
+        bundle.succeeded_cells,
+        bundle.failed_cells,
+        bundle.missing_cells,
+        bundle.invalid_cells,
+        bundle.scientific_evidence_complete,
+        bundle.headline_eligible,
+        bundle.scientific_effectiveness_established,
+    )
+    actual = (
+        entry.result_id,
+        entry.evaluation_id,
+        entry.status,
+        entry.planned_cells,
+        entry.verified_records,
+        entry.succeeded_cells,
+        entry.failed_cells,
+        entry.missing_cells,
+        entry.invalid_cells,
+        entry.scientific_evidence_complete,
+        entry.headline_eligible,
+        entry.scientific_effectiveness_established,
+    )
+    if actual != expected:
+        raise ValueError("registered evaluation-result summary does not match its bundle")
 
 
 def _lexists(path: Path) -> bool:

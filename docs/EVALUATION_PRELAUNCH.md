@@ -132,6 +132,36 @@ approval. `diagnostic_blocker_count` remains the number of exact unique codes;
 `decision_blocker_count` is the number of unresolved decision domains. Unknown
 diagnostic codes fail closed into the integrity domain.
 
+## Result admission after approved execution
+
+Execution output does not become paper evidence merely because a launcher
+finished. A runner writes a self-hashed `EvaluationResultSet` beneath the owning
+project. It records exact cell/plan/resource identities, API or GPU telemetry,
+real-versus-synthetic evidence class, hashed output artifacts, condition-blinded
+review attestations, and primary analysis contrasts. Register it without
+performing another model, provider, or GPU call:
+
+```bash
+.venv/bin/scitaste project evaluation register-result \
+  --project-id scitaste-self-development \
+  --evaluation-id <approved-evaluation-id> \
+  --result-id <immutable-result-id> \
+  --result-set outputs/projects/scitaste-self-development/runs/<run>/RESULT_SET.json \
+  --expected-revision <revision> --select --outputs-root outputs --dry-run
+
+.venv/bin/scitaste project evaluation result-status \
+  --project-id scitaste-self-development --outputs-root outputs
+```
+
+The dry run fully verifies existing bytes but creates no execution. Result
+selection also selects the proposal it belongs to; selecting another proposal
+clears an incompatible result selection. For a formal headline result, every
+matched-backbone cell must be a budget-compliant real success, every required
+blind review must be external and attested, and the preregistered primary
+contrast against at least two independent method comparators must verify. A
+pilot, synthetic run, internal review, missing cell, drifted artifact, or GPU
+small-model robustness lane cannot establish the headline claim.
+
 The critic review is explicitly advisory: its schema fixes
 `authorizes_execution=false`. `ready_for_author_review` becomes true only when
 all five critic domains and the resource gate have no blockers. Even then, only

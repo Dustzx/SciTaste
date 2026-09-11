@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- API and GPU evaluations now share a project-owned result-admission path.
+  Cell records bind the exact proposal, plan, resource, telemetry, outcome, and
+  artifact bytes; formal headline evidence additionally requires real matched
+  cells, condition-blinded external review, and every preregistered SciTaste
+  contrast against at least two independent methods. Primary conclusions are
+  derived from their frozen interval rule. Complete small-model GPU robustness
+  results remain explicitly ineligible for a headline effectiveness claim.
+  Registered result bundles appear on the project home and feed separate
+  lifecycle facts for scientific-evidence completeness, paper binding, and the
+  final pre-submission evidence/review loop.
+
 - Experiment proposal diagnostics now have a deterministic seven-gate decision
   map for task scope, real comparator adapters, statistical design, temporal
   integrity, independent review, runtime resources, and exact-hash owner

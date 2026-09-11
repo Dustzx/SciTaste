@@ -39,6 +39,14 @@ blocker. Exact no-run proposal bundles can now be registered under the owning
 project and inspected on its Generation-as-Content home, but registration and
 selection confer no execution authority.
 
+The post-execution software path is also implemented: existing API or GPU cell
+outputs can be admitted as project-owned immutable result bundles and shown
+separately from proposals on the project home. Admission rechecks plan/resource
+identity, budgets, artifacts, evidence class, blind reviews, and preregistered
+contrasts. No formal SciTaste result has been produced or registered yet, and a
+paper becomes top-venue evidence-complete only after a new paper revision binds
+the exact selected result and an independent review closes against that paper.
+
 The homepage now compresses repeated proposal diagnostics into seven stable
 decision gates while retaining the exact codes underneath. For the current
 DeepSeek prepilot, the API identity, dated pricing, and declared runtime budget

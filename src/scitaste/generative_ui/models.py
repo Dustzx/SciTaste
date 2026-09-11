@@ -618,6 +618,7 @@ class ProjectProgressCounts(BaseModel):
     completed_stages: int = Field(ge=0)
     papers_registered: int = Field(ge=0)
     evaluations_registered: int = Field(ge=0)
+    evaluation_results_registered: int = Field(ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -812,6 +813,43 @@ class ProjectProgressEvaluationItem(BaseModel):
         return self
 
 
+class ProjectProgressEvaluationResultItem(BaseModel):
+    """One reverified project result, separate from its immutable proposal."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    result_ref_id: SafeIdentifier
+    result_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    evaluation_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    status: Literal["incomplete", "complete"]
+    planned_cells: int = Field(ge=0)
+    verified_records: int = Field(ge=0)
+    succeeded_cells: int = Field(ge=0)
+    failed_cells: int = Field(ge=0)
+    missing_cells: int = Field(ge=0)
+    invalid_cells: int = Field(ge=0)
+    valid_external_reviews: int = Field(ge=0)
+    scientific_evidence_complete: bool
+    headline_eligible: bool
+    scientific_effectiveness_established: bool
+    selected: bool
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def result_summary_is_closed(self) -> ProjectProgressEvaluationResultItem:
+        if self.verified_records + self.missing_cells + self.invalid_cells != self.planned_cells:
+            raise ValueError("project evaluation-result cells do not close")
+        if self.succeeded_cells + self.failed_cells != self.verified_records:
+            raise ValueError("project evaluation-result verified records do not close")
+        if self.headline_eligible != self.scientific_evidence_complete:
+            raise ValueError("project evaluation-result headline state is inconsistent")
+        if self.scientific_effectiveness_established and not self.headline_eligible:
+            raise ValueError("project result effectiveness requires headline evidence")
+        if self.result_ref_id not in self.support_ref_ids:
+            raise ValueError("project evaluation result must cite its result record")
+        return self
+
+
 class ProjectProgressMilestoneItem(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
@@ -934,11 +972,17 @@ class ProjectLifecycleSummaryData(BaseModel):
     ]
     current_paper_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     current_review_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    current_evaluation_result_id: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    )
     idea_to_paper_complete: bool
     internal_review_cycle_complete: bool
     independent_pre_submission_review_complete: bool
+    scientific_evidence_complete: bool
+    paper_scientific_evidence_bound: bool
+    top_venue_evidence_loop_complete: bool
     official_decision_authority: Literal[False] = False
-    scientific_effectiveness_established: Literal[False] = False
+    scientific_effectiveness_established: bool = False
     gates: tuple[ProjectLifecycleGateItem, ...] = Field(min_length=8, max_length=8)
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
 
@@ -959,6 +1003,17 @@ class ProjectLifecycleSummaryData(BaseModel):
         cited = {ref for item in self.gates for ref in item.support_ref_ids}
         if cited - set(self.support_ref_ids):
             raise ValueError("project lifecycle gate cites evidence outside its support set")
+        expected_loop = (
+            self.independent_pre_submission_review_complete
+            and self.scientific_evidence_complete
+            and self.paper_scientific_evidence_bound
+        )
+        if self.top_venue_evidence_loop_complete != expected_loop:
+            raise ValueError("project top-venue loop does not match its evidence states")
+        if self.paper_scientific_evidence_bound and not self.scientific_evidence_complete:
+            raise ValueError("project paper cannot bind incomplete scientific evidence")
+        if self.scientific_effectiveness_established and not self.scientific_evidence_complete:
+            raise ValueError("project effectiveness requires complete scientific evidence")
         return self
 
 
@@ -1003,6 +1058,7 @@ class ProjectProgressBoardData(BaseModel):
     stages: tuple[ProjectProgressStageItem, ...] = ()
     papers: tuple[ProjectProgressPaperItem, ...] = ()
     evaluations: tuple[ProjectProgressEvaluationItem, ...] = ()
+    evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -1055,6 +1111,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.stages,
             *self.papers,
             *self.evaluations,
+            *self.evaluation_results,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,
@@ -1502,6 +1559,7 @@ _DATA_REF_EVIDENCE_KINDS: dict[str, frozenset[EvidenceKind]] = {
     "artifact_ref_id": frozenset({EvidenceKind.ARTIFACT}),
     "paper_ref_id": frozenset({EvidenceKind.PAPER}),
     "evaluation_ref_id": frozenset({EvidenceKind.EVALUATION}),
+    "result_ref_id": frozenset({EvidenceKind.EVALUATION_RESULT}),
     "audit_ref_id": frozenset({EvidenceKind.AUDIT_RECORD}),
     "evidence_ref_ids": frozenset({EvidenceKind.EVIDENCE_RECORD}),
 }

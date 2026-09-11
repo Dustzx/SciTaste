@@ -82,6 +82,8 @@ _INPUT_TYPES = {
     "structured-repair": StructuredRepairInput,
     "venue-paper-review": VenuePaperReviewInput,
 }
+
+
 class ModelNodeFacadeRequest(FacadeModel):
     """Complete immutable request passed from a deterministic workflow controller."""
 

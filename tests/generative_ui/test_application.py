@@ -697,9 +697,7 @@ def test_research_workspace_rejects_unregistered_or_reordered_context_turns(
         app.append_research_workspace_turn(
             "app-project",
             created.workspace.workspace_id,
-            base.model_copy(
-                update={"context_turn_ids": ("turn-0002", "turn-0001")}
-            ),
+            base.model_copy(update={"context_turn_ids": ("turn-0002", "turn-0001")}),
         )
     with pytest.raises(ValueError, match="ordered selection"):
         app.append_research_workspace_turn(

@@ -118,6 +118,16 @@ decision, affected-identity count, exact diagnostic count, and content hash;
 collapsed evidence still retains every original code. This is presentation
 taste over verified state, not a model summary.
 
+Registered experiment results form a separate section from proposal readiness.
+Each result card is reconstructed from a project-owned immutable result bundle
+and exposes planned/succeeded/failed/missing/invalid cell counts, valid external
+review count, scientific-evidence completeness, headline eligibility, and
+whether all required primary contrasts support the claim. The project lifecycle
+disclosure separately states whether the current paper binds that exact result
+and whether a subsequent independent review closes the top-venue evidence loop.
+Consequently, a completed robustness result, an old paper, or a self-review
+cannot be presented as a formal paper-level effectiveness result.
+
 The canonical progress summary and a generated workspace have distinct roles.
 `project-progress` is the stable, reproducible landing view. The left-side quick
 prompts, free-question form, and the progress view's `Explore next` buttons all

@@ -560,6 +560,46 @@ class WorkspaceSurfaceFactory:
                 }
             )
 
+        evaluation_result_rows: list[dict[str, object]] = []
+        evaluation_result_refs: dict[str, EvidenceRef] = {}
+        for result in snapshot.manifest.evaluation_results:
+            bundle = self._runtime.open_evaluation_result(snapshot.project_id, result.result_id)
+            result_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.EVALUATION_RESULT,
+                _project_relative(
+                    snapshot,
+                    snapshot.evaluation_result_locators[result.result_id],
+                ),
+            )
+            evaluation_result_refs[result.result_id] = result_ref
+            evidence_ref_ids.append(result_ref.evidence_id)
+            evaluation_result_rows.append(
+                {
+                    "result_ref_id": result_ref.evidence_id,
+                    "result_id": result.result_id,
+                    "evaluation_id": result.evaluation_id,
+                    "status": result.status,
+                    "planned_cells": result.planned_cells,
+                    "verified_records": result.verified_records,
+                    "succeeded_cells": result.succeeded_cells,
+                    "failed_cells": result.failed_cells,
+                    "missing_cells": result.missing_cells,
+                    "invalid_cells": result.invalid_cells,
+                    "valid_external_reviews": bundle.valid_external_reviews,
+                    "scientific_evidence_complete": (result.scientific_evidence_complete),
+                    "headline_eligible": result.headline_eligible,
+                    "scientific_effectiveness_established": (
+                        result.scientific_effectiveness_established
+                    ),
+                    "selected": (result.result_id == snapshot.manifest.current_evaluation_result),
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        result_ref.evidence_id,
+                    ],
+                }
+            )
+
         focus, focus_status, next_gate = _project_focus(snapshot)
         milestone_state, milestone_reason_code, milestone_rows = _project_milestones(
             snapshot,
@@ -674,6 +714,10 @@ class WorkspaceSurfaceFactory:
                     "support_ref_ids": gate_ref_ids,
                 }
             )
+        if lifecycle.current_evaluation_result_id is not None:
+            result_ref = evaluation_result_refs.get(lifecycle.current_evaluation_result_id)
+            if result_ref is not None:
+                lifecycle_ref_ids.append(result_ref.evidence_id)
         evidence_ref_ids.extend(lifecycle_ref_ids)
 
         component = ComponentSpec(
@@ -708,18 +752,27 @@ class WorkspaceSurfaceFactory:
                     "completed_stages": len(stage_rows),
                     "papers_registered": len(paper_rows),
                     "evaluations_registered": len(evaluation_rows),
+                    "evaluation_results_registered": len(evaluation_result_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
                     "current_paper_id": lifecycle.current_paper_directory,
                     "current_review_id": lifecycle.current_review_id,
+                    "current_evaluation_result_id": (lifecycle.current_evaluation_result_id),
                     "idea_to_paper_complete": lifecycle.idea_to_paper_complete,
                     "internal_review_cycle_complete": (lifecycle.internal_review_cycle_complete),
                     "independent_pre_submission_review_complete": (
                         lifecycle.independent_pre_submission_review_complete
                     ),
+                    "scientific_evidence_complete": (lifecycle.scientific_evidence_complete),
+                    "paper_scientific_evidence_bound": (lifecycle.paper_scientific_evidence_bound),
+                    "top_venue_evidence_loop_complete": (
+                        lifecycle.top_venue_evidence_loop_complete
+                    ),
                     "official_decision_authority": False,
-                    "scientific_effectiveness_established": False,
+                    "scientific_effectiveness_established": (
+                        lifecycle.scientific_effectiveness_established
+                    ),
                     "gates": lifecycle_gates,
                     "support_ref_ids": list(dict.fromkeys(lifecycle_ref_ids)),
                 },
@@ -735,6 +788,7 @@ class WorkspaceSurfaceFactory:
                 "stages": stage_rows,
                 "papers": paper_rows,
                 "evaluations": evaluation_rows,
+                "evaluation_results": evaluation_result_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,

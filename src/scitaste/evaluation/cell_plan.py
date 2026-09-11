@@ -24,6 +24,7 @@ from scitaste.evaluation.prelaunch import (
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _SHA256 = r"^[0-9a-f]{64}$"
+_MAX_PLAN_BYTES = 64 * 1024 * 1024
 
 
 def _canonical_sha256(value: object) -> str:
@@ -300,6 +301,27 @@ def save_evaluation_cell_plan(plan: EvaluationCellPlan, path: str | Path) -> Pat
     return target
 
 
+def load_evaluation_cell_plan(path: str | Path) -> EvaluationCellPlan:
+    """Load a bounded cell plan and verify its serialized computed fingerprint."""
+
+    requested = Path(path)
+    if requested.is_symlink() or not requested.is_file():
+        raise ValueError("evaluation cell plan must be a regular non-symlink file")
+    if requested.stat().st_size > _MAX_PLAN_BYTES:
+        raise ValueError("evaluation cell plan exceeds its size limit")
+    try:
+        payload = json.loads(requested.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("evaluation cell plan must contain UTF-8 JSON") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("evaluation cell plan root must be an object")
+    serialized_sha256 = payload.pop("plan_sha256", None)
+    plan = EvaluationCellPlan.model_validate(payload)
+    if serialized_sha256 is not None and serialized_sha256 != plan.plan_sha256:
+        raise ValueError("evaluation cell plan fingerprint mismatch")
+    return plan
+
+
 def _resource_for(lane: ExecutionLane) -> EvaluationCellResource:
     if lane.kind is ExecutionLaneKind.API_ONLY:
         assert lane.api_model is not None
@@ -400,5 +422,6 @@ __all__ = [
     "PlannedEvaluationCell",
     "PlannedEvaluationLane",
     "compile_evaluation_cell_plan",
+    "load_evaluation_cell_plan",
     "save_evaluation_cell_plan",
 ]

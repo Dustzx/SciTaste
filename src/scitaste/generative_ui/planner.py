@@ -439,9 +439,7 @@ class StructuredWorkspacePlanner:
             snapshot_sha256=request.snapshot_sha256,
             catalog_fingerprint=catalog.fingerprint,
             request_fingerprint=structured_request.fingerprint,
-            conversation_context_sha256=(
-                context.fingerprint if context is not None else None
-            ),
+            conversation_context_sha256=(context.fingerprint if context is not None else None),
             provider_response_sha256=response.raw_response_sha256,
             deterministic_reproducible=False,
         )

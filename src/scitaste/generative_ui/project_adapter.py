@@ -36,6 +36,16 @@ class ProjectSnapshotAdapter:
                 "project evaluation evidence failed integrity validation: "
                 + "; ".join(invalid_evaluations)
             )
+        invalid_results = [
+            warning
+            for warning in snapshot.warnings
+            if warning.startswith("registered evaluation result is missing or invalid:")
+        ]
+        if invalid_results:
+            raise ValueError(
+                "project evaluation-result evidence failed integrity validation: "
+                + "; ".join(invalid_results)
+            )
         project_root = self.runtime.outputs_root / snapshot.project_locator
         refs: list[EvidenceRef] = []
 
@@ -129,6 +139,19 @@ class ProjectSnapshotAdapter:
                     kind=EvidenceKind.EVALUATION,
                     locator=evaluation.record_locator,
                     label=f"Evaluation proposal {evaluation_index}",
+                )
+            )
+
+        for result_index, result in enumerate(snapshot.manifest.evaluation_results, start=1):
+            self.runtime.open_evaluation_result(snapshot.project_id, result.result_id)
+            refs.append(
+                self._ref(
+                    snapshot=snapshot,
+                    project_root=project_root,
+                    evidence_id=_evidence_id("evaluation-result", result.record_locator),
+                    kind=EvidenceKind.EVALUATION_RESULT,
+                    locator=result.record_locator,
+                    label=f"Evaluation result {result_index}",
                 )
             )
 

@@ -3,8 +3,9 @@
 `ProjectRuntime` makes a research project the writable ownership boundary instead
 of treating `outputs/` as a collection of unrelated command directories. It
 manages versioned `PROJECT.json` state, registered runs, paper bundles, review
-rounds, no-run evaluation proposals, current navigation aliases, and a
-content-hashed `ProjectSnapshot` for catalogs and generated interfaces.
+rounds, no-run evaluation proposals, admitted evaluation results, current
+navigation aliases, and a content-hashed `ProjectSnapshot` for catalogs and
+generated interfaces.
 
 ## Safety and concurrency
 
@@ -16,9 +17,10 @@ content-hashed `ProjectSnapshot` for catalogs and generated interfaces.
   than silently overwriting a concurrent update.
 - Project creation is prepared in a temporary sibling directory and renamed only
   after `PROJECT.json`, `README.md`, `STAGES.md`, `runs/`, `stages/`, `papers/`,
-  `reviews/`, and `evaluations/` exist.
+  `reviews/`, `evaluations/`, and `evaluation-results/` exist.
 - `stages/current`, `papers/current`, `reviews/current`,
-  `evaluations/current`, and `outputs/papers/latest` are replaceable
+  `evaluations/current`, `evaluation-results/current`, and
+  `outputs/papers/latest` are replaceable
   only when they are symlinks. A user-owned real file or directory is never
   overwritten.
 - A paper can be registered only after every declared file exists inside that
@@ -248,6 +250,29 @@ deriving its seven decision-scale readiness gates. This keeps a large expanded
 cell matrix inspectable without allowing summary prose or a UI count to replace
 the underlying blocker codes.
 
+After an explicitly approved runner has produced existing result bytes, admit
+them through a separate immutable registry transition:
+
+```bash
+.venv/bin/scitaste project evaluation register-result \
+  --project-id my-research-project \
+  --evaluation-id deepseek-v41-formal \
+  --result-id deepseek-v41-formal-r1 \
+  --result-set outputs/projects/my-research-project/runs/<run>/RESULT_SET.json \
+  --expected-revision <revision> --select --outputs-root outputs --dry-run
+
+.venv/bin/scitaste project evaluation result-status \
+  --project-id my-research-project --outputs-root outputs
+```
+
+This path never launches a cell. It rechecks proposal, plan, cell and resource
+identities; real-versus-synthetic evidence; API/GPU budgets and telemetry;
+artifact containment and hashes; external blind-review attestations; and the
+preregistered primary comparisons. Formal scientific completeness, headline
+eligibility, and observed effectiveness remain separate derived values. Pilot
+or robustness results may be complete without establishing the paper's headline
+claim.
+
 ## Paper review and lifecycle
 
 Review rounds are first-class project records beneath
@@ -285,6 +310,13 @@ idea-to-paper complete only when its own `source_run` owns both stages; merely
 placing unrelated artifacts in one project is insufficient. Review closure is
 likewise content-bound to the revised registered paper and original-reviewer
 verifications. See [`PAPER_REVIEW_LOOP.md`](PAPER_REVIEW_LOOP.md).
+
+The top-venue evidence loop is stricter than either project-level result
+admission or paper review alone. The current paper manifest must bind the exact
+selected result ID, result-bundle hash, and derived assessment hash; the
+independent pre-submission review must then close against that paper. A paper or
+review created before the result cannot inherit later evidence merely because
+all objects live under the same project.
 
 Run selected matched-study cells inside an existing project with:
 

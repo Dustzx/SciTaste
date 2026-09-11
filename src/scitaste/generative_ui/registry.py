@@ -19,6 +19,7 @@ class EvidenceKind(StrEnum):
     CLAIM = "claim"
     REVIEW = "review"
     EVALUATION = "evaluation"
+    EVALUATION_RESULT = "evaluation_result"
     ARTIFACT = "artifact"
     PAPER = "paper"
     AUDIT_RECORD = "audit_record"

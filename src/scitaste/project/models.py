@@ -281,6 +281,137 @@ class ProjectEvaluation(BaseModel):
         return self
 
 
+class ProjectEvaluationResultEvidence(BaseModel):
+    """One immutable project-owned byte sequence used by an evaluation result."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    locator: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    size_bytes: int = Field(gt=0, le=4 * 1024 * 1024 * 1024)
+
+    @field_validator("locator")
+    @classmethod
+    def locator_is_project_relative(cls, value: str) -> str:
+        return validate_relative_locator(value, field_name="evaluation-result evidence")
+
+
+class ProjectEvaluationResultBundle(BaseModel):
+    """Self-hashed result admission bound to one immutable evaluation proposal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    result_id: str
+    evaluation_id: str
+    proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    plan_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    result_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    assessment_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    status: Literal["incomplete", "complete"]
+    planned_cells: int = Field(ge=0)
+    verified_records: int = Field(ge=0)
+    succeeded_cells: int = Field(ge=0)
+    failed_cells: int = Field(ge=0)
+    missing_cells: int = Field(ge=0)
+    invalid_cells: int = Field(ge=0)
+    valid_external_reviews: int = Field(ge=0)
+    scientific_evidence_complete: bool
+    headline_eligible: bool
+    scientific_effectiveness_established: bool
+    blocker_codes: tuple[str, ...] = Field(max_length=20_000)
+    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=2, max_length=2)
+    evidence: tuple[ProjectEvaluationResultEvidence, ...] = Field(max_length=20_000)
+    bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("project_id")
+    @classmethod
+    def project_id_is_safe(cls, value: str) -> str:
+        return validate_project_id(value)
+
+    @field_validator("result_id", "evaluation_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @model_validator(mode="after")
+    def result_bundle_is_closed_and_self_hashed(self) -> ProjectEvaluationResultBundle:
+        if set(self.files) != {"result_set", "assessment"}:
+            raise ValueError("evaluation result bundle must bind result_set and assessment")
+        locators = [item.locator for item in self.files.values()]
+        if len(locators) != len(set(locators)) or "RESULT.json" in locators:
+            raise ValueError("evaluation result bundle file locators must be unique")
+        evidence_locators = [item.locator for item in self.evidence]
+        if len(evidence_locators) != len(set(evidence_locators)):
+            raise ValueError("evaluation result evidence locators must be unique")
+        if self.verified_records + self.missing_cells + self.invalid_cells != self.planned_cells:
+            raise ValueError("evaluation result counts must cover every planned cell")
+        if self.succeeded_cells + self.failed_cells != self.verified_records:
+            raise ValueError("evaluation verified-result counts must close")
+        if self.headline_eligible != self.scientific_evidence_complete:
+            raise ValueError("result headline eligibility must match scientific completeness")
+        if self.scientific_effectiveness_established and not self.headline_eligible:
+            raise ValueError("scientific effectiveness requires headline-eligible evidence")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"bundle_sha256"}))
+        if self.bundle_sha256 != expected:
+            raise ValueError("evaluation result bundle hash mismatch")
+        return self
+
+
+class ProjectEvaluationResult(BaseModel):
+    """Content-bound project-manifest pointer to one admitted result bundle."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    result_id: str
+    evaluation_id: str
+    status: Literal["incomplete", "complete"]
+    planned_cells: int = Field(ge=0)
+    verified_records: int = Field(ge=0)
+    succeeded_cells: int = Field(ge=0)
+    failed_cells: int = Field(ge=0)
+    missing_cells: int = Field(ge=0)
+    invalid_cells: int = Field(ge=0)
+    scientific_evidence_complete: bool
+    headline_eligible: bool
+    scientific_effectiveness_established: bool
+    record_locator: str
+    record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("result_id", "evaluation_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @field_validator("record_locator")
+    @classmethod
+    def record_locator_is_owned(cls, value: str) -> str:
+        locator = validate_relative_locator(value, field_name="evaluation-result record")
+        parts = PurePosixPath(locator).parts
+        if len(parts) != 3 or parts[0] != "evaluation-results" or parts[2] != "RESULT.json":
+            raise ValueError(
+                "evaluation-result record_locator must be "
+                "evaluation-results/<result-id>/RESULT.json"
+            )
+        validate_entry_id(parts[1], field_name="evaluation-result directory")
+        return locator
+
+    @model_validator(mode="after")
+    def result_entry_is_consistent(self) -> ProjectEvaluationResult:
+        if PurePosixPath(self.record_locator).parts[1] != self.result_id:
+            raise ValueError("evaluation-result directory must match result_id")
+        if self.verified_records + self.missing_cells + self.invalid_cells != self.planned_cells:
+            raise ValueError("evaluation-result entry counts must cover the plan")
+        if self.succeeded_cells + self.failed_cells != self.verified_records:
+            raise ValueError("evaluation-result entry verified counts must close")
+        if self.headline_eligible != self.scientific_evidence_complete:
+            raise ValueError("evaluation-result headline status is inconsistent")
+        if self.scientific_effectiveness_established and not self.headline_eligible:
+            raise ValueError("evaluation-result effectiveness requires headline evidence")
+        return self
+
+
 class ProjectManifest(BaseModel):
     """Primary ownership record; extension fields preserve historical manifests."""
 
@@ -300,11 +431,13 @@ class ProjectManifest(BaseModel):
     current_paper: str | None = None
     current_review: str | None = None
     current_evaluation: str | None = None
+    current_evaluation_result: str | None = None
     stage_semantics: str = "autoresearchclaw-stages"
     retrieval_eligible: bool = True
     runs: list[ProjectRun] = Field(default_factory=list)
     reviews: list[ProjectReview] = Field(default_factory=list)
     evaluations: list[ProjectEvaluation] = Field(default_factory=list)
+    evaluation_results: list[ProjectEvaluationResult] = Field(default_factory=list)
 
     @field_validator("project_id")
     @classmethod
@@ -344,6 +477,13 @@ class ProjectManifest(BaseModel):
             return value
         return validate_entry_id(value, field_name="current_evaluation")
 
+    @field_validator("current_evaluation_result")
+    @classmethod
+    def current_evaluation_result_is_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_entry_id(value, field_name="current_evaluation_result")
+
     @field_validator("completed_stages")
     @classmethod
     def completed_stages_are_canonical(cls, values: list[int]) -> list[int]:
@@ -382,6 +522,26 @@ class ProjectManifest(BaseModel):
             evaluation_ids
         ):
             raise ValueError("current_evaluation must reference a registered evaluation")
+        result_ids = [item.result_id for item in self.evaluation_results]
+        if len(result_ids) != len(set(result_ids)):
+            raise ValueError("project evaluation-result IDs must be unique")
+        known_evaluations = set(evaluation_ids)
+        if any(item.evaluation_id not in known_evaluations for item in self.evaluation_results):
+            raise ValueError("evaluation results must reference registered evaluations")
+        if self.current_evaluation_result is not None and self.current_evaluation_result not in set(
+            result_ids
+        ):
+            raise ValueError(
+                "current_evaluation_result must reference a registered evaluation result"
+            )
+        if self.current_evaluation_result is not None:
+            selected_result = next(
+                item
+                for item in self.evaluation_results
+                if item.result_id == self.current_evaluation_result
+            )
+            if self.current_evaluation != selected_result.evaluation_id:
+                raise ValueError("current evaluation result must belong to the current evaluation")
         return self
 
 
@@ -465,12 +625,14 @@ class ProjectSnapshot(BaseModel):
     run_locators: dict[str, str]
     review_locators: dict[str, str] = Field(default_factory=dict)
     evaluation_locators: dict[str, str] = Field(default_factory=dict)
+    evaluation_result_locators: dict[str, str] = Field(default_factory=dict)
     papers: list[ProjectPaperEntry]
     current_run_locator: str | None = None
     current_stage_locator: str | None = None
     current_paper_locator: str | None = None
     current_review_locator: str | None = None
     current_evaluation_locator: str | None = None
+    current_evaluation_result_locator: str | None = None
     warnings: list[str] = Field(default_factory=list)
 
     @field_validator(
@@ -480,6 +642,7 @@ class ProjectSnapshot(BaseModel):
         "current_paper_locator",
         "current_review_locator",
         "current_evaluation_locator",
+        "current_evaluation_result_locator",
     )
     @classmethod
     def snapshot_locators_are_relative(cls, value: str | None) -> str | None:
@@ -501,6 +664,10 @@ class ProjectSnapshot(BaseModel):
             evaluation.evaluation_id for evaluation in self.manifest.evaluations
         }:
             raise ValueError("snapshot evaluation locators must cover registered evaluations")
+        if set(self.evaluation_result_locators) != {
+            result.result_id for result in self.manifest.evaluation_results
+        }:
+            raise ValueError("snapshot evaluation-result locators must cover registered results")
         return self
 
 

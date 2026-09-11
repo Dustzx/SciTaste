@@ -1129,6 +1129,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.stages"), data.counts.completed_stages, t("progress.metric.stages_note")),
     progressMetric(t("progress.metric.papers"), data.counts.papers_registered, t("progress.metric.papers_note")),
     progressMetric(t("progress.metric.evaluations"), data.counts.evaluations_registered, t("progress.metric.evaluations_note")),
+    progressMetric(t("progress.metric.results"), data.counts.evaluation_results_registered, t("progress.metric.results_note")),
   );
   container.append(
     hero,
@@ -1291,6 +1292,76 @@ function renderProjectProgress(data) {
     evaluations.appendChild(evaluationGrid);
   }
   container.appendChild(evaluations);
+
+  const evaluationResults = progressSection(
+    t("progress.results.title"),
+    data.evaluation_results.length > 0
+      ? t("progress.results.subtitle", {count: data.evaluation_results.length})
+      : t("progress.results.empty"),
+  );
+  if (data.evaluation_results.length > 0) {
+    const resultGrid = document.createElement("div");
+    resultGrid.className = "evaluation-proposal-grid";
+    for (const item of data.evaluation_results) {
+      const card = document.createElement("article");
+      card.className = `evaluation-proposal-card status-${item.status}`;
+      const header = document.createElement("div");
+      header.className = "compact-row-header";
+      const identity = document.createElement("div");
+      const label = document.createElement("span");
+      label.className = "card-label";
+      appendText(label, item.evaluation_id);
+      const title = document.createElement("strong");
+      appendText(title, item.result_id);
+      identity.append(label, title);
+      const state = document.createElement("span");
+      state.className = `lifecycle-state state-${item.headline_eligible ? "satisfied" : "blocked"}`;
+      appendText(state, t(`progress.results.status.${item.status}`));
+      header.append(identity, state);
+
+      const facts = document.createElement("div");
+      facts.className = "evaluation-proposal-facts";
+      const cells = document.createElement("span");
+      appendText(cells, t("progress.results.cells", {
+        succeeded: item.succeeded_cells,
+        planned: item.planned_cells,
+      }));
+      const failures = document.createElement("span");
+      appendText(failures, t("progress.results.failures", {
+        failed: item.failed_cells,
+        missing: item.missing_cells,
+        invalid: item.invalid_cells,
+      }));
+      const reviews = document.createElement("span");
+      appendText(reviews, t("progress.results.reviews", {
+        count: item.valid_external_reviews,
+      }));
+      facts.append(cells, failures, reviews);
+
+      const verdicts = document.createElement("ul");
+      verdicts.className = "evaluation-resource-list";
+      for (const [key, value] of [
+        ["scientific_evidence", item.scientific_evidence_complete],
+        ["headline", item.headline_eligible],
+        ["effectiveness", item.scientific_effectiveness_established],
+      ]) {
+        const row = document.createElement("li");
+        appendText(row, t(`progress.results.${key}.${value ? "yes" : "no"}`));
+        verdicts.appendChild(row);
+      }
+      card.append(header, facts, verdicts, evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          result_id: item.result_id,
+          evaluation_id: item.evaluation_id,
+          selected: item.selected,
+        },
+        names: ["result_id", "evaluation_id", "selected"],
+      }));
+      resultGrid.appendChild(card);
+    }
+    evaluationResults.appendChild(resultGrid);
+  }
+  container.appendChild(evaluationResults);
 
   const standing = document.createElement("div");
   standing.className = "progress-columns";
@@ -1461,6 +1532,9 @@ function renderProjectLifecycle(data) {
       internal_review_cycle_complete: data.internal_review_cycle_complete,
       independent_pre_submission_review_complete:
         data.independent_pre_submission_review_complete,
+      scientific_evidence_complete: data.scientific_evidence_complete,
+      paper_scientific_evidence_bound: data.paper_scientific_evidence_bound,
+      top_venue_evidence_loop_complete: data.top_venue_evidence_loop_complete,
       official_decision_authority: data.official_decision_authority,
       scientific_effectiveness_established: data.scientific_effectiveness_established,
     },
@@ -1468,6 +1542,9 @@ function renderProjectLifecycle(data) {
       "idea_to_paper_complete",
       "internal_review_cycle_complete",
       "independent_pre_submission_review_complete",
+      "scientific_evidence_complete",
+      "paper_scientific_evidence_bound",
+      "top_venue_evidence_loop_complete",
       "official_decision_authority",
       "scientific_effectiveness_established",
     ],

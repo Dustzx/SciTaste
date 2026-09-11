@@ -153,9 +153,7 @@ class DirectAgentInvocation(BaseModel):
     backend_config_sha256: str = Field(pattern=_SHA256)
     budget: DirectAgentBudget
     approval: DirectAgentCellApproval
-    prompt_version: Literal["prompt-only-research-control-v1"] = (
-        "prompt-only-research-control-v1"
-    )
+    prompt_version: Literal["prompt-only-research-control-v1"] = "prompt-only-research-control-v1"
 
     @model_validator(mode="after")
     def invocation_is_one_approved_control_cell(self) -> DirectAgentInvocation:
@@ -427,8 +425,7 @@ def execute_direct_agent(
         "task_package.json": _pretty_json(_task_payload(task)),
     }
     artifact_sha256 = {
-        name: hashlib.sha256(content.encode()).hexdigest()
-        for name, content in artifacts.items()
+        name: hashlib.sha256(content.encode()).hexdigest() for name, content in artifacts.items()
     }
     receipt = DirectAgentRunReceipt(
         invocation_id=invocation.invocation_id,
