@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="site/assets/scitaste-mark.svg" width="104" alt="SciTaste">
+  <img src="site/assets/scitaste-mark.svg" width="96" alt="SciTaste">
 </p>
 
 <h1 align="center">SciTaste</h1>
@@ -19,132 +19,82 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
-  <a href="#generation-as-content">Interface</a> ·
-  <a href="#current-status">Status</a> ·
+  <a href="docs/INNOVATION_MAP.md">Innovations</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="docs/ROADMAP.md">Roadmap</a>
 </p>
 
 <p align="center">
-  <img src="site/assets/scitaste-lineage.webp" width="880" alt="Evidence sources converge at a scientific compass, then continue through experiment, paper, and review.">
+  <img src="site/assets/scitaste-lineage.webp" width="880" alt="Evidence converges at a scientific compass and continues through experiment, paper, and review.">
 </p>
 
-SciTaste starts from a different premise: producing more hypotheses, experiments,
-or prose is not enough. Autonomous research also needs a policy for judging
-**which action is scientifically worthwhile now**, why it should be preferred,
-what evidence could falsify it, and when the project should pivot or stop.
+Generating more ideas, experiments, and prose is not enough. Autonomous research
+also needs judgment: **which action is scientifically worthwhile now, why, what
+could falsify it, and when to revise, pivot, or stop**.
 
-SciTaste is a first-party autonomous-research system. It owns the controller,
-state, native executor, project runtime, paper/review loop, and user interface.
-AutoResearchClaw is kept unmodified as an optional compatibility adapter and
-external baseline; SciTaste does not require it to run.
+SciTaste makes that judgment an explicit part of the research system. It owns the
+controller, project state, native executor, evidence loop, paper/review loop, and
+local interface. It runs without AutoResearchClaw; the unchanged upstream project
+is available only as an optional compatibility adapter and external baseline.
 
-> **Research status — 2026-09-11.** The software control plane and offline
-> idea-to-paper machinery are substantially implemented. The current ICLR 2027
-> manuscript is a venue-formatted research draft, not an accepted or
-> publication-ready paper. Formal matched-system effectiveness experiments,
-> verified native evidence lineage, and independent expert review remain pending.
+> **Research preview.** The offline system and idea-to-paper control plane are
+> implemented. Formal matched-system experiments and independent expert review
+> are still pending, so no current result establishes SciTaste's headline
+> effectiveness claim.
 
 ## Why scientific taste?
 
-High-quality papers, reviews, revisions, and outcomes contain more than facts.
-They encode decisions: which problem was worth pursuing, which experiment was
-diagnostic, which claim was too strong, and which revision actually resolved a
-review concern.
+High-quality papers, reviews, revisions, and outcomes contain decision experience,
+not just passages to retrieve. SciTaste abstracts that experience into verified
+**Taste Cases**, then judges candidate actions in the context of current evidence,
+uncertainty, scientific value, and budget.
 
-SciTaste does not reduce that material to ordinary retrieval-augmented prompting:
+<p align="center">
+  <img src="site/assets/scientific-taste-loop.svg" width="720" alt="High-quality research is abstracted into scientific taste, which selects the next action and learns from the observed outcome.">
+</p>
 
-1. source material enters through provenance, rights, and quality gates;
-2. factual content becomes a **Knowledge Document**;
-3. decision context, alternatives, rationale, and observed outcome become a
-   candidate **Taste Case**;
-4. only verified Taste Cases enter stage-aware precedent retrieval;
-5. the Taste controller ranks explicit candidate actions under current evidence,
-   uncertainty, scientific value, and budget;
-6. later outcomes can become new precedents without erasing failures or negative
-   results.
+Retrieval helps locate relevant material; it is a transport layer, not the whole
+mechanism. The core problem is learning **why a decision was good in context** and
+whether that precedent should transfer to the present project. Failed and negative
+outcomes remain visible instead of being rewritten as success.
 
-```mermaid
-flowchart LR
-    A[High-quality papers<br/>reviews · revisions] --> B{Admission}
-    B --> K[Knowledge Library<br/>facts and methods]
-    B --> T[Taste Library<br/>decision precedents]
-    S[ResearchState<br/>evidence · uncertainty · budget] --> C[Candidate actions]
-    K -. grounded context .-> C
-    T --> G[Scientific Taste]
-    C --> G
-    G --> D[Research decision]
-    D --> E[Native executor]
-    E --> O[Observation]
-    O --> S
-    O --> P[Paper and figures]
-    P --> R[Review obligations]
-    R --> S
-```
+## What SciTaste adds
 
-## Three primary innovations
+| | Capability | Role |
+|---|---|---|
+| 01 | **Scientific Taste** | Ranks explicit research actions using evidence, precedent, uncertainty, value, and cost. |
+| 02 | **Generation as Content** | Generates bounded project views around the current question instead of forcing every task into one dashboard. |
+| 03 | **Tool Intelligence** | Uses typed model nodes at semantic decision points while deterministic gates retain execution authority. |
 
-| | Innovation | What changes | Authority boundary |
-|---|---|---|---|
-| 01 | **Scientific Taste** | Research quality becomes an inspectable decision policy over candidate actions, evidence, precedent, uncertainty, and cost. | The controller selects; an executor cannot silently choose the next global action. |
-| 02 | **Generation as Content** | The interface is generated around the project, question, and evidence instead of forcing every task into one dashboard. | A planner may select only server-owned components and cannot invent state, code, URLs, or execution authority. |
-| 03 | **Tool Intelligence** | Typed model nodes make rigid tools adaptive at semantic decision points such as classification, planning, and bounded repair. | Model output remains a proposal until deterministic schema, evidence, budget, and execution gates accept it. |
-
-The enabling ideas include nonlinear research control, Evidence-to-Idea,
-Knowledge/Taste dual memory, evidence-native writing and figures, reviewer-driven
-research obligations, project-owned provenance, and substrate-independent
-execution. See the full [Innovation Map](docs/INNOVATION_MAP.md).
-
-## One project, one research lineage
-
-SciTaste maintains a canonical `ResearchState` rather than a one-way sequence of
-generated files. Discovery, evidence, communication, and review can move forward
-or route backward while preserving the reason and artifacts for every transition.
+Together these support a nonlinear research loop:
 
 ```text
 Discover ──► Evidence ──► Communicate ──► Review
     ▲            │              ▲            │
-    └─ reformulate / pivot ◄────┴─ new evidence obligation
+    └──── reformulate / pivot ◄──┴────────────┘
 ```
 
-- **Discovery:** literature landscape, intuition, falsifiable hypothesis,
-  diagnostic probes, reformulation, mature ideas, and portfolio selection.
-- **Evidence:** claim/evidence graphs, gap planning, controlled measurement,
-  interpretation criticism, contradiction retention, and pivot routing.
-- **Communication:** evidence-gated narrative, Writing Taste, venue profiles,
-  claim-linked editable figures, TeX/PDF packaging, and artifact lineage.
-- **Review:** structured concerns, author responses, evidence-bearing obligations,
-  reviewer verification, and independent pre-submission gates.
+## What works today
 
-## Generation as Content
+- A first-party controller and revisioned `ResearchState` select and explain the
+  next action.
+- Discovery, evidence, writing, figures, review obligations, and backward routing
+  share one project lineage.
+- The native executor records content-bound runs, budgets, receipts, and evidence;
+  optional CPU, local-GPU, API, and external-framework paths fail closed.
+- Paper builds produce Markdown, TeX, PDF, assessments, and claim-linked artifacts.
+- The local Generation-as-Content workspace provides project homes, conversations,
+  immutable turns, and evidence-bound generated surfaces.
+- Every run, paper, review, evaluation, and interface surface belongs beneath one
+  `outputs/projects/<project-id>/` tree.
 
-The local UI is a research workspace rather than a credential form or a single
-chat page:
-
-```text
-Project index
-└── Project home
-    ├── lifecycle, runs, papers, evidence, blockers
-    └── research topic / conversation
-        ├── immutable question page
-        ├── immutable follow-up page
-        └── evidence-bound generated surface
-```
-
-Each project has a stable homepage. Each topic owns a multi-turn conversation,
-and every question creates a refreshable deep link. Quick intents and free-form
-questions can change grouping, emphasis, and evidence views, but the browser
-receives only closed renderer data. On loopback, the main page requires no
-credential; non-loopback access remains explicit and authenticated.
-
-The public-facing project page is a separate dependency-free static site under
-[`site/`](site/README.md). It intentionally has no access to research state,
-model endpoints, or the authenticated Generation as Content runtime.
+See the [architecture](docs/ARCHITECTURE.md) for component boundaries and the
+[innovation map](docs/INNOVATION_MAP.md) for the full research argument.
 
 ## Quick start
 
-Requires Python 3.11 or newer. API access and the AutoResearchClaw submodule are
-optional.
+Python 3.11 or newer is required. The default path is deterministic and offline;
+it needs no API key, model download, GPU, or external research framework.
 
 ```bash
 git clone https://github.com/Dustzx/SciTaste.git
@@ -152,15 +102,11 @@ cd SciTaste
 python3.11 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 
-# Deterministic offline research trajectory
 .venv/bin/scitaste run demo --output outputs/demo --seed 7
-
-# Complete offline test suite
-.venv/bin/pytest
 ```
 
 Inspect `outputs/demo/research_state.json`, `decisions.jsonl`, and
-`demo_summary.json` to see the selected actions and state transitions.
+`demo_summary.json` to see the selected actions and transitions.
 
 Create a project and open its local workspace:
 
@@ -170,111 +116,46 @@ Create a project and open its local workspace:
   --title "My research project" \
   --research-direction "A falsifiable research direction"
 
-.venv/bin/scitaste project status --project-id my-project
 .venv/bin/scitaste ui serve --outputs-root outputs
 ```
 
-Open <http://127.0.0.1:8765>. The browser establishes its protected loopback
-session automatically; no token is entered in the main interface.
+Open <http://127.0.0.1:8765>. Loopback access establishes its protected browser
+session automatically; the main page has no credential field.
 
-Run the integrated offline Discovery → Evidence → Communication → Figure path:
+For the complete offline Discovery → Evidence → Communication → Figure path, use
+the [full-workflow guide](docs/FULL_WORKFLOW.md). The default developer extra runs
+the repository tests; study dependencies are installed separately with
+`pip install -e '.[study]'`.
 
-```bash
-.venv/bin/scitaste run full \
-  --config configs/workflows/full_offline_v1.yaml \
-  --project-id my-full-project \
-  --run-id offline-full-seed-07 \
-  --paper-directory offline-full-seed-07-integration-fixture \
-  --seed 7 --output outputs
-```
+## Research status
 
-This validates integration and produces a project-owned Markdown/TeX/PDF bundle.
-Its short paper is deliberately classified as an `integration-fixture`, not as
-scientific evidence or a publication-quality manuscript. Native measured code
-execution requires a working Bubblewrap installation on Linux. See the
-[Full Workflow guide](docs/FULL_WORKFLOW.md).
+| Area | Current boundary |
+|---|---|
+| System | Core offline paths are implemented and tested; engineering correctness is not a scientific effectiveness result. |
+| Evaluation | Protocols, matched-budget cells, resource gates, and baseline contracts exist; formal comparative cells have not been launched. |
+| Paper | The tracked ICLR 2027 manuscript is a working research draft, not a publication-ready or accepted paper. |
+| Review | Typed model and reviewer-obligation loops exist; independent expert review of the current manuscript remains incomplete. |
 
-## Project-owned outputs
+The manuscript source is
+[`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md). Before interpreting
+any pilot, read the [ICLR 2027 evaluation plan](docs/ICLR_2027_EVALUATION_PLAN.md)
+and [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
 
-`outputs/INDEX.md` is the human-readable catalog. The canonical unit is always a
-project—not an isolated stage directory:
+## Models and integrations
 
-```text
-outputs/projects/<project-id>/
-├── PROJECT.json            # revisioned project identity and current pointers
-├── runs/<run-id>/          # inputs, state, stages, decisions, receipts, evidence
-├── papers/<paper-id>/      # Markdown, TeX, PDF, assessments, manifest
-├── reviews/<review-id>/    # packets, reports, responses, verification
-├── evaluations/            # protocols, cells, results, and blockers
-├── surfaces/               # content-addressed project views
-└── .generative-ui/         # project-owned conversations and UI audits
-```
-
-Generated outputs, model responses, datasets, papers, and secrets are intentionally
-ignored by Git. Refresh the local catalog with:
-
-```bash
-.venv/bin/python scripts/catalog_outputs.py outputs
-```
-
-See [Output Layout](docs/OUTPUT_LAYOUT.md) and
-[Project Runtime](docs/PROJECT_RUNTIME.md).
-
-## Current status
-
-| Capability | Engineering state | Scientific boundary |
-|---|---|---|
-| Native controller and project runtime | Implemented and offline tested | Engineering correctness is not an effectiveness result. |
-| Discovery and Evidence loops | Implemented with deterministic and bounded semantic paths | Open-ended scientific quality requires held-out evaluation. |
-| Native execution | Content-bound CPU execution and explicit local GPU profiles | Portability, broader workloads, and external replication remain pending. |
-| Writing, figures, and paper build | Evidence contracts, venue taste, editable figures, Markdown/TeX/PDF, and submission checks | Passing structural gates does not establish paper quality or claims. |
-| Review loop | Typed packets, concerns, responses, obligations, and verification paths | Independent expert reviews for the current paper are incomplete. |
-| Generation as Content | Project homes, multiple conversations, immutable turns, bounded layout planning, and responsive browser probes | Counterbalanced human usability and decision-quality studies remain pending. |
-| Formal system evaluation | Comparison regimes, resource dossiers, exact acquisition approval, cell plans, and budget gates implemented | No current formal result establishes SciTaste's headline improvement claim. |
-
-The substantive tracked manuscript is
-**SciTaste: Improving Autonomous Research through Scientific Taste** at
-[`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md). Local venue builds
-live beneath the self-development project and are intentionally excluded from
-Git. Read the [ICLR 2027 evaluation plan](docs/ICLR_2027_EVALUATION_PLAN.md) and
-[experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md) before
-interpreting any pilot result.
-
-## Models, APIs, and external systems
-
-The default installation and CI are offline. Live access requires both a declared
-configuration and an explicit caller gate; secrets are read from environment
-variables and never stored in YAML, output receipts, or source code.
-
-- **API backends:** OpenAI-compatible providers, including tracked Zhipu and
-  DeepSeek examples, with exact request/response recording and bounded usage.
-- **Local model:** an opt-in Transformers backend for the existing
-  Qwen3-VL-2B-Instruct checkpoint; no model is downloaded implicitly.
-- **GPU execution:** content-bound profiles default-deny GPU access and expose
-  only verified devices with measured GPU-hour accounting.
-- **External frameworks:** AutoResearchClaw is an optional pinned adapter and
-  baseline. Unavailable systems remain declared unavailable rather than replaced
-  with fake implementations.
-
-No formal API, data acquisition, remote GPU, or external-system execution is
-triggered by installation, tests, UI startup, or dry-run commands. See
-[API Providers](docs/API_PROVIDERS.md),
-[Data Acquisition Approval](docs/DATA_ACQUISITION_APPROVAL.md), and
-[External System Adapters](docs/EXTERNAL_SYSTEM_ADAPTERS.md).
+Live backends are opt-in and require an explicit caller gate. SciTaste supports
+OpenAI-compatible APIs, an optional local Transformers backend, content-bound GPU
+profiles, and declared external-system adapters. Secrets are read from environment
+variables and are not stored in source, YAML, or output receipts.
 
 ## Documentation
 
-| Guide | Purpose |
+| Start here | Then go deeper |
 |---|---|
-| [Roadmap](docs/ROADMAP.md) | Milestones, exit gates, current work, and deferred proof |
-| [Architecture](docs/ARCHITECTURE.md) | Component boundaries and system invariants |
-| [Innovation Map](docs/INNOVATION_MAP.md) | Scientific Taste, Generation as Content, and Tool Intelligence |
-| [Generative UI](docs/GENERATIVE_UI.md) | Project homes, conversations, surfaces, security, and interaction contracts |
-| [Native Execution](docs/NATIVE_EXECUTION.md) | First-party executor, admission, sandbox, and evidence ownership |
-| [Paper Review Loop](docs/PAPER_REVIEW_LOOP.md) | Paper packets, review obligations, responses, and verification |
-| [Writing Taste](docs/WRITING_TASTE.md) | Venue/archetype guidance and evidence-first writing constraints |
-| [Evaluation Prelaunch](docs/EVALUATION_PRELAUNCH.md) | Hash-bound model, task, adapter, budget, and authorization gates |
-| [Project specification](PROJECT_SPEC.md) | Authoritative product and research requirements |
+| [Architecture](docs/ARCHITECTURE.md) | [Scientific Taste and the innovation map](docs/INNOVATION_MAP.md) |
+| [Full workflow](docs/FULL_WORKFLOW.md) | [Generation as Content](docs/GENERATIVE_UI.md) |
+| [Output layout](docs/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
+| [Roadmap](docs/ROADMAP.md) | [Evaluation prelaunch gates](docs/EVALUATION_PRELAUNCH.md) |
 
 ## Development
 
@@ -283,8 +164,5 @@ make install
 make check
 ```
 
-Contributions should preserve deterministic decision logging, state compatibility,
-project ownership, and the distinction between integration evidence and scientific
-claims. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-SciTaste is released under the [MIT License](LICENSE).
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. SciTaste is
+released under the [MIT License](LICENSE).

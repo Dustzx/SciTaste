@@ -68,8 +68,14 @@ def test_homepage_is_self_contained_and_has_closed_navigation() -> None:
 
 def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None:
     hero = _SITE / "assets/scitaste-lineage.webp"
+    taste_loop = _SITE / "assets/scientific-taste-loop.svg"
     assert hero.stat().st_size < 100_000
     assert (_SITE / "assets/scitaste-mark.svg").stat().st_size < 10_000
+    assert taste_loop.stat().st_size < 15_000
+    taste_loop_source = taste_loop.read_text(encoding="utf-8")
+    assert "<title" in taste_loop_source
+    assert "<desc" in taste_loop_source
+    assert "Scientific Taste" in taste_loop_source
 
     homepage = (_SITE / "index.html").read_text(encoding="utf-8")
     assert "effectiveness claim is not yet established" in homepage
@@ -82,3 +88,6 @@ def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None
         "SciTaste: Learning Scientific Taste for Autonomous Research Decision Making" not in readme
     )
     assert "site/assets/scitaste-mark.svg" in readme
+    assert "site/assets/scientific-taste-loop.svg" in readme
+    assert "```mermaid" not in readme
+    assert len(readme.splitlines()) <= 180

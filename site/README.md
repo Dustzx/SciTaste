@@ -30,6 +30,9 @@ artifact and add the resulting public URL to the root README.
   2026-09-11 with the built-in image-generation path, then encoded locally as a
   metadata-free WebP. It depicts evidence converging into a taste decision and
   continuing through experiment, paper, and review.
+- `scientific-taste-loop.svg` is a repository-native, text-safe diagram reducing
+  the public Scientific Taste explanation to four readable nodes and one feedback
+  loop.
 
 The generated illustration is decorative; it is not a workflow result, evidence
 artifact, product screenshot, or scientific claim.
