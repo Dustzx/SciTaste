@@ -59,9 +59,11 @@ evaluation, blocker, milestone, and activity records remain available in a
 default-collapsed evidence vault or focused follow-up pages. Graph-node
 exploration creates another immutable turn in the same conversation. Proposal
 approval/rejection and artifact previews appear inline only after a user action;
-the previous permanently empty right rail is no longer rendered. Project and
-history navigation now occupy a toggleable drawer, while the question composer
-sits horizontally below the scrollable evidence workspace. This closes a
+the previous permanently empty right rail is no longer rendered. Project-scoped
+history now occupies a closed-by-default, hover-previewable and explicitly
+pinnable drawer; project and evidence tools stay in the content toolbar. The
+text-entry-first question composer sits below the scrollable evidence workspace
+and keeps context settings secondary. This closes a
 navigation and intervention engineering gate, not a human-usability or
 research-quality claim.
 

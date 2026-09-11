@@ -1662,10 +1662,15 @@ artifact previews are rendered inline only after an explicit action. Approval
 still produces only the existing deterministic, non-executable handoff; the
 model and browser gain no tool or state-mutation authority.
 
-The same presentation boundary places project selection, conversation history,
-fixed views, and advanced selectors in a toggleable left drawer. The question
-composer belongs below the evidence workspace, not inside navigation. A project
-home exposes four recurring research-room launchers, each backed by a current
-server-issued next-step candidate; it does not pre-create empty or inferred
-conversations. These rules are receiver layout policy and introduce no new
-state, evidence, or execution authority.
+The same presentation boundary gives the left drawer one stable information
+role: project-scoped conversation history. Project switching remains in the
+content toolbar, and fixed views plus advanced evidence selectors live behind
+one toolbar disclosure. The drawer is closed by default; a desktop edge hover
+may preview it without reflow, while click/focus/touch provide explicit,
+accessible control and Escape closes it. The question composer belongs below
+the evidence workspace, not inside navigation, and is text-entry-first rather
+than a three-column settings form. A project home exposes four recurring
+research-room launchers, each backed by a current server-issued next-step
+candidate; it does not pre-create empty or inferred conversations. These rules
+are receiver layout policy and introduce no new state, evidence, or execution
+authority.

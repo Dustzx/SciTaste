@@ -16,14 +16,6 @@
         <p class="header-summary" data-i18n="brand.summary">Generated views are typed evidence, never executable code.</p>
       </div>
       <div class="header-controls">
-        <button
-          id="drawer-toggle"
-          class="drawer-toggle"
-          type="button"
-          aria-controls="project-drawer"
-          aria-expanded="true"
-          data-i18n="nav.close"
-        >Close project navigation</button>
         <div class="locale-panel">
           <label for="locale-select" data-i18n="locale.label">Interface language</label>
           <select id="locale-select" aria-label="Interface language" data-i18n-aria="locale.label">
@@ -36,20 +28,32 @@
     <div class="freshness-bar" id="freshness" role="status">
       <span data-i18n="freshness.none">No authoritative project view loaded.</span>
     </div>
+    <div id="drawer-edge" class="drawer-edge">
+      <button
+        id="drawer-toggle"
+        class="drawer-toggle"
+        type="button"
+        aria-controls="project-drawer"
+        aria-expanded="false"
+        data-i18n-aria="nav.open"
+      >
+        <span class="drawer-toggle-icon" aria-hidden="true">☰</span>
+        <span class="drawer-toggle-label" data-i18n="nav.history">Conversations</span>
+      </button>
+    </div>
     <div class="application-grid">
-      <nav id="project-drawer" class="project-nav" aria-label="Research workspace navigation" data-i18n-aria="nav.aria" tabindex="-1">
-        <div class="nav-section">
-          <button id="global-home" type="button" disabled data-i18n="project.all">All projects</button>
-          <label for="project-select" data-i18n="project.label">Authoritative project</label>
-          <select id="project-select" disabled></select>
-          <button id="load-project" type="button" disabled data-i18n="project.open">Open project</button>
-          <p id="connection-status" role="status" data-i18n="connection.connecting">Opening a protected local session…</p>
-        </div>
-        <div class="nav-section workspace-history" aria-labelledby="workspace-history-heading">
-          <div class="nav-heading-row">
-            <h2 id="workspace-history-heading" data-i18n="thread.heading">Research conversations</h2>
-            <button id="new-topic" type="button" disabled data-i18n="thread.new">New conversation</button>
+      <nav id="project-drawer" class="project-nav" aria-label="Conversation history" data-i18n-aria="nav.aria" tabindex="-1">
+        <div class="drawer-heading">
+          <div>
+            <p class="eyebrow dark" data-i18n="nav.eyebrow">Project memory</p>
+            <h2 data-i18n="thread.heading">Research conversations</h2>
+            <p id="drawer-project-context" class="drawer-project-context" data-i18n="thread.no_project">No project selected</p>
           </div>
+          <button id="drawer-close" class="drawer-close" type="button" data-i18n-aria="nav.close" aria-label="Close conversation history">×</button>
+        </div>
+        <div class="workspace-history" aria-labelledby="workspace-history-heading">
+          <h3 id="workspace-history-heading" class="visually-hidden" data-i18n="thread.heading">Research conversations</h3>
+          <button id="new-topic" class="new-topic-button" type="button" disabled data-i18n="thread.new">New conversation</button>
           <label class="visually-hidden" for="topic-search" data-i18n="thread.search_label">Search topics</label>
           <input
             id="topic-search"
@@ -64,54 +68,57 @@
             <p class="muted" data-i18n="thread.open_project">Open a project to see its topics.</p>
           </div>
         </div>
-        <div class="nav-section" aria-labelledby="view-heading">
-          <h2 id="view-heading" data-i18n="views.heading">Workspace views</h2>
-          <div class="view-navigation">
-            <button class="view-button" data-view="project-progress" type="button" disabled data-i18n="view.project-progress">Progress</button>
-            <button class="view-button" data-view="research-landscape" type="button" disabled data-i18n="view.research-landscape">Research map</button>
-            <button class="view-button" data-view="project-overview" type="button" disabled data-i18n="view.project-overview">Overview</button>
-            <button class="view-button" data-view="run-stage-explorer" type="button" disabled data-i18n="view.run-stage-explorer">Runs &amp; stages</button>
-            <button class="view-button" data-view="paper-evidence" type="button" disabled data-i18n="view.paper-evidence">Papers &amp; evidence</button>
-            <button class="view-button" data-view="run-comparison" type="button" disabled data-i18n="view.run-comparison">Compare runs</button>
-            <button class="view-button" data-view="blockers" type="button" disabled data-i18n="view.blockers">Blockers</button>
-            <button class="view-button" data-view="pending-proposals" type="button" disabled data-i18n="view.pending-proposals">Pending proposals</button>
-          </div>
-        </div>
-        <div class="nav-section selection-controls" aria-labelledby="selection-heading">
-          <h2 id="selection-heading" data-i18n="selection.heading">Evidence selection</h2>
-          <label for="run-select" data-i18n="selection.run">Run</label>
-          <select id="run-select" disabled></select>
-          <button id="open-run" type="button" disabled data-i18n="selection.open_run">Open run stages</button>
-          <label for="paper-select" data-i18n="selection.paper">Paper</label>
-          <select id="paper-select" disabled></select>
-          <button id="open-paper" type="button" disabled data-i18n="selection.open_paper">Open paper evidence</button>
-          <fieldset id="comparison-controls" disabled>
-            <legend data-i18n="selection.comparison">Registered run comparison</legend>
-            <label for="baseline-run" data-i18n="selection.baseline">Baseline</label>
-            <select id="baseline-run"></select>
-            <label for="candidate-run" data-i18n="selection.candidate">Candidate</label>
-            <select id="candidate-run"></select>
-            <button id="compare-runs" type="button" data-i18n="selection.compare">Compare selected runs</button>
-          </fieldset>
-        </div>
       </nav>
-      <button id="drawer-backdrop" class="drawer-backdrop" type="button" aria-label="Close project navigation" data-i18n-aria="nav.close"></button>
+      <button id="drawer-backdrop" class="drawer-backdrop" type="button" aria-label="Close conversation history" data-i18n-aria="nav.close"></button>
       <div class="content-column">
+        <section class="project-toolbar" aria-label="Project and evidence tools" data-i18n-aria="project.toolbar_aria">
+          <button id="global-home" class="toolbar-home" type="button" disabled data-i18n="project.all">All projects</button>
+          <label class="visually-hidden" for="project-select" data-i18n="project.label">Authoritative project</label>
+          <select id="project-select" disabled></select>
+          <button id="load-project" class="toolbar-open" type="button" disabled data-i18n="project.open">Open project</button>
+          <details class="evidence-tools">
+            <summary data-i18n="tools.open">Evidence tools</summary>
+            <div class="evidence-tools-panel">
+              <section aria-labelledby="view-heading">
+                <h2 id="view-heading" data-i18n="views.heading">Workspace views</h2>
+                <div class="view-navigation">
+                  <button class="view-button" data-view="project-progress" type="button" disabled data-i18n="view.project-progress">Progress</button>
+                  <button class="view-button" data-view="research-landscape" type="button" disabled data-i18n="view.research-landscape">Research map</button>
+                  <button class="view-button" data-view="project-overview" type="button" disabled data-i18n="view.project-overview">Overview</button>
+                  <button class="view-button" data-view="run-stage-explorer" type="button" disabled data-i18n="view.run-stage-explorer">Runs &amp; stages</button>
+                  <button class="view-button" data-view="paper-evidence" type="button" disabled data-i18n="view.paper-evidence">Papers &amp; evidence</button>
+                  <button class="view-button" data-view="run-comparison" type="button" disabled data-i18n="view.run-comparison">Compare runs</button>
+                  <button class="view-button" data-view="blockers" type="button" disabled data-i18n="view.blockers">Blockers</button>
+                  <button class="view-button" data-view="pending-proposals" type="button" disabled data-i18n="view.pending-proposals">Pending proposals</button>
+                </div>
+              </section>
+              <section class="selection-controls" aria-labelledby="selection-heading">
+                <h2 id="selection-heading" data-i18n="selection.heading">Evidence selection</h2>
+                <label for="run-select" data-i18n="selection.run">Run</label>
+                <select id="run-select" disabled></select>
+                <button id="open-run" type="button" disabled data-i18n="selection.open_run">Open run stages</button>
+                <label for="paper-select" data-i18n="selection.paper">Paper</label>
+                <select id="paper-select" disabled></select>
+                <button id="open-paper" type="button" disabled data-i18n="selection.open_paper">Open paper evidence</button>
+                <fieldset id="comparison-controls" disabled>
+                  <legend data-i18n="selection.comparison">Registered run comparison</legend>
+                  <label for="baseline-run" data-i18n="selection.baseline">Baseline</label>
+                  <select id="baseline-run"></select>
+                  <label for="candidate-run" data-i18n="selection.candidate">Candidate</label>
+                  <select id="candidate-run"></select>
+                  <button id="compare-runs" type="button" data-i18n="selection.compare">Compare selected runs</button>
+                </fieldset>
+              </section>
+            </div>
+          </details>
+          <p id="connection-status" role="status" data-i18n="connection.connecting">Opening a protected local session…</p>
+        </section>
         <main id="workspace" class="workspace" aria-live="polite" aria-busy="false" tabindex="-1">
           <p class="empty-state" data-i18n="workspace.empty">No trusted project workspace is loaded.</p>
         </main>
         <section class="conversation-composer" aria-labelledby="intent-heading">
-          <div class="composer-heading">
-            <div>
-              <p class="eyebrow dark" data-i18n="generation.eyebrow">Generation as content</p>
-              <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
-            </div>
-            <p class="control-hint" data-i18n="generation.description">Choose an evidence-derived prompt or ask a bounded free question.</p>
-          </div>
-          <div id="quick-intents" class="quick-intents" role="group" aria-label="Evidence-derived quick intents" data-i18n-aria="generation.quick_aria">
-            <p class="muted" data-i18n="quick.open_project">Open a project to load applicable prompts.</p>
-          </div>
-          <form id="intent-form">
+          <div class="composer-topline">
+            <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
             <div class="conversation-context-control">
               <label for="conversation-context-mode" data-i18n="thread.context_label">Conversation context</label>
               <select id="conversation-context-mode" disabled>
@@ -119,12 +126,17 @@
                 <option value="none" data-i18n="thread.context_none">Use this question only</option>
               </select>
             </div>
+          </div>
+          <div id="quick-intents" class="quick-intents" role="group" aria-label="Evidence-derived quick intents" data-i18n-aria="generation.quick_aria">
+            <p class="muted" data-i18n="quick.open_project">Open a project to load applicable prompts.</p>
+          </div>
+          <form id="intent-form">
             <div class="composer-question">
-              <label for="intent-question" data-i18n="generation.free_question">Free question</label>
+              <label class="visually-hidden" for="intent-question" data-i18n="generation.free_question">Free question</label>
               <textarea
                 id="intent-question"
                 maxlength="1000"
-                rows="2"
+                rows="1"
                 disabled
                 placeholder="Ask about progress, blockers, runs, papers, or next steps"
                 data-i18n-placeholder="generation.placeholder"

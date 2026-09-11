@@ -222,10 +222,20 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'window.addEventListener("popstate"' in script.text
     assert 'headers["If-None-Match"]' in script.text
     assert 'class="skip-link"' in index.text
-    assert 'aria-label="Research workspace navigation"' in index.text
+    assert 'aria-label="Conversation history"' in index.text
     assert 'id="drawer-toggle"' in index.text
+    assert 'id="drawer-edge"' in index.text
+    assert 'id="drawer-close"' in index.text
     assert 'aria-controls="project-drawer"' in index.text
     assert 'id="project-drawer"' in index.text
+    drawer_markup = index.text[
+        index.text.index('<nav id="project-drawer"') : index.text.index("</nav>")
+    ]
+    assert 'id="workspace-history-list"' in drawer_markup
+    assert 'class="view-navigation"' not in drawer_markup
+    assert 'class="selection-controls"' not in drawer_markup
+    assert 'class="project-toolbar"' in index.text
+    assert 'class="evidence-tools"' in index.text
     assert 'class="content-column"' in index.text
     assert 'class="conversation-composer"' in index.text
     assert index.text.index('id="workspace"') < index.text.index('id="intent-form"')
@@ -257,9 +267,12 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert ".generated-blocker-list" in stylesheet.text
     assert "@media (max-width: 1050px)" in stylesheet.text
     assert ".workspace.generated-workspace" in stylesheet.text
-    assert "body.drawer-closed .project-nav" in stylesheet.text
+    assert "body.drawer-open .project-nav" in stylesheet.text
     assert ".research-lens-grid" in stylesheet.text
-    assert "setDrawerOpen(!drawerOpen" in script.text
+    assert "previewDrawer" in script.text
+    assert "setDrawerPinned(!drawerPinned" in script.text
+    assert "workspaceDisplayTitle" in script.text
+    assert 'event.key === "Enter" && !event.shiftKey && !event.isComposing' in script.text
     assert "@media (max-width: 720px)" in stylesheet.text
     assert ":focus-visible" in stylesheet.text
     assert "workspace.focus({preventScroll: true})" in script.text

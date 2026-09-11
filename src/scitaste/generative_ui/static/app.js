@@ -38,8 +38,12 @@ const intentResult = document.getElementById("intent-result");
 const localeSelect = document.getElementById("locale-select");
 const skipLink = document.querySelector(".skip-link");
 const drawerToggle = document.getElementById("drawer-toggle");
+const drawerEdge = document.getElementById("drawer-edge");
 const projectDrawer = document.getElementById("project-drawer");
+const drawerClose = document.getElementById("drawer-close");
 const drawerBackdrop = document.getElementById("drawer-backdrop");
+const evidenceTools = document.querySelector(".evidence-tools");
+const drawerProjectContext = document.getElementById("drawer-project-context");
 
 const localeAssetPaths = Object.freeze({
   en: "/assets/locales/en.json",
@@ -95,39 +99,79 @@ let connectionStatusKey = "connection.connecting";
 let freshnessStatusKey = "freshness.none";
 let connectionStatusError = null;
 const compactNavigation = window.matchMedia("(max-width: 900px)");
-let drawerOpen = !compactNavigation.matches;
+let drawerPinned = false;
+let drawerPreview = false;
+let drawerCloseTimer = null;
 
-document.body.classList.toggle("drawer-closed", !drawerOpen);
-projectDrawer.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
-drawerToggle.setAttribute("aria-expanded", drawerOpen ? "true" : "false");
+function isDrawerOpen() {
+  return drawerPinned || drawerPreview;
+}
 
 function renderDrawerState({focus = false} = {}) {
-  document.body.classList.toggle("drawer-closed", !drawerOpen);
-  projectDrawer.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
-  drawerToggle.setAttribute("aria-expanded", drawerOpen ? "true" : "false");
-  const labelKey = drawerOpen ? "nav.close" : "nav.open";
-  drawerToggle.dataset.i18n = labelKey;
-  drawerToggle.textContent = hasTranslation(labelKey)
+  const open = isDrawerOpen();
+  document.body.classList.toggle("drawer-open", open);
+  document.body.classList.toggle("drawer-closed", !open);
+  document.body.classList.toggle("drawer-pinned", drawerPinned);
+  document.body.classList.toggle("drawer-preview", drawerPreview && !drawerPinned);
+  projectDrawer.setAttribute("aria-hidden", open ? "false" : "true");
+  projectDrawer.inert = !open;
+  drawerToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  const labelKey = drawerPinned ? "nav.close" : "nav.open";
+  drawerToggle.dataset.i18nAria = labelKey;
+  drawerToggle.setAttribute("aria-label", hasTranslation(labelKey)
     ? t(labelKey)
-    : drawerOpen ? "Close project navigation" : "Open project navigation";
+    : drawerPinned ? "Close conversation history" : "Open conversation history");
   drawerBackdrop.setAttribute("aria-label", hasTranslation("nav.close")
     ? t("nav.close")
-    : "Close project navigation");
-  if (focus && drawerOpen) {
+    : "Close conversation history");
+  if (focus && open) {
     projectDrawer.focus({preventScroll: true});
   }
 }
 
-function setDrawerOpen(open, options = {}) {
-  drawerOpen = Boolean(open);
+function clearDrawerCloseTimer() {
+  if (drawerCloseTimer !== null) {
+    window.clearTimeout(drawerCloseTimer);
+    drawerCloseTimer = null;
+  }
+}
+
+function setDrawerPinned(pinned, options = {}) {
+  clearDrawerCloseTimer();
+  drawerPinned = Boolean(pinned);
+  drawerPreview = false;
   renderDrawerState(options);
+}
+
+function previewDrawer(event) {
+  if (compactNavigation.matches || drawerPinned
+      || (event?.pointerType && event.pointerType !== "mouse")) {
+    return;
+  }
+  clearDrawerCloseTimer();
+  drawerPreview = true;
+  renderDrawerState();
+}
+
+function scheduleDrawerPreviewClose() {
+  if (drawerPinned || !drawerPreview) {
+    return;
+  }
+  clearDrawerCloseTimer();
+  drawerCloseTimer = window.setTimeout(() => {
+    drawerPreview = false;
+    drawerCloseTimer = null;
+    renderDrawerState();
+  }, 180);
 }
 
 function closeDrawerOnMobile() {
   if (compactNavigation.matches) {
-    setDrawerOpen(false);
+    setDrawerPinned(false);
   }
 }
+
+renderDrawerState();
 
 function browserLocale() {
   return String(navigator.language || "en").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
@@ -2535,6 +2579,7 @@ function setIntentEnabled(enabled) {
 
 function clearProjectContext(projectId = "") {
   activeProjectId = projectId;
+  drawerProjectContext.textContent = projectId || t("thread.no_project");
   researchWorkspaceCatalog = null;
   topicSearchQuery = "";
   topicSearch.value = "";
@@ -2556,6 +2601,7 @@ function clearProjectContext(projectId = "") {
   responseCache.clear();
   resetCatalogs();
   intentQuestion.value = "";
+  intentQuestion.style.height = "";
   quickIntents.replaceChildren();
   const quickMessage = document.createElement("p");
   quickMessage.className = "muted";
@@ -2602,6 +2648,25 @@ function renderTopicManagementStatus() {
   topicManagementStatus.appendChild(message);
 }
 
+function localizedQuickIntentText(value) {
+  const descriptor = quickIntentCatalog?.intents.find(
+    (item) => item.quick_intent_id === value,
+  );
+  if (!descriptor) {
+    return value;
+  }
+  const labelKey = quickIntentLabelKeys[descriptor.label_code];
+  return labelKey ? t(labelKey) : descriptor.label;
+}
+
+function workspaceDisplayTitle(title) {
+  return localizedQuickIntentText(title);
+}
+
+function turnPromptDisplay(prompt) {
+  return prompt.kind === "quick" ? localizedQuickIntentText(prompt.text) : prompt.text;
+}
+
 function renderWorkspaceHistory() {
   workspaceHistoryList.replaceChildren();
   if (!activeProjectId) {
@@ -2628,7 +2693,8 @@ function renderWorkspaceHistory() {
   const normalizedSearch = topicSearchQuery.trim().toLocaleLowerCase(activeLocale);
   const filteredWorkspaces = normalizedSearch
     ? researchWorkspaceCatalog.workspaces.filter((item) => (
-      item.title.toLocaleLowerCase(activeLocale).includes(normalizedSearch)
+      workspaceDisplayTitle(item.title).toLocaleLowerCase(activeLocale).includes(normalizedSearch)
+      || item.title.toLocaleLowerCase(activeLocale).includes(normalizedSearch)
     ))
     : researchWorkspaceCatalog.workspaces;
   const visibleWorkspaces = [...filteredWorkspaces];
@@ -2650,6 +2716,7 @@ function renderWorkspaceHistory() {
   const list = document.createElement("ol");
   list.className = "workspace-history-items";
   for (const item of visibleWorkspaces) {
+    const displayTitle = workspaceDisplayTitle(item.title);
     const row = document.createElement("li");
     row.className = "workspace-history-topic";
     const button = document.createElement("button");
@@ -2658,7 +2725,7 @@ function renderWorkspaceHistory() {
       ? "workspace-history-button selected"
       : "workspace-history-button";
     const title = document.createElement("strong");
-    appendText(title, item.title);
+    appendText(title, displayTitle);
     const metadata = document.createElement("small");
     appendText(metadata, t("thread.turn_count", {count: item.revision}));
     const status = document.createElement("small");
@@ -2675,8 +2742,9 @@ function renderWorkspaceHistory() {
     const renameButton = document.createElement("button");
     renameButton.type = "button";
     renameButton.className = "workspace-history-rename";
-    renameButton.setAttribute("aria-label", t("thread.rename_aria", {title: item.title}));
-    appendText(renameButton, t("thread.rename"));
+    renameButton.setAttribute("aria-label", t("thread.rename_aria", {title: displayTitle}));
+    renameButton.setAttribute("title", t("thread.rename"));
+    appendText(renameButton, "✎");
     renameButton.addEventListener("click", () => renameResearchWorkspace(item));
     actions.append(button, renameButton);
     row.appendChild(actions);
@@ -2694,7 +2762,7 @@ function renderWorkspaceHistory() {
         const page = document.createElement("span");
         appendText(page, t("thread.turn_page", {ordinal: turn.ordinal}));
         const prompt = document.createElement("small");
-        appendText(prompt, turn.prompt.text);
+        appendText(prompt, turnPromptDisplay(turn.prompt));
         const turnStatus = document.createElement("small");
         turnStatus.className = `workspace-history-status state-${turn.status}`;
         appendText(turnStatus, localizedCode(turn.status));
@@ -2715,7 +2783,7 @@ function renderWorkspaceHistory() {
 }
 
 async function renameResearchWorkspace(item) {
-  const proposed = window.prompt(t("thread.rename_prompt"), item.title);
+  const proposed = window.prompt(t("thread.rename_prompt"), workspaceDisplayTitle(item.title));
   if (proposed === null) {
     return;
   }
@@ -2844,6 +2912,7 @@ async function loadQuickIntents(projectId) {
     }
     quickIntentCatalog = catalog;
     renderQuickIntents();
+    renderWorkspaceHistory();
     setIntentEnabled(true);
   } catch (error) {
     quickIntentCatalog = null;
@@ -3425,6 +3494,7 @@ function showError(container, error) {
 
 function rerenderForLocale() {
   localizeStaticShell();
+  drawerProjectContext.textContent = activeProjectId || t("thread.no_project");
   renderDrawerState();
   if (connectionStatusError) {
     showError(connectionStatus, connectionStatusError);
@@ -3484,19 +3554,53 @@ skipLink.addEventListener("click", (event) => {
   workspace.focus({preventScroll: false});
 });
 drawerToggle.addEventListener("click", () => {
-  setDrawerOpen(!drawerOpen, {focus: !drawerOpen});
+  setDrawerPinned(!drawerPinned, {focus: !drawerPinned});
 });
-drawerBackdrop.addEventListener("click", () => setDrawerOpen(false));
+drawerClose.addEventListener("click", () => {
+  setDrawerPinned(false);
+  drawerToggle.focus({preventScroll: true});
+});
+drawerBackdrop.addEventListener("click", () => setDrawerPinned(false));
+drawerEdge.addEventListener("pointerenter", previewDrawer);
+drawerEdge.addEventListener("pointerleave", scheduleDrawerPreviewClose);
+projectDrawer.addEventListener("pointerenter", clearDrawerCloseTimer);
+projectDrawer.addEventListener("pointerleave", scheduleDrawerPreviewClose);
+projectDrawer.addEventListener("focusin", () => {
+  clearDrawerCloseTimer();
+  if (!drawerPinned) {
+    drawerPreview = true;
+    renderDrawerState();
+  }
+});
+projectDrawer.addEventListener("focusout", (event) => {
+  if (!projectDrawer.contains(event.relatedTarget)
+      && !drawerEdge.contains(event.relatedTarget)) {
+    scheduleDrawerPreviewClose();
+  }
+});
 projectDrawer.addEventListener("click", (event) => {
   if (event.target.closest("button")) {
     closeDrawerOnMobile();
   }
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && drawerOpen
-      && compactNavigation.matches) {
-    setDrawerOpen(false);
+  if (event.key === "Escape" && evidenceTools.open) {
+    evidenceTools.removeAttribute("open");
+  }
+  if (event.key === "Escape" && isDrawerOpen()) {
+    setDrawerPinned(false);
     drawerToggle.focus({preventScroll: true});
+  }
+});
+compactNavigation.addEventListener("change", () => setDrawerPinned(false));
+evidenceTools.addEventListener("click", (event) => {
+  if (event.target.closest("button")) {
+    evidenceTools.removeAttribute("open");
+  }
+});
+document.addEventListener("pointerdown", (event) => {
+  if (evidenceTools.open && !evidenceTools.contains(event.target)) {
+    evidenceTools.removeAttribute("open");
   }
 });
 localeSelect.addEventListener("change", () => {
@@ -3547,6 +3651,7 @@ intentForm.addEventListener("submit", (event) => {
     return;
   }
   intentQuestion.value = "";
+  intentQuestion.style.height = "";
   generateWithIntent({
     schema_version: "1.0",
     kind: "free_question",
@@ -3555,6 +3660,16 @@ intentForm.addEventListener("submit", (event) => {
     snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
     question,
   });
+});
+intentQuestion.addEventListener("input", () => {
+  intentQuestion.style.height = "auto";
+  intentQuestion.style.height = `${Math.min(intentQuestion.scrollHeight, 136)}px`;
+});
+intentQuestion.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    intentForm.requestSubmit();
+  }
 });
 for (const button of viewButtons) {
   button.addEventListener("click", () => activateView(button.dataset.view));

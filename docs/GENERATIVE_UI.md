@@ -32,9 +32,12 @@ closed. Empty projects, absent papers, unavailable stages, and missing
 comparable metrics use explicit typed availability states; the composer does not
 invent research progress or substitute model-authored explanations.
 
-The fixed receiver provides a project switcher, the eight project-scoped view
+The fixed receiver provides a project toolbar, the eight project-scoped view
 controls, run and paper selection, comparison controls, freshness/provenance,
-and browser back/forward deep links. Conditional GET uses the workspace
+and browser back/forward deep links. The fixed views and evidence selectors are
+grouped under one receiver-owned `Evidence tools` disclosure; they remain
+available without competing with project content or conversation history.
+Conditional GET uses the workspace
 fingerprint as an ETag. The responsive shell and all navigation remain receiver
 code shipped in the package; only validated component data changes. Every
 workspace render and project-selector change clears the prior run and paper
@@ -44,15 +47,23 @@ also clears the prior quick-intent catalog, free-question value, generated
 layout, proposal result, artifact preview, response cache, and current document
 before any newly selected project is rendered.
 
-Project selection, conversation history, fixed views, and advanced evidence
-selectors live in a receiver-owned drawer. It is open by default on a desktop,
-closed by default as an overlay on a narrow screen, and can always be toggled
-from the header without persistence or a model call. Questions are not placed
-in that navigation tree: the quick prompts, bounded-context selector, free
-question, and submit control form one horizontal composer beneath the main
-workspace. The workspace and composer share a viewport-height content column,
-so evidence scrolls inside the workspace while the current interaction remains
-available below it.
+The receiver-owned left drawer has one responsibility: project-scoped
+conversation history. It contains new-topic, title-search, rename, topic, and
+immutable turn-page controls, but no fixed-view or evidence-selection controls.
+The drawer is closed by default. On a fine-pointer desktop, moving onto the
+left-edge affordance previews it without shifting content or adding a backdrop;
+moving into the drawer preserves the preview, while leaving closes it after a
+short intent delay. Clicking pins it, Escape closes it, keyboard focus opens it,
+and touch layouts use the same explicit button with a modal backdrop. No state
+is persisted and no model is called by these shell interactions.
+
+Questions are not placed in that navigation tree. Evidence-derived prompt chips
+sit above a single-row-first text entry that grows only to a bounded height;
+Enter submits, Shift+Enter inserts a newline, and the verified-context selector
+remains visible but secondary. This bottom composer and the main workspace share
+a viewport-height content column, so evidence scrolls inside the workspace while
+the current interaction remains available below it. The compact composition is
+a receiver layout choice, not evidence or a learned preference claim.
 
 The navigation hierarchy is deliberately four-level: the portfolio index lists
 all registered projects; each project opens to its stable `project-progress`
@@ -74,6 +85,13 @@ generated-document contents and does not call a model. Project-local shared and
 exclusive file locks coordinate readers, appends, creation, and renames across
 local server processes. A stale rename returns a conflict and reloads current
 metadata instead of overwriting it.
+
+An unrenamed quick-intent conversation keeps its stable intent ID in storage,
+but the receiver projects the current server-issued `label_code` in the active
+locale for both its topic title and quick-turn label. A user-authored rename
+replaces that projection. Thus internal identifiers such as
+`review-project-progress` remain available for audit and search without becoming
+the default human-facing history label.
 
 Each follow-up explicitly chooses either the current question alone or at most
 the eight latest immutable turns. The receiver submits only their IDs; the
@@ -867,10 +885,11 @@ The logical `inspector` name remains in the v1 shell contract so archived
 documents preserve their fingerprints. The packaged browser no longer renders
 a permanent right-hand inspector: proposal decisions and artifact previews are
 materialized as an inline workspace panel only after an explicit action, and no
-empty hint rail occupies the project page. Likewise, the visual project
-navigation is a toggleable drawer and the question composer is a bottom content
-surface; these visual placements do not change the archived logical region
-names. The other receiver assets are
+empty hint rail occupies the project page. Likewise, the visual conversation
+history is a hover-previewable, explicitly pinnable drawer; project and
+evidence navigation lives in the project toolbar; and the question composer is
+a compact bottom content surface. These visual placements do not change the
+archived logical region names. The other receiver assets are
 build-time package data rather than generated project output and reference no
 remote script, stylesheet, font, or renderer.
 

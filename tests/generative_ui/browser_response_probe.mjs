@@ -140,6 +140,20 @@ async function main() {
       await waitFor(cdp, sessionId, `
         document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "false"
       `);
+      await evaluate(cdp, sessionId, `document.querySelector(".evidence-tools > summary").click()`);
+      await waitFor(cdp, sessionId, `document.querySelector(".evidence-tools").open`);
+      projectHomeShell.mobile_evidence_tools_fit = await evaluate(cdp, sessionId, `(() => {
+        const panel = document.querySelector(".evidence-tools-panel");
+        const rect = panel.getBoundingClientRect();
+        return rect.left >= 0
+          && rect.right <= window.innerWidth
+          && panel.querySelectorAll(".view-button").length === 8
+          && Boolean(panel.querySelector(".selection-controls"));
+      })()`);
+      await evaluate(cdp, sessionId, `
+        document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))
+      `);
+      await waitFor(cdp, sessionId, `!document.querySelector(".evidence-tools").open`);
 
       await evaluate(cdp, sessionId, `
         (() => {
@@ -270,6 +284,84 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 300));
       const localeSwitchRequests = networkRequests - beforeLocaleSwitch;
 
+      await setViewport(cdp, sessionId, 1440, 1000);
+      await evaluate(cdp, sessionId, `
+        (() => {
+          const toggle = document.getElementById("drawer-toggle");
+          if (toggle.getAttribute("aria-expanded") === "true") {
+            document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+          }
+          document.getElementById("drawer-edge").dispatchEvent(
+            new PointerEvent("pointerenter", {pointerType: "mouse"}),
+          );
+        })()
+      `);
+      await waitFor(cdp, sessionId, `
+        document.body.classList.contains("drawer-preview")
+        && document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "true"
+        && document.getElementById("project-drawer").getBoundingClientRect().left >= 0
+      `);
+      const desktopDrawer = await evaluate(cdp, sessionId, `(() => {
+        const drawer = document.getElementById("project-drawer");
+        return {
+          hover_preview_opens: document.body.classList.contains("drawer-preview"),
+          fully_visible:
+            drawer.getBoundingClientRect().left >= 0
+            && drawer.getBoundingClientRect().right <= window.innerWidth,
+          overlays_without_backdrop:
+            getComputedStyle(drawer).position === "fixed"
+            && getComputedStyle(document.getElementById("drawer-backdrop")).display === "none",
+          history_present: Boolean(drawer.querySelector("#workspace-history-list")),
+          internal_intent_slug_hidden: !drawer.textContent.includes("review-project-progress"),
+          fixed_views_absent: !drawer.querySelector(".view-navigation"),
+          evidence_selection_absent: !drawer.querySelector(".selection-controls"),
+        };
+      })()`);
+      if (screenshotRoot) {
+        await mkdir(screenshotRoot, {recursive: true});
+        const capture = await cdp.call("Page.captureScreenshot", {
+          format: "png",
+          fromSurface: true,
+          captureBeyondViewport: false,
+        }, sessionId);
+        await writeFile(
+          join(screenshotRoot, "conversation-drawer-hover-1440.png"),
+          Buffer.from(capture.data, "base64"),
+        );
+      }
+      await evaluate(cdp, sessionId, `
+        (() => {
+          const edge = document.getElementById("drawer-edge");
+          const drawer = document.getElementById("project-drawer");
+          edge.dispatchEvent(new PointerEvent("pointerleave", {pointerType: "mouse"}));
+          drawer.dispatchEvent(new PointerEvent("pointerenter", {pointerType: "mouse"}));
+        })()
+      `);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      desktopDrawer.pointer_transfer_preserves_preview = await evaluate(cdp, sessionId, `
+        document.body.classList.contains("drawer-preview")
+      `);
+      await evaluate(cdp, sessionId, `
+        document.getElementById("project-drawer").dispatchEvent(
+          new PointerEvent("pointerleave", {pointerType: "mouse"}),
+        )
+      `);
+      await waitFor(cdp, sessionId, `
+        document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "false"
+      `);
+      await evaluate(cdp, sessionId, `document.getElementById("drawer-toggle").click()`);
+      await waitFor(cdp, sessionId, `document.body.classList.contains("drawer-pinned")`);
+      desktopDrawer.click_pins = await evaluate(cdp, sessionId, `
+        document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "true"
+      `);
+      await evaluate(cdp, sessionId, `
+        document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))
+      `);
+      await waitFor(cdp, sessionId, `
+        document.getElementById("drawer-toggle").getAttribute("aria-expanded") === "false"
+      `);
+      desktopDrawer.escape_closes = true;
+
       const viewports = [];
       for (const [width, height] of [
         [1440, 1000],
@@ -281,9 +373,10 @@ async function main() {
         await evaluate(cdp, sessionId, `
           (() => {
             const toggle = document.getElementById("drawer-toggle");
-            const desiredOpen = ${width > 900};
-            if ((toggle.getAttribute("aria-expanded") === "true") !== desiredOpen) {
-              toggle.click();
+            if (toggle.getAttribute("aria-expanded") === "true") {
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", {key: "Escape", bubbles: true}),
+              );
             }
             const workspace = document.getElementById("workspace");
             workspace.focus({preventScroll: true});
@@ -298,7 +391,8 @@ async function main() {
               .filter((element) => {
                 const style = getComputedStyle(element);
                 const rect = element.getBoundingClientRect();
-                return style.position !== "fixed"
+                return !element.closest("[inert]")
+                  && style.position !== "fixed"
                   && rect.width > 0
                   && (rect.left < -1 || rect.right > width + 1);
               })
@@ -351,6 +445,10 @@ async function main() {
                 const rect = document.querySelector(".conversation-composer").getBoundingClientRect();
                 return rect.bottom > 0 && rect.top < window.innerHeight;
               })(),
+              composer_height: Math.round(document.querySelector(".conversation-composer")
+                .getBoundingClientRect().height),
+              composer_is_bounded: document.querySelector(".conversation-composer")
+                .getBoundingClientRect().height <= Math.min(260, window.innerHeight * 0.34),
             };
           })()
         `);
@@ -420,6 +518,7 @@ async function main() {
         quick_intent_to_generated_workspace_ms:
           Math.round(quickIntentToGeneratedMs * 1000) / 1000,
         generated_response_focus: generatedResponseFocus,
+        desktop_conversation_drawer: desktopDrawer,
         evidence_graph_exploration: evidenceGraphExploration,
         intervention,
         topic_navigation: topicNavigation,
@@ -437,10 +536,21 @@ async function main() {
         || localeSwitchRequests !== 0
         || !projectHomeShell.mobile_drawer_default_closed
         || !projectHomeShell.mobile_drawer_opens_as_overlay
+        || !projectHomeShell.mobile_evidence_tools_fit
         || !projectHomeShell.composer_follows_workspace
         || projectHomeShell.research_lens_count !== 4
         || !generatedResponseFocus.workspace_visible
         || !generatedResponseFocus.workspace_has_focus
+        || !desktopDrawer.hover_preview_opens
+        || !desktopDrawer.fully_visible
+        || !desktopDrawer.overlays_without_backdrop
+        || !desktopDrawer.history_present
+        || !desktopDrawer.internal_intent_slug_hidden
+        || !desktopDrawer.fixed_views_absent
+        || !desktopDrawer.evidence_selection_absent
+        || !desktopDrawer.pointer_transfer_preserves_preview
+        || !desktopDrawer.click_pins
+        || !desktopDrawer.escape_closes
         || (evidenceGraphExploration.tested && (
           !evidenceGraphExploration.workspace_id_preserved
           || evidenceGraphExploration.turn_count_increment !== 1
@@ -460,7 +570,8 @@ async function main() {
           || !item.workspace_visible
           || !item.workspace_has_focus
           || !item.composer_below_workspace
-          || !item.composer_visible)
+          || !item.composer_visible
+          || !item.composer_is_bounded)
       ) {
         process.exitCode = 1;
       }
