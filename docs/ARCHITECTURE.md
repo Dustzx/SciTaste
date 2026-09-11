@@ -1575,3 +1575,34 @@ required type instead of allowing arbitrary later evidence to close it. Formal
 results must subsequently enter ResearchState with those matching types, after
 which a content-bound paper revision and original-reviewer verification remain
 necessary.
+
+### ADR-052: Formal results close only evidence-matched review obligations
+
+Status: accepted for project-owned result-to-state admission; no experiment is
+authorized or implied.
+
+An evaluation result bundle can be internally valid without proving that it was
+the project's selected result, that it answers a routed reviewer concern, or
+that the paper revision used its exact evidence. SciTaste therefore introduces
+a separate immutable evidence-admission run after result registration and
+selection. It revalidates the evaluation proposal, plan, result set, assessment,
+all nested artifacts, source review routing, opening ResearchState, and a copy
+of the project manifest at the admission revision.
+
+Admission requires formal scope, exact-proposal execution authorization,
+headline completeness, and positive preregistered primary contrasts against at
+least two real external method implementations. It creates distinct evidence
+types for comparative effectiveness and matched external baselines. Multi-task
+validity appears only when at least two held-out matched-lane tasks are present.
+Evidence with no claim relation may close a broad paper-level obligation but
+cannot close a claim-specific obligation. Closure is restricted to the named
+routing bundle so a new result cannot silently close matching historical
+reviews, and prose-only concerns are never closed by evidence.
+
+The transition also records the formal result as a completed experiment and can
+derive `PaperRevisionClosureProof` objects from the exact opening/closing state
+and result-record bytes. These proofs feed the existing proposal-only paper
+revision path. Manuscript materialization, author response, original-reviewer
+verification, and the two-expert pre-submission gate remain separate authority
+boundaries. The implementation performs no provider call, GPU work, task
+acquisition, paper mutation, or review self-certification.

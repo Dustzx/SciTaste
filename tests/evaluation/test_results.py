@@ -48,9 +48,25 @@ from scitaste.project import (
     ProjectEvaluationArtifact,
     ProjectEvaluationBundle,
     ProjectManifest,
+    ProjectRun,
     ProjectRuntime,
 )
 from scitaste.project.models import content_sha256
+from scitaste.review import (
+    ReviewerIdentity,
+    ReviewFeedback,
+    VenueCriterionAssessment,
+    VenueReviewReport,
+    build_project_evaluation_closure_proofs,
+    import_venue_review_report,
+    inspect_project_evaluation_evidence,
+    prepare_project_evaluation_evidence,
+    prepare_project_review_routing,
+    prepare_venue_review,
+    publish_project_evaluation_evidence,
+    publish_project_review_routing,
+)
+from scitaste.state.research_state import ResearchState
 from scitaste.writing import materialize_paper_scientific_evidence
 
 SHA = "a" * 64
@@ -490,6 +506,163 @@ def _publish_formal_evaluation(
     )
 
 
+def _route_result_review(
+    runtime: ProjectRuntime,
+    *,
+    expected_revision: int,
+) -> tuple[object, str]:
+    source_run_id = "result-review-source"
+    snapshot = runtime.begin_run(
+        "result-project",
+        ProjectRun(
+            run_id=source_run_id,
+            provider="scitaste-native",
+            model="deterministic-controller",
+            condition="result-review-source",
+            seed=0,
+            status="complete",
+            evidence_scope="test-only",
+            stage_path="state",
+        ),
+        expected_revision=expected_revision,
+    )
+    source_state = ResearchState(
+        project_id="result-project",
+        research_direction="Test formal evidence closure.",
+        target_domain="autonomous research",
+    )
+    source_locator = f"runs/{source_run_id}/state/research_state.json"
+    source_path = runtime.projects_root / "result-project" / source_locator
+    source_path.write_text(source_state.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    paper_directory = "review-paper-v1"
+    paper_root = runtime.projects_root / "result-project" / "papers" / paper_directory
+    paper_root.mkdir(parents=True)
+    (paper_root / "main.md").write_text("# Formal result review\n", encoding="utf-8")
+    snapshot = runtime.register_paper(
+        "result-project",
+        PaperManifest(
+            paper_id=paper_directory,
+            project_id="result-project",
+            title="Formal result review",
+            date="2026-09-11",
+            provider="scitaste-native",
+            model="deterministic-writer",
+            condition="review-test",
+            task="formal-result",
+            seed=0,
+            stage=17,
+            status="venue-submission-draft",
+            evidence_scope="test-only",
+            files={"source-markdown": "main.md"},
+            venue_id="iclr-2027",
+            eligible_for_submission=True,
+        ),
+        directory_name=paper_directory,
+        expected_revision=snapshot.revision,
+    )
+    snapshot, packet, _round = prepare_venue_review(
+        runtime,
+        project_id="result-project",
+        paper_directory=paper_directory,
+        review_id="formal-result-review",
+        round_number=1,
+        review_scope="development",
+        venue_taste_profile=Path("configs/writing/venues/iclr-2027/taste.yaml"),
+        expected_revision=snapshot.revision,
+    )
+    criteria = tuple(
+        VenueCriterionAssessment(
+            criterion=criterion,
+            assessment="partially_satisfied",
+            rationale="The formal result must be routed into the research state.",
+        )
+        for criterion in (
+            "specific_question",
+            "motivation_and_literature",
+            "claim_support_and_rigor",
+            "significance_and_community_value",
+        )
+    )
+    concerns = (
+        ReviewFeedback(
+            concern_id="missing-effectiveness",
+            category="missing_evidence",
+            severity="high",
+            text="Add formal comparative effectiveness evidence.",
+            requires_new_evidence=True,
+            requires_new_experiment=True,
+        ),
+        ReviewFeedback(
+            concern_id="missing-external-baseline",
+            category="missing_baseline",
+            severity="high",
+            text="Add real external method comparisons.",
+            requires_new_evidence=True,
+            requires_new_experiment=True,
+        ),
+        ReviewFeedback(
+            concern_id="single-task-validity",
+            category="validity",
+            severity="high",
+            text="Demonstrate validity across multiple held-out tasks.",
+            requires_new_evidence=True,
+            requires_new_experiment=True,
+        ),
+        ReviewFeedback(
+            concern_id="title-overclaim",
+            category="overclaim",
+            severity="high",
+            text="Keep the title claim bounded by the paper evidence.",
+        ),
+    )
+    report = VenueReviewReport.create(
+        report_id="formal-result-report",
+        packet_sha256=packet.packet_sha256,
+        review_scope="development",
+        reviewer=ReviewerIdentity(
+            reviewer_id="test-reviewer",
+            reviewer_kind="internal_model",
+            independent=False,
+            conflict_status="unverified",
+            provider="scripted",
+            model_name="test-reviewer",
+        ),
+        summary="The paper needs formal result evidence and bounded claims.",
+        strengths=("The scientific question is explicit.",),
+        weaknesses=("The research state does not yet bind the formal result.",),
+        criteria=criteria,
+        initial_recommendation="reject",
+        decision_reasons=("The evidence chain is incomplete.",),
+        concerns=concerns,
+        confidence="high",
+    )
+    snapshot, _round = import_venue_review_report(
+        runtime,
+        project_id="result-project",
+        review_id="formal-result-review",
+        report=report,
+        expected_revision=snapshot.revision,
+    )
+    routing_run_id = "formal-result-obligations"
+    prepared = prepare_project_review_routing(
+        runtime,
+        project_id="result-project",
+        review_id="formal-result-review",
+        report_id="formal-result-report",
+        source_state_locator=source_locator,
+        run_id=routing_run_id,
+        source_commit="a" * 40,
+        expected_revision=snapshot.revision,
+    )
+    snapshot, _routing = publish_project_review_routing(
+        runtime,
+        prepared=prepared,
+        expected_revision=snapshot.revision,
+    )
+    return snapshot, routing_run_id
+
+
 def test_formal_real_complete_results_establish_effectiveness(tmp_path: Path) -> None:
     root = tmp_path / "project"
     root.mkdir()
@@ -887,3 +1060,103 @@ def test_paper_binding_reverifies_selected_result_and_every_paper_artifact(
         ).paper_scientific_evidence_bound
         is False
     )
+
+
+def test_selected_formal_result_closes_only_supported_review_obligations(
+    tmp_path: Path,
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    runtime.create(
+        ProjectManifest(
+            project_id="result-project",
+            title="Result project",
+            research_direction="Verify result-to-review evidence.",
+            status="active",
+        )
+    )
+    manifest = _formal_manifest()
+    _publish_formal_evaluation(runtime, manifest)
+    project_root = runtime.projects_root / "result-project"
+    results = _result_set(project_root, manifest)
+    result_set_path = project_root / "runs/formal/RESULT_SET.json"
+    result_set_path.parent.mkdir(parents=True, exist_ok=True)
+    result_set_path.write_text(results.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    prepared_result = prepare_project_evaluation_result(
+        runtime,
+        project_id="result-project",
+        result_id="formal-result-r1",
+        evaluation_id="formal-evaluation",
+        result_set_path=result_set_path,
+    )
+    snapshot = publish_project_evaluation_result(
+        runtime,
+        prepared_result,
+        expected_revision=1,
+        select=True,
+    )
+    snapshot, routing_run_id = _route_result_review(
+        runtime,
+        expected_revision=snapshot.revision,
+    )
+
+    prepared = prepare_project_evaluation_evidence(
+        runtime,
+        project_id="result-project",
+        routing_run_id=routing_run_id,
+        result_id="formal-result-r1",
+        run_id="formal-result-evidence-v1",
+        source_commit="b" * 40,
+        expected_revision=snapshot.revision,
+    )
+
+    assert {item.evidence_type for item in prepared.bundle.evidence} == {
+        "comparative effectiveness experiment",
+        "matched external baseline comparison",
+    }
+    assert set(prepared.bundle.closed_obligation_ids) == {
+        "obligation-missing-effectiveness",
+        "obligation-missing-external-baseline",
+    }
+    assert set(prepared.bundle.remaining_open_obligation_ids) == {
+        "obligation-single-task-validity",
+        "obligation-title-overclaim",
+    }
+    assert runtime.open("result-project").revision == snapshot.revision
+
+    published, bundle = publish_project_evaluation_evidence(
+        runtime,
+        prepared=prepared,
+        expected_revision=snapshot.revision,
+    )
+    assert published.revision == snapshot.revision + 2
+    assert (
+        inspect_project_evaluation_evidence(
+            runtime,
+            "result-project",
+            "formal-result-evidence-v1",
+        )
+        == bundle
+    )
+    run = next(item for item in published.manifest.runs if item.run_id == bundle.run_id)
+    assert run.model_calls == 0
+    assert run.status == "complete-evaluation-evidence-admitted"
+    proofs = build_project_evaluation_closure_proofs(
+        runtime,
+        "result-project",
+        "formal-result-evidence-v1",
+    )
+    assert {item.concern_id for item in proofs} == {
+        "missing-effectiveness",
+        "missing-external-baseline",
+    }
+    assert all(item.new_evidence[0].target_claim_ids == () for item in proofs)
+    assert all(item.experiments[0].experiment_id == "formal-result-r1" for item in proofs)
+
+    admitted = project_root / "runs/formal-result-evidence-v1/review_evidence/research_state.json"
+    admitted.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="admitted ResearchState"):
+        inspect_project_evaluation_evidence(
+            runtime,
+            "result-project",
+            "formal-result-evidence-v1",
+        )

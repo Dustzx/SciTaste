@@ -107,6 +107,49 @@ def test_obligation_closes_only_with_new_matching_evidence() -> None:
     assert state.reviewer_concerns[0].status == "closed"
 
 
+def test_obligation_closure_can_be_limited_to_one_review_scope() -> None:
+    state = ResearchState(
+        project_id="review",
+        research_direction="test",
+        target_domain="testing",
+    )
+    for concern_id in ("selected", "historical"):
+        concern = parse_feedback(
+            [
+                ReviewFeedback(
+                    concern_id=concern_id,
+                    category="missing_evidence",
+                    severity="high",
+                    text="Add comparative evidence.",
+                    requires_new_evidence=True,
+                    requires_new_experiment=True,
+                )
+            ]
+        )[0]
+        state.reviewer_concerns.append(concern)
+        state.open_research_obligations.append(
+            create_obligation(concern, ReviewActionRouter().route(concern), state)
+        )
+    state.evidence_graph.items.append(
+        EvidenceItem(
+            evidence_id="formal-comparison",
+            source_type="experiment",
+            evidence_type="comparative effectiveness experiment",
+            observation="The formal comparison passed its registered analysis.",
+            confidence=1.0,
+        )
+    )
+
+    closed = close_satisfied_obligations(
+        state,
+        obligation_ids=("obligation-selected",),
+    )
+
+    assert [item.obligation_id for item in closed] == ["obligation-selected"]
+    assert state.open_research_obligations[1].status == "open"
+    assert state.reviewer_concerns[1].status == "open"
+
+
 @pytest.mark.parametrize(
     ("category", "expected_type"),
     [

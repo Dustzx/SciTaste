@@ -71,6 +71,24 @@ call, and cannot close the review. Evidence-requiring concerns that omit an
 evidence type receive fail-closed category defaults for comparative
 effectiveness, matched external baselines, or multi-task validity.
 
+After execution, `project paper review admit-evaluation-evidence` accepts only
+the project's selected result when the registered assessment is formal,
+complete, headline-eligible, and positive under every preregistered primary
+contrast. It adds typed evidence and a completed experiment record to a new
+immutable ResearchState revision, then closes only obligations from the named
+routing run. Real external methods are required for baseline evidence; at least
+two matched held-out tasks are required for multi-task evidence. A result that
+does not bind a concern's target claim cannot close that claim-specific
+obligation.
+
+`project paper review evaluation-closure-proofs` converts each actually closed
+experimental obligation into a self-hashed `PaperRevisionClosureProof` that
+binds the opening state, closing state, result record, evidence IDs, and
+experiment ID. The proof can enter the existing proposal-only paper-revision
+node. It does not revise a paper, submit an author response, or close review;
+those remain separate registered transitions, and only the original reviewers
+can verify their concerns as closed.
+
 ## Venue-native submission gate
 
 Research manuscripts can be packaged through an exact venue contract after the

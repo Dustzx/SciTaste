@@ -57,6 +57,16 @@ effectiveness because the subject system, development process, and selected
 evidence are coupled. Only held-out external projects contribute to the
 headline effect estimate.
 
+The software return path from a future formal result is now explicit. A result
+must first pass project-owned admission and selection. Only a complete positive
+formal result may then create typed comparative-effectiveness and matched-
+external-baseline evidence in the routed review ResearchState; multi-task
+validity additionally requires at least two matched held-out tasks. The derived
+state transition can emit exact paper-revision closure proofs, but it cannot
+revise the manuscript or certify review closure. Original-reviewer verification
+and two conflict-cleared independent experts remain mandatory. No current
+self-development result satisfies this path.
+
 The accepted-literature basis and the resulting evaluation-stack decision are
 recorded in
 [`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md).

@@ -132,14 +132,18 @@ from scitaste.review import (
     VenueReviewReport,
     VenueReviewResponse,
     VenueReviewVerification,
+    build_project_evaluation_closure_proofs,
     build_venue_review_packet,
     import_venue_review_report,
     import_venue_review_verification,
+    inspect_project_evaluation_evidence,
     inspect_project_review_routing,
     inspect_venue_review,
     load_venue_review_packet,
+    prepare_project_evaluation_evidence,
     prepare_project_review_routing,
     prepare_venue_review,
+    publish_project_evaluation_evidence,
     publish_project_review_routing,
     submit_venue_review_response,
 )
@@ -865,6 +869,45 @@ def build_parser() -> argparse.ArgumentParser:
     review_routing_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(review_routing_status)
     review_routing_status.set_defaults(handler=_handle_project_paper_review_routing_status)
+
+    review_admit_evidence = project_paper_review_commands.add_parser(
+        "admit-evaluation-evidence",
+        help="Admit a selected formal result into routed review obligations",
+    )
+    review_admit_evidence.add_argument("--project-id", required=True)
+    review_admit_evidence.add_argument("--routing-run-id", required=True)
+    review_admit_evidence.add_argument("--result-id", required=True)
+    review_admit_evidence.add_argument("--run-id", required=True)
+    review_admit_evidence.add_argument("--source-commit", required=True)
+    review_admit_evidence.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_admit_evidence)
+    review_admit_evidence.set_defaults(
+        handler=_handle_project_paper_review_admit_evaluation_evidence
+    )
+
+    review_evidence_status = project_paper_review_commands.add_parser(
+        "evaluation-evidence-status",
+        help="Rehash one formal-result-to-review-state evidence transition",
+    )
+    review_evidence_status.add_argument("--project-id", required=True)
+    review_evidence_status.add_argument("--run-id", required=True)
+    review_evidence_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_evidence_status)
+    review_evidence_status.set_defaults(
+        handler=_handle_project_paper_review_evaluation_evidence_status
+    )
+
+    review_closure_proofs = project_paper_review_commands.add_parser(
+        "evaluation-closure-proofs",
+        help="Build paper-revision proofs from admitted formal evaluation evidence",
+    )
+    review_closure_proofs.add_argument("--project-id", required=True)
+    review_closure_proofs.add_argument("--run-id", required=True)
+    review_closure_proofs.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_closure_proofs)
+    review_closure_proofs.set_defaults(
+        handler=_handle_project_paper_review_evaluation_closure_proofs
+    )
 
     register_model_node_pilot_cli(commands)
     register_model_node_runtime_cli(commands)
@@ -2592,6 +2635,84 @@ def _handle_project_paper_review_routing_status(args: argparse.Namespace) -> int
         args.run_id,
     )
     print(bundle.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_review_admit_evaluation_evidence(
+    args: argparse.Namespace,
+) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    prepared = prepare_project_evaluation_evidence(
+        runtime,
+        project_id=args.project_id,
+        routing_run_id=args.routing_run_id,
+        result_id=args.result_id,
+        run_id=args.run_id,
+        source_commit=args.source_commit,
+        expected_revision=args.expected_revision,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": args.project_id,
+                    "current_revision": args.expected_revision,
+                    "expected_published_revision": args.expected_revision + 2,
+                    "bundle": prepared.bundle.model_dump(mode="json"),
+                    "no_execution_performed": True,
+                    "no_model_call_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, bundle = publish_project_evaluation_evidence(
+        runtime,
+        prepared=prepared,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "evaluation_evidence": bundle.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_evaluation_evidence_status(
+    args: argparse.Namespace,
+) -> int:
+    bundle = inspect_project_evaluation_evidence(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+        args.run_id,
+    )
+    print(bundle.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_review_evaluation_closure_proofs(
+    args: argparse.Namespace,
+) -> int:
+    proofs = build_project_evaluation_closure_proofs(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+        args.run_id,
+    )
+    print(
+        json.dumps(
+            {"closure_proofs": [item.model_dump(mode="json") for item in proofs]},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

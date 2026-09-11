@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- A selected, fully reverified formal evaluation result can now enter the
+  ResearchState produced by a registered review-routing run. The new immutable
+  transition records the project selection, proposal/result/assessment bytes,
+  real external method identities, held-out task breadth, added evidence,
+  completed experiment record, and exactly which obligations closed. It rejects
+  pilot, robustness, incomplete, ineffective, unselected, or drifted results;
+  one task cannot close multi-task validity, claim-specific concerns require
+  claim-linked evidence, and text-only concerns remain open. A read-only command
+  projects state-derived experiment proofs for the existing paper-revision and
+  original-reviewer verification path without running a model or experiment.
+
 - Admitted venue-review reports can now be materialized into a project-owned
   ResearchState routing run. The bundle rehashes the registered report, source
   state, routed state, actions, and one open obligation per concern, while

@@ -2,15 +2,26 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from scitaste.state.research_state import ResearchObligation, ResearchState
 
 EVIDENCE_ACTIONS = {"ADD_EXPERIMENT", "ADD_BASELINE", "ADD_ANALYSIS", "REVISE_METHOD"}
 
 
-def close_satisfied_obligations(state: ResearchState) -> list[ResearchObligation]:
+def close_satisfied_obligations(
+    state: ResearchState,
+    *,
+    obligation_ids: Iterable[str] | None = None,
+) -> list[ResearchObligation]:
+    """Close matching evidence obligations, optionally within one explicit review scope."""
+
     closed: list[ResearchObligation] = []
+    selected = set(obligation_ids) if obligation_ids is not None else None
     evidence = {item.evidence_id: item for item in state.evidence_graph.items}
     for obligation in state.open_research_obligations:
+        if selected is not None and obligation.obligation_id not in selected:
+            continue
         if obligation.status != "open":
             continue
         if obligation.action_type not in EVIDENCE_ACTIONS:

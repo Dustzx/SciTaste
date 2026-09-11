@@ -32,6 +32,17 @@ neither evidence nor closure. Broad paper-level effectiveness, baseline, and
 validity concerns receive distinct required evidence types when the reviewer did
 not name one, so later unrelated evidence cannot close them accidentally.
 
+The complementary result-to-state transition is now implemented. It can admit
+only a selected, complete formal result whose preregistered primary comparisons
+establish the bounded effectiveness claim. The transition records real external
+method identities and matched task breadth, adds exact evidence and experiment
+records, closes only the named review's matching obligations, and emits
+paper-revision closure proofs. It deliberately leaves text-only, claim-unbound,
+and single-task generalization concerns open. The self-development project
+cannot exercise this transition yet because it has no approved formal result;
+the software control path is complete while the scientific evidence path
+remains blocked.
+
 The local Generation-as-Content receiver now presents this lifecycle through a
 portfolio index, one stable home per project, project-owned research
 conversations, and one immutable generated page per user question. Conversation

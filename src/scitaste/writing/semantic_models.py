@@ -478,7 +478,7 @@ class PaperRevisionConcernInput(WritingSemanticModel):
 class PaperRevisionEvidenceProofItem(WritingSemanticModel):
     evidence_id: str = Field(pattern=_IDENTIFIER)
     evidence_type: str = Field(min_length=1, max_length=500)
-    target_claim_ids: tuple[str, ...] = Field(min_length=1, max_length=100)
+    target_claim_ids: tuple[str, ...] = Field(default=(), max_length=100)
     experiment_id: str | None = Field(default=None, pattern=_IDENTIFIER)
 
     @field_validator("target_claim_ids")
