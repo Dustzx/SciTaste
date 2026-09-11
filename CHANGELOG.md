@@ -18,6 +18,12 @@ semantic versioning.
   lifecycle facts for scientific-evidence completeness, paper binding, and the
   final pre-submission evidence/review loop.
 
+- Generated workspace identities now bind an explicit receiver-envelope
+  contract and the exact materialized surface. Additive project-home schema
+  changes therefore create a new immutable archive epoch instead of colliding
+  with a valid older generation that used the same question and project
+  revision.
+
 - Experiment proposal diagnostics now have a deterministic seven-gate decision
   map for task scope, real comparator adapters, statistical design, temporal
   integrity, independent review, runtime resources, and exact-hash owner

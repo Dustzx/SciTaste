@@ -10,6 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 import scitaste.generative_ui.application as application_module
+import scitaste.generative_ui.generation as generation_module
 from scitaste.generative_ui import (
     ArtifactInspectedAudit,
     AuditIntegrityError,
@@ -668,6 +669,40 @@ def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path)
         ).turn
         == first.turn
     )
+
+
+def test_generation_contract_change_creates_a_new_immutable_archive_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    request = WorkspaceGenerationRequest(
+        quick_catalog_fingerprint=catalog.fingerprint,
+        intent_request=QuickIntentRequest(
+            project_id="app-project",
+            snapshot_revision=catalog.snapshot.snapshot_revision,
+            snapshot_sha256=catalog.snapshot.snapshot_sha256,
+            quick_intent_id=catalog.intents[0].quick_intent_id,
+        ),
+    )
+
+    first = app.create_research_workspace("app-project", request)
+    monkeypatch.setattr(
+        generation_module,
+        "_GENERATION_ID_CONTRACT",
+        "generated-workspace-envelope-test-next",
+    )
+    second = GenerativeUIApplication(runtime).create_research_workspace(
+        "app-project",
+        request,
+    )
+
+    assert first.turn.generation_id != second.turn.generation_id
+    archive_root = runtime.projects_root / "app-project/.generative-ui/generations"
+    assert (archive_root / first.turn.generation_id / "archive.json").is_file()
+    assert (archive_root / second.turn.generation_id / "archive.json").is_file()
 
 
 def test_research_workspace_rejects_unregistered_or_reordered_context_turns(

@@ -47,6 +47,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+_GENERATION_ID_CONTRACT = "generated-workspace-envelope-v2"
 
 
 class WorkspaceGenerationRequest(BaseModel):
@@ -338,10 +339,12 @@ class WorkspaceGenerationService:
         materialized = materialize_surface_plan(candidates, planning.plan)
         generation_fingerprint = _fingerprint(
             {
+                "generation_id_contract": _GENERATION_ID_CONTRACT,
                 "request_fingerprint": parsed.fingerprint,
                 "conversation_context_sha256": (
                     conversation_context.fingerprint if conversation_context is not None else None
                 ),
+                "materialized_surface_fingerprint": materialized.surface.fingerprint,
             }
         )
         scoped_surface = SurfaceSpec.model_validate(

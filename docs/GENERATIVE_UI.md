@@ -80,6 +80,12 @@ ephemeral HttpOnly session automatically; a remote deployment must enforce
 identity and project access outside the content surface, through an explicit
 bearer API client or a deployment-owned authentication gateway.
 
+Generated page identities bind an explicit receiver-envelope version and the
+exact materialized surface fingerprint. A compatible repeated question reuses
+identical archived bytes; a component or receiver schema change creates a new
+immutable generation identity instead of overwriting or colliding with an older
+page at the same project revision.
+
 ### Progress-first self-hosting view
 
 `project-progress` is the default view after selecting a project. Its
