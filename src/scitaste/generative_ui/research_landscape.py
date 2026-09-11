@@ -19,13 +19,14 @@ _CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_PROJECTION_KIND = "autoresearch-evaluation-landscape-v5"
+_PROJECTION_KIND = "autoresearch-evaluation-landscape-v6"
 _PROJECTION_KINDS = frozenset(
     {
         "autoresearch-evaluation-landscape-v1",
         "autoresearch-evaluation-landscape-v2",
         "autoresearch-evaluation-landscape-v3",
         "autoresearch-evaluation-landscape-v4",
+        "autoresearch-evaluation-landscape-v5",
         _PROJECTION_KIND,
     }
 )
@@ -34,6 +35,7 @@ _OVERLAY_PROJECTION_KINDS = frozenset(
         "autoresearch-evaluation-landscape-v3",
         "autoresearch-evaluation-landscape-v4",
         "autoresearch-evaluation-landscape-v5",
+        "autoresearch-evaluation-landscape-v6",
     }
 )
 _MAX_ARTIFACT_BYTES = 256 * 1024
@@ -209,13 +211,14 @@ class ResearchLandscapeArtifact(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.4"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.5"
     artifact_kind: Literal[
         "autoresearch-evaluation-landscape-v1",
         "autoresearch-evaluation-landscape-v2",
         "autoresearch-evaluation-landscape-v3",
         "autoresearch-evaluation-landscape-v4",
         "autoresearch-evaluation-landscape-v5",
+        "autoresearch-evaluation-landscape-v6",
     ] = _PROJECTION_KIND
     title: SafeText
     source_document: SafeLocator
@@ -226,6 +229,7 @@ class ResearchLandscapeArtifact(BaseModel):
         "accepted-method-census-candidate-and-targeted-evaluation-resources",
         "accepted-method-census-second-screen-and-targeted-evaluation-resources",
         "accepted-method-census-third-screen-and-targeted-evaluation-resources",
+        "accepted-method-census-fourth-screen-and-targeted-evaluation-resources",
     ] = "targeted-evaluation-precedents"
     scope_note_en: SafeText = (
         "Selected evaluation precedents; counts do not estimate publication prevalence."
@@ -236,7 +240,7 @@ class ResearchLandscapeArtifact(BaseModel):
     decision_reason_code: SafeIdentifier
     stages: tuple[ResearchStage, ...] = Field(min_length=4, max_length=8)
     lenses: tuple[EvaluationLens, ...] = Field(min_length=3, max_length=6)
-    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=40)
+    works: tuple[ResearchWork, ...] = Field(min_length=3, max_length=52)
     comparison_candidates: tuple[ComparisonCandidate, ...] = Field(min_length=2, max_length=20)
     planning_gates: tuple[PlanningGate, ...] = Field(min_length=4, max_length=8)
     open_questions: tuple[ResearchQuestion, ...] = Field(min_length=1, max_length=6)
@@ -249,6 +253,7 @@ class ResearchLandscapeArtifact(BaseModel):
             "1.2": "autoresearch-evaluation-landscape-v3",
             "1.3": "autoresearch-evaluation-landscape-v4",
             "1.4": "autoresearch-evaluation-landscape-v5",
+            "1.5": "autoresearch-evaluation-landscape-v6",
         }
         if self.artifact_kind != expected_pair[self.schema_version]:
             raise ValueError("research landscape schema and artifact kind must match")
@@ -282,7 +287,7 @@ class ResearchLandscapeArtifact(BaseModel):
         if not any(item.role == "primary" for item in self.works):
             raise ValueError("research landscape requires a primary comparison work")
         contribution_types = {item.contribution_type for item in self.works}
-        if self.schema_version in {"1.1", "1.2", "1.3", "1.4"}:
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4", "1.5"}:
             if "unclassified" in contribution_types:
                 raise ValueError("classified research works require an explicit contribution type")
             if not {"method", "benchmark", "hybrid"}.issubset(contribution_types):
@@ -355,6 +360,32 @@ class ResearchLandscapeArtifact(BaseModel):
                 for item in self.comparison_candidates
             ):
                 raise ValueError("preprint-only systems must remain sensitivity candidates")
+        if self.schema_version == "1.5":
+            if self.corpus_scope != (
+                "accepted-method-census-fourth-screen-and-targeted-evaluation-resources"
+            ):
+                raise ValueError("v6 landscape must disclose its fourth-screen scope")
+            if any(item.publication_status == "unverified" for item in self.works):
+                raise ValueError("v6 research works require explicit publication status")
+            if any(
+                item.publication_status == "unverified" or item.evaluation_track == "design-only"
+                for item in self.comparison_candidates
+            ):
+                raise ValueError("v6 comparison candidates require explicit evidence tracks")
+            headline_external = {
+                item.candidate_id
+                for item in self.comparison_candidates
+                if item.evaluation_track == "headline-system"
+                and item.publication_status == "accepted-archival"
+            }
+            if len(headline_external) < 2:
+                raise ValueError("v6 requires at least two accepted external headline candidates")
+            if any(
+                item.publication_status == "preprint-only"
+                and item.evaluation_track != "sensitivity-system"
+                for item in self.comparison_candidates
+            ):
+                raise ValueError("preprint-only systems must remain sensitivity candidates")
         if self.freeze_decision == "ready" and any(
             item.state != "ready" for item in self.planning_gates
         ):
@@ -391,11 +422,12 @@ class ResearchLandscapeOverlay(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.2", "1.3", "1.4"] = "1.4"
+    schema_version: Literal["1.2", "1.3", "1.4", "1.5"] = "1.5"
     artifact_kind: Literal[
         "autoresearch-evaluation-landscape-v3",
         "autoresearch-evaluation-landscape-v4",
         "autoresearch-evaluation-landscape-v5",
+        "autoresearch-evaluation-landscape-v6",
     ] = _PROJECTION_KIND
     base_source: SafeLocator
     base_source_sha256: Sha256
@@ -407,6 +439,7 @@ class ResearchLandscapeOverlay(BaseModel):
         "accepted-method-census-candidate-and-targeted-evaluation-resources",
         "accepted-method-census-second-screen-and-targeted-evaluation-resources",
         "accepted-method-census-third-screen-and-targeted-evaluation-resources",
+        "accepted-method-census-fourth-screen-and-targeted-evaluation-resources",
     ]
     scope_note_en: SafeText
     scope_note_zh: SafeText
@@ -480,7 +513,7 @@ def _compose_research_landscape_overlay(
     if hashlib.sha256(base_path.read_bytes()).hexdigest() != overlay.base_source_sha256:
         raise ValueError("research landscape overlay base hash has drifted")
     base = load_research_landscape_source(base_path)
-    expected_base = {"1.2": "1.1", "1.3": "1.2", "1.4": "1.3"}[overlay.schema_version]
+    expected_base = {"1.2": "1.1", "1.3": "1.2", "1.4": "1.3", "1.5": "1.4"}[overlay.schema_version]
     if base.schema_version != expected_base:
         raise ValueError(f"{overlay.artifact_kind} overlay must extend schema {expected_base}")
 

@@ -24,10 +24,9 @@ from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
 _SOURCE = (
     Path(__file__).resolve().parents[2]
-    / "docs/research/data/autoresearch_evaluation_landscape_v5.yaml"
+    / "docs/research/data/autoresearch_evaluation_landscape_v6.yaml"
 )
-_V3_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v3.yaml")
-_V4_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v4.yaml")
+_V5_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v5.yaml")
 _LEGACY_SOURCE = _SOURCE.with_name("autoresearch_evaluation_landscape_v1.yaml")
 
 
@@ -56,7 +55,7 @@ def _runtime(tmp_path: Path, *, projection: bool = True) -> ProjectRuntime:
             status="complete",
             evidence_scope="literature-and-protocol-design-only",
             artifact=artifact,
-            generative_ui_projection="autoresearch-evaluation-landscape-v5",
+            generative_ui_projection="autoresearch-evaluation-landscape-v6",
         ),
         expected_revision=snapshot.revision,
     )
@@ -74,21 +73,21 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
 
     assert artifact.synthesis_scope == "literature-and-protocol-design-only"
     assert artifact.freeze_decision == "hold"
-    assert artifact.schema_version == "1.4"
+    assert artifact.schema_version == "1.5"
     assert artifact.corpus_scope == (
-        "accepted-method-census-third-screen-and-targeted-evaluation-resources"
+        "accepted-method-census-fourth-screen-and-targeted-evaluation-resources"
     )
     assert artifact.prevalence_inference == "not-estimable"
-    assert len(artifact.works) == 34
+    assert len(artifact.works) == 45
     assert {item.role for item in artifact.works} == {"primary", "anchor", "context"}
     assert {item.contribution_type for item in artifact.works} == {
         "method",
         "benchmark",
         "hybrid",
     }
-    assert sum(item.contribution_type == "method" for item in artifact.works) == 13
+    assert sum(item.contribution_type == "method" for item in artifact.works) == 16
     assert sum(item.contribution_type == "hybrid" for item in artifact.works) == 6
-    assert sum(item.contribution_type == "benchmark" for item in artifact.works) == 15
+    assert sum(item.contribution_type == "benchmark" for item in artifact.works) == 23
     assert {item.publication_status for item in artifact.works} == {"accepted-archival"}
     assert not any(item.readiness == "formal" for item in artifact.comparison_candidates)
     assert {"agent-laboratory", "dolphin", "code-scientist", "ai-researcher"}.issubset(
@@ -129,8 +128,8 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
             and {"benchmark", "judge", "dataset"} & set(item.bundled_artifacts)
         )
     }
-    assert len(system_sources) == 19
-    assert len(evaluation_sources) == 21
+    assert len(system_sources) == 22
+    assert len(evaluation_sources) == 29
     assert system_sources & evaluation_sources == {
         "ai-researcher",
         "empirical-outcome-prediction",
@@ -212,7 +211,7 @@ def test_preprint_system_cannot_enter_the_headline_track() -> None:
         ResearchLandscapeArtifact.model_validate(payload)
 
 
-def test_v5_requires_two_accepted_external_headline_candidates() -> None:
+def test_v6_requires_two_accepted_external_headline_candidates() -> None:
     payload = load_research_landscape_source(_SOURCE).model_dump(mode="json")
     for candidate in payload["comparison_candidates"]:
         if (
@@ -233,11 +232,11 @@ def test_legacy_landscape_remains_readable_but_explicitly_unclassified() -> None
     assert {item.contribution_type for item in artifact.works} == {"unclassified"}
 
 
-def test_v5_overlay_is_bound_to_the_exact_v4_base(tmp_path: Path) -> None:
+def test_v6_overlay_is_bound_to_the_exact_v5_base(tmp_path: Path) -> None:
     overlay = tmp_path / _SOURCE.name
-    base = tmp_path / _V4_SOURCE.name
+    base = tmp_path / _V5_SOURCE.name
     shutil.copyfile(_SOURCE, overlay)
-    shutil.copyfile(_V4_SOURCE, base)
+    shutil.copyfile(_V5_SOURCE, base)
     base.write_text(base.read_text(encoding="utf-8") + "\n# drift\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="base hash has drifted"):
@@ -331,7 +330,7 @@ def test_landscape_artifact_must_remain_inside_declaring_run(tmp_path: Path) -> 
             status="complete",
             evidence_scope="engineering-only",
             artifact="PROJECT.json",
-            generative_ui_projection="autoresearch-evaluation-landscape-v5",
+            generative_ui_projection="autoresearch-evaluation-landscape-v6",
         ),
         expected_revision=snapshot.revision,
     )

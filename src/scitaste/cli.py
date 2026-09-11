@@ -479,6 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
             "autoresearch-evaluation-landscape-v3",
             "autoresearch-evaluation-landscape-v4",
             "autoresearch-evaluation-landscape-v5",
+            "autoresearch-evaluation-landscape-v6",
         ],
         default=None,
     )

@@ -59,15 +59,18 @@ integrity, blinded review, and owner approval remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
-The research-landscape v5 third screen now separates 34 relevance-gated works
-into 13 method, 6 hybrid, and 15 benchmark/evaluation contributions without
-interpreting their counts as field prevalence. It independently records
-publication evidence and experiment eligibility: accepted MLR-Agent,
-AI-Researcher, Agent Laboratory, and TinyScientist are headline adapter
-candidates, while preprint-only AI Scientist-v2 and AutoResearchClaw are
-sensitivity candidates. The census remains in progress because the third
-screen recovered material additions; a fourth saturation screen and exact
-adapters/licenses remain open.
+The research-landscape v6 fourth screen now separates 45 relevance-gated works
+into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without
+interpreting their counts as field prevalence. The newly recovered ICLR 2026
+evidence is evaluation-heavy: InnovatorBench, InnoGym, ScienceBoard,
+AutoExperiment, NewtonBench, MoSciBench, and MedAgentGym supply task or
+environment evidence, while SciNav, MetaMuse, and reinforcement-learned MLE
+agents supply method precedents. A benchmark's bundled baseline is not promoted
+to a method comparator. Accepted MLR-Agent, AI-Researcher, Agent Laboratory,
+and TinyScientist remain headline adapter candidates, while preprint-only AI
+Scientist-v2 and AutoResearchClaw remain sensitivity candidates. The census is
+still in progress because this screen recovered material additions; a focused
+citation/resource screen and exact adapters/licenses remain open.
 
 ## Phase 2/3 progress
 

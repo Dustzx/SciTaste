@@ -210,13 +210,14 @@ acceptance cannot waive an adapter gate, and a runnable preprint cannot enter
 the headline system lane. The v5 schema requires at least two accepted external
 headline candidates while keeping preprint-only systems in sensitivity analysis.
 
-The current v5 synthesis contains 13 method, 6 hybrid, and 15
+The current v6 synthesis contains 16 method, 6 hybrid, and 23
 benchmark/evaluation entries. Its primary page does not present these as a
 single ranked list: it renders the three contribution lanes separately, then
 derives a system-comparator track and an evaluation-infrastructure track from
 their declared artifacts. The counts are corpus diagnostics only. Because the
-third screen still found material accepted methods, the map keeps the literature
-freeze on `hold` and points to a fourth saturation screen.
+fourth screen still found material accepted methods and evaluation resources,
+the map keeps the literature freeze on `hold` and points to a focused
+citation/resource screen.
 
 This Taste is a presentation and abstraction policy, not a factual rewriter. It
 chooses relationships, visual hierarchy, compression, and disclosure while

@@ -60,11 +60,14 @@ headline effect estimate.
 The accepted-literature basis and the resulting evaluation-stack decision are
 recorded in
 [`research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md`](research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md).
-The independent third screen and its non-saturation decision are recorded in
-[`research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md`](research/AUTORESEARCH_METHOD_CENSUS_THIRD_SCREEN_V5.md).
-It recovered additional accepted methods and evaluation resources, so a fourth
-screen is still required before the declared stopping rule can be assessed.
-This remains a candidate comparison inventory rather than a frozen census.
+The independent fourth screen and its non-saturation decision are recorded in
+[`research/AUTORESEARCH_METHOD_CENSUS_FOURTH_SCREEN_V6.md`](research/AUTORESEARCH_METHOD_CENSUS_FOURTH_SCREEN_V6.md).
+It recovered three additional accepted methods and eight accepted evaluation
+works. The resulting bounded corpus contains 16 methods, 6 hybrids, and 23
+benchmark/evaluation works; these counts describe search coverage rather than
+field prevalence. A focused citation/resource screen is still required before
+the declared stopping rule can be assessed, so this remains a candidate
+comparison inventory rather than a frozen census.
 
 ## Four distinct evaluation tracks
 
@@ -74,6 +77,14 @@ This remains a candidate comparison inventory rather than a frozen census.
 | B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, accepted MLR-Agent, AI-Researcher, Agent Laboratory, TinyScientist, and SciTaste Native; preprint systems only in sensitivity analysis | headline external-validity result |
 | C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
+
+Benchmark papers and method papers are never rows in the same role. Track B
+compares executable **systems**. Accepted resources such as InnovatorBench,
+InnoGym, ScienceBoard, AutoExperiment, NewtonBench, MoSciBench, MedAgentGym,
+MLGym, and MLR-Bench may provide tasks, environments, or judges only after
+resource admission. A baseline shipped by one of those benchmarks is not a
+method comparator unless its method contribution and unchanged implementation
+pass a separate system audit.
 
 The tracks answer different questions and must not share one aggregate score.
 In particular, the current registered 48-cell study uses the same

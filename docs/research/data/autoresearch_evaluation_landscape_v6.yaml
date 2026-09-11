@@ -1,0 +1,230 @@
+schema_version: "1.5"
+artifact_kind: autoresearch-evaluation-landscape-v6
+base_source: autoresearch_evaluation_landscape_v5.yaml
+base_source_sha256: 0edbcce59b76d719f97b99685944377c130c60a0cbd70dc5c3e4b869d4717ea2
+title: AutoResearch methods and evaluation infrastructure after a fourth official-source screen
+source_document: docs/research/AUTORESEARCH_METHOD_CENSUS_FOURTH_SCREEN_V6.md
+source_document_sha256: 8793a80eeba09256794ee268db77ad4376ff0fa37bedcdfdfe1474428c7972e4
+synthesis_scope: literature-and-protocol-design-only
+corpus_scope: accepted-method-census-fourth-screen-and-targeted-evaluation-resources
+scope_note_en: The fourth screen recovered three accepted methods and eight accepted evaluation works; benchmark baselines remain distinct from method comparators, and the corpus remains unsaturated.
+scope_note_zh: 第四轮筛查新增三项已接收方法和八项已接收评测工作；Benchmark附带的基线仍不等同于方法对手，语料仍未饱和。
+prevalence_inference: not-estimable
+freeze_decision: hold
+decision_reason_code: fifth-citation-screen-and-executable-admission-remain-open
+
+work_additions:
+  - work_id: ml-gym
+    name: MLGym
+    venue: COLM 2025
+    evaluation_unit: Gym-style open-ended machine-learning research tasks
+    scale: Thirteen tasks across vision, language, reinforcement learning, and game theory
+    comparison_anchor: Frontier language models and research-agent scaffolds
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [idea, hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: innovator-bench
+    name: InnovatorBench and ResearchGym
+    venue: ICLR 2026
+    evaluation_unit: Long-horizon innovative LLM research with runnable artifacts
+    scale: Twenty tasks across six LLM-research categories
+    comparison_anchor: Lightweight agent baselines and frontier model backbones
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset, judge]
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, human, cost]
+    execution_signal: executed
+    resource_tier: frontier
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: inno-gym
+    name: InnoGym
+    venue: ICLR 2026
+    evaluation_unit: Agent innovation measured by novelty and executable performance gain
+    scale: Eighteen engineering and scientific tasks in a long-horizon execution environment
+    comparison_anchor: Agent and model variants against best-known solutions
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset, judge]
+    stage_ids: [idea, hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: science-board
+    name: ScienceBoard
+    venue: ICLR 2026
+    evaluation_unit: Multimodal computer use in realistic scientific software workflows
+    scale: 169 human-validated tasks across six scientific domains
+    comparison_anchor: Language, vision-language, and GUI agents
+    contribution_type: benchmark
+    experiment_role: task-source
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, human, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: primary
+    publication_status: accepted-archival
+    comparison_scope: task-source
+  - work_id: auto-experiment
+    name: AutoExperiment
+    venue: ICLR 2026
+    evaluation_unit: Research experiment implementation under progressive code masking
+    scale: Paper and code tasks ranging from partial reproduction to full replication
+    comparison_anchor: Interactive and fixed agent harnesses with pass-at-one and pass-at-five
+    contribution_type: benchmark
+    experiment_role: design-precedent
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: design-precedent
+  - work_id: newton-bench
+    name: NewtonBench
+    venue: ICLR 2026
+    evaluation_unit: Interactive discovery of counterfactually shifted scientific laws
+    scale: 324 tasks across twelve physics domains
+    comparison_anchor: Eleven language models with and without code-interpreter assistance
+    contribution_type: benchmark
+    experiment_role: design-precedent
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: moderate
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: mosci-bench
+    name: MoSciBench
+    venue: ICLR 2026
+    evaluation_unit: Multimodal data-driven hypothesis verification
+    scale: Eighty-eight tasks across six domains, seven modalities, and five question types
+    comparison_anchor: Four representative agent frameworks across model families
+    contribution_type: benchmark
+    experiment_role: design-precedent
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: med-agent-gym
+    name: MedAgentGym
+    venue: ICLR 2026
+    evaluation_unit: Executable biomedical data-science coding and reasoning
+    scale: 72413 task instances across 129 categories and twelve biomedical scenarios
+    comparison_anchor: Twenty-nine models and trained Med-Copilot variants
+    contribution_type: benchmark
+    experiment_role: design-precedent
+    bundled_artifacts: [benchmark, dataset]
+    stage_ids: [design, execute, interpret]
+    lens_ids: [integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: sci-nav
+    name: SciNav
+    venue: ICLR 2026
+    evaluation_unit: Relative-judgment-guided top-k search for scientific coding
+    scale: Two scientific-coding benchmarks across models, task types, and difficulty levels
+    comparison_anchor: Direct prompting, OpenHands, Self-Debug, random selection, and absolute scoring
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+  - work_id: rl-mle-agents
+    name: Reinforcement Learning for Machine Learning Engineering Agents
+    venue: ICLR 2026
+    evaluation_unit: Duration-aware reinforcement learning for iterative MLE agents
+    scale: Twelve Kaggle tasks with distributed asynchronous adaptation
+    comparison_anchor: Qwen2.5-3B with reinforcement learning against static frontier-model AIDE
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: frontier
+    role: context
+    publication_status: accepted-archival
+    comparison_scope: domain-boundary
+  - work_id: meta-muse
+    name: MetaMuse
+    venue: ICLR 2026
+    evaluation_unit: Creative algorithm search grounded in diversity, usefulness, and execution
+    scale: Two online system-design problems with externally measured objectives
+    comparison_anchor: Generic heuristic generation and self-reflection variants
+    contribution_type: method
+    experiment_role: design-precedent
+    bundled_artifacts: [system]
+    stage_ids: [idea, hypothesis, design, execute, interpret]
+    lens_ids: [decision, integrity, progress, cost]
+    execution_signal: executed
+    resource_tier: high
+    role: anchor
+    publication_status: accepted-archival
+    comparison_scope: stage-specific
+
+comparison_candidate_additions:
+  - candidate_id: innovator-bench-tasks
+    name: InnovatorBench task source
+    candidate_kind: benchmark
+    role: primary
+    readiness: reference
+    barrier_code: exact-assets-license-runtime-cost-and-scoring-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: inno-gym-tasks
+    name: InnoGym task source
+    candidate_kind: benchmark
+    role: primary
+    readiness: reference
+    barrier_code: exact-assets-license-novelty-judge-and-leakage-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+  - candidate_id: science-board-tasks
+    name: ScienceBoard task source
+    candidate_kind: benchmark
+    role: secondary
+    readiness: reference
+    barrier_code: vm-assets-license-interface-equivalence-and-gpu-cost-unqualified
+    publication_status: accepted-archival
+    evaluation_track: task-source
+
+planning_gate_overrides:
+  - gate_id: census
+    label_en: Systematic method and evaluation census
+    label_zh: 系统性方法与评测普查
+    state: candidate
+    reason_code: fourth-screen-found-material-additions-focused-citation-screen-pending
+
+open_question_overrides:
+  - question_id: methods
+    label_en: Does a focused citation screen add no high-impact accepted system or task source, and which separately admitted systems and benchmarks can form a resource-feasible matched comparison?
+    label_zh: 聚焦引文筛查是否不再新增高影响已接收系统或任务源，以及哪些分别准入的方法与Benchmark能组成资源可行的匹配对比？
