@@ -7,6 +7,18 @@ semantic versioning.
 
 ### Added
 
+- API and GPU experiment plans can now be materialized as immutable,
+  project-owned no-run evaluation bundles. Each bundle binds the exact
+  prelaunch manifest, resource corpus, gate report, five-critic review, and
+  complete cell plan; `ProjectRuntime` rehashes the record and every nested
+  artifact before selection or Generation-as-Content projection. The project
+  home shows exact model/checkpoint identities, cell counts, unresolved gates,
+  and the no-execution boundary without granting launch authority. New CLI
+  commands register and select proposals with optimistic project revisions and
+  transactional publication. The Zhipu proposal now binds the provider's
+  documented `glm-5.3-flash` / `GLM-5.3-Flash` identity while leaving exact
+  pricing and authenticated served-revision evidence blocked.
+
 - Reviewer-driven full-paper revision is now a registered proposal-only model
   node. Its typed input binds the accepted source draft, target evidence scope,
   paper and review hashes, every concern, and optional self-hashed state-derived

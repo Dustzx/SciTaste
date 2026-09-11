@@ -85,21 +85,30 @@ bearer API client or a deployment-owned authentication gateway.
 `project-progress` is the default view after selecting a project. Its
 `ProjectProgressBoard` is a receiver-owned component built from the current
 `PROJECT.json`, registered run records, current stage binding, and registered
-paper manifests. It reports observed record counts, the selected current run,
-declared focus and next gate, latest registered activity in manifest order,
-completed AutoResearchClaw stages where those semantics apply, paper state,
-blocked/failed run attention, and evidence-supported next-step candidates.
+paper and evaluation manifests. It reports observed record counts, the selected
+current run, declared focus and next gate, latest registered activity in
+manifest order, completed AutoResearchClaw stages where those semantics apply,
+paper state, blocked/failed run attention, exact no-run API/GPU proposal
+resources, and evidence-supported next-step candidates.
 
 The browser renders this baseline as an executive evidence summary rather than
 a serialized field inspector. It leads with one categorical status statement,
-six exact record-count tiles, and a run-outcome composition strip; follows with
+seven exact record-count tiles, and a run-outcome composition strip; follows with
 the current focus, selected run, next evidence gate, blockers and decision
-timeline; and bounds recent activity to four initially visible rows. Raw
+timeline; shows registered experiment readiness as compact resource cards; and
+bounds recent activity to four initially visible rows. Raw
 evidence IDs, full run IDs, locators and secondary status fields remain
 available through native collapsed disclosure controls. This changes only the
 receiver-owned presentation: all visible summary values are deterministic
 functions of the validated `ProjectProgressBoardData`, and no browser prose is
 fed back as research evidence.
+
+Every evaluation card is derived from a project-owned `EVALUATION.json` whose
+five bound artifacts are rehashed before rendering. Any record, manifest,
+resource corpus, gate, critic, or cell-plan drift fails the project surface
+closed. Selecting a proposal is navigation only: the card explicitly retains
+`no_execution_performed=true`, and the interface has no provider-call, download,
+GPU-launch, or approval-escalation path.
 
 The canonical progress summary and a generated workspace have distinct roles.
 `project-progress` is the stable, reproducible landing view. The left-side quick

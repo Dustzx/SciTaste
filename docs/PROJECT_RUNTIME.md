@@ -2,9 +2,9 @@
 
 `ProjectRuntime` makes a research project the writable ownership boundary instead
 of treating `outputs/` as a collection of unrelated command directories. It
-manages versioned `PROJECT.json` state, registered runs, paper bundles, current
-navigation aliases, and a content-hashed `ProjectSnapshot` for catalogs and
-future generated interfaces.
+manages versioned `PROJECT.json` state, registered runs, paper bundles, review
+rounds, no-run evaluation proposals, current navigation aliases, and a
+content-hashed `ProjectSnapshot` for catalogs and generated interfaces.
 
 ## Safety and concurrency
 
@@ -15,9 +15,10 @@ future generated interfaces.
   `PROJECT.json`. A stale caller receives `ProjectRevisionConflictError` rather
   than silently overwriting a concurrent update.
 - Project creation is prepared in a temporary sibling directory and renamed only
-  after `PROJECT.json`, `README.md`, `STAGES.md`, `runs/`, `stages/`, and
-  `papers/` exist.
-- `stages/current`, `papers/current`, and `outputs/papers/latest` are replaceable
+  after `PROJECT.json`, `README.md`, `STAGES.md`, `runs/`, `stages/`, `papers/`,
+  `reviews/`, and `evaluations/` exist.
+- `stages/current`, `papers/current`, `reviews/current`,
+  `evaluations/current`, and `outputs/papers/latest` are replaceable
   only when they are symlinks. A user-owned real file or directory is never
   overwritten.
 - A paper can be registered only after every declared file exists inside that
@@ -218,6 +219,29 @@ Paper generation materializes files beneath
 
 All mutating commands support `--dry-run`. Dry-run validates IDs, schemas, and
 the expected revision without creating or changing files.
+
+## Project-owned experiment proposals
+
+API and GPU prelaunch manifests become durable project evidence through an
+immutable evaluation bundle rather than another loose directory under
+`outputs/`. The registration command computes the resource gate, five-domain
+critic review, and complete cell expansion; copies their exact bytes below the
+project; then stores hashes and a no-execution boundary in `PROJECT.json`.
+
+```bash
+.venv/bin/scitaste project evaluation register-prelaunch \
+  --project-id my-research-project \
+  --evaluation-id deepseek-v41-prepilot \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
+  --source-root . --evidence-root . \
+  --expected-revision <revision> --select --outputs-root outputs
+```
+
+The selected proposal appears on the project's Generation-as-Content home with
+its API/checkpoint identity, closed cell count, unresolved-gate count, and
+authorization state. The page is a verified read-only projection and cannot
+turn selection or author approval into execution.
 
 ## Paper review and lifecycle
 

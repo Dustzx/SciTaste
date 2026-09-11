@@ -617,6 +617,7 @@ class ProjectProgressCounts(BaseModel):
     runs_unknown: int = Field(ge=0)
     completed_stages: int = Field(ge=0)
     papers_registered: int = Field(ge=0)
+    evaluations_registered: int = Field(ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -707,6 +708,47 @@ class ProjectProgressPaperItem(BaseModel):
             raise ValueError("project progress paper evidence references must be unique")
         if self.paper_ref_id not in self.support_ref_ids:
             raise ValueError("project progress paper must cite its paper record")
+        return self
+
+
+class ProjectProgressEvaluationItem(BaseModel):
+    """One exact no-run experiment proposal displayed on its project home."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    evaluation_ref_id: SafeIdentifier
+    evaluation_id: str = Field(
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    protocol_id: str = Field(
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    study_scope: Literal["pilot", "formal", "robustness"]
+    status: Literal["blocked", "awaiting_author_approval", "execution_authorized"]
+    planned_cells: int = Field(gt=0)
+    api_resources: tuple[SafeText, ...] = ()
+    gpu_resources: tuple[SafeText, ...] = ()
+    ready_for_author_review: bool
+    execution_authorized: bool
+    blocker_count: int = Field(ge=0)
+    selected: bool
+    no_execution_performed: Literal[True] = True
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def evaluation_support_is_closed(self) -> ProjectProgressEvaluationItem:
+        if self.evaluation_ref_id not in self.support_ref_ids:
+            raise ValueError("project evaluation must cite its registered record")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project evaluation evidence references must be unique")
+        if not self.api_resources and not self.gpu_resources:
+            raise ValueError("project evaluation must name an API or GPU resource")
+        if self.execution_authorized and not self.ready_for_author_review:
+            raise ValueError("project evaluation authority requires readiness")
         return self
 
 
@@ -900,6 +942,7 @@ class ProjectProgressBoardData(BaseModel):
     activity_truncated: bool
     stages: tuple[ProjectProgressStageItem, ...] = ()
     papers: tuple[ProjectProgressPaperItem, ...] = ()
+    evaluations: tuple[ProjectProgressEvaluationItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -951,6 +994,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.recent_activity,
             *self.stages,
             *self.papers,
+            *self.evaluations,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,
@@ -966,6 +1010,12 @@ class ProjectProgressBoardData(BaseModel):
         selected_papers = [item.paper_id for item in self.papers if item.selected]
         if selected_papers != ([self.current_paper_id] if self.current_paper_id else []):
             raise ValueError("project progress current paper must match exactly one paper row")
+
+        evaluation_ids = [item.evaluation_id for item in self.evaluations]
+        if len(evaluation_ids) != len(set(evaluation_ids)):
+            raise ValueError("project progress evaluation IDs must be unique")
+        if self.counts.evaluations_registered != len(self.evaluations):
+            raise ValueError("project progress evaluation count must match its rows")
 
         stages = [item.stage for item in self.stages]
         if stages != sorted(set(stages)):
@@ -1391,6 +1441,7 @@ _DATA_REF_EVIDENCE_KINDS: dict[str, frozenset[EvidenceKind]] = {
     "review_ref_id": frozenset({EvidenceKind.REVIEW}),
     "artifact_ref_id": frozenset({EvidenceKind.ARTIFACT}),
     "paper_ref_id": frozenset({EvidenceKind.PAPER}),
+    "evaluation_ref_id": frozenset({EvidenceKind.EVALUATION}),
     "audit_ref_id": frozenset({EvidenceKind.AUDIT_RECORD}),
     "evidence_ref_ids": frozenset({EvidenceKind.EVIDENCE_RECORD}),
 }

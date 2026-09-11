@@ -87,6 +87,11 @@ from scitaste.evaluation.prelaunch import (
     inspect_prelaunch_manifest,
     load_prelaunch_manifest,
 )
+from scitaste.evaluation.project_materialization import (
+    PreparedProjectEvaluation,
+    prepare_project_evaluation,
+    publish_project_evaluation,
+)
 from scitaste.evaluation.resources import (
     DatasetPin,
     EvaluationResourceKind,
@@ -176,6 +181,7 @@ __all__ = [
     "PrelaunchManifestInspection",
     "PrelaunchSystem",
     "PrelaunchTask",
+    "PreparedProjectEvaluation",
     "PriorResourceSnapshot",
     "PromptOnlyResearchPackage",
     "ProviderPricing",
@@ -210,6 +216,8 @@ __all__ = [
     "load_external_resource_corpus",
     "load_prelaunch_manifest",
     "load_task_selection_manifest",
+    "prepare_project_evaluation",
+    "publish_project_evaluation",
     "run_live_direct_agent",
     "save_evaluation_cell_plan",
 ]

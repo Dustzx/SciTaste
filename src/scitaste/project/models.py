@@ -7,7 +7,7 @@ import json
 import re
 from datetime import date
 from pathlib import PurePosixPath
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -115,6 +115,172 @@ class ProjectReview(BaseModel):
         return self
 
 
+class ProjectEvaluationArtifact(BaseModel):
+    """One immutable file inside a project-owned evaluation proposal bundle."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    locator: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    size_bytes: int = Field(ge=1, le=16 * 1024 * 1024)
+
+    @field_validator("locator")
+    @classmethod
+    def locator_is_bundle_relative(cls, value: str) -> str:
+        return validate_relative_locator(value, field_name="evaluation artifact locator")
+
+
+class ProjectEvaluationBundle(BaseModel):
+    """Self-hashed no-run projection of one exact experiment proposal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str
+    evaluation_id: str
+    manifest_id: str
+    protocol_id: str
+    study_scope: Literal["pilot", "formal", "robustness"]
+    status: Literal["blocked", "awaiting_author_approval", "execution_authorized"]
+    proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    planned_cells: int = Field(gt=0)
+    system_ids: tuple[str, ...] = Field(min_length=2, max_length=30)
+    task_ids: tuple[str, ...] = Field(min_length=1, max_length=500)
+    lane_ids: tuple[str, ...] = Field(min_length=1, max_length=10)
+    api_resources: tuple[str, ...] = Field(default=(), max_length=10)
+    gpu_resources: tuple[str, ...] = Field(default=(), max_length=10)
+    ready_for_author_review: bool
+    execution_authorized: bool
+    observed_source_commit: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}$")
+    source_tree_clean: bool | None = None
+    readiness_blocker_codes: tuple[str, ...] = Field(default=(), max_length=2_000)
+    authorization_blocker_codes: tuple[str, ...] = Field(default=(), max_length=100)
+    critic_blocking_codes: tuple[str, ...] = Field(default=(), max_length=100)
+    cell_plan_blockers: tuple[str, ...] = Field(default=(), max_length=2_000)
+    files: dict[str, ProjectEvaluationArtifact] = Field(min_length=5, max_length=20)
+    no_execution_performed: Literal[True] = True
+    bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("project_id")
+    @classmethod
+    def project_id_is_safe(cls, value: str) -> str:
+        return validate_project_id(value)
+
+    @field_validator("evaluation_id", "manifest_id", "protocol_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @field_validator("system_ids", "task_ids", "lane_ids")
+    @classmethod
+    def referenced_ids_are_unique(cls, values: tuple[str, ...], info: Any) -> tuple[str, ...]:
+        for value in values:
+            validate_entry_id(value, field_name=str(info.field_name))
+        if len(values) != len(set(values)):
+            raise ValueError(f"{info.field_name} must be unique")
+        return values
+
+    @field_validator(
+        "readiness_blocker_codes",
+        "authorization_blocker_codes",
+        "critic_blocking_codes",
+        "cell_plan_blockers",
+    )
+    @classmethod
+    def blocker_codes_are_unique(cls, values: tuple[str, ...], info: Any) -> tuple[str, ...]:
+        if len(values) != len(set(values)):
+            raise ValueError(f"{info.field_name} must be unique")
+        return values
+
+    @model_validator(mode="after")
+    def bundle_is_closed_and_self_hashed(self) -> ProjectEvaluationBundle:
+        required_files = {
+            "prelaunch_manifest",
+            "resource_corpus",
+            "gate_report",
+            "critic_report",
+            "cell_plan",
+        }
+        if set(self.files) != required_files:
+            raise ValueError("evaluation bundle must bind the five canonical artifacts")
+        locators = [item.locator for item in self.files.values()]
+        if len(locators) != len(set(locators)) or "EVALUATION.json" in locators:
+            raise ValueError("evaluation artifact locators must be unique and non-recursive")
+        if not self.api_resources and not self.gpu_resources:
+            raise ValueError("evaluation bundle must identify at least one API or GPU resource")
+        if self.execution_authorized and not self.ready_for_author_review:
+            raise ValueError("execution authorization requires completed author-review readiness")
+        expected_status = (
+            "execution_authorized"
+            if self.execution_authorized
+            else "awaiting_author_approval"
+            if self.ready_for_author_review
+            else "blocked"
+        )
+        if self.status != expected_status:
+            raise ValueError("evaluation status does not match its readiness and authority")
+        expected = content_sha256(self.model_dump(mode="json", exclude={"bundle_sha256"}))
+        if self.bundle_sha256 != expected:
+            raise ValueError("evaluation bundle hash mismatch")
+        return self
+
+
+class ProjectEvaluation(BaseModel):
+    """Content-bound pointer to one registered project evaluation proposal."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    evaluation_id: str
+    manifest_id: str
+    protocol_id: str
+    study_scope: Literal["pilot", "formal", "robustness"]
+    status: Literal["blocked", "awaiting_author_approval", "execution_authorized"]
+    proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    planned_cells: int = Field(gt=0)
+    api_resources: tuple[str, ...] = Field(default=(), max_length=10)
+    gpu_resources: tuple[str, ...] = Field(default=(), max_length=10)
+    ready_for_author_review: bool
+    execution_authorized: bool
+    blocker_count: int = Field(ge=0)
+    record_locator: str
+    record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    no_execution_performed: Literal[True] = True
+
+    @field_validator("evaluation_id", "manifest_id", "protocol_id")
+    @classmethod
+    def identifiers_are_safe(cls, value: str, info: Any) -> str:
+        return validate_entry_id(value, field_name=str(info.field_name))
+
+    @field_validator("record_locator")
+    @classmethod
+    def record_locator_is_owned(cls, value: str) -> str:
+        locator = validate_relative_locator(value, field_name="evaluation record locator")
+        parts = PurePosixPath(locator).parts
+        if len(parts) != 3 or parts[0] != "evaluations" or parts[2] != "EVALUATION.json":
+            raise ValueError(
+                "evaluation record_locator must be evaluations/<evaluation-id>/EVALUATION.json"
+            )
+        validate_entry_id(parts[1], field_name="evaluation directory")
+        return locator
+
+    @model_validator(mode="after")
+    def entry_is_consistent(self) -> ProjectEvaluation:
+        if PurePosixPath(self.record_locator).parts[1] != self.evaluation_id:
+            raise ValueError("evaluation record directory must match evaluation_id")
+        if self.execution_authorized and not self.ready_for_author_review:
+            raise ValueError("execution authorization requires author-review readiness")
+        expected_status = (
+            "execution_authorized"
+            if self.execution_authorized
+            else "awaiting_author_approval"
+            if self.ready_for_author_review
+            else "blocked"
+        )
+        if self.status != expected_status:
+            raise ValueError("evaluation entry status is inconsistent")
+        return self
+
+
 class ProjectManifest(BaseModel):
     """Primary ownership record; extension fields preserve historical manifests."""
 
@@ -133,10 +299,12 @@ class ProjectManifest(BaseModel):
     completed_stages: list[int] = Field(default_factory=list)
     current_paper: str | None = None
     current_review: str | None = None
+    current_evaluation: str | None = None
     stage_semantics: str = "autoresearchclaw-stages"
     retrieval_eligible: bool = True
     runs: list[ProjectRun] = Field(default_factory=list)
     reviews: list[ProjectReview] = Field(default_factory=list)
+    evaluations: list[ProjectEvaluation] = Field(default_factory=list)
 
     @field_validator("project_id")
     @classmethod
@@ -169,6 +337,13 @@ class ProjectManifest(BaseModel):
             return value
         return validate_entry_id(value, field_name="current_review")
 
+    @field_validator("current_evaluation")
+    @classmethod
+    def current_evaluation_is_safe(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_entry_id(value, field_name="current_evaluation")
+
     @field_validator("completed_stages")
     @classmethod
     def completed_stages_are_canonical(cls, values: list[int]) -> list[int]:
@@ -200,6 +375,13 @@ class ProjectManifest(BaseModel):
             raise ValueError("project review IDs must be unique")
         if self.current_review is not None and self.current_review not in set(review_ids):
             raise ValueError("current_review must reference a registered review")
+        evaluation_ids = [item.evaluation_id for item in self.evaluations]
+        if len(evaluation_ids) != len(set(evaluation_ids)):
+            raise ValueError("project evaluation IDs must be unique")
+        if self.current_evaluation is not None and self.current_evaluation not in set(
+            evaluation_ids
+        ):
+            raise ValueError("current_evaluation must reference a registered evaluation")
         return self
 
 
@@ -282,11 +464,13 @@ class ProjectSnapshot(BaseModel):
     manifest: ProjectManifest
     run_locators: dict[str, str]
     review_locators: dict[str, str] = Field(default_factory=dict)
+    evaluation_locators: dict[str, str] = Field(default_factory=dict)
     papers: list[ProjectPaperEntry]
     current_run_locator: str | None = None
     current_stage_locator: str | None = None
     current_paper_locator: str | None = None
     current_review_locator: str | None = None
+    current_evaluation_locator: str | None = None
     warnings: list[str] = Field(default_factory=list)
 
     @field_validator(
@@ -295,6 +479,7 @@ class ProjectSnapshot(BaseModel):
         "current_stage_locator",
         "current_paper_locator",
         "current_review_locator",
+        "current_evaluation_locator",
     )
     @classmethod
     def snapshot_locators_are_relative(cls, value: str | None) -> str | None:
@@ -312,6 +497,10 @@ class ProjectSnapshot(BaseModel):
             raise ValueError("snapshot run locators must cover registered runs")
         if set(self.review_locators) != {review.review_id for review in self.manifest.reviews}:
             raise ValueError("snapshot review locators must cover registered reviews")
+        if set(self.evaluation_locators) != {
+            evaluation.evaluation_id for evaluation in self.manifest.evaluations
+        }:
+            raise ValueError("snapshot evaluation locators must cover registered evaluations")
         return self
 
 

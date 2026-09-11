@@ -26,7 +26,7 @@ no silent fallback between Zhipu and DeepSeek.
 |---|---|---|---:|---|
 | `formal-v4-prepilot` | API matched-backbone feasibility | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | current scope proposal; blocked on task qualification, adapters, replication, analysis/integrity contracts, reviewers, and approval |
 | `formal-v3-prepilot` | historical API proposal | retired DeepSeek V4 API identity, temporarily compatibility-routed by the provider | 5 system × task × seed cells | immutable history; do not launch or edit into V4.1 evidence |
-| `formal-v2-prepilot` | API matched-backbone feasibility | requested Zhipu `glm-5.3-flash` | 5 system × task × seed cells | additionally blocked on official/authenticated model identity and pricing |
+| `formal-v2-prepilot` | API matched-backbone feasibility | Zhipu `glm-5.3-flash`, documented version `GLM-5.3-Flash` | 5 system × task × seed cells | official identity verified; blocked on dated exact pricing, authenticated served revision, tasks, adapters, reviewers, and approval |
 | `robustness-v1-prepilot` | local small-model robustness | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablation × task × seed cells | blocked on ablation adapters, task subset, remote inventory/checkpoint, reviewers, and approval |
 
 DeepSeek released V4.1 Flash on 2026-09-10. Its official callable identifier is
@@ -39,11 +39,14 @@ immediately before an approved call. See the official [release
 notice](https://deepseek.com/news/deepseek-v4-1-flash/) and [dated model and
 pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
-The public Zhipu model overview and chat-completions schema checked for this
-proposal do not list `glm-5.3-flash`; they currently list other GLM-5 and Flash
-families. That requested model stays blocked until an official page or an
-authenticated, no-generation model inventory establishes its identity and a
-dated price record is captured.
+The official Zhipu model page now names callable ID `glm-5.3-flash`, version
+`GLM-5.3-Flash`, 1M context, and 128K maximum output. The proposal therefore
+marks public identity verified. The public price page still does not expose a
+stable exact token table to the no-JavaScript inspector, and the model page gives
+only relative-cost language. Pricing stays blocked rather than borrowing values
+from another GLM family. An authenticated preflight must also record the served
+revision immediately before an approved call because the callable name is a
+rolling alias.
 
 The local Qwen tree and license metadata have been inspected without loading the
 model. The remote machine has not been contacted, so GPU count, free storage,
@@ -85,6 +88,33 @@ The result contains:
   statistics, integrity, and resource critics;
 - separate readiness and exact-hash author-approval verdicts;
 - `no_execution_performed=true`.
+
+## Project-owned proposal bundles
+
+The global `configs/evaluation/prelaunch/` files are reusable proposal sources,
+not a project history. A project registers an exact no-run copy before treating
+it as its current experiment plan:
+
+```bash
+.venv/bin/scitaste project evaluation register-prelaunch \
+  --project-id scitaste-self-development \
+  --evaluation-id deepseek-v41-prepilot \
+  --manifest configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v2.yaml \
+  --source-root . --evidence-root . \
+  --expected-revision <current-project-revision> --select \
+  --outputs-root outputs
+```
+
+This atomically creates
+`outputs/projects/<project-id>/evaluations/<evaluation-id>/` with exact copies of
+the prelaunch manifest and resource corpus plus `GATE_REPORT.json`,
+`CRITIC_REPORT.json`, `CELL_PLAN.json`, and a self-hashed `EVALUATION.json`.
+`PROJECT.json` retains the record hash, readiness, resources, blocker count, and
+cell count. Opening or selecting the proposal rehashes every file. Registration
+does not acquire data, contact a provider, inspect the remote GPU host, or launch
+a cell; even an approved proposal remains data-only until a separate launch
+service revalidates its exact authority.
 
 The critic review is explicitly advisory: its schema fixes
 `authorizes_execution=false`. `ready_for_author_review` becomes true only when
@@ -164,7 +194,8 @@ protocol.
    failure handling, and statistical analysis.
 4. Secure the blinded expert rubric, reviewers, conflict checks, and
    adjudication path.
-5. For Zhipu, resolve model identity and pricing. For DeepSeek, perform an
+5. For Zhipu, resolve exact dated pricing and record the authenticated served
+   revision. For DeepSeek, perform an
    authenticated identity preflight immediately before launch because the API
    name is a rolling alias.
 6. For the GPU lane, inspect the remote inventory and storage without running a

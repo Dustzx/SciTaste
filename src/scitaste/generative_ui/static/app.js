@@ -1128,6 +1128,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.candidates"), data.counts.runs_candidates, t("progress.metric.candidates_note"), "candidate"),
     progressMetric(t("progress.metric.stages"), data.counts.completed_stages, t("progress.metric.stages_note")),
     progressMetric(t("progress.metric.papers"), data.counts.papers_registered, t("progress.metric.papers_note")),
+    progressMetric(t("progress.metric.evaluations"), data.counts.evaluations_registered, t("progress.metric.evaluations_note")),
   );
   container.append(
     hero,
@@ -1183,6 +1184,76 @@ function renderProjectProgress(data) {
   }
   direction.appendChild(directionGrid);
   container.appendChild(direction);
+
+  const evaluations = progressSection(
+    t("progress.evaluations.title"),
+    data.evaluations.length > 0
+      ? t("progress.evaluations.subtitle", {count: data.evaluations.length})
+      : t("progress.evaluations.empty"),
+  );
+  if (data.evaluations.length > 0) {
+    const evaluationGrid = document.createElement("div");
+    evaluationGrid.className = "evaluation-proposal-grid";
+    for (const item of data.evaluations) {
+      const card = document.createElement("article");
+      card.className = `evaluation-proposal-card status-${item.status}`;
+      const header = document.createElement("div");
+      header.className = "compact-row-header";
+      const identity = document.createElement("div");
+      const scope = document.createElement("span");
+      scope.className = "card-label";
+      appendText(scope, t(`progress.evaluations.scope.${item.study_scope}`));
+      const title = document.createElement("strong");
+      appendText(title, item.protocol_id);
+      identity.append(scope, title);
+      const status = document.createElement("span");
+      status.className = `lifecycle-state state-${item.execution_authorized ? "satisfied" : "blocked"}`;
+      appendText(status, t(`progress.evaluations.status.${item.status}`));
+      header.append(identity, status);
+
+      const facts = document.createElement("div");
+      facts.className = "evaluation-proposal-facts";
+      const cells = document.createElement("span");
+      appendText(cells, t("progress.evaluations.cells", {count: item.planned_cells}));
+      const blockers = document.createElement("span");
+      appendText(blockers, t("progress.evaluations.blockers", {count: item.blocker_count}));
+      facts.append(cells, blockers);
+
+      const resources = document.createElement("ul");
+      resources.className = "evaluation-resource-list";
+      for (const resource of [...item.api_resources, ...item.gpu_resources]) {
+        const entry = document.createElement("li");
+        appendText(entry, resource);
+        resources.appendChild(entry);
+      }
+      const boundary = document.createElement("p");
+      boundary.className = "muted compact-copy";
+      appendText(boundary, t("progress.evaluations.no_execution"));
+      card.append(
+        header,
+        facts,
+        resources,
+        boundary,
+        evidenceDisclosure(item.support_ref_ids, {
+          data: {
+            evaluation_id: item.evaluation_id,
+            ready_for_author_review: item.ready_for_author_review,
+            execution_authorized: item.execution_authorized,
+            selected: item.selected,
+          },
+          names: [
+            "evaluation_id",
+            "ready_for_author_review",
+            "execution_authorized",
+            "selected",
+          ],
+        }),
+      );
+      evaluationGrid.appendChild(card);
+    }
+    evaluations.appendChild(evaluationGrid);
+  }
+  container.appendChild(evaluations);
 
   const standing = document.createElement("div");
   standing.className = "progress-columns";

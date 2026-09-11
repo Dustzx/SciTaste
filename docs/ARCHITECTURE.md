@@ -1399,3 +1399,30 @@ the original reviewer must bind the same proof when closing it. Round status
 inspection repeats the checks rather than trusting stored status. Models may
 draft a revision or review, but cannot create evidence, certify their own
 closure, impersonate an independent expert, or issue an official venue decision.
+
+### ADR-046: Experiment proposals are immutable project evidence, not launch configuration
+
+Status: accepted for API/GPU prelaunch ownership; formal execution remains blocked.
+
+Reusable files below `configs/evaluation/prelaunch/` describe candidate
+protocols, but do not establish which exact proposal an individual research
+project inspected or selected. Copying those files into ad hoc output folders
+would also separate the resource gate, critic findings, and expanded cells from
+the project revision shown to a user.
+
+`ProjectRuntime` therefore publishes one project-owned evaluation directory
+transactionally. Its self-hashed `EVALUATION.json` binds exact bytes for the
+prelaunch manifest, external-resource corpus, deterministic gate report,
+five-domain critic report, and complete cell plan. `PROJECT.json` retains a
+content-bound summary and optional current-navigation identity. Opening a
+project reports nested drift; selecting or projecting an invalid bundle fails
+closed. The Generation-as-Content project home may display only this verified
+summary and keeps its no-execution statement visible.
+
+Publication, selection, scientific readiness, author approval, and launch are
+distinct transitions. This implementation provides only the first two. It does
+not contact an API, inventory a remote GPU host, acquire a benchmark, run a
+cell, or elevate proposal data into executable authority. A future launch
+service must revalidate the selected proposal hash, readiness, exact human
+approval, current provider revision and price, local/remote resources, and every
+task and comparator adapter before admitting work.

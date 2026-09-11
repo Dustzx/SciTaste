@@ -507,6 +507,39 @@ class WorkspaceSurfaceFactory:
                 }
             )
 
+        evaluation_rows: list[dict[str, object]] = []
+        for evaluation in snapshot.manifest.evaluations:
+            evaluation_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.EVALUATION,
+                _project_relative(
+                    snapshot,
+                    snapshot.evaluation_locators[evaluation.evaluation_id],
+                ),
+            )
+            evidence_ref_ids.append(evaluation_ref.evidence_id)
+            evaluation_rows.append(
+                {
+                    "evaluation_ref_id": evaluation_ref.evidence_id,
+                    "evaluation_id": evaluation.evaluation_id,
+                    "protocol_id": evaluation.protocol_id,
+                    "study_scope": evaluation.study_scope,
+                    "status": evaluation.status,
+                    "planned_cells": evaluation.planned_cells,
+                    "api_resources": list(evaluation.api_resources),
+                    "gpu_resources": list(evaluation.gpu_resources),
+                    "ready_for_author_review": evaluation.ready_for_author_review,
+                    "execution_authorized": evaluation.execution_authorized,
+                    "blocker_count": evaluation.blocker_count,
+                    "selected": (evaluation.evaluation_id == snapshot.manifest.current_evaluation),
+                    "no_execution_performed": evaluation.no_execution_performed,
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        evaluation_ref.evidence_id,
+                    ],
+                }
+            )
+
         focus, focus_status, next_gate = _project_focus(snapshot)
         milestone_state, milestone_reason_code, milestone_rows = _project_milestones(
             snapshot,
@@ -654,6 +687,7 @@ class WorkspaceSurfaceFactory:
                     "runs_unknown": run_states.count("unknown"),
                     "completed_stages": len(stage_rows),
                     "papers_registered": len(paper_rows),
+                    "evaluations_registered": len(evaluation_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -680,6 +714,7 @@ class WorkspaceSurfaceFactory:
                 "activity_truncated": len(snapshot.manifest.runs) > len(recent_activity),
                 "stages": stage_rows,
                 "papers": paper_rows,
+                "evaluations": evaluation_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,

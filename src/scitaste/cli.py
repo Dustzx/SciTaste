@@ -71,6 +71,8 @@ from scitaste.evaluation import (
     load_external_resource_corpus,
     load_prelaunch_manifest,
     load_task_selection_manifest,
+    prepare_project_evaluation,
+    publish_project_evaluation,
     run_live_direct_agent,
     save_evaluation_cell_plan,
 )
@@ -368,6 +370,35 @@ def build_parser() -> argparse.ArgumentParser:
     project_discovery_verify.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_discovery_verify)
     project_discovery_verify.set_defaults(handler=_handle_project_discovery_verify)
+
+    project_evaluation = project_commands.add_parser(
+        "evaluation", help="Register and select project-owned experiment proposals"
+    )
+    project_evaluation_commands = project_evaluation.add_subparsers(
+        dest="project_evaluation_command", required=True
+    )
+    project_evaluation_register = project_evaluation_commands.add_parser(
+        "register-prelaunch",
+        help="Materialize a no-run prelaunch proposal below its owning project",
+    )
+    project_evaluation_register.add_argument("--project-id", required=True)
+    project_evaluation_register.add_argument("--evaluation-id", required=True)
+    project_evaluation_register.add_argument("--manifest", type=Path, required=True)
+    project_evaluation_register.add_argument("--resource-corpus", type=Path, required=True)
+    project_evaluation_register.add_argument("--source-root", type=Path, default=Path("."))
+    project_evaluation_register.add_argument("--evidence-root", type=Path, default=Path("."))
+    project_evaluation_register.add_argument("--expected-revision", type=int, required=True)
+    project_evaluation_register.add_argument("--select", action="store_true")
+    _add_project_options(project_evaluation_register)
+    project_evaluation_register.set_defaults(handler=_handle_project_evaluation_register_prelaunch)
+    project_evaluation_select = project_evaluation_commands.add_parser(
+        "select", help="Select a registered experiment proposal"
+    )
+    project_evaluation_select.add_argument("--project-id", required=True)
+    project_evaluation_select.add_argument("--evaluation-id", required=True)
+    project_evaluation_select.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(project_evaluation_select)
+    project_evaluation_select.set_defaults(handler=_handle_project_evaluation_select)
 
     project_run = project_commands.add_parser("run", help="Register and select project runs")
     project_run_commands = project_run.add_subparsers(dest="project_run_command", required=True)
@@ -1234,6 +1265,96 @@ def _handle_project_discovery_verify(args: argparse.Namespace) -> int:
         args.run_id,
     )
     print(report.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_evaluation_register_prelaunch(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    if snapshot.revision != args.expected_revision:
+        raise ValueError(
+            f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+        )
+    prepared = prepare_project_evaluation(
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        manifest_path=args.manifest,
+        resource_corpus_path=args.resource_corpus,
+        source_root=args.source_root,
+        evidence_root=args.evidence_root,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned-no-run-publication",
+                    "next_revision": snapshot.revision + 1 + int(args.select),
+                    "selection_requested": args.select,
+                    "bundle": prepared.bundle.model_dump(mode="json"),
+                    "no_execution_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot = publish_project_evaluation(
+        runtime,
+        prepared,
+        expected_revision=args.expected_revision,
+        select=args.select,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "registered-no-run-evaluation",
+                "project_id": args.project_id,
+                "project_revision": snapshot.revision,
+                "evaluation_id": prepared.bundle.evaluation_id,
+                "evaluation_status": prepared.bundle.status,
+                "proposal_sha256": prepared.bundle.proposal_sha256,
+                "planned_cells": prepared.bundle.planned_cells,
+                "ready_for_author_review": prepared.bundle.ready_for_author_review,
+                "execution_authorized": prepared.bundle.execution_authorized,
+                "record_locator": snapshot.evaluation_locators[prepared.bundle.evaluation_id],
+                "selected": snapshot.manifest.current_evaluation == prepared.bundle.evaluation_id,
+                "no_execution_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_evaluation_select(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    if args.dry_run:
+        snapshot = runtime.open(args.project_id)
+        if snapshot.revision != args.expected_revision:
+            raise ValueError(
+                f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
+            )
+        if args.evaluation_id not in snapshot.evaluation_locators:
+            raise ValueError(f"unknown project evaluation {args.evaluation_id!r}")
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "next_revision": snapshot.revision + 1,
+                    "current_evaluation": args.evaluation_id,
+                    "no_execution_performed": True,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    snapshot = runtime.select_evaluation(
+        args.project_id,
+        args.evaluation_id,
+        expected_revision=args.expected_revision,
+    )
+    print(snapshot.model_dump_json(indent=2))
     return 0
 
 

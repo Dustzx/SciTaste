@@ -32,8 +32,12 @@ configuration and never belong to a project page.
 Phase 9 now has a typed prelaunch resource gate and separate DeepSeek, Zhipu,
 and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
 the accepted Benchmark subset, external/control adapters, independent reviewers,
-and explicit hash-bound launch approval are not yet complete; Zhipu model
-identity and remote GPU inventory add lane-specific blockers.
+and explicit hash-bound launch approval are not yet complete. Zhipu's official
+model identity is now verified, while exact dated pricing and an authenticated
+served revision remain blocked; remote GPU inventory is still a lane-specific
+blocker. Exact no-run proposal bundles can now be registered under the owning
+project and inspected on its Generation-as-Content home, but registration and
+selection confer no execution authority.
 
 ## Phase 2/3 progress
 

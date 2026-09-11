@@ -26,6 +26,16 @@ class ProjectSnapshotAdapter:
         """Build a content-addressed binding from the runtime's current revision."""
 
         snapshot = self.runtime.open(project_id)
+        invalid_evaluations = [
+            warning
+            for warning in snapshot.warnings
+            if warning.startswith("registered evaluation is missing or invalid:")
+        ]
+        if invalid_evaluations:
+            raise ValueError(
+                "project evaluation evidence failed integrity validation: "
+                + "; ".join(invalid_evaluations)
+            )
         project_root = self.runtime.outputs_root / snapshot.project_locator
         refs: list[EvidenceRef] = []
 
@@ -107,6 +117,18 @@ class ProjectSnapshotAdapter:
                     kind=EvidenceKind.REVIEW,
                     locator=review.round_locator,
                     label=f"Review round {review_index}",
+                )
+            )
+
+        for evaluation_index, evaluation in enumerate(snapshot.manifest.evaluations, start=1):
+            refs.append(
+                self._ref(
+                    snapshot=snapshot,
+                    project_root=project_root,
+                    evidence_id=_evidence_id("evaluation", evaluation.record_locator),
+                    kind=EvidenceKind.EVALUATION,
+                    locator=evaluation.record_locator,
+                    label=f"Evaluation proposal {evaluation_index}",
                 )
             )
 

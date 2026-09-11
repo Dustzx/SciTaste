@@ -2,6 +2,9 @@
 
 from scitaste.project.models import (
     PaperManifest,
+    ProjectEvaluation,
+    ProjectEvaluationArtifact,
+    ProjectEvaluationBundle,
     ProjectManifest,
     ProjectPaperEntry,
     ProjectReview,
@@ -12,6 +15,9 @@ from scitaste.project.runtime import ProjectRevisionConflictError, ProjectRuntim
 
 __all__ = [
     "PaperManifest",
+    "ProjectEvaluation",
+    "ProjectEvaluationArtifact",
+    "ProjectEvaluationBundle",
     "ProjectManifest",
     "ProjectPaperEntry",
     "ProjectReview",
