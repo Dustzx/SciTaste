@@ -71,6 +71,31 @@ class ResearchWork(BaseModel):
     resource_tier: Literal["desktop", "moderate", "high", "frontier", "unreported"]
     role: Literal["primary", "anchor", "context"]
 
+    @model_validator(mode="after")
+    def contribution_and_experiment_roles_are_separate(self) -> ResearchWork:
+        artifacts = set(self.bundled_artifacts)
+        if self.contribution_type == "unclassified":
+            return self
+        if self.contribution_type == "method" and "system" not in artifacts:
+            raise ValueError("a method contribution must bundle a system")
+        if self.contribution_type == "benchmark" and "benchmark" not in artifacts:
+            raise ValueError("a benchmark contribution must bundle a benchmark")
+        if self.contribution_type == "hybrid" and not (
+            "system" in artifacts and {"benchmark", "judge", "dataset"} & artifacts
+        ):
+            raise ValueError(
+                "a hybrid contribution must bundle a system and evaluation infrastructure"
+            )
+        if self.experiment_role == "system-comparator" and (
+            self.contribution_type not in {"method", "hybrid"} or "system" not in artifacts
+        ):
+            raise ValueError("only a method or hybrid system can be a system comparator")
+        if self.experiment_role == "task-source" and (
+            self.contribution_type not in {"benchmark", "hybrid"} or "benchmark" not in artifacts
+        ):
+            raise ValueError("only a benchmark or hybrid benchmark can be a task source")
+        return self
+
 
 class ComparisonCandidate(BaseModel):
     model_config = _CONFIG
@@ -183,6 +208,13 @@ class ResearchLandscapeArtifact(BaseModel):
             for work in self.works:
                 if len(work.bundled_artifacts) != len(set(work.bundled_artifacts)):
                     raise ValueError("research work bundled artifacts must be unique")
+            candidate_kinds = {item.candidate_kind for item in self.comparison_candidates}
+            if "system" not in candidate_kinds:
+                raise ValueError("classified landscape requires a system candidate track")
+            if not {"benchmark", "judge"} & candidate_kinds:
+                raise ValueError(
+                    "classified landscape requires an evaluation-infrastructure candidate track"
+                )
         if self.schema_version == "1.2" and self.corpus_scope != (
             "accepted-method-census-candidate-and-targeted-evaluation-resources"
         ):
@@ -191,6 +223,16 @@ class ResearchLandscapeArtifact(BaseModel):
             item.state != "ready" for item in self.planning_gates
         ):
             raise ValueError("a ready freeze decision requires every planning gate")
+        if self.freeze_decision == "ready":
+            formal_kinds = {
+                item.candidate_kind
+                for item in self.comparison_candidates
+                if item.readiness == "formal"
+            }
+            if "system" not in formal_kinds or not {"benchmark", "judge"} & formal_kinds:
+                raise ValueError(
+                    "a ready freeze decision requires formal system and evaluation tracks"
+                )
         return self
 
 

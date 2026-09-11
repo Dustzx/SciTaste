@@ -127,6 +127,54 @@ def test_landscape_source_is_strict_closed_and_not_an_experiment_result() -> Non
         ResearchLandscapeArtifact.model_validate(payload)
 
 
+@pytest.mark.parametrize(
+    ("work_id", "update", "message"),
+    [
+        (
+            "mlr-bench",
+            {"experiment_role": "system-comparator"},
+            "only a method or hybrid system can be a system comparator",
+        ),
+        (
+            "cycle-researcher",
+            {"experiment_role": "task-source"},
+            "only a benchmark or hybrid benchmark can be a task source",
+        ),
+        (
+            "cycle-researcher",
+            {"bundled_artifacts": ["dataset"]},
+            "a method contribution must bundle a system",
+        ),
+        (
+            "ai-researcher",
+            {"bundled_artifacts": ["system"]},
+            "a hybrid contribution must bundle a system and evaluation infrastructure",
+        ),
+    ],
+)
+def test_contribution_type_cannot_impersonate_an_experiment_role(
+    work_id: str,
+    update: dict[str, object],
+    message: str,
+) -> None:
+    payload = load_research_landscape_source(_SOURCE).model_dump(mode="json")
+    work = next(item for item in payload["works"] if item["work_id"] == work_id)
+    work.update(update)
+
+    with pytest.raises(ValidationError, match=message):
+        ResearchLandscapeArtifact.model_validate(payload)
+
+
+def test_ready_landscape_requires_both_formal_experiment_tracks() -> None:
+    payload = load_research_landscape_source(_SOURCE).model_dump(mode="json")
+    payload["freeze_decision"] = "ready"
+    for gate in payload["planning_gates"]:
+        gate["state"] = "ready"
+
+    with pytest.raises(ValidationError, match="formal system and evaluation tracks"):
+        ResearchLandscapeArtifact.model_validate(payload)
+
+
 def test_legacy_landscape_remains_readable_but_explicitly_unclassified() -> None:
     artifact = load_research_landscape_source(_LEGACY_SOURCE)
 
