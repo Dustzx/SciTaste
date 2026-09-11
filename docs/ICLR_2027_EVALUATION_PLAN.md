@@ -127,6 +127,11 @@ passes. Declared and reversed action orders are separate repeated-measure arms.
 No natural case population or expert annotation has yet been collected, so this
 is protocol readiness rather than Track A evidence. See
 [`research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
+The metadata-only acquisition screen and exact API/GPU decision brief are
+[`research/data/scitastebench_v2_source_candidates_v1.yaml`](research/data/scitastebench_v2_source_candidates_v1.yaml)
+and
+[`research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md`](research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md).
+Neither artifact authorizes a download, label, provider call, or GPU job.
 
 ## Track B: independent end-to-end comparison
 

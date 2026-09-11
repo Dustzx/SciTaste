@@ -1,0 +1,124 @@
+schema_version: "1.0"
+manifest_id: scitastebench-v2-source-candidates-v1
+observed_at: 2026-09-11
+status: metadata-only-candidate-screen
+scientific_role: track-a-natural-decision-curation
+formal_case_floor: 120
+minimum_domains: 3
+required_decision_families: [idea, experiment, evidence, writing, review, visual]
+no_remote_data_acquired: true
+no_case_label_created: true
+no_model_call_performed: true
+formal_split_opened: false
+population_rules:
+  source_group_unit: one-paper-repository-review-thread-or-research-trajectory
+  split_unit: source-group
+  label_source: at-least-two-conflict-cleared-humans-per-case
+  model_labels_allowed: false
+  observed_action_is_gold: false
+  self_development_headline_eligible: false
+  taste_precedent_groups_must_be_disjoint: true
+  personal_identifiers_retained: false
+sources:
+  - source_id: aaar-1.0
+    name: AAAR-1.0
+    role: natural-case-candidate-only
+    publication_url: https://proceedings.mlr.press/v267/lou25c.html
+    code_url: https://github.com/RenzeLou/AAAR-1.0
+    code_revision: 5e56192452d809e61dedd435622567d55515f527
+    code_license_claim: MIT
+    dataset_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0
+    dataset_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    dataset_license_claim: MIT
+    license_scope: packaged-dataset-claim-does-not-waive-per-paper-source-audit
+    advertised_counts:
+      experiment_design_papers: 100
+      paper_weakness_papers: 993
+    author_restriction: do-not-use-for-training
+    candidate_families: [experiment, evidence, review, visual]
+    use_boundary: evaluation-and-human-curation-only-not-taste-training
+    acquisition_status: not-acquired
+    blockers:
+      - verify-license-scope-for-each-bundled-paper-source-and-image
+      - freeze-source-groups-and-deduplicate-across-taste-precedents
+      - convert-open-ended-outputs-to-fixed-pair-decisions-before-labeling
+      - obtain-independent-human-labels-under-the-frozen-rubric
+  - source_id: aries
+    name: ARIES-review-informed-edits
+    role: natural-case-and-precedent-candidate
+    publication_url: https://arxiv.org/abs/2306.12587
+    code_url: https://github.com/allenai/aries
+    code_revision: 5691bae71a101225ed345d0ffc42e47609f03bbb
+    code_license_claim: Apache-2.0
+    dataset_url: https://github.com/allenai/aries#dataset
+    dataset_revision: null
+    dataset_license_claim: ODC-BY-1.0
+    license_scope: released-dataset-with-separate-openreview-work-provenance
+    advertised_counts: {}
+    author_restriction: null
+    candidate_families: [writing, review, evidence]
+    use_boundary: observed-review-to-edit-alignment-is-context-not-quality-gold
+    acquisition_status: not-acquired
+    blockers:
+      - obtain-content-addressed-dataset-snapshot-before-ingestion
+      - preserve-openreview-paper-and-comment-provenance-separately
+      - expert-relabel-scientific-value-instead-of-copying-observed-edits
+      - prevent-document-overlap-between-cases-and-taste-precedents
+  - source_id: openreview-public-comments
+    name: OpenReview-public-comments-and-configuration-records
+    role: natural-case-and-precedent-candidate
+    publication_url: https://openreview.net/about
+    code_url: null
+    code_revision: null
+    code_license_claim: null
+    dataset_url: https://openreview.net/legal/terms
+    dataset_revision: null
+    dataset_license_claim: CC-BY-4.0-comments-and-configuration-records
+    license_scope: paper-works-remain-submission-specific
+    advertised_counts: {}
+    author_restriction: public-content-only
+    candidate_families: [idea, experiment, evidence, writing, review, visual]
+    use_boundary: public-comments-only-unless-each-work-license-is-separately-admitted
+    acquisition_status: not-acquired
+    blockers:
+      - freeze-venue-year-and-publication-cutoff-before-query
+      - exclude-nonpublic-and-security-incident-derived-content
+      - strip-user-and-reviewer-identifiers-before-curation
+      - preserve-attribution-without-exposing-pseudonymous-identities
+      - audit-each-paper-work-license-before-using-paper-text-or-figures
+  - source_id: mlr-bench-tasks
+    name: MLR-Bench-task-population
+    role: track-b-end-to-end-task-source
+    publication_url: https://openreview.net/pdf?id=JX9DE6colf
+    code_url: https://github.com/chchenhui/mlrbench
+    code_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    code_license_claim: MIT
+    dataset_url: https://huggingface.co/datasets/chchenhui/mlrbench-tasks
+    dataset_revision: f1a9a989d4925ff8145e70810e144130be3f8a11
+    dataset_license_claim: MIT
+    license_scope: packaged-task-metadata-not-every-upstream-task-asset
+    advertised_counts:
+      research_tasks: 201
+    author_restriction: null
+    candidate_families: []
+    use_boundary: end-to-end-starting-briefs-and-stagewise-rubric-only
+    acquisition_status: not-acquired
+    blockers:
+      - audit-each-selected-workshop-description-and-upstream-task-license
+      - resolve-dataset-card-duplicate-missing-and-deleted-source-notes
+      - freeze-held-out-source-disjoint-subset-before-system-execution
+      - do-not-relabel-rubric-score-as-objective-progress
+admission_decision:
+  status: hold
+  permitted_now: metadata-and-license-review-only
+  prohibited_now:
+    - dataset-download
+    - source-text-ingestion
+    - model-label-generation
+    - gpu-benchmark-execution
+    - api-benchmark-execution
+  next_gate:
+    - author-approves-exact-acquisition-slice-and-storage-budget
+    - rights-review-passes-for-the-selected-bytes
+    - source-group-sampling-plan-is-content-addressed
+    - human-annotation-rubric-and-recruitment-plan-are-frozen

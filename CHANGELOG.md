@@ -7,6 +7,12 @@ semantic versioning.
 
 ### Added
 
+- A metadata-only SciTasteBench v2 source screen separates AAAR, ARIES,
+  OpenReview comments, and MLR-Bench by evidence role, license scope, source
+  revision, and remaining admission gates. A companion decision brief fixes the
+  first API/GPU models, populations, matrices, budgets, endpoints, and launch
+  order without downloading data or authorizing execution.
+
 - Project run status and bounded provider-failure metadata can now be updated
   through an optimistic-revision CLI operation with dry-run support, avoiding
   one-off manifest edits when a review or experiment call terminates.

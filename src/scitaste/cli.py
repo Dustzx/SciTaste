@@ -44,6 +44,7 @@ from scitaste.benchmark import (
     load_benchmark_report,
     load_benchmark_suite,
     load_curation_package,
+    load_source_candidate_manifest,
     load_study_launch_config,
     load_study_protocol,
     load_study_results,
@@ -54,6 +55,7 @@ from scitaste.benchmark import (
     save_study_plan,
     save_study_report,
     scripted_selections,
+    source_candidate_status,
 )
 from scitaste.benchmark.manuscript import materialize_venue_manuscript
 from scitaste.data.curation import CurationFormat, curate_snapshot
@@ -1018,6 +1020,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(benchmark_curate)
     benchmark_curate.set_defaults(handler=_handle_benchmark_curate)
+    benchmark_source_status = benchmark_commands.add_parser(
+        "source-status",
+        help="Inspect a metadata-only SciTasteBench source screen without acquisition",
+    )
+    benchmark_source_status.add_argument("--manifest", type=Path, required=True)
+    _add_log_level_option(benchmark_source_status)
+    benchmark_source_status.set_defaults(handler=_handle_benchmark_source_status)
     benchmark_attribute = benchmark_commands.add_parser(
         "attribute", help="Separate model-specific misses from SciTaste regressions"
     )
@@ -3204,6 +3213,27 @@ def _handle_benchmark_curate(args: argparse.Namespace) -> int:
         payload["compiled_suite"] = save_curated_suite(suite, args.output)
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0 if report.ready_to_compile else 1
+
+
+def _handle_benchmark_source_status(args: argparse.Namespace) -> int:
+    inspection = load_source_candidate_manifest(args.manifest)
+    report = source_candidate_status(inspection.manifest)
+    print(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "status": "hold",
+                "file_sha256": inspection.file_sha256,
+                **report.model_dump(mode="json"),
+                "no_download_performed": True,
+                "no_model_call_performed": True,
+                "no_gpu_work_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
 
 
 def _handle_benchmark_attribute(args: argparse.Namespace) -> int:

@@ -34,6 +34,16 @@ from scitaste.benchmark.runner import (
     save_benchmark_report,
     scripted_selections,
 )
+from scitaste.benchmark.source_candidates import (
+    CandidateAdmissionDecision,
+    CandidateSource,
+    CandidateSourceRole,
+    SourceCandidateInspection,
+    SourceCandidateManifest,
+    SourceCandidateStatus,
+    load_source_candidate_manifest,
+    source_candidate_status,
+)
 from scitaste.benchmark.study import (
     MatchedStudyEvaluator,
     MatchedStudyPlanner,
@@ -78,7 +88,10 @@ __all__ = [
     "BenchmarkEvidenceTier",
     "BenchmarkReport",
     "BenchmarkSuite",
+    "CandidateAdmissionDecision",
     "CandidateOrder",
+    "CandidateSource",
+    "CandidateSourceRole",
     "CapabilityBoundaryReport",
     "CrossModelCapabilityComparison",
     "CuratedDecisionCase",
@@ -95,6 +108,9 @@ __all__ = [
     "ProjectStudySummary",
     "SciTasteBenchCurationPackage",
     "SciTasteBenchRunner",
+    "SourceCandidateInspection",
+    "SourceCandidateManifest",
+    "SourceCandidateStatus",
     "StudyCellProgress",
     "StudyLaunchConfig",
     "StudyMatrixStatus",
@@ -114,6 +130,7 @@ __all__ = [
     "load_benchmark_report",
     "load_benchmark_suite",
     "load_curation_package",
+    "load_source_candidate_manifest",
     "load_study_launch_config",
     "load_study_protocol",
     "load_study_results",
@@ -124,4 +141,5 @@ __all__ = [
     "save_study_plan",
     "save_study_report",
     "scripted_selections",
+    "source_candidate_status",
 ]
