@@ -16,6 +16,7 @@ from scitaste.evaluation import (
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
+    GpuModelResource,
     HumanReviewResource,
     IntegrityContract,
     PrelaunchApproval,
@@ -41,6 +42,7 @@ PACKAGE_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources
 PACKAGE_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
 OFFICIAL_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v5.yaml")
 OFFICIAL_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml")
+GPU_INVENTORY_PATH = Path("docs/research/data/gpu_host_3090_2_inventory_v1.yaml")
 CURRENT_MANIFEST_PATHS = (
     Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
     Path("configs/evaluation/prelaunch/zhipu_glm53flash_pilot_v2.yaml"),
@@ -238,6 +240,53 @@ def test_pending_assets_and_gpu_or_api_identity_fail_closed() -> None:
     assert "task_assets_pending:mlr-heldout-001" in codes
     assert "api_identity_blocked:deepseek-api" in codes
     assert report.ready_for_author_approval is False
+
+
+def test_gpu_critic_revalidates_content_bound_inventory_semantics() -> None:
+    manifest = _manifest()
+    inventory_sha256 = hashlib.sha256(GPU_INVENTORY_PATH.read_bytes()).hexdigest()
+    gpu = GpuModelResource(
+        host_alias="3090-2",
+        device_count=7,
+        device_name="NVIDIA GeForce RTX 3090",
+        minimum_memory_mb_per_device=24_000,
+        checkpoint_id="qwen3-vl-2b-instruct",
+        checkpoint_source_path="/media/weights/Qwen3-VL-2B-Instruct",
+        checkpoint_sha256=(
+            "8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1"
+        ),
+        checkpoint_bytes=4_266_653_057,
+        license_identifier="Apache-2.0",
+        local_preflight_status=ReadinessStatus.VERIFIED,
+        remote_inventory_status=ReadinessStatus.VERIFIED,
+        remote_inventory_ref=GPU_INVENTORY_PATH.as_posix(),
+        remote_inventory_sha256=inventory_sha256,
+        remote_checkpoint_status=ReadinessStatus.PENDING,
+        max_gpu_hours=1,
+        max_storage_bytes=10_000_000_000,
+    )
+    lane = manifest.lanes[0].model_copy(
+        update={"kind": ExecutionLaneKind.GPU, "api_model": None, "gpu_resource": gpu}
+    )
+    gpu_manifest = manifest.model_copy(update={"lanes": (lane,)})
+    gate = inspect_prelaunch_manifest(
+        gpu_manifest,
+        _admitted_corpus(),
+        observed_source_commit=COMMIT,
+        source_tree_clean=True,
+    )
+
+    review = EvaluationCriticSuite().review(
+        gpu_manifest,
+        _admitted_corpus(),
+        gate,
+        evidence_root=Path("."),
+    )
+    finding = next(
+        item for item in review.findings if item.domain is EvaluationCriticDomain.RESOURCES
+    )
+
+    assert "gpu_inventory_device_count_mismatch" in finding.message
 
 
 def test_source_identity_and_cleanliness_are_observed_not_declared() -> None:

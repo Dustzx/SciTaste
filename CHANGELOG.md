@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Remote GPU readiness can now be supported by a typed, content-addressed,
+  read-only host inventory instead of an unchecked `verified` label. The first
+  8 × RTX 3090 inventory records device UUIDs and memory, driver/runtime tools,
+  bounded root-storage headroom, and the absent Qwen3-VL-2B destination without
+  retaining a host address or credential. A verified copied checkpoint requires
+  a separate hash-bound attestation; inventory alone never authorizes transfer
+  or execution.
+
 - The evaluation resource ledger now supports evidence-only v2.3 overlays, and
   the current DeepSeek package-preference proposal uses the provider-documented
   `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` identity and dated prices.

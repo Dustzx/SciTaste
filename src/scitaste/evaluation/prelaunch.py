@@ -175,10 +175,38 @@ class GpuModelResource(BaseModel):
     license_identifier: str = Field(min_length=1, max_length=200)
     local_preflight_status: ReadinessStatus
     remote_inventory_status: ReadinessStatus
+    remote_inventory_ref: str | None = Field(default=None, max_length=1_000)
+    remote_inventory_sha256: str | None = Field(default=None, pattern=_SHA256)
     remote_checkpoint_status: ReadinessStatus
+    remote_checkpoint_attestation_ref: str | None = Field(default=None, max_length=1_000)
+    remote_checkpoint_attestation_sha256: str | None = Field(
+        default=None, pattern=_SHA256
+    )
     max_gpu_hours: float = Field(gt=0)
     max_storage_bytes: int = Field(gt=0)
     network_access: Literal[False] = False
+
+    @model_validator(mode="after")
+    def verified_remote_resources_are_content_bound(self) -> GpuModelResource:
+        inventory = (self.remote_inventory_ref, self.remote_inventory_sha256)
+        checkpoint = (
+            self.remote_checkpoint_attestation_ref,
+            self.remote_checkpoint_attestation_sha256,
+        )
+        if (inventory[0] is None) != (inventory[1] is None):
+            raise ValueError("remote GPU inventory reference and SHA-256 must be paired")
+        if (checkpoint[0] is None) != (checkpoint[1] is None):
+            raise ValueError("remote checkpoint attestation and SHA-256 must be paired")
+        if self.remote_inventory_status is ReadinessStatus.VERIFIED and any(
+            value is None for value in inventory
+        ):
+            raise ValueError("verified remote GPU inventory requires content-bound evidence")
+        if self.remote_checkpoint_status is ReadinessStatus.VERIFIED:
+            if self.remote_inventory_status is not ReadinessStatus.VERIFIED:
+                raise ValueError("verified remote checkpoint requires verified host inventory")
+            if any(value is None for value in checkpoint):
+                raise ValueError("verified remote checkpoint requires content-bound attestation")
+        return self
 
 
 class ExecutionLane(BaseModel):

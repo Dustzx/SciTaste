@@ -10,6 +10,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from scitaste.evaluation.gpu_inventory import (
+    compare_gpu_inventory,
+    load_gpu_host_inventory,
+)
 from scitaste.evaluation.prelaunch import (
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
@@ -90,7 +94,7 @@ class EvaluationCriticSuite:
             *self._baseline_applicability(manifest, resource_corpus, evidence_root),
             *self._statistics(manifest, evidence_root),
             *self._integrity(manifest, gate_report, evidence_root),
-            *self._resources(manifest, gate_report),
+            *self._resources(manifest, gate_report, evidence_root),
         )
         blocking_codes = tuple(
             f"{finding.domain.value}:{finding.criterion}"
@@ -423,6 +427,7 @@ class EvaluationCriticSuite:
     def _resources(
         manifest: ExperimentPrelaunchManifest,
         gate_report: PrelaunchGateReport,
+        evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         prefixes = (
             "api_",
@@ -436,6 +441,7 @@ class EvaluationCriticSuite:
         resource_blockers = sorted(
             blocker.code for blocker in gate_report.blockers if blocker.code.startswith(prefixes)
         )
+        resource_blockers.extend(_gpu_inventory_problems(manifest, evidence_root))
         refs = tuple(f"manifest://lanes/{lane.lane_id}" for lane in manifest.lanes)
         if resource_blockers:
             return (
@@ -460,6 +466,90 @@ class EvaluationCriticSuite:
                 refs,
             ),
         )
+
+
+def _gpu_inventory_problems(
+    manifest: ExperimentPrelaunchManifest,
+    evidence_root: str | Path | None,
+) -> list[str]:
+    problems: list[str] = []
+    for lane in manifest.lanes:
+        resource = lane.gpu_resource
+        if resource is None:
+            continue
+        bindings: list[tuple[str | None, str | None]] = []
+        if resource.remote_inventory_status is ReadinessStatus.VERIFIED:
+            bindings.append(
+                (resource.remote_inventory_ref, resource.remote_inventory_sha256)
+            )
+        if resource.remote_checkpoint_status is ReadinessStatus.VERIFIED:
+            bindings.append(
+                (
+                    resource.remote_checkpoint_attestation_ref,
+                    resource.remote_checkpoint_attestation_sha256,
+                )
+            )
+        artifact_problems = _artifact_problems(evidence_root, bindings)
+        problems.extend(f"{lane.lane_id}:{problem}" for problem in artifact_problems)
+        if (
+            resource.remote_inventory_status is not ReadinessStatus.VERIFIED
+            or artifact_problems
+            or evidence_root is None
+            or resource.remote_inventory_ref is None
+        ):
+            continue
+        try:
+            root = Path(evidence_root).resolve(strict=True)
+            inventory_path = root.joinpath(*PurePosixPath(resource.remote_inventory_ref).parts)
+            inspection = load_gpu_host_inventory(inventory_path)
+        except (OSError, ValueError) as exc:
+            problems.append(f"{lane.lane_id}:gpu_inventory_invalid:{type(exc).__name__}")
+            continue
+        mismatches = compare_gpu_inventory(
+            inspection.inventory,
+            host_alias=resource.host_alias,
+            device_count=resource.device_count,
+            device_name=resource.device_name,
+            minimum_memory_mb_per_device=resource.minimum_memory_mb_per_device,
+            checkpoint_id=resource.checkpoint_id,
+            checkpoint_sha256=resource.checkpoint_sha256,
+            checkpoint_bytes=resource.checkpoint_bytes,
+        )
+        problems.extend(f"{lane.lane_id}:gpu_inventory_{code}" for code in mismatches)
+        if (
+            resource.remote_checkpoint_status is ReadinessStatus.VERIFIED
+            and resource.remote_checkpoint_attestation_ref is not None
+        ):
+            try:
+                attestation_path = root.joinpath(
+                    *PurePosixPath(resource.remote_checkpoint_attestation_ref).parts
+                )
+                attestation = load_gpu_host_inventory(attestation_path).inventory
+            except (OSError, ValueError) as exc:
+                problems.append(
+                    f"{lane.lane_id}:remote_checkpoint_attestation_invalid:"
+                    f"{type(exc).__name__}"
+                )
+                continue
+            problems.extend(
+                f"{lane.lane_id}:checkpoint_attestation_{code}"
+                for code in compare_gpu_inventory(
+                    attestation,
+                    host_alias=resource.host_alias,
+                    device_count=resource.device_count,
+                    device_name=resource.device_name,
+                    minimum_memory_mb_per_device=resource.minimum_memory_mb_per_device,
+                    checkpoint_id=resource.checkpoint_id,
+                    checkpoint_sha256=resource.checkpoint_sha256,
+                    checkpoint_bytes=resource.checkpoint_bytes,
+                )
+            )
+            checkpoint = attestation.checkpoint
+            if not checkpoint.destination_present:
+                problems.append(f"{lane.lane_id}:remote_checkpoint_absent")
+            elif checkpoint.observed_sha256 != resource.checkpoint_sha256:
+                problems.append(f"{lane.lane_id}:remote_checkpoint_hash_mismatch")
+    return problems
 
 
 def _finding(

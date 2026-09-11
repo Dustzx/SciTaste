@@ -1,8 +1,8 @@
 # Evaluation prelaunch contracts
 
-Status: **resource proposals only**. No API generation, remote login, model
-transfer, dataset download, GPU execution, reviewer recruitment, or formal cell
-is authorized by these files.
+Status: **resource proposals only**. A read-only remote inventory has been
+recorded, but no model transfer, dataset download, GPU execution, reviewer
+recruitment, or formal cell is authorized by these files.
 
 SciTaste keeps three experimental objects separate:
 
@@ -57,12 +57,19 @@ rolling alias. A future Zhipu package-preference proposal must bind the same
 schema-v1.1 endpoint semantics in its own immutable bytes; it cannot reuse the
 historical objective-progress proposal or act as a silent DeepSeek fallback.
 
-The local Qwen tree and license metadata have been inspected without loading the
-model. The remote machine has not been contacted, so GPU count, free storage,
-runtime compatibility, and remote checkpoint presence remain pending. The 2B
-model is a robustness condition, not a replacement for a frontier API backbone.
-Its replacement proposal must choose either a genuinely objective benchmark or
-the package-preference protocol before GPU work is requested.
+The local Qwen tree and license metadata have been inspected without starting a
+new workload. A read-only SSH observation on 2026-09-11 verified eight idle RTX
+3090 devices with 24,576 MiB each, driver 570.211.01, Python 3.12.3, Docker,
+Bubblewrap, and 59,034,427,392 bytes free on the 88%-used root filesystem. The
+intended remote checkpoint destination is absent. The exact observation is
+recorded in
+`research/data/gpu_host_3090_2_inventory_v1.yaml` with no address or credential;
+verified GPU inventory declarations now require this kind of content-bound
+evidence, and a verified remote checkpoint separately requires an attestation.
+The 2B model is a robustness condition, not a replacement for a frontier API
+backbone. Its replacement proposal must use the SciTasteBench mechanism track,
+a genuinely objective benchmark, or the package-preference protocol rather than
+reusing the invalid MLR-Bench objective-progress binding.
 
 The current DeepSeek proposal names the exact ten-task MLR-Bench Appendix A
 candidate population used by the accepted benchmark for experimentation,
@@ -272,9 +279,10 @@ protocol.
    revision. For DeepSeek, perform an
    authenticated identity preflight immediately before launch because the API
    name is a rolling alias.
-6. For the GPU lane, inspect the remote inventory and storage without running a
-   workload, define the checkpoint transfer/archive plan, and verify the copied
-   tree hash.
+6. For the GPU lane, review the recorded remote inventory, define the checkpoint
+   transfer/archive plan within the remaining 59 GB, then transfer and verify the
+   copied tree hash only after approval. No task data currently fits inside that
+   authorization.
 7. Present the regenerated exact manifests and their proposal hashes to the
    project owner. Run one matched block only after explicit approval; require a
    second approval for scale-out.

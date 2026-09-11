@@ -1,0 +1,78 @@
+schema_version: "1.0"
+inventory_id: gpu-host-3090-2-20260911-v1
+host_alias: 3090-2
+hostname: ubuntu-3090cx
+observed_at: 2026-09-11T05:56:39Z
+observation_method: read-only-ssh
+devices:
+  - index: 0
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-0d2a357b-27ef-5917-c7b0-dcd603b6631c
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 1
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-7f5d4646-4596-0dd2-affb-f9ded9ab9aa6
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 2
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-c2e5d08b-3c61-e341-d386-a08f7296bd12
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 3
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-0daf8572-a271-20ba-b39a-cf5fa862500d
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 4
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-d4953ebb-810a-004b-21b1-81e0243df493
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 5
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-d2d4a688-3d61-5ece-b15b-693e95ab1a23
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 6
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-11fdcb98-bf96-8aa8-426e-70e46f34ac88
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+  - index: 7
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-5f720994-94de-0f3d-6eeb-ec57f9949a96
+    memory_total_mb: 24576
+    memory_free_mb: 24124
+    driver_version: 570.211.01
+root_storage:
+  filesystem: /dev/nvme0n1p4
+  mount: /
+  total_bytes: 502815162368
+  used_bytes: 418163920896
+  available_bytes: 59034427392
+  percent_used: 88
+runtime:
+  python_version: 3.12.3
+  docker_path: /usr/bin/docker
+  bubblewrap_path: /usr/bin/bwrap
+checkpoint:
+  checkpoint_id: qwen3-vl-2b-instruct
+  expected_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+  expected_bytes: 4266653057
+  destination_path: /srv/scitaste/weights/Qwen3-VL-2B-Instruct
+  destination_present: false
+  observed_sha256: null
+remote_state_mutation_performed: false
+gpu_work_performed: false
+model_transfer_performed: false
+dataset_download_performed: false
+credentials_recorded: false

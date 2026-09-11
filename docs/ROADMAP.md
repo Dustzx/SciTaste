@@ -34,10 +34,13 @@ and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
 the accepted Benchmark subset, external/control adapters, independent reviewers,
 and explicit hash-bound launch approval are not yet complete. Zhipu's official
 model identity is now verified, while exact dated pricing and an authenticated
-served revision remain blocked; remote GPU inventory is still a lane-specific
-blocker. Exact no-run proposal bundles can now be registered under the owning
-project and inspected on its Generation-as-Content home, but registration and
-selection confer no execution authority.
+served revision remain blocked. The remote GPU inventory is now a content-bound
+read-only observation: all eight 24 GB RTX 3090 devices were idle, but only about
+59 GB of root storage remained and the Qwen checkpoint was absent. Checkpoint
+transfer, task assets, and workload execution remain blocked. Exact no-run
+proposal bundles can now be registered under the owning project and inspected
+on its Generation-as-Content home, but registration and selection confer no
+execution authority.
 
 The post-execution software path is also implemented: existing API or GPU cell
 outputs can be admitted as project-owned immutable result bundles and shown
