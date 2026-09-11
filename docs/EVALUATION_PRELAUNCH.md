@@ -51,9 +51,9 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource named in its immutable bytes | Declared matrix | Current state |
 |---|---|---|---:|---|
-| `formal-v6-package-prepilot` | invalidated API idea-to-paper feasibility snapshot | historical `deepseek-flash` / `DeepSeek-V4.1-Flash` claim | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; a 2026-09-12 official-source recheck contradicted its provider identity and pricing, so it must not be approved or launched |
-| `formal-v5-package-prepilot` | historical package-preference proposal with the currently documented DeepSeek identity | `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history with an older source and governance snapshot; it is provider evidence, not a current launch proposal |
-| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable no-run history carrying the same contradicted identity; do not use it for review or approval |
+| `formal-v6-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | current schema-v1.1 no-run proposal; its 100 units are a ceiling pending pilot power analysis; task bytes, adapters, reviewers, clean executable binding, authenticated served identity, and approval remain blocked |
+| `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; the legacy alias is now routed to V4.1, so this record must not be relabeled or launched |
+| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable history with the current identity but an older source, resource snapshot, and governance contract; use v6 for current review |
 | `formal-v4-accepted-method-prepilot` | historical API scope with an invalid endpoint/task binding | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; v3 incorrectly treated the MLR-Bench open-ended package rubric as objective task progress and must not be approved or launched |
 | `formal-v4-prepilot` | historical API scope proposal | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | immutable history; included preprint comparators and lacked replication plus analysis/integrity contracts |
 | `formal-v3-prepilot` | historical API proposal | earlier DeepSeek V4 API identity | 5 system × task × seed cells | immutable history; do not edit it into current evidence |
@@ -62,17 +62,15 @@ no silent fallback between Zhipu and DeepSeek.
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-The 2026-09-12 official DeepSeek catalog recheck exposes callable ID
-`deepseek-v4-flash` and model version `DeepSeek-V4-Flash-0731`, not the
-`deepseek-flash` / `DeepSeek-V4.1-Flash` pair recorded in v6. The current peak
-prices are USD 0.014/M cache-hit input tokens, USD 0.44/M cache-miss input
-tokens, and USD 1.32/M output tokens. V6 therefore remains immutable negative
-protocol evidence rather than being silently repaired. V5 retains the current
-provider identity but also remains historical because it binds an older source
-and governance snapshot. A future DeepSeek proposal must receive a new identity,
-bytes, price capture, and approval after the comparison regime is selected.
-Because `deepseek-v4-flash` is a rolling alias, an authenticated returned-model
-observation remains mandatory immediately before an approved call. See the
+The live 2026-09-12 official DeepSeek catalog exposes callable ID
+`deepseek-flash` and served version `DeepSeek-V4.1-Flash`. Peak prices are USD
+0.006/M cache-hit input tokens, USD 0.30/M cache-miss input tokens, and USD
+1.20/M output tokens. The retired `deepseek-v4-flash` and
+`deepseek-v4-flash-vision-exp` names remain accepted only as compatibility
+aliases whose requests are served by V4.1. This confirms the v6 identity and
+conservative price ceilings without authorizing execution. Because
+`deepseek-flash` is a rolling alias, an authenticated returned-model observation
+remains mandatory immediately before an approved call. See the
 official [dated model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
 The official Zhipu model page now names callable ID `glm-5.3-flash`, version
@@ -271,7 +269,7 @@ The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. The historical v6 proposal
+provider call, GPU work, or task download occurred. The registered v6 proposal
 produces 100 intended two-seed execution units; none is launch-ready while its
 provider identity, task, and accepted-system adapter gates remain open. This
 makes the gap between a YAML matrix count and an executable cross-framework
@@ -282,13 +280,14 @@ that open adapter gate. MLR-Agent and Agent Laboratory are real method
 candidates, but their pinned releases cannot provide an unchanged-core, fully
 matched v6 trajectory under its task and coding-role contract. Their
 content-addressed adapter contracts remain blocked before upstream checkout or
-runtime implementation. The later provider-identity contradiction independently
-makes v6 non-launchable. Preserving it as immutable evidence avoids silently
-weakening “matched backbone”; choosing a common natively supported backbone or
-a separately disclosed best-native-system design requires a new proposal.
+runtime implementation. This makes the declared v6 matched-backbone matrix
+non-launchable even though its provider identity is current. Preserving the
+blocked contracts avoids silently weakening “matched backbone”; choosing a
+common natively supported backbone or a separately disclosed best-native-system
+design requires a new proposal.
 
 The `max_output_tokens_per_call` values in these proposals are per-experiment
-ceilings, not a global SciTaste limit. Historical v6 reserves 32,768 output
+ceilings, not a global SciTaste limit. V6 reserves 32,768 output
 tokens per call, 1,500 requests, and fifteen million total tokens across its 100
 candidate execution units. These are ceilings rather than targets and still
 require a pilot-informed adequacy check. Any change creates new proposal bytes

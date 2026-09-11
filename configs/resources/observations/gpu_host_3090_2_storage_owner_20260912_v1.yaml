@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: gpu-storage-owner-20260912-v1
+resource_id: gpu-host-3090-2
+resource_kind: gpu_host
+observed_at: 2026-09-12T03:42:00+08:00
+method: owner_report
+status: reported
+available_storage_bytes: null
+available_storage_gb_reported: 200.0
+observed_device_count: 8
+observed_device_name: NVIDIA GeForce RTX 3090
+notes:
+  - The project owner reported approximately 200 GB free after cleanup.
+  - Automated SSH refresh is pending; the prior verified inventory remains immutable.
+credentials_recorded: false
+observation_only: true

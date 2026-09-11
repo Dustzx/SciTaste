@@ -1,0 +1,44 @@
+schema_version: "1.0"
+catalog_id: scitaste-shared-compute-v1
+resources:
+  - kind: api_model
+    resource_id: deepseek-v41-flash
+    provider_id: deepseek
+    endpoint: https://api.deepseek.com/chat/completions
+    interface: openai-chat-completions
+    model_id: deepseek-flash
+    model_revision: DeepSeek-V4.1-Flash
+    rolling_alias: true
+    identity_source_url: https://api-docs.deepseek.com/quick_start/pricing/
+    identity_verified_on: 2026-09-12
+    credential_env: DEEPSEEK_API_KEY
+    pricing:
+      currency: USD
+      as_of: 2026-09-12
+      input_cache_hit_per_million: 0.006
+      input_cache_miss_per_million: 0.30
+      output_per_million: 1.20
+      source_url: https://api-docs.deepseek.com/quick_start/pricing/
+      status: verified
+  - kind: api_model
+    resource_id: zhipu-glm53-flash
+    provider_id: zhipu
+    endpoint: https://open.bigmodel.cn/api/paas/v4/chat/completions
+    interface: openai-chat-completions
+    model_id: glm-5.3-flash
+    model_revision: GLM-5.3-Flash
+    rolling_alias: true
+    identity_source_url: https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3
+    identity_verified_on: 2026-09-11
+    credential_env: ZHIPU_API_KEY
+    pricing: null
+  - kind: gpu_host
+    resource_id: gpu-host-3090-2
+    host_alias: 3090-2
+    access_profile: operator-managed-ssh
+    device_count: 8
+    device_name: NVIDIA GeForce RTX 3090
+    minimum_memory_mb_per_device: 24000
+    baseline_inventory_ref: docs/research/data/gpu_host_3090_2_inventory_v1.yaml
+    baseline_inventory_sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
+    baseline_observed_at: 2026-09-11T05:56:39Z

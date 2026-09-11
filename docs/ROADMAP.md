@@ -109,11 +109,10 @@ SciTaste self-development paper because no approved formal result exists yet;
 the current draft and its prior reviews therefore stay correctly unbound.
 
 The homepage now compresses repeated proposal diagnostics into seven stable
-decision gates while retaining the exact codes underneath. For the historical
-DeepSeek v6 prepilot, statistical design, temporal integrity, and the declared
-runtime ceiling pass, while a 2026-09-12 official-source recheck invalidates its
-API identity and pricing. Task qualification, comparator adapters, blinded
-review, and owner approval also remain open. This distinction
+decision gates while retaining the exact codes underneath. For the DeepSeek v6
+prepilot, provider identity, statistical design, temporal integrity, and the
+declared runtime ceiling pass. Task qualification, comparator adapters, blinded
+review, clean executable binding, and owner approval remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
@@ -136,16 +135,24 @@ genuinely common backbone or disclose a best-native-system comparison with
 model effects confounded; the choice is an author-level scientific-design
 decision.
 
-DeepSeek's official model catalog was rechecked on 2026-09-12 and names callable
-ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash-0731`. This contradicts
-the V4.1 identity captured by v6, so v6 is retained as immutable no-run evidence
-and cannot authorize a study. V5 retains the currently documented provider
-identity but binds older source and governance bytes, so it also remains
-historical rather than being promoted in place. A new proposal must capture the
-chosen comparison regime, current pricing, authenticated served observation,
-cleared tasks/comparators and human review before any execution unit is run.
+DeepSeek's live official model catalog was rechecked on 2026-09-12 and names
+callable ID `deepseek-flash` with version `DeepSeek-V4.1-Flash`. Legacy
+`deepseek-v4-flash` requests are served by V4.1. This confirms v6's identity and
+peak price ceilings, but cannot authorize a study while the task, adapter,
+reviewer, executable-binding, and owner-approval gates remain open. Every live
+run still requires authenticated requested-versus-returned identity evidence.
 The internal-review profile can be used independently because review feedback
 is advisory rather than an experiment result.
+
+Shared compute ownership is no longer embedded only in project proposals. A
+secret-free `configs/resources/` catalog now names reusable API models and GPU
+hosts, while `outputs/resources/` sits beside `outputs/projects/` and retains
+self-hashed availability observations. The first records distinguish the live
+DeepSeek official catalog, the owner's successful-call report, the immutable
+3090 inventory, and the owner's newer approximately 200-GB storage report. The
+latter remains `reported` until an automated host refresh verifies exact bytes.
+This inventory layer neither reserves capacity nor authorizes work; concurrent
+allocation and usage roll-up remain the next scheduler boundary.
 
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without

@@ -98,13 +98,14 @@ candidate was also syntactically invalid. This is retained negative engineering
 evidence, not a reason to invent a zero price, silently repair code, or bypass
 admission.
 
-The 2026-09-12 official DeepSeek catalog recheck lists callable ID
-`deepseek-v4-flash` and version `DeepSeek-V4-Flash-0731`. It contradicts the
-`deepseek-flash` / `DeepSeek-V4.1-Flash` identity captured by the no-run v6
-proposal one day earlier. Both snapshots remain immutable evidence, but v6 is
-not launchable and no new DeepSeek call may inherit its identity or price. A new
-proposal must bind the official catalog bytes and then record the authenticated
-requested and provider-returned identifiers separately.
+DeepSeek's live official catalog was checked again on 2026-09-12. The canonical
+callable ID is `deepseek-flash`, the displayed version is
+`DeepSeek-V4.1-Flash`, and legacy `deepseek-v4-flash` requests are routed to
+V4.1 and billed at the Flash price. This confirms the no-run v6 identity and
+its conservative peak prices. Because the callable ID is a rolling alias,
+every authenticated run still records requested and provider-returned
+identifiers separately; historical proposals and responses are never
+relabeled.
 
 An existing local Qwen checkpoint can instead run without a server or API key:
 

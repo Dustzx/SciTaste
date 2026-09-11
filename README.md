@@ -91,6 +91,8 @@ Discover ──► Evidence ──► Communicate ──► Review
   immutable turns, and evidence-bound generated surfaces.
 - Every run, paper, review, evaluation, and interface surface belongs beneath one
   `outputs/projects/<project-id>/` tree.
+- Shared API/GPU definitions and changing observations live above projects in a
+  secret-free catalog plus the local `outputs/resources/` registry.
 
 See the [architecture](docs/ARCHITECTURE.md) for component boundaries and the
 [innovation map](docs/INNOVATION_MAP.md) for the full research argument.

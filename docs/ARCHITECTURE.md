@@ -1674,3 +1674,32 @@ research-room launchers, each backed by a current server-issued next-step
 candidate; it does not pre-create empty or inferred conversations. These rules
 are receiver layout policy and introduce no new state, evidence, or execution
 authority.
+
+### ADR-055: Compute inventory is project-superordinate and secret-free
+
+Status: accepted for shared API/GPU definitions and observations; scheduling is
+not yet implemented.
+
+GPU hosts and provider model identities are reusable infrastructure, not
+artifacts owned by whichever project happens to use them first. Conversely, an
+experiment proposal, its approval, results, and paper claims remain project
+evidence. SciTaste therefore places a stable catalog in `configs/resources/`
+and a machine-local runtime registry at `outputs/resources/`, as a sibling of
+`outputs/projects/`.
+
+The catalog stores typed capability and identity only: API endpoint, requested
+model and expected served revision, dated public price ceiling, credential
+environment-variable name, GPU device class, and a content-bound baseline
+inventory. Passwords, keys, and raw authenticated responses are excluded.
+Changing capacity enters as an immutable typed observation whose exact source
+bytes and self-hashed record are retained. Official catalog observations may be
+verified; owner reports remain reported until an independent probe replaces
+them. Requested-versus-returned API identity and approximate-versus-exact disk
+capacity are distinct fields rather than prose aliases.
+
+Catalog inspection and observation registration perform no provider call,
+remote login, project mutation, reservation, or workload. They cannot authorize
+an experiment. A later allocation layer must atomically lease devices or API
+quota, reject overlapping reservations, bind the lease into a project proposal,
+and reconcile measured usage back to both the shared resource and project
+ledgers.

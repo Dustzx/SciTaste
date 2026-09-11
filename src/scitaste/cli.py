@@ -137,6 +137,7 @@ from scitaste.model_nodes.workflow_bridge import load_full_workflow_model_adviso
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.project.models import validate_entry_id
 from scitaste.project_substrate_cli import register_project_substrate_cli
+from scitaste.resource_cli import register_resource_cli
 from scitaste.review import (
     VenueReviewReport,
     VenueReviewResponse,
@@ -255,6 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version="SciTaste 0.1.0")
     commands = parser.add_subparsers(dest="command", required=True)
     add_ui_commands(commands)
+    register_resource_cli(commands)
 
     baseline = commands.add_parser("baseline", help="Execution-substrate baseline commands")
     baseline_commands = baseline.add_subparsers(dest="baseline_command", required=True)

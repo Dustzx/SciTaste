@@ -40,10 +40,8 @@ V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v
 CURRENT_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v3.yaml")
 PACKAGE_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v4.yaml")
 PACKAGE_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
-HISTORICAL_V6_CORPUS_PATH = Path(
-    "docs/research/data/autoresearch_evaluation_resources_v6.yaml"
-)
-HISTORICAL_V6_MANIFEST_PATH = Path(
+CURRENT_V6_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v6.yaml")
+CURRENT_V6_MANIFEST_PATH = Path(
     "configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v6.yaml"
 )
 GPU_INVENTORY_PATH = Path("docs/research/data/gpu_host_3090_2_inventory_v1.yaml")
@@ -497,8 +495,8 @@ def test_current_api_headline_set_uses_accepted_methods_not_preprint_substitutes
 
 
 def test_package_preference_proposal_cannot_be_relabelled_as_objective_progress() -> None:
-    manifest = load_prelaunch_manifest(HISTORICAL_V6_MANIFEST_PATH).manifest
-    corpus = load_external_resource_corpus(HISTORICAL_V6_CORPUS_PATH).corpus
+    manifest = load_prelaunch_manifest(CURRENT_V6_MANIFEST_PATH).manifest
+    corpus = load_external_resource_corpus(CURRENT_V6_CORPUS_PATH).corpus
     gate = inspect_prelaunch_manifest(
         manifest,
         corpus,
@@ -530,8 +528,8 @@ def test_package_preference_proposal_cannot_be_relabelled_as_objective_progress(
     )
 
 
-def test_historical_v6_preserves_its_now_contradicted_identity_and_prices() -> None:
-    manifest = load_prelaunch_manifest(HISTORICAL_V6_MANIFEST_PATH).manifest
+def test_current_v6_preserves_official_identity_and_conservative_peak_prices() -> None:
+    manifest = load_prelaunch_manifest(CURRENT_V6_MANIFEST_PATH).manifest
     model = manifest.lanes[0].api_model
 
     assert manifest.protocol_id == "formal-v6-package-prepilot"

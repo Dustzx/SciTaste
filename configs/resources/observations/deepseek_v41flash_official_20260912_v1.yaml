@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: deepseek-official-20260912-v1
+resource_id: deepseek-v41-flash
+resource_kind: api_model
+observed_at: 2026-09-12T03:43:53+08:00
+method: official_catalog
+status: verified
+requested_model_id: deepseek-flash
+returned_model_revision: DeepSeek-V4.1-Flash
+request_succeeded: null
+source_url: https://api-docs.deepseek.com/quick_start/pricing/
+notes:
+  - The live official table names deepseek-flash and DeepSeek-V4.1-Flash.
+  - Retired deepseek-v4-flash aliases are served by V4.1 at Flash pricing.
+credentials_recorded: false
+observation_only: true

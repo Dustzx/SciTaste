@@ -1,0 +1,15 @@
+schema_version: "1.0"
+observation_id: deepseek-owner-call-20260912-v1
+resource_id: deepseek-v41-flash
+resource_kind: api_model
+observed_at: 2026-09-12T03:42:00+08:00
+method: owner_report
+status: reported
+requested_model_id: deepseek-flash
+returned_model_revision: DeepSeek-V4.1-Flash
+request_succeeded: true
+source_url: https://api-docs.deepseek.com/quick_start/pricing/
+notes:
+  - The project owner reported a successful call today; no response bytes or credential are stored.
+credentials_recorded: false
+observation_only: true

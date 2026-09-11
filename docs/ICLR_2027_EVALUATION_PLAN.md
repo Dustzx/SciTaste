@@ -171,13 +171,13 @@ the manuscript claims broad external-system superiority. Publication status and
 execution readiness are independent: acceptance cannot waive adapter gates, and
 a runnable preprint cannot satisfy this archival-evidence minimum.
 
-The exact-commit translation audit found that the historical DeepSeek v6
+The exact-commit translation audit found that the current DeepSeek v6
 proposal cannot satisfy this rule: MLR-Agent and Agent Laboratory do not
 natively expose the same callable model across all research/coding roles, and
-their selected-task mappings are not losslessly admitted. A 2026-09-12
-official-source recheck also contradicted v6's declared provider identity. The
-systems remain valid candidates, but v6 is non-launchable feasibility evidence,
-not a formal matched block. A common-backbone or explicitly confounded
+their selected-task mappings are not losslessly admitted. The provider identity
+is current, but that does not repair comparator inequivalence. The systems
+remain valid candidates, while v6 is non-launchable feasibility evidence rather
+than a formal matched block. A common-backbone or explicitly confounded
 best-native comparison must be frozen in a new proposal; wrapper code cannot
 retroactively make the design matched.
 
@@ -240,7 +240,7 @@ The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
 those controls. The current official DeepSeek candidate is
-`deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`; Zhipu `glm-5.3-flash` remains a
+`deepseek-flash` / `DeepSeek-V4.1-Flash`; Zhipu `glm-5.3-flash` remains a
 separate provider candidate whose exact dated price and authenticated served
 identity must be captured. Provider proposals have separate hashes, pricing,
 execution units, and approvals. They are never silent fallbacks and their
@@ -332,8 +332,8 @@ No formal run may start until all of these gates pass:
    storage, failures/repairs/discards, and human minutes;
 4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
    `glm-5.3-flash` uses the separate `formal-v2` family and the corrected
-   DeepSeek V4 Flash identity appears in historical `formal-v5`; the later v6
-   identity is contradicted and non-launchable. Any new provider plan needs new
+   DeepSeek V4 Flash identity appears in historical `formal-v5`; v6 records the
+   current V4.1 identity but remains non-launchable for other gates. Any new provider plan needs new
    IDs, blind IDs, hashes, and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and
    telemetry review without a pseudo-implementation;

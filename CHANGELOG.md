@@ -7,14 +7,23 @@ semantic versioning.
 
 ### Added
 
+- A project-superordinate compute registry now separates stable, secret-free
+  API/GPU definitions in `configs/resources/` from changing local observations
+  in `outputs/resources/`. Its CLI validates content-bound host evidence,
+  initializes the global registry, registers typed official/owner observations,
+  and reports current status without loading credentials, probing a host, or
+  authorizing a workload. DeepSeek V4.1 Flash and GLM-5.3-Flash are catalogued;
+  the owner's approximately 200-GB GPU-host storage report remains explicitly
+  unverified pending a new automated observation.
+
 - Evaluation planning now treats an execution cell as an internal accounting
   unit rather than a rigor target. Historical 100-unit matrices are ceilings;
   deterministic checks are not repeated, pilot variance selects formal task
   and seed counts, distinct tasks are preferred once within-task variance is
   small, and a second API provider receives only a powered model-robustness
-  slice. A 2026-09-12 official-source recheck also invalidates the historical
-  DeepSeek v6 identity and price without rewriting its immutable bytes; new
-  DeepSeek execution requires a fresh proposal and authenticated identity.
+  slice. A live 2026-09-12 official-source recheck confirms the DeepSeek v6
+  callable ID, served revision, and conservative peak prices; authenticated
+  calls must still record requested and returned identities separately.
 
 - A dependency-free public project page now presents SciTaste's positioning,
   framework, implemented capabilities, local quick start, Generation-as-Content
@@ -90,9 +99,9 @@ semantic versioning.
 
 - External method comparators now have a static, content-addressed translation
   contract before any upstream checkout or executable adapter is accepted. Two
-  exact-commit audits show that MLR-Agent and Agent Laboratory cannot serve as
-  unchanged-core, fully matched comparators for the historical DeepSeek v6
-  envelope: task/model/sandbox/telemetry mappings are blocked and
+  exact-commit audits show that MLR-Agent and Agent Laboratory cannot currently
+  serve as unchanged-core, fully matched `DeepSeek-V4.1-Flash` comparators:
+  task/model/sandbox/telemetry mappings are blocked and
   artifact/recovery work remains pending. The contracts preserve these as real
   unavailable conditions, reject unsafe shell templates and unpinned evidence,
   and never download or run upstream code.
@@ -106,14 +115,13 @@ semantic versioning.
   and cross-task substitution; inspection performs no network access and can
   authorize neither download nor execution.
 
-- The no-run idea-to-paper package-preference snapshot
-  `formal-v6-package-prepilot` records the then-observed
-  `deepseek-flash` / `DeepSeek-V4.1-Flash` identity, price capture, resource
-  overlay, and governance v4. Its evidence ladder maps the draft-v6 review
-  concerns to a clean-block prepilot, a separately powered formal study, paper
-  evidence binding, and two independent human reviews. It is now retained as
-  contradicted, non-authorizing history alongside v4/v5 rather than described
-  as the current provider proposal.
+- The current no-run idea-to-paper package-preference proposal is
+  `formal-v6-package-prepilot`, pinned to official callable ID
+  `deepseek-flash`, served version `DeepSeek-V4.1-Flash`, conservative peak
+  prices, a new resource overlay, and governance v4. Its evidence ladder maps
+  the draft-v6 review concerns to a clean-block prepilot, a separately powered
+  formal study, paper evidence binding, and two independent human reviews;
+  historical v4/v5 proposal bytes remain unchanged and non-authorizing.
 
 - Internal whole-paper review reports can now be imported directly from one
   accepted project model-node invocation. The report derives provider/model
@@ -126,9 +134,10 @@ semantic versioning.
   Schema for registered claim/section identifiers, permitted evidence types,
   and allowed actions, and rejects concern categories whose proposed actions
   conflict with deterministic routing or whose experiment/evidence flags are
-  incoherent. The historical DeepSeek V4.1 profile keeps requested and returned
-  model identities separately recorded; the later official-source contradiction
-  prevents that profile from serving as a current experiment identity.
+  incoherent. The current DeepSeek profile is
+  `deepseek-flash` / `DeepSeek-V4.1-Flash` after the provider's 2026-09-12
+  catalog update; requested and returned model identities remain separately
+  recorded, while all earlier V4/V4.1 proposal and run bytes remain history.
 
 - A metadata-only SciTasteBench v2 source screen separates AAAR, ARIES,
   OpenReview comments, and MLR-Bench by evidence role, license scope, source
