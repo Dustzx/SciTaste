@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Project conversations now expose an explicit bounded-context control. A
+  follow-up may select either no history or the latest eight immutable turns;
+  the server revalidates their project, conversation, identity, and order before
+  exposing prompt-only context to the optional intent classifier. Generated
+  prose is never replayed as authority, and every result binds the selected turn
+  IDs and context hash. Equivalent layouts now receive request-scoped generation
+  identities, so distinct question pages cannot collide in the project archive.
+
 - Project research topics can now be renamed without changing immutable turn
   pages or stable deep links, using a separate optimistic metadata revision and
   project-local cross-process file locks. The browser adds title-only topic

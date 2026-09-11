@@ -14,7 +14,12 @@ from scitaste.generative_ui.generation import (
     WorkspaceGenerationService,
 )
 from scitaste.generative_ui.intent import FreeQuestionRequest, QuickIntentRequest
-from scitaste.generative_ui.planner import ModelPlannerPolicy, StructuredWorkspacePlanner
+from scitaste.generative_ui.planner import (
+    ModelPlannerPolicy,
+    PlannerContextTurn,
+    PlannerConversationContext,
+    StructuredWorkspacePlanner,
+)
 from scitaste.model_nodes.models import StructuredModelRequest, StructuredModelResponse
 from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
 
@@ -85,7 +90,9 @@ def test_quick_and_equivalent_question_generate_the_same_trusted_layout(
     assert quick.intent is not None and free.intent is not None
     assert quick.intent.fingerprint == free.intent.fingerprint
     assert quick.renderer is not None and free.renderer is not None
-    assert quick.renderer == free.renderer
+    assert quick.renderer.surface_id != free.renderer.surface_id
+    assert quick.renderer.components == free.renderer.components
+    assert quick.renderer.actions == free.renderer.actions
     assert quick.request_fingerprint != free.request_fingerprint
     assert quick.execution_authority == "none"
     assert quick.planning is not None
@@ -95,6 +102,38 @@ def test_quick_and_equivalent_question_generate_the_same_trusted_layout(
         item.component_id for item in quick.renderer.components
     ]
     assert all(item.explanation for item in quick.placements)
+
+
+def test_generation_requires_server_verified_context_and_binds_it_to_the_page(
+    tmp_path: Path,
+) -> None:
+    service = WorkspaceGenerationService(_runtime(tmp_path))
+    request = _request(service, question="A deliberately long-tail follow-up")
+    request = request.model_copy(update={"context_turn_ids": ("turn-0001",)})
+    context = PlannerConversationContext(
+        project_id="generation-project",
+        workspace_id="conversation-one",
+        turns=(
+            PlannerContextTurn(
+                turn_id="turn-0001",
+                ordinal=1,
+                prompt_kind="free_question",
+                prompt_text="Which registered run failed?",
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="server-verified context"):
+        service.generate(request)
+
+    generated = service.generate_output(
+        request,
+        conversation_context=context,
+    ).document
+
+    assert generated.status == "provider_unavailable"
+    assert generated.context_turn_ids == ("turn-0001",)
+    assert generated.conversation_context_sha256 == context.fingerprint
 
 
 def test_unknown_and_ambiguous_questions_are_legible_without_a_blank_renderer(

@@ -13,6 +13,8 @@ from scitaste.generative_ui.planner import (
     DeterministicWorkspacePlanner,
     FallbackWorkspacePlanner,
     ModelPlannerPolicy,
+    PlannerContextTurn,
+    PlannerConversationContext,
     PlannerMode,
     StructuredWorkspacePlanner,
     WorkspacePlanner,
@@ -242,6 +244,46 @@ def test_model_classification_can_only_select_a_server_issued_intent(tmp_path: P
     assert "script" not in serialized
     assert set(backend.calls[0].input_payload) == {"question", "options"}
     assert "evidence_ref_ids" not in backend.calls[0].model_dump_json()
+
+
+def test_model_classification_receives_only_bounded_verified_prompt_context(
+    tmp_path: Path,
+) -> None:
+    resolver, request, _ = _inputs(_runtime(tmp_path))
+    quick = resolver.quick_catalog("planner-project")
+    selected_id = quick.intents[0].quick_intent_id
+    backend = FakeStructuredBackend(lambda _: {"quick_intent_id": selected_id})
+    context = PlannerConversationContext(
+        project_id="planner-project",
+        workspace_id="conversation-one",
+        turns=(
+            PlannerContextTurn(
+                turn_id="turn-0001",
+                ordinal=1,
+                prompt_kind="free_question",
+                prompt_text="Inspect the failed run",
+            ),
+        ),
+    )
+
+    outcome = StructuredWorkspacePlanner(backend, _policy()).classify(
+        request.model_copy(update={"question": "How does that compare?"}),
+        quick,
+        context=context,
+    )
+
+    assert outcome.status == "selected"
+    assert outcome.provenance is not None
+    assert outcome.provenance.conversation_context_sha256 == context.fingerprint
+    assert backend.calls[0].input_payload["conversation_context"] == [
+        {
+            "turn_id": "turn-0001",
+            "ordinal": 1,
+            "prompt_kind": "free_question",
+            "prompt_text": "Inspect the failed run",
+        }
+    ]
+    assert "renderer" not in json.dumps(backend.calls[0].input_payload)
 
 
 def test_model_classification_rejects_unknown_ids_without_guessing(tmp_path: Path) -> None:

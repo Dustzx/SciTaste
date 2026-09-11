@@ -56,6 +56,42 @@ class PlannerOperation(StrEnum):
     SURFACE_COMPOSITION = "surface_composition"
 
 
+class PlannerContextTurn(BaseModel):
+    """One server-verified prior question exposed to intent classification."""
+
+    model_config = _MODEL_CONFIG
+
+    turn_id: SafeIdentifier
+    ordinal: int = Field(ge=1)
+    prompt_kind: Literal["quick", "free_question"]
+    prompt_text: str = Field(min_length=1, max_length=1_000)
+
+
+class PlannerConversationContext(BaseModel):
+    """Bounded project-local context; generated prose is deliberately excluded."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: ProjectIdentifier
+    workspace_id: SafeIdentifier
+    turns: tuple[PlannerContextTurn, ...] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode="after")
+    def turns_are_an_ordered_unique_selection(self) -> PlannerConversationContext:
+        identities = [item.turn_id for item in self.turns]
+        ordinals = [item.ordinal for item in self.turns]
+        if len(identities) != len(set(identities)):
+            raise ValueError("planner conversation turn IDs must be unique")
+        if ordinals != sorted(ordinals) or len(ordinals) != len(set(ordinals)):
+            raise ValueError("planner conversation turns must be in unique ordinal order")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        return _fingerprint(self.model_dump(mode="json"))
+
+
 class PlannerIdentity(BaseModel):
     """Pinned implementation identity safe to retain in UI provenance."""
 
@@ -116,6 +152,7 @@ class PlannerProvenance(BaseModel):
     intent_fingerprint: Sha256 | None = None
     catalog_fingerprint: Sha256
     request_fingerprint: Sha256
+    conversation_context_sha256: Sha256 | None = None
     provider_response_sha256: Sha256 | None = None
     result_fingerprint: Sha256 | None = None
     deterministic_reproducible: bool
@@ -218,6 +255,8 @@ class WorkspacePlanner(Protocol):
         self,
         request: FreeQuestionRequest,
         catalog: QuickIntentCatalog,
+        *,
+        context: PlannerConversationContext | None = None,
     ) -> IntentPlannerOutcome: ...
 
     def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome: ...
@@ -242,7 +281,10 @@ class DeterministicWorkspacePlanner:
         self,
         request: FreeQuestionRequest,
         catalog: QuickIntentCatalog,
+        *,
+        context: PlannerConversationContext | None = None,
     ) -> IntentPlannerOutcome:
+        del context
         _validate_question_catalog_binding(request, catalog)
         return IntentPlannerOutcome(
             status="unavailable",
@@ -330,8 +372,11 @@ class StructuredWorkspacePlanner:
         self,
         request: FreeQuestionRequest,
         catalog: QuickIntentCatalog,
+        *,
+        context: PlannerConversationContext | None = None,
     ) -> IntentPlannerOutcome:
         _validate_question_catalog_binding(request, catalog)
+        _validate_conversation_context(request, context)
         input_payload: dict[str, JsonValue] = {
             "question": request.question,
             "options": [
@@ -343,6 +388,23 @@ class StructuredWorkspacePlanner:
                 for item in catalog.intents
             ],
         }
+        identity_fingerprint = request.fingerprint
+        if context is not None:
+            input_payload["conversation_context"] = [
+                {
+                    "turn_id": item.turn_id,
+                    "ordinal": item.ordinal,
+                    "prompt_kind": item.prompt_kind,
+                    "prompt_text": item.prompt_text,
+                }
+                for item in context.turns
+            ]
+            identity_fingerprint = _fingerprint(
+                {
+                    "request_fingerprint": request.fingerprint,
+                    "conversation_context_sha256": context.fingerprint,
+                }
+            )
         try:
             structured_request = self._request(
                 operation=PlannerOperation.INTENT_CLASSIFICATION,
@@ -351,7 +413,7 @@ class StructuredWorkspacePlanner:
                 snapshot_sha256=request.snapshot_sha256,
                 input_payload=input_payload,
                 output_schema=IntentPlannerChoice.model_json_schema(mode="validation"),
-                identity_fingerprint=request.fingerprint,
+                identity_fingerprint=identity_fingerprint,
             )
             response = self._complete(structured_request)
             choice = IntentPlannerChoice.model_validate(response.output_payload)
@@ -377,6 +439,9 @@ class StructuredWorkspacePlanner:
             snapshot_sha256=request.snapshot_sha256,
             catalog_fingerprint=catalog.fingerprint,
             request_fingerprint=structured_request.fingerprint,
+            conversation_context_sha256=(
+                context.fingerprint if context is not None else None
+            ),
             provider_response_sha256=response.raw_response_sha256,
             deterministic_reproducible=False,
         )
@@ -536,11 +601,13 @@ class FallbackWorkspacePlanner:
         self,
         request: FreeQuestionRequest,
         catalog: QuickIntentCatalog,
+        *,
+        context: PlannerConversationContext | None = None,
     ) -> IntentPlannerOutcome:
         if self.primary is None:
-            return self.fallback.classify(request, catalog)
+            return self.fallback.classify(request, catalog, context=context)
         try:
-            return self.primary.classify(request, catalog)
+            return self.primary.classify(request, catalog, context=context)
         except Exception:
             return IntentPlannerOutcome(
                 status="unavailable",
@@ -629,6 +696,14 @@ def _validate_question_catalog_binding(
         or request.snapshot_sha256 != catalog.snapshot.snapshot_sha256
     ):
         raise ValueError("free question and quick-intent catalog snapshots differ")
+
+
+def _validate_conversation_context(
+    request: FreeQuestionRequest,
+    context: PlannerConversationContext | None,
+) -> None:
+    if context is not None and context.project_id != request.project_id:
+        raise ValueError("conversation context belongs to another project")
 
 
 def _deterministic_candidate_key(
@@ -783,6 +858,8 @@ __all__ = [
     "IntentPlannerChoice",
     "IntentPlannerOutcome",
     "ModelPlannerPolicy",
+    "PlannerContextTurn",
+    "PlannerConversationContext",
     "PlannerIdentity",
     "PlannerMode",
     "PlannerOperation",

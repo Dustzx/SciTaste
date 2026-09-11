@@ -39,8 +39,8 @@
         </div>
         <div class="nav-section workspace-history" aria-labelledby="workspace-history-heading">
           <div class="nav-heading-row">
-            <h2 id="workspace-history-heading" data-i18n="thread.heading">Research topics</h2>
-            <button id="new-topic" type="button" disabled data-i18n="thread.new">New topic</button>
+            <h2 id="workspace-history-heading" data-i18n="thread.heading">Research conversations</h2>
+            <button id="new-topic" type="button" disabled data-i18n="thread.new">New conversation</button>
           </div>
           <label class="visually-hidden" for="topic-search" data-i18n="thread.search_label">Search topics</label>
           <input
@@ -64,6 +64,14 @@
             <p class="muted" data-i18n="quick.open_project">Open a project to load applicable prompts.</p>
           </div>
           <form id="intent-form">
+            <div class="conversation-context-control">
+              <label for="conversation-context-mode" data-i18n="thread.context_label">Conversation context</label>
+              <select id="conversation-context-mode" disabled>
+                <option value="recent" data-i18n="thread.context_recent">Use up to 8 recent turns</option>
+                <option value="none" data-i18n="thread.context_none">Use this question only</option>
+              </select>
+              <p class="control-hint" data-i18n="thread.context_hint">Only verified prior questions are shared with an optional intent planner; generated prose is excluded.</p>
+            </div>
             <label for="intent-question" data-i18n="generation.free_question">Free question</label>
             <textarea
               id="intent-question"

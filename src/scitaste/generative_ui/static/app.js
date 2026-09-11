@@ -32,6 +32,7 @@ const compareRunsButton = document.getElementById("compare-runs");
 const quickIntents = document.getElementById("quick-intents");
 const intentForm = document.getElementById("intent-form");
 const intentQuestion = document.getElementById("intent-question");
+const conversationContextMode = document.getElementById("conversation-context-mode");
 const generateWorkspaceButton = document.getElementById("generate-workspace");
 const intentResult = document.getElementById("intent-result");
 const localeSelect = document.getElementById("locale-select");
@@ -1837,6 +1838,7 @@ function renderArtifactPreview(preview, {remember = true} = {}) {
 function setIntentEnabled(enabled) {
   intentQuestion.disabled = !enabled;
   generateWorkspaceButton.disabled = !enabled;
+  conversationContextMode.disabled = !enabled || !activeResearchWorkspaceId;
   for (const button of quickIntents.querySelectorAll("button")) {
     button.disabled = !enabled;
   }
@@ -1851,6 +1853,7 @@ function clearProjectContext(projectId = "") {
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
   activeResearchWorkspaceDetail = null;
+  conversationContextMode.value = "recent";
   currentDocument = null;
   quickIntentCatalog = null;
   lastProposalReceipt = null;
@@ -2096,6 +2099,7 @@ async function loadResearchWorkspaceDetail(projectId, workspaceId) {
       return;
     }
     activeResearchWorkspaceDetail = detail;
+    conversationContextMode.disabled = !quickIntentCatalog || !activeResearchWorkspaceId;
     renderWorkspaceHistory();
   } catch (error) {
     if (activeProjectId !== requestedProject
@@ -2165,6 +2169,13 @@ async function generateWithIntent(intentRequest) {
   }
   const requestedProject = activeProjectId;
   const requestedCatalog = quickIntentCatalog.fingerprint;
+  const selectedContextTurnIds = (
+    activeResearchWorkspaceId
+    && conversationContextMode.value === "recent"
+    && activeResearchWorkspaceDetail?.workspace.workspace_id === activeResearchWorkspaceId
+  )
+    ? activeResearchWorkspaceDetail.turns.map((item) => item.turn_id).slice(-8)
+    : [];
   setIntentEnabled(false);
   intentResultState = {kind: "resolving"};
   renderIntentResult();
@@ -2181,6 +2192,7 @@ async function generateWithIntent(intentRequest) {
           schema_version: "1.0",
           quick_catalog_fingerprint: requestedCatalog,
           intent_request: intentRequest,
+          context_turn_ids: selectedContextTurnIds,
         }),
       },
     );
@@ -2205,6 +2217,7 @@ async function generateWithIntent(intentRequest) {
     intentResultState = {
       kind: "accepted",
       mode: documentValue.planning.provenance.mode,
+      contextCount: documentValue.context_turn_ids.length,
     };
     renderIntentResult();
     const route = researchTurnHash(turnDocument);
@@ -2254,6 +2267,12 @@ function renderIntentResult() {
       mode: localizedCode(intentResultState.mode),
     }));
     intentResult.appendChild(accepted);
+    const context = document.createElement("p");
+    context.className = "muted";
+    appendText(context, intentResultState.contextCount > 0
+      ? t("generation.context_used", {count: intentResultState.contextCount})
+      : t("generation.context_none"));
+    intentResult.appendChild(context);
     return;
   }
   if (intentResultState.kind === "error") {
@@ -2790,6 +2809,8 @@ newTopicButton.addEventListener("click", () => {
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
   activeResearchWorkspaceDetail = null;
+  conversationContextMode.value = "recent";
+  conversationContextMode.disabled = true;
   renderWorkspaceHistory();
   loadWorkspace(defaultQuery(activeProjectId));
 });

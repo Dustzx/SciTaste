@@ -46,10 +46,10 @@ before any newly selected project is rendered.
 
 The navigation hierarchy is deliberately four-level: the portfolio index lists
 all registered projects; each project opens to its stable `project-progress`
-home; a first question creates a project-owned research topic; and every
+home; a first question creates a project-owned research conversation; and every
 question or follow-up is an immutable turn page with its own deep link. Follow-up
-questions stay in the active topic, while `New topic` returns to the project home
-and makes the next question start a separate context. The active topic expands
+questions stay in the active conversation, while `New conversation` returns to the project home
+and makes the next question start a separate context. The active conversation expands
 its ordered page list, so earlier questions are navigable without relying on
 browser history. This is a project workspace model, not one disconnected chat
 window per sentence.
@@ -63,10 +63,15 @@ exclusive file locks coordinate readers, appends, creation, and renames across
 local server processes. A stale rename returns a conflict and reloads current
 metadata instead of overwriting it.
 
-The current follow-up route provides persistent conversational organization, but
-the generator still resolves each turn against the current authoritative project
-snapshot rather than replaying prior turn prose as model context. It must not yet
-be described as an unconstrained context-carrying chat agent.
+Each follow-up explicitly chooses either the current question alone or at most
+the eight latest immutable turns. The receiver submits only their IDs; the
+server reloads them from the same project and conversation, verifies their
+registered order, and exposes only the retained prior questions to the optional
+model intent classifier. The selected IDs and a hash of the exact context are
+bound into the generated document and immutable turn. Prior generated prose,
+components, actions, and explanations are never replayed as authority. The
+deterministic resolver still evaluates the current question first, so this is a
+bounded conversational intent aid rather than an unconstrained chat agent.
 
 The browser shell contains no credential field. Loopback use establishes an
 ephemeral HttpOnly session automatically; a remote deployment must enforce
@@ -571,15 +576,18 @@ The versioned same-origin JSON API is deliberately closed:
 - `POST` to that generated path plus `/events`, `/decisions`, or `/inspections`
   resolves only against the retained server-owned surface.
 - `GET /api/v4/projects/<project-id>/workspaces` lists project-owned research
-  topics without mixing them with runs or papers;
-- `POST /api/v4/projects/<project-id>/workspaces` creates one topic and its
+  conversations without mixing them with runs or papers;
+- `POST /api/v4/projects/<project-id>/workspaces` creates one conversation and its
   first immutable turn from a `WorkspaceGenerationRequest`;
 - `GET /api/v4/projects/<project-id>/workspaces/<workspace-id>` returns the
   ordered turn index, while `/turns/<turn-id>` returns one exact page;
 - `PATCH /api/v4/projects/<project-id>/workspaces/<workspace-id>` renames only
   topic metadata using exact prior-title and metadata-revision preconditions;
 - `POST /api/v4/projects/<project-id>/workspaces/<workspace-id>/turns` appends
-  a follow-up turn without rewriting earlier turns.
+  a follow-up turn without rewriting earlier turns. Its optional
+  `context_turn_ids` is limited to eight IDs and must be an ordered selection
+  from that exact conversation; standalone and new-conversation generation
+  reject non-empty context.
 
 There is no general filesystem, artifact download, callback, tool, model, or
 executor endpoint. The controller endpoint accepts only a request/proposal
@@ -910,7 +918,7 @@ two project identities.
 
 ## Known limitations
 
-- Project topics and turns are local, single-user records. Free questions are
+- Project conversations and turns are local, single-user records. Free questions are
   retained as inert project-owned text so the conversation remains intelligible;
   users should not paste credentials into a research question. The records stay
   below ignored `outputs/projects/<project-id>/.generative-ui/workspaces/`.
@@ -924,7 +932,9 @@ two project identities.
 - The first deterministic free-question resolver is a bounded Chinese/English
   keyword classifier. Unknown phrasing needs the optional model selector; the
   model can still choose only a currently offered quick intent and cannot answer
-  an arbitrary research question.
+  an arbitrary research question. Conversation context currently informs this
+  bounded intent selection only; it is not a general memory, summarizer, or
+  model-authored answer history.
 - Automatic session bootstrap is loopback-only. This remains a single-user
   engineering receiver, not a multi-user identity or remote authorization
   system.

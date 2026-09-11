@@ -40,7 +40,7 @@ from scitaste.generative_ui.interaction import (
     SurfaceSession,
 )
 from scitaste.generative_ui.models import SurfaceSpec
-from scitaste.generative_ui.planner import WorkspacePlanner
+from scitaste.generative_ui.planner import PlannerConversationContext, WorkspacePlanner
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier
@@ -241,8 +241,10 @@ class GenerativeUIApplication:
         """Resolve an intent as the first turn of a new persistent topic."""
 
         parsed = _generation_request(project_id, request)
+        if parsed.context_turn_ids:
+            raise ValueError("a new research conversation cannot select prior turn context")
         with self._request_lock:
-            document = self.generate_workspace(project_id, parsed)
+            document = self._generate_workspace(project_id, parsed, context=None)
             return self._research_workspaces.create(project_id, parsed, document)
 
     def append_research_workspace_turn(
@@ -255,8 +257,18 @@ class GenerativeUIApplication:
 
         parsed = _generation_request(project_id, request)
         with self._request_lock:
-            self._research_workspaces.detail(project_id, workspace_id)
-            document = self.generate_workspace(project_id, parsed)
+            context = (
+                self._research_workspaces.conversation_context(
+                    project_id,
+                    workspace_id,
+                    parsed.context_turn_ids,
+                )
+                if parsed.context_turn_ids
+                else None
+            )
+            if context is None:
+                self._research_workspaces.detail(project_id, workspace_id)
+            document = self._generate_workspace(project_id, parsed, context=context)
             return self._research_workspaces.append(
                 project_id,
                 workspace_id,
@@ -272,24 +284,40 @@ class GenerativeUIApplication:
         """Resolve and retain one exact generated surface for later safe interactions."""
 
         parsed = _generation_request(project_id, request)
-        with self._request_lock:
-            output = self._generation_service.generate_output(parsed)
-            if output.surface is not None:
-                self._open_audit(output.surface)
-                key = (project_id, output.surface.surface_id)
-                self._generated_archive.store(
-                    project_id,
-                    output.surface.surface_id,
-                    output.document,
-                    output.surface,
-                )
-                self._generated[key] = (output.document, output.surface)
-                self._generated.move_to_end(key)
-                while len(self._generated) > _MAX_RETAINED_GENERATIONS:
-                    self._generated.popitem(last=False)
-            return GeneratedWorkspaceDocument.model_validate(
-                output.document.model_dump(mode="json")
+        if parsed.context_turn_ids:
+            raise ValueError(
+                "standalone generation cannot select project conversation turns"
             )
+        with self._request_lock:
+            return self._generate_workspace(project_id, parsed, context=None)
+
+    def _generate_workspace(
+        self,
+        project_id: str,
+        request: WorkspaceGenerationRequest,
+        *,
+        context: PlannerConversationContext | None,
+    ) -> GeneratedWorkspaceDocument:
+        output = self._generation_service.generate_output(
+            request,
+            conversation_context=context,
+        )
+        if output.surface is not None:
+            self._open_audit(output.surface)
+            key = (project_id, output.surface.surface_id)
+            self._generated_archive.store(
+                project_id,
+                output.surface.surface_id,
+                output.document,
+                output.surface,
+            )
+            self._generated[key] = (output.document, output.surface)
+            self._generated.move_to_end(key)
+            while len(self._generated) > _MAX_RETAINED_GENERATIONS:
+                self._generated.popitem(last=False)
+        return GeneratedWorkspaceDocument.model_validate(
+            output.document.model_dump(mode="json")
+        )
 
     def current_generated_workspace(
         self,

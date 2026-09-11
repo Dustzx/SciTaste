@@ -639,12 +639,15 @@ def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path)
     second = app.append_research_workspace_turn(
         "app-project",
         first.workspace.workspace_id,
-        request(0),
+        request(0).model_copy(update={"context_turn_ids": ("turn-0001",)}),
     )
 
     assert first.turn.turn_id == "turn-0001"
     assert second.turn.turn_id == "turn-0002"
     assert second.turn.parent_turn_id == first.turn.turn_id
+    assert second.turn.context_turn_ids == ("turn-0001",)
+    assert second.turn.document.conversation_context_sha256 is not None
+    assert second.turn.generation_id != first.turn.generation_id
     assert second.workspace.turn_ids == ("turn-0001", "turn-0002")
     assert second.workspace.revision == 2
     detail = app.research_workspace_detail(
@@ -665,6 +668,50 @@ def test_research_workspace_groups_persistent_ordered_turn_pages(tmp_path: Path)
         ).turn
         == first.turn
     )
+
+
+def test_research_workspace_rejects_unregistered_or_reordered_context_turns(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime_with_action(tmp_path)
+    app = GenerativeUIApplication(runtime)
+    catalog = app.quick_intents("app-project")
+    base = WorkspaceGenerationRequest(
+        quick_catalog_fingerprint=catalog.fingerprint,
+        intent_request=QuickIntentRequest(
+            project_id="app-project",
+            snapshot_revision=catalog.snapshot.snapshot_revision,
+            snapshot_sha256=catalog.snapshot.snapshot_sha256,
+            quick_intent_id=catalog.intents[0].quick_intent_id,
+        ),
+    )
+    created = app.create_research_workspace("app-project", base)
+    second = app.append_research_workspace_turn(
+        "app-project",
+        created.workspace.workspace_id,
+        base.model_copy(update={"context_turn_ids": ("turn-0001",)}),
+    )
+    assert second.turn.turn_id == "turn-0002"
+
+    with pytest.raises(ValueError, match="ordered selection"):
+        app.append_research_workspace_turn(
+            "app-project",
+            created.workspace.workspace_id,
+            base.model_copy(
+                update={"context_turn_ids": ("turn-0002", "turn-0001")}
+            ),
+        )
+    with pytest.raises(ValueError, match="ordered selection"):
+        app.append_research_workspace_turn(
+            "app-project",
+            created.workspace.workspace_id,
+            base.model_copy(update={"context_turn_ids": ("turn-9999",)}),
+        )
+    with pytest.raises(ValueError, match="new research conversation"):
+        app.create_research_workspace(
+            "app-project",
+            base.model_copy(update={"context_turn_ids": ("turn-0001",)}),
+        )
 
 
 def test_research_workspace_rename_preserves_turn_bytes_and_survives_restart(

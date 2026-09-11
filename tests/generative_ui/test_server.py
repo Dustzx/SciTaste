@@ -224,6 +224,7 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert 'id="quick-intents"' in index.text
     assert 'id="intent-question"' in index.text
     assert 'id="intent-form"' in index.text
+    assert 'id="conversation-context-mode"' in index.text
     assert 'id="bearer-token"' not in index.text
     assert 'id="connect"' not in index.text
     assert 'id="global-home"' in index.text
@@ -231,6 +232,7 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "project-index-grid" in script.text
     assert "/api/v3/generative/projects/" in script.text
     assert "quick_catalog_fingerprint" in script.text
+    assert "context_turn_ids" in script.text
     assert english.json()["generation.accepted"].startswith("Generated from verified evidence")
     assert english.json()["progress.canonical"] == "Canonical evidence snapshot"
     assert english.json()["progress.distribution.subtitle"].startswith("Exact record distribution")
@@ -513,7 +515,7 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
         appended = httpx.post(
             origin + f"/api/v4/projects/http-project/workspaces/{workspace_id}/turns",
             headers=_headers(),
-            json=request,
+            json={**request, "context_turn_ids": ["turn-0001"]},
         )
         listed = httpx.get(
             origin + "/api/v4/projects/http-project/workspaces",
@@ -591,6 +593,8 @@ def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
     assert first["turn"]["turn_id"] == "turn-0001"
     assert appended.status_code == 201
     assert appended.json()["turn"]["turn_id"] == "turn-0002"
+    assert appended.json()["turn"]["context_turn_ids"] == ["turn-0001"]
+    assert appended.json()["turn"]["document"]["conversation_context_sha256"]
     assert listed.status_code == 200
     assert listed.json()["workspaces"][0]["latest_turn_id"] == "turn-0002"
     assert renamed.status_code == 200

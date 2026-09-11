@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scitaste.generative_ui.intent import (
     FreeQuestionRequest,
@@ -24,6 +24,7 @@ from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.planner import (
     FallbackWorkspacePlanner,
     IntentPlannerOutcome,
+    PlannerConversationContext,
     SurfacePlannerOutcome,
     WorkspacePlanner,
 )
@@ -56,6 +57,14 @@ class WorkspaceGenerationRequest(BaseModel):
     schema_version: Literal["1.0"] = "1.0"
     quick_catalog_fingerprint: Sha256
     intent_request: IntentRequest
+    context_turn_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=8)
+
+    @field_validator("context_turn_ids")
+    @classmethod
+    def context_turns_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if len(values) != len(set(values)):
+            raise ValueError("conversation context turn IDs must be unique")
+        return values
 
     @property
     def fingerprint(self) -> str:
@@ -104,6 +113,8 @@ class GeneratedWorkspaceDocument(BaseModel):
     project_id: ProjectIdentifier
     snapshot_revision: int = Field(ge=0)
     snapshot_sha256: Sha256
+    context_turn_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=8)
+    conversation_context_sha256: Sha256 | None = None
     entity_candidates: tuple[IntentEntityCandidate, ...] = ()
     intent: WorkspaceIntent | None = None
     classification: IntentPlannerOutcome | None = None
@@ -119,6 +130,8 @@ class GeneratedWorkspaceDocument(BaseModel):
 
     @model_validator(mode="after")
     def generated_payload_is_atomic_and_bound(self) -> GeneratedWorkspaceDocument:
+        if bool(self.context_turn_ids) != (self.conversation_context_sha256 is not None):
+            raise ValueError("generated workspace conversation context is incomplete")
         if self.status != "generated":
             if self.renderer is not None or self.freshness is not None or self.placements:
                 raise ValueError("unresolved generation cannot expose a renderer")
@@ -236,6 +249,8 @@ class WorkspaceGenerationService:
     def generate_output(
         self,
         request: WorkspaceGenerationRequest | dict[str, object],
+        *,
+        conversation_context: PlannerConversationContext | None = None,
     ) -> WorkspaceGenerationOutput:
         parsed = (
             request
@@ -243,6 +258,7 @@ class WorkspaceGenerationService:
             else WorkspaceGenerationRequest.model_validate(request)
         )
         parsed = WorkspaceGenerationRequest.model_validate(parsed.model_dump(mode="json"))
+        _validate_conversation_context(parsed, conversation_context)
         intent_request = parsed.intent_request
         quick_catalog = self._resolver.quick_catalog(intent_request.project_id)
         if parsed.quick_catalog_fingerprint != quick_catalog.fingerprint:
@@ -253,7 +269,11 @@ class WorkspaceGenerationService:
         if resolution.status == "provider_unavailable" and isinstance(
             intent_request, FreeQuestionRequest
         ):
-            classification = self._planner.classify(intent_request, quick_catalog)
+            classification = self._planner.classify(
+                intent_request,
+                quick_catalog,
+                context=conversation_context,
+            )
             if classification.status == "selected":
                 selected = QuickIntentRequest(
                     project_id=intent_request.project_id,
@@ -279,12 +299,17 @@ class WorkspaceGenerationService:
                         resolution,
                         reason_code=classification.reason_code,
                         classification=classification,
+                        context=conversation_context,
                     )
                 )
 
         if resolution.intent is None:
             return WorkspaceGenerationOutput(
-                document=_resolution_failure(resolution, classification=classification)
+                document=_resolution_failure(
+                    resolution,
+                    classification=classification,
+                    context=conversation_context,
+                )
             )
 
         candidates = self._candidate_factory.build(resolution.intent)
@@ -298,6 +323,12 @@ class WorkspaceGenerationService:
                     project_id=resolution.project_id,
                     snapshot_revision=resolution.snapshot_revision,
                     snapshot_sha256=resolution.snapshot_sha256,
+                    context_turn_ids=parsed.context_turn_ids,
+                    conversation_context_sha256=(
+                        conversation_context.fingerprint
+                        if conversation_context is not None
+                        else None
+                    ),
                     intent=resolution.intent,
                     classification=classification,
                     planning=planning,
@@ -305,10 +336,30 @@ class WorkspaceGenerationService:
             )
 
         materialized = materialize_surface_plan(candidates, planning.plan)
+        generation_fingerprint = _fingerprint(
+            {
+                "request_fingerprint": parsed.fingerprint,
+                "conversation_context_sha256": (
+                    conversation_context.fingerprint
+                    if conversation_context is not None
+                    else None
+                ),
+            }
+        )
+        scoped_surface = SurfaceSpec.model_validate(
+            materialized.surface.model_copy(
+                update={
+                    "surface_id": (
+                        f"generated-{resolution.intent.goal.value}-"
+                        f"{generation_fingerprint[:16]}"
+                    )
+                }
+            ).model_dump(mode="json")
+        )
         current = self._adapter.build_binding(resolution.project_id)
-        if current != materialized.surface.snapshot:
+        if current != scoped_surface.snapshot:
             raise StaleIntentRequestError("project evidence changed while generating its workspace")
-        renderer = project_surface(materialized.surface)
+        renderer = project_surface(scoped_surface)
         placements = _placements(candidates, planning)
         return WorkspaceGenerationOutput(
             document=GeneratedWorkspaceDocument(
@@ -318,6 +369,12 @@ class WorkspaceGenerationService:
                 project_id=resolution.project_id,
                 snapshot_revision=resolution.snapshot_revision,
                 snapshot_sha256=resolution.snapshot_sha256,
+                context_turn_ids=parsed.context_turn_ids,
+                conversation_context_sha256=(
+                    conversation_context.fingerprint
+                    if conversation_context is not None
+                    else None
+                ),
                 intent=resolution.intent,
                 classification=classification,
                 planning=planning,
@@ -330,7 +387,7 @@ class WorkspaceGenerationService:
                     evidence_count=len(renderer.snapshot.evidence_refs),
                 ),
             ),
-            surface=materialized.surface,
+            surface=scoped_surface,
         )
 
 
@@ -339,6 +396,7 @@ def _resolution_failure(
     *,
     reason_code: str | None = None,
     classification: IntentPlannerOutcome | None = None,
+    context: PlannerConversationContext | None = None,
 ) -> GeneratedWorkspaceDocument:
     status: Literal[
         "clarification_required",
@@ -355,9 +413,30 @@ def _resolution_failure(
         project_id=resolution.project_id,
         snapshot_revision=resolution.snapshot_revision,
         snapshot_sha256=resolution.snapshot_sha256,
+        context_turn_ids=(
+            tuple(item.turn_id for item in context.turns) if context is not None else ()
+        ),
+        conversation_context_sha256=context.fingerprint if context is not None else None,
         entity_candidates=resolution.candidates,
         classification=classification,
     )
+
+
+def _validate_conversation_context(
+    request: WorkspaceGenerationRequest,
+    context: PlannerConversationContext | None,
+) -> None:
+    selected = request.context_turn_ids
+    if not selected:
+        if context is not None:
+            raise ValueError("conversation context was supplied without selected turn IDs")
+        return
+    if context is None:
+        raise ValueError("selected conversation turns require server-verified context")
+    if context.project_id != request.intent_request.project_id:
+        raise ValueError("conversation context belongs to another project")
+    if tuple(item.turn_id for item in context.turns) != selected:
+        raise ValueError("conversation context differs from selected turn IDs")
 
 
 def _placements(

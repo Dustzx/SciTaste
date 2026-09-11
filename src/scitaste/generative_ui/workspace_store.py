@@ -30,6 +30,7 @@ from scitaste.generative_ui.generation import (
     WorkspaceGenerationRequest,
 )
 from scitaste.generative_ui.intent import FreeQuestionRequest, QuickIntentRequest
+from scitaste.generative_ui.planner import PlannerContextTurn, PlannerConversationContext
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha256
 from scitaste.project.models import validate_entry_id, validate_project_id
 
@@ -62,6 +63,7 @@ class ResearchTurnRecord(BaseModel):
     parent_turn_id: SafeIdentifier | None = None
     created_at: datetime
     prompt: ResearchTurnPrompt
+    context_turn_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=8)
     request_fingerprint: Sha256
     generation_id: SafeIdentifier | None = None
     document: GeneratedWorkspaceDocument
@@ -79,6 +81,12 @@ class ResearchTurnRecord(BaseModel):
             raise ValueError("first turn cannot have a parent")
         if self.ordinal > 1 and self.parent_turn_id is None:
             raise ValueError("follow-up turn requires its parent")
+        if self.turn_id in self.context_turn_ids:
+            raise ValueError("a research turn cannot include itself as context")
+        if len(self.context_turn_ids) != len(set(self.context_turn_ids)):
+            raise ValueError("research turn context IDs must be unique")
+        if self.context_turn_ids != self.document.context_turn_ids:
+            raise ValueError("research turn context differs from its generated document")
         return self
 
 
@@ -350,6 +358,43 @@ class ResearchWorkspaceStore:
             turn = self._load_turn(directory, turn_id)
             return ResearchWorkspaceTurnDocument(workspace=workspace, turn=turn)
 
+    def conversation_context(
+        self,
+        project_id: str,
+        workspace_id: str,
+        turn_ids: tuple[str, ...],
+    ) -> PlannerConversationContext:
+        """Load an ordered, bounded prompt-only selection from immutable turns."""
+
+        if not turn_ids:
+            raise ValueError("conversation context requires at least one turn")
+        root = self._root(project_id, create=False)
+        with _workspace_lock(root, exclusive=False):
+            directory = self._workspace_directory(project_id, workspace_id)
+            workspace = self._load_workspace(directory)
+            selected = set(turn_ids)
+            if len(selected) != len(turn_ids):
+                raise ValueError("conversation context turn IDs must be unique")
+            ordered = tuple(item for item in workspace.turn_ids if item in selected)
+            if ordered != turn_ids:
+                raise ValueError(
+                    "conversation context must be an ordered selection from its workspace"
+                )
+            turns = tuple(self._load_turn(directory, turn_id) for turn_id in turn_ids)
+            return PlannerConversationContext(
+                project_id=project_id,
+                workspace_id=workspace_id,
+                turns=tuple(
+                    PlannerContextTurn(
+                        turn_id=turn.turn_id,
+                        ordinal=turn.ordinal,
+                        prompt_kind=turn.prompt.kind,
+                        prompt_text=turn.prompt.text,
+                    )
+                    for turn in turns
+                ),
+            )
+
     def rename(
         self,
         project_id: str,
@@ -476,6 +521,7 @@ def _turn_record(
         parent_turn_id=parent_turn_id,
         created_at=created_at,
         prompt=prompt,
+        context_turn_ids=request.context_turn_ids,
         request_fingerprint=request.fingerprint,
         generation_id=document.renderer.surface_id if document.renderer is not None else None,
         document=document,
