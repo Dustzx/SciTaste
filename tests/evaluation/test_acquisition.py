@@ -1,21 +1,27 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from pydantic import ValidationError
 
+import scitaste.evaluation.acquisition as acquisition_module
 from scitaste.cli import main
 from scitaste.evaluation import (
     AcquisitionApproval,
     AcquisitionEvidenceBinding,
     AcquisitionGateReport,
     DatasetAcquisitionRequest,
+    approve_dataset_acquisition_request,
     inspect_dataset_acquisition_request,
+    load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
+    materialize_dataset_acquisition,
+    save_dataset_acquisition_request,
 )
 
 REQUEST_PATH = Path("configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml")
@@ -41,6 +47,21 @@ def _isolated_request(tmp_path: Path) -> DatasetAcquisitionRequest:
             "destination_root": "downloads/mlr-ten",
             "evidence": tuple(evidence),
         }
+    )
+
+
+def _approved_request(tmp_path: Path) -> DatasetAcquisitionRequest:
+    request = _isolated_request(tmp_path)
+    request = request.model_copy(
+        update={
+            "destination_root": f"downloads/{request.request_id}/raw",
+        }
+    )
+    return approve_dataset_acquisition_request(
+        request,
+        confirmed_request_sha256=request.request_sha256,
+        approved_by="project-owner",
+        approved_at=datetime(2026, 9, 12, 8, 0, tzinfo=UTC),
     )
 
 
@@ -128,6 +149,13 @@ def test_request_rejects_unpinned_hosts_paths_and_false_budget_arithmetic() -> N
         DatasetAcquisitionRequest.model_validate(payload)
 
     payload = request.model_dump(mode="json", exclude={"request_sha256"})
+    payload["items"][0]["source_url"] = payload["items"][0]["source_url"].replace(
+        "raw.githubusercontent.com/", "raw.githubusercontent.com:444/"
+    )
+    with pytest.raises(ValidationError, match="standard HTTPS port"):
+        DatasetAcquisitionRequest.model_validate(payload)
+
+    payload = request.model_dump(mode="json", exclude={"request_sha256"})
     payload["items"][0]["destination"] = "../task.md"
     with pytest.raises(ValidationError, match="normalized relative path"):
         DatasetAcquisitionRequest.model_validate(payload)
@@ -155,6 +183,224 @@ def test_gate_report_rejects_internally_inconsistent_summaries() -> None:
         payload[field] = value
         with pytest.raises(ValidationError, match=message):
             AcquisitionGateReport.model_validate(payload)
+
+
+def test_approval_is_hash_bound_and_saved_without_downloading(tmp_path: Path) -> None:
+    request = _isolated_request(tmp_path)
+    with pytest.raises(ValueError, match="does not match"):
+        approve_dataset_acquisition_request(
+            request,
+            confirmed_request_sha256="0" * 64,
+            approved_by="project-owner",
+            approved_at=datetime(2026, 9, 12, 8, 0, tzinfo=UTC),
+        )
+
+    approved = approve_dataset_acquisition_request(
+        request,
+        confirmed_request_sha256=request.request_sha256,
+        approved_by="project-owner",
+        approved_at=datetime(2026, 9, 12, 8, 0, tzinfo=UTC),
+    )
+    output = tmp_path / "approved.yaml"
+    save_dataset_acquisition_request(approved, output)
+    loaded = load_dataset_acquisition_request(output).request
+
+    assert loaded.request_sha256 == request.request_sha256
+    assert loaded.approval.approved is True
+    assert loaded.authorizes_ingestion is False
+    assert loaded.authorizes_execution is False
+    assert not (tmp_path / request.destination_root).exists()
+    with pytest.raises(FileExistsError):
+        save_dataset_acquisition_request(approved, output)
+
+
+def test_approved_download_is_atomic_content_addressed_and_non_executing(
+    tmp_path: Path,
+) -> None:
+    approved = _approved_request(tmp_path)
+    bodies = {item.source_url: f"# {item.item_id}\n".encode() for item in approved.items}
+
+    receipt = materialize_dataset_acquisition(
+        approved,
+        workspace_root=tmp_path,
+        confirmed_request_sha256=approved.request_sha256,
+        allow_network_download=True,
+        fetcher=lambda url, _ceiling, _media_type: bodies[url],
+        acquired_at=datetime(2026, 9, 12, 8, 30, tzinfo=UTC),
+    )
+
+    transaction_root = tmp_path / PurePosixPath(approved.destination_root).parent
+    raw_root = tmp_path / approved.destination_root
+    loaded = load_dataset_acquisition_receipt(transaction_root / "RECEIPT.json")
+    assert loaded.receipt == receipt
+    assert receipt.item_count == 10
+    assert receipt.total_bytes == sum(len(value) for value in bodies.values())
+    assert receipt.acquisition_complete is True
+    assert receipt.redirects_followed is False
+    assert receipt.overwrote_existing_files is False
+    assert receipt.authorizes_ingestion is False
+    assert receipt.authorizes_execution is False
+    assert {path.name for path in raw_root.iterdir()} == {
+        item.destination for item in approved.items
+    }
+    assert all(
+        (raw_root / item.destination).read_bytes() == bodies[item.source_url]
+        for item in approved.items
+    )
+
+    receipt_path = transaction_root / "RECEIPT.json"
+    tampered = json.loads(receipt_path.read_text(encoding="utf-8"))
+    tampered["items"][0]["sha256"] = "0" * 64
+    receipt_path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(ValidationError, match="receipt hash mismatch"):
+        load_dataset_acquisition_receipt(receipt_path)
+
+
+def test_download_requires_both_switch_and_authority_and_rolls_back_on_failure(
+    tmp_path: Path,
+) -> None:
+    approved = _approved_request(tmp_path)
+    calls = 0
+
+    def failing_fetcher(url: str, ceiling: int, media_type: str) -> bytes:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("scripted transfer failure")
+        return b"bounded\n"
+
+    with pytest.raises(ValueError, match="explicit network-download switch"):
+        materialize_dataset_acquisition(
+            approved,
+            workspace_root=tmp_path,
+            confirmed_request_sha256=approved.request_sha256,
+            allow_network_download=False,
+            fetcher=failing_fetcher,
+        )
+    assert calls == 0
+
+    unapproved = approved.model_copy(update={"approval": AcquisitionApproval()})
+    with pytest.raises(ValueError, match="not authorized"):
+        materialize_dataset_acquisition(
+            unapproved,
+            workspace_root=tmp_path,
+            confirmed_request_sha256=unapproved.request_sha256,
+            allow_network_download=True,
+            fetcher=failing_fetcher,
+        )
+    assert calls == 0
+
+    with pytest.raises(RuntimeError, match="scripted transfer failure"):
+        materialize_dataset_acquisition(
+            approved,
+            workspace_root=tmp_path,
+            confirmed_request_sha256=approved.request_sha256,
+            allow_network_download=True,
+            fetcher=failing_fetcher,
+        )
+    transaction_root = tmp_path / PurePosixPath(approved.destination_root).parent
+    assert not transaction_root.exists()
+    assert list(transaction_root.parent.glob(f".{approved.request_id}.*.staging")) == []
+
+
+def test_default_https_fetch_is_bounded_and_rejects_redirects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_url = (
+        "https://raw.githubusercontent.com/example/repository/"
+        "0123456789abcdef0123456789abcdef01234567/example.md"
+    )
+
+    class Response:
+        status = 200
+
+        def __init__(
+            self,
+            body: bytes,
+            *,
+            final_url: str,
+            declared_length: int,
+            content_encoding: str | None = None,
+        ) -> None:
+            self._stream = io.BytesIO(body)
+            self._final_url = final_url
+            self.headers = {
+                "Content-Length": str(declared_length),
+                "Content-Type": "text/plain; charset=utf-8",
+            }
+            if content_encoding is not None:
+                self.headers["Content-Encoding"] = content_encoding
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback) -> None:
+            return None
+
+        def read(self, size: int) -> bytes:
+            return self._stream.read(size)
+
+        def geturl(self) -> str:
+            return self._final_url
+
+    class Opener:
+        def __init__(self, response: Response) -> None:
+            self.response = response
+
+        def open(self, request, *, timeout: float):
+            assert request.full_url == source_url
+            assert request.headers["Accept-encoding"] == "identity"
+            assert timeout == 30.0
+            return self.response
+
+    body = b"# pinned\n"
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(Response(body, final_url=source_url, declared_length=len(body))),
+    )
+    assert acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown") == body
+
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(body, final_url=f"{source_url}?redirected=1", declared_length=len(body))
+        ),
+    )
+    with pytest.raises(ValueError, match="redirects are forbidden"):
+        acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown")
+
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(Response(body, final_url=source_url, declared_length=1025)),
+    )
+    with pytest.raises(ValueError, match="declared byte ceiling"):
+        acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown")
+
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(Response(body, final_url=source_url, declared_length=len(body))),
+    )
+    with pytest.raises(ValueError, match="approved media type"):
+        acquisition_module._fetch_https_bytes(source_url, 1024, "application/json")
+
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(
+                body,
+                final_url=source_url,
+                declared_length=len(body),
+                content_encoding="gzip",
+            )
+        ),
+    )
+    with pytest.raises(ValueError, match="content encoding"):
+        acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown")
 
 
 def test_acquisition_cli_materializes_only_a_no_network_report(
@@ -186,3 +432,57 @@ def test_acquisition_cli_materializes_only_a_no_network_report(
     assert saved["items"][0]["item_id"] == "iclr2025_bi_align"
     assert saved["no_network_access_performed"] is True
     assert saved["no_dataset_file_created"] is True
+
+
+def test_acquisition_cli_separates_approval_from_network_execution(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    request = _isolated_request(tmp_path)
+    request = request.model_copy(update={"destination_root": f"downloads/{request.request_id}/raw"})
+    manifest = tmp_path / "request.yaml"
+    approved_manifest = tmp_path / "approved.yaml"
+    save_dataset_acquisition_request(request, manifest)
+
+    assert (
+        main(
+            [
+                "evaluation",
+                "acquisition-approve",
+                "--manifest",
+                str(manifest),
+                "--workspace-root",
+                str(tmp_path),
+                "--confirm-request-sha256",
+                request.request_sha256,
+                "--approved-by",
+                "project-owner",
+                "--approved-at",
+                "2026-09-12T08:00:00+00:00",
+                "--output",
+                str(approved_manifest),
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["download_authorized"] is True
+    assert payload["download_performed"] is False
+    assert payload["authorizes_ingestion"] is False
+    assert not (tmp_path / request.destination_root).exists()
+
+    with pytest.raises(SystemExit) as caught:
+        main(
+            [
+                "evaluation",
+                "acquisition-download",
+                "--manifest",
+                str(approved_manifest),
+                "--workspace-root",
+                str(tmp_path),
+                "--confirm-request-sha256",
+                request.request_sha256,
+            ]
+        )
+    assert caught.value.code == 2
+    assert "explicit network-download switch" in capsys.readouterr().err

@@ -1606,3 +1606,31 @@ revision path. Manuscript materialization, author response, original-reviewer
 verification, and the two-expert pre-submission gate remain separate authority
 boundaries. The implementation performs no provider call, GPU work, task
 acquisition, paper mutation, or review self-certification.
+
+### ADR-053: Acquisition approval and data movement are separate transactions
+
+Status: accepted for bounded source acquisition; the current request remains
+unapproved and unexecuted.
+
+A review-ready source allowlist is not permission to move data, and a signed
+download decision is not permission to ingest or execute it. SciTaste therefore
+turns the acquisition boundary into three independently visible states:
+deterministic inspection, an immutable owner approval bound to the exact
+semantic request hash, and a separately switched download-only transaction.
+Approval metadata is excluded from the request identity so the same approved
+artifact proves precisely which pre-approval decision it signs.
+
+The executor replays readiness and authorization immediately before transfer,
+accepts only HTTPS sources already bound to allowlisted hosts and immutable
+revisions, disables redirects, validates declared media types and byte ceilings,
+and writes into a private staging transaction. It publishes the whole request
+directory with observed per-file hashes and a self-hashed receipt only after all
+items succeed. Existing transaction roots are never reused; transfer failure
+removes staging and cannot leave a partial admitted dataset. The receipt fixes
+both `authorizes_ingestion` and `authorizes_execution` to false.
+
+This ADR closes the movement-control implementation gap, not the scientific
+gate. Actual acquisition still requires the project's explicit exact-hash
+decision. Task-package qualification, runtime preflight, experiment launch,
+result selection, paper evidence binding, and independent review remain later
+authority boundaries.

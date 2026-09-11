@@ -5,11 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import tempfile
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal
+from urllib.error import HTTPError
 from urllib.parse import urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
@@ -21,6 +25,10 @@ _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
 _SHA256 = r"^[0-9a-f]{64}$"
 _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_REQUEST_BYTES = 2 * 1024 * 1024
+_DOWNLOAD_CHUNK_BYTES = 64 * 1024
+_DOWNLOAD_TIMEOUT_SECONDS = 30.0
+
+AcquisitionFetcher = Callable[[str, int, str], bytes]
 
 
 class AcquisitionEvidenceBinding(BaseModel):
@@ -57,6 +65,8 @@ class AcquisitionItem(BaseModel):
         parsed = urlparse(self.source_url)
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("acquisition sources must use an HTTPS host")
+        if parsed.port not in {None, 443}:
+            raise ValueError("acquisition sources must use the standard HTTPS port")
         if parsed.username or parsed.password or parsed.fragment:
             raise ValueError("acquisition source URLs cannot contain credentials or fragments")
         if self.source_revision not in self.source_url:
@@ -199,6 +209,136 @@ class AcquisitionGateReport(BaseModel):
         return self
 
 
+class AcquiredItemReceipt(BaseModel):
+    model_config = _CONFIG
+
+    item_id: str = Field(pattern=_ID)
+    source_url: str = Field(min_length=1, max_length=2_000)
+    source_revision: str = Field(pattern=_COMMIT)
+    destination: str = Field(min_length=1, max_length=1_000)
+    size_bytes: int = Field(gt=0, le=16 * 1024 * 1024)
+    sha256: str = Field(pattern=_SHA256)
+    expected_sha256: str | None = Field(default=None, pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def item_receipt_is_bounded(self) -> AcquiredItemReceipt:
+        parsed = urlparse(self.source_url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise ValueError("acquisition receipt sources must use HTTPS")
+        if parsed.port not in {None, 443}:
+            raise ValueError("acquisition receipt sources must use the standard HTTPS port")
+        if parsed.username or parsed.password or parsed.fragment:
+            raise ValueError("acquisition receipt sources cannot contain credentials or fragments")
+        if self.source_revision not in self.source_url or self.item_id not in self.source_url:
+            raise ValueError("acquisition receipt source is not pinned to its item")
+        _validate_relative_path(self.destination, label="acquisition receipt destination")
+        if self.expected_sha256 is not None and self.sha256 != self.expected_sha256:
+            raise ValueError("acquisition receipt differs from the expected item hash")
+        return self
+
+
+class DatasetAcquisitionReceipt(BaseModel):
+    """Self-hashed proof of one approved, atomic download-only transaction."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(pattern=_ID)
+    request_sha256: str = Field(pattern=_SHA256)
+    approved_by: str = Field(min_length=1, max_length=200)
+    approved_at: datetime
+    acquired_at: datetime
+    approval_scope: Literal["download-only-no-ingestion"]
+    destination_root: str = Field(min_length=1, max_length=1_000)
+    items: tuple[AcquiredItemReceipt, ...] = Field(min_length=1, max_length=500)
+    item_count: int = Field(gt=0)
+    total_bytes: int = Field(gt=0)
+    maximum_total_bytes: int = Field(gt=0, le=10 * 1024 * 1024 * 1024)
+    source_hosts: tuple[str, ...] = Field(min_length=1, max_length=20)
+    redirects_followed: Literal[False] = False
+    overwrote_existing_files: Literal[False] = False
+    acquisition_complete: Literal[True] = True
+    authorizes_ingestion: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    receipt_sha256: str = Field(pattern=_SHA256)
+
+    @field_validator("approved_at", "acquired_at")
+    @classmethod
+    def receipt_times_are_aware(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("acquisition receipt timestamps must include a timezone")
+        return value
+
+    @model_validator(mode="after")
+    def receipt_is_closed_and_self_hashed(self) -> DatasetAcquisitionReceipt:
+        _validate_relative_path(self.destination_root, label="acquisition receipt root")
+        destination = PurePosixPath(self.destination_root)
+        if destination.name != "raw" or destination.parent.name != self.request_id:
+            raise ValueError("acquisition receipt root is not bound to its request ID")
+        if self.acquired_at < self.approved_at:
+            raise ValueError("acquisition cannot precede its approval")
+        if self.item_count != len(self.items):
+            raise ValueError("acquisition receipt item count differs from its items")
+        if self.total_bytes != sum(item.size_bytes for item in self.items):
+            raise ValueError("acquisition receipt byte total differs from its items")
+        if self.total_bytes > self.maximum_total_bytes:
+            raise ValueError("acquisition receipt exceeds its aggregate byte ceiling")
+        item_ids = [item.item_id for item in self.items]
+        destinations = [item.destination for item in self.items]
+        if len(item_ids) != len(set(item_ids)) or len(destinations) != len(set(destinations)):
+            raise ValueError("acquisition receipt item identities and destinations must be unique")
+        hosts = tuple(sorted({urlparse(item.source_url).hostname or "" for item in self.items}))
+        if self.source_hosts != hosts:
+            raise ValueError("acquisition receipt source hosts differ from its items")
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("acquisition receipt hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> DatasetAcquisitionReceipt:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("receipt_sha256", None)
+        unsigned = cls.model_construct(receipt_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            receipt_sha256=_canonical_sha256(
+                unsigned.model_dump(mode="json", exclude={"receipt_sha256"})
+            ),
+        )
+
+
+class AcquisitionReceiptInspection(BaseModel):
+    model_config = _CONFIG
+
+    path: Path
+    file_sha256: str = Field(pattern=_SHA256)
+    receipt: DatasetAcquisitionReceipt
+
+
+def approve_dataset_acquisition_request(
+    request: DatasetAcquisitionRequest,
+    *,
+    confirmed_request_sha256: str,
+    approved_by: str,
+    approved_at: datetime,
+) -> DatasetAcquisitionRequest:
+    """Bind explicit owner approval to exact request bytes without moving data."""
+
+    if request.approval.approved:
+        raise ValueError("dataset acquisition request is already approved")
+    if confirmed_request_sha256 != request.request_sha256:
+        raise ValueError("confirmed acquisition request hash does not match the request")
+    approval = AcquisitionApproval(
+        approved=True,
+        request_sha256=confirmed_request_sha256,
+        approved_by=approved_by,
+        approved_at=approved_at,
+        scope="download-only-no-ingestion",
+    )
+    return request.model_copy(update={"approval": approval})
+
+
 def load_dataset_acquisition_request(path: str | Path) -> AcquisitionRequestInspection:
     """Load one bounded request without following a top-level symlink."""
 
@@ -336,6 +476,309 @@ def save_acquisition_gate_report(report: AcquisitionGateReport, path: str | Path
     return target
 
 
+def save_dataset_acquisition_request(
+    request: DatasetAcquisitionRequest,
+    path: str | Path,
+) -> Path:
+    """Save a new immutable request or approved derivative without moving data."""
+
+    payload = request.model_dump(mode="json", exclude={"request_sha256"})
+    rendered = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False)
+    return _atomic_text(path, rendered, require_absent=True)
+
+
+def load_dataset_acquisition_receipt(path: str | Path) -> AcquisitionReceiptInspection:
+    """Load and revalidate one bounded, self-hashed acquisition receipt."""
+
+    requested = Path(path)
+    if requested.is_symlink():
+        raise ValueError("dataset acquisition receipt must not be a symlink")
+    resolved = requested.resolve(strict=True)
+    if not resolved.is_file() or resolved.stat().st_size > _MAX_REQUEST_BYTES:
+        raise ValueError("dataset acquisition receipt must be a bounded regular file")
+    raw = resolved.read_bytes()
+    return AcquisitionReceiptInspection(
+        path=resolved,
+        file_sha256=hashlib.sha256(raw).hexdigest(),
+        receipt=DatasetAcquisitionReceipt.model_validate_json(raw),
+    )
+
+
+def materialize_dataset_acquisition(
+    request: DatasetAcquisitionRequest,
+    *,
+    workspace_root: str | Path,
+    confirmed_request_sha256: str,
+    allow_network_download: bool,
+    fetcher: AcquisitionFetcher | None = None,
+    acquired_at: datetime | None = None,
+) -> DatasetAcquisitionReceipt:
+    """Execute one approved download-only transaction and atomically publish its receipt."""
+
+    if not allow_network_download:
+        raise ValueError("dataset acquisition requires the explicit network-download switch")
+    if confirmed_request_sha256 != request.request_sha256:
+        raise ValueError("confirmed acquisition request hash does not match the request")
+    report = inspect_dataset_acquisition_request(request, workspace_root=workspace_root)
+    if not report.download_authorized:
+        codes = ", ".join(item.code for item in report.authorization_blockers)
+        raise ValueError(f"dataset acquisition is not authorized: {codes}")
+
+    approval = request.approval
+    if (
+        not approval.approved
+        or approval.approved_by is None
+        or approval.approved_at is None
+        or approval.scope != "download-only-no-ingestion"
+    ):
+        raise ValueError("dataset acquisition approval is incomplete")
+
+    root = Path(workspace_root).resolve(strict=True)
+    destination_relative = PurePosixPath(request.destination_root)
+    if destination_relative.name != "raw" or destination_relative.parent.name != request.request_id:
+        raise ValueError(
+            "download destination must be <acquisition-root>/<request-id>/raw "
+            "for atomic receipt binding"
+        )
+    transaction_relative = destination_relative.parent
+    transaction_root = root.joinpath(*transaction_relative.parts)
+    transaction_parent = transaction_root.parent
+    _ensure_directory_chain(root, transaction_parent)
+    selected_fetcher = fetcher or _fetch_https_bytes
+    timestamp = acquired_at or datetime.now(UTC)
+    staging: Path | None = None
+
+    with _acquisition_lock(transaction_parent):
+        if os.path.lexists(transaction_root):
+            raise FileExistsError(transaction_root)
+        staging = Path(
+            tempfile.mkdtemp(
+                prefix=f".{request.request_id}.",
+                suffix=".staging",
+                dir=transaction_parent,
+            )
+        )
+        try:
+            staged_destination = staging / "raw"
+            staged_destination.mkdir()
+            receipts: list[AcquiredItemReceipt] = []
+            total_bytes = 0
+            for item in request.items:
+                content = selected_fetcher(
+                    item.source_url,
+                    item.maximum_bytes,
+                    item.media_type,
+                )
+                if not isinstance(content, bytes) or not content:
+                    raise ValueError(f"acquisition item {item.item_id} returned no bytes")
+                if len(content) > item.maximum_bytes:
+                    raise ValueError(f"acquisition item {item.item_id} exceeded its byte ceiling")
+                total_bytes += len(content)
+                if total_bytes > request.maximum_total_bytes:
+                    raise ValueError("dataset acquisition exceeded its aggregate byte ceiling")
+                observed_sha256 = hashlib.sha256(content).hexdigest()
+                if item.expected_sha256 is not None and observed_sha256 != item.expected_sha256:
+                    raise ValueError(f"acquisition item {item.item_id} failed its expected hash")
+                staged_item = staged_destination.joinpath(*PurePosixPath(item.destination).parts)
+                staged_item.parent.mkdir(parents=True, exist_ok=True)
+                _write_new_bytes(staged_item, content)
+                receipts.append(
+                    AcquiredItemReceipt(
+                        item_id=item.item_id,
+                        source_url=item.source_url,
+                        source_revision=item.source_revision,
+                        destination=item.destination,
+                        size_bytes=len(content),
+                        sha256=observed_sha256,
+                        expected_sha256=item.expected_sha256,
+                    )
+                )
+
+            receipt = DatasetAcquisitionReceipt.create(
+                request_id=request.request_id,
+                request_sha256=request.request_sha256,
+                approved_by=approval.approved_by,
+                approved_at=approval.approved_at,
+                acquired_at=timestamp,
+                approval_scope=approval.scope,
+                destination_root=request.destination_root,
+                items=tuple(receipts),
+                item_count=len(receipts),
+                total_bytes=total_bytes,
+                maximum_total_bytes=request.maximum_total_bytes,
+                source_hosts=report.source_hosts,
+            )
+            _write_new_bytes(
+                staging / "RECEIPT.json",
+                (receipt.model_dump_json(indent=2) + "\n").encode(),
+            )
+            if os.path.lexists(transaction_root):
+                raise FileExistsError(transaction_root)
+            os.rename(staging, transaction_root)
+            staging = None
+            _fsync_directory(transaction_parent)
+            return receipt
+        finally:
+            if staging is not None:
+                shutil.rmtree(staging, ignore_errors=True)
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -> bytes:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError("acquisition fetch requires an HTTPS source")
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/octet-stream,text/markdown,text/plain;q=0.9",
+            "Accept-Encoding": "identity",
+            "User-Agent": "SciTaste-approved-acquisition/1.0",
+        },
+        method="GET",
+    )
+    opener = build_opener(_RejectRedirects())
+    try:
+        response = opener.open(request, timeout=_DOWNLOAD_TIMEOUT_SECONDS)
+    except HTTPError as exc:
+        if 300 <= exc.code < 400:
+            raise ValueError("acquisition redirects are forbidden") from exc
+        raise
+    with response:
+        if getattr(response, "status", None) != 200:
+            raise ValueError("acquisition source did not return HTTP 200")
+        if response.geturl() != url:
+            raise ValueError("acquisition redirects are forbidden")
+        content_encoding = response.headers.get("Content-Encoding")
+        if content_encoding is not None and content_encoding.strip().lower() != "identity":
+            raise ValueError("acquisition source returned an unapproved content encoding")
+        declared_media_type = response.headers.get("Content-Type")
+        if declared_media_type is None:
+            raise ValueError("acquisition source omitted Content-Type")
+        observed_media_type = declared_media_type.partition(";")[0].strip().lower()
+        accepted_media_types = {
+            "text/markdown": {"text/markdown", "text/plain"},
+            "application/json": {"application/json"},
+            "application/x-yaml": {
+                "application/x-yaml",
+                "application/yaml",
+                "text/yaml",
+            },
+        }
+        if observed_media_type not in accepted_media_types.get(expected_media_type, set()):
+            raise ValueError(
+                "acquisition source Content-Type does not match its approved media type"
+            )
+        declared_length = response.headers.get("Content-Length")
+        if declared_length is not None:
+            try:
+                parsed_length = int(declared_length)
+                if parsed_length < 0:
+                    raise ValueError("negative")
+                if parsed_length > maximum_bytes:
+                    raise ValueError("acquisition source exceeds its declared byte ceiling")
+            except ValueError as exc:
+                if "exceeds" in str(exc):
+                    raise
+                raise ValueError("acquisition source returned an invalid Content-Length") from exc
+        content = bytearray()
+        while chunk := response.read(_DOWNLOAD_CHUNK_BYTES):
+            content.extend(chunk)
+            if len(content) > maximum_bytes:
+                raise ValueError("acquisition source exceeded its byte ceiling")
+    return bytes(content)
+
+
+def _atomic_text(path: str | Path, text: str, *, require_absent: bool) -> Path:
+    target = Path(path)
+    if target.is_symlink() or (require_absent and target.exists()):
+        raise FileExistsError(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if require_absent:
+            try:
+                os.link(temporary, target)
+            except FileExistsError as exc:
+                raise FileExistsError(target) from exc
+            temporary.unlink()
+        else:
+            os.replace(temporary, target)
+        _fsync_directory(target.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return target
+
+
+def _write_new_bytes(path: Path, content: bytes) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _ensure_directory_chain(root: Path, target: Path) -> None:
+    try:
+        relative = target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("acquisition transaction directory escaped its workspace") from exc
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("acquisition transaction directory cannot contain symlinks")
+        current.mkdir(exist_ok=True)
+        if not current.is_dir() or not current.resolve(strict=True).is_relative_to(root):
+            raise ValueError("acquisition transaction directory escaped its workspace")
+
+
+class _acquisition_lock:
+    def __init__(self, directory: Path) -> None:
+        self._path = directory / ".scitaste-acquisition.lock"
+        self._descriptor: int | None = None
+
+    def __enter__(self) -> None:
+        import fcntl
+
+        self._descriptor = os.open(
+            self._path,
+            os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        fcntl.flock(self._descriptor, fcntl.LOCK_EX)
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        import fcntl
+
+        if self._descriptor is None:
+            return
+        try:
+            fcntl.flock(self._descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(self._descriptor)
+            self._descriptor = None
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def _validate_relative_path(value: str, *, label: str) -> None:
     if "\\" in value or "//" in value:
         raise ValueError(f"{label} must use normalized POSIX separators")
@@ -360,14 +803,22 @@ def _add(findings: list[AcquisitionFinding], code: str, message: str) -> None:
 
 
 __all__ = [
+    "AcquiredItemReceipt",
     "AcquisitionApproval",
     "AcquisitionEvidenceBinding",
+    "AcquisitionFetcher",
     "AcquisitionFinding",
     "AcquisitionGateReport",
     "AcquisitionItem",
+    "AcquisitionReceiptInspection",
     "AcquisitionRequestInspection",
+    "DatasetAcquisitionReceipt",
     "DatasetAcquisitionRequest",
+    "approve_dataset_acquisition_request",
     "inspect_dataset_acquisition_request",
+    "load_dataset_acquisition_receipt",
     "load_dataset_acquisition_request",
+    "materialize_dataset_acquisition",
     "save_acquisition_gate_report",
+    "save_dataset_acquisition_request",
 ]

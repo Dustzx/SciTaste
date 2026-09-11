@@ -57,6 +57,21 @@ scale-out, paper revision, internal model critique, two independent expert
 reviews, and original-reviewer closure each remain separate stages and require
 their own exact evidence or approval.
 
+## Acquisition control status
+
+The bounded MLR-Bench source request now has an executable control path, but not
+an approval. SciTaste can create an immutable approval artifact bound to the
+exact request hash and can later execute a separate, atomic, download-only
+transaction. The downloader rejects request drift, missing evidence, redirects,
+unexpected media types, byte-ceiling violations, destination collisions, and
+partial publication. A successful transaction emits observed file hashes and a
+self-hashed receipt while keeping ingestion and execution authority false.
+
+This closes a product-control gap only. No source file has been downloaded, no
+task package has been admitted, and no API/GPU cell has become launchable. The
+exact pending request, command sequence, and authority boundary are documented
+in [`DATA_ACQUISITION_APPROVAL.md`](DATA_ACQUISITION_APPROVAL.md).
+
 The prelaunch schema can represent either decision without conflating them.
 Schema `1.2` assigns a common resource to every `matched_backbone` cell, while a
 `best_native` lane must bind one provider/model resource to each system and

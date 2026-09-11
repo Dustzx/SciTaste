@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -70,6 +70,7 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    approve_dataset_acquisition_request,
     compile_evaluation_cell_plan,
     inspect_adapter_contract,
     inspect_adapter_preflight,
@@ -87,12 +88,14 @@ from scitaste.evaluation import (
     load_prelaunch_manifest,
     load_task_package_manifest,
     load_task_selection_manifest,
+    materialize_dataset_acquisition,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     publish_project_evaluation,
     publish_project_evaluation_result,
     run_live_direct_agent,
     save_acquisition_gate_report,
+    save_dataset_acquisition_request,
     save_evaluation_cell_plan,
     save_experiment_decision_dossier_report,
     summarize_evaluation_readiness,
@@ -1270,6 +1273,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquisition_request)
     acquisition_request.set_defaults(handler=_handle_evaluation_acquisition_request)
+    acquisition_approve = evaluation_commands.add_parser(
+        "acquisition-approve",
+        help="Bind owner approval to an exact review-ready download request without downloading",
+    )
+    acquisition_approve.add_argument("--manifest", type=Path, required=True)
+    acquisition_approve.add_argument("--workspace-root", type=Path, default=Path("."))
+    acquisition_approve.add_argument("--confirm-request-sha256", required=True)
+    acquisition_approve.add_argument("--approved-by", required=True)
+    acquisition_approve.add_argument(
+        "--approved-at",
+        required=True,
+        help="timezone-aware ISO-8601 owner approval timestamp",
+    )
+    acquisition_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(acquisition_approve)
+    acquisition_approve.set_defaults(handler=_handle_evaluation_acquisition_approve)
+    acquisition_download = evaluation_commands.add_parser(
+        "acquisition-download",
+        help="Atomically materialize one exactly approved download-only request",
+    )
+    acquisition_download.add_argument("--manifest", type=Path, required=True)
+    acquisition_download.add_argument("--workspace-root", type=Path, default=Path("."))
+    acquisition_download.add_argument("--confirm-request-sha256", required=True)
+    acquisition_download.add_argument(
+        "--allow-network-download",
+        action="store_true",
+        help="explicitly permit only the approved allowlisted download transaction",
+    )
+    _add_log_level_option(acquisition_download)
+    acquisition_download.set_defaults(handler=_handle_evaluation_acquisition_download)
     task_selection = evaluation_commands.add_parser(
         "task-selection",
         help="Inspect an exact metadata-only benchmark task selection",
@@ -3883,6 +3916,72 @@ def _handle_evaluation_acquisition_request(args: argparse.Namespace) -> int:
         return 1
     if args.require_authorized and not report.download_authorized:
         return 1
+    return 0
+
+
+def _handle_evaluation_acquisition_approve(args: argparse.Namespace) -> int:
+    inspection = load_dataset_acquisition_request(args.manifest)
+    report = inspect_dataset_acquisition_request(
+        inspection.request,
+        workspace_root=args.workspace_root,
+    )
+    if not report.ready_for_owner_approval:
+        codes = ", ".join(item.code for item in report.blockers)
+        raise ValueError(f"dataset acquisition request is not review-ready: {codes}")
+    approved = approve_dataset_acquisition_request(
+        inspection.request,
+        confirmed_request_sha256=args.confirm_request_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_dataset_acquisition_request(approved, args.output)
+    approved_report = inspect_dataset_acquisition_request(
+        approved,
+        workspace_root=args.workspace_root,
+    )
+    print(
+        json.dumps(
+            {
+                "manifest_path": str(inspection.path),
+                "manifest_file_sha256": inspection.file_sha256,
+                "approved_request": str(output),
+                "request_sha256": approved.request_sha256,
+                "download_authorized": approved_report.download_authorized,
+                "authorization_scope": approved.authorization_scope,
+                "authorizes_ingestion": approved.authorizes_ingestion,
+                "authorizes_execution": approved.authorizes_execution,
+                "download_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_acquisition_download(args: argparse.Namespace) -> int:
+    inspection = load_dataset_acquisition_request(args.manifest)
+    receipt = materialize_dataset_acquisition(
+        inspection.request,
+        workspace_root=args.workspace_root,
+        confirmed_request_sha256=args.confirm_request_sha256,
+        allow_network_download=args.allow_network_download,
+    )
+    transaction_root = (
+        args.workspace_root / Path(inspection.request.destination_root).parent
+    ).resolve()
+    print(
+        json.dumps(
+            {
+                "manifest_path": str(inspection.path),
+                "manifest_file_sha256": inspection.file_sha256,
+                "receipt_path": str(transaction_root / "RECEIPT.json"),
+                **receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

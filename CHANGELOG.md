@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Dataset acquisition now has separate hash-confirmed approval and explicit
+  download commands. Approval creates an immutable derivative without network
+  access; download rechecks all evidence and authority, rejects redirects,
+  media-type or byte-limit violations and existing destinations, stages the
+  complete allowlisted transaction, and atomically publishes a self-hashed
+  receipt with observed file hashes. Neither transition authorizes ingestion or
+  experiment execution, and all tests use injected transport rather than a real
+  download.
+
 - The Generation-as-Content project home now promotes canonical, project-owned
   dataset-acquisition gate reports out of the run history into a compact
   decision card. It shows the exact request/report hashes, pinned item count,

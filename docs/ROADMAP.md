@@ -57,6 +57,14 @@ review affordance only creates another immutable conversation page; download,
 ingestion, and experiment execution remain separate, explicitly authorized
 transitions.
 
+The corresponding command path now enforces those transitions. An approval
+command creates a new immutable, hash-bound, download-only request and cannot
+move data. A separately switched downloader revalidates the request, performs a
+bounded no-redirect HTTPS transaction in staging, and publishes files plus a
+self-hashed receipt atomically. It still grants no ingestion or execution
+authority. The repository request remains unapproved and no real acquisition
+was performed while implementing or testing this path.
+
 Phase 9 now has a typed prelaunch resource gate and separate DeepSeek, Zhipu,
 and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
 the accepted Benchmark subset, external/control adapters, independent reviewers,
