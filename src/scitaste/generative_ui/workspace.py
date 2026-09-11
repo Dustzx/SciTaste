@@ -865,9 +865,7 @@ class WorkspaceSurfaceFactory:
         def connect_to_project(ref_id: str, kind: str, label: str, relation: str) -> None:
             if any(node["evidence_ref_id"] == ref_id for node in graph_nodes):
                 return
-            graph_nodes.append(
-                {"evidence_ref_id": ref_id, "kind": kind, "label": label}
-            )
+            graph_nodes.append({"evidence_ref_id": ref_id, "kind": kind, "label": label})
             graph_edges.append(
                 {
                     "source_ref_id": project_ref.evidence_id,
