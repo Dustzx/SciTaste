@@ -39,6 +39,24 @@ def test_review_categories_route_to_stage_specific_actions(category, expected) -
     assert ReviewActionRouter().route(concern).type == expected
 
 
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"requires_new_experiment": True},
+        {"required_evidence_types": ["matched baseline"]},
+    ],
+)
+def test_review_feedback_rejects_inconsistent_evidence_requirements(values) -> None:
+    with pytest.raises(ValueError, match="require new evidence"):
+        ReviewFeedback(
+            concern_id="invalid-evidence-gate",
+            category="missing_evidence",
+            severity="high",
+            text="This requirement is internally inconsistent.",
+            **values,
+        )
+
+
 def test_obligation_closes_only_with_new_matching_evidence() -> None:
     claim = ScientificClaim(
         claim_id="claim-1",

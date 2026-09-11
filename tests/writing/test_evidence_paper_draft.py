@@ -384,7 +384,11 @@ def test_evidence_paper_draft_accepts_complete_reference_closed_manuscript() -> 
     assert tuple(item.section_name for item in result.proposal.sections) == (
         node_input.required_sections
     )
-    assert set(writing_node_types()) == {"evidence-paper-draft", "writing-taste"}
+    assert set(writing_node_types()) == {
+        "evidence-paper-draft",
+        "evidence-paper-revision",
+        "writing-taste",
+    }
     markdown = render_evidence_paper_markdown(result.proposal, input_data=node_input)
     assert markdown.startswith(
         "## Title\nScientific Taste for Autonomous Research\n\n## Abstract"

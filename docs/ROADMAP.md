@@ -723,6 +723,14 @@ identity and remote GPU inventory add lane-specific blockers.
 
 ## Writing Taste whole-paper closure
 
+- Reviewer-driven long-form revision is now a distinct bounded model node. It
+  revalidates the accepted source draft and target evidence projection, binds
+  exact paper/packet/report hashes, and leaves evidence or experiment concerns
+  blocked unless a later project state supplies a self-hashed closure proof.
+  Proof-backed treatments must cite the exact new evidence; the node has no
+  manuscript mutation, empirical execution, response-submission, or review-
+  closure authority. Deterministic revision materialization and original-
+  reviewer verification remain the next integration gate.
 - A typed argument contract now joins central question/answer, registered
   claims, reciprocal evidence, reader-facing carriers, section delivery,
   high-attention entry points, and material limitations without treating a

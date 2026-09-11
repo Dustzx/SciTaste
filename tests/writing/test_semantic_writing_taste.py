@@ -156,7 +156,11 @@ def test_semantic_writing_taste_node_accepts_bounded_advice() -> None:
     assert result.proposal.advisory_only is True
     assert result.advisory_only is True
     assert result.executable is False
-    assert set(writing_node_types()) == {"evidence-paper-draft", "writing-taste"}
+    assert set(writing_node_types()) == {
+        "evidence-paper-draft",
+        "evidence-paper-revision",
+        "writing-taste",
+    }
 
 
 def test_semantic_writing_taste_receives_exact_venue_profile_context() -> None:

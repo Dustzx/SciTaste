@@ -4,19 +4,27 @@ from __future__ import annotations
 
 import re
 
+from scitaste.model_nodes.backends import StructuredModelBackend
 from scitaste.model_nodes.models import NodeContext, NodePolicy
-from scitaste.model_nodes.nodes import ModelNode
+from scitaste.model_nodes.nodes import ModelNode, NodeNotApplicableError
 from scitaste.model_nodes.runtime import ModelNodeRegistration
 from scitaste.writing.semantic_models import (
     EVIDENCE_PAPER_DRAFT_NODE,
+    EVIDENCE_PAPER_REVISION_NODE,
     WRITING_TASTE_NODE,
     EvidencePaperDraftInput,
     EvidencePaperDraftProposal,
+    EvidencePaperParagraph,
     EvidencePaperParagraphRole,
+    EvidencePaperRevisionInput,
+    EvidencePaperRevisionProposal,
     PaperClaimSupport,
+    PaperRevisionRequirement,
+    PaperRevisionTreatmentMode,
     WritingRevisionAction,
     WritingTasteReviewProposal,
     WritingTasteSemanticInput,
+    paper_draft_proposal_sha256,
 )
 
 
@@ -137,6 +145,217 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
         if referenced_limitations != limitations:
             reasons.append("paper proposal does not state every material limitation explicitly")
         return sorted(set(reasons))
+
+
+class EvidencePaperRevisionNode(
+    ModelNode[EvidencePaperRevisionInput, EvidencePaperRevisionProposal]
+):
+    """Revise admitted prose without granting evidence or review-closure authority."""
+
+    node_name = EVIDENCE_PAPER_REVISION_NODE
+    prompt_version = "evidence-paper-revision-v1"
+    system_instruction = (
+        "Revise the supplied accepted paper only within the target draft evidence scope and "
+        "the exact reviewer concerns. Return one treatment for every concern. Use "
+        "prose_revision only for text-only concerns. A concern requiring evidence or an "
+        "experiment must remain pending unless the input contains a deterministic closure "
+        "proof; never infer a proof from reviewer prose or from the manuscript. For a proved "
+        "concern, integrate only the proof-bound evidence and completed experiment IDs into "
+        "paragraphs that explicitly reference that evidence. Preserve the target section order, "
+        "registered claims, citations, numeric vocabulary, and all material limitations. Put "
+        "citation identifiers only in citation_ids and never write internal identifiers into "
+        "reader-facing text. Do not say that a concern is resolved, closed, accepted, or "
+        "reviewer-verified. This output is proposal-only: do not write files, run experiments, "
+        "call tools, mutate state, submit a response, or impersonate the original reviewer."
+    )
+    input_model = EvidencePaperRevisionInput
+    output_model = EvidencePaperRevisionProposal
+
+    def _preflight(
+        self,
+        input_data: EvidencePaperRevisionInput,
+        *,
+        context: NodeContext,
+        backend: StructuredModelBackend,
+        policy: NodePolicy,
+    ) -> None:
+        super()._preflight(input_data, context=context, backend=backend, policy=policy)
+        proofs = input_data.closure_proof_by_concern
+        if not any(
+            concern.requirement is PaperRevisionRequirement.TEXT_ONLY
+            or concern.concern_id in proofs
+            for concern in input_data.concerns
+        ):
+            raise NodeNotApplicableError(
+                "paper revision has no prose-addressable or proof-backed concern"
+            )
+
+    def _proposal_rejections(
+        self,
+        proposal: EvidencePaperRevisionProposal,
+        *,
+        input_data: EvidencePaperRevisionInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        reasons: list[str] = []
+        if proposal.input_fingerprint != input_data.fingerprint:
+            reasons.append("paper revision targets a different review projection")
+        if proposal.source_proposal_sha256 != paper_draft_proposal_sha256(
+            input_data.prior_proposal
+        ):
+            reasons.append("paper revision targets a different source proposal")
+        if proposal.source_paper_manifest_sha256 != input_data.source_paper_manifest_sha256:
+            reasons.append("paper revision targets a different source paper")
+        if proposal.review_packet_sha256 != input_data.review_packet_sha256:
+            reasons.append("paper revision targets a different review packet")
+        if proposal.source_report_sha256s != input_data.source_report_sha256s:
+            reasons.append("paper revision does not bind every source report")
+
+        source_context = NodeContext.model_validate(
+            context.model_copy(
+                update={
+                    "claim_ids": [
+                        item.claim_id for item in input_data.source_draft_input.claims
+                    ],
+                    "evidence_ids": [
+                        item.evidence_id for item in input_data.source_draft_input.evidence
+                    ],
+                    "section_ids": list(input_data.source_draft_input.required_sections),
+                }
+            ).model_dump(mode="json")
+        )
+        reasons.extend(
+            f"source draft: {reason}"
+            for reason in EvidencePaperDraftNode()._proposal_rejections(
+                input_data.prior_proposal,
+                input_data=input_data.source_draft_input,
+                context=source_context,
+                policy=policy,
+            )
+        )
+        reasons.extend(
+            f"revised draft: {reason}"
+            for reason in EvidencePaperDraftNode()._proposal_rejections(
+                proposal.revised_draft,
+                input_data=input_data.target_draft_input,
+                context=context,
+                policy=policy,
+            )
+        )
+
+        concerns = {item.concern_id: item for item in input_data.concerns}
+        proofs = input_data.closure_proof_by_concern
+        treatments = {item.concern_id: item for item in proposal.treatments}
+        if set(treatments) != set(concerns):
+            reasons.append("paper revision must treat every review concern exactly once")
+        expected_blocked = {
+            item.concern_id
+            for item in input_data.concerns
+            if item.requirement is not PaperRevisionRequirement.TEXT_ONLY
+            and item.concern_id not in proofs
+        }
+        if set(proposal.blocked_concern_ids) != expected_blocked:
+            reasons.append("paper revision blocked concerns differ from missing closure proofs")
+
+        revised_paragraphs = _paper_paragraphs(proposal.revised_draft)
+        source_paragraphs = _paper_paragraphs(input_data.prior_proposal)
+        for concern_id, concern in concerns.items():
+            treatment = treatments.get(concern_id)
+            if treatment is None:
+                continue
+            proof = proofs.get(concern_id)
+            expected_mode = _expected_revision_mode(concern.requirement, proof is not None)
+            if treatment.mode is not expected_mode:
+                reasons.append(
+                    f"concern {concern_id!r} uses a treatment inconsistent with its evidence gate"
+                )
+            unknown_targets = set(treatment.target_paragraph_ids) - set(revised_paragraphs)
+            if unknown_targets:
+                reasons.append(
+                    f"concern {concern_id!r} targets an unknown revised paragraph"
+                )
+            if expected_mode is PaperRevisionTreatmentMode.PROSE_REVISION:
+                if not treatment.target_paragraph_ids:
+                    reasons.append(f"concern {concern_id!r} has no proposed prose edit")
+                if treatment.evidence_ids or treatment.experiment_ids:
+                    reasons.append(
+                        f"text-only concern {concern_id!r} claims evidence or experiment authority"
+                    )
+                if treatment.target_paragraph_ids and not any(
+                    source_paragraphs.get(paragraph_id)
+                    != revised_paragraphs.get(paragraph_id)
+                    for paragraph_id in treatment.target_paragraph_ids
+                ):
+                    reasons.append(f"concern {concern_id!r} does not change its target prose")
+            elif expected_mode in {
+                PaperRevisionTreatmentMode.PENDING_EVIDENCE,
+                PaperRevisionTreatmentMode.PENDING_EXPERIMENT,
+            }:
+                if (
+                    treatment.target_paragraph_ids
+                    or treatment.evidence_ids
+                    or treatment.experiment_ids
+                ):
+                    reasons.append(
+                        f"blocked concern {concern_id!r} cannot claim a revision treatment"
+                    )
+            elif proof is not None:
+                expected_evidence = {item.evidence_id for item in proof.new_evidence}
+                expected_experiments = {item.experiment_id for item in proof.experiments}
+                if set(treatment.evidence_ids) != expected_evidence:
+                    reasons.append(
+                        f"concern {concern_id!r} does not bind its proved evidence exactly"
+                    )
+                if set(treatment.experiment_ids) != expected_experiments:
+                    reasons.append(
+                        f"concern {concern_id!r} does not bind its proved experiments exactly"
+                    )
+                if not treatment.target_paragraph_ids or not any(
+                    set(revised_paragraphs[paragraph_id].evidence_ids) & expected_evidence
+                    for paragraph_id in treatment.target_paragraph_ids
+                    if paragraph_id in revised_paragraphs
+                ):
+                    reasons.append(
+                        f"concern {concern_id!r} does not integrate proved evidence into prose"
+                    )
+
+        if paper_draft_proposal_sha256(
+            proposal.revised_draft
+        ) == paper_draft_proposal_sha256(
+            input_data.prior_proposal
+        ):
+            reasons.append("paper revision leaves the source proposal unchanged")
+        return sorted(set(reasons))
+
+
+def _paper_paragraphs(
+    proposal: EvidencePaperDraftProposal,
+) -> dict[str, EvidencePaperParagraph]:
+    paragraphs = [
+        proposal.abstract,
+        *(paragraph for section in proposal.sections for paragraph in section.paragraphs),
+    ]
+    return {item.paragraph_id: item for item in paragraphs}
+
+
+def _expected_revision_mode(
+    requirement: PaperRevisionRequirement,
+    has_proof: bool,
+) -> PaperRevisionTreatmentMode:
+    if requirement is PaperRevisionRequirement.TEXT_ONLY:
+        return PaperRevisionTreatmentMode.PROSE_REVISION
+    if requirement is PaperRevisionRequirement.EXPERIMENT:
+        return (
+            PaperRevisionTreatmentMode.EXPERIMENT_INTEGRATED
+            if has_proof
+            else PaperRevisionTreatmentMode.PENDING_EXPERIMENT
+        )
+    return (
+        PaperRevisionTreatmentMode.EVIDENCE_INTEGRATED
+        if has_proof
+        else PaperRevisionTreatmentMode.PENDING_EVIDENCE
+    )
 
 
 def render_evidence_paper_markdown(
@@ -281,6 +500,11 @@ def writing_node_types() -> dict[str, ModelNodeRegistration]:
             EvidencePaperDraftInput,
             EvidencePaperDraftProposal,
         ),
+        EVIDENCE_PAPER_REVISION_NODE: ModelNodeRegistration(
+            EvidencePaperRevisionNode,
+            EvidencePaperRevisionInput,
+            EvidencePaperRevisionProposal,
+        ),
         WRITING_TASTE_NODE: ModelNodeRegistration(
             WritingTasteNode,
             WritingTasteSemanticInput,
@@ -291,8 +515,10 @@ def writing_node_types() -> dict[str, ModelNodeRegistration]:
 
 __all__ = [
     "EVIDENCE_PAPER_DRAFT_NODE",
+    "EVIDENCE_PAPER_REVISION_NODE",
     "WRITING_TASTE_NODE",
     "EvidencePaperDraftNode",
+    "EvidencePaperRevisionNode",
     "WritingTasteNode",
     "render_evidence_paper_markdown",
     "writing_node_types",

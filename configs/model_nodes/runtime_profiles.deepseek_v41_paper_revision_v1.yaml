@@ -1,0 +1,11 @@
+# Content-addressed profile set for reviewer-driven paper revision.
+# Live execution still requires a separately approved runtime config, priced
+# backend config, environment credential, and the caller's --allow-live switch.
+schema_version: "1.0"
+profile_set_id: deepseek-v41-paper-revision-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_deepseek_v41flash_paper_revision_v1.yaml
+    sha256: 71ba084505868e9b849e15b43c4963273c013e4039135ecb4799a314c8beb9f1
+    profile_sha256: 594feb50b98c401c34f328e9799920e1feddbda45d0de4bb2d1884dff29cc3be

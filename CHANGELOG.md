@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- Reviewer-driven full-paper revision is now a registered proposal-only model
+  node. Its typed input binds the accepted source draft, target evidence scope,
+  paper and review hashes, every concern, and optional self-hashed state-derived
+  closure proofs. Text-only concerns may change prose; evidence and experiment
+  concerns remain explicitly blocked without a valid proof, while proof-backed
+  treatments must cite exactly the new registered evidence in revised
+  paragraphs. The node cannot write files, run experiments, submit a response,
+  close review, or impersonate the original reviewer. A separate content-
+  addressed DeepSeek V4.1 Flash profile provides the long-form envelope without
+  enabling live execution by itself.
+
 - Project conversations now expose an explicit bounded-context control. A
   follow-up may select either no history or the latest eight immutable turns;
   the server revalidates their project, conversation, identity, and order before

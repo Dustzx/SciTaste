@@ -73,6 +73,15 @@ projection creates research obligations for evidence, method, claim, or
 communication work; it does not directly mutate canonical state or close a
 concern with prose alone.
 
+The additive `evidence-paper-revision` node enforces the same boundary at the
+long-form manuscript layer. It may revise text-only concerns and integrate new
+evidence only when a later project-state proof binds the new evidence, target
+claims, evidence type, and any completed experiment. Without that proof, the
+typed treatment remains pending and the node is not invoked when every concern
+is blocked. Even a proof-backed revision is only a manuscript proposal: review
+closure still requires a registered new paper, an author response, and exact
+verification by the original reviewer.
+
 ## Bounded model reviewer
 
 `venue-paper-review` is a proposal-only model node for an exact anonymous paper

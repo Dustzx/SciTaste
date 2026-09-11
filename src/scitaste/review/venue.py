@@ -761,6 +761,19 @@ def inspect_venue_review(
     return round_record
 
 
+def load_venue_review_reports(
+    runtime: ProjectRuntime,
+    project_id: str,
+    review_id: str,
+) -> tuple[VenueReviewReport, ...]:
+    """Return every admitted report after rehashing the complete review round."""
+
+    round_record = inspect_venue_review(runtime, project_id, review_id)
+    root = runtime.projects_root / project_id / "reviews" / review_id
+    reports = _load_reports(root, round_record)
+    return tuple(reports[key] for key in sorted(reports))
+
+
 def load_venue_review_packet(
     runtime: ProjectRuntime, project_id: str, review_id: str
 ) -> VenueReviewPacket:

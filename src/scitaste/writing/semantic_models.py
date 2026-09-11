@@ -10,11 +10,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from scitaste.schema.review import ConcernCategory, ConcernSeverity
 from scitaste.writing.taste import WritingTasteDimension, WritingTasteLevel
 from scitaste.writing.venue_taste import VenueWritingTasteContext
 
 WRITING_TASTE_NODE = "writing-taste"
 EVIDENCE_PAPER_DRAFT_NODE = "evidence-paper-draft"
+EVIDENCE_PAPER_REVISION_NODE = "evidence-paper-revision"
 _IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
 _BIBTEX_KEY = r"^[A-Za-z][A-Za-z0-9_:-]*$"
 _NUMBER = re.compile(
@@ -414,8 +416,326 @@ class EvidencePaperDraftProposal(WritingSemanticModel):
     def word_count(self) -> int:
         return len(self.complete_text.split())
 
+
+class PaperRevisionRequirement(StrEnum):
+    TEXT_ONLY = "text_only"
+    EVIDENCE = "evidence"
+    EXPERIMENT = "experiment"
+
+
+class PaperRevisionTreatmentMode(StrEnum):
+    PROSE_REVISION = "prose_revision"
+    EVIDENCE_INTEGRATED = "evidence_integrated"
+    EXPERIMENT_INTEGRATED = "experiment_integrated"
+    PENDING_EVIDENCE = "pending_evidence"
+    PENDING_EXPERIMENT = "pending_experiment"
+
+
+_EXPERIMENT_CONCERN_CATEGORIES = {
+    ConcernCategory.MISSING_EVIDENCE,
+    ConcernCategory.MISSING_BASELINE,
+    ConcernCategory.VALIDITY,
+}
+_EVIDENCE_CONCERN_CATEGORIES = {
+    ConcernCategory.ANALYSIS,
+    ConcernCategory.METHOD,
+}
+
+
+class PaperRevisionConcernInput(WritingSemanticModel):
+    concern_id: str = Field(pattern=_IDENTIFIER)
+    source_report_id: str = Field(pattern=_IDENTIFIER)
+    source_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    category: ConcernCategory
+    severity: ConcernSeverity
+    text: str = Field(min_length=1, max_length=16_000)
+    target_claim_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    target_section: str | None = Field(default=None, min_length=1, max_length=500)
+    requires_new_evidence: bool = False
+    requires_new_experiment: bool = False
+    required_evidence_types: tuple[str, ...] = Field(default=(), max_length=100)
+
+    @field_validator("target_claim_ids", "required_evidence_types")
+    @classmethod
+    def concern_values_are_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper revision concern values must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def declared_requirements_are_consistent(self) -> PaperRevisionConcernInput:
+        if self.requires_new_experiment and not self.requires_new_evidence:
+            raise ValueError("an experimental concern must require new evidence")
+        if self.required_evidence_types and not self.requires_new_evidence:
+            raise ValueError("required evidence types require new evidence")
+        return self
+
+    @property
+    def requirement(self) -> PaperRevisionRequirement:
+        if self.requires_new_experiment or self.category in _EXPERIMENT_CONCERN_CATEGORIES:
+            return PaperRevisionRequirement.EXPERIMENT
+        if (
+            self.requires_new_evidence
+            or self.required_evidence_types
+            or self.category in _EVIDENCE_CONCERN_CATEGORIES
+        ):
+            return PaperRevisionRequirement.EVIDENCE
+        return PaperRevisionRequirement.TEXT_ONLY
+
+
+class PaperRevisionEvidenceProofItem(WritingSemanticModel):
+    evidence_id: str = Field(pattern=_IDENTIFIER)
+    evidence_type: str = Field(min_length=1, max_length=500)
+    target_claim_ids: tuple[str, ...] = Field(min_length=1, max_length=100)
+    experiment_id: str | None = Field(default=None, pattern=_IDENTIFIER)
+
+    @field_validator("target_claim_ids")
+    @classmethod
+    def claims_are_sorted_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("revision proof claims must be sorted and unique")
+        return values
+
+
+class PaperRevisionExperimentProofItem(WritingSemanticModel):
+    experiment_id: str = Field(pattern=_IDENTIFIER)
+    status: Literal["completed"]
+    result_locator: str = Field(min_length=1, max_length=1_000)
+    result_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class PaperRevisionClosureProof(WritingSemanticModel):
+    """Deterministic state-derived proof; never part of model-authored output."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    proof_id: str = Field(pattern=_IDENTIFIER)
+    concern_id: str = Field(pattern=_IDENTIFIER)
+    opened_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    closed_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    opened_revision: int = Field(ge=0)
+    closed_revision: int = Field(ge=1)
+    evidence_ids_at_open: tuple[str, ...] = Field(default=(), max_length=2_000)
+    new_evidence: tuple[PaperRevisionEvidenceProofItem, ...] = Field(min_length=1, max_length=100)
+    experiments: tuple[PaperRevisionExperimentProofItem, ...] = Field(default=(), max_length=32)
+    proof_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("evidence_ids_at_open")
+    @classmethod
+    def open_evidence_is_sorted_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("open evidence IDs must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def proof_is_new_and_self_hashed(self) -> PaperRevisionClosureProof:
+        if self.closed_revision <= self.opened_revision:
+            raise ValueError("revision closure proof requires a later state revision")
+        if self.closed_state_sha256 == self.opened_state_sha256:
+            raise ValueError("revision closure proof requires a changed state hash")
+        evidence_ids = [item.evidence_id for item in self.new_evidence]
+        experiment_ids = [item.experiment_id for item in self.experiments]
+        if len(evidence_ids) != len(set(evidence_ids)):
+            raise ValueError("revision closure proof evidence IDs must be unique")
+        if len(experiment_ids) != len(set(experiment_ids)):
+            raise ValueError("revision closure proof experiment IDs must be unique")
+        if set(evidence_ids) & set(self.evidence_ids_at_open):
+            raise ValueError("revision closure proof evidence must be new")
+        if {
+            item.experiment_id
+            for item in self.new_evidence
+            if item.experiment_id is not None
+        } - set(experiment_ids):
+            raise ValueError("revision evidence references an unproved experiment")
+        expected = _content_sha256(self.model_dump(mode="json", exclude={"proof_sha256"}))
+        if self.proof_sha256 != expected:
+            raise ValueError("revision closure proof hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> PaperRevisionClosureProof:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("proof_sha256", None)
+        payload["new_evidence"] = tuple(
+            item
+            if isinstance(item, PaperRevisionEvidenceProofItem)
+            else PaperRevisionEvidenceProofItem.model_validate(item)
+            for item in payload.get("new_evidence", ())
+        )
+        payload["experiments"] = tuple(
+            item
+            if isinstance(item, PaperRevisionExperimentProofItem)
+            else PaperRevisionExperimentProofItem.model_validate(item)
+            for item in payload.get("experiments", ())
+        )
+        unsigned = cls.model_construct(proof_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            proof_sha256=_content_sha256(
+                unsigned.model_dump(mode="json", exclude={"proof_sha256"})
+            ),
+        )
+
+
+class EvidencePaperRevisionInput(WritingSemanticModel):
+    """One accepted draft, a target evidence scope, and exact review obligations."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    source_paper_directory: str = Field(pattern=_IDENTIFIER)
+    target_manuscript_id: str = Field(pattern=_IDENTIFIER)
+    source_paper_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    review_packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_report_sha256s: tuple[str, ...] = Field(min_length=1, max_length=8)
+    source_draft_input: EvidencePaperDraftInput
+    target_draft_input: EvidencePaperDraftInput
+    prior_proposal: EvidencePaperDraftProposal
+    concerns: tuple[PaperRevisionConcernInput, ...] = Field(min_length=1, max_length=320)
+    closure_proofs: tuple[PaperRevisionClosureProof, ...] = Field(default=(), max_length=320)
+
+    @field_validator("source_report_sha256s")
+    @classmethod
+    def report_hashes_are_closed(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper revision report hashes must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def revision_scope_is_closed(self) -> EvidencePaperRevisionInput:
+        if self.prior_proposal.input_fingerprint != self.source_draft_input.fingerprint:
+            raise ValueError("prior paper proposal targets a different source draft input")
+        if self.source_draft_input.manuscript_id != self.source_paper_directory:
+            raise ValueError("source draft input differs from the reviewed paper directory")
+        if self.target_draft_input.manuscript_id != self.target_manuscript_id:
+            raise ValueError("target draft input differs from the revision manuscript identity")
+        if self.source_paper_directory == self.target_manuscript_id:
+            raise ValueError("paper revision requires a new manuscript identity")
+        concern_ids = [item.concern_id for item in self.concerns]
+        if len(concern_ids) != len(set(concern_ids)):
+            raise ValueError("paper revision concern identifiers must be unique")
+        if {item.source_report_sha256 for item in self.concerns} - set(
+            self.source_report_sha256s
+        ):
+            raise ValueError("paper revision concern references an unbound report")
+        known_claims = {item.claim_id for item in self.target_draft_input.claims}
+        if any(set(item.target_claim_ids) - known_claims for item in self.concerns):
+            raise ValueError("paper revision concern references an unknown target claim")
+        known_sections = set(self.target_draft_input.required_sections)
+        if any(
+            item.target_section is not None and item.target_section not in known_sections
+            for item in self.concerns
+        ):
+            raise ValueError("paper revision concern references an unknown target section")
+        proof_ids = [item.proof_id for item in self.closure_proofs]
+        proof_concerns = [item.concern_id for item in self.closure_proofs]
+        if len(proof_ids) != len(set(proof_ids)) or len(proof_concerns) != len(
+            set(proof_concerns)
+        ):
+            raise ValueError("paper revision closure proofs must be unique")
+        concerns = {item.concern_id: item for item in self.concerns}
+        target_evidence = {item.evidence_id: item for item in self.target_draft_input.evidence}
+        target_claims = {item.claim_id: item for item in self.target_draft_input.claims}
+        source_evidence = {item.evidence_id for item in self.source_draft_input.evidence}
+        for proof in self.closure_proofs:
+            concern = concerns.get(proof.concern_id)
+            if concern is None:
+                raise ValueError("paper revision proof references an unknown concern")
+            if concern.requirement is PaperRevisionRequirement.TEXT_ONLY:
+                raise ValueError("a text-only concern cannot claim an evidence closure proof")
+            if set(proof.evidence_ids_at_open) != source_evidence:
+                raise ValueError("revision proof open evidence differs from the source draft")
+            for new_item in proof.new_evidence:
+                target = target_evidence.get(new_item.evidence_id)
+                if target is None or target.evidence_type != new_item.evidence_type:
+                    raise ValueError("revision proof evidence differs from target draft evidence")
+                if set(new_item.target_claim_ids) - set(concern.target_claim_ids):
+                    raise ValueError("revision proof evidence targets claims outside its concern")
+                if any(
+                    new_item.evidence_id not in target_claims[claim_id].evidence_ids
+                    for claim_id in new_item.target_claim_ids
+                ):
+                    raise ValueError("revision proof evidence is not bound to its target claim")
+                if (
+                    concern.required_evidence_types
+                    and new_item.evidence_type not in concern.required_evidence_types
+                ):
+                    raise ValueError("revision proof evidence type does not satisfy its concern")
+            if concern.requirement is PaperRevisionRequirement.EXPERIMENT:
+                experiments = {item.experiment_id for item in proof.experiments}
+                if not experiments or not any(
+                    item.experiment_id in experiments for item in proof.new_evidence
+                ):
+                    raise ValueError("experimental concern requires completed experiment evidence")
+        return self
+
+    @property
+    def fingerprint(self) -> str:
+        return _content_sha256(self.model_dump(mode="json"))
+
+    @property
+    def closure_proof_by_concern(self) -> dict[str, PaperRevisionClosureProof]:
+        return {item.concern_id: item for item in self.closure_proofs}
+
+
+class PaperRevisionTreatment(WritingSemanticModel):
+    concern_id: str = Field(pattern=_IDENTIFIER)
+    mode: PaperRevisionTreatmentMode
+    target_paragraph_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    evidence_ids: tuple[str, ...] = Field(default=(), max_length=100)
+    experiment_ids: tuple[str, ...] = Field(default=(), max_length=32)
+    rationale: str = Field(min_length=1, max_length=4_000)
+
+    @field_validator("target_paragraph_ids", "evidence_ids", "experiment_ids")
+    @classmethod
+    def references_are_sorted_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper revision treatment references must be sorted and unique")
+        return values
+
+
+class EvidencePaperRevisionProposal(WritingSemanticModel):
+    """Proposal-only revision; review closure remains original-reviewer authority."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    input_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_paper_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    review_packet_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_report_sha256s: tuple[str, ...] = Field(min_length=1, max_length=8)
+    revised_draft: EvidencePaperDraftProposal
+    treatments: tuple[PaperRevisionTreatment, ...] = Field(min_length=1, max_length=320)
+    blocked_concern_ids: tuple[str, ...] = Field(default=(), max_length=320)
+    revision_summary: str = Field(min_length=1, max_length=8_000)
+    proposal_only: Literal[True] = True
+    manuscript_mutation_authorized: Literal[False] = False
+    review_closure_authorized: Literal[False] = False
+    empirical_execution_authorized: Literal[False] = False
+
+    @field_validator("source_report_sha256s", "blocked_concern_ids")
+    @classmethod
+    def closed_sets_are_sorted_unique(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        if tuple(sorted(set(values))) != values:
+            raise ValueError("paper revision closed sets must be sorted and unique")
+        return values
+
+    @model_validator(mode="after")
+    def local_revision_structure_is_closed(self) -> EvidencePaperRevisionProposal:
+        treatment_ids = [item.concern_id for item in self.treatments]
+        if len(treatment_ids) != len(set(treatment_ids)):
+            raise ValueError("paper revision treatments must cover unique concerns")
+        return self
+
+
+def paper_draft_proposal_sha256(proposal: EvidencePaperDraftProposal) -> str:
+    return _content_sha256(proposal.model_dump(mode="json"))
+
+
+def _content_sha256(payload: object) -> str:
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 __all__ = [
     "EVIDENCE_PAPER_DRAFT_NODE",
+    "EVIDENCE_PAPER_REVISION_NODE",
     "WRITING_TASTE_NODE",
     "EvidencePaperCitationInput",
     "EvidencePaperClaimInput",
@@ -425,11 +745,21 @@ __all__ = [
     "EvidencePaperEvidenceInput",
     "EvidencePaperParagraph",
     "EvidencePaperParagraphRole",
+    "EvidencePaperRevisionInput",
+    "EvidencePaperRevisionProposal",
     "MaterialWritingLimitation",
     "PaperClaimSupport",
+    "PaperRevisionClosureProof",
+    "PaperRevisionConcernInput",
+    "PaperRevisionEvidenceProofItem",
+    "PaperRevisionExperimentProofItem",
+    "PaperRevisionRequirement",
+    "PaperRevisionTreatment",
+    "PaperRevisionTreatmentMode",
     "SemanticWritingTasteFinding",
     "WritingRevisionAction",
     "WritingTasteReviewProposal",
     "WritingTasteSectionInput",
     "WritingTasteSemanticInput",
+    "paper_draft_proposal_sha256",
 ]

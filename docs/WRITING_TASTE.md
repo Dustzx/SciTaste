@@ -230,13 +230,26 @@ identity. It then writes clean Markdown and a self-hashed `PAPER_DRAFT_TRACE.jso
 into the ordinary venue pipeline, which builds TeX/PDF, runs manuscript and
 submission gates, registers the full bundle under the project, and binds the
 draft hashes into `PaperManifest`. No second model call occurs during this
-materialization. Feeding review obligations into a bounded revision node remains
-a subsequent workflow step.
+materialization.
 
-The committed `deepseek-v41flash-paper-draft` profile allows up to 32,768 output
-tokens for this long-form task. It is separate from short semantic-review
-profiles and still requires all live-execution gates; no API call is made merely
-by loading or planning the profile.
+The registered `evidence-paper-revision` node consumes an admitted source draft,
+a separately supplied target evidence projection, exact paper/packet/report
+hashes, and typed reviewer concerns. It classifies the effective requirement
+from both flags and concern category, so missing-evidence, missing-baseline,
+analysis, method, and validity concerns cannot be downgraded to ordinary prose
+by an inconsistent report. Text-only concerns may propose paragraph changes.
+Evidence and experiment concerns stay in `pending_evidence` or
+`pending_experiment` unless the input contains a self-hashed closure proof built
+from a later project state; proof-backed revisions must integrate exactly the
+new evidence into named revised paragraphs. The proposal never calls a tool,
+writes a manuscript, submits a response, or closes review. Deterministic
+materialization and the original reviewer remain separate downstream gates.
+
+The committed `deepseek-v41flash-paper-draft` and
+`deepseek-v41flash-paper-revision` profiles each allow up to 32,768 output tokens
+for their distinct long-form tasks. They are separate from short semantic-review
+profiles and still require all live-execution gates; no API call is made merely
+by loading or planning either profile.
 
 ## SciTaste self-iteration
 

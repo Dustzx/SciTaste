@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from scitaste.schema.review import ConcernCategory, ConcernSeverity
 from scitaste.state.research_state import ReviewerConcern
@@ -20,6 +20,14 @@ class ReviewFeedback(BaseModel):
     requires_new_evidence: bool = False
     requires_new_experiment: bool = False
     required_evidence_types: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def evidence_requirements_are_consistent(self) -> ReviewFeedback:
+        if self.requires_new_experiment and not self.requires_new_evidence:
+            raise ValueError("a requested experiment must require new evidence")
+        if self.required_evidence_types and not self.requires_new_evidence:
+            raise ValueError("required evidence types require new evidence")
+        return self
 
 
 def parse_feedback(items: list[ReviewFeedback]) -> list[ReviewerConcern]:
