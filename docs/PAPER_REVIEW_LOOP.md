@@ -124,6 +124,27 @@ typed input explicitly authorizes title revision; the project compiler keeps
 that authority disabled. The optional output is created exclusively and is
 never overwritten.
 
+For a model-assisted revision, the same projection can be wrapped in a strict,
+no-secret runtime configuration without provider access:
+
+```bash
+.venv/bin/scitaste project paper review revision-runtime-config \
+  --project-id <project-id> --review-id <review-id> \
+  --source-adoption-run-id <adoption-run-id> \
+  --target-manuscript-id <new-paper-directory> \
+  --profile-set configs/model_nodes/runtime_profiles.deepseek_v41_paper_revision_v1.yaml \
+  --profile-id deepseek-v41flash-paper-revision \
+  --backend-config <ignored-local-backend-config.yaml> \
+  --expected-revision <revision> --output <ignored-runtime-config.json> \
+  --outputs-root outputs
+```
+
+The generated configuration pins the profile, admission limits, exact context
+hash, claims, evidence, sections, and blocked concerns. It contains only an
+environment-variable credential name. A provider call still requires a
+separately live-enabled backend plus both runtime live switches; config
+generation itself never calls a model or executes an experiment.
+
 An accepted revision is materialized without another model call:
 
 ```bash

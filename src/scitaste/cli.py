@@ -179,7 +179,10 @@ from scitaste.writing.paper_adoption import (
     publish_project_paper_adoption,
 )
 from scitaste.writing.paper_draft_materialization import materialize_accepted_paper_draft
-from scitaste.writing.paper_revision_context import prepare_project_paper_revision_context
+from scitaste.writing.paper_revision_context import (
+    build_project_paper_revision_runtime_config,
+    prepare_project_paper_revision_context,
+)
 from scitaste.writing.paper_revision_materialization import (
     materialize_accepted_paper_revision,
 )
@@ -956,6 +959,29 @@ def build_parser() -> argparse.ArgumentParser:
     review_revision_input.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(review_revision_input)
     review_revision_input.set_defaults(handler=_handle_project_paper_review_revision_input)
+
+    review_revision_runtime = project_paper_review_commands.add_parser(
+        "revision-runtime-config",
+        help="Build a profile-bound paper-revision invocation without calling a model",
+    )
+    review_revision_runtime.add_argument("--project-id", required=True)
+    review_revision_runtime.add_argument("--review-id", required=True)
+    review_revision_runtime.add_argument("--source-adoption-run-id", required=True)
+    review_revision_runtime.add_argument("--target-manuscript-id", required=True)
+    review_revision_runtime.add_argument(
+        "--evaluation-evidence-run-id", action="append", default=[]
+    )
+    review_revision_runtime.add_argument("--profile-set", type=Path, required=True)
+    review_revision_runtime.add_argument("--profile-id", required=True)
+    review_revision_runtime.add_argument("--backend-config", type=Path, required=True)
+    review_revision_runtime.add_argument("--expected-revision", type=int, required=True)
+    review_revision_runtime.add_argument("--seed", type=int, default=0)
+    review_revision_runtime.add_argument("--output", type=Path, required=True)
+    review_revision_runtime.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_revision_runtime)
+    review_revision_runtime.set_defaults(
+        handler=_handle_project_paper_review_revision_runtime_config
+    )
 
     register_model_node_pilot_cli(commands)
     register_model_node_runtime_cli(commands)
@@ -2845,6 +2871,79 @@ def _handle_project_paper_review_revision_input(args: argparse.Namespace) -> int
                 "context": prepared.bundle.model_dump(mode="json"),
                 "revision_input": prepared.input_data.model_dump(mode="json"),
                 "input_output": str(output) if output is not None else None,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_revision_runtime_config(args: argparse.Namespace) -> int:
+    evidence_run_ids = tuple(sorted(args.evaluation_evidence_run_id))
+    if len(evidence_run_ids) != len(set(evidence_run_ids)):
+        raise ValueError("evaluation-evidence run IDs must be unique")
+    profiles = load_model_node_profile_set(args.profile_set)
+    try:
+        profile = profiles.profiles[args.profile_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown model-node profile {args.profile_id!r}") from exc
+    prepared = prepare_project_paper_revision_context(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        review_id=args.review_id,
+        source_adoption_run_id=args.source_adoption_run_id,
+        target_manuscript_id=args.target_manuscript_id,
+        expected_revision=args.expected_revision,
+        evaluation_evidence_run_ids=evidence_run_ids,
+    )
+    config = build_project_paper_revision_runtime_config(
+        prepared,
+        profile=profile,
+        backend_config=load_structured_openai_compatible_config(args.backend_config),
+        seed=args.seed,
+    )
+    payload = (
+        json.dumps(
+            config.model_dump(mode="json", exclude_computed_fields=True),
+            indent=2,
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{args.output.name}.", suffix=".tmp", dir=args.output.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, args.output)
+    finally:
+        temporary.unlink(missing_ok=True)
+    print(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "status": "prepared",
+                "project_id": prepared.bundle.project_id,
+                "project_revision": prepared.bundle.project_revision,
+                "review_id": prepared.bundle.review_id,
+                "revision_context_sha256": prepared.bundle.record_sha256,
+                "input_fingerprint": prepared.input_data.fingerprint,
+                "blocked_concern_ids": prepared.bundle.blocked_concern_ids,
+                "profile_id": profile.profile_id,
+                "profile_fingerprint": profile.fingerprint,
+                "profile_set_sha256": profiles.source_sha256,
+                "backend_live_enabled": config.backend.config.live_enabled,
+                "runtime_config": str(args.output),
+                "runtime_config_sha256": hashlib.sha256(payload).hexdigest(),
+                "model_called": False,
+                "experiment_executed": False,
             },
             indent=2,
             ensure_ascii=False,

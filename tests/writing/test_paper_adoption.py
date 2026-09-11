@@ -21,6 +21,7 @@ from scitaste.model_nodes import (
     ScriptedStructuredBackend,
     ScriptedStructuredReply,
 )
+from scitaste.model_nodes.openai_compatible import load_structured_openai_compatible_config
 from scitaste.model_nodes.profiles import load_model_node_profile_set
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.review import (
@@ -42,6 +43,7 @@ from scitaste.state.research_state import ResearchState
 from scitaste.writing import (
     EVIDENCE_PAPER_REVISION_NODE,
     PaperArgumentContract,
+    build_project_paper_revision_runtime_config,
     inspect_project_paper_adoption,
     load_project_paper_adoption_source,
     prepare_project_paper_adoption,
@@ -919,3 +921,36 @@ def test_revision_input_cli_writes_only_an_explicit_new_file(
     assert runtime.open("adoption-project").revision == revision
     with pytest.raises(FileExistsError):
         args.handler(args)
+
+
+def test_revision_runtime_config_is_profile_bound_and_inert(tmp_path: Path) -> None:
+    runtime, revision = _reviewed_adoption(tmp_path)
+    prepared = prepare_project_paper_revision_context(
+        runtime,
+        project_id="adoption-project",
+        review_id="development-review",
+        source_adoption_run_id="adopt-paper-v1",
+        target_manuscript_id="paper-v2",
+        expected_revision=revision,
+    )
+    profile = load_model_node_profile_set(
+        "configs/model_nodes/runtime_profiles.deepseek_v41_paper_revision_v1.yaml"
+    ).profiles["deepseek-v41flash-paper-revision"]
+    backend = load_structured_openai_compatible_config(
+        "configs/model_nodes/deepseek_v41flash.priced_20260911.example.yaml"
+    )
+    config = build_project_paper_revision_runtime_config(
+        prepared,
+        profile=profile,
+        backend_config=backend,
+        seed=7,
+    )
+
+    assert config.node_name == EVIDENCE_PAPER_REVISION_NODE
+    assert config.backend.config.live_enabled is False
+    assert config.policy.allowed_tool_names == []
+    assert config.state_projection.state_snapshot_id == prepared.bundle.record_sha256
+    assert config.state_projection.state_revision == revision
+    assert config.state_projection.metadata["blocked_concern_ids"] == ["missing-baseline"]
+    assert config.node_input["title_revision_authorized"] is False
+    assert runtime.open("adoption-project").revision == revision

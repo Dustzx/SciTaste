@@ -30,6 +30,7 @@ from scitaste.writing.paper_draft_materialization import (
 from scitaste.writing.paper_revision_context import (
     PreparedProjectPaperRevisionContext,
     ProjectPaperRevisionContextBundle,
+    build_project_paper_revision_runtime_config,
     prepare_project_paper_revision_context,
 )
 from scitaste.writing.revision_trace import PaperRevisionTrace
@@ -147,6 +148,7 @@ __all__ = [
     "WritingTasteSemanticInput",
     "assess_paper_argument",
     "assess_writing_taste",
+    "build_project_paper_revision_runtime_config",
     "build_venue_writing_taste_context",
     "inspect_project_paper_adoption",
     "inspect_venue_writing_taste",

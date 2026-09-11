@@ -10,6 +10,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from scitaste.model_nodes.facade import ImmutableStateProjection
+from scitaste.model_nodes.models import NodePolicy
+from scitaste.model_nodes.openai_compatible import StructuredOpenAICompatibleConfig
+from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
+from scitaste.model_nodes.runtime import ModelNodeTrigger
+from scitaste.model_nodes.runtime_config import LiveRuntimeBackend, ModelNodeRuntimeConfig
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import (
     content_sha256,
@@ -29,6 +35,7 @@ from scitaste.writing.paper_adoption import (
     load_project_paper_adoption_source,
 )
 from scitaste.writing.semantic_models import (
+    EVIDENCE_PAPER_REVISION_NODE,
     EvidencePaperClaimInput,
     EvidencePaperDraftInput,
     EvidencePaperDraftProposal,
@@ -52,6 +59,7 @@ class ProjectPaperRevisionContextBundle(BaseModel):
 
     schema_version: Literal["1.0"] = "1.0"
     project_id: str
+    project_revision: int = Field(ge=0)
     review_id: str
     source_paper_directory: str
     source_adoption_run_id: str
@@ -315,6 +323,7 @@ def prepare_project_paper_revision_context(
     blocked = known_concerns - text_only - proof_backed
     context = ProjectPaperRevisionContextBundle.create(
         project_id=project_id,
+        project_revision=snapshot.revision,
         review_id=review_id,
         source_paper_directory=adoption.paper_directory,
         source_adoption_run_id=source_adoption_run_id,
@@ -339,6 +348,72 @@ def prepare_project_paper_revision_context(
         input_data=input_data,
         source_input=source_input,
         source_proposal=source_proposal,
+    )
+
+
+def build_project_paper_revision_runtime_config(
+    prepared: PreparedProjectPaperRevisionContext,
+    *,
+    profile: ModelNodeProfile,
+    backend_config: StructuredOpenAICompatibleConfig,
+    seed: int = 0,
+) -> ModelNodeRuntimeConfig:
+    """Build a no-secret, profile-bound revision invocation without calling a model."""
+
+    if EVIDENCE_PAPER_REVISION_NODE not in profile.allowed_node_names:
+        raise ValueError("selected model profile does not permit evidence-paper-revision")
+    if (backend_config.provider, backend_config.model) != (profile.provider, profile.model):
+        raise ValueError("paper-revision backend identity differs from its selected profile")
+    if backend_config.max_output_tokens < profile.generation.max_output_tokens:
+        raise ValueError("paper-revision backend output ceiling is below its selected profile")
+    policy = NodePolicy(
+        policy_id=f"{profile.profile_id}-policy-v1",
+        enabled=True,
+        allowed_node_names=[EVIDENCE_PAPER_REVISION_NODE],
+        expected_backend=profile.provider,
+        expected_model=profile.model,
+        allowed_tool_names=list(profile.admission.allowed_tool_names),
+        max_request_bytes=profile.admission.max_request_bytes,
+        max_input_tokens=profile.admission.max_input_tokens,
+        max_output_tokens=profile.admission.max_output_tokens,
+        max_total_tokens=profile.admission.max_total_tokens,
+        max_api_cost_usd=profile.cumulative_project.max_api_cost_usd,
+        max_latency_ms=profile.admission.max_latency_ms,
+    )
+    validate_profile_binding(
+        profile,
+        policy,
+        node_name=EVIDENCE_PAPER_REVISION_NODE,
+    )
+    target = prepared.input_data.target_draft_input
+    return ModelNodeRuntimeConfig(
+        node_name=EVIDENCE_PAPER_REVISION_NODE,
+        node_input=prepared.input_data.model_dump(mode="json"),
+        state_projection=ImmutableStateProjection(
+            project_id=prepared.bundle.project_id,
+            state_snapshot_id=prepared.bundle.record_sha256,
+            state_revision=prepared.bundle.project_revision,
+            stage="COMMUNICATION",
+            claim_ids=tuple(item.claim_id for item in target.claims),
+            evidence_ids=tuple(item.evidence_id for item in target.evidence),
+            section_ids=target.required_sections,
+            metadata={
+                "review_id": prepared.bundle.review_id,
+                "source_adoption_run_id": prepared.bundle.source_adoption_run_id,
+                "revision_context_sha256": prepared.bundle.record_sha256,
+                "blocked_concern_ids": list(prepared.bundle.blocked_concern_ids),
+            },
+        ),
+        trigger=ModelNodeTrigger(
+            trigger_id=f"revise-{prepared.bundle.review_id}",
+            reason=(
+                "Revise prose-addressable and proof-backed concerns while preserving "
+                "every unproved research obligation."
+            ),
+        ),
+        policy=policy,
+        backend=LiveRuntimeBackend(config=backend_config),
+        seed=seed,
     )
 
 
@@ -399,5 +474,6 @@ def _read_admitted_state(
 __all__ = [
     "PreparedProjectPaperRevisionContext",
     "ProjectPaperRevisionContextBundle",
+    "build_project_paper_revision_runtime_config",
     "prepare_project_paper_revision_context",
 ]
