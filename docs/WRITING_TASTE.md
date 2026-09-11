@@ -213,14 +213,25 @@ section-order drift, excess words, and any numeric token not authorized by the
 input.
 
 The trace sidecar retains internal identifiers for audit, while the Markdown
-renderer deliberately removes those identifiers from the paper prose. Names
+renderer rejects those identifiers in model-authored text and emits the title
+contract expected by the venue builder. Citation references remain typed IDs in
+the proposal and are deterministically rendered as `\\citep{<bibtex-key>}` only
+after their registered BibTeX keys are found in the supplied bibliography. Names
 such as run IDs, scenario IDs, and internal diagnosis labels therefore have no
 reason to appear in a reader-facing manuscript unless they are intentionally
 included as scientific content. The node is still proposal-only: it does not
 run experiments, alter project state, claim independent review, or make a paper
-submission-ready. Materializing the accepted proposal into the TeX/PDF build and
-feeding review obligations into a bounded revision node are subsequent workflow
-steps.
+submission-ready.
+
+`scitaste project paper build-draft` is the deterministic ledger-to-paper bridge.
+It revalidates the complete model-node chain, accepted typed result, current
+proposal admission, project/run ownership, bibliography closure, and manuscript
+identity. It then writes clean Markdown and a self-hashed `PAPER_DRAFT_TRACE.json`
+into the ordinary venue pipeline, which builds TeX/PDF, runs manuscript and
+submission gates, registers the full bundle under the project, and binds the
+draft hashes into `PaperManifest`. No second model call occurs during this
+materialization. Feeding review obligations into a bounded revision node remains
+a subsequent workflow step.
 
 The committed `deepseek-v41flash-paper-draft` profile allows up to 32,768 output
 tokens for this long-form task. It is separate from short semantic-review

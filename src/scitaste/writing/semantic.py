@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from scitaste.model_nodes.models import NodeContext, NodePolicy
 from scitaste.model_nodes.nodes import ModelNode
 from scitaste.model_nodes.runtime import ModelNodeRegistration
@@ -30,6 +32,8 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
         "evidence supporting its referenced claims. Preserve unsupported or contradicted claims "
         "as explicit boundaries, preserve every material limitation, and do not invent numeric "
         "values. Report the complete sorted numeric-token inventory found in the generated text. "
+        "Put citation identifiers only in citation_ids; do not write citation commands or "
+        "internal identifiers into reader-facing text. "
         "This is a proposal only: do not mutate manuscript files, execute experiments, call "
         "tools, claim venue acceptance, or imply independent review."
     )
@@ -66,6 +70,22 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
             reasons.append("paper proposal contains an unauthorized numeric token")
         if proposal.word_count > input_data.maximum_words:
             reasons.append("paper proposal exceeds the approved word budget")
+        internal_ids = {
+            *claims,
+            *evidence,
+            *citations,
+            *limitations,
+            *(item.bibtex_key for item in input_data.citations),
+        }
+        leaked_ids = sorted(
+            identifier
+            for identifier in internal_ids
+            if _identifier_occurs(proposal.complete_text, identifier)
+        )
+        if leaked_ids:
+            reasons.append("paper proposal leaks internal identifiers into reader-facing text")
+        if re.search(r"\\cite[pt]?\{", proposal.complete_text):
+            reasons.append("paper proposal contains renderer-owned citation markup")
 
         paragraphs = [
             proposal.abstract,
@@ -119,24 +139,63 @@ class EvidencePaperDraftNode(ModelNode[EvidencePaperDraftInput, EvidencePaperDra
         return sorted(set(reasons))
 
 
-def render_evidence_paper_markdown(proposal: EvidencePaperDraftProposal) -> str:
+def render_evidence_paper_markdown(
+    proposal: EvidencePaperDraftProposal,
+    *,
+    input_data: EvidencePaperDraftInput,
+) -> str:
     """Render clean paper prose while keeping internal IDs in the typed sidecar."""
 
     validated = EvidencePaperDraftProposal.model_validate(proposal.model_dump(mode="json"))
+    bound_input = EvidencePaperDraftInput.model_validate(input_data.model_dump(mode="json"))
+    if validated.input_fingerprint != bound_input.fingerprint:
+        raise ValueError("paper proposal does not match the supplied draft input")
+    internal_ids = {
+        *(item.claim_id for item in bound_input.claims),
+        *(item.evidence_id for item in bound_input.evidence),
+        *(item.citation_id for item in bound_input.citations),
+        *(item.limitation_id for item in bound_input.material_limitations),
+        *(item.bibtex_key for item in bound_input.citations),
+    }
+    if any(_identifier_occurs(validated.complete_text, item) for item in internal_ids):
+        raise ValueError("reader-facing paper text contains an internal identifier")
+    if re.search(r"\\cite[pt]?\{", validated.complete_text):
+        raise ValueError("reader-facing paper text contains renderer-owned citation markup")
+    citation_keys = {item.citation_id: item.bibtex_key for item in bound_input.citations}
+
+    def render_paragraph(text: str, citation_ids: tuple[str, ...]) -> str:
+        try:
+            suffix = " ".join(f"\\citep{{{citation_keys[item]}}}" for item in citation_ids)
+        except KeyError as exc:
+            raise ValueError("paper paragraph references an unknown citation") from exc
+        return text if not suffix else f"{text} {suffix}"
+
     sections = "\n\n".join(
         "\n\n".join(
             [
-                f"## {section.section_name}",
-                *(paragraph.text for paragraph in section.paragraphs),
+                f"# {section.section_name}",
+                *(
+                    render_paragraph(paragraph.text, paragraph.citation_ids)
+                    for paragraph in section.paragraphs
+                ),
             ]
         )
         for section in validated.sections
     )
     return (
-        f"# {validated.title}\n\n"
-        f"## Abstract\n\n{validated.abstract.text}\n\n"
+        f"## Title\n{validated.title}\n\n"
+        f"## Abstract\n\n"
+        f"{render_paragraph(validated.abstract.text, validated.abstract.citation_ids)}\n\n"
         f"{sections}\n"
     )
+
+
+def _identifier_occurs(text: str, identifier: str) -> bool:
+    boundary = r"A-Za-z0-9_.:-"
+    return re.search(
+        rf"(?<![{boundary}]){re.escape(identifier)}(?![{boundary}])",
+        text,
+    ) is not None
 
 
 class WritingTasteNode(ModelNode[WritingTasteSemanticInput, WritingTasteReviewProposal]):

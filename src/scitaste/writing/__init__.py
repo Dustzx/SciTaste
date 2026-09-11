@@ -14,6 +14,11 @@ from scitaste.writing.argument import (
 from scitaste.writing.critics import WritingCriticSuite
 from scitaste.writing.drafter import ContractDrafter
 from scitaste.writing.narrative import NarrativeTasteReview, review_narrative
+from scitaste.writing.paper_draft_materialization import (
+    MaterializedPaperDraft,
+    PaperDraftTrace,
+    materialize_accepted_paper_draft,
+)
 from scitaste.writing.semantic import (
     EvidencePaperDraftNode,
     WritingTasteNode,
@@ -69,12 +74,14 @@ __all__ = [
     "EvidencePaperParagraphRole",
     "MaterialLimitationContract",
     "MaterialWritingLimitation",
+    "MaterializedPaperDraft",
     "NarrativeTasteReview",
     "PaperArchetype",
     "PaperArgumentAssessment",
     "PaperArgumentContract",
     "PaperArgumentGap",
     "PaperClaimSupport",
+    "PaperDraftTrace",
     "PaperEntryPointContract",
     "SectionDeliveryContract",
     "SemanticWritingTasteFinding",
@@ -94,6 +101,7 @@ __all__ = [
     "assess_writing_taste",
     "build_venue_writing_taste_context",
     "inspect_venue_writing_taste",
+    "materialize_accepted_paper_draft",
     "render_evidence_paper_markdown",
     "review_narrative",
     "writing_node_types",

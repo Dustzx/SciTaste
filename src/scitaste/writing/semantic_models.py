@@ -16,6 +16,7 @@ from scitaste.writing.venue_taste import VenueWritingTasteContext
 WRITING_TASTE_NODE = "writing-taste"
 EVIDENCE_PAPER_DRAFT_NODE = "evidence-paper-draft"
 _IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
+_BIBTEX_KEY = r"^[A-Za-z][A-Za-z0-9_:-]*$"
 _NUMBER = re.compile(
     r"(?<![A-Za-z0-9_.])(?:\d+(?:\.\d+)?%?)(?![A-Za-z0-9_]|\.\d)"
 )
@@ -240,6 +241,7 @@ class EvidencePaperEvidenceInput(WritingSemanticModel):
 
 class EvidencePaperCitationInput(WritingSemanticModel):
     citation_id: str = Field(pattern=_IDENTIFIER)
+    bibtex_key: str = Field(pattern=_BIBTEX_KEY)
     title: str = Field(min_length=1, max_length=2_000)
     relevance: str = Field(min_length=1, max_length=4_000)
 
@@ -304,6 +306,9 @@ class EvidencePaperDraftInput(WritingSemanticModel):
             raise ValueError("paper limitation identifiers must be unique")
         if not any(item.headline for item in self.claims):
             raise ValueError("paper draft requires at least one headline claim")
+        bibtex_keys = [item.bibtex_key for item in self.citations]
+        if len(bibtex_keys) != len(set(bibtex_keys)):
+            raise ValueError("paper-draft BibTeX keys must be unique")
         return self
 
     @property

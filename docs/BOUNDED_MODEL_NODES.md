@@ -79,7 +79,9 @@ cost telemetry is never admissible.
 `EvidencePaperDraftNode` is the long-form content path, not another placeholder
 renderer. Internal claim, evidence, citation, and limitation identifiers stay in
 the typed proposal sidecar; `render_evidence_paper_markdown` emits only clean
-paper prose. An empirical paragraph requires registered evidence, an unsupported
+paper prose using the venue builder's explicit Title/Abstract contract. Citation
+IDs are converted to registered BibTeX keys by the deterministic renderer rather
+than copied from model-authored citation markup. An empirical paragraph requires registered evidence, an unsupported
 claim cannot be presented as a result, and every number in the generated title
 and body must occur in the input's explicit numeric vocabulary. These checks do
 not establish that the evidence itself is correct, so the draft remains a
@@ -92,6 +94,12 @@ not a fixed limit on normal development. Live use still requires the normal
 priced backend configuration, environment credential, exact runtime invocation,
 and explicit `--allow-live`; committed files contain no secret. Offline scripted
 execution and replay remain available for deterministic acceptance tests.
+
+An accepted long-form proposal is not exported by trusting terminal output.
+`scitaste project paper build-draft` reads it back through the verified durable
+ledger, re-applies current admission, checks bibliography closure, and records a
+self-hashed draft trace before invoking the ordinary venue-native Markdown,
+TeX, PDF, assessment, and project-registration path.
 
 Whole-paper review uses its own content-addressed profile set,
 `runtime_profiles.deepseek_venue_review_v1.yaml`, and a separately copied local
