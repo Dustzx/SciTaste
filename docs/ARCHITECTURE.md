@@ -1473,3 +1473,25 @@ and lifecycle inspection. Review preparation already hashes every declared paper
 file, so reviewers necessarily receive a packet tied to the same proof. Older
 papers remain readable but cannot satisfy this gate without a newly materialized
 revision.
+
+### ADR-048: Model review identity is derived from the runtime ledger
+
+Status: accepted for internal whole-paper review admission.
+
+A structured review proposal and an operator-typed provider/model pair do not
+prove which model invocation produced a paper review. New internal review
+reports therefore name one project run and invocation. Admission verifies the
+complete append-only model-node ledger, requires an accepted
+`venue-paper-review` result, and checks that its immutable context, input,
+request fingerprint, packet, paper bytes, profile, policy, and returned identity
+remain mutually consistent.
+
+The resulting report embeds a typed provenance record for the ledger entry,
+result, recording, raw response, prompt, and profile. Reviewer identity is
+derived from the returned response and cannot be supplied separately. A
+rejected, failed, planned, cross-round, or identity-drifted invocation cannot be
+promoted. Historical schema-1.0 reports retain their original self-hashes and
+remain readable; absence of invocation provenance is preserved rather than
+silently rewritten. This boundary establishes internal critique provenance but
+does not make a model reviewer independent, expert, or an official venue
+decision authority.

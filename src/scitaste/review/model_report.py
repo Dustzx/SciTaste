@@ -8,10 +8,14 @@ from pathlib import Path, PurePosixPath
 from pydantic import BaseModel, ConfigDict, Field
 
 from scitaste.model_nodes.facade import ImmutableStateProjection
-from scitaste.model_nodes.models import NodePolicy
+from scitaste.model_nodes.models import NodePolicy, NodeResult, NodeResultStatus
 from scitaste.model_nodes.openai_compatible import StructuredOpenAICompatibleConfig
 from scitaste.model_nodes.profiles import ModelNodeProfile, validate_profile_binding
-from scitaste.model_nodes.runtime import ModelNodeTrigger
+from scitaste.model_nodes.runtime import (
+    ModelNodeRuntime,
+    ModelNodeTrigger,
+    RuntimeOutcome,
+)
 from scitaste.model_nodes.runtime_config import LiveRuntimeBackend, ModelNodeRuntimeConfig
 from scitaste.model_nodes.schemas import VenuePaperReviewInput, VenuePaperReviewProposal
 from scitaste.project import ProjectRuntime
@@ -19,6 +23,7 @@ from scitaste.project.models import validate_relative_locator
 from scitaste.review.parser import ReviewFeedback
 from scitaste.review.routing import ReviewActionRouter
 from scitaste.review.venue import (
+    ModelReviewInvocationProvenance,
     ReviewerIdentity,
     VenueCriterionAssessment,
     VenueReviewPacket,
@@ -107,6 +112,7 @@ def build_internal_model_review_report(
     reviewer_id: str,
     provider: str,
     model: str,
+    model_invocation: ModelReviewInvocationProvenance | None = None,
 ) -> VenueReviewReport:
     """Bind model content to deterministic identity and hashes, never expert status."""
 
@@ -130,6 +136,7 @@ def build_internal_model_review_report(
             provider=provider,
             model_name=model,
         ),
+        model_invocation=model_invocation,
         summary=proposal.summary,
         strengths=proposal.strengths,
         weaknesses=proposal.weaknesses,
@@ -150,6 +157,126 @@ def build_internal_model_review_report(
         ethics_concern=proposal.ethics_concern,
         ethics_explanation=proposal.ethics_explanation,
         official_review=False,
+    )
+
+
+def build_internal_model_review_report_from_runtime(
+    runtime: ProjectRuntime,
+    *,
+    project_id: str,
+    review_id: str,
+    run_id: str,
+    invocation_id: str,
+    report_id: str,
+    reviewer_id: str,
+) -> VenueReviewReport:
+    """Build a report only from one accepted, fully verified runtime-ledger entry."""
+
+    packet = load_venue_review_packet(runtime, project_id, review_id)
+    entry = ModelNodeRuntime(runtime).entry(
+        project_id=project_id,
+        run_id=run_id,
+        invocation_id=invocation_id,
+    )
+    if entry.outcome is not RuntimeOutcome.ACCEPTED:
+        raise ValueError("model review import requires an accepted runtime-ledger entry")
+    if entry.result is None or entry.result_sha256 is None:
+        raise ValueError("accepted model review entry has no committed result")
+    if entry.request_fingerprint is None:
+        raise ValueError("accepted model review entry has no request fingerprint")
+    if entry.intent.node_name != "venue-paper-review":
+        raise ValueError("runtime-ledger entry is not a venue-paper-review invocation")
+    if entry.intent.context.metadata.get("review_id") != review_id:
+        raise ValueError("runtime-ledger entry targets a different review round")
+
+    result = NodeResult[VenuePaperReviewProposal].model_validate(entry.result)
+    if result.node_name != entry.intent.node_name:
+        raise ValueError("model review result node differs from its runtime intent")
+    if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
+        raise ValueError("runtime-ledger result does not contain an accepted proposal")
+    if result.untrusted_proposal is not None or result.rejection_reasons:
+        raise ValueError("accepted model review result contains rejected proposal state")
+    if result.policy_id != entry.intent.policy.policy_id:
+        raise ValueError("model review result policy differs from its runtime intent")
+    if result.request.policy_fingerprint != entry.intent.policy.fingerprint:
+        raise ValueError("model review request policy differs from its runtime intent")
+    if result.request.node_name != entry.intent.node_name:
+        raise ValueError("model review request node differs from its runtime intent")
+    if result.request.fingerprint != entry.request_fingerprint:
+        raise ValueError("model review request fingerprint differs from its ledger entry")
+    if entry.intent.expected_request_fingerprint != entry.request_fingerprint:
+        raise ValueError("model review intent fingerprint differs from its ledger entry")
+    if result.response.request_fingerprint != entry.request_fingerprint:
+        raise ValueError("model review response fingerprint differs from its ledger entry")
+
+    profile = entry.intent.profile
+    requested_identity = (profile.provider, profile.model)
+    if (result.request.expected_backend, result.request.expected_model) != requested_identity:
+        raise ValueError("model review request identity differs from its runtime profile")
+    if (
+        entry.intent.policy.expected_backend,
+        entry.intent.policy.expected_model,
+    ) != requested_identity:
+        raise ValueError("model review policy identity differs from its runtime profile")
+    if (result.request.profile_id, result.request.profile_fingerprint) != (
+        profile.profile_id,
+        profile.fingerprint,
+    ):
+        raise ValueError("model review request profile differs from its runtime intent")
+    returned_identity = (result.response.backend, result.response.model)
+    if returned_identity != requested_identity:
+        raise ValueError("accepted model review returned an unpinned provider/model identity")
+
+    node_input = VenuePaperReviewInput.model_validate(entry.intent.node_input)
+    if node_input.packet_sha256 != packet.packet_sha256:
+        raise ValueError("model review runtime input targets a different review packet")
+    if node_input.venue_id != packet.venue_id:
+        raise ValueError("model review runtime input targets a different venue")
+    if node_input.registered_claim_ids != packet.registered_claim_ids:
+        raise ValueError("model review runtime claims differ from its review packet")
+    if hashlib.sha256(node_input.paper_text.encode()).hexdigest() != node_input.paper_text_sha256:
+        raise ValueError("model review runtime paper text hash mismatch")
+    if node_input.paper_text_sha256 not in set(packet.paper_artifact_sha256.values()):
+        raise ValueError("model review runtime paper is not an artifact in its review packet")
+    context = entry.intent.context
+    if context.state_snapshot_id != packet.packet_sha256:
+        raise ValueError("model review state snapshot differs from its review packet")
+    if context.metadata.get("review_packet_sha256") != packet.packet_sha256:
+        raise ValueError("model review context targets a different review packet")
+    if context.metadata.get("paper_text_sha256") != node_input.paper_text_sha256:
+        raise ValueError("model review context paper hash differs from its runtime input")
+    if result.request.input_payload.get("context") != context.model_dump(mode="json"):
+        raise ValueError("model review request context differs from its runtime intent")
+    if result.request.input_payload.get("input") != node_input.model_dump(mode="json"):
+        raise ValueError("model review request input differs from its runtime intent")
+    if result.proposal.packet_sha256 != packet.packet_sha256:
+        raise ValueError("model review proposal targets a different review packet")
+
+    provenance = ModelReviewInvocationProvenance(
+        project_id=project_id,
+        run_id=run_id,
+        invocation_id=invocation_id,
+        entry_sha256=entry.entry_sha256,
+        result_sha256=entry.result_sha256,
+        request_fingerprint=entry.request_fingerprint,
+        recording_sha256=entry.recording_sha256,
+        requested_provider=requested_identity[0],
+        requested_model=requested_identity[1],
+        returned_provider=returned_identity[0],
+        returned_model=returned_identity[1],
+        prompt_version=result.request.prompt_version,
+        profile_id=profile.profile_id,
+        profile_fingerprint=profile.fingerprint,
+        raw_response_sha256=result.response.raw_response_sha256,
+    )
+    return build_internal_model_review_report(
+        packet,
+        result.proposal,
+        report_id=report_id,
+        reviewer_id=reviewer_id,
+        provider=returned_identity[0],
+        model=returned_identity[1],
+        model_invocation=provenance,
     )
 
 
@@ -232,6 +359,7 @@ def _contained_file(root: Path, locator: str) -> Path:
 __all__ = [
     "VenuePaperReviewMaterial",
     "build_internal_model_review_report",
+    "build_internal_model_review_report_from_runtime",
     "build_venue_paper_review_material",
     "build_venue_paper_review_runtime_config",
 ]

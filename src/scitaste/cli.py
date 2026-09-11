@@ -138,6 +138,7 @@ from scitaste.review import (
 )
 from scitaste.review.model_report import (
     build_internal_model_review_report,
+    build_internal_model_review_report_from_runtime,
     build_venue_paper_review_material,
     build_venue_paper_review_runtime_config,
 )
@@ -743,15 +744,27 @@ def build_parser() -> argparse.ArgumentParser:
 
     review_import_model = project_paper_review_commands.add_parser(
         "import-model-report",
-        help="Bind proposal-only model feedback to an internal reviewer identity",
+        help="Bind accepted model feedback to an internal reviewer identity",
     )
     review_import_model.add_argument("--project-id", required=True)
     review_import_model.add_argument("--review-id", required=True)
-    review_import_model.add_argument("--proposal", type=Path, required=True)
+    review_import_model.add_argument(
+        "--proposal",
+        type=Path,
+        help="Legacy proposal file; requires --provider and --model",
+    )
     review_import_model.add_argument("--report-id", required=True)
     review_import_model.add_argument("--reviewer-id", required=True)
-    review_import_model.add_argument("--provider", required=True)
-    review_import_model.add_argument("--model", required=True)
+    review_import_model.add_argument("--provider")
+    review_import_model.add_argument("--model")
+    review_import_model.add_argument(
+        "--run-id",
+        help="Verified model-node run containing the accepted review",
+    )
+    review_import_model.add_argument(
+        "--invocation-id",
+        help="Unique accepted invocation in the verified run ledger",
+    )
     review_import_model.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(review_import_model)
     review_import_model.set_defaults(handler=_handle_project_paper_review_import_model)
@@ -2299,18 +2312,38 @@ def _handle_project_paper_review_import(args: argparse.Namespace) -> int:
 def _handle_project_paper_review_import_model(args: argparse.Namespace) -> int:
     _reject_review_import_dry_run(args)
     runtime = ProjectRuntime(args.outputs_root)
-    proposal = VenuePaperReviewProposal.model_validate_json(
-        args.proposal.read_text(encoding="utf-8"), strict=True
-    )
-    packet = load_venue_review_packet(runtime, args.project_id, args.review_id)
-    report = build_internal_model_review_report(
-        packet,
-        proposal,
-        report_id=args.report_id,
-        reviewer_id=args.reviewer_id,
-        provider=args.provider,
-        model=args.model,
-    )
+    legacy_values = (args.proposal, args.provider, args.model)
+    ledger_values = (args.run_id, args.invocation_id)
+    legacy_mode = all(value is not None for value in legacy_values) and not any(ledger_values)
+    ledger_mode = all(value is not None for value in ledger_values) and not any(legacy_values)
+    if not (legacy_mode or ledger_mode):
+        raise ValueError(
+            "model report import requires exactly one complete source: either "
+            "--run-id with --invocation-id, or legacy --proposal with --provider and --model"
+        )
+    if ledger_mode:
+        report = build_internal_model_review_report_from_runtime(
+            runtime,
+            project_id=args.project_id,
+            review_id=args.review_id,
+            run_id=args.run_id,
+            invocation_id=args.invocation_id,
+            report_id=args.report_id,
+            reviewer_id=args.reviewer_id,
+        )
+    else:
+        proposal = VenuePaperReviewProposal.model_validate_json(
+            args.proposal.read_text(encoding="utf-8"), strict=True
+        )
+        packet = load_venue_review_packet(runtime, args.project_id, args.review_id)
+        report = build_internal_model_review_report(
+            packet,
+            proposal,
+            report_id=args.report_id,
+            reviewer_id=args.reviewer_id,
+            provider=args.provider,
+            model=args.model,
+        )
     snapshot, review_round = import_venue_review_report(
         runtime,
         project_id=args.project_id,
@@ -2318,7 +2351,10 @@ def _handle_project_paper_review_import_model(args: argparse.Namespace) -> int:
         report=report,
         expected_revision=args.expected_revision,
     )
-    _print_review_operation(snapshot, review_round, report_sha256=report.report_sha256)
+    hashes = {"report_sha256": report.report_sha256}
+    if report.model_invocation is not None:
+        hashes["source_entry_sha256"] = report.model_invocation.entry_sha256
+    _print_review_operation(snapshot, review_round, **hashes)
     return 0
 
 

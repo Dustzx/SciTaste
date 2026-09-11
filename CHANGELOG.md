@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Internal whole-paper review reports can now be imported directly from one
+  accepted project model-node invocation. The report derives provider/model
+  identity from the verified response and binds the run, invocation, ledger
+  entry, result, request, recording, raw response, prompt, and profile hashes;
+  failed or cross-round entries cannot become review evidence. Legacy
+  proposal-file reports remain readable without being upgraded retroactively.
+
 - Whole-paper model review now sends an invocation-specific closed-world JSON
   Schema for registered claim/section identifiers, permitted evidence types,
   and allowed actions, and rejects concern categories whose proposed actions

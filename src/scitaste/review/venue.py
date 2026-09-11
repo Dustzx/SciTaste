@@ -154,6 +154,29 @@ class ReviewerIdentity(BaseModel):
         return self
 
 
+class ModelReviewInvocationProvenance(BaseModel):
+    """Verified model-node ledger identity behind one internal review report."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: str = Field(min_length=1, max_length=200)
+    run_id: str = Field(pattern=_SAFE_ID)
+    invocation_id: str = Field(pattern=_SAFE_ID)
+    entry_sha256: str = Field(pattern=_SHA256)
+    result_sha256: str = Field(pattern=_SHA256)
+    request_fingerprint: str = Field(pattern=_SHA256)
+    recording_sha256: str | None = Field(default=None, pattern=_SHA256)
+    requested_provider: str = Field(min_length=1, max_length=200)
+    requested_model: str = Field(min_length=1, max_length=200)
+    returned_provider: str = Field(min_length=1, max_length=200)
+    returned_model: str = Field(min_length=1, max_length=200)
+    prompt_version: str = Field(min_length=1, max_length=200)
+    profile_id: str = Field(min_length=1, max_length=200)
+    profile_fingerprint: str = Field(pattern=_SHA256)
+    raw_response_sha256: str = Field(pattern=_SHA256)
+
+
 class VenueReviewReport(BaseModel):
     """Structured ICLR-style review without numerical acceptance prediction."""
 
@@ -164,6 +187,7 @@ class VenueReviewReport(BaseModel):
     packet_sha256: str = Field(pattern=_SHA256)
     review_scope: ReviewScope
     reviewer: ReviewerIdentity
+    model_invocation: ModelReviewInvocationProvenance | None = None
     summary: str = Field(min_length=1, max_length=_MAX_TEXT)
     strengths: tuple[str, ...] = Field(min_length=1, max_length=20)
     weaknesses: tuple[str, ...] = Field(default=(), max_length=20)
@@ -194,10 +218,26 @@ class VenueReviewReport(BaseModel):
             raise ValueError("a potential ethics concern requires an explanation")
         if self.ethics_concern == "none" and self.ethics_explanation is not None:
             raise ValueError("an ethics explanation requires ethics_concern=potential")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"report_sha256"}))
+        if self.model_invocation is not None:
+            if self.reviewer.reviewer_kind not in {"internal_model", "independent_model"}:
+                raise ValueError("only a model reviewer can bind model invocation provenance")
+            if (self.reviewer.provider, self.reviewer.model_name) != (
+                self.model_invocation.returned_provider,
+                self.model_invocation.returned_model,
+            ):
+                raise ValueError("reviewer identity differs from returned model identity")
+        expected = content_sha256(self._unsigned_hash_payload())
         if self.report_sha256 != expected:
             raise ValueError("venue review report hash mismatch")
         return self
+
+    def _unsigned_hash_payload(self) -> dict[str, object]:
+        """Keep schema-1.0 reports readable while hashing new provenance when present."""
+
+        exclude = {"report_sha256"}
+        if self.model_invocation is None:
+            exclude.add("model_invocation")
+        return self.model_dump(mode="json", exclude=exclude)
 
     @classmethod
     def create(cls, **values: object) -> VenueReviewReport:
@@ -205,9 +245,7 @@ class VenueReviewReport(BaseModel):
         unsigned = cls.model_construct(report_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            report_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"report_sha256"})
-            ),
+            report_sha256=content_sha256(unsigned._unsigned_hash_payload()),
         )
 
 

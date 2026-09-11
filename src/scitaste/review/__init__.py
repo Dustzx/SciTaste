@@ -5,6 +5,7 @@ from scitaste.review.obligations import create_obligation
 from scitaste.review.parser import ReviewFeedback, parse_feedback
 from scitaste.review.routing import ReviewActionRouter
 from scitaste.review.venue import (
+    ModelReviewInvocationProvenance,
     ReviewConcernResolution,
     ReviewConcernVerification,
     ReviewerIdentity,
@@ -27,6 +28,7 @@ from scitaste.review.venue import (
 )
 
 __all__ = [
+    "ModelReviewInvocationProvenance",
     "ReviewActionRouter",
     "ReviewConcernResolution",
     "ReviewConcernVerification",

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
+import pytest
+
+from scitaste.cli import main
 from scitaste.model_nodes import (
+    ModelNodeRuntime,
+    ModelNodeTrigger,
     NodeContext,
     NodePolicy,
     NodeResultStatus,
+    RuntimeBackendMode,
     ScriptedStructuredBackend,
     ScriptedStructuredReply,
     VenuePaperReviewInput,
@@ -15,12 +22,15 @@ from scitaste.model_nodes import (
     load_model_node_profile_set,
 )
 from scitaste.model_nodes.openai_compatible import load_structured_openai_compatible_config
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.review.model_report import (
     VenuePaperReviewMaterial,
     build_internal_model_review_report,
+    build_internal_model_review_report_from_runtime,
+    build_venue_paper_review_material,
     build_venue_paper_review_runtime_config,
 )
-from scitaste.review.venue import VenueReviewPacket
+from scitaste.review.venue import VenueReviewPacket, VenueReviewReport, prepare_venue_review
 from scitaste.schema.actions import MetaAction
 
 HASH = "a" * 64
@@ -313,6 +323,25 @@ def test_internal_report_builder_rejects_cross_packet_proposal() -> None:
         raise AssertionError("cross-packet proposal was admitted")
 
 
+def test_legacy_model_report_hash_remains_readable_without_provenance_field() -> None:
+    packet = _packet()
+    report = build_internal_model_review_report(
+        packet,
+        VenuePaperReviewProposal.model_validate(_proposal(packet.packet_sha256)),
+        report_id="legacy-model-report",
+        reviewer_id="legacy-model-reviewer",
+        provider="legacy-provider",
+        model="legacy-model",
+    )
+    legacy_payload = report.model_dump(mode="json")
+    legacy_payload.pop("model_invocation")
+
+    loaded = VenueReviewReport.model_validate(legacy_payload)
+
+    assert loaded.report_sha256 == report.report_sha256
+    assert loaded.model_invocation is None
+
+
 def test_runtime_config_builder_binds_profile_packet_and_internal_authority() -> None:
     packet = _packet()
     node_input = _input(packet)
@@ -388,3 +417,223 @@ def test_v41_review_profile_uses_current_official_callable_id_and_peak_price_cei
     assert backend.pricing.input_usd_per_million_tokens == 0.3
     assert backend.pricing.cached_input_usd_per_million_tokens == 0.006
     assert backend.pricing.output_usd_per_million_tokens == 1.2
+
+
+def test_internal_report_import_is_bound_to_verified_runtime_entry(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = runtime.create(
+        ProjectManifest(
+            project_id="paper-project",
+            title="Paper project",
+            research_direction="Test ledger-bound model review import.",
+            target_venue="ICLR 2027",
+            status="active",
+        )
+    )
+    paper_root = runtime.projects_root / "paper-project" / "papers" / "paper-v1"
+    paper_root.mkdir(parents=True)
+    (paper_root / "main.md").write_text(
+        "# Scientific Taste\n\nA bounded system claim.\n",
+        encoding="utf-8",
+    )
+    snapshot = runtime.register_paper(
+        "paper-project",
+        PaperManifest(
+            paper_id="paper-v1",
+            project_id="paper-project",
+            title="Scientific Taste",
+            date="2026-09-11",
+            provider="scitaste-native",
+            model="deterministic-writer",
+            condition="internal-review",
+            task="self-development",
+            seed=0,
+            stage=18,
+            status="venue-compliant-draft",
+            evidence_scope="test-only",
+            files={"source-markdown": "main.md"},
+            venue_id="iclr-2027",
+            eligible_for_submission=True,
+        ),
+        directory_name="paper-v1",
+        expected_revision=snapshot.revision,
+    )
+    snapshot, packet, _round = prepare_venue_review(
+        runtime,
+        project_id="paper-project",
+        paper_directory="paper-v1",
+        review_id="iclr-r1",
+        round_number=1,
+        review_scope="development",
+        venue_taste_profile=ROOT / "configs/writing/venues/iclr-2027/taste.yaml",
+        expected_revision=snapshot.revision,
+    )
+    snapshot = runtime.begin_run(
+        "paper-project",
+        ProjectRun(
+            run_id="internal-review-run",
+            provider="scripted",
+            model="scripted-v1",
+            condition="ledger-bound-review",
+            seed=0,
+            status="running",
+            evidence_scope="internal-model-review",
+        ),
+        expected_revision=snapshot.revision,
+    )
+    material = build_venue_paper_review_material(
+        runtime,
+        project_id="paper-project",
+        review_id="iclr-r1",
+        permitted_evidence_types=("matched-baseline",),
+    )
+    profile = (
+        load_model_node_profile_set(ROOT / "configs/model_nodes/runtime_profiles.example.yaml")
+        .profiles["short-structured-semantic"]
+        .model_copy(
+            update={
+                "profile_id": "scripted-venue-review",
+                "model": "scripted-reviewer-v1",
+                "allowed_node_names": ("venue-paper-review",),
+            }
+        )
+    )
+    policy = NodePolicy(
+        policy_id="scripted-venue-review-policy",
+        enabled=True,
+        allowed_node_names=["venue-paper-review"],
+        expected_backend=profile.provider,
+        expected_model=profile.model,
+        allowed_action_types=[MetaAction.ADD_BASELINE],
+        max_request_bytes=profile.admission.max_request_bytes,
+        max_input_tokens=profile.admission.max_input_tokens,
+        max_output_tokens=profile.admission.max_output_tokens,
+        max_total_tokens=profile.admission.max_total_tokens,
+        max_api_cost_usd=profile.cumulative_project.max_api_cost_usd,
+        max_latency_ms=profile.admission.max_latency_ms,
+    )
+    context = NodeContext(
+        project_id="paper-project",
+        stage="REVIEW",
+        state_snapshot_id=packet.packet_sha256,
+        cumulative_api_cost_usd=0,
+        metadata={
+            "review_id": "iclr-r1",
+            "review_packet_sha256": packet.packet_sha256,
+            "paper_text_sha256": material.node_input.paper_text_sha256,
+        },
+    )
+    proposal = _proposal(packet.packet_sha256)
+    proposal["concerns"][0]["target_claim_ids"] = []
+    proposal["concerns"][0]["target_section"] = None
+    model_runtime = ModelNodeRuntime(runtime)
+    receipt = model_runtime.execute(
+        backend=_backend("ledger-review", proposal),
+        project_id="paper-project",
+        run_id="internal-review-run",
+        invocation_id="ledger-review",
+        request_id="ledger-review",
+        expected_project_revision=snapshot.revision,
+        state_revision=snapshot.revision,
+        node_name="venue-paper-review",
+        node_input=material.node_input,
+        context=context,
+        trigger=ModelNodeTrigger(
+            trigger_id="internal-review",
+            reason="Review the exact registered paper.",
+        ),
+        profile=profile,
+        policy=policy,
+        backend_mode=RuntimeBackendMode.SCRIPTED,
+    )
+    assert receipt.outcome.value == "accepted", receipt.model_dump_json(indent=2)
+
+    report = build_internal_model_review_report_from_runtime(
+        runtime,
+        project_id="paper-project",
+        review_id="iclr-r1",
+        run_id="internal-review-run",
+        invocation_id="ledger-review",
+        report_id="model-report",
+        reviewer_id="scripted-reviewer",
+    )
+
+    assert report.model_invocation is not None
+    assert report.model_invocation.entry_sha256 == receipt.entry_sha256
+    assert report.model_invocation.result_sha256 is not None
+    assert report.model_invocation.request_fingerprint == receipt.request_fingerprint
+    assert report.model_invocation.prompt_version == "venue-paper-review-v3"
+    assert report.reviewer.provider == "scripted"
+    assert report.reviewer.model_name == "scripted-reviewer-v1"
+
+    rejected = _proposal(packet.packet_sha256)
+    rejected["concerns"][0]["target_claim_ids"] = ["unknown-claim"]
+    model_runtime.execute(
+        backend=_backend("rejected-review", rejected),
+        project_id="paper-project",
+        run_id="internal-review-run",
+        invocation_id="rejected-review",
+        request_id="rejected-review",
+        expected_project_revision=snapshot.revision,
+        state_revision=snapshot.revision,
+        node_name="venue-paper-review",
+        node_input=material.node_input,
+        context=context,
+        trigger=ModelNodeTrigger(
+            trigger_id="rejected-review",
+            reason="Exercise fail-closed report import.",
+        ),
+        profile=profile,
+        policy=policy,
+        backend_mode=RuntimeBackendMode.SCRIPTED,
+    )
+    with pytest.raises(ValueError, match="requires an accepted runtime-ledger entry"):
+        build_internal_model_review_report_from_runtime(
+            runtime,
+            project_id="paper-project",
+            review_id="iclr-r1",
+            run_id="internal-review-run",
+            invocation_id="rejected-review",
+            report_id="rejected-report",
+            reviewer_id="scripted-reviewer-rejected",
+        )
+
+    assert (
+        main(
+            [
+                "project",
+                "paper",
+                "review",
+                "import-model-report",
+                "--project-id",
+                "paper-project",
+                "--review-id",
+                "iclr-r1",
+                "--run-id",
+                "internal-review-run",
+                "--invocation-id",
+                "ledger-review",
+                "--report-id",
+                "model-report",
+                "--reviewer-id",
+                "scripted-reviewer",
+                "--expected-revision",
+                str(snapshot.revision),
+                "--outputs-root",
+                str(runtime.outputs_root),
+            ]
+        )
+        == 0
+    )
+    imported = json.loads(capsys.readouterr().out)
+    assert imported["report_sha256"] == report.report_sha256
+    assert imported["source_entry_sha256"] == receipt.entry_sha256
+    saved = VenueReviewReport.model_validate_json(
+        (
+            runtime.projects_root / "paper-project/reviews/iclr-r1/reports/model-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert saved.model_invocation is not None
+    assert saved.model_invocation.entry_sha256 == receipt.entry_sha256

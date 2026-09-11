@@ -140,18 +140,26 @@ overwriting an existing file. `model-node runtime plan` can then validate that
 config without provider access; live execution still requires every independent
 runtime switch.
 
-The deterministic adapter converts an accepted proposal into a
-`VenueReviewReport` with `reviewer_kind=internal_model`, explicit provider/model
-identity, and a self-hash. The CLI imports it with:
+The deterministic adapter converts only an accepted, chain-verified runtime
+entry into a `VenueReviewReport` with `reviewer_kind=internal_model`, explicit
+requested and returned identities, request/result/recording hashes, profile and
+prompt identity, and a report self-hash. The primary CLI path names the owning
+run and invocation; provider, model, and proposal content are derived from the
+verified ledger rather than typed by the operator:
 
 ```bash
 .venv/bin/scitaste project paper review import-model-report \
   --project-id <project-id> --review-id <review-id> \
-  --proposal <venue-paper-review-proposal.json> \
   --report-id <report-id> --reviewer-id <reviewer-id> \
-  --provider deepseek --model deepseek-flash \
+  --run-id <project-run-id> --invocation-id <model-node-invocation-id> \
   --expected-revision <revision> --outputs-root outputs
 ```
+
+The importer replays the complete model-node ledger and rejects a failed,
+planned, rejected, missing, duplicate, wrong-node, wrong-round, cross-packet, or
+identity-drifted entry. The older `--proposal --provider --model` mode remains
+readable for historical workflows, but it has no runtime-ledger provenance and
+should not be used for new project evidence.
 
 The current DeepSeek V4.1 Flash review profile and inert, conservatively
 peak-priced backend example reserve a 32,768-token output ceiling for this
