@@ -95,9 +95,7 @@ def _package(root: Path, *, disagree: bool = False) -> SciTasteBenchCurationPack
     rubric_ref, rubric_sha = _artifact(root, "protocol/rubric.md")
     precedent_ref, precedent_sha = _artifact(root, "corpora/taste.json")
     source_ref, source_sha = _artifact(root, "sources/source-paper-001/decision.json")
-    case = _case().model_copy(
-        update={"source_ref": source_ref, "source_sha256": source_sha}
-    )
+    case = _case().model_copy(update={"source_ref": source_ref, "source_sha256": source_sha})
     return SciTasteBenchCurationPackage(
         package_id="scitastebench-v2-pilot-001",
         suite_id="scitastebench-v2-pilot",
@@ -242,6 +240,4 @@ def test_non_tied_labels_reject_unnecessary_adjudication(tmp_path: Path) -> None
     report = inspect_curation_package(package, evidence_root=tmp_path)
 
     assert report.ready_to_compile is False
-    assert (
-        "case:natural-decision-001:unnecessary_adjudicator" in report.blocker_codes
-    )
+    assert "case:natural-decision-001:unnecessary_adjudicator" in report.blocker_codes

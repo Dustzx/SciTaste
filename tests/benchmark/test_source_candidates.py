@@ -32,10 +32,7 @@ def test_committed_source_screen_separates_tracks_and_authorizes_nothing() -> No
     assert report.acquisition_authorized is False
     assert report.api_execution_authorized is False
     assert report.gpu_execution_authorized is False
-    assert all(
-        item.acquisition_status == "not-acquired"
-        for item in inspection.manifest.sources
-    )
+    assert all(item.acquisition_status == "not-acquired" for item in inspection.manifest.sources)
 
 
 def test_track_b_source_cannot_be_used_as_track_a_label(tmp_path: Path) -> None:

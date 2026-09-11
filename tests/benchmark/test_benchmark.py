@@ -64,6 +64,7 @@ def test_suite_hash_canonicalizes_unordered_transfer_axes() -> None:
 
     assert rebuilt.sha256 == V1_SEMANTIC_SHA256
 
+
 def test_offline_benchmark_measures_augmented_delta_and_robustness() -> None:
     suite = load_benchmark_suite(SUITE_PATH)
     backend = ScriptedPreferenceBackend(scripted_selections(suite))

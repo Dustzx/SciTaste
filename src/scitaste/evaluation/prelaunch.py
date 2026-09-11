@@ -179,9 +179,7 @@ class GpuModelResource(BaseModel):
     remote_inventory_sha256: str | None = Field(default=None, pattern=_SHA256)
     remote_checkpoint_status: ReadinessStatus
     remote_checkpoint_attestation_ref: str | None = Field(default=None, max_length=1_000)
-    remote_checkpoint_attestation_sha256: str | None = Field(
-        default=None, pattern=_SHA256
-    )
+    remote_checkpoint_attestation_sha256: str | None = Field(default=None, pattern=_SHA256)
     max_gpu_hours: float = Field(gt=0)
     max_storage_bytes: int = Field(gt=0)
     network_access: Literal[False] = False

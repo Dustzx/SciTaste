@@ -188,9 +188,9 @@ def scripted_selections(
     for case in suite.cases:
         for condition in selected_conditions:
             try:
-                selections[case.request_id(condition, candidate_order)] = (
-                    case.scripted_selections[condition]
-                )
+                selections[case.request_id(condition, candidate_order)] = case.scripted_selections[
+                    condition
+                ]
             except KeyError as exc:
                 raise ValueError(
                     f"scripted selection missing for {case.case_id!r} / {condition.value!r}"

@@ -158,9 +158,7 @@ def compare_gpu_inventory(
         problems.append("device_count_mismatch")
     if any(item.name != device_name for item in inventory.devices):
         problems.append("device_name_mismatch")
-    if any(
-        item.memory_total_mb < minimum_memory_mb_per_device for item in inventory.devices
-    ):
+    if any(item.memory_total_mb < minimum_memory_mb_per_device for item in inventory.devices):
         problems.append("device_memory_below_minimum")
     checkpoint = inventory.checkpoint
     if checkpoint.checkpoint_id != checkpoint_id:

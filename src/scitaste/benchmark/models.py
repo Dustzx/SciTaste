@@ -74,9 +74,7 @@ class BenchmarkCase(BaseModel):
     source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     primary_label_count: int | None = Field(default=None, ge=2)
     primary_label_agreement: float | None = Field(default=None, ge=0, le=1)
-    annotation_manifest_sha256: str | None = Field(
-        default=None, pattern=r"^[0-9a-f]{64}$"
-    )
+    annotation_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     prompt_version: str = Field(default="scitastebench-v1", min_length=1, max_length=100)
     headline_eligible: bool = True
     self_referential: bool = False
@@ -146,9 +144,7 @@ class BenchmarkCase(BaseModel):
         if condition in {BenchmarkCondition.TASTE_LIBRARY, BenchmarkCondition.FULL_SCITASTE}:
             sections.append(f"Retrieved taste principle:\n{self.taste_principle}")
         if condition is BenchmarkCondition.TASTE_PLACEBO:
-            sections.append(
-                f"Retrieved taste principle:\n{self.placebo_taste_principle}"
-            )
+            sections.append(f"Retrieved taste principle:\n{self.placebo_taste_principle}")
         if condition in {BenchmarkCondition.TASTE_CRITICS, BenchmarkCondition.FULL_SCITASTE}:
             sections.append(f"Independent critic feedback:\n{self.critic_feedback}")
         if condition == BenchmarkCondition.FULL_SCITASTE:
@@ -179,9 +175,7 @@ class BenchmarkSuite(BaseModel):
     version: str
     description: str
     evidence_tier: BenchmarkEvidenceTier = BenchmarkEvidenceTier.SYNTHETIC_ACCEPTANCE
-    annotation_manifest_sha256: str | None = Field(
-        default=None, pattern=r"^[0-9a-f]{64}$"
-    )
+    annotation_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     precedent_corpus_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     precedent_source_group_ids: tuple[str, ...] = ()
     conditions: list[BenchmarkCondition]
@@ -215,9 +209,7 @@ class BenchmarkSuite(BaseModel):
                 set(self.precedent_source_group_ids)
             ):
                 raise ValueError("formal SciTasteBench requires unique precedent source groups")
-            if {case.source_group_id for case in headline} & set(
-                self.precedent_source_group_ids
-            ):
+            if {case.source_group_id for case in headline} & set(self.precedent_source_group_ids):
                 raise ValueError("formal case and precedent source groups must be disjoint")
             if any(
                 case.source_group_id is None
@@ -247,9 +239,7 @@ class BenchmarkSuite(BaseModel):
         payload = self.model_dump(mode="json")
         for case in payload["cases"]:
             observed = set(case["transfer_axes"])
-            case["transfer_axes"] = [
-                axis.value for axis in TransferAxis if axis.value in observed
-            ]
+            case["transfer_axes"] = [axis.value for axis in TransferAxis if axis.value in observed]
         if self.version == "1.0":
             for field in (
                 "evidence_tier",

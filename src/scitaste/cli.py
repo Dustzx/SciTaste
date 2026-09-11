@@ -1679,9 +1679,7 @@ def _handle_project_run_update(args: argparse.Namespace) -> int:
             f"stale project revision {args.expected_revision}; current is {snapshot.revision}"
         )
     try:
-        registered = next(
-            item for item in snapshot.manifest.runs if item.run_id == args.run_id
-        )
+        registered = next(item for item in snapshot.manifest.runs if item.run_id == args.run_id)
     except StopIteration as exc:
         raise ValueError(f"unknown project run {args.run_id!r}") from exc
     optional = {
@@ -1713,9 +1711,7 @@ def _handle_project_run_update(args: argparse.Namespace) -> int:
     }
     if failure_fields & changes.keys() and not args.status.startswith("failed"):
         raise ValueError("failure metadata requires a failed run status")
-    updated = ProjectRun.model_validate(
-        {**registered.model_dump(mode="json"), **changes}
-    )
+    updated = ProjectRun.model_validate({**registered.model_dump(mode="json"), **changes})
     if args.dry_run:
         print(
             json.dumps(

@@ -479,9 +479,7 @@ def _gpu_inventory_problems(
             continue
         bindings: list[tuple[str | None, str | None]] = []
         if resource.remote_inventory_status is ReadinessStatus.VERIFIED:
-            bindings.append(
-                (resource.remote_inventory_ref, resource.remote_inventory_sha256)
-            )
+            bindings.append((resource.remote_inventory_ref, resource.remote_inventory_sha256))
         if resource.remote_checkpoint_status is ReadinessStatus.VERIFIED:
             bindings.append(
                 (
@@ -527,8 +525,7 @@ def _gpu_inventory_problems(
                 attestation = load_gpu_host_inventory(attestation_path).inventory
             except (OSError, ValueError) as exc:
                 problems.append(
-                    f"{lane.lane_id}:remote_checkpoint_attestation_invalid:"
-                    f"{type(exc).__name__}"
+                    f"{lane.lane_id}:remote_checkpoint_attestation_invalid:{type(exc).__name__}"
                 )
                 continue
             problems.extend(

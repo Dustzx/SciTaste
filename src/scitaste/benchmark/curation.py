@@ -72,9 +72,7 @@ class CuratedDecisionCase(BaseModel):
     taste_precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
     placebo_taste_principle: str = Field(min_length=1, max_length=10_000)
     placebo_precedent_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    placebo_precedent_source_group_ids: tuple[str, ...] = Field(
-        min_length=1, max_length=20
-    )
+    placebo_precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
     critic_feedback: str = Field(min_length=1, max_length=10_000)
     controller_context: str = Field(min_length=1, max_length=10_000)
 
@@ -147,9 +145,7 @@ class SciTasteBenchCurationPackage(BaseModel):
     precedent_corpus_sha256: str = Field(pattern=_SHA256)
     precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=10_000)
     cases: tuple[CuratedDecisionCase, ...] = Field(min_length=1, max_length=10_000)
-    annotations: tuple[ExpertDecisionAnnotation, ...] = Field(
-        min_length=1, max_length=100_000
-    )
+    annotations: tuple[ExpertDecisionAnnotation, ...] = Field(min_length=1, max_length=100_000)
 
     @model_validator(mode="after")
     def identities_are_unique_and_referenced(self) -> SciTasteBenchCurationPackage:
@@ -170,14 +166,9 @@ class SciTasteBenchCurationPackage(BaseModel):
         known = {item.case_id for item in self.cases}
         if any(item.case_id not in known for item in self.annotations):
             raise ValueError("annotations must reference a curated case")
-        if any(
-            item.rubric_version != self.annotation_rubric_version
-            for item in self.annotations
-        ):
+        if any(item.rubric_version != self.annotation_rubric_version for item in self.annotations):
             raise ValueError("annotations must use the package-bound rubric version")
-        if {item.source_group_id for item in self.cases} & set(
-            self.precedent_source_group_ids
-        ):
+        if {item.source_group_id for item in self.cases} & set(self.precedent_source_group_ids):
             raise ValueError("curated case and precedent corpus source groups must be disjoint")
         if any(
             not {
@@ -194,9 +185,7 @@ class SciTasteBenchCurationPackage(BaseModel):
         payload = self.model_dump(mode="json")
         for case in payload["cases"]:
             observed = set(case["transfer_axes"])
-            case["transfer_axes"] = [
-                axis.value for axis in TransferAxis if axis.value in observed
-            ]
+            case["transfer_axes"] = [axis.value for axis in TransferAxis if axis.value in observed]
         canonical = json.dumps(
             payload,
             ensure_ascii=False,
@@ -341,9 +330,7 @@ def compile_curated_suite(
 ) -> BenchmarkSuite:
     report = inspect_curation_package(package, evidence_root=evidence_root)
     if not report.ready_to_compile:
-        raise ValueError(
-            "SciTasteBench curation is not ready: " + ", ".join(report.blocker_codes)
-        )
+        raise ValueError("SciTasteBench curation is not ready: " + ", ".join(report.blocker_codes))
     annotations: dict[str, list[ExpertDecisionAnnotation]] = defaultdict(list)
     for annotation in package.annotations:
         annotations[annotation.case_id].append(annotation)
@@ -386,14 +373,10 @@ def compile_curated_suite(
                 knowledge_evidence_ids=case.knowledge_evidence_ids,
                 taste_principle=case.taste_principle,
                 taste_precedent_ids=case.taste_precedent_ids,
-                taste_precedent_source_group_ids=(
-                    case.taste_precedent_source_group_ids
-                ),
+                taste_precedent_source_group_ids=(case.taste_precedent_source_group_ids),
                 placebo_taste_principle=case.placebo_taste_principle,
                 placebo_precedent_ids=case.placebo_precedent_ids,
-                placebo_precedent_source_group_ids=(
-                    case.placebo_precedent_source_group_ids
-                ),
+                placebo_precedent_source_group_ids=(case.placebo_precedent_source_group_ids),
                 critic_feedback=case.critic_feedback,
                 controller_context=case.controller_context,
                 primary_label_count=len(primary),

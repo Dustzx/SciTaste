@@ -59,10 +59,7 @@ class CandidateSource(BaseModel):
             raise ValueError("candidate source blockers must be unique")
         if any(value < 1 for value in self.advertised_counts.values()):
             raise ValueError("advertised source counts must be positive")
-        if (
-            self.role is CandidateSourceRole.TRACK_B_END_TO_END_TASK
-            and self.candidate_families
-        ):
+        if self.role is CandidateSourceRole.TRACK_B_END_TO_END_TASK and self.candidate_families:
             raise ValueError("Track B task sources cannot be presented as Track A labels")
         return self
 
@@ -116,9 +113,7 @@ class SourceCandidateManifest(BaseModel):
     def population_and_roles_are_closed(self) -> SourceCandidateManifest:
         if set(self.required_decision_families) != set(TasteTask):
             raise ValueError("source screen must require every Taste decision family")
-        if len(self.required_decision_families) != len(
-            set(self.required_decision_families)
-        ):
+        if len(self.required_decision_families) != len(set(self.required_decision_families)):
             raise ValueError("required decision families must be unique")
         source_ids = [item.source_id for item in self.sources]
         if len(source_ids) != len(set(source_ids)):
@@ -132,8 +127,7 @@ class SourceCandidateManifest(BaseModel):
         if track_a_coverage != set(TasteTask):
             raise ValueError("Track A source candidates must cover every decision family")
         if not any(
-            item.role is CandidateSourceRole.TRACK_B_END_TO_END_TASK
-            for item in self.sources
+            item.role is CandidateSourceRole.TRACK_B_END_TO_END_TASK for item in self.sources
         ):
             raise ValueError("source screen must keep a distinct Track B task source")
         return self
@@ -216,9 +210,7 @@ def source_candidate_status(manifest: SourceCandidateManifest) -> SourceCandidat
         source_count=len(manifest.sources),
         track_a_source_ids=track_a,
         track_b_source_ids=track_b,
-        covered_decision_families=tuple(
-            family for family in TasteTask if family in covered
-        ),
+        covered_decision_families=tuple(family for family in TasteTask if family in covered),
         blocker_count=sum(len(item.blockers) for item in manifest.sources)
         + len(manifest.admission_decision.next_gate),
     )
