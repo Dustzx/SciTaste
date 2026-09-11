@@ -28,6 +28,8 @@ def test_locale_catalogs_have_exact_key_and_interpolation_parity() -> None:
 
     assert english.keys() == chinese.keys()
     assert len(english) >= 300
+    assert not any("credential" in key for key in english)
+    assert not any("凭据" in value or "凭证" in value for value in chinese.values())
     for key in english:
         assert re.fullmatch(r"[a-z][A-Za-z0-9_.-]+", key)
         assert isinstance(english[key], str) and english[key]

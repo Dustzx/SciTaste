@@ -51,8 +51,10 @@ question or follow-up is an immutable turn page with its own deep link. Follow-u
 questions stay in the active conversation, while `New conversation` returns to the project home
 and makes the next question start a separate context. The active conversation expands
 its ordered page list, so earlier questions are navigable without relying on
-browser history. This is a project workspace model, not one disconnected chat
-window per sentence.
+browser history. A generated page displays a `project / conversation / page`
+breadcrumb and human-readable page ordinal; storage identities remain available
+only in its provenance details. This is a project workspace model, not one
+disconnected chat window per sentence.
 
 Topic management is metadata-only. A user may rename a topic through an
 optimistic `metadata_revision` check and filter the current project's topic
@@ -419,9 +421,9 @@ network requests, preserved the project and generated-surface IDs, and retained
 both a proposal receipt and a verified Markdown preview in a separate
 paper-bearing project check. Back/forward restored a Chinese fixed progress
 entry and an English retained generation with their original routes. Refresh
-restored the fragment locale while the password input correctly returned
-empty. The screenshots were temporary visual-inspection artifacts and were not
-added to the repository.
+restored the fragment locale while the loopback server re-established its
+HttpOnly session; the receiver contained no credential input. The screenshots
+were temporary visual-inspection artifacts and were not added to the repository.
 
 The prior generation-planner branch verification passed 223 Generative UI and
 focused CLI tests with 86.03% branch-aware coverage of

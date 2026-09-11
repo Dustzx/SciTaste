@@ -241,6 +241,9 @@ def test_fixed_shell_assets_are_public_local_and_use_only_inert_text_rendering(
     assert "translateMessage" in locale_script.text
     assert "requestCandidateWorkspace" in script.text
     assert "generation-metadata" in script.text
+    assert "generation-breadcrumb" in script.text
+    assert "activeResearchTurn.ordinal" in script.text
+    assert "project.open_home_aria" in script.text
     assert ".plan-emphasis-compact .progress-board" in stylesheet.text
     assert ".generated-blocker-list" in stylesheet.text
     assert "@media (max-width: 1050px)" in stylesheet.text

@@ -441,6 +441,35 @@ fieldset {
   text-transform: capitalize;
 }
 
+.generation-breadcrumb {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.generation-breadcrumb-home {
+  background: transparent;
+  border: 0;
+  color: var(--forest);
+  min-height: auto;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.16rem;
+}
+
+.generation-breadcrumb-home:hover:not(:disabled) {
+  background: transparent;
+  color: var(--forest-dark);
+}
+
+.generation-breadcrumb-separator {
+  color: #809086;
+}
+
 .generation-metadata {
   display: flex;
   flex-wrap: wrap;

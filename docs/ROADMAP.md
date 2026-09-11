@@ -23,6 +23,12 @@ pre-submission review. This closes the software control path, but the
 paper source run binds verified native evidence and independent review artifacts
 are collected.
 
+The local Generation-as-Content receiver now presents this lifecycle through a
+portfolio index, one stable home per project, project-owned research
+conversations, and one immutable generated page per user question. Conversation
+context is explicit and bounded; model/API credentials remain deployment
+configuration and never belong to a project page.
+
 Phase 9 now has a typed prelaunch resource gate and separate DeepSeek, Zhipu,
 and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
 the accepted Benchmark subset, external/control adapters, independent reviewers,

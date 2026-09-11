@@ -76,6 +76,7 @@ let topicSearchQuery = "";
 let activeResearchWorkspaceId = "";
 let activeResearchTurnId = "";
 let activeResearchWorkspace = null;
+let activeResearchTurn = null;
 let activeResearchWorkspaceDetail = null;
 let eventCounter = 0;
 let artifactObjectUrl = null;
@@ -1513,6 +1514,33 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
 function renderGenerationSummary(documentValue) {
   const summary = document.createElement("section");
   summary.className = "generation-summary";
+  if (activeResearchWorkspace && activeResearchTurn) {
+    const breadcrumb = document.createElement("nav");
+    breadcrumb.className = "generation-breadcrumb";
+    breadcrumb.setAttribute("aria-label", t("thread.breadcrumb_aria"));
+    const projectHome = document.createElement("button");
+    projectHome.type = "button";
+    projectHome.className = "generation-breadcrumb-home";
+    projectHome.setAttribute("aria-label", t("project.open_home_aria", {
+      project: documentValue.project_id,
+    }));
+    appendText(projectHome, documentValue.project_id);
+    projectHome.addEventListener("click", () => (
+      loadWorkspace(defaultQuery(documentValue.project_id))
+    ));
+    const topic = document.createElement("span");
+    appendText(topic, activeResearchWorkspace.title);
+    const page = document.createElement("strong");
+    appendText(page, t("thread.turn_page", {ordinal: activeResearchTurn.ordinal}));
+    breadcrumb.append(
+      projectHome,
+      breadcrumbSeparator(),
+      topic,
+      breadcrumbSeparator(),
+      page,
+    );
+    summary.appendChild(breadcrumb);
+  }
   const eyebrow = document.createElement("p");
   eyebrow.className = "eyebrow dark";
   appendText(eyebrow, t("generation.validated"));
@@ -1523,7 +1551,9 @@ function renderGenerationSummary(documentValue) {
   metadata.className = "generation-metadata";
   const values = [
     [t("thread.topic"), activeResearchWorkspace?.title || t("common.missing")],
-    [t("thread.turn"), activeResearchTurnId || t("common.missing")],
+    [t("thread.page"), activeResearchTurn
+      ? t("thread.turn_page", {ordinal: activeResearchTurn.ordinal})
+      : t("common.missing")],
     [t("generation.planner"), localizedCode(planner?.mode)],
     [t("generation.snapshot"), t("generation.revision", {
       revision: documentValue.snapshot_revision,
@@ -1544,11 +1574,21 @@ function renderGenerationSummary(documentValue) {
   const provenanceSummary = document.createElement("summary");
   appendText(provenanceSummary, t("generation.provenance"));
   provenance.append(provenanceSummary, fixedFields({
+    workspace_id: activeResearchWorkspaceId || undefined,
+    turn_id: activeResearchTurnId || undefined,
     reason_code: documentValue.reason_code,
     execution_authority: documentValue.execution_authority,
-  }, ["reason_code", "execution_authority"]));
+  }, ["workspace_id", "turn_id", "reason_code", "execution_authority"]));
   summary.append(eyebrow, heading, metadata, provenance);
   return summary;
+}
+
+function breadcrumbSeparator() {
+  const separator = document.createElement("span");
+  separator.className = "generation-breadcrumb-separator";
+  separator.setAttribute("aria-hidden", "true");
+  appendText(separator, "/");
+  return separator;
 }
 
 function updateFreshness(documentValue) {
@@ -1852,6 +1892,7 @@ function clearProjectContext(projectId = "") {
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
+  activeResearchTurn = null;
   activeResearchWorkspaceDetail = null;
   conversationContextMode.value = "recent";
   currentDocument = null;
@@ -2202,6 +2243,7 @@ async function generateWithIntent(intentRequest) {
     activeResearchWorkspace = turnDocument.workspace;
     activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
     activeResearchTurnId = turnDocument.turn.turn_id;
+    activeResearchTurn = turnDocument.turn;
     activeResearchWorkspaceDetail = null;
     const documentValue = turnDocument.turn.document;
     if (documentValue.status !== "generated") {
@@ -2445,6 +2487,7 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
     activeResearchWorkspace = null;
     activeResearchWorkspaceId = "";
     activeResearchTurnId = "";
+    activeResearchTurn = null;
     activeResearchWorkspaceDetail = null;
     currentDocument = documentValue;
     projectSelect.value = documentValue.project_id;
@@ -2491,6 +2534,7 @@ async function loadResearchTurn(route, historyMode = "push") {
     activeResearchWorkspace = turnDocument.workspace;
     activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
     activeResearchTurnId = turnDocument.turn.turn_id;
+    activeResearchTurn = turnDocument.turn;
     activeResearchWorkspaceDetail = null;
     projectSelect.value = documentValue.project_id;
     if (documentValue.status !== "generated") {
@@ -2808,6 +2852,7 @@ newTopicButton.addEventListener("click", () => {
   activeResearchWorkspaceId = "";
   activeResearchTurnId = "";
   activeResearchWorkspace = null;
+  activeResearchTurn = null;
   activeResearchWorkspaceDetail = null;
   conversationContextMode.value = "recent";
   conversationContextMode.disabled = true;

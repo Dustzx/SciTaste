@@ -64,7 +64,11 @@ semantic versioning.
   history retention.
   Large projects also bound candidate admission before planning, and the
   deterministic progress view now favors structural summaries over exhaustive
-  paper/artifact repetition.
+  paper/artifact repetition. Generated turn headers now expose the user-facing
+  `project / conversation / page` hierarchy and page ordinal, while internal
+  workspace and turn identities remain in provenance details. Obsolete
+  credential-field translations were removed so the browser shell consistently
+  represents deployment-owned authentication rather than asking for model keys.
 
 - Generation as Content now projects a registered AutoResearch evaluation
   synthesis as a compact lifecycle map, six-lens estimand palette, comparison-
