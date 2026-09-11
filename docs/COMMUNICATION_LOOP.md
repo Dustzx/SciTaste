@@ -62,6 +62,15 @@ but it cannot edit the manuscript or suppress registered limitations. A future
 live writer must consume the same contracts and critic outputs without changing
 routing. See [`WRITING_TASTE.md`](WRITING_TASTE.md).
 
+Project-owned venue reports enter this loop through
+`project paper review route-state`. The command revalidates the complete review
+round, requires a ResearchState owned by a registered project run, and publishes
+a self-hashed routing run containing the routed state and routing record. It
+opens one obligation per concern but records no new evidence, performs no model
+call, and cannot close the review. Evidence-requiring concerns that omit an
+evidence type receive fail-closed category defaults for comparative
+effectiveness, matched external baselines, or multi-task validity.
+
 ## Venue-native submission gate
 
 Research manuscripts can be packaged through an exact venue contract after the

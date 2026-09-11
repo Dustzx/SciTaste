@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- Admitted venue-review reports can now be materialized into a project-owned
+  ResearchState routing run. The bundle rehashes the registered report, source
+  state, routed state, actions, and one open obligation per concern, while
+  recording zero new evidence and zero model calls. Broad evidence concerns
+  with no reviewer-specified evidence type now receive category-specific,
+  fail-closed defaults, preventing an unrelated new result from closing an
+  effectiveness, external-baseline, or multi-task-validity concern.
+
 - External method comparators now have a static, content-addressed translation
   contract before any upstream checkout or executable adapter is accepted. Two
   exact-commit audits show that MLR-Agent and Agent Laboratory cannot currently

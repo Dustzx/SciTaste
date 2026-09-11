@@ -1551,3 +1551,27 @@ backbone can preserve the matched estimand, while a best-native-system design
 answers a different, model-confounded systems question. Either change requires
 a new immutable experiment proposal and author decision; no runtime adapter may
 silently choose between them.
+
+### ADR-051: Venue-review concerns become project-owned state obligations
+
+Status: accepted for review-to-research-state routing; evidence collection and
+closure remain later transitions.
+
+The pure concern router demonstrates deterministic action selection, but a
+paper-review loop is not auditable if its output never enters the owning
+project. SciTaste therefore materializes one registered routing run from an
+admitted review report and a ResearchState belonging to an existing project
+run. Its self-hashed manifest binds the report, implementation commit, source
+state file and semantic identity, routed state, routing record, concern IDs,
+and newly opened obligation IDs. Publication uses a preparing run followed by
+an immutable stage directory; interruption cannot leave a run falsely marked
+complete.
+
+Routing is not evidence. Every new obligation remains open, the bundle records
+zero new evidence and zero model calls, and the project's scientific claims do
+not advance. When an evidence-requiring paper-level concern names neither a
+claim nor an evidence type, the obligation creator supplies a category-specific
+required type instead of allowing arbitrary later evidence to close it. Formal
+results must subsequently enter ResearchState with those matching types, after
+which a content-bound paper revision and original-reviewer verification remain
+necessary.

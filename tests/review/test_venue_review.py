@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from scitaste.project import PaperManifest, ProjectManifest, ProjectRuntime
+from scitaste.cli import main
+from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.review import (
+    ProjectReviewRoutingBundle,
     ReviewConcernResolution,
     ReviewerIdentity,
     ReviewFeedback,
@@ -15,7 +18,10 @@ from scitaste.review import (
     VenueReviewReport,
     VenueReviewResponse,
     import_venue_review_report,
+    inspect_project_review_routing,
+    prepare_project_review_routing,
     prepare_venue_review,
+    publish_project_review_routing,
     route_venue_review_to_state,
     submit_venue_review_response,
 )
@@ -214,6 +220,131 @@ def test_review_round_rejects_manuscript_bytes_as_new_evidence(
             expected_revision=snapshot.revision,
             response=response,
         )
+
+
+def test_registered_review_routes_to_open_project_obligations(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    snapshot = _project(runtime)
+    source_run_id = "source-state-run"
+    snapshot = runtime.begin_run(
+        "review-project",
+        ProjectRun(
+            run_id=source_run_id,
+            provider="scitaste-native",
+            model="deterministic-controller",
+            condition="review-routing-source",
+            seed=0,
+            status="complete",
+            evidence_scope="test-only",
+            stage_path="state",
+        ),
+        expected_revision=snapshot.revision,
+    )
+    source_state = ResearchState(
+        project_id="review-project",
+        research_direction="Test project-owned review routing.",
+        target_domain="autonomous-research",
+    )
+    source_locator = f"runs/{source_run_id}/state/research_state.json"
+    source_path = runtime.projects_root / "review-project" / source_locator
+    source_path.write_text(source_state.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    snapshot = _paper(runtime, snapshot, "paper-routing-v1", text="# Paper routing v1\n")
+    snapshot, packet, _ = prepare_venue_review(
+        runtime,
+        project_id="review-project",
+        paper_directory="paper-routing-v1",
+        review_id="routing-round",
+        round_number=1,
+        review_scope="independent_pre_submission",
+        venue_taste_profile=_PROFILE,
+        expected_revision=snapshot.revision,
+    )
+    report = _report(
+        packet.packet_sha256,
+        report_id="routing-report",
+        reviewer_id="routing-expert",
+        concern_id="routing-evidence",
+        requires_new_experiment=True,
+    )
+    snapshot, _ = import_venue_review_report(
+        runtime,
+        project_id="review-project",
+        review_id="routing-round",
+        report=report,
+        expected_revision=snapshot.revision,
+    )
+    assert (
+        main(
+            [
+                "project",
+                "paper",
+                "review",
+                "route-state",
+                "--project-id",
+                "review-project",
+                "--review-id",
+                "routing-round",
+                "--report-id",
+                "routing-report",
+                "--source-state",
+                source_locator,
+                "--run-id",
+                "review-obligations-v1",
+                "--source-commit",
+                "a" * 40,
+                "--expected-revision",
+                str(snapshot.revision),
+                "--outputs-root",
+                str(runtime.outputs_root),
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    dry_run = json.loads(capsys.readouterr().out)
+    assert dry_run["bundle"]["open_obligation_ids"] == ["obligation-routing-evidence"]
+    assert dry_run["scientific_evidence_established"] is False
+    prepared = prepare_project_review_routing(
+        runtime,
+        project_id="review-project",
+        review_id="routing-round",
+        report_id="routing-report",
+        source_state_locator=source_locator,
+        run_id="review-obligations-v1",
+        source_commit="a" * 40,
+        expected_revision=snapshot.revision,
+    )
+
+    assert prepared.bundle.open_obligation_ids == ("obligation-routing-evidence",)
+    assert prepared.bundle.new_evidence_count == 0
+    assert prepared.bundle.scientific_evidence_established is False
+    assert runtime.open("review-project").revision == snapshot.revision
+
+    published, bundle = publish_project_review_routing(
+        runtime,
+        prepared=prepared,
+        expected_revision=snapshot.revision,
+    )
+    assert published.revision == snapshot.revision + 2
+    assert ProjectReviewRoutingBundle.model_validate(bundle).record_sha256 == bundle.record_sha256
+    assert (
+        inspect_project_review_routing(runtime, "review-project", "review-obligations-v1") == bundle
+    )
+    registered = next(item for item in published.manifest.runs if item.run_id == bundle.run_id)
+    assert registered.status == "complete-review-routed"
+    assert registered.model_calls == 0
+
+    routed_path = (
+        runtime.projects_root
+        / "review-project/runs/review-obligations-v1/review_routing/research_state.json"
+    )
+    routed_path.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="ResearchState"):
+        inspect_project_review_routing(runtime, "review-project", "review-obligations-v1")
 
 
 def test_review_round_rejects_duplicate_concern_ids_across_reports(tmp_path: Path) -> None:

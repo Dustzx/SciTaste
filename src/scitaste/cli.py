@@ -135,9 +135,12 @@ from scitaste.review import (
     build_venue_review_packet,
     import_venue_review_report,
     import_venue_review_verification,
+    inspect_project_review_routing,
     inspect_venue_review,
     load_venue_review_packet,
+    prepare_project_review_routing,
     prepare_venue_review,
+    publish_project_review_routing,
     submit_venue_review_response,
 )
 from scitaste.review.model_report import (
@@ -839,6 +842,29 @@ def build_parser() -> argparse.ArgumentParser:
     review_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(review_status)
     review_status.set_defaults(handler=_handle_project_paper_review_status)
+    review_route_state = project_paper_review_commands.add_parser(
+        "route-state",
+        help="Route one admitted review report into project-owned research obligations",
+    )
+    review_route_state.add_argument("--project-id", required=True)
+    review_route_state.add_argument("--review-id", required=True)
+    review_route_state.add_argument("--report-id", required=True)
+    review_route_state.add_argument("--source-state", required=True)
+    review_route_state.add_argument("--run-id", required=True)
+    review_route_state.add_argument("--source-commit", required=True)
+    review_route_state.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_route_state)
+    review_route_state.set_defaults(handler=_handle_project_paper_review_route_state)
+
+    review_routing_status = project_paper_review_commands.add_parser(
+        "routing-status",
+        help="Rehash one registered review-to-research-state routing bundle",
+    )
+    review_routing_status.add_argument("--project-id", required=True)
+    review_routing_status.add_argument("--run-id", required=True)
+    review_routing_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_routing_status)
+    review_routing_status.set_defaults(handler=_handle_project_paper_review_routing_status)
 
     register_model_node_pilot_cli(commands)
     register_model_node_runtime_cli(commands)
@@ -2509,6 +2535,63 @@ def _handle_project_paper_review_status(args: argparse.Namespace) -> int:
         ProjectRuntime(args.outputs_root), args.project_id, args.review_id
     )
     print(review_round.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_review_route_state(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    prepared = prepare_project_review_routing(
+        runtime,
+        project_id=args.project_id,
+        review_id=args.review_id,
+        report_id=args.report_id,
+        source_state_locator=args.source_state,
+        run_id=args.run_id,
+        source_commit=args.source_commit,
+        expected_revision=args.expected_revision,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": args.project_id,
+                    "current_revision": args.expected_revision,
+                    "expected_published_revision": args.expected_revision + 2,
+                    "bundle": prepared.bundle.model_dump(mode="json"),
+                    "no_model_call_performed": True,
+                    "scientific_evidence_established": False,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, bundle = publish_project_review_routing(
+        runtime,
+        prepared=prepared,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "routing": bundle.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_routing_status(args: argparse.Namespace) -> int:
+    bundle = inspect_project_review_routing(
+        ProjectRuntime(args.outputs_root),
+        args.project_id,
+        args.run_id,
+    )
+    print(bundle.model_dump_json(indent=2))
     return 0
 
 

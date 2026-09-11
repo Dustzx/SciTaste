@@ -105,3 +105,49 @@ def test_obligation_closes_only_with_new_matching_evidence() -> None:
     closed = close_satisfied_obligations(state)
     assert [item.obligation_id for item in closed] == ["obligation-c1"]
     assert state.reviewer_concerns[0].status == "closed"
+
+
+@pytest.mark.parametrize(
+    ("category", "expected_type"),
+    [
+        ("missing_evidence", "comparative effectiveness experiment"),
+        ("missing_baseline", "matched external baseline comparison"),
+        ("validity", "multi-task validity experiment"),
+    ],
+)
+def test_broad_evidence_concerns_receive_fail_closed_evidence_types(
+    category: str,
+    expected_type: str,
+) -> None:
+    concern = parse_feedback(
+        [
+            ReviewFeedback(
+                concern_id=f"broad-{category}",
+                category=category,
+                severity="high",
+                text="The broad paper-level concern still requires specific evidence.",
+                requires_new_evidence=True,
+                requires_new_experiment=True,
+            )
+        ]
+    )[0]
+    state = ResearchState(
+        project_id="review",
+        research_direction="test",
+        target_domain="testing",
+    )
+    obligation = create_obligation(concern, ReviewActionRouter().route(concern), state)
+
+    assert obligation.required_evidence_types == [expected_type]
+    state.reviewer_concerns.append(concern)
+    state.open_research_obligations.append(obligation)
+    state.evidence_graph.items.append(
+        EvidenceItem(
+            evidence_id="unrelated-evidence",
+            source_type="experiment",
+            evidence_type="unrelated result",
+            observation="This evidence must not close a broad paper concern.",
+            confidence=0.9,
+        )
+    )
+    assert close_satisfied_obligations(state) == []

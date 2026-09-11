@@ -24,6 +24,14 @@ pre-submission review. This closes the software control path, but the
 paper source run binds verified native evidence and independent review artifacts
 are collected.
 
+The review path now includes a project-owned report-to-state transition rather
+than leaving `route_venue_review_to_state` as a test-only pure function. One
+registered routing bundle binds source and output ResearchState bytes, the exact
+admitted report, deterministic actions, and still-open obligations. It creates
+neither evidence nor closure. Broad paper-level effectiveness, baseline, and
+validity concerns receive distinct required evidence types when the reviewer did
+not name one, so later unrelated evidence cannot close them accidentally.
+
 The local Generation-as-Content receiver now presents this lifecycle through a
 portfolio index, one stable home per project, project-owned research
 conversations, and one immutable generated page per user question. Conversation
