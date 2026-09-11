@@ -35,14 +35,18 @@ source-disjoint split, and remote checkpoint attestation do not yet exist.
 The older two-task Qwen prelaunch file remains historical and must not be used
 as though MLR-Bench package-review tasks supplied objective progress.
 
-The API Track B design has an exact 100-trajectory candidate matrix: SciTaste
-Native, Direct Agent, MLR-Agent, Agent Laboratory, and TinyScientist over ten
-MLR-Bench research briefs and two seeds. It names DeepSeek `deepseek-flash`,
-served version `DeepSeek-V4.1-Flash`, with ceilings of 1,500 calls, 15 million
-tokens, USD 100, 100 GiB, and 30 reviewer-hours. That matrix remains blocked:
-MLR-Agent and Agent Laboratory do not currently preserve this common backbone
-unchanged, TinyScientist has unresolved code/license gates, task bytes and the
-held-out audit are absent, and independent reviewers are not secured.
+The historical API Track B design has an exact 100-trajectory candidate matrix:
+SciTaste Native, Direct Agent, MLR-Agent, Agent Laboratory, and TinyScientist
+over ten MLR-Bench research briefs and two seeds. It names the now-contradicted
+DeepSeek `deepseek-flash` / `DeepSeek-V4.1-Flash` identity, with ceilings of
+1,500 calls, 15 million tokens, USD 100, 100 GiB, and 30 reviewer-hours. That
+matrix is non-launchable: the 2026-09-12 official catalog recheck instead names
+`deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`; MLR-Agent and Agent Laboratory
+do not preserve the historical common backbone unchanged; TinyScientist has
+unresolved code/license gates; task bytes and held-out audit are absent; and
+independent reviewers are not secured. Its 100 trajectories are a ceiling, not
+a target that must be consumed before pilot variance and reviewer burden are
+known.
 
 Consequently the next project-owner decision is methodological, not a launch:
 

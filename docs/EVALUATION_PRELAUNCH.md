@@ -49,11 +49,11 @@ display label in a YAML file.
 Each provider alternative has a separate protocol and proposal hash. There is
 no silent fallback between Zhipu and DeepSeek.
 
-| Proposal | Scientific role | Exact model/resource currently named | Planned first block | Current state |
+| Proposal | Scientific role | Exact model/resource named in its immutable bytes | Declared matrix | Current state |
 |---|---|---|---:|---|
-| `formal-v6-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | current schema-v1.1 no-run proposal; independent expert preference is primary and a model judge is secondary; task bytes, adapters, reviewers, clean executable checkout, authenticated served identity, and approval remain blocked |
-| `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable no-run history; superseded by the provider's 2026-09-11 V4.1 catalog and must not be approved or launched |
-| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history with the current identity but an older source, resource snapshot, and governance contract; use v6 for new review or approval |
+| `formal-v6-package-prepilot` | invalidated API idea-to-paper feasibility snapshot | historical `deepseek-flash` / `DeepSeek-V4.1-Flash` claim | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; a 2026-09-12 official-source recheck contradicted its provider identity and pricing, so it must not be approved or launched |
+| `formal-v5-package-prepilot` | historical package-preference proposal with the currently documented DeepSeek identity | `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history with an older source and governance snapshot; it is provider evidence, not a current launch proposal |
+| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable no-run history carrying the same contradicted identity; do not use it for review or approval |
 | `formal-v4-accepted-method-prepilot` | historical API scope with an invalid endpoint/task binding | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; v3 incorrectly treated the MLR-Bench open-ended package rubric as objective task progress and must not be approved or launched |
 | `formal-v4-prepilot` | historical API scope proposal | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | immutable history; included preprint comparators and lacked replication plus analysis/integrity contracts |
 | `formal-v3-prepilot` | historical API proposal | earlier DeepSeek V4 API identity | 5 system × task × seed cells | immutable history; do not edit it into current evidence |
@@ -62,16 +62,18 @@ no silent fallback between Zhipu and DeepSeek.
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-DeepSeek's 2026-09-11 official catalog exposes callable ID `deepseek-flash` and
-served version `DeepSeek-V4.1-Flash`. Peak pricing is $0.006/M cached input
-tokens, $0.30/M uncached input tokens, and $1.20/M output tokens. The older
-`deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` names are accepted only
-as compatibility aliases routed to V4.1. SciTaste therefore retains v5 as
-non-launchable history and creates `formal-v6-package-prepilot` with the
-canonical identity and conservative peak prices. Because the callable ID is a
-rolling alias, an authenticated returned-model observation is still mandatory
-immediately before an approved call. See the official
-[dated model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
+The 2026-09-12 official DeepSeek catalog recheck exposes callable ID
+`deepseek-v4-flash` and model version `DeepSeek-V4-Flash-0731`, not the
+`deepseek-flash` / `DeepSeek-V4.1-Flash` pair recorded in v6. The current peak
+prices are USD 0.014/M cache-hit input tokens, USD 0.44/M cache-miss input
+tokens, and USD 1.32/M output tokens. V6 therefore remains immutable negative
+protocol evidence rather than being silently repaired. V5 retains the current
+provider identity but also remains historical because it binds an older source
+and governance snapshot. A future DeepSeek proposal must receive a new identity,
+bytes, price capture, and approval after the comparison regime is selected.
+Because `deepseek-v4-flash` is a rolling alias, an authenticated returned-model
+observation remains mandatory immediately before an approved call. See the
+official [dated model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
 The official Zhipu model page now names callable ID `glm-5.3-flash`, version
 `GLM-5.3-Flash`, 1M context, and 128K maximum output. The proposal therefore
@@ -98,12 +100,13 @@ backbone. Its replacement proposal must use the SciTasteBench mechanism track,
 a genuinely objective benchmark, or the package-preference protocol rather than
 reusing the invalid MLR-Bench objective-progress binding.
 
-The current DeepSeek proposal names the exact ten-task MLR-Bench Appendix A
-candidate population used by the accepted benchmark for experimentation,
-writing, and end-to-end evaluation. It contains seven Trustworthy AI, two
-LLM/VLM, and one ML Theory task. These are open-ended workshop-derived research
-briefs assessed with research-quality rubrics; they do **not** expose a fixed
-objective score for each task. The metadata-only selection is tracked in
+The historical DeepSeek package proposals name the exact ten-task MLR-Bench
+Appendix A candidate population used by the accepted benchmark for
+experimentation, writing, and end-to-end evaluation. It contains seven
+Trustworthy AI, two LLM/VLM, and one ML Theory task. These are open-ended
+workshop-derived research briefs assessed with research-quality rubrics; they do
+**not** expose a fixed objective score for each task. The metadata-only
+selection is tracked in
 `research/data/mlr_bench_official_ten_candidate_v2.yaml`, which machine-labels
 every task as `research_package_review`. Its starting brief bytes are not
 present, downstream/runtime asset licenses and executable signals remain
@@ -113,6 +116,31 @@ package protocol at
 freezes independent blinded expert preference as primary and a model judge as
 secondary. Objective progress remains a separate lane for a benchmark such as
 qualified MLRC-Bench; the two estimates are never pooled.
+
+## Replication and matrix discipline
+
+An execution `cell` is an internal scheduling and accounting term for one
+system--task--seed--condition combination. The paper reports systems, tasks,
+independent trajectories, repetitions, and analysis units; a large cell count
+is not evidence of rigor by itself.
+
+- Deterministic checks receive no repeated scientific runs; unit and replay
+  tests establish their engineering behavior.
+- One task/seed across every admitted system is an adapter block only. It can
+  expose inequivalence and telemetry failures but cannot estimate an effect.
+- A pilot uses the smallest source-diverse task set and paired seeds needed to
+  estimate between-task, within-task, and reviewer variance. More distinct
+  tasks are preferred over additional seeds once within-task variance is small.
+- Formal task and seed counts follow the preregistered pilot power analysis.
+  The historical 100-unit matrices are ceilings and design snapshots, not
+  quotas that must be consumed.
+- Exactly one provider/model family supplies the primary matched-backbone
+  estimate. A second provider runs only the powered robustness slice needed to
+  test model dependence; SciTaste does not duplicate the full Cartesian matrix
+  merely because another API is available.
+- Scale-out stops after each complete matched block if task signal, adapter
+  equivalence, telemetry, reviewer reliability, or conditional variance makes
+  further repetitions uninformative.
 
 ## Machine gate
 
@@ -243,28 +271,28 @@ The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. The current v6 proposal
-produces 100 intended two-seed cells; none is launch-ready while task and
-accepted-system adapter gates remain open. This makes the gap between a YAML
-cell count and an executable cross-framework experiment explicit.
+provider call, GPU work, or task download occurred. The historical v6 proposal
+produces 100 intended two-seed execution units; none is launch-ready while its
+provider identity, task, and accepted-system adapter gates remain open. This
+makes the gap between a YAML matrix count and an executable cross-framework
+experiment explicit.
 
 Static exact-commit translation review has now resolved one ambiguity inside
 that open adapter gate. MLR-Agent and Agent Laboratory are real method
 candidates, but their pinned releases cannot provide an unchanged-core, fully
-matched `deepseek-flash` / `DeepSeek-V4.1-Flash` trajectory under the current
-task and coding-role contract. Their content-addressed adapter contracts remain
-blocked before upstream checkout or runtime implementation. Consequently v6
-must not be approved as written. Preserving v6 as immutable evidence avoids
-silently weakening “matched backbone”; choosing a common natively supported
-backbone or a separately disclosed best-native-system design requires a new
-proposal.
+matched v6 trajectory under its task and coding-role contract. Their
+content-addressed adapter contracts remain blocked before upstream checkout or
+runtime implementation. The later provider-identity contradiction independently
+makes v6 non-launchable. Preserving it as immutable evidence avoids silently
+weakening “matched backbone”; choosing a common natively supported backbone or
+a separately disclosed best-native-system design requires a new proposal.
 
 The `max_output_tokens_per_call` values in these proposals are per-experiment
-ceilings, not a global SciTaste limit. The current V4.1 proposal reserves 32,768
-output tokens per call, 1,500 requests, and fifteen million total tokens across
-all 100 candidate cells. These are ceilings rather than targets and still require a
-pilot-informed adequacy check. Any change creates new proposal bytes and needs a
-new hash-bound approval.
+ceilings, not a global SciTaste limit. Historical v6 reserves 32,768 output
+tokens per call, 1,500 requests, and fifteen million total tokens across its 100
+candidate execution units. These are ceilings rather than targets and still
+require a pilot-informed adequacy check. Any change creates new proposal bytes
+and needs a new hash-bound approval.
 
 ### Prompt-only control boundary
 

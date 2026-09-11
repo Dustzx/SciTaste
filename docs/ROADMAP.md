@@ -109,11 +109,11 @@ SciTaste self-development paper because no approved formal result exists yet;
 the current draft and its prior reviews therefore stay correctly unbound.
 
 The homepage now compresses repeated proposal diagnostics into seven stable
-decision gates while retaining the exact codes underneath. For the current
-DeepSeek v6 prepilot, statistical design, temporal integrity, public API
-identity, dated pricing, and the declared runtime ceiling pass; task
-qualification, comparator adapters, blinded review, and owner approval remain
-open. This distinction
+decision gates while retaining the exact codes underneath. For the historical
+DeepSeek v6 prepilot, statistical design, temporal integrity, and the declared
+runtime ceiling pass, while a 2026-09-12 official-source recheck invalidates its
+API identity and pricing. Task qualification, comparator adapters, blinded
+review, and owner approval also remain open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
@@ -128,24 +128,24 @@ resources.
 
 Static translation contracts now expose a harder comparator result before
 implementation effort or API spend: at their pinned commits, neither MLR-Agent
-nor Agent Laboratory supports the complete `deepseek-flash` /
-`DeepSeek-V4.1-Flash` task-and-model envelope without unmatched model roles or
-unreviewed semantic translation. The current v6 proposal therefore remains
-useful immutable feasibility evidence but cannot become the matched external
-block merely by writing wrappers. A new proposal must either select a genuinely
-common backbone or disclose a best-native-system comparison with model effects
-confounded; the choice is an author-level scientific-design decision.
+nor Agent Laboratory supports the complete v6 task-and-model envelope without
+unmatched model roles or unreviewed semantic translation. V6 therefore remains
+useful immutable negative feasibility evidence but cannot become the matched
+external block merely by writing wrappers. A new proposal must either select a
+genuinely common backbone or disclose a best-native-system comparison with
+model effects confounded; the choice is an author-level scientific-design
+decision.
 
-DeepSeek's official model catalog changed on 2026-09-11: callable ID
-`deepseek-flash` now names `DeepSeek-V4.1-Flash`, while legacy
-`deepseek-v4-flash` calls are explicitly compatibility-routed to V4.1. The
-v5 proposal therefore remains an immutable V4-era no-run artifact and cannot
-authorize a V4.1 study. The new no-run v6 proposal carries the canonical
-identity, conservative peak pricing, a resource overlay, and governance v4, but
-still requires an authenticated served observation, cleared task/comparator and
-human-review gates, and exact-hash owner approval before any cell is run. The
-internal-review profile can be used independently because review feedback is
-advisory rather than an experiment result.
+DeepSeek's official model catalog was rechecked on 2026-09-12 and names callable
+ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash-0731`. This contradicts
+the V4.1 identity captured by v6, so v6 is retained as immutable no-run evidence
+and cannot authorize a study. V5 retains the currently documented provider
+identity but binds older source and governance bytes, so it also remains
+historical rather than being promoted in place. A new proposal must capture the
+chosen comparison regime, current pricing, authenticated served observation,
+cleared tasks/comparators and human review before any execution unit is run.
+The internal-review profile can be used independently because review feedback
+is advisory rather than an experiment result.
 
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without

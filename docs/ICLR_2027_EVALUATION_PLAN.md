@@ -171,14 +171,15 @@ the manuscript claims broad external-system superiority. Publication status and
 execution readiness are independent: acceptance cannot waive adapter gates, and
 a runnable preprint cannot satisfy this archival-evidence minimum.
 
-The 2026-09-11 exact-commit translation audit found that the current DeepSeek
-V4.1 proposal cannot yet satisfy this rule: MLR-Agent and Agent Laboratory do
-not natively expose the same callable model across all research/coding roles,
-and their selected-task mappings are not losslessly admitted. They remain valid
-candidate systems, but v6 is a blocked feasibility proposal rather than the
-formal matched block. A common-backbone or explicitly confounded best-native
-comparison must be frozen in a new proposal; wrapper code cannot retroactively
-make the current design matched.
+The exact-commit translation audit found that the historical DeepSeek v6
+proposal cannot satisfy this rule: MLR-Agent and Agent Laboratory do not
+natively expose the same callable model across all research/coding roles, and
+their selected-task mappings are not losslessly admitted. A 2026-09-12
+official-source recheck also contradicted v6's declared provider identity. The
+systems remain valid candidates, but v6 is non-launchable feasibility evidence,
+not a formal matched block. A common-backbone or explicitly confounded
+best-native comparison must be frozen in a new proposal; wrapper code cannot
+retroactively make the design matched.
 
 **AI Scientist-v2** and **AutoResearchClaw** remain real pinned sensitivity
 systems if their respective license, sandbox, task, model, artifact, failure,
@@ -238,11 +239,12 @@ package or if evaluation depends on unavailable private data.
 The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
-those controls. DeepSeek `deepseek-flash` / currently documented
-`DeepSeek-V4.1-Flash`
-and Zhipu `glm-5.3-flash` are separate provider proposals with separate hashes,
-pricing, served-identity attestations, cells, and approvals. They are never
-silent fallbacks and their estimates are never pooled as one backbone.
+those controls. The current official DeepSeek candidate is
+`deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`; Zhipu `glm-5.3-flash` remains a
+separate provider candidate whose exact dated price and authenticated served
+identity must be captured. Provider proposals have separate hashes, pricing,
+execution units, and approvals. They are never silent fallbacks and their
+estimates are never pooled as one backbone.
 
 A separate **official-configuration sensitivity track** may run each framework
 with its authors' recommended model and settings. It is labelled as a sensitivity
@@ -330,8 +332,9 @@ No formal run may start until all of these gates pass:
    storage, failures/repairs/discards, and human minutes;
 4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
    `glm-5.3-flash` uses the separate `formal-v2` family and the corrected
-   DeepSeek V4 Flash proposal uses `formal-v5`, each with new IDs, blind IDs, hashes,
-   and price records rather than mutating prior studies;
+   DeepSeek V4 Flash identity appears in historical `formal-v5`; the later v6
+   identity is contradicted and non-launchable. Any new provider plan needs new
+   IDs, blind IDs, hashes, and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and
    telemetry review without a pseudo-implementation;
 6. expert reviewers and the blinded adjudication process are secured before

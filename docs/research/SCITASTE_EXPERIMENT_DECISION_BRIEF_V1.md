@@ -28,26 +28,27 @@ The metadata-only source screen is
 
 ## API block — Track B end-to-end external systems
 
-| Binding | Frozen proposal |
+| Binding | Historical blocked proposal |
 |---|---|
 | Question | Under matched starting briefs, tools, model, repair rules, and budgets, are complete SciTaste Native packages preferred by blinded experts? |
-| Provider/model | DeepSeek `deepseek-flash`, served version `DeepSeek-V4.1-Flash`; Zhipu `glm-5.3-flash` requires a separate proposal and is not a silent fallback |
+| Provider/model | V6 records the now-contradicted DeepSeek `deepseek-flash` / `DeepSeek-V4.1-Flash` identity; the 2026-09-12 official catalog instead lists `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`; Zhipu `glm-5.3-flash` requires a separate proposal and is not a silent fallback |
 | Data | the ten candidate ICLR-2025 MLR-Bench workshop briefs; exact task assets remain unacquired and unadmitted |
 | Systems | SciTaste Native, Direct Agent, MLR-Agent, Agent Laboratory, TinyScientist candidate |
-| Matrix | 5 systems × 10 tasks × 2 seeds = 100 trajectories |
-| API ceiling | 1,500 requests, 15M total tokens, USD 100 at conservative DeepSeek peak prices |
+| Matrix | historical upper design: 5 systems × 10 tasks × 2 seeds = 100 trajectories; formal size must follow pilot power analysis |
+| API ceiling | historical v6 ceiling: 1,500 requests, 15M total tokens, USD 100; current prices require a new capture |
 | Human ceiling | 30 reviewer-hours; at least two conflict-checked blinded reviewers per comparison |
 | Primary metric | task-averaged blinded expert package preference for scientific value and evidence validity |
 | Secondary metrics | unsupported claims, valid/failed experiments, pivot/stop quality, reproducibility, wall time, tokens, cost, interventions |
-| Current status | blocked: accepted external adapters, per-task assets/licenses, held-out audit, and human reviewers are not ready |
+| Current status | non-launchable: provider identity is contradicted, and accepted external adapters, per-task assets/licenses, held-out audit, and human reviewers are not ready |
 
 The registered immutable proposal is
 `outputs/projects/scitaste-self-development/evaluations/deepseek-v41-package-prepilot-v6/`.
 Its proposal SHA-256 is
 `0820a4589b859d1f2feb2e8f14bf37cc8c0477b6c1413e32cbbe8122b6411e8e`.
 It pins executable commit `2e2316099700951c922a79cbc04bd95dea4cf892` and
-authorizes no execution. Any later executable change requires a new proposal;
-this one must not be edited in place or approved by alias.
+authorizes no execution. It is retained as invalidated history. Any later
+executable change requires a new proposal; this one must not be edited in place
+or approved by alias.
 
 ## Launch order
 

@@ -15,10 +15,10 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 31deb58805579df364e6f7753af058bae820a27ebf0ffc06597886412af406ca
+    sha256: 754ae4e1499cfdf9886037dea85ca98ebc5b7cdfd8b125ff029a359a3c60d053
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: 1e4a5550db3673b8b736cc8a0d45a49b7cf547dbb115cee3816159995df512d5
+    sha256: a912e10632902ccddec1599b3fd7bc9488f20ed0d950c83e50f437f89a72404e
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198
@@ -39,7 +39,7 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: 64f420194b6bc7cf5200bf2a56c7a58ce5f243147c5e2e5f6a3c71ca38441966
+    sha256: d8d226815673337b652b105891097ff707619f7a3ed673454e8712862b12d759
 tracks:
   - track_id: scientific-taste-mechanism
     role: scientific_taste_mechanism
@@ -124,15 +124,18 @@ tracks:
       Task-averaged, condition-blinded independent expert package preference for
       scientific value and evidence validity, retaining ties and failures.
     comparison_design: >-
-      The 100-cell DeepSeek V4.1 matched-backbone proposal is an exact candidate
-      matrix, but it is non-launchable because two accepted upstream systems do
-      not preserve the requested backbone. The owner must choose a genuinely
-      common backbone or a separately labelled best-native, model-confounded design.
+      The historical 100-unit DeepSeek V4.1 matched-backbone proposal is
+      non-launchable because its provider identity is contradicted and two
+      accepted upstream systems do not preserve the requested backbone. Its
+      size is a ceiling, not a quota. The owner must choose a genuinely common
+      backbone or a separately labelled best-native, model-confounded design;
+      formal repetition follows pilot power analysis.
     model:
       kind: api
       usage_scope: >-
-        Candidate common controller for SciTaste Native and Direct Agent; it is
-        not yet a verified unchanged-core backbone for the accepted comparators.
+        Historical candidate retained to bind the invalidated v6 proposal; it
+        is not a current provider identity or a verified unchanged-core backbone
+        for the accepted comparators.
       provider_id: deepseek
       model_id: deepseek-flash
       model_revision: DeepSeek-V4.1-Flash
@@ -202,6 +205,7 @@ tracks:
       - mlr-ten-task-screen
       - package-preference-governance
     blocker_codes:
+      - provider-identity:v6-contradicted
       - comparison-design:common-backbone-not-supported
       - accepted-comparators:fewer-than-two-qualified
       - task-bytes:not-acquired
