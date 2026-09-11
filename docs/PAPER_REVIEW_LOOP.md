@@ -165,7 +165,7 @@ and explicit live switches are still required. A model report may close a
 development round after verified revision, but it never satisfies independent
 expert review.
 
-The v2 reviewer prompt carries a closed-world contract in both the request
+The v3 reviewer prompt carries a closed-world contract in both the request
 payload and generated JSON Schema. Claim IDs, section IDs, evidence types, and
 action types are restricted to the exact current packet/policy vocabularies;
 empty vocabularies permit only `[]` or `null`. A concern's category must also

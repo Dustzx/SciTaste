@@ -398,7 +398,7 @@ class VenuePaperReviewNode(ModelNode[VenuePaperReviewInput, VenuePaperReviewProp
     """Review exact paper content without claiming expert or conference authority."""
 
     node_name = "venue-paper-review"
-    prompt_version = "venue-paper-review-v2"
+    prompt_version = "venue-paper-review-v3"
     system_instruction = (
         "Review the supplied anonymous paper against the four venue questions. Return a concise "
         "summary, concrete strengths and weaknesses, one accept/reject recommendation with one "

@@ -167,7 +167,7 @@ def test_venue_paper_node_and_internal_report_keep_authority_separate() -> None:
 
     assert result.status is NodeResultStatus.ACCEPTED
     assert result.proposal is not None
-    assert result.request.prompt_version == "venue-paper-review-v2"
+    assert result.request.prompt_version == "venue-paper-review-v3"
     contract = result.request.input_payload["closed_world_contract"]
     assert contract == {
         "registered_claim_ids": ["claim-1"],
