@@ -25,6 +25,10 @@ from scitaste.evaluation.acquired_cohort import (
     load_acquired_task_cohort_report,
 )
 from scitaste.evaluation.acquisition import AcquisitionGateReport
+from scitaste.evaluation.dataset_package import (
+    DatasetPackageGateReport,
+    load_dataset_package_gate_report,
+)
 from scitaste.evaluation.executable_candidate import (
     ExecutableCandidateReport,
     load_executable_candidate_report,
@@ -471,6 +475,56 @@ class WorkspaceSurfaceFactory:
             }
         acquisition_rows = list(acquisition_by_request.values())
 
+        dataset_package_by_request: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected = _dataset_package_report_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_file_sha256 = inspected
+            run_ref = run_refs[run.run_id]
+            dataset_package_by_request[report.request_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "request_id": report.request_id,
+                "proposal_sha256": report.proposal_sha256,
+                "report_sha256": report.report_sha256,
+                "report_file_sha256": report_file_sha256,
+                "selected_task_ids": list(report.selected_task_ids),
+                "source_hosts": list(report.source_hosts),
+                "asset_count": report.asset_count,
+                "observed_download_bytes": report.observed_download_bytes,
+                "maximum_unpacked_bytes": report.maximum_unpacked_bytes,
+                "minimum_free_storage_bytes": report.minimum_free_storage_bytes,
+                "task_qualifications": [
+                    item.model_dump(mode="json") for item in report.task_qualifications
+                ],
+                "metadata_review_ready": report.metadata_review_ready,
+                "ready_for_owner_approval": report.ready_for_owner_approval,
+                "pending_content_hash_count": report.pending_content_hash_count,
+                "integrity_blocker_codes": [item.code for item in report.integrity_blockers],
+                "approval_blocker_codes": [item.code for item in report.approval_blockers],
+                "pending_qualification_codes": [
+                    item.code for item in report.pending_qualifications
+                ],
+                "authorization_blocker_codes": [
+                    item.code for item in report.authorization_blockers
+                ],
+                "authorizes_network_preflight": report.authorizes_network_preflight,
+                "authorizes_download": report.authorizes_download,
+                "authorizes_ingestion": report.authorizes_ingestion,
+                "authorizes_api_calls": report.authorizes_api_calls,
+                "authorizes_gpu_work": report.authorizes_gpu_work,
+                "authorizes_execution": report.authorizes_execution,
+                "no_network_access_performed": report.no_network_access_performed,
+                "no_download_performed": report.no_download_performed,
+                "no_dataset_file_created": report.no_dataset_file_created,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        dataset_package_rows = list(dataset_package_by_request.values())
+
         qualification_by_selection: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _acquired_cohort_report_for_run(
@@ -771,7 +825,7 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
-        if acquisition_rows or qualification_rows:
+        if acquisition_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
                     "candidate_id": "review-data-acquisition-request",
@@ -783,12 +837,14 @@ class WorkspaceSurfaceFactory:
                                 project_ref.evidence_id,
                                 *(item["run_ref_id"] for item in acquisition_rows),
                                 *(item["run_ref_id"] for item in qualification_rows),
+                                *(item["run_ref_id"] for item in dataset_package_rows),
                             ]
                         )
                     ),
                     "target_ids": [
                         *(item["request_id"] for item in acquisition_rows),
                         *(item["selection_id"] for item in qualification_rows),
+                        *(item["request_id"] for item in dataset_package_rows),
                     ],
                 }
             )
@@ -972,6 +1028,7 @@ class WorkspaceSurfaceFactory:
                 "evaluation_results": evaluation_result_rows,
                 "acquisitions": acquisition_rows,
                 "acquisition_qualifications": qualification_rows,
+                "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
@@ -1716,6 +1773,30 @@ def _acquired_cohort_report_for_run(
         report = load_acquired_task_cohort_report(resolved)
     except (ValidationError, ValueError) as exc:
         raise ProjectSurfaceChangedError("registered acquisition qualification is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def _dataset_package_report_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[DatasetPackageGateReport, str] | None:
+    """Read a canonical no-download large-asset acquisition qualification."""
+
+    expected = f"runs/{run.run_id}/dataset_package_acquisition/REPORT.json"
+    if run.stage_path != "dataset_package_acquisition" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered dataset package report is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered dataset package report escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = load_dataset_package_gate_report(resolved)
+    except (ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered dataset package report is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
 
 

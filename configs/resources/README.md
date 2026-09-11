@@ -43,3 +43,16 @@ The catalog is stable identity; observation files are time-stamped facts. The
 runtime copies accepted observations into `outputs/resources/observations/`, so
 their source version remains auditable without turning an observation into a
 reservation or experiment approval.
+
+Machine-local access material belongs only in the ignored runtime plane:
+
+```text
+outputs/resources/access/
+├── credentials.env   # mode 0600; values never enter status JSON
+└── STATUS.json       # explicit bound/missing partition, no secret values
+```
+
+`scitaste resource access-status` reads only credential names declared by the
+catalog. It rejects symlinks, permissive file modes, duplicate assignments, and
+unscoped variables. A bound credential is not a connectivity result or
+experiment authorization.

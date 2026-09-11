@@ -1005,6 +1005,98 @@ class ProjectProgressAcquisitionQualificationItem(BaseModel):
         return self
 
 
+class ProjectProgressDatasetPackageTaskItem(BaseModel):
+    """One task-level large-asset acquisition qualification."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    task_id: SafeIdentifier
+    asset_count: int = Field(gt=0)
+    observed_compressed_bytes: int = Field(gt=0)
+    maximum_unpacked_bytes: int = Field(gt=0)
+    license_disposition: Literal["verified", "review_required", "blocked"]
+    exact_source_metadata_ready: bool
+    ready_for_owner_approval: bool
+    blocker_codes: tuple[SafeText, ...] = ()
+
+    @model_validator(mode="after")
+    def dataset_package_task_is_consistent(self) -> ProjectProgressDatasetPackageTaskItem:
+        if self.maximum_unpacked_bytes < self.observed_compressed_bytes:
+            raise ValueError("dataset package task unpacked ceiling is below compressed bytes")
+        if self.ready_for_owner_approval and (
+            not self.exact_source_metadata_ready
+            or self.license_disposition != "verified"
+            or self.blocker_codes
+        ):
+            raise ValueError("approval-ready dataset task retains unresolved evidence")
+        return self
+
+
+class ProjectProgressDatasetPackageItem(BaseModel):
+    """One exact, no-download large benchmark asset decision."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    proposal_sha256: Sha256
+    report_sha256: Sha256
+    report_file_sha256: Sha256
+    selected_task_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    source_hosts: tuple[SafeText, ...] = Field(min_length=1, max_length=20)
+    asset_count: int = Field(gt=0)
+    observed_download_bytes: int = Field(gt=0)
+    maximum_unpacked_bytes: int = Field(gt=0)
+    minimum_free_storage_bytes: int = Field(gt=0)
+    task_qualifications: tuple[ProjectProgressDatasetPackageTaskItem, ...] = Field(min_length=1)
+    metadata_review_ready: bool
+    ready_for_owner_approval: bool
+    pending_content_hash_count: int = Field(ge=0)
+    integrity_blocker_codes: tuple[SafeText, ...] = ()
+    approval_blocker_codes: tuple[SafeText, ...] = ()
+    pending_qualification_codes: tuple[SafeText, ...] = ()
+    authorization_blocker_codes: tuple[SafeText, ...] = ()
+    authorizes_network_preflight: Literal[False] = False
+    authorizes_download: Literal[False] = False
+    authorizes_ingestion: Literal[False] = False
+    authorizes_api_calls: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    no_network_access_performed: Literal[True] = True
+    no_download_performed: Literal[True] = True
+    no_dataset_file_created: Literal[True] = True
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def dataset_package_is_consistent(self) -> ProjectProgressDatasetPackageItem:
+        if self.asset_count != sum(item.asset_count for item in self.task_qualifications):
+            raise ValueError("dataset package asset count differs from its tasks")
+        if self.observed_download_bytes != sum(
+            item.observed_compressed_bytes for item in self.task_qualifications
+        ):
+            raise ValueError("dataset package compressed bytes differ from its tasks")
+        if self.maximum_unpacked_bytes != sum(
+            item.maximum_unpacked_bytes for item in self.task_qualifications
+        ):
+            raise ValueError("dataset package unpacked ceiling differs from its tasks")
+        if self.minimum_free_storage_bytes < self.maximum_unpacked_bytes:
+            raise ValueError("dataset package free-storage floor is below its unpacked ceiling")
+        if tuple(item.task_id for item in self.task_qualifications) != self.selected_task_ids:
+            raise ValueError("dataset package task order differs from its selected tasks")
+        if self.metadata_review_ready and self.integrity_blocker_codes:
+            raise ValueError("metadata-ready dataset package retains integrity blockers")
+        if self.ready_for_owner_approval and (
+            not self.metadata_review_ready or self.approval_blocker_codes
+        ):
+            raise ValueError("approval-ready dataset package retains approval blockers")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("dataset package must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("dataset package evidence references must be unique")
+        return self
+
+
 class ProjectProgressBenchmarkQualificationItem(BaseModel):
     """One no-run benchmark/compute compatibility decision."""
 
@@ -1238,6 +1330,7 @@ class ProjectProgressBoardData(BaseModel):
     evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
     acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
+    dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
@@ -1294,6 +1387,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.evaluation_results,
             *self.acquisitions,
             *self.acquisition_qualifications,
+            *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.milestones,
             *self.attention,
@@ -1326,6 +1420,10 @@ class ProjectProgressBoardData(BaseModel):
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):
             raise ValueError("project progress acquisition qualification IDs must be unique")
+
+        package_ids = [item.request_id for item in self.dataset_packages]
+        if len(package_ids) != len(set(package_ids)):
+            raise ValueError("project progress dataset package request IDs must be unique")
 
         benchmark_ids = [item.candidate_id for item in self.benchmark_qualifications]
         if len(benchmark_ids) != len(set(benchmark_ids)):

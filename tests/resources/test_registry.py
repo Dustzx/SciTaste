@@ -13,11 +13,13 @@ from scitaste.evaluation import load_gpu_host_inventory
 from scitaste.resources import (
     ComputeResourceCatalog,
     ComputeResourceRuntime,
+    CredentialBindingSource,
     ObservationStatus,
     ResourceKind,
     ResourceObservation,
     inspect_compute_resource_catalog,
     inspect_project_resource_binding,
+    inspect_resource_access,
     load_compute_resource_catalog,
     load_resource_observation,
 )
@@ -106,6 +108,86 @@ def test_self_development_binding_explicitly_selects_every_resource_class() -> N
     )
     assert inspection.gpu_resource_ids == ("gpu-host-local-3090", "gpu-host-3090-2")
     assert inspection.checkpoint_resource_ids == ("qwen3-vl-2b-local-47f9c0e0",)
+
+
+def test_resource_access_explicitly_partitions_local_bindings_without_exposing_values(
+    tmp_path: Path,
+) -> None:
+    credential_file = tmp_path / "credentials.env"
+    zhipu_secret = "zhipu-test-secret"
+    ssh_secret = "ssh-test-secret"
+    credential_file.write_text(
+        "\n".join(
+            (
+                f"ZAI_API_KEY={zhipu_secret}",
+                "DASHSCOPE_API_KEY=",
+                f"SCITASTE_GPU_3090_2_SSH_PASSWORD={ssh_secret}",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    credential_file.chmod(0o600)
+
+    status = inspect_resource_access(
+        CATALOG_V2,
+        credential_file=credential_file,
+        environ={"DASHSCOPE_API_KEY": "process-only-secret"},
+    )
+    by_id = {item.resource_id: item for item in status.resources}
+
+    assert status.bound_credential_resource_ids == (
+        "zhipu-glm53-flash",
+        "bailian-qwen38-max",
+        "gpu-host-3090-2",
+    )
+    assert status.missing_credential_resource_ids == ("deepseek-v41-flash",)
+    assert status.credential_free_resource_ids == (
+        "gpu-host-local-3090",
+        "qwen3-vl-2b-local-47f9c0e0",
+    )
+    assert (
+        by_id["zhipu-glm53-flash"].credential_source
+        is CredentialBindingSource.LOCAL_CREDENTIAL_FILE
+    )
+    assert (
+        by_id["bailian-qwen38-max"].credential_source is CredentialBindingSource.PROCESS_ENVIRONMENT
+    )
+    assert by_id["gpu-host-3090-2"].connection_metadata_complete is True
+    assert by_id["gpu-host-local-3090"].connection_metadata_complete is True
+    checkpoint = load_compute_resource_catalog(CATALOG_V2).catalog.resource(
+        "qwen3-vl-2b-local-47f9c0e0"
+    )
+    checkpoint_path = Path(checkpoint.local_path)
+    assert by_id["qwen3-vl-2b-local-47f9c0e0"].local_path_present is (
+        checkpoint_path.is_dir() and not checkpoint_path.is_symlink()
+    )
+    serialized = status.model_dump_json()
+    assert zhipu_secret not in serialized
+    assert ssh_secret not in serialized
+    assert "process-only-secret" not in serialized
+    assert status.credential_values_exposed is False
+    assert status.remote_probe_performed is False
+    assert status.workload_executed is False
+    assert status.execution_authority == "none"
+
+
+def test_resource_access_rejects_unsafe_or_overbroad_credential_files(tmp_path: Path) -> None:
+    credential_file = tmp_path / "credentials.env"
+    credential_file.write_text("ZAI_API_KEY=test\n", encoding="utf-8")
+    credential_file.chmod(0o644)
+    with pytest.raises(ValueError, match="group- or world-accessible"):
+        inspect_resource_access(CATALOG_V2, credential_file=credential_file, environ={})
+
+    credential_file.chmod(0o600)
+    linked = tmp_path / "linked.env"
+    linked.symlink_to(credential_file)
+    with pytest.raises(ValueError, match="must not be a symlink"):
+        inspect_resource_access(CATALOG_V2, credential_file=linked, environ={})
+
+    credential_file.write_text("UNSCOPED_SECRET=test\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="names absent from the compute catalog"):
+        inspect_resource_access(CATALOG_V2, credential_file=credential_file, environ={})
 
 
 def test_catalog_rejects_duplicate_identity_and_drifted_evidence(tmp_path: Path) -> None:
@@ -282,6 +364,52 @@ def test_resource_cli_initializes_registers_and_reports_status(
     status = json.loads(capsys.readouterr().out)
     gpu = next(item for item in status["resources"] if item["resource_id"] == "gpu-host-3090-2")
     assert gpu["latest_observation"]["available_storage_gb_reported"] == 200.0
+
+
+def test_resource_cli_writes_redacted_access_status(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name in (
+        "DEEPSEEK_API_KEY",
+        "ZAI_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "SCITASTE_GPU_3090_2_SSH_PASSWORD",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    credential_file = tmp_path / "credentials.env"
+    credential_file.write_text("ZAI_API_KEY=private-test-value\n", encoding="utf-8")
+    credential_file.chmod(0o600)
+    output = tmp_path / "access" / "STATUS.json"
+
+    assert (
+        main(
+            [
+                "resource",
+                "access-status",
+                "--catalog",
+                str(CATALOG_V2),
+                "--credential-file",
+                str(credential_file),
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    response = json.loads(capsys.readouterr().out)
+    persisted = json.loads(output.read_text(encoding="utf-8"))
+
+    assert response == persisted
+    assert response["bound_credential_resource_ids"] == ["zhipu-glm53-flash"]
+    assert response["missing_credential_resource_ids"] == [
+        "deepseek-v41-flash",
+        "bailian-qwen38-max",
+        "gpu-host-3090-2",
+    ]
+    assert "private-test-value" not in output.read_text(encoding="utf-8")
+    assert response["execution_authority"] == "none"
 
 
 def test_resource_cli_migrates_catalog_and_registers_explicit_project_binding(

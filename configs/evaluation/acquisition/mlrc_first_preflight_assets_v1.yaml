@@ -1,0 +1,45 @@
+schema_version: "1.0"
+request_id: mlrc-first-preflight-assets-v1
+project_id: scitaste-self-development
+track_id: objective-progress-transfer
+authorization_scope: review-only-no-download-no-execution
+purpose: >-
+  Freeze the exact source identities, observed compressed bytes, license
+  evidence, destination, and storage envelope for the first two MLRC-Bench
+  objective-progress candidates before any network acquisition or task setup.
+claim_boundary: >-
+  This request is a metadata and owner-decision artifact only. It establishes
+  neither legal clearance, content hashes, archive safety, environment
+  reproducibility, benchmark validity, model performance, nor permission to
+  download, ingest, call an API, use a GPU, or execute an experiment.
+candidate_manifest:
+  path: configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml
+  sha256: ac7595a6f66bde172f59a04cea9d4e173802d46b05e30d05ecbf233b0a2f8379
+resource_corpus:
+  path: docs/research/data/autoresearch_evaluation_resources_v7.yaml
+  sha256: d1c6c741992064e4587c5223183508ca9ea05ad8ecabbb6b14d1e122733d77b9
+compute_catalog:
+  path: configs/resources/compute_catalog_v2.yaml
+  sha256: 9392babcd090aedb12c9d7227f3e7589316945bf8a4bae973f1c9de74ddc056b
+inventory:
+  path: docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml
+  sha256: 7e1d3b3bd66716691b8a70aead205e2af9a361a60971a81e46a91584b078f8ad
+selected_task_ids:
+  - perception_temporal_action_loc
+  - meta-learning
+allowed_hosts:
+  - drive.usercontent.google.com
+  - data.openml.org
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/raw
+expected_asset_count: 39
+expected_download_bytes: 3761168137
+maximum_unpacked_bytes: 17179869184
+minimum_free_storage_bytes: 34359738368
+owner_approval_required: true
+owner_approved: false
+authorizes_network_preflight: false
+authorizes_download: false
+authorizes_ingestion: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

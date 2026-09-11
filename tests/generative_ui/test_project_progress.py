@@ -15,9 +15,12 @@ from scitaste.evaluation import (
     ReadinessStatus,
     TaskSignalKind,
     inspect_dataset_acquisition_request,
+    inspect_dataset_package_request,
     inspect_executable_candidate,
     load_dataset_acquisition_request,
+    load_dataset_package_request,
     load_executable_candidate_manifest,
+    save_dataset_package_gate_report,
     save_executable_candidate_report,
 )
 from scitaste.generative_ui import (
@@ -508,6 +511,77 @@ def test_progress_surfaces_executable_benchmark_qualification(tmp_path: Path) ->
     invalid["planned_gpu_hours"] = 1.0
     report_path.write_text(json.dumps(invalid), encoding="utf-8")
     with pytest.raises(ProjectSurfaceChangedError, match="qualification is invalid"):
+        _progress(runtime)
+
+
+def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "dataset-package-run"
+    artifact = f"runs/{run_id}/dataset_package_acquisition/REPORT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="dataset_package_acquisition",
+        artifact=artifact,
+    )
+    report = inspect_dataset_package_request(
+        load_dataset_package_request(
+            "configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml"
+        ),
+        workspace_root=".",
+    )
+    report_path = runtime.projects_root / "progress-project" / artifact
+    save_dataset_package_gate_report(report, report_path)
+
+    _, data = _progress(runtime)
+
+    assert data["dataset_packages"] == [
+        {
+            "run_ref_id": data["dataset_packages"][0]["run_ref_id"],
+            "run_id": run_id,
+            "request_id": report.request_id,
+            "proposal_sha256": report.proposal_sha256,
+            "report_sha256": report.report_sha256,
+            "report_file_sha256": data["dataset_packages"][0]["report_file_sha256"],
+            "selected_task_ids": list(report.selected_task_ids),
+            "source_hosts": list(report.source_hosts),
+            "asset_count": 39,
+            "observed_download_bytes": 3_761_168_137,
+            "maximum_unpacked_bytes": 16 * 1024**3,
+            "minimum_free_storage_bytes": 32 * 1024**3,
+            "task_qualifications": [
+                item.model_dump(mode="json") for item in report.task_qualifications
+            ],
+            "metadata_review_ready": True,
+            "ready_for_owner_approval": False,
+            "pending_content_hash_count": 39,
+            "integrity_blocker_codes": [],
+            "approval_blocker_codes": [item.code for item in report.approval_blockers],
+            "pending_qualification_codes": [item.code for item in report.pending_qualifications],
+            "authorization_blocker_codes": [item.code for item in report.authorization_blockers],
+            "authorizes_network_preflight": False,
+            "authorizes_download": False,
+            "authorizes_ingestion": False,
+            "authorizes_api_calls": False,
+            "authorizes_gpu_work": False,
+            "authorizes_execution": False,
+            "no_network_access_performed": True,
+            "no_download_performed": True,
+            "no_dataset_file_created": True,
+            "support_ref_ids": data["dataset_packages"][0]["support_ref_ids"],
+        }
+    ]
+    candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "review_data_acquisition"
+    )
+    assert candidate["target_ids"] == [report.request_id]
+
+    invalid = json.loads(report_path.read_text(encoding="utf-8"))
+    invalid["observed_download_bytes"] += 1
+    report_path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(ProjectSurfaceChangedError, match="dataset package report is invalid"):
         _progress(runtime)
 
 

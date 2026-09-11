@@ -74,3 +74,31 @@ population, rights-compatible slice, source groups, expected storage, and human
 curation plan are not sufficiently exact. Creating a plausible-looking GPU data
 request now would weaken rather than advance the formal experiment, so the GPU
 track remains `design_only` until those fields are frozen.
+
+## Large executable-task packages
+
+Large benchmark archives use a stricter review object than the small immutable
+brief downloader. The first package request is
+`configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml`; it binds
+the two MLRC tasks admitted for first preflight to 39 exact provider objects,
+3,761,168,137 observed compressed bytes, a 16-GiB unpack ceiling, and a 32-GiB
+free-space floor. Google Drive file IDs and OpenML object ETags are preserved
+separately from the SHA-256 values that can exist only after first acquisition.
+
+Inspect it without a download:
+
+```bash
+.venv/bin/scitaste evaluation dataset-package-request \
+  --manifest configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml \
+  --workspace-root . --require-metadata-review-ready
+```
+
+The current metadata gate passes but `--require-owner-approval-ready` fails.
+Temporal Action Localisation has a Perception Test versus MLRC derivative-data
+license discrepancy; Meta-Album has heterogeneous per-dataset obligations and
+an unspecified AWA Creative Commons variant. The request therefore retains all
+network, download, ingestion, API, GPU, and execution authority as false.
+Closing those license issues would make the exact request reviewable, not
+approved. A later downloader must still recheck provider identity immediately
+before transfer, stream into an atomic staging area, compute every archive hash,
+and run ZIP path/expanded-size checks before extraction.

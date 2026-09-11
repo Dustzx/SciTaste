@@ -1192,6 +1192,60 @@ fieldset {
   border-left-color: #587b94;
 }
 
+.dataset-package-card {
+  border-left-color: #8b6840;
+}
+
+.dataset-package-flow {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dataset-package-flow > div,
+.dataset-package-tasks > div {
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid #d8dfd4;
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.5rem;
+}
+
+.dataset-package-flow strong {
+  color: #765431;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.dataset-package-flow small,
+.dataset-package-tasks small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.dataset-package-tasks {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dataset-package-tasks strong {
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.dataset-package-license {
+  color: #8a532d;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.dataset-package-blockers {
+  margin: 0;
+}
+
 .benchmark-funnel {
   align-items: center;
   display: grid;
@@ -1310,6 +1364,14 @@ fieldset {
   }
 
   .benchmark-task-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dataset-package-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dataset-package-tasks {
     grid-template-columns: minmax(0, 1fr);
   }
 }

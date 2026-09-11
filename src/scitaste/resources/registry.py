@@ -6,9 +6,10 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from datetime import date, datetime
 from enum import StrEnum
@@ -44,6 +45,13 @@ class ObservationStatus(StrEnum):
     REPORTED = "reported"
     PENDING = "pending"
     BLOCKED = "blocked"
+
+
+class CredentialBindingSource(StrEnum):
+    PROCESS_ENVIRONMENT = "process_environment"
+    LOCAL_CREDENTIAL_FILE = "local_credential_file"
+    ABSENT = "absent"
+    NOT_REQUIRED = "not_required"
 
 
 class ApiPriceCeiling(BaseModel):
@@ -477,6 +485,72 @@ class ResourceRegistryStatus(BaseModel):
     workload_executed: Literal[False] = False
 
 
+class ResourceAccessBindingItem(BaseModel):
+    """Secret-redacted local binding state for one catalog resource."""
+
+    model_config = _CONFIG
+
+    resource_id: str = Field(pattern=_ID)
+    kind: ResourceKind
+    availability: ObservationStatus
+    credential_env: str | None = Field(default=None, pattern=_ENV)
+    credential_source: CredentialBindingSource
+    credential_present: bool
+    access_binding_complete: bool
+    connection_metadata_complete: bool | None = None
+    local_path_present: bool | None = None
+
+    @model_validator(mode="after")
+    def binding_state_is_consistent(self) -> ResourceAccessBindingItem:
+        if self.credential_env is None:
+            if self.credential_source is not CredentialBindingSource.NOT_REQUIRED:
+                raise ValueError("credential-free resources must use not_required source")
+            if self.credential_present:
+                raise ValueError("credential-free resources cannot report a credential")
+        elif self.credential_present:
+            if self.credential_source not in {
+                CredentialBindingSource.PROCESS_ENVIRONMENT,
+                CredentialBindingSource.LOCAL_CREDENTIAL_FILE,
+            }:
+                raise ValueError("present credentials require an explicit local source")
+        elif self.credential_source is not CredentialBindingSource.ABSENT:
+            raise ValueError("missing credentials must use absent source")
+        if self.access_binding_complete != (self.credential_env is None or self.credential_present):
+            raise ValueError("access binding completeness differs from credential state")
+        return self
+
+
+class ResourceAccessStatus(BaseModel):
+    """Credential-name inventory that never serializes credential values."""
+
+    model_config = _CONFIG
+
+    catalog_id: str = Field(pattern=_ID)
+    catalog_semantic_sha256: str = Field(pattern=_SHA256)
+    credential_file: str | None = None
+    credential_file_loaded: bool
+    resources: tuple[ResourceAccessBindingItem, ...] = Field(min_length=1)
+    bound_credential_resource_ids: tuple[str, ...] = ()
+    missing_credential_resource_ids: tuple[str, ...] = ()
+    credential_free_resource_ids: tuple[str, ...] = ()
+    credential_values_exposed: Literal[False] = False
+    remote_probe_performed: Literal[False] = False
+    workload_executed: Literal[False] = False
+    execution_authority: Literal["none"] = "none"
+
+    @model_validator(mode="after")
+    def partitions_cover_resources(self) -> ResourceAccessStatus:
+        observed = [item.resource_id for item in self.resources]
+        partitioned = [
+            *self.bound_credential_resource_ids,
+            *self.missing_credential_resource_ids,
+            *self.credential_free_resource_ids,
+        ]
+        if len(partitioned) != len(set(partitioned)) or set(partitioned) != set(observed):
+            raise ValueError("resource access partitions must cover every resource exactly once")
+        return self
+
+
 def load_compute_resource_catalog(path: str | Path) -> LoadedComputeResourceCatalog:
     source, payload = _load_yaml(path)
     component_hashes: dict[str, str] = {}
@@ -567,6 +641,113 @@ def inspect_compute_resource_catalog(
         component_file_sha256=loaded.component_file_sha256,
         evidence_verified=not issues,
         evidence_issues=tuple(issues),
+    )
+
+
+def inspect_resource_access(
+    catalog_path: str | Path,
+    *,
+    credential_file: str | Path | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> ResourceAccessStatus:
+    """Resolve only whether declared credentials exist, without returning their values.
+
+    This is deliberately not a connectivity probe. A bound credential says that a
+    future, separately authorized executor can resolve the catalog contract; it does
+    not say that the account, endpoint, SSH host, or workload is available.
+    """
+
+    loaded = load_compute_resource_catalog(catalog_path)
+    required_names = {
+        credential_env
+        for resource in loaded.catalog.resources
+        if (
+            credential_env := (
+                resource.credential_env
+                if isinstance(resource, (ApiModelDefinition, GpuHostDefinition))
+                else None
+            )
+        )
+        is not None
+    }
+    file_values: dict[str, str] = {}
+    resolved_file: Path | None = None
+    if credential_file is not None:
+        resolved_file, file_values = _load_local_credential_file(credential_file)
+        unknown = set(file_values) - required_names
+        if unknown:
+            raise ValueError(
+                "credential file contains names absent from the compute catalog: "
+                + ", ".join(sorted(unknown))
+            )
+
+    process_values = os.environ if environ is None else environ
+    items: list[ResourceAccessBindingItem] = []
+    bound: list[str] = []
+    missing: list[str] = []
+    credential_free: list[str] = []
+    for resource in loaded.catalog.resources:
+        credential_env = (
+            resource.credential_env
+            if isinstance(resource, (ApiModelDefinition, GpuHostDefinition))
+            else None
+        )
+        if credential_env is None:
+            source = CredentialBindingSource.NOT_REQUIRED
+            credential_present = False
+            credential_free.append(resource.resource_id)
+        elif process_values.get(credential_env):
+            source = CredentialBindingSource.PROCESS_ENVIRONMENT
+            credential_present = True
+            bound.append(resource.resource_id)
+        elif file_values.get(credential_env):
+            source = CredentialBindingSource.LOCAL_CREDENTIAL_FILE
+            credential_present = True
+            bound.append(resource.resource_id)
+        else:
+            source = CredentialBindingSource.ABSENT
+            credential_present = False
+            missing.append(resource.resource_id)
+
+        connection_metadata_complete: bool | None = None
+        local_path_present: bool | None = None
+        if isinstance(resource, GpuHostDefinition):
+            connection_metadata_complete = resource.location == "local" or all(
+                value is not None
+                for value in (
+                    resource.connection_alias,
+                    resource.connection_host,
+                    resource.connection_port,
+                    resource.connection_user,
+                )
+            )
+        elif isinstance(resource, ModelCheckpointDefinition):
+            local_path = Path(resource.local_path).expanduser()
+            local_path_present = local_path.is_dir() and not local_path.is_symlink()
+
+        items.append(
+            ResourceAccessBindingItem(
+                resource_id=resource.resource_id,
+                kind=resource.kind,
+                availability=resource.availability,
+                credential_env=credential_env,
+                credential_source=source,
+                credential_present=credential_present,
+                access_binding_complete=credential_env is None or credential_present,
+                connection_metadata_complete=connection_metadata_complete,
+                local_path_present=local_path_present,
+            )
+        )
+
+    return ResourceAccessStatus(
+        catalog_id=loaded.catalog.catalog_id,
+        catalog_semantic_sha256=loaded.semantic_sha256,
+        credential_file=resolved_file.as_posix() if resolved_file is not None else None,
+        credential_file_loaded=resolved_file is not None,
+        resources=tuple(items),
+        bound_credential_resource_ids=tuple(bound),
+        missing_credential_resource_ids=tuple(missing),
+        credential_free_resource_ids=tuple(credential_free),
     )
 
 
@@ -1041,6 +1222,43 @@ def _read_bounded_regular_file(path: Path, label: str) -> bytes:
     if path.stat().st_size > _MAX_INPUT_BYTES:
         raise ValueError(f"{label} exceeds {_MAX_INPUT_BYTES} bytes")
     return path.read_bytes()
+
+
+def _load_local_credential_file(path: str | Path) -> tuple[Path, dict[str, str]]:
+    supplied = Path(path).expanduser()
+    if supplied.is_symlink():
+        raise ValueError("local credential file must not be a symlink")
+    source = supplied.resolve()
+    raw = _read_bounded_regular_file(source, "local credential file")
+    if source.stat().st_mode & 0o077:
+        raise ValueError("local credential file must not be group- or world-accessible")
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("local credential file must be UTF-8") from exc
+
+    values: dict[str, str] = {}
+    for line_number, original in enumerate(text.splitlines(), start=1):
+        line = original.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        name, separator, value = line.partition("=")
+        name = name.strip()
+        if not separator or re.fullmatch(_ENV, name) is None:
+            raise ValueError(f"invalid credential assignment on line {line_number}")
+        if name in values:
+            raise ValueError(f"duplicate credential assignment for {name}")
+        value = value.strip()
+        if value[:1] in {"'", '"'}:
+            if len(value) < 2 or value[-1] != value[0]:
+                raise ValueError(f"unterminated credential quote on line {line_number}")
+            value = value[1:-1]
+        if "\x00" in value or "\r" in value or "\n" in value:
+            raise ValueError(f"invalid credential value on line {line_number}")
+        values[name] = value
+    return source, values
 
 
 def _strip_empty_checkpoint_observation_fields(payload: dict[str, object]) -> None:

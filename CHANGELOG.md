@@ -7,6 +7,13 @@ semantic versioning.
 
 ### Added
 
+- Shared resources now have a redacted local-access inspection boundary. A
+  mode-`0600`, Git-ignored credential file can bind the catalog's DeepSeek,
+  Zhipu, Bailian, and remote-GPU environment names, while `resource
+  access-status` persists only bound/missing states. It rejects symlinks,
+  permissive modes, duplicate or unscoped assignments and performs no API,
+  SSH, GPU, model, reservation, or experiment action.
+
 - A no-run executable-benchmark qualifier now binds the official MLRC-Bench
   code/data identities to the shared API/GPU catalog, preserves all seven
   accepted tasks, selects four published 16-GB tasks, and excludes three
@@ -15,6 +22,15 @@ semantic versioning.
   legal, asset, environment, authentication, hidden-test, and task-sampling
   limits. Metadata review can pass without granting download, API, GPU, or
   execution authority.
+
+- The first MLRC executable-task slice now has an exact, no-download package
+  gate. It binds 39 Google Drive/OpenML archives and their source identities,
+  3.503 GiB of observed compressed bytes, per-task unpack ceilings, a 32-GiB
+  free-space floor, and heterogeneous license evidence. Perception Test
+  derivative-license and Meta-Album AWA-license conflicts remain explicit
+  approval blockers; all network, download, ingestion, API, GPU, and execution
+  authority remains false. Generation as Content projects the decision as a
+  compact review card instead of expanding the archive ledger on the homepage.
 
 - API and GPU resources are now operationally explicit inside the shared
   resource directory. The Zhipu manifest uses the executable backend's

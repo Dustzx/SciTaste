@@ -1271,6 +1271,7 @@ function renderProjectProgress(data) {
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
   );
+  const datasetPackages = renderDatasetPackages(data.dataset_packages || []);
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
 
@@ -1709,6 +1710,9 @@ function renderProjectProgress(data) {
   if ((data.benchmark_qualifications || []).length > 0) {
     container.appendChild(benchmarkQualifications);
   }
+  if ((data.dataset_packages || []).length > 0) {
+    container.appendChild(datasetPackages);
+  }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
 }
@@ -1919,6 +1923,148 @@ function renderAcquisitionQualifications(items) {
           "authorizes_execution",
           "provider_call_performed",
           "gpu_work_performed",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderDatasetPackages(items) {
+  const section = progressSection(
+    t("progress.dataset_package.title"),
+    items.length > 0
+      ? t("progress.dataset_package.subtitle", {count: items.length})
+      : t("progress.dataset_package.empty"),
+  );
+  if (items.length === 0) {
+    return section;
+  }
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card dataset-package-card";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.dataset_package.request"));
+    const title = document.createElement("strong");
+    appendText(title, item.request_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.ready_for_owner_approval
+          ? "candidate"
+          : item.metadata_review_ready
+            ? "blocked"
+            : "failed",
+        item.ready_for_owner_approval
+          ? t("progress.dataset_package.approval_ready")
+          : item.metadata_review_ready
+            ? t("progress.dataset_package.license_blocked")
+            : t("progress.dataset_package.metadata_blocked"),
+      ),
+    );
+
+    const flow = document.createElement("div");
+    flow.className = "dataset-package-flow";
+    const flowItems = [
+      [String(item.asset_count), t("progress.dataset_package.archives")],
+      [formatByteCeiling(item.observed_download_bytes), t("progress.dataset_package.download")],
+      [formatByteCeiling(item.maximum_unpacked_bytes), t("progress.dataset_package.unpacked")],
+      [formatByteCeiling(item.minimum_free_storage_bytes), t("progress.dataset_package.free")],
+    ];
+    for (const [value, copy] of flowItems) {
+      const fact = document.createElement("div");
+      const amount = document.createElement("strong");
+      appendText(amount, value);
+      const factLabel = document.createElement("small");
+      appendText(factLabel, copy);
+      fact.append(amount, factLabel);
+      flow.appendChild(fact);
+    }
+
+    const taskGrid = document.createElement("div");
+    taskGrid.className = "dataset-package-tasks";
+    for (const task of item.task_qualifications) {
+      const taskCard = document.createElement("div");
+      const taskName = document.createElement("strong");
+      appendText(taskName, localizedCode(task.task_id));
+      const taskFacts = document.createElement("small");
+      appendText(taskFacts, t("progress.dataset_package.task_summary", {
+        count: task.asset_count,
+        size: formatByteCeiling(task.observed_compressed_bytes),
+      }));
+      const license = document.createElement("span");
+      license.className = "dataset-package-license";
+      appendText(license, t(`progress.dataset_package.license.${task.license_disposition}`));
+      taskCard.append(taskName, taskFacts, license);
+      taskGrid.appendChild(taskCard);
+    }
+
+    const blockerCodes = [
+      ...item.approval_blocker_codes,
+      ...item.pending_qualification_codes,
+    ];
+    const blockers = document.createElement("ul");
+    blockers.className = "acquisition-restrictions dataset-package-blockers";
+    for (const code of blockerCodes.slice(0, 5)) {
+      const blocker = document.createElement("li");
+      appendText(blocker, localizedCode(code));
+      blockers.appendChild(blocker);
+    }
+
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.dataset_package.boundary", {
+      hashes: item.pending_content_hash_count,
+    }));
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "secondary-button acquisition-review";
+    appendText(review, t("progress.dataset_package.review"));
+    review.addEventListener("click", () => requestCandidateWorkspace(
+      "review-data-acquisition-request",
+    ));
+    card.append(
+      header,
+      flow,
+      taskGrid,
+      blockers,
+      boundary,
+      review,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          proposal_sha256: item.proposal_sha256,
+          report_sha256: item.report_sha256,
+          report_file_sha256: item.report_file_sha256,
+          source_hosts: item.source_hosts,
+          authorizes_network_preflight: item.authorizes_network_preflight,
+          authorizes_download: item.authorizes_download,
+          authorizes_ingestion: item.authorizes_ingestion,
+          authorizes_api_calls: item.authorizes_api_calls,
+          authorizes_gpu_work: item.authorizes_gpu_work,
+          authorizes_execution: item.authorizes_execution,
+          no_dataset_file_created: item.no_dataset_file_created,
+        },
+        names: [
+          "proposal_sha256",
+          "report_sha256",
+          "report_file_sha256",
+          "source_hosts",
+          "authorizes_network_preflight",
+          "authorizes_download",
+          "authorizes_ingestion",
+          "authorizes_api_calls",
+          "authorizes_gpu_work",
+          "authorizes_execution",
+          "no_dataset_file_created",
         ],
       }),
     );

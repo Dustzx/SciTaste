@@ -170,6 +170,14 @@ backend, and the remote eight-card host records its actual SSH host, port, user,
 password environment binding, and RemoteForward topology rather than only an
 operator alias. Secret values remain local and untracked.
 
+The local-access boundary now makes that last sentence executable. A scoped,
+mode-`0600` file under ignored `outputs/resources/access/` may supply only the
+credential names declared by the catalog. `resource access-status` partitions
+all API/GPU/checkpoint resources into bound, missing, and credential-free sets
+without serializing values. Binding still conveys neither connectivity nor
+experiment authority; it simply removes undocumented operator memory from the
+future launch path.
+
 The first approved benchmark-source acquisition has now completed without
 model or GPU use. Ten MLR-Bench workshop briefs were atomically downloaded from
 the pinned repository commit, and a new cohort inspector revalidates request,
@@ -192,6 +200,17 @@ Localisation are first in line for a content-addressed acquisition proposal;
 Kaggle and AIcrowd tasks remain blocked by terms, credentials, or manual test
 steps. This slice supplies transfer/mechanism evidence, not the complete ICLR
 claim.
+
+That first-line choice now reaches exact asset review. Temporal Action
+Localisation contributes nine multimodal Google Drive archives and Cross-Domain
+Meta Learning contributes 30 OpenML image archives: 3,761,168,137 compressed
+bytes under a 16-GiB unpack ceiling and 32-GiB free-space floor. The metadata
+contract is internally complete, but download approval remains blocked by the
+Perception Test/MLRC derivative-license discrepancy, heterogeneous Meta-Album
+obligations, and an unspecified AWA Creative Commons variant. Every first-copy
+content hash and archive-safety check also remains pending by construction.
+This narrows the next work to rights closure and a streaming atomic downloader,
+not GPU or API execution.
 
 The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external

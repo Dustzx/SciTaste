@@ -15,13 +15,22 @@ The implementation has two planes:
   changing availability, catalog predecessors, and exact per-project resource
   bindings. It is ignored by Git because these are local operational state.
 
-Provider credentials and SSH passwords never enter either plane. API manifests
-store only `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, or `DASHSCOPE_API_KEY` as binding
-names; these now match the executable DeepSeek, Zhipu, and Bailian backend
-contracts. GPU manifests store a local-process profile or explicit non-secret
-SSH connection metadata plus a password environment-variable name. A resource
-observation or project binding cannot authorize an experiment, reserve a
-device, change scientific evidence, or execute a workload.
+Provider credentials and SSH passwords never enter tracked definitions,
+observations, bindings, or status records. API manifests store only
+`DEEPSEEK_API_KEY`, `ZAI_API_KEY`, or `DASHSCOPE_API_KEY` as binding names; these
+now match the executable DeepSeek, Zhipu, and Bailian backend contracts. GPU
+manifests store a local-process profile or explicit non-secret SSH connection
+metadata plus a password environment-variable name. A resource observation or
+project binding cannot authorize an experiment, reserve a device, change
+scientific evidence, or execute a workload.
+
+The one exception to “no secret values in the registry” is an explicitly local,
+Git-ignored access file at `outputs/resources/access/credentials.env`. It is a
+mode-`0600` runtime input rather than evidence: the access inspector consumes
+its values only to determine whether each declared name is non-empty and never
+copies, hashes, or prints them. The neighboring `STATUS.json` contains only the
+bound/missing partition. This keeps actual local usability visible without
+turning a weak password hash or bearer key into a tracked artifact.
 
 ## Explicit resources
 
@@ -102,7 +111,17 @@ scitaste resource update-project-binding \
 scitaste resource status \
   --catalog configs/resources/compute_catalog_v2.yaml \
   --outputs-root outputs
+
+scitaste resource access-status \
+  --catalog configs/resources/compute_catalog_v2.yaml \
+  --credential-file outputs/resources/access/credentials.env \
+  --output outputs/resources/access/STATUS.json
 ```
+
+The access-status command performs no API request, SSH login, GPU probe, model
+load, reservation, or experiment. `access_binding_complete` means only that the
+future executor can resolve the declared local credential name. Provider
+availability and execution approval remain independent gates.
 
 Catalog update preserves the predecessor registry and every compatible
 observation. Project binding publication copies the exact YAML and records its

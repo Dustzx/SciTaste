@@ -76,6 +76,7 @@ from scitaste.evaluation import (
     inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_dataset_acquisition_request,
+    inspect_dataset_package_request,
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
@@ -85,6 +86,7 @@ from scitaste.evaluation import (
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_dataset_acquisition_request,
+    load_dataset_package_request,
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
@@ -100,6 +102,7 @@ from scitaste.evaluation import (
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
     save_dataset_acquisition_request,
+    save_dataset_package_gate_report,
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
@@ -1280,6 +1283,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquisition_request)
     acquisition_request.set_defaults(handler=_handle_evaluation_acquisition_request)
+    dataset_package_request = evaluation_commands.add_parser(
+        "dataset-package-request",
+        help="Inspect a large benchmark package request without network or execution",
+    )
+    dataset_package_request.add_argument("--manifest", type=Path, required=True)
+    dataset_package_request.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_package_request.add_argument("--output", type=Path, default=None)
+    dataset_package_request.add_argument(
+        "--require-metadata-review-ready",
+        action="store_true",
+        help=(
+            "return nonzero unless task identities, source metadata, sizes, and bindings are exact"
+        ),
+    )
+    dataset_package_request.add_argument(
+        "--require-owner-approval-ready",
+        action="store_true",
+        help="return nonzero while license or package-safety gates remain unresolved",
+    )
+    _add_log_level_option(dataset_package_request)
+    dataset_package_request.set_defaults(handler=_handle_evaluation_dataset_package_request)
     acquisition_approve = evaluation_commands.add_parser(
         "acquisition-approve",
         help="Bind owner approval to an exact review-ready download request without downloading",
@@ -3963,6 +3987,26 @@ def _handle_evaluation_acquisition_request(args: argparse.Namespace) -> int:
     if args.require_review_ready and not report.ready_for_owner_approval:
         return 1
     if args.require_authorized and not report.download_authorized:
+        return 1
+    return 0
+
+
+def _handle_evaluation_dataset_package_request(args: argparse.Namespace) -> int:
+    inspection = load_dataset_package_request(args.manifest)
+    report = inspect_dataset_package_request(
+        inspection,
+        workspace_root=args.workspace_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report"] = str(save_dataset_package_gate_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_metadata_review_ready and not report.metadata_review_ready:
+        return 1
+    if args.require_owner_approval_ready and not report.ready_for_owner_approval:
         return 1
     return 0
 

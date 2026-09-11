@@ -250,6 +250,23 @@ browser runtime error, or sub-24-pixel enabled target was observed. These are
 interaction and layout checks only; they do not validate benchmark fitness or
 scientific effectiveness.
 
+Project revision 303 adds the next decision artifact without expanding the page
+into an archive ledger. The compact dataset-package card shows the 39-archive
+and 3.503-GiB transfer, 16-GiB unpack and 32-GiB free-space bounds, the two task
+license dispositions, and the exact blocker/authority split. Its review action
+opens a generated evidence workspace through the existing intent contract; it
+cannot approve a download or execute the task. Exact per-object URLs, ETags,
+timestamps, and license sources remain in the content-bound report rather than
+becoming a long default-page table.
+
+A Chromium DevTools emulation at 1440, 768, 390, and 320 CSS pixels observed
+equal document and viewport widths, equal workspace client/scroll widths, one
+bounded package card, and no browser exception. After the quick-intent catalog
+finished loading, the card's review action created a first immutable page in a
+project conversation at revision 303 and disclosed deterministic planning with
+no execution authority. The check is receiver engineering evidence, not a
+human-usability result.
+
 Every visible progress row carries supporting evidence references. Run and
 paper status rows cite both `PROJECT.json` and their content-addressed run or
 paper record because selection and status come from the project manifest.
@@ -264,8 +281,8 @@ Next-step entries are capabilities for later intent planning, not controller
 decisions. They can offer progress review, blocker diagnosis, comparison of the
 latest two registered runs, paper-evidence review, review of a declared next
 gate, a registered acquisition decision or qualification, a registered
-executable-benchmark qualification, or a registered evaluation landscape only
-when their required project records exist. They
+dataset-package review, an executable-benchmark qualification, or a registered
+evaluation landscape only when their required project records exist. They
 contain no command or execution authority.
 
 ### Research synthesis as generated visual content

@@ -645,3 +645,47 @@ gap, and next review action. A Chromium walkthrough at 1440, 768, 390, and
 320 CSS pixels observed no document-level horizontal overflow, undersized
 enabled target, or browser runtime error; this is interface engineering
 evidence, not human-usability or scientific-effectiveness evidence.
+
+## Exact MLRC asset review changed the acquisition boundary (2026-09-12)
+
+The next recursive pass followed the executable candidate into its actual data
+preparation code. That inspection found that the two retained tasks require 39
+archives and 3,761,168,137 compressed bytes, not a generic “download the
+benchmark” action. Temporal Action Localisation needs all nine video, sound,
+and annotation archives because the pinned MLRC configuration selects the
+multimodal path. Cross-Domain Meta Learning needs 30 OpenML image archives
+whose official per-dataset licenses are heterogeneous.
+
+SciTaste now has a strict dataset-package request that binds every provider
+object identity, observed length, last-modified value or ETag, destination,
+license evidence, task total, 16-GiB unpack ceiling, and 32-GiB free-space
+floor. The metadata gate passes, but owner-approval readiness remains false:
+the Perception Test and MLRC derivative-license descriptions conflict, and the
+Meta-Album AWA license variant is unresolved. Content hashes and archive safety
+are explicitly deferred until an approved first transfer. No dataset body,
+provider call, GPU, or benchmark execution was used.
+
+The report is registered as run
+`2026-09-12__scitaste-native__mlrc-first-preflight-assets-v1__seed-00` and is
+selected at project revision 303. Its canonical artifact is
+`dataset_package_acquisition/REPORT.json`. This is acquisition-decision and
+project-management evidence; it establishes neither legal clearance nor an
+experimental result.
+
+## Local API/GPU access binding became explicit (2026-09-12)
+
+The shared catalog already separated stable API/GPU/checkpoint identity from
+project artifacts, but “credential name exists in YAML” still did not answer
+which resources this machine could resolve. The new access inspector consumes
+only catalog-declared names from a mode-`0600`, Git-ignored file under
+`outputs/resources/access/` or the process environment. It persists only a
+bound/missing/credential-free partition and never prints or hashes a value.
+
+On this machine, Zhipu GLM-5.3-Flash, historical Bailian Qwen3.8-Max, and the
+remote 8×3090 SSH profile are locally bound; the local 1×3090 and verified
+Qwen3-VL-2B tree need no credential. DeepSeek V4.1 Flash remains explicitly
+missing a local credential. Bailian remains provider-blocked and the remote
+host remains owner-reported even though their credentials are present. This
+distinction prevents “a key exists” from being promoted into availability or
+experiment authority. The inspection made no API request, SSH login, GPU
+probe, model load, reservation, or experiment.

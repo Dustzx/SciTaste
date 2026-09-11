@@ -10,6 +10,7 @@ from scitaste.resources import (
     ComputeResourceRuntime,
     inspect_compute_resource_catalog,
     inspect_project_resource_binding,
+    inspect_resource_access,
 )
 
 
@@ -90,6 +91,21 @@ def register_resource_cli(commands: argparse._SubParsersAction[argparse.Argument
     status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(status)
     status.set_defaults(handler=_handle_resource_status)
+
+    access_status = resource_commands.add_parser(
+        "access-status",
+        help="Report local credential bindings without exposing values or contacting resources",
+    )
+    access_status.add_argument("--catalog", type=Path, required=True)
+    access_status.add_argument("--credential-file", type=Path, default=None)
+    access_status.add_argument("--output", type=Path, default=None)
+    access_status.add_argument(
+        "--require-all-bindings",
+        action="store_true",
+        help="return nonzero when any catalog credential binding is absent",
+    )
+    _add_log_level_option(access_status)
+    access_status.set_defaults(handler=_handle_resource_access_status)
 
 
 def _add_catalog_options(parser: argparse.ArgumentParser) -> None:
@@ -224,3 +240,19 @@ def _handle_resource_status(args: argparse.Namespace) -> int:
     status = ComputeResourceRuntime(args.outputs_root).status(args.catalog)
     print(status.model_dump_json(indent=2))
     return 0
+
+
+def _handle_resource_access_status(args: argparse.Namespace) -> int:
+    status = inspect_resource_access(
+        args.catalog,
+        credential_file=args.credential_file,
+    )
+    serialized = status.model_dump_json(indent=2) + "\n"
+    if args.output is not None:
+        target = args.output.expanduser()
+        if target.is_symlink():
+            raise ValueError("resource access status output must not be a symlink")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(serialized, encoding="utf-8")
+    print(serialized, end="")
+    return int(args.require_all_bindings and bool(status.missing_credential_resource_ids))

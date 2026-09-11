@@ -187,6 +187,23 @@ task bytes, upstream-license closure, environments, baselines, and held-out
 reproduction are not yet complete, and the four-task slice cannot support a
 benchmark-wide generalization claim.
 
+The first two candidates now have an exact large-asset inventory and a separate
+review-only request:
+
+```bash
+.venv/bin/scitaste evaluation dataset-package-request \
+  --manifest configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml \
+  --workspace-root . --require-metadata-review-ready
+```
+
+It binds 39 archives with 3,761,168,137 observed compressed bytes, a 16 GiB
+unpacked ceiling, and a 32 GiB minimum-free-storage requirement. It is not
+owner-approval-ready: the Perception Test/MLRC derivative-license descriptions
+conflict, Meta-Album's per-dataset licenses are heterogeneous, and AWA lacks a
+precise Creative Commons variant. Content hashes and archive safety also remain
+post-acquisition qualifications. See
+[`MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md`](research/MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md).
+
 ## Project-owned proposal bundles
 
 The global `configs/evaluation/prelaunch/` files are reusable proposal sources,
@@ -349,13 +366,14 @@ protocol.
 
 ## Remaining work before the first approved block
 
-1. Select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
+1. Resolve the two exact MLRC large-asset license blockers, freeze the
+   attribution/obligation manifest, and implement the bounded streaming plus
+   archive-safety path. Present the regenerated request hash before any
+   transfer. Separately select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
    exact acquired inputs; freeze output package hashes, reviewer blinding, and
-   runtime policy. Do not promote these broad prompts to empirical tasks. The
-   separate MLRC-Bench metadata qualification is complete: prepare an exact,
-   no-execution acquisition request for only Cross-Domain Meta Learning and
-   Temporal Action Localisation, then reproduce each baseline and held-out path
-   before a formal objective-progress proposal.
+   runtime policy. Do not promote these broad prompts to empirical tasks. After
+   an approved MLRC acquisition and package qualification, reproduce each
+   baseline and held-out path before a formal objective-progress proposal.
 2. Materialize the v2 claim architecture as two proposals: a matched
    within-SciTaste causal lane and a separately labelled best-native external
    lane with model effects acknowledged. Then prepare exact direct-agent

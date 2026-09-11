@@ -1700,6 +1700,14 @@ verified; owner reports remain reported until an independent probe replaces
 them. Requested-versus-returned API identity and approximate-versus-exact disk
 capacity are distinct fields rather than prose aliases.
 
+Actual credentials may exist only in a mode-`0600`, Git-ignored local access
+file below `outputs/resources/access/` or in the process environment. The
+access inspector resolves only catalog-declared variable names, rejects
+symlinks, permissive modes, duplicates, and unrelated variables, and emits no
+value or secret hash. Its status partitions resources by binding presence while
+retaining provider availability as a separate field. Credential presence is
+therefore neither a connectivity observation nor execution authority.
+
 Catalog inspection and observation registration perform no provider call,
 remote login, project mutation, reservation, or workload. They cannot authorize
 an experiment. The v2 catalog is a small hash-index over independent API, GPU
@@ -1770,3 +1778,29 @@ manual submissions, missing file hashes, unbuilt environments, unverified
 provider/host observations, and absent 48 GB devices remain visible. The report
 and CLI carry literal false authority fields and perform no network, provider,
 SSH, or GPU action.
+
+### ADR-058: Large dataset metadata is not download approval
+
+Status: accepted for the first MLRC executable-task acquisition review; no
+dataset body has been acquired.
+
+A repository commit and task name do not determine the bytes needed by an
+executable benchmark. SciTaste therefore derives a separate dataset-package
+inventory from pinned preparation code and binds every provider object ID,
+source URL, observed length, modification time or ETag, destination, task, and
+license evidence. Inventory and request hashes are closed over the executable
+candidate, external-resource corpus, and shared compute catalog. Asset/task
+counts and compressed/unpacked/free-space arithmetic are recomputed rather than
+trusted from prose.
+
+Metadata readiness, owner-approval readiness, post-transfer qualification, and
+execution authority are separate partitions. An initial transfer cannot claim
+a content SHA-256 before bytes exist; it must record that hash in an atomic
+receipt. Archive path traversal and expanded-size safety are likewise
+post-transfer gates. A license conflict blocks owner-approval readiness even
+when every source object is exact. The current report grants no network,
+download, ingestion, API, GPU, or execution authority.
+
+Generation as Content may show the bounded task/size/license decision and link
+to the content-addressed report. It does not inline 39 object records on the
+project landing page and cannot mutate the request or approve a transfer.
