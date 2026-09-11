@@ -782,9 +782,12 @@ semantic versioning.
 
 - Fresh development installs now include the NumPy dependency required by the
   frozen diagnosis benchmark kernels, so the complete CI matrix no longer relies
-  on packages left over in a maintainer environment. The public README is also a
-  shorter project entry point with a readable four-node Scientific Taste diagram;
-  detailed implementation and research boundaries remain in the linked docs.
+  on packages left over in a maintainer environment. Ubuntu 24.04 CI runners now
+  load the distribution's restricted Bubblewrap AppArmor profile and prove the
+  native no-network sandbox before testing, without disabling the system-wide
+  user-namespace policy. The public README is also a shorter project entry point
+  with a readable four-node Scientific Taste diagram; detailed implementation
+  and research boundaries remain in the linked docs.
 
 - The public `scitaste.writing` package now lazily exposes review-dependent
   paper-revision context APIs, removing a cold-import cycle that could prevent

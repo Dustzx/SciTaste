@@ -32,7 +32,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install native isolation dependency
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apparmor-profiles apparmor-utils bubblewrap
+          sudo install -m 0644 \
+            /usr/share/apparmor/extra-profiles/bwrap-userns-restrict \
+            /etc/apparmor.d/bwrap-userns-restrict
+          sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+          bwrap --die-with-parent --unshare-all --new-session \
+            --uid 65534 --gid 65534 \
+            --ro-bind /usr /usr --ro-bind /bin /bin \
+            --ro-bind /lib /lib --ro-bind /lib64 /lib64 \
+            --proc /proc --dev /dev /bin/true
       - name: Install SciTaste test environment
         run: python -m pip install -e '.[dev]'
       - name: Check formatting
