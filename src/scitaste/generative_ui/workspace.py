@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 
+from scitaste.evaluation.acquisition import AcquisitionGateReport
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
@@ -423,6 +424,45 @@ class WorkspaceSurfaceFactory:
                     }
                 )
 
+        acquisition_by_request: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected = _acquisition_report_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_sha256 = inspected
+            run_ref = run_refs[run.run_id]
+            acquisition_by_request[report.request_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "request_id": report.request_id,
+                "request_sha256": report.request_sha256,
+                "report_sha256": report_sha256,
+                "status": (
+                    "download_authorized"
+                    if report.download_authorized
+                    else "awaiting_owner_approval"
+                    if report.ready_for_owner_approval
+                    else "blocked"
+                ),
+                "purpose": report.purpose,
+                "claim_boundary": report.claim_boundary,
+                "item_count": report.item_count,
+                "maximum_total_bytes": report.maximum_total_bytes,
+                "source_hosts": list(report.source_hosts),
+                "ready_for_owner_approval": report.ready_for_owner_approval,
+                "download_authorized": report.download_authorized,
+                "authorizes_ingestion": report.authorizes_ingestion,
+                "authorizes_execution": report.authorizes_execution,
+                "no_network_access_performed": report.no_network_access_performed,
+                "no_download_performed": report.no_download_performed,
+                "no_dataset_file_created": report.no_dataset_file_created,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        acquisition_rows = list(acquisition_by_request.values())
+
         recent_activity = []
         for run in reversed(snapshot.manifest.runs[-10:]):
             run_ref = run_refs[run.run_id]
@@ -629,6 +669,23 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
+        if acquisition_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-data-acquisition-request",
+                    "kind": "review_data_acquisition",
+                    "label_code": "review-project-data-acquisition-request",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in acquisition_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["request_id"] for item in acquisition_rows],
+                }
+            )
         if attention_rows:
             next_step_candidates.append(
                 {
@@ -753,6 +810,7 @@ class WorkspaceSurfaceFactory:
                     "papers_registered": len(paper_rows),
                     "evaluations_registered": len(evaluation_rows),
                     "evaluation_results_registered": len(evaluation_result_rows),
+                    "acquisition_requests": len(acquisition_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -789,6 +847,7 @@ class WorkspaceSurfaceFactory:
                 "papers": paper_rows,
                 "evaluations": evaluation_rows,
                 "evaluation_results": evaluation_result_rows,
+                "acquisitions": acquisition_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,
@@ -1388,6 +1447,30 @@ def _project_relative(snapshot: ProjectSnapshot, locator: str) -> str:
         )
     except ValueError as exc:
         raise ProjectSurfaceChangedError("workspace evidence escaped its project") from exc
+
+
+def _acquisition_report_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[AcquisitionGateReport, str] | None:
+    """Read only the canonical bounded report for an explicitly registered acquisition run."""
+
+    expected = f"runs/{run.run_id}/acquisition/REPORT.json"
+    if run.stage_path != "acquisition" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered acquisition report is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered acquisition report escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = AcquisitionGateReport.model_validate_json(raw)
+    except ValidationError as exc:
+        raise ProjectSurfaceChangedError("registered acquisition report is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
 
 
 def _notice(

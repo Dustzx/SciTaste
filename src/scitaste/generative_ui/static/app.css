@@ -778,6 +778,75 @@ fieldset {
   padding: 0.45rem 0.6rem;
 }
 
+.acquisition-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+}
+
+.acquisition-card {
+  background: linear-gradient(135deg, #f2f6ef 0%, #fbf8ec 100%);
+  border: 1px solid #cdd8cc;
+  border-left: 0.35rem solid #8a7d2d;
+  border-radius: 0.6rem;
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.85rem;
+}
+
+.acquisition-card.status-blocked {
+  border-left-color: var(--warning);
+}
+
+.acquisition-card.status-download_authorized {
+  border-left-color: #247549;
+}
+
+.acquisition-card .compact-row-header strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.acquisition-facts,
+.acquisition-restrictions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.acquisition-facts span,
+.acquisition-restrictions li {
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid #d8dfd4;
+  border-radius: 99rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  padding: 0.28rem 0.5rem;
+}
+
+.acquisition-purpose {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.acquisition-boundary {
+  border-left: 0.2rem solid var(--forest);
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin: 0;
+  padding-left: 0.55rem;
+}
+
+.acquisition-review {
+  justify-self: start;
+}
+
 @media (max-width: 960px) {
   .evaluation-gate-rail {
     grid-template-columns: repeat(2, minmax(0, 1fr));

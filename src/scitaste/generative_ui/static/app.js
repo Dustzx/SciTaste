@@ -50,6 +50,7 @@ const quickIntentLabelKeys = Object.freeze({
   "review-registered-paper-evidence": "quick.paper",
   "review-manifest-declared-next-gate": "quick.next_gate",
   "review-autoresearch-evaluation-landscape": "quick.research_landscape",
+  "review-project-data-acquisition-request": "quick.data_acquisition",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
@@ -273,6 +274,19 @@ function compactRunLabel(runId) {
     return `${readableCode(parts[2])} · ${parts[1]}`;
   }
   return readableCode(runId);
+}
+
+function formatByteCeiling(bytes) {
+  if (!Number.isSafeInteger(bytes) || bytes < 0) {
+    return "—";
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${Number((bytes / (1024 * 1024)).toFixed(1))} MiB`;
+  }
+  if (bytes >= 1024) {
+    return `${Number((bytes / 1024).toFixed(1))} KiB`;
+  }
+  return `${bytes} B`;
 }
 
 function progressPill(state, label = null) {
@@ -1148,9 +1162,11 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.papers"), data.counts.papers_registered, t("progress.metric.papers_note")),
     progressMetric(t("progress.metric.evaluations"), data.counts.evaluations_registered, t("progress.metric.evaluations_note")),
     progressMetric(t("progress.metric.results"), data.counts.evaluation_results_registered, t("progress.metric.results_note")),
+    progressMetric(t("progress.metric.acquisitions"), data.counts.acquisition_requests || 0, t("progress.metric.acquisitions_note")),
   );
   container.append(
     hero,
+    renderAcquisitionRequests(data.acquisitions || []),
     metrics,
     renderRunDistribution(data.counts),
     renderProjectLifecycle(data.lifecycle),
@@ -1465,6 +1481,7 @@ function renderProjectProgress(data) {
     review_paper_evidence: t("progress.next.paper"),
     review_next_gate: t("progress.next.gate"),
     review_research_landscape: t("progress.next.research_landscape"),
+    review_data_acquisition: t("progress.next.data_acquisition"),
   };
   const candidateList = document.createElement("div");
   candidateList.className = "candidate-list";
@@ -1505,6 +1522,110 @@ function renderProjectProgress(data) {
   activityAndNext.appendChild(nextSteps);
   container.appendChild(activityAndNext);
   return container;
+}
+
+function renderAcquisitionRequests(items) {
+  const section = progressSection(
+    t("progress.acquisition.title"),
+    items.length > 0
+      ? t("progress.acquisition.subtitle", {count: items.length})
+      : t("progress.acquisition.empty"),
+  );
+  if (items.length === 0) {
+    return section;
+  }
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  const stateMap = {
+    blocked: "blocked",
+    awaiting_owner_approval: "candidate",
+    download_authorized: "observed_completed",
+  };
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.status}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.acquisition.decision"));
+    const title = document.createElement("strong");
+    appendText(title, item.request_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        stateMap[item.status] || "unknown",
+        t(`progress.acquisition.status.${item.status}`),
+      ),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const value of [
+      t("progress.acquisition.items", {count: item.item_count}),
+      t("progress.acquisition.ceiling", {size: formatByteCeiling(item.maximum_total_bytes)}),
+      t("progress.acquisition.hosts", {hosts: item.source_hosts.join(", ")}),
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, value);
+      facts.appendChild(fact);
+    }
+
+    const purpose = document.createElement("p");
+    purpose.className = "acquisition-purpose";
+    appendText(purpose, item.purpose);
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.acquisition.boundary"));
+    const restrictions = document.createElement("ul");
+    restrictions.className = "acquisition-restrictions";
+    for (const key of ["no_network", "no_download", "no_ingestion_execution"]) {
+      const restriction = document.createElement("li");
+      appendText(restriction, t(`progress.acquisition.${key}`));
+      restrictions.appendChild(restriction);
+    }
+
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "secondary-button acquisition-review";
+    appendText(review, t("progress.acquisition.review"));
+    review.addEventListener("click", () => requestCandidateWorkspace(
+      "review-data-acquisition-request",
+    ));
+    card.append(
+      header,
+      facts,
+      purpose,
+      boundary,
+      restrictions,
+      review,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          request_sha256: item.request_sha256,
+          report_sha256: item.report_sha256,
+          claim_boundary: item.claim_boundary,
+          download_authorized: item.download_authorized,
+          authorizes_ingestion: item.authorizes_ingestion,
+          authorizes_execution: item.authorizes_execution,
+          no_dataset_file_created: item.no_dataset_file_created,
+        },
+        names: [
+          "request_sha256",
+          "report_sha256",
+          "claim_boundary",
+          "download_authorized",
+          "authorizes_ingestion",
+          "authorizes_execution",
+          "no_dataset_file_created",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
 }
 
 function renderProjectLifecycle(data) {

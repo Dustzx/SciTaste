@@ -6,10 +6,17 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from scitaste.evaluation import (
+    inspect_dataset_acquisition_request,
+    load_dataset_acquisition_request,
+)
 from scitaste.generative_ui import (
+    IntentGoal,
     ProjectProgressQuery,
+    ProjectSurfaceChangedError,
     SurfaceSpec,
     TrustedComponent,
+    WorkspaceIntentResolver,
     WorkspaceSurfaceFactory,
 )
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
@@ -85,6 +92,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "papers_registered": 0,
         "evaluations_registered": 0,
         "evaluation_results_registered": 0,
+        "acquisition_requests": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -139,6 +147,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "papers_registered": 0,
         "evaluations_registered": 0,
         "evaluation_results_registered": 0,
+        "acquisition_requests": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -214,6 +223,84 @@ def test_progress_binds_observed_stages_and_registered_paper(tmp_path: Path) -> 
     assert data["papers"][0]["selected"] is True
     assert data["papers"][0]["observed_state"] == "current_work"
     assert "review_paper_evidence" in {item["kind"] for item in data["next_step_candidates"]}
+
+
+def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "acquisition-run"
+    artifact = f"runs/{run_id}/acquisition/REPORT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="acquisition",
+        artifact=artifact,
+    )
+    report = inspect_dataset_acquisition_request(
+        load_dataset_acquisition_request(
+            "configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml"
+        ).request,
+        workspace_root=".",
+    )
+    report_path = runtime.projects_root / "progress-project" / artifact
+    report_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+
+    _, data = _progress(runtime)
+
+    assert data["counts"]["acquisition_requests"] == 1
+    assert data["acquisitions"] == [
+        {
+            "run_ref_id": data["acquisitions"][0]["run_ref_id"],
+            "run_id": run_id,
+            "request_id": report.request_id,
+            "request_sha256": report.request_sha256,
+            "report_sha256": data["acquisitions"][0]["report_sha256"],
+            "status": "awaiting_owner_approval",
+            "purpose": report.purpose,
+            "claim_boundary": report.claim_boundary,
+            "item_count": 10,
+            "maximum_total_bytes": 10 * 1024 * 1024,
+            "source_hosts": ["raw.githubusercontent.com"],
+            "ready_for_owner_approval": True,
+            "download_authorized": False,
+            "authorizes_ingestion": False,
+            "authorizes_execution": False,
+            "no_network_access_performed": True,
+            "no_download_performed": True,
+            "no_dataset_file_created": True,
+            "support_ref_ids": data["acquisitions"][0]["support_ref_ids"],
+        }
+    ]
+    acquisition_candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "review_data_acquisition"
+    )
+    assert acquisition_candidate["target_ids"] == [report.request_id]
+    assert len(acquisition_candidate["support_ref_ids"]) == 2
+    resolver = WorkspaceIntentResolver(runtime)
+    catalog = resolver.quick_catalog("progress-project")
+    descriptor = next(
+        item
+        for item in catalog.intents
+        if item.quick_intent_id == "review-data-acquisition-request"
+    )
+    assert descriptor.goal is IntentGoal.NEXT_STEP_REVIEW
+    resolution = resolver.resolve(
+        {
+            "kind": "quick",
+            "project_id": "progress-project",
+            "snapshot_revision": catalog.snapshot.snapshot_revision,
+            "snapshot_sha256": catalog.snapshot.snapshot_sha256,
+            "quick_intent_id": descriptor.quick_intent_id,
+        }
+    )
+    assert resolution.status == "resolved"
+
+    invalid = report.model_dump(mode="json")
+    invalid["item_count"] += 1
+    report_path.write_text(json.dumps(invalid), encoding="utf-8")
+    with pytest.raises(ProjectSurfaceChangedError, match="acquisition report is invalid"):
+        _progress(runtime)
 
 
 def test_strict_manifest_extensions_supply_milestones_or_fail_closed(

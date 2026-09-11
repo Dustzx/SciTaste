@@ -619,6 +619,7 @@ class ProjectProgressCounts(BaseModel):
     papers_registered: int = Field(ge=0)
     evaluations_registered: int = Field(ge=0)
     evaluation_results_registered: int = Field(ge=0)
+    acquisition_requests: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -899,6 +900,51 @@ class ProjectProgressAttentionItem(BaseModel):
         return self
 
 
+class ProjectProgressAcquisitionItem(BaseModel):
+    """One inspected, project-owned acquisition decision with no implied execution."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_sha256: Sha256
+    report_sha256: Sha256
+    status: Literal["blocked", "awaiting_owner_approval", "download_authorized"]
+    purpose: SafeText
+    claim_boundary: SafeText
+    item_count: int = Field(gt=0)
+    maximum_total_bytes: int = Field(gt=0)
+    source_hosts: tuple[SafeText, ...] = Field(min_length=1, max_length=20)
+    ready_for_owner_approval: bool
+    download_authorized: bool
+    authorizes_ingestion: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    no_network_access_performed: Literal[True] = True
+    no_download_performed: Literal[True] = True
+    no_dataset_file_created: Literal[True] = True
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def acquisition_state_is_closed(self) -> ProjectProgressAcquisitionItem:
+        expected = (
+            "download_authorized"
+            if self.download_authorized
+            else "awaiting_owner_approval"
+            if self.ready_for_owner_approval
+            else "blocked"
+        )
+        if self.status != expected:
+            raise ValueError("project acquisition status differs from its gate report")
+        if self.download_authorized and not self.ready_for_owner_approval:
+            raise ValueError("project acquisition authorization requires review readiness")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("project acquisition must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project acquisition evidence references must be unique")
+        return self
+
+
 class ProjectProgressCandidateItem(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
@@ -910,6 +956,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_paper_evidence",
         "review_next_gate",
         "review_research_landscape",
+        "review_data_acquisition",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -1059,6 +1106,7 @@ class ProjectProgressBoardData(BaseModel):
     papers: tuple[ProjectProgressPaperItem, ...] = ()
     evaluations: tuple[ProjectProgressEvaluationItem, ...] = ()
     evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
+    acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -1112,6 +1160,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.papers,
             *self.evaluations,
             *self.evaluation_results,
+            *self.acquisitions,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,
@@ -1133,6 +1182,12 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress evaluation IDs must be unique")
         if self.counts.evaluations_registered != len(self.evaluations):
             raise ValueError("project progress evaluation count must match its rows")
+
+        acquisition_ids = [item.request_id for item in self.acquisitions]
+        if len(acquisition_ids) != len(set(acquisition_ids)):
+            raise ValueError("project progress acquisition request IDs must be unique")
+        if self.counts.acquisition_requests != len(self.acquisitions):
+            raise ValueError("project progress acquisition count must match its rows")
 
         stages = [item.stage for item in self.stages]
         if stages != sorted(set(stages)):

@@ -658,6 +658,7 @@ _CANDIDATE_GOALS = {
     "review_paper_evidence": IntentGoal.PAPER_EVIDENCE_REVIEW,
     "review_next_gate": IntentGoal.NEXT_STEP_REVIEW,
     "review_research_landscape": IntentGoal.RESEARCH_LANDSCAPE_REVIEW,
+    "review_data_acquisition": IntentGoal.NEXT_STEP_REVIEW,
 }
 
 _QUICK_LABELS = {
@@ -667,6 +668,7 @@ _QUICK_LABELS = {
     "review_paper_evidence": "Review registered paper evidence",
     "review_next_gate": "Review the declared next gate",
     "review_research_landscape": "Map how accepted AutoResearch work is evaluated",
+    "review_data_acquisition": "Review the current data acquisition decision",
 }
 
 _GOAL_TERMS = (

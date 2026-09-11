@@ -49,6 +49,14 @@ conversations, and one immutable generated page per user question. Conversation
 context is explicit and bounded; model/API credentials remain deployment
 configuration and never belong to a project page.
 
+The project home also promotes a canonical data-acquisition gate out of the run
+history into an evidence-bound decision card. The current MLR-Bench ten-brief
+request is therefore visible with its exact hash, 10 MiB ceiling, allowed host,
+and pending owner decision without implying that any file was downloaded. Its
+review affordance only creates another immutable conversation page; download,
+ingestion, and experiment execution remain separate, explicitly authorized
+transitions.
+
 Phase 9 now has a typed prelaunch resource gate and separate DeepSeek, Zhipu,
 and 8 × RTX 3090/Qwen3-VL-2B proposals. All three deliberately remain blocked:
 the accepted Benchmark subset, external/control adapters, independent reviewers,

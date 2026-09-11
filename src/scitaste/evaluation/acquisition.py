@@ -182,6 +182,22 @@ class AcquisitionGateReport(BaseModel):
     no_download_performed: Literal[True] = True
     no_dataset_file_created: Literal[True] = True
 
+    @model_validator(mode="after")
+    def report_is_closed(self) -> AcquisitionGateReport:
+        if self.item_count != len(self.items):
+            raise ValueError("acquisition report item count differs from its items")
+        if self.maximum_total_bytes != sum(item.maximum_bytes for item in self.items):
+            raise ValueError("acquisition report byte ceiling differs from its items")
+        hosts = tuple(sorted({urlparse(item.source_url).hostname or "" for item in self.items}))
+        if self.source_hosts != hosts:
+            raise ValueError("acquisition report source hosts differ from its items")
+        if self.ready_for_owner_approval != (not self.blockers):
+            raise ValueError("acquisition report readiness differs from its blockers")
+        expected_authorized = self.ready_for_owner_approval and not self.authorization_blockers
+        if self.download_authorized != expected_authorized:
+            raise ValueError("acquisition report authorization differs from its blockers")
+        return self
+
 
 def load_dataset_acquisition_request(path: str | Path) -> AcquisitionRequestInspection:
     """Load one bounded request without following a top-level symlink."""

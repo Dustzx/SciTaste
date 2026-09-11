@@ -27,12 +27,6 @@ from scitaste.writing.paper_draft_materialization import (
     PaperDraftTrace,
     materialize_accepted_paper_draft,
 )
-from scitaste.writing.paper_revision_context import (
-    PreparedProjectPaperRevisionContext,
-    ProjectPaperRevisionContextBundle,
-    build_project_paper_revision_runtime_config,
-    prepare_project_paper_revision_context,
-)
 from scitaste.writing.revision_trace import PaperRevisionTrace
 from scitaste.writing.scientific_evidence import (
     MaterializedPaperScientificEvidence,
@@ -89,6 +83,24 @@ from scitaste.writing.venue_taste import (
     build_venue_writing_taste_context,
     inspect_venue_writing_taste,
 )
+
+_PAPER_REVISION_CONTEXT_EXPORTS = {
+    "PreparedProjectPaperRevisionContext",
+    "ProjectPaperRevisionContextBundle",
+    "build_project_paper_revision_runtime_config",
+    "prepare_project_paper_revision_context",
+}
+
+
+def __getattr__(name: str):
+    """Load review-dependent paper revision APIs without creating an import cycle."""
+
+    if name in _PAPER_REVISION_CONTEXT_EXPORTS:
+        from scitaste.writing import paper_revision_context
+
+        return getattr(paper_revision_context, name)
+    raise AttributeError(name)
+
 
 __all__ = [
     "EVIDENCE_PAPER_DRAFT_NODE",

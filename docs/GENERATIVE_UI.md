@@ -95,11 +95,12 @@ paper and evaluation manifests. It reports observed record counts, the selected
 current run, declared focus and next gate, latest registered activity in
 manifest order, completed AutoResearchClaw stages where those semantics apply,
 paper state, blocked/failed run attention, exact no-run API/GPU proposal
-resources, and evidence-supported next-step candidates.
+resources, canonical no-network data-acquisition decisions, and
+evidence-supported next-step candidates.
 
 The browser renders this baseline as an executive evidence summary rather than
 a serialized field inspector. It leads with one categorical status statement,
-seven exact record-count tiles, and a run-outcome composition strip; follows with
+nine exact record-count tiles, and a run-outcome composition strip; follows with
 the current focus, selected run, next evidence gate, blockers and decision
 timeline; shows registered experiment readiness as compact resource cards; and
 bounds recent activity to four initially visible rows. Raw
@@ -108,6 +109,20 @@ available through native collapsed disclosure controls. This changes only the
 receiver-owned presentation: all visible summary values are deterministic
 functions of the validated `ProjectProgressBoardData`, and no browser prose is
 fed back as research evidence.
+
+An acquisition run appears as a decision card only when it registers the exact
+`runs/<run-id>/acquisition/REPORT.json` locator under the canonical
+`acquisition` stage. The server rejects symlinked, missing, oversized,
+out-of-project, or schema-inconsistent reports and binds the accepted bytes to
+the run evidence hash. The compact card exposes the exact request and report
+hashes, pinned item count, aggregate byte ceiling, allowlisted hosts, readiness,
+and authorization state. It also retains the stronger negative facts that no
+network access, download, dataset creation, ingestion authority, or execution
+authority occurred. Its button and quick prompt generate an immutable review
+page in the active project conversation; neither is an approval or download
+control. If immutable history contains several reports for the same request ID,
+the latest manifest entry supplies the current card while every earlier run
+remains visible in project activity.
 
 Every evaluation card is derived from a project-owned `EVALUATION.json` whose
 five bound artifacts are rehashed before rendering. Any record, manifest,
@@ -173,8 +188,9 @@ inspection target.
 Next-step entries are capabilities for later intent planning, not controller
 decisions. They can offer progress review, blocker diagnosis, comparison of the
 latest two registered runs, paper-evidence review, review of a declared next
-gate, or a registered evaluation landscape only when their required project
-records exist. They contain no command or execution authority.
+gate, a registered acquisition decision, or a registered evaluation landscape
+only when their required project records exist. They contain no command or
+execution authority.
 
 ### Research synthesis as generated visual content
 

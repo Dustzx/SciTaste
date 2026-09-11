@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- The Generation-as-Content project home now promotes canonical, project-owned
+  dataset-acquisition gate reports out of the run history into a compact
+  decision card. It shows the exact request/report hashes, pinned item count,
+  byte ceiling, allowlisted hosts, owner-approval state, and the non-authority
+  boundary. A dedicated quick intent creates another immutable read-only review
+  page; the interface still cannot download, ingest, or execute data. Invalid,
+  oversized, escaped, or drifted registered reports fail closed.
+
 - A selected, fully reverified formal evaluation result can now enter the
   ResearchState produced by a registered review-routing run. The new immutable
   transition records the project selection, proposal/result/assessment bytes,
@@ -745,6 +753,11 @@ semantic versioning.
   added complete-condition parsing for `condition: mean=...` metric summaries.
 
 ### Fixed
+
+- The public `scitaste.writing` package now lazily exposes review-dependent
+  paper-revision context APIs, removing a cold-import cycle that could prevent
+  `scitaste.generative_ui` from loading when its tests or API were imported
+  before the review package.
 
 - SciTasteBench semantic hashes now canonicalize unordered transfer axes, so
   identical suites retain the historical v1 hash across Python processes and

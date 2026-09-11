@@ -12,6 +12,7 @@ from scitaste.cli import main
 from scitaste.evaluation import (
     AcquisitionApproval,
     AcquisitionEvidenceBinding,
+    AcquisitionGateReport,
     DatasetAcquisitionRequest,
     inspect_dataset_acquisition_request,
     load_dataset_acquisition_request,
@@ -135,6 +136,25 @@ def test_request_rejects_unpinned_hosts_paths_and_false_budget_arithmetic() -> N
     payload["maximum_total_bytes"] -= 1
     with pytest.raises(ValidationError, match="sum of item ceilings"):
         DatasetAcquisitionRequest.model_validate(payload)
+
+
+def test_gate_report_rejects_internally_inconsistent_summaries() -> None:
+    report = inspect_dataset_acquisition_request(
+        load_dataset_acquisition_request(REQUEST_PATH).request,
+        workspace_root=".",
+    )
+    mutations = (
+        ("item_count", report.item_count + 1, "item count"),
+        ("maximum_total_bytes", report.maximum_total_bytes - 1, "byte ceiling"),
+        ("source_hosts", ["example.com"], "source hosts"),
+        ("ready_for_owner_approval", False, "readiness"),
+        ("download_authorized", True, "authorization"),
+    )
+    for field, value, message in mutations:
+        payload = report.model_dump(mode="json")
+        payload[field] = value
+        with pytest.raises(ValidationError, match=message):
+            AcquisitionGateReport.model_validate(payload)
 
 
 def test_acquisition_cli_materializes_only_a_no_network_report(
