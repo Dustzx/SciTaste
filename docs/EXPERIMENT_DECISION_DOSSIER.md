@@ -1,0 +1,66 @@
+# Experiment decision dossier
+
+The decision dossier is SciTaste's compact, machine-checked view of the work
+between an evaluation idea and an authorized experiment. It exists because an
+aggregate statement such as "run API and GPU experiments" hides the decisions
+that determine whether the result can support a paper claim.
+
+The current ICLR 2027 dossier is
+`configs/evaluation/campaigns/iclr2027_self_development_v1.yaml`. It binds the
+exact paper title, scientific questions, model and checkpoint identities, data
+scope, comparison systems, matrix arithmetic, resource ceilings, claim
+boundaries, dependency stages, and source documents. The dossier itself is
+strictly no-run: it cannot authorize downloads, remote-host access, provider
+calls, GPU work, or reviewer recruitment.
+
+Inspect it with:
+
+```bash
+.venv/bin/scitaste evaluation decision-dossier \
+  --manifest configs/evaluation/campaigns/iclr2027_self_development_v1.yaml \
+  --evidence-root . --require-artifacts
+```
+
+Use `--output /path/to/REPORT.json` to materialize only the deterministic
+inspection report. This still performs no external action.
+
+## Current decision
+
+The local Track A design is intentionally marked `design_only`. It identifies
+Qwen3-VL-2B-Instruct, eight RTX 3090 devices, the six mechanism conditions, a
+120-case natural-data floor, two order arms, 1,440 minimum model decisions, a
+16 allocated-GPU-hour ceiling, and a 100-GiB storage ceiling. It does **not**
+claim an executable cell matrix because the natural cases, human labels,
+source-disjoint split, and remote checkpoint attestation do not yet exist.
+The older two-task Qwen prelaunch file remains historical and must not be used
+as though MLR-Bench package-review tasks supplied objective progress.
+
+The API Track B design has an exact 100-trajectory candidate matrix: SciTaste
+Native, Direct Agent, MLR-Agent, Agent Laboratory, and TinyScientist over ten
+MLR-Bench research briefs and two seeds. It names DeepSeek `deepseek-flash`,
+served version `DeepSeek-V4.1-Flash`, with ceilings of 1,500 calls, 15 million
+tokens, USD 100, 100 GiB, and 30 reviewer-hours. That matrix remains blocked:
+MLR-Agent and Agent Laboratory do not currently preserve this common backbone
+unchanged, TinyScientist has unresolved code/license gates, task bytes and the
+held-out audit are absent, and independent reviewers are not secured.
+
+Consequently the next project-owner decision is methodological, not a launch:
+
+1. select a genuinely common model backbone that at least two accepted systems
+   support without changing their scientific core; or
+2. preregister a best-native-system comparison that explicitly treats model
+   choice as a confound and does not call the contrast a matched-backbone effect.
+
+After that choice, SciTaste must create a new immutable dossier and prelaunch
+proposal. Source acquisition, runtime preflight, pilot execution, formal
+scale-out, paper revision, internal model critique, two independent expert
+reviews, and original-reviewer closure each remain separate stages and require
+their own exact evidence or approval.
+
+## Why this is part of the product
+
+The dossier is more than project prose. It provides a stable projection that a
+CLI, project homepage, or Generation-as-Content surface can summarize without
+inventing missing cells or hiding resource conflicts. It also makes the
+framework diagnose when the limiting factor is experimental design or system
+compatibility rather than the capability of the model used to draft the plan.

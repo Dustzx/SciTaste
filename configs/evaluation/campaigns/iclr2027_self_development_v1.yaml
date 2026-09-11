@@ -1,0 +1,385 @@
+schema_version: "1.0"
+dossier_id: iclr2027-scitaste-self-development-v1
+project_id: scitaste-self-development
+paper_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
+target_venue: ICLR 2027
+central_question: >-
+  Under matched information and resource budgets, does explicit,
+  precedent-informed scientific Taste improve autonomous research decisions and
+  the evidence validity of complete idea-to-paper trajectories?
+claim_boundary: >-
+  Engineering tests and recursive self-development establish implementation
+  readiness and ecological usefulness only. The title-level improvement claim
+  requires held-out mechanism evidence plus an independently reviewed formal
+  result; pilot, model-review, or self-iteration outputs cannot establish it.
+artifacts:
+  - artifact_id: iclr-evaluation-contract
+    path: docs/ICLR_2027_EVALUATION_PLAN.md
+    sha256: 31deb58805579df364e6f7753af058bae820a27ebf0ffc06597886412af406ca
+  - artifact_id: experiment-decision-brief
+    path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
+    sha256: 1e4a5550db3673b8b736cc8a0d45a49b7cf547dbb115cee3816159995df512d5
+  - artifact_id: mechanism-source-screen
+    path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
+    sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198
+  - artifact_id: mechanism-governance
+    path: docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md
+    sha256: ffa2349bfa00e172b793e3e468dac44375fa6d821118a519daba03bb86cf8217
+  - artifact_id: deepseek-package-proposal
+    path: configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v6.yaml
+    sha256: f4f23da3c40949f3a7175dad78993dbba3dada77dfbdde60a4e27cbc34700159
+  - artifact_id: mlr-ten-task-screen
+    path: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+  - artifact_id: package-preference-governance
+    path: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+    sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  - artifact_id: gpu-host-inventory
+    path: docs/research/data/gpu_host_3090_2_inventory_v1.yaml
+    sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
+  - artifact_id: paper-review-loop
+    path: docs/PAPER_REVIEW_LOOP.md
+    sha256: 64f420194b6bc7cf5200bf2a56c7a58ce5f243147c5e2e5f6a3c71ca38441966
+tracks:
+  - track_id: scientific-taste-mechanism
+    role: scientific_taste_mechanism
+    state: design_only
+    scientific_question: >-
+      Does matched, abstracted scientific Taste improve expert-aligned choices
+      beyond Base, factual Knowledge, critics, and mismatched Taste?
+    primary_endpoint: >-
+      Paired expert-aligned action selection for Full SciTaste versus Base,
+      clustered by source group; calibration and wrong-level decisions are secondary.
+    comparison_design: >-
+      Six-condition within-case mechanism ablation with declared and reversed
+      action order; matched Taste versus source-disjoint mismatched Taste is the
+      negative control.
+    model:
+      kind: gpu
+      usage_scope: Fixed local controller for every decision condition and order arm.
+      provider_id: null
+      model_id: Qwen3-VL-2B-Instruct
+      model_revision: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+      api_key_env: null
+      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_sha256: 8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1
+      device_count: 8
+      device_name: NVIDIA GeForce RTX 3090
+    data:
+      dataset_id: scitastebench-v2
+      role: >-
+        At least 120 natural, source-group-disjoint research decisions across
+        at least three domains and all six SciTaste decision families.
+      item_ids: [aaar-1.0, aries, openreview-public-comments]
+      population_floor: 120
+      exact_bytes_available: false
+      held_out_verified: false
+      acquisition_approved: false
+    matrix:
+      system_ids:
+        - native-base
+        - native-knowledge
+        - native-taste
+        - native-critics
+        - full-scitaste
+        - mismatched-taste-placebo
+      task_ids: []
+      seeds: []
+      repetitions: 1
+      order_arms: 2
+      planned_cells: null
+      planned_model_calls: 1440
+    budget:
+      api_requests: null
+      total_tokens: null
+      api_cost_usd: null
+      allocated_gpu_hours: 16.0
+      output_storage_bytes: 107374182400
+      human_hours: null
+    claim_allowed: >-
+      After a powered formal split, this track may support a causal claim about
+      expert-aligned scientific decisions under the fixed small-model setting.
+    claim_forbidden: >-
+      It cannot establish full idea-to-paper superiority, frontier-model
+      robustness, official peer review, or an executable-cell count before the
+      natural cases and labels are frozen.
+    evidence_artifact_ids:
+      - experiment-decision-brief
+      - mechanism-source-screen
+      - mechanism-governance
+      - gpu-host-inventory
+    blocker_codes:
+      - natural-case-bytes:not-acquired
+      - expert-labels:not-collected
+      - held-out-split:not-verified
+      - exact-cell-plan:not-compilable-before-curation
+      - remote-checkpoint:not-attested
+  - track_id: external-idea-to-paper
+    role: end_to_end_external_systems
+    state: blocked
+    scientific_question: >-
+      Under matched starting briefs, tools, repair policy, and budgets, are
+      complete SciTaste Native research packages preferred by blinded experts?
+    primary_endpoint: >-
+      Task-averaged, condition-blinded independent expert package preference for
+      scientific value and evidence validity, retaining ties and failures.
+    comparison_design: >-
+      The 100-cell DeepSeek V4.1 matched-backbone proposal is an exact candidate
+      matrix, but it is non-launchable because two accepted upstream systems do
+      not preserve the requested backbone. The owner must choose a genuinely
+      common backbone or a separately labelled best-native, model-confounded design.
+    model:
+      kind: api
+      usage_scope: >-
+        Candidate common controller for SciTaste Native and Direct Agent; it is
+        not yet a verified unchanged-core backbone for the accepted comparators.
+      provider_id: deepseek
+      model_id: deepseek-flash
+      model_revision: DeepSeek-V4.1-Flash
+      api_key_env: DEEPSEEK_API_KEY
+      checkpoint_source_path: null
+      checkpoint_sha256: null
+      device_count: null
+      device_name: null
+    data:
+      dataset_id: mlr-bench-official-ten
+      role: >-
+        Ten ICLR-2025 workshop-derived open research briefs used for complete
+        research-package review; they do not expose fixed objective progress.
+      item_ids:
+        - iclr2025_bi_align
+        - iclr2025_buildingtrust
+        - iclr2025_data_problems
+        - iclr2025_dl4c
+        - iclr2025_mldpr
+        - iclr2025_question
+        - iclr2025_scope
+        - iclr2025_scsl
+        - iclr2025_verifai
+        - iclr2025_wsl
+      population_floor: null
+      exact_bytes_available: false
+      held_out_verified: false
+      acquisition_approved: false
+    matrix:
+      system_ids:
+        - scitaste-native
+        - direct-agent
+        - mlr-agent
+        - agent-laboratory
+        - tiny-scientist
+      task_ids:
+        - iclr2025_bi_align
+        - iclr2025_buildingtrust
+        - iclr2025_data_problems
+        - iclr2025_dl4c
+        - iclr2025_mldpr
+        - iclr2025_question
+        - iclr2025_scope
+        - iclr2025_scsl
+        - iclr2025_verifai
+        - iclr2025_wsl
+      seeds: [7, 19]
+      repetitions: 1
+      order_arms: 1
+      planned_cells: 100
+      planned_model_calls: null
+    budget:
+      api_requests: 1500
+      total_tokens: 15000000
+      api_cost_usd: 100.0
+      allocated_gpu_hours: null
+      output_storage_bytes: 107374182400
+      human_hours: 30.0
+    claim_allowed: >-
+      One completed matched block may establish adapter feasibility only; a
+      later powered, separately frozen formal study may support package-quality effects.
+    claim_forbidden: >-
+      The current blocked prepilot cannot establish superiority, ICLR readiness,
+      objective progress, provider equivalence, or official peer review.
+    evidence_artifact_ids:
+      - deepseek-package-proposal
+      - mlr-ten-task-screen
+      - package-preference-governance
+    blocker_codes:
+      - comparison-design:common-backbone-not-supported
+      - accepted-comparators:fewer-than-two-qualified
+      - task-bytes:not-acquired
+      - held-out-audit:not-complete
+      - independent-reviewers:not-secured
+stages:
+  - stage_id: audit-evaluation-basis
+    kind: design_decision
+    state: complete
+    track_ids: [scientific-taste-mechanism, external-idea-to-paper]
+    depends_on: []
+    external_actions: []
+    owner_approval_required: false
+    blocker_codes: []
+    completion_artifact_ids:
+      - iclr-evaluation-contract
+      - experiment-decision-brief
+      - mechanism-source-screen
+      - mechanism-governance
+      - deepseek-package-proposal
+      - mlr-ten-task-screen
+      - package-preference-governance
+      - gpu-host-inventory
+      - paper-review-loop
+    next_decision: Evidence roles, resource identities, and claim boundaries are now content-bound.
+  - stage_id: freeze-headline-comparison-design
+    kind: design_decision
+    state: ready_for_decision
+    track_ids: [external-idea-to-paper]
+    depends_on: [audit-evaluation-basis]
+    external_actions: []
+    owner_approval_required: true
+    blocker_codes: []
+    completion_artifact_ids: []
+    next_decision: >-
+      Choose either a genuinely common backbone supported unchanged by at least
+      two accepted systems, or a best-native comparison explicitly confounded by model.
+  - stage_id: approve-exact-source-acquisition
+    kind: asset_acquisition
+    state: future
+    track_ids: [scientific-taste-mechanism, external-idea-to-paper]
+    depends_on: [freeze-headline-comparison-design]
+    external_actions: [download_data]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:headline-design-not-frozen
+      - acquisition-slice:not-hash-approved
+    completion_artifact_ids: []
+    next_decision: >-
+      Present exact URLs, expected byte/storage ceilings, destination roots,
+      license scope, and selection rules before downloading any source or task bytes.
+  - stage_id: curate-and-qualify-held-out-data
+    kind: human_curation
+    state: future
+    track_ids: [scientific-taste-mechanism, external-idea-to-paper]
+    depends_on: [approve-exact-source-acquisition]
+    external_actions: [recruit_humans]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:source-acquisition-not-complete
+      - annotation-rubric:not-instantiated
+    completion_artifact_ids: []
+    next_decision: >-
+      Freeze source groups, licenses, natural decision cases, two human labels
+      per case, MLR task packages, and the pilot power analysis.
+  - stage_id: attest-remote-qwen-runtime
+    kind: runtime_preflight
+    state: future
+    track_ids: [scientific-taste-mechanism]
+    depends_on: [curate-and-qualify-held-out-data]
+    external_actions: [connect_remote_host, transfer_checkpoint]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:curated-data-not-frozen
+      - remote-checkpoint:not-present
+    completion_artifact_ids: [gpu-host-inventory]
+    next_decision: >-
+      Recheck all eight RTX 3090 devices, storage, runtime, and the copied
+      Qwen3-VL-2B tree hash without starting a benchmark cell.
+  - stage_id: run-gpu-mechanism-pilot
+    kind: pilot_execution
+    state: future
+    track_ids: [scientific-taste-mechanism]
+    depends_on: [attest-remote-qwen-runtime]
+    external_actions: [connect_remote_host, run_gpu]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:runtime-and-cell-plan-not-ready
+      - exact-pilot-block:not-approved
+    completion_artifact_ids: []
+    next_decision: >-
+      Run only the hash-approved source-disjoint pilot block, inspect failures,
+      variance, telemetry, and model-versus-framework attribution, then stop.
+  - stage_id: run-api-end-to-end-pilot
+    kind: pilot_execution
+    state: future
+    track_ids: [external-idea-to-paper]
+    depends_on: [curate-and-qualify-held-out-data]
+    external_actions: [call_api]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:tasks-and-comparators-not-qualified
+      - exact-pilot-block:not-approved
+    completion_artifact_ids: []
+    next_decision: >-
+      Regenerate a clean-commit proposal, authenticate the served model, and run
+      one complete system-by-task-by-seed block before any scale-out.
+  - stage_id: freeze-and-run-formal-scaleout
+    kind: formal_scale_out
+    state: future
+    track_ids: [scientific-taste-mechanism, external-idea-to-paper]
+    depends_on: [run-gpu-mechanism-pilot, run-api-end-to-end-pilot]
+    external_actions: [call_api, connect_remote_host, run_gpu, recruit_humans]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:pilot-results-not-admitted
+      - formal-power-analysis:not-frozen
+      - exact-formal-proposal:not-approved
+    completion_artifact_ids: []
+    next_decision: >-
+      Approve a new powered formal protocol only after inspecting both pilots;
+      never promote pilot cells by relabelling them.
+  - stage_id: bind-results-and-revise-paper
+    kind: paper_revision
+    state: future
+    track_ids: [scientific-taste-mechanism, external-idea-to-paper]
+    depends_on: [freeze-and-run-formal-scaleout]
+    external_actions: []
+    owner_approval_required: false
+    blocker_codes:
+      - dependency:formal-results-not-admitted
+    completion_artifact_ids: [paper-review-loop]
+    next_decision: >-
+      Admit verified result bundles, bind them into a new paper revision, and
+      preserve unsupported claims and limitations rather than filling gaps.
+  - stage_id: run-internal-model-review
+    kind: internal_model_review
+    state: future
+    track_ids: []
+    depends_on: [bind-results-and-revise-paper]
+    external_actions: [call_api]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:evidence-bound-paper-not-built
+      - review-runtime:not-hash-approved
+    completion_artifact_ids: [paper-review-loop]
+    next_decision: >-
+      Use DeepSeek V4.1 Flash or GLM-5.3-Flash as an internal critic only;
+      model review never substitutes for independent expert review.
+  - stage_id: obtain-independent-expert-review
+    kind: independent_review
+    state: future
+    track_ids: []
+    depends_on: [run-internal-model-review]
+    external_actions: [recruit_humans]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:internal-concerns-not-routed
+      - reviewers:two-conflict-cleared-experts-not-secured
+    completion_artifact_ids: [paper-review-loop]
+    next_decision: >-
+      Obtain at least two conflict-checked external reviews of the exact paper
+      packet, retain disagreements, and create typed concern routes.
+  - stage_id: verify-review-response-closure
+    kind: response_verification
+    state: future
+    track_ids: []
+    depends_on: [obtain-independent-expert-review]
+    external_actions: [recruit_humans]
+    owner_approval_required: true
+    blocker_codes:
+      - dependency:independent-reviews-not-complete
+      - original-reviewer-verification:not-complete
+    completion_artifact_ids: [paper-review-loop]
+    next_decision: >-
+      Rebuild, respond, and require the original reviewers to verify every
+      material concern before declaring the top-venue loop complete.
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false

@@ -73,12 +73,14 @@ from scitaste.evaluation import (
     compile_evaluation_cell_plan,
     inspect_adapter_contract,
     inspect_adapter_preflight,
+    inspect_experiment_decision_dossier,
     inspect_git_source,
     inspect_prelaunch_manifest,
     inspect_task_package,
     inspect_task_selection,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_experiment_decision_dossier,
     load_external_resource_corpus,
     load_prelaunch_manifest,
     load_task_package_manifest,
@@ -89,6 +91,7 @@ from scitaste.evaluation import (
     publish_project_evaluation_result,
     run_live_direct_agent,
     save_evaluation_cell_plan,
+    save_experiment_decision_dossier_report,
     summarize_evaluation_readiness,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
@@ -1226,6 +1229,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(prelaunch)
     prelaunch.set_defaults(handler=_handle_evaluation_prelaunch)
+    decision_dossier = evaluation_commands.add_parser(
+        "decision-dossier",
+        help="Inspect a compact API/GPU experiment campaign without external actions",
+    )
+    decision_dossier.add_argument("--manifest", type=Path, required=True)
+    decision_dossier.add_argument("--evidence-root", type=Path, default=Path("."))
+    decision_dossier.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="optional no-run JSON report output",
+    )
+    decision_dossier.add_argument(
+        "--require-artifacts",
+        action="store_true",
+        help="return nonzero when any content-bound planning artifact is missing or drifted",
+    )
+    _add_log_level_option(decision_dossier)
+    decision_dossier.set_defaults(handler=_handle_evaluation_decision_dossier)
     task_selection = evaluation_commands.add_parser(
         "task-selection",
         help="Inspect an exact metadata-only benchmark task selection",
@@ -3798,6 +3820,25 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
     if args.require_ready and (
         not critic_report.ready_for_author_review or not report.execution_authorized
     ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_decision_dossier(args: argparse.Namespace) -> int:
+    inspection = load_experiment_decision_dossier(args.manifest)
+    report = inspect_experiment_decision_dossier(
+        inspection.dossier,
+        evidence_root=args.evidence_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report"] = str(save_experiment_decision_dossier_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_artifacts and not report.artifact_bindings_verified:
         return 1
     return 0
 

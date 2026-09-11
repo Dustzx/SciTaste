@@ -12,6 +12,13 @@ SciTaste keeps three experimental objects separate:
 | benchmark/task source | MLR-Bench, MLRC-Bench, EXP-Bench, HeurekaBench, AAAR-1.0 | where and on what evidence the systems are evaluated |
 | review/judge protocol | blinded experts, adjudication, calibrated model judge | how the outputs are judged |
 
+The cross-track approval view is the
+[`EXPERIMENT_DECISION_DOSSIER.md`](EXPERIMENT_DECISION_DOSSIER.md). Its current
+machine-readable campaign binds the API and GPU plans, their dependency order,
+resource ceilings, paper title, and review closure path while granting no
+download or execution authority. The older individual proposal files remain
+immutable evidence and are not silently promoted when the campaign changes.
+
 A Benchmark repository cannot satisfy a method-comparator gate, and a method
 repository cannot satisfy a task-source gate. The prelaunch validator enforces
 that distinction through the audited external-resource corpus rather than the
