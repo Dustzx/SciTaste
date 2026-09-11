@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- API and GPU resources are now operationally explicit inside the shared
+  resource directory. The Zhipu manifest uses the executable backend's
+  `ZAI_API_KEY` binding, and the remote 8×RTX 3090 manifest records its SSH
+  host, port, user, password environment binding, and RemoteForward topology
+  without storing credentials or authorizing a login/workload. Project resource
+  bindings can now advance after catalog changes while archiving their exact
+  predecessor.
+
 - Added a post-acquisition cohort inspector that revalidates approved requests,
   atomic receipts, exact local bytes, licenses, task sets, and scientific-use
   boundaries. The first real MLR-Bench ten-brief acquisition is correctly

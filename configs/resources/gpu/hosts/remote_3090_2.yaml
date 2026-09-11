@@ -6,6 +6,14 @@ resource:
   location: remote
   access_profile: operator-managed-ssh
   connection_alias: 3090-2
+  connection_host: 10.7.33.15
+  connection_port: 22
+  connection_user: ubuntu
+  credential_env: SCITASTE_GPU_3090_2_SSH_PASSWORD
+  remote_forwards:
+    - remote_port: 7891
+      local_host: 127.0.0.1
+      local_port: 7890
   device_count: 8
   device_name: NVIDIA GeForce RTX 3090
   minimum_memory_mb_per_device: 24000

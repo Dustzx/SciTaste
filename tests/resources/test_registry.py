@@ -37,6 +37,9 @@ def test_tracked_catalog_defines_project_superordinate_api_and_gpu_resources() -
     loaded = load_compute_resource_catalog(CATALOG)
 
     assert inspection.evidence_verified is True
+    assert loaded.semantic_sha256 == (
+        "1af4a702d11c84caf0b3f0b176a6c3b4bbba7e4a23dc2842d514d5390c98cdf7"
+    )
     assert inspection.secret_values_loaded is False
     assert inspection.external_action_performed is False
     assert inspection.api_model_ids == ("deepseek-v41-flash", "zhipu-glm53-flash")
@@ -76,6 +79,19 @@ def test_explicit_catalog_hash_binds_api_gpu_and_checkpoint_manifests() -> None:
     checkpoint_observation = load_resource_observation(LOCAL_CHECKPOINT_OBSERVATION)
     assert checkpoint_observation.resource_kind is ResourceKind.MODEL_CHECKPOINT
     assert checkpoint_observation.observed_checkpoint_sha256 == checkpoint.checkpoint_sha256
+
+    zhipu = loaded.catalog.resource("zhipu-glm53-flash")
+    assert zhipu.credential_env == "ZAI_API_KEY"
+    remote_gpu = loaded.catalog.resource("gpu-host-3090-2")
+    assert remote_gpu.connection_alias == "3090-2"
+    assert remote_gpu.connection_host == "10.7.33.15"
+    assert remote_gpu.connection_port == 22
+    assert remote_gpu.connection_user == "ubuntu"
+    assert remote_gpu.credential_env == "SCITASTE_GPU_3090_2_SSH_PASSWORD"
+    assert len(remote_gpu.remote_forwards) == 1
+    assert remote_gpu.remote_forwards[0].remote_port == 7891
+    assert remote_gpu.remote_forwards[0].local_host == "127.0.0.1"
+    assert remote_gpu.remote_forwards[0].local_port == 7890
 
 
 def test_self_development_binding_explicitly_selects_every_resource_class() -> None:
@@ -326,3 +342,30 @@ def test_resource_cli_migrates_catalog_and_registers_explicit_project_binding(
     )
     response = json.loads(capsys.readouterr().out)
     assert response["record"]["binding"]["project_id"] == "scitaste-self-development"
+
+
+def test_project_binding_update_archives_the_exact_predecessor(tmp_path: Path) -> None:
+    outputs = tmp_path / "outputs"
+    project = outputs / "projects" / "scitaste-self-development"
+    project.mkdir(parents=True)
+    (project / "PROJECT.json").write_text("{}\n", encoding="utf-8")
+    runtime = ComputeResourceRuntime(outputs)
+    runtime.initialize(CATALOG_V2)
+
+    payload = yaml.safe_load(PROJECT_BINDING.read_text(encoding="utf-8"))
+    payload["bindings"][0]["purpose"] = "Temporary predecessor for update coverage."
+    first_source = tmp_path / "first-binding.yaml"
+    first_source.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    first = runtime.register_project_binding(CATALOG_V2, first_source)
+
+    updated = runtime.update_project_binding(CATALOG_V2, PROJECT_BINDING)
+    history = (
+        runtime.root / "project-binding-history" / "scitaste-self-development" / first.record_sha256
+    )
+
+    archived = json.loads((history / "RECORD.json").read_text(encoding="utf-8"))
+    assert updated.binding.binding_set_id == "scitaste-self-development-resources-v2"
+    assert updated.record_sha256 != first.record_sha256
+    assert archived["record_sha256"] == first.record_sha256
+    assert (history / "RESOURCE_BINDING.yaml").is_file()
+    assert runtime.status(CATALOG_V2).project_binding_ids == ("scitaste-self-development",)

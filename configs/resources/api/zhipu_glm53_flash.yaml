@@ -10,7 +10,7 @@ resource:
   rolling_alias: true
   identity_source_url: https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3
   identity_verified_on: 2026-09-11
-  credential_env: ZHIPU_API_KEY
+  credential_env: ZAI_API_KEY
   availability: pending
   availability_reason: Model identity is documented, but this exact revision has no registered authenticated call observation.
   pricing: null

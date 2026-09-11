@@ -16,10 +16,12 @@ The implementation has two planes:
   bindings. It is ignored by Git because these are local operational state.
 
 Provider credentials and SSH passwords never enter either plane. API manifests
-store only `DEEPSEEK_API_KEY`, `ZHIPU_API_KEY`, or `DASHSCOPE_API_KEY` as binding
-names; GPU manifests store only a local-process or operator-managed SSH profile.
-A resource observation or project binding cannot authorize an experiment,
-reserve a device, change scientific evidence, or execute a workload.
+store only `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, or `DASHSCOPE_API_KEY` as binding
+names; these now match the executable DeepSeek, Zhipu, and Bailian backend
+contracts. GPU manifests store a local-process profile or explicit non-secret
+SSH connection metadata plus a password environment-variable name. A resource
+observation or project binding cannot authorize an experiment, reserve a
+device, change scientific evidence, or execute a workload.
 
 ## Explicit resources
 
@@ -31,6 +33,12 @@ reserve a device, change scientific evidence, or execute a workload.
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
 | GPU | `gpu-host-3090-2` | remote 8×RTX 3090 scale-out host; approximately 200 GB free is owner-reported pending a fresh probe |
 | checkpoint | `qwen3-vl-2b-local-47f9c0e0` | verified current local Qwen3-VL-2B-Instruct tree |
+
+The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
+`10.7.33.15`, port 22, user `ubuntu`, password binding
+`SCITASTE_GPU_3090_2_SSH_PASSWORD`, and RemoteForward `7891 ->
+127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
+the host; they do not perform a login or persist the password.
 
 `configs/resources/projects/scitaste_self_development.yaml` explicitly binds all
 six resources to the self-development project with primary, robustness,
@@ -85,6 +93,12 @@ scitaste resource bind-project \
   --binding configs/resources/projects/scitaste_self_development.yaml \
   --outputs-root outputs
 
+# After a content-bound catalog change, archive and replace an existing binding:
+scitaste resource update-project-binding \
+  --catalog configs/resources/compute_catalog_v2.yaml \
+  --binding configs/resources/projects/scitaste_self_development.yaml \
+  --outputs-root outputs
+
 scitaste resource status \
   --catalog configs/resources/compute_catalog_v2.yaml \
   --outputs-root outputs
@@ -92,9 +106,11 @@ scitaste resource status \
 
 Catalog update preserves the predecessor registry and every compatible
 observation. Project binding publication copies the exact YAML and records its
-hash, size, catalog semantic hash, and self-hashed record. Definition drift,
-symlinks, unknown resource IDs, duplicate IDs, API/GPU/checkpoint type confusion,
-and project/catalog mismatch fail closed.
+hash, size, catalog semantic hash, and self-hashed record. Updating a binding
+moves the exact predecessor under `outputs/resources/project-binding-history/`
+before publishing its replacement. Definition drift, symlinks, unknown resource
+IDs, duplicate IDs, API/GPU/checkpoint type confusion, and project/catalog
+mismatch fail closed.
 
 This slice establishes inventory and observation ownership. Exclusive GPU
 reservation, concurrent allocation, API quota leasing, and project usage

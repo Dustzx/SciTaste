@@ -1690,7 +1690,10 @@ and a machine-local runtime registry at `outputs/resources/`, as a sibling of
 The catalog stores typed capability and identity only: API endpoint, requested
 model and expected served revision, dated public price ceiling, credential
 environment-variable name, GPU device class, and a content-bound baseline
-inventory. Passwords, keys, and raw authenticated responses are excluded.
+inventory. Remote GPU definitions may additionally bind an explicit SSH
+alias/host/port/user, password environment-variable name, and bounded forward
+topology so infrastructure does not depend on undocumented operator memory.
+Passwords, keys, and raw authenticated responses are excluded.
 Changing capacity enters as an immutable typed observation whose exact source
 bytes and self-hashed record are retained. Official catalog observations may be
 verified; owner reports remain reported until an independent probe replaces

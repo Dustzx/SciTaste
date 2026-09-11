@@ -26,11 +26,15 @@ configs/resources/
 ```
 
 The API manifests store endpoints, model identities, public pricing state, and
-credential environment-variable names, never credential values. GPU host
-manifests store capabilities and content-bound inventory references. Checkpoint
-manifests store exact current tree identity separately from host presence.
-Project bindings state why and at what evidence status each project uses a
-shared resource.
+credential environment-variable names, never credential values. The current
+bindings use `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, and `DASHSCOPE_API_KEY`, matching
+the executable backend configurations. GPU host manifests store capabilities,
+content-bound inventory references, and non-secret connection metadata. The
+remote `3090-2` entry also declares its SSH alias, host, port, user, password
+environment-variable name, and RemoteForward topology. Checkpoint manifests
+store exact current tree identity separately from host presence. Project
+bindings state why and at what evidence status each project uses a shared
+resource.
 
 `compute_catalog_v1.yaml` remains readable as the immutable first inline-layout
 snapshot. New work uses v2; do not edit v1 into the new structure.

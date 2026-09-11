@@ -72,6 +72,16 @@ def register_resource_cli(commands: argparse._SubParsersAction[argparse.Argument
     _add_log_level_option(bind_project)
     bind_project.set_defaults(handler=_handle_resource_bind_project)
 
+    update_project = resource_commands.add_parser(
+        "update-project-binding",
+        help="Advance one project resource binding and archive its predecessor",
+    )
+    update_project.add_argument("--catalog", type=Path, required=True)
+    update_project.add_argument("--binding", type=Path, required=True)
+    update_project.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(update_project)
+    update_project.set_defaults(handler=_handle_resource_update_project_binding)
+
     status = resource_commands.add_parser(
         "status",
         help="Report shared definitions and the latest registered observations",
@@ -179,6 +189,26 @@ def _handle_resource_bind_project(args: argparse.Namespace) -> int:
             {
                 "status": "registered-project-resource-binding",
                 "record": record.model_dump(mode="json"),
+                "secret_values_loaded": False,
+                "remote_probe_performed": False,
+                "workload_executed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_resource_update_project_binding(args: argparse.Namespace) -> int:
+    runtime = ComputeResourceRuntime(args.outputs_root)
+    record = runtime.update_project_binding(args.catalog, args.binding)
+    print(
+        json.dumps(
+            {
+                "status": "updated-project-resource-binding",
+                "record": record.model_dump(mode="json"),
+                "predecessor_archived": True,
                 "secret_values_loaded": False,
                 "remote_probe_performed": False,
                 "workload_executed": False,

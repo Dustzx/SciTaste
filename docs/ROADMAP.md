@@ -164,6 +164,12 @@ all six roles under `outputs/resources/projects/`. The local hash is
 `47f9c0e0...`, not the `8e95e5f6...` frozen in the older GPU proposal, so the
 formal plan remains blocked against silent checkpoint substitution.
 
+The explicit resource audit then closed two operational ambiguities without
+launching work: Zhipu now uses the same `ZAI_API_KEY` binding as every live
+backend, and the remote eight-card host records its actual SSH host, port, user,
+password environment binding, and RemoteForward topology rather than only an
+operator alias. Secret values remain local and untracked.
+
 The first approved benchmark-source acquisition has now completed without
 model or GPU use. Ten MLR-Bench workshop briefs were atomically downloaded from
 the pinned repository commit, and a new cohort inspector revalidates request,

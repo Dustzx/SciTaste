@@ -592,6 +592,14 @@ This iteration therefore produced both a reusable resource-management feature
 and a concrete self-case demonstrating why infrastructure identity belongs in
 the research evidence chain.
 
+A follow-up explicit-integration check caught configuration drift before any
+paid or GPU work: the first resource manifest named `ZHIPU_API_KEY`, while all
+tested Zhipu backends and the machine-local credential use `ZAI_API_KEY`. The
+catalog now uses the executable name. The same check promoted the remote 3090
+alias into structured, non-secret SSH connection fields. This is another Taste
+case candidate: readable resource topology is useful only when it is consistent
+with the actual execution boundary.
+
 ## Real task acquisition changed the experiment plan (2026-09-12)
 
 The next self-iteration exercised SciTaste's acquisition path instead of

@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 _ENV = r"^[A-Z][A-Z0-9_]{2,100}$"
+_SSH_USER = r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$"
 _SHA256 = r"^[0-9a-f]{64}$"
 _MAX_INPUT_BYTES = 1_048_576
 
@@ -82,6 +83,16 @@ class ApiModelDefinition(BaseModel):
         return self
 
 
+class SshRemoteForward(BaseModel):
+    """One declarative SSH RemoteForward; it never opens a connection."""
+
+    model_config = _CONFIG
+
+    remote_port: int = Field(gt=0, le=65_535)
+    local_host: str = Field(min_length=1, max_length=253)
+    local_port: int = Field(gt=0, le=65_535)
+
+
 class GpuHostDefinition(BaseModel):
     model_config = _CONFIG
 
@@ -91,6 +102,11 @@ class GpuHostDefinition(BaseModel):
     location: Literal["local", "remote"] = "remote"
     access_profile: str = Field(min_length=1, max_length=200)
     connection_alias: str | None = Field(default=None, min_length=1, max_length=200)
+    connection_host: str | None = Field(default=None, min_length=1, max_length=253)
+    connection_port: int | None = Field(default=None, gt=0, le=65_535)
+    connection_user: str | None = Field(default=None, pattern=_SSH_USER)
+    credential_env: str | None = Field(default=None, pattern=_ENV)
+    remote_forwards: tuple[SshRemoteForward, ...] = Field(default=(), max_length=20)
     device_count: int = Field(gt=0, le=64)
     device_name: str = Field(min_length=1, max_length=200)
     minimum_memory_mb_per_device: int = Field(gt=0)
@@ -105,8 +121,28 @@ class GpuHostDefinition(BaseModel):
         if self.baseline_observed_at.tzinfo is None:
             raise ValueError("GPU baseline observation time must include a timezone")
         _validate_relative_locator(self.baseline_inventory_ref)
-        if self.location == "local" and self.connection_alias is not None:
-            raise ValueError("local GPU resources cannot declare a remote connection alias")
+        connection_fields = (
+            self.connection_alias,
+            self.connection_host,
+            self.connection_port,
+            self.connection_user,
+            self.credential_env,
+        )
+        if self.location == "local" and (
+            any(value is not None for value in connection_fields) or self.remote_forwards
+        ):
+            raise ValueError("local GPU resources cannot declare remote connection fields")
+        explicit_connection = connection_fields[1:]
+        if self.location == "remote" and any(value is not None for value in explicit_connection):
+            if any(value is None for value in connection_fields[:4]):
+                raise ValueError(
+                    "explicit remote GPU connections require alias, host, port, and user"
+                )
+        if self.remote_forwards and self.connection_host is None:
+            raise ValueError("SSH remote forwards require an explicit remote connection")
+        forward_ports = [item.remote_port for item in self.remote_forwards]
+        if len(forward_ports) != len(set(forward_ports)):
+            raise ValueError("SSH remote-forward ports must be unique")
         return self
 
 
@@ -473,7 +509,7 @@ def load_compute_resource_catalog(path: str | Path) -> LoadedComputeResourceCata
     return LoadedComputeResourceCatalog(
         path=source,
         file_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
-        semantic_sha256=_semantic_sha256(catalog.model_dump(mode="json")),
+        semantic_sha256=_semantic_sha256(_catalog_semantic_payload(catalog)),
         component_file_sha256=component_hashes,
         catalog=catalog,
     )
@@ -764,6 +800,60 @@ class ComputeResourceRuntime:
                 raise
         return self._open_project_binding(target)
 
+    def update_project_binding(
+        self,
+        catalog_path: str | Path,
+        binding_path: str | Path,
+    ) -> RegisteredProjectResourceBinding:
+        """Replace one project binding while preserving its immutable predecessor."""
+
+        loaded = load_compute_resource_catalog(catalog_path)
+        self.open(loaded)
+        inspection = inspect_project_resource_binding(catalog_path, binding_path)
+        if not inspection.valid:
+            raise ValueError("project resource binding is invalid: " + ", ".join(inspection.issues))
+        source, payload = _load_yaml(binding_path)
+        binding = ProjectResourceBinding.model_validate(payload)
+        project_manifest = self.outputs_root / "projects" / binding.project_id / "PROJECT.json"
+        if not project_manifest.is_file() or project_manifest.is_symlink():
+            raise ValueError("project resource binding requires an existing project")
+        source_bytes = source.read_bytes()
+        record_payload = {
+            "schema_version": "1.0",
+            "binding": binding.model_dump(mode="json"),
+            "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
+            "source_size_bytes": len(source_bytes),
+        }
+        record_payload["record_sha256"] = _semantic_sha256(record_payload)
+        registered = RegisteredProjectResourceBinding.model_validate(record_payload)
+        target = self.root / "projects" / binding.project_id
+        with _locked(self.root / ".resources.lock"):
+            if not _lexists(target):
+                raise FileNotFoundError(target)
+            existing = self._open_project_binding(target)
+            if existing == registered:
+                return existing
+            history = (
+                self.root / "project-binding-history" / binding.project_id / existing.record_sha256
+            )
+            if _lexists(history):
+                raise FileExistsError(history)
+            history.parent.mkdir(parents=True, exist_ok=True)
+            temporary = Path(tempfile.mkdtemp(prefix=".project-binding-", dir=target.parent))
+            try:
+                _atomic_bytes(temporary / "RESOURCE_BINDING.yaml", source_bytes)
+                _atomic_json(temporary / "RECORD.json", registered.model_dump(mode="json"))
+                os.replace(target, history)
+                try:
+                    os.replace(temporary, target)
+                except BaseException:
+                    os.replace(history, target)
+                    raise
+            except BaseException:
+                shutil.rmtree(temporary, ignore_errors=True)
+                raise
+        return self._open_project_binding(target)
+
     def register_observation(
         self,
         catalog_path: str | Path,
@@ -923,6 +1013,26 @@ def _load_yaml(path: str | Path) -> tuple[Path, object]:
     if not isinstance(payload, dict):
         raise ValueError("resource YAML must contain a mapping")
     return source, payload
+
+
+def _catalog_semantic_payload(catalog: ComputeResourceCatalog) -> dict[str, object]:
+    """Keep newly optional connection fields neutral for historical catalogs."""
+
+    payload = catalog.model_dump(mode="json")
+    for resource in payload["resources"]:
+        if resource.get("kind") != ResourceKind.GPU_HOST:
+            continue
+        for field in (
+            "connection_host",
+            "connection_port",
+            "connection_user",
+            "credential_env",
+        ):
+            if resource.get(field) is None:
+                resource.pop(field, None)
+        if not resource.get("remote_forwards"):
+            resource.pop("remote_forwards", None)
+    return payload
 
 
 def _read_bounded_regular_file(path: Path, label: str) -> bytes:
