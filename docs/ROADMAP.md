@@ -57,21 +57,23 @@ the current draft and its prior reviews therefore stay correctly unbound.
 
 The homepage now compresses repeated proposal diagnostics into seven stable
 decision gates while retaining the exact codes underneath. For the current
-DeepSeek v5 prepilot, the public API identity, dated pricing, and declared runtime budget
-are ready, while task qualification, comparator adapters, analysis/replication,
-integrity, blinded review, and owner approval remain open. This distinction
+DeepSeek v6 prepilot, statistical design, temporal integrity, public API
+identity, dated pricing, and the declared runtime ceiling pass; task
+qualification, comparator adapters, blinded review, and owner approval remain
+open. This distinction
 prevents a large repeated blocker count from obscuring the actual launch
 decisions.
 
 DeepSeek's official model catalog changed on 2026-09-11: callable ID
 `deepseek-flash` now names `DeepSeek-V4.1-Flash`, while legacy
 `deepseek-v4-flash` calls are explicitly compatibility-routed to V4.1. The
-current v5 proposal therefore remains an immutable V4-era no-run artifact and
-cannot authorize a V4.1 study. A new V4.1 proposal must carry the new identity,
-peak/off-peak pricing rule, resource overlay, authenticated served observation,
-and owner approval before any formal cell is run. The internal-review profile
-can be used independently because review feedback is advisory rather than an
-experiment result.
+v5 proposal therefore remains an immutable V4-era no-run artifact and cannot
+authorize a V4.1 study. The new no-run v6 proposal carries the canonical
+identity, conservative peak pricing, a resource overlay, and governance v4, but
+still requires an authenticated served observation, cleared task/comparator and
+human-review gates, and exact-hash owner approval before any cell is run. The
+internal-review profile can be used independently because review feedback is
+advisory rather than an experiment result.
 
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without

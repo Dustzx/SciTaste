@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- The current no-run idea-to-paper package-preference proposal is now
+  `formal-v6-package-prepilot`, pinned to official callable ID
+  `deepseek-flash`, served version `DeepSeek-V4.1-Flash`, conservative peak
+  prices, a new resource overlay, and governance v4. Its evidence ladder maps
+  the draft-v6 review concerns to a clean-block prepilot, a separately powered
+  formal study, paper evidence binding, and two independent human reviews;
+  historical v4/v5 proposal bytes remain unchanged and non-authorizing.
+
 - Internal whole-paper review reports can now be imported directly from one
   accepted project model-node invocation. The report derives provider/model
   identity from the verified response and binds the run, invocation, ledger
@@ -50,13 +58,12 @@ semantic versioning.
   a separate hash-bound attestation; inventory alone never authorizes transfer
   or execution.
 
-- The evaluation resource ledger now supports evidence-only v2.3 overlays, and
-  the current DeepSeek package-preference proposal uses the provider-documented
-  `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` identity and dated prices.
-  Earlier V4.1-labelled proposal and model-profile bytes remain readable as
-  non-launchable history. New content-addressed V4 Flash profiles cover venue
-  review, full-paper drafting, and reviewer-driven revision without embedding a
-  credential or authorizing a call.
+- The evaluation resource ledger now supports evidence-only v2.3 overlays. The
+  superseded v5 package proposal preserves its dated
+  `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` provider snapshot as immutable
+  no-run history rather than being silently edited. Content-addressed provider
+  profiles cover venue review, full-paper drafting, and reviewer-driven revision
+  without embedding a credential or authorizing a call.
 
 - API and GPU evaluations now share a project-owned result-admission path.
   Cell records bind the exact proposal, plan, resource, telemetry, outcome, and

@@ -19,8 +19,8 @@ from scitaste.generative_ui import (
 from scitaste.project import ProjectManifest, ProjectRuntime
 
 CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
-PACKAGE_CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v5.yaml")
-PACKAGE_PROPOSAL = Path("configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml")
+PACKAGE_CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v6.yaml")
+PACKAGE_PROPOSAL = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v6.yaml")
 PROPOSALS = {
     "deepseek-v41-prepilot": (
         Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml"),
@@ -94,7 +94,7 @@ def test_api_and_gpu_proposals_prepare_exact_no_run_resources() -> None:
 def test_package_preference_proposal_materializes_as_blocked_no_run_evidence() -> None:
     prepared = prepare_project_evaluation(
         project_id="evaluation-project",
-        evaluation_id="deepseek-v4-package-prepilot-v5",
+        evaluation_id="deepseek-v41-package-prepilot-v6",
         manifest_path=PACKAGE_PROPOSAL,
         resource_corpus_path=PACKAGE_CORPUS,
         source_root=Path("."),

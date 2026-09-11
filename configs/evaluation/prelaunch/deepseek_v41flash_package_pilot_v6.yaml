@@ -1,0 +1,266 @@
+schema_version: "1.1"
+manifest_id: deepseek-v41flash-package-pilot-v6
+protocol_id: formal-v6-package-prepilot
+protocol_version: "6.0"
+study_scope: pilot
+scientific_question: >-
+  Under matched starting briefs, information access, model revision, tools,
+  repair rules, and resource ceilings, does SciTaste Native produce complete
+  research packages that independent blinded experts prefer for scientific
+  value and evidence validity over packages from real accepted AutoResearch
+  systems?
+claim_allowed: >-
+  A completed clean block may establish adapter feasibility, failure modes,
+  reviewer workload, and pilot variance for a later power analysis only.
+claim_forbidden: >-
+  This pilot cannot establish SciTaste superiority, ICLR readiness, field-wide
+  effectiveness, provider equivalence, an objective-progress result, or an
+  official peer-review outcome.
+primary_endpoint: blinded_package_preference
+automated_judge_role: secondary_diagnostic
+source_commit: 2e2316099700951c922a79cbc04bd95dea4cf892
+require_clean_tree: true
+resource_corpus_sha256: f8fda16551526f8622fa7e97c1f1c177f4b5cc2a48b8f4bac3926f435b05c8bb
+systems:
+  - system_id: scitaste-native
+    role: scitaste
+    implementation_ref: scitaste@2e2316099700951c922a79cbc04bd95dea4cf892
+    availability: verified
+    real_implementation: true
+  - system_id: direct-agent
+    role: control
+    implementation_ref: scitaste-direct-agent@603195a6c37bacd7009ed9402cbd1eba4d9c71db
+    availability: verified
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/adapters/direct_agent_mlr_v1.yaml
+    adapter_preflight_sha256: 3450153c30d8c4832c62008ae03fe4a929021158675503091e83408c3e3bbd43
+  - system_id: mlr-agent
+    role: method_comparator
+    implementation_ref: mlr-agent@f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    external_resource_id: mlr-agent
+    availability: pending
+    real_implementation: true
+  - system_id: agent-laboratory
+    role: method_comparator
+    implementation_ref: agent-laboratory@d9017d90e329112d2a80b7712f37ee9094d2cd27
+    external_resource_id: agent-laboratory
+    availability: pending
+    real_implementation: true
+  - system_id: tiny-scientist
+    role: method_comparator
+    implementation_ref: tiny-scientist@9c4f1a89411e05857c748db9731c33500516e9c6
+    external_resource_id: tiny-scientist
+    availability: blocked
+    real_implementation: true
+tasks:
+  - task_id: iclr2025_bi_align
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_buildingtrust
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_data_problems
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_dl4c
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_mldpr
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_question
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_scope
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_scsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_verifai
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+  - task_id: iclr2025_wsl
+    benchmark_resource_id: mlr-bench
+    split: official-appendix-a-ten-package-review-candidate
+    selected_asset_manifest: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    asset_manifest_sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+    license_status: pending
+    asset_status: pending
+    held_out: false
+    source_group_disjoint: false
+    signal_kind: research_package_review
+lanes:
+  - lane_id: deepseek-v41-package-api
+    kind: api_only
+    scientific_role: matched_backbone
+    system_ids:
+      - scitaste-native
+      - direct-agent
+      - mlr-agent
+      - agent-laboratory
+      - tiny-scientist
+    task_ids:
+      - iclr2025_bi_align
+      - iclr2025_buildingtrust
+      - iclr2025_data_problems
+      - iclr2025_dl4c
+      - iclr2025_mldpr
+      - iclr2025_question
+      - iclr2025_scope
+      - iclr2025_scsl
+      - iclr2025_verifai
+      - iclr2025_wsl
+    seeds: [7, 19]
+    repetitions: 1
+    planned_cells: 100
+    api_model:
+      provider_id: deepseek
+      endpoint: https://api.deepseek.com/chat/completions
+      interface: openai-chat-completions
+      model_id: deepseek-flash
+      model_revision: DeepSeek-V4.1-Flash
+      rolling_alias: true
+      identity_source_url: https://api-docs.deepseek.com/quick_start/pricing
+      identity_status: verified
+      api_key_env: DEEPSEEK_API_KEY
+      max_input_tokens_per_call: 100000
+      max_output_tokens_per_call: 32768
+      max_requests: 1500
+      max_total_tokens: 15000000
+      max_cost: 100.0
+      pricing:
+        currency: USD
+        as_of: 2026-09-11
+        source_url: https://api-docs.deepseek.com/quick_start/pricing
+        input_cache_hit_per_million: 0.006
+        input_cache_miss_per_million: 0.3
+        output_per_million: 1.2
+        status: verified
+    gpu_resource: null
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 30.0
+retention:
+  output_root: outputs/projects/scitaste-eval-formal-v6-package-prepilot
+  archive_root: archives/scitaste-eval-formal-v6-package-prepilot
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: >-
+    Condition-blinded independent expert pairwise preference for the scientific
+    value and evidence validity of the complete research package, with ties
+    retained.
+  estimand: >-
+    Task-averaged probability that a blinded reviewer prefers SciTaste Native
+    to each preregistered accepted external comparator; every comparator
+    contrast is reported rather than selecting the most favourable one.
+  analysis_unit: One matched system-task-seed research trajectory reviewed as a complete package.
+  aggregation_method: >-
+    Fit the preregistered task- and reviewer-aware paired preference model;
+    report raw wins, ties, losses, reviewer agreement, adjudication, failures,
+    and each comparator contrast with the prespecified multiplicity correction.
+  uncertainty_method: >-
+    Report 95 percent intervals from the paired preference model and a
+    task-clustered bootstrap sensitivity analysis; the pilot estimates variance
+    and reviewer burden only.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+integrity:
+  preregistration_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  preregistration_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  task_freeze_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  task_freeze_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  failure_policy_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  failure_policy_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  repair_policy_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  repair_policy_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  leakage_audit_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  leakage_audit_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+  judge_protocol_ref: docs/research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md
+  judge_protocol_sha256: d9f7d1fb40f1f6d81b566e7125bde10438d19707075579c060323bb6a1ddfafe
+launch_order: [deepseek-v41-package-api]
+stop_rules:
+  - Do not run or download a task until its exact starting bytes, license, held-out audit, and runtime-acquisition policy pass.
+  - Stop before the first paid call if the authenticated provider identity differs from deepseek-flash or the served revision cannot be recorded.
+  - Stop unless at least two accepted external method systems pass unchanged-core adapter, license, task-equivalence, telemetry, sandbox, artifact, and failure-resume gates.
+  - Stop unless two conflict-checked independent expert reviewers per comparison and the adjudication process are secured before scale-out.
+  - Stop the complete matched block if any system changes task semantics, starting evidence, tools, repair policy, or resource ceilings.
+  - Stop on incomplete token, retry, cost, wall-time, intervention, experiment, artifact, or reviewer telemetry; retain every attempt.
+  - Stop after one clean matched block and request a second approval before any scale-out.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

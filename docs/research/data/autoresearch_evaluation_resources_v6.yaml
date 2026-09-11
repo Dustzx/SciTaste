@@ -1,0 +1,46 @@
+schema_version: "2.3"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-11-v6
+audited_on: 2026-09-11
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v4.yaml
+base_source_sha256: a4e670cc3de1c0dd07784b8d5acd3043bd6e4c4643b80105c81e0a7ffffee4d8
+
+resource_overrides:
+  - resource_id: mlr-agent
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          The 2026-09-11 DeepSeek catalog names callable model deepseek-flash
+          and served version DeepSeek-V4.1-Flash. The pinned MLR-Agent
+          implementation has not passed an unchanged-core mapping to that
+          rolling alias under the matched SciTaste envelope.
+        evidence_url: https://api-docs.deepseek.com/quick_start/pricing/
+    notes_append:
+      - Compatibility aliases are not accepted as the pinned launch identity; authenticated responses must return deepseek-flash.
+
+  - resource_id: agent-laboratory
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          The 2026-09-11 DeepSeek catalog names callable model deepseek-flash
+          and served version DeepSeek-V4.1-Flash. The pinned Agent Laboratory
+          implementation has not passed an unchanged-core mapping to that
+          rolling alias under the matched SciTaste envelope.
+        evidence_url: https://api-docs.deepseek.com/quick_start/pricing/
+    notes_append:
+      - Compatibility aliases are not accepted as the pinned launch identity; authenticated responses must return deepseek-flash.
+
+  - resource_id: tiny-scientist
+    gates:
+      model_mapping:
+        status: blocked
+        evidence: >-
+          The 2026-09-11 DeepSeek catalog names callable model deepseek-flash
+          and served version DeepSeek-V4.1-Flash. TinyScientist remains blocked
+          first by conflicting release-license declarations and has not been
+          qualified through its LiteLLM path against that rolling alias.
+        evidence_url: https://api-docs.deepseek.com/quick_start/pricing/
+    notes_append:
+      - Compatibility aliases are not accepted as the pinned launch identity; the unresolved license and adapter gates remain unchanged.

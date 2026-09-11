@@ -203,7 +203,7 @@ estimands with separate schemas, protocols, analyses, and result tables. A
 rubric score or model-judge score cannot be relabelled as a task's objective
 value, and the two task populations are never pooled into one headline number.
 The current no-run package protocol is
-[`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V3.md).
+[`research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md`](research/protocols/AUTORESEARCH_PACKAGE_PREFERENCE_PREPILOT_GOVERNANCE_V4.md).
 The earlier DeepSeek v3, Zhipu v2, and Qwen robustness v2 manifests remain
 immutable design history because they bound MLR-Bench briefs to an objective-
 progress endpoint; none is eligible for launch or formal evidence.
@@ -219,8 +219,8 @@ package or if evaluation depends on unavailable private data.
 The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
-those controls. DeepSeek `deepseek-v4-flash` / currently documented
-`DeepSeek-V4-Flash-0731`
+those controls. DeepSeek `deepseek-flash` / currently documented
+`DeepSeek-V4.1-Flash`
 and Zhipu `glm-5.3-flash` are separate provider proposals with separate hashes,
 pricing, served-identity attestations, cells, and approvals. They are never
 silent fallbacks and their estimates are never pooled as one backbone.

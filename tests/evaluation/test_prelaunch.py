@@ -40,8 +40,10 @@ V41_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v
 CURRENT_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v3.yaml")
 PACKAGE_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v4.yaml")
 PACKAGE_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v4.yaml")
-OFFICIAL_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v5.yaml")
-OFFICIAL_MANIFEST_PATH = Path("configs/evaluation/prelaunch/deepseek_v4flash_package_pilot_v5.yaml")
+OFFICIAL_CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v6.yaml")
+OFFICIAL_MANIFEST_PATH = Path(
+    "configs/evaluation/prelaunch/deepseek_v41flash_package_pilot_v6.yaml"
+)
 GPU_INVENTORY_PATH = Path("docs/research/data/gpu_host_3090_2_inventory_v1.yaml")
 CURRENT_MANIFEST_PATHS = (
     Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
@@ -252,9 +254,7 @@ def test_gpu_critic_revalidates_content_bound_inventory_semantics() -> None:
         minimum_memory_mb_per_device=24_000,
         checkpoint_id="qwen3-vl-2b-instruct",
         checkpoint_source_path="/media/weights/Qwen3-VL-2B-Instruct",
-        checkpoint_sha256=(
-            "8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1"
-        ),
+        checkpoint_sha256=("8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1"),
         checkpoint_bytes=4_266_653_057,
         license_identifier="Apache-2.0",
         local_preflight_status=ReadinessStatus.VERIFIED,
@@ -532,14 +532,14 @@ def test_official_deepseek_proposal_uses_documented_callable_identity_and_prices
     manifest = load_prelaunch_manifest(OFFICIAL_MANIFEST_PATH).manifest
     model = manifest.lanes[0].api_model
 
-    assert manifest.protocol_id == "formal-v5-package-prepilot"
+    assert manifest.protocol_id == "formal-v6-package-prepilot"
     assert model is not None
-    assert model.model_id == "deepseek-v4-flash"
-    assert model.model_revision == "DeepSeek-V4-Flash-0731"
-    assert model.pricing.input_cache_hit_per_million == 0.0028
-    assert model.pricing.input_cache_miss_per_million == 0.14
-    assert model.pricing.output_per_million == 0.28
-    assert model.max_cost == 20.0
+    assert model.model_id == "deepseek-flash"
+    assert model.model_revision == "DeepSeek-V4.1-Flash"
+    assert model.pricing.input_cache_hit_per_million == 0.006
+    assert model.pricing.input_cache_miss_per_million == 0.3
+    assert model.pricing.output_per_million == 1.2
+    assert model.max_cost == 100.0
     assert manifest.approval.approved is False
 
 
