@@ -1,0 +1,150 @@
+schema_version: "1.1"
+selection_id: mlr-bench-official-ten-candidate-v2
+authorization_scope: metadata-only-no-download
+benchmark_resource_id: mlr-bench
+repository_commit: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+dataset_id: mlrbench-tasks
+dataset_revision: f1a9a989d4925ff8145e70810e144130be3f8a11
+selection_basis: >-
+  The ten ICLR 2025 workshop-derived research briefs reported in MLR-Bench
+  Appendix A, Table 8, for experimentation, paper writing, and end-to-end
+  evaluation. They support research-package review, not a fixed objective task
+  score.
+selection_basis_url: https://proceedings.neurips.cc/paper_files/paper/2025/file/ab8dd000d6f87f40061a73f8bca7fae4-Paper-Datasets_and_Benchmarks_Track.pdf
+primary_endpoint: blinded_package_preference
+automated_judge_role: secondary_diagnostic
+tasks:
+  - task_id: iclr2025_bi_align
+    title: Bidirectional Human-AI Alignment
+    category: Trustworthy AI
+    source_group: iclr2025_bi_align
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_bi_align.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_buildingtrust
+    title: Building Trust in Language Models and Applications
+    category: Trustworthy AI
+    source_group: iclr2025_buildingtrust
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_buildingtrust.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_data_problems
+    title: Navigating and Addressing Data Problems for Foundation Models
+    category: Trustworthy AI
+    source_group: iclr2025_data_problems
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_data_problems.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_dl4c
+    title: Emergent Possibilities and Challenges in Deep Learning for Code
+    category: LLM/VLM
+    source_group: iclr2025_dl4c
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_dl4c.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_mldpr
+    title: The Future of Machine Learning Data Practices and Repositories
+    category: Trustworthy AI
+    source_group: iclr2025_mldpr
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_mldpr.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_question
+    title: Quantify Uncertainty and Hallucination in Foundation Models - The Next Frontier in Reliable AI
+    category: LLM/VLM
+    source_group: iclr2025_question
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_question.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_scope
+    title: Scalable Optimization for Efficient and Adaptive Foundation Models
+    category: Trustworthy AI
+    source_group: iclr2025_scope
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_scope.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_scsl
+    title: Spurious Correlation and Shortcut Learning - Foundations and Solutions
+    category: Trustworthy AI
+    source_group: iclr2025_scsl
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_scsl.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_verifai
+    title: VerifAI - AI Verification in the Wild
+    category: Trustworthy AI
+    source_group: iclr2025_verifai
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_verifai.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+  - task_id: iclr2025_wsl
+    title: Neural Network Weights as a New Data Modality
+    category: ML Theory
+    source_group: iclr2025_wsl
+    upstream_locator: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_wsl.md
+    local_asset_present: false
+    asset_sha256: null
+    upstream_license_status: pending
+    executable_signal_status: pending
+    input_asset_scope: Pinned MIT-licensed MLR-Bench research brief only; runtime-acquired assets are excluded.
+    input_license_status: verified
+    signal_kind: research_package_review
+    objective_task_score_available: false
+held_out_against_project: scitaste-self-development
+held_out_audit_status: pending
+owner_download_approval: false
+no_download_performed: true

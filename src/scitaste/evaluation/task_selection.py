@@ -10,7 +10,12 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from scitaste.evaluation.prelaunch import ReadinessStatus
+from scitaste.evaluation.prelaunch import (
+    AutomatedJudgeRole,
+    ReadinessStatus,
+    ScientificEndpointKind,
+    TaskSignalKind,
+)
 from scitaste.evaluation.resources import (
     EvaluationResourceKind,
     ExternalResourceCorpus,
@@ -34,6 +39,10 @@ class CandidateBenchmarkTask(BaseModel):
     asset_sha256: None = None
     upstream_license_status: ReadinessStatus
     executable_signal_status: ReadinessStatus
+    input_asset_scope: str | None = Field(default=None, min_length=1, max_length=1_000)
+    input_license_status: ReadinessStatus | None = None
+    signal_kind: TaskSignalKind | None = None
+    objective_task_score_available: bool | None = None
 
     @model_validator(mode="after")
     def locator_is_remote_and_pinned(self) -> CandidateBenchmarkTask:
@@ -47,7 +56,7 @@ class BenchmarkTaskSelectionManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     selection_id: str = Field(pattern=_ID)
     authorization_scope: Literal["metadata-only-no-download"]
     benchmark_resource_id: str = Field(pattern=_ID)
@@ -56,6 +65,8 @@ class BenchmarkTaskSelectionManifest(BaseModel):
     dataset_revision: str = Field(pattern=_COMMIT)
     selection_basis: str = Field(min_length=1, max_length=1_000)
     selection_basis_url: str = Field(min_length=1, max_length=2_000)
+    primary_endpoint: ScientificEndpointKind | None = None
+    automated_judge_role: AutomatedJudgeRole | None = None
     tasks: tuple[CandidateBenchmarkTask, ...] = Field(min_length=2, max_length=100)
     held_out_against_project: str = Field(pattern=_ID)
     held_out_audit_status: ReadinessStatus
@@ -72,6 +83,36 @@ class BenchmarkTaskSelectionManifest(BaseModel):
             raise ValueError("candidate source groups must be unique")
         if not self.selection_basis_url.startswith("https://"):
             raise ValueError("selection basis must use an HTTPS source")
+        semantic_fields = (
+            self.primary_endpoint,
+            self.automated_judge_role,
+            *(task.input_asset_scope for task in self.tasks),
+            *(task.input_license_status for task in self.tasks),
+            *(task.signal_kind for task in self.tasks),
+            *(task.objective_task_score_available for task in self.tasks),
+        )
+        if self.schema_version == "1.0":
+            if any(value is not None for value in semantic_fields):
+                raise ValueError("task selection v1.0 cannot declare v1.1 signal semantics")
+            return self
+        if any(value is None for value in semantic_fields):
+            raise ValueError("task selection v1.1 requires complete signal semantics")
+        if self.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS:
+            if any(
+                task.signal_kind not in {TaskSignalKind.OBJECTIVE_SCORE, TaskSignalKind.MIXED}
+                or not task.objective_task_score_available
+                for task in self.tasks
+            ):
+                raise ValueError("objective selection requires an objective score for every task")
+        else:
+            if any(
+                task.signal_kind
+                not in {TaskSignalKind.RESEARCH_PACKAGE_REVIEW, TaskSignalKind.MIXED}
+                for task in self.tasks
+            ):
+                raise ValueError("package preference requires review-capable task signals")
+            if self.automated_judge_role is AutomatedJudgeRole.CALIBRATED_PRIMARY:
+                raise ValueError("task selection cannot replace primary independent human review")
         return self
 
     @property
@@ -100,7 +141,7 @@ class TaskSelectionReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     selection_id: str
     proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     resource_corpus_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -184,6 +225,15 @@ def inspect_task_selection(
             "task/source overlap with the parent project has not been audited",
         )
     for task in manifest.tasks:
+        if (
+            manifest.schema_version == "1.1"
+            and task.input_license_status is not ReadinessStatus.VERIFIED
+        ):
+            _add(
+                pending,
+                f"task_input_license_{task.input_license_status.value}:{task.task_id}",
+                f"task {task.task_id} starting-input license is not verified",
+            )
         if task.upstream_license_status is not ReadinessStatus.VERIFIED:
             _add(
                 pending,
@@ -206,6 +256,7 @@ def inspect_task_selection(
     for task in manifest.tasks:
         category_counts[task.category] = category_counts.get(task.category, 0) + 1
     return TaskSelectionReport(
+        schema_version=manifest.schema_version,
         selection_id=manifest.selection_id,
         proposal_sha256=manifest.proposal_sha256,
         resource_corpus_sha256=resource_corpus.semantic_sha256,

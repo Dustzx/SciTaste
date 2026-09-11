@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import shutil
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from scitaste.evaluation import (
 
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
 V3_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v3.yaml")
+V4_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v4.yaml")
 
 
 @pytest.fixture(scope="module")
@@ -30,6 +32,11 @@ def corpus() -> ExternalResourceCorpus:
 @pytest.fixture(scope="module")
 def v3_corpus() -> ExternalResourceCorpus:
     return load_external_resource_corpus(V3_CORPUS_PATH).corpus
+
+
+@pytest.fixture(scope="module")
+def v4_corpus() -> ExternalResourceCorpus:
+    return load_external_resource_corpus(V4_CORPUS_PATH).corpus
 
 
 def test_v3_adds_accepted_headline_and_objective_benchmark_candidates(
@@ -50,6 +57,49 @@ def test_v3_adds_accepted_headline_and_objective_benchmark_candidates(
     assert resources["agent-laboratory"].code_license.identifier == "MIT"
     assert resources["ai-researcher"].code_license is None
     assert resources["mlrc-bench"].datasets[0].reported_rows == 7
+
+
+def test_v4_adds_tiny_scientist_and_revises_only_mlr_bench_evidence(
+    v3_corpus: ExternalResourceCorpus,
+    v4_corpus: ExternalResourceCorpus,
+) -> None:
+    before = {item.resource_id: item for item in v3_corpus.resources}
+    after = {item.resource_id: item for item in v4_corpus.resources}
+
+    assert v4_corpus.schema_version == "2.2"
+    assert set(after) - set(before) == {"tiny-scientist"}
+    assert after["mlr-bench"].repository_commit == before["mlr-bench"].repository_commit
+    assert (
+        after["mlr-bench"].gates[ResourceGateName.SOURCE_GROUPS].status
+        is ResourceGateStatus.VERIFIED
+    )
+    assert (
+        after["mlr-bench"].gates[ResourceGateName.SELECTED_TASK_MANIFEST].status
+        is ResourceGateStatus.VERIFIED
+    )
+    tiny = after["tiny-scientist"]
+    assert tiny.accepted_venue == "EMNLP 2025 System Demonstrations"
+    assert tiny.repository_commit == "9c4f1a89411e05857c748db9731c33500516e9c6"
+    assert tiny.code_license is None
+    assert tiny.gates[ResourceGateName.CODE_LICENSE].status is ResourceGateStatus.BLOCKED
+
+
+def test_v4_tiny_scientist_license_conflict_remains_a_real_blocker(
+    v4_corpus: ExternalResourceCorpus,
+) -> None:
+    reference = evaluate_resource_feasibility(
+        v4_corpus,
+        "tiny-scientist",
+        ResourceUse.REFERENCE,
+    )
+    comparison = evaluate_resource_feasibility(
+        v4_corpus,
+        "tiny-scientist",
+        ResourceUse.COMPARISON_SYSTEM,
+    )
+
+    assert "blocked_gate:code_license" in reference.blocker_codes
+    assert "blocked_gate:license_acceptance" in comparison.blocker_codes
 
 
 def test_missing_license_is_a_blocker_not_a_pseudo_license(
@@ -80,6 +130,86 @@ def test_v3_overlay_is_bound_to_the_exact_v2_source(tmp_path: Path) -> None:
     base.write_text(base.read_text(encoding="utf-8") + "\n# drift\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="overlay base hash has drifted"):
+        load_external_resource_corpus(overlay)
+
+
+def test_v22_overlay_can_rev_evidence_without_replacing_resource_identity(
+    tmp_path: Path,
+) -> None:
+    base_v2 = tmp_path / CORPUS_PATH.name
+    base_v3 = tmp_path / V3_CORPUS_PATH.name
+    shutil.copyfile(CORPUS_PATH, base_v2)
+    shutil.copyfile(V3_CORPUS_PATH, base_v3)
+    overlay = tmp_path / "resources-v4.yaml"
+    overlay.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "2.2",
+                "corpus_id": "accepted-autoresearch-evaluation-resources-test-v4",
+                "audited_on": "2026-09-11",
+                "authorization_scope": "metadata-only-no-execution",
+                "base_source": base_v3.name,
+                "base_source_sha256": hashlib.sha256(base_v3.read_bytes()).hexdigest(),
+                "resource_overrides": [
+                    {
+                        "resource_id": "mlr-bench",
+                        "gates": {
+                            "source_groups": {
+                                "status": "verified",
+                                "evidence": "Exact source groups were frozen.",
+                            }
+                        },
+                        "notes_append": ["Evidence revision only; identity unchanged."],
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    corpus = load_external_resource_corpus(overlay).corpus
+    resources = {item.resource_id: item for item in corpus.resources}
+
+    assert corpus.schema_version == "2.2"
+    assert resources["mlr-bench"].repository_commit == ("f728d571a992d71c8b526eeb4d9ab6bb5c8cc824")
+    assert (
+        resources["mlr-bench"].gates[ResourceGateName.SOURCE_GROUPS].status
+        is ResourceGateStatus.VERIFIED
+    )
+    assert resources["agent-laboratory"].repository_commit == (
+        "d9017d90e329112d2a80b7712f37ee9094d2cd27"
+    )
+
+
+def test_v22_overlay_rejects_unknown_resource_override(tmp_path: Path) -> None:
+    base_v2 = tmp_path / CORPUS_PATH.name
+    base_v3 = tmp_path / V3_CORPUS_PATH.name
+    shutil.copyfile(CORPUS_PATH, base_v2)
+    shutil.copyfile(V3_CORPUS_PATH, base_v3)
+    overlay = tmp_path / "resources-v4.yaml"
+    overlay.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "2.2",
+                "corpus_id": "accepted-autoresearch-evaluation-resources-test-v4",
+                "audited_on": "2026-09-11",
+                "authorization_scope": "metadata-only-no-execution",
+                "base_source": base_v3.name,
+                "base_source_sha256": hashlib.sha256(base_v3.read_bytes()).hexdigest(),
+                "resource_overrides": [
+                    {
+                        "resource_id": "missing-system",
+                        "notes_append": ["Must not create a resource implicitly."],
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="cannot revise unknown"):
         load_external_resource_corpus(overlay)
 
 

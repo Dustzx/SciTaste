@@ -1,0 +1,109 @@
+schema_version: "2.2"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-11-v4
+audited_on: 2026-09-11
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v3.yaml
+base_source_sha256: b8dd8ac15afc6deb6f3269b9e83f8b31fba5ed54f71d44c59a8e97e0f00e6cd9
+
+resource_overrides:
+  - resource_id: mlr-bench
+    gates:
+      source_groups:
+        status: verified
+        evidence: >-
+          The no-download v2 selection binds ten distinct ICLR 2025 workshop
+          source groups exactly matching Appendix A, Table 8 of the accepted
+          paper.
+        evidence_url: https://proceedings.neurips.cc/paper_files/paper/2025/file/ab8dd000d6f87f40061a73f8bca7fae4-Paper-Datasets_and_Benchmarks_Track.pdf
+      selected_task_manifest:
+        status: verified
+        evidence: >-
+          docs/research/data/mlr_bench_official_ten_candidate_v2.yaml freezes
+          the exact ten-task candidate scope with SHA-256
+          bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+          and explicitly identifies research-package review rather than an
+          objective task score.
+        evidence_url: https://github.com/chchenhui/mlrbench/tree/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks
+    notes_append:
+      - MLR-Bench package review and objective-progress benchmarks now use separate machine-checked endpoint protocols.
+
+resources_additions:
+  - resource_id: tiny-scientist
+    resource_kind: system
+    official_repository: https://github.com/ulab-uiuc/tiny-scientist
+    repository_commit: 9c4f1a89411e05857c748db9731c33500516e9c6
+    implementation_path: .
+    publication_url: https://aclanthology.org/2025.emnlp-demos.41/
+    accepted_venue: EMNLP 2025 System Demonstrations
+    code_license: null
+    datasets: []
+    lifecycle_stages:
+      - ideation
+      - experimentation
+      - paper-writing
+      - paper-review
+      - human-control
+    native_model_interfaces:
+      - LiteLLM-compatible provider
+      - OpenAI API
+      - Anthropic API
+      - Aider coding agent
+      - Semantic Scholar API
+      - MCP tools
+    resource_requirements:
+      - Python 3.9 through 3.11 environment from the pinned release
+      - provider credentials for the selected language model
+      - coding-agent and task-specific experiment dependencies
+      - TeX-capable paper environment
+      - optional search and MCP provider credentials
+    gates:
+      official_identity:
+        status: verified
+        evidence: The archival paper identifies the ulab-uiuc/tiny-scientist repository and PyPI package.
+        evidence_url: https://aclanthology.org/2025.emnlp-demos.41/
+      repository_pin:
+        status: verified
+        evidence: Git tag v0.1.3 resolves to the recorded 40-character commit and matches the October 12, 2025 PyPI release version.
+        evidence_url: https://github.com/ulab-uiuc/tiny-scientist/tree/9c4f1a89411e05857c748db9731c33500516e9c6
+      publication_identity:
+        status: verified
+        evidence: ACL Anthology lists TinyScientist in EMNLP 2025 System Demonstrations.
+        evidence_url: https://aclanthology.org/2025.emnlp-demos.41/
+      code_license:
+        status: blocked
+        evidence: >-
+          License metadata conflict at the pinned v0.1.3 release: the root
+          LICENSE contains MIT terms, pyproject.toml declares Apache 2.0
+          License, and PyPI classifies the release as Other/Proprietary. No
+          single applicable release license may be inferred.
+        evidence_url: https://github.com/ulab-uiuc/tiny-scientist/tree/9c4f1a89411e05857c748db9731c33500516e9c6
+      license_acceptance:
+        status: blocked
+        evidence: The conflicting release-license declarations must be resolved before code use.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated v0.1.3 checkout and unchanged-core diff have been prepared.
+      task_mapping:
+        status: blocked
+        evidence: The intent input has not been mapped to an equivalent frozen MLR-Bench research brief and output package.
+      model_mapping:
+        status: blocked
+        evidence: DeepSeek V4.1 Flash and GLM-5.3-Flash have not been qualified through the release's LiteLLM/provider path without changing method semantics.
+      sandbox:
+        status: blocked
+        evidence: Aider, generated experiment code, Docker, filesystem, network, and MCP boundaries require a dedicated review.
+      telemetry:
+        status: blocked
+        evidence: Provider calls, token classes, cost, wall time, experiments, retries, interventions, allocated GPU, and active GPU use are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: Idea, code, experiment, paper, and review outputs are not mapped into immutable SciTaste evidence records.
+      failure_resume:
+        status: blocked
+        evidence: Stage pause, failed code execution, timeout, retry, resume, and budget exhaustion have no matched adapter tests.
+      disclosure_acceptance:
+        status: blocked
+        evidence: Manuscript and redistribution obligations cannot be fixed until the release-license conflict is resolved.
+    notes:
+      - The accepted end-to-end lifecycle and stable v0.1.3 release make this a high-priority comparator candidate, not a formal-ready system.
+      - No repository checkout, package installation, provider call, or system execution occurred during this metadata audit.

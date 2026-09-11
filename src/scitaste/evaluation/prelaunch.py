@@ -50,6 +50,27 @@ class ScientificLaneRole(StrEnum):
     EXPERIMENT_WORKLOAD = "experiment_workload"
 
 
+class ScientificEndpointKind(StrEnum):
+    """Primary evidence semantics; unlike prose, this is machine checked."""
+
+    OBJECTIVE_PROGRESS = "objective_progress"
+    BLINDED_PACKAGE_PREFERENCE = "blinded_package_preference"
+
+
+class TaskSignalKind(StrEnum):
+    """Signal that an admitted task can actually supply."""
+
+    OBJECTIVE_SCORE = "objective_score"
+    RESEARCH_PACKAGE_REVIEW = "research_package_review"
+    MIXED = "mixed"
+
+
+class AutomatedJudgeRole(StrEnum):
+    NONE = "none"
+    SECONDARY_DIAGNOSTIC = "secondary_diagnostic"
+    CALIBRATED_PRIMARY = "calibrated_primary"
+
+
 class PrelaunchSystem(BaseModel):
     model_config = _CONFIG
 
@@ -89,6 +110,7 @@ class PrelaunchTask(BaseModel):
     asset_status: ReadinessStatus
     held_out: bool
     source_group_disjoint: bool
+    signal_kind: TaskSignalKind | None = None
 
     @model_validator(mode="after")
     def verified_assets_are_pinned(self) -> PrelaunchTask:
@@ -294,7 +316,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -302,6 +324,8 @@ class ExperimentPrelaunchManifest(BaseModel):
     scientific_question: str = Field(min_length=1, max_length=4_000)
     claim_allowed: str = Field(min_length=1, max_length=4_000)
     claim_forbidden: str = Field(min_length=1, max_length=4_000)
+    primary_endpoint: ScientificEndpointKind | None = None
+    automated_judge_role: AutomatedJudgeRole | None = None
     source_commit: str | None = Field(default=None, pattern=_COMMIT)
     require_clean_tree: Literal[True] = True
     resource_corpus_sha256: str = Field(pattern=_SHA256)
@@ -345,6 +369,37 @@ class ExperimentPrelaunchManifest(BaseModel):
             raise ValueError("provider alternatives require separate prelaunch manifests")
         if tuple(lane_ids) != self.launch_order:
             raise ValueError("launch_order must name every lane exactly once in declared order")
+        if self.schema_version == "1.0":
+            if self.primary_endpoint is not None or self.automated_judge_role is not None:
+                raise ValueError("prelaunch v1.0 cannot declare v1.1 endpoint semantics")
+            if any(task.signal_kind is not None for task in self.tasks):
+                raise ValueError("prelaunch v1.0 cannot declare v1.1 task signals")
+            return self
+        if self.primary_endpoint is None or self.automated_judge_role is None:
+            raise ValueError("prelaunch v1.1 requires explicit endpoint and judge semantics")
+        if self.analysis is None or self.integrity is None:
+            raise ValueError("prelaunch v1.1 requires analysis and integrity contracts")
+        if any(task.signal_kind is None for task in self.tasks):
+            raise ValueError("prelaunch v1.1 requires every task signal kind")
+        if self.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS:
+            if any(
+                task.signal_kind not in {TaskSignalKind.OBJECTIVE_SCORE, TaskSignalKind.MIXED}
+                for task in self.tasks
+            ):
+                raise ValueError("objective progress requires objective or mixed task signals")
+        else:
+            if any(
+                task.signal_kind
+                not in {TaskSignalKind.RESEARCH_PACKAGE_REVIEW, TaskSignalKind.MIXED}
+                for task in self.tasks
+            ):
+                raise ValueError("blinded package preference requires review-capable task signals")
+            if not self.human_review.required:
+                raise ValueError("blinded package preference requires independent human review")
+            if self.automated_judge_role is AutomatedJudgeRole.CALIBRATED_PRIMARY:
+                raise ValueError(
+                    "automated judges cannot replace the primary blinded human preference"
+                )
         return self
 
     @property
@@ -598,6 +653,7 @@ def _git(cwd: Path, *arguments: str) -> str:
 __all__ = [
     "AnalysisContract",
     "ApiModelResource",
+    "AutomatedJudgeRole",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",
@@ -613,8 +669,10 @@ __all__ = [
     "ProviderPricing",
     "ReadinessStatus",
     "RetentionContract",
+    "ScientificEndpointKind",
     "ScientificLaneRole",
     "SystemRole",
+    "TaskSignalKind",
     "inspect_git_source",
     "inspect_prelaunch_manifest",
     "load_prelaunch_manifest",

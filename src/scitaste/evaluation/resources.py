@@ -136,7 +136,7 @@ class ExternalEvaluationResource(FrozenModel):
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal["2.0", "2.1"] = "2.0"
+    schema_version: Literal["2.0", "2.1", "2.2"] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -160,22 +160,48 @@ class ExternalResourceCorpus(FrozenModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-class ExternalResourceCorpusOverlay(FrozenModel):
-    """Content-addressed additive metadata revision over one prior corpus."""
+class ExternalResourceOverride(FrozenModel):
+    """Evidence-only revision that cannot silently change a resource identity."""
 
-    schema_version: Literal["2.1"] = "2.1"
+    resource_id: str = Field(pattern=_RESOURCE_ID)
+    gates: dict[ResourceGateName, ResourceGateDecision] = Field(default_factory=dict)
+    notes_append: tuple[str, ...] = Field(default=(), max_length=30)
+
+    @model_validator(mode="after")
+    def carries_a_bounded_revision(self) -> ExternalResourceOverride:
+        if not self.gates and not self.notes_append:
+            raise ValueError("resource override must revise gates or append notes")
+        if len(self.notes_append) != len(set(self.notes_append)):
+            raise ValueError("resource override notes must be unique")
+        return self
+
+
+class ExternalResourceCorpusOverlay(FrozenModel):
+    """Content-addressed additive or evidence-only revision over one prior corpus."""
+
+    schema_version: Literal["2.1", "2.2"] = "2.1"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
     base_source: str = Field(min_length=1, max_length=500)
     base_source_sha256: str = Field(pattern=_SHA256)
-    resources_additions: tuple[ExternalEvaluationResource, ...] = Field(min_length=1, max_length=50)
+    resources_additions: tuple[ExternalEvaluationResource, ...] = Field(default=(), max_length=50)
+    resource_overrides: tuple[ExternalResourceOverride, ...] = Field(default=(), max_length=50)
 
     @model_validator(mode="after")
     def additions_are_unique(self) -> ExternalResourceCorpusOverlay:
         resource_ids = [item.resource_id for item in self.resources_additions]
         if len(resource_ids) != len(set(resource_ids)):
             raise ValueError("evaluation resource overlay IDs must be unique")
+        override_ids = [item.resource_id for item in self.resource_overrides]
+        if len(override_ids) != len(set(override_ids)):
+            raise ValueError("evaluation resource override IDs must be unique")
+        if set(resource_ids) & set(override_ids):
+            raise ValueError("new resources cannot also be overridden")
+        if self.schema_version == "2.1" and self.resource_overrides:
+            raise ValueError("evaluation resource v2.1 overlays are additions-only")
+        if not self.resources_additions and not self.resource_overrides:
+            raise ValueError("evaluation resource overlay must contain a revision")
         return self
 
 
@@ -272,7 +298,7 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
         raise ValueError("evaluation resource corpus must be UTF-8") from exc
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
-    if payload.get("schema_version") == "2.1" and "base_source" in payload:
+    if payload.get("schema_version") in {"2.1", "2.2"} and "base_source" in payload:
         corpus = _compose_external_resource_overlay(resolved, payload)
     else:
         corpus = ExternalResourceCorpus.model_validate(payload)
@@ -302,19 +328,38 @@ def _compose_external_resource_overlay(
     if hashlib.sha256(base_path.read_bytes()).hexdigest() != overlay.base_source_sha256:
         raise ValueError("evaluation resource overlay base hash has drifted")
     base = load_external_resource_corpus(base_path).corpus
-    if base.schema_version != "2.0":
-        raise ValueError("evaluation resource v2.1 overlay must extend schema 2.0")
+    expected_base = {"2.1": "2.0", "2.2": "2.1"}[overlay.schema_version]
+    if base.schema_version != expected_base:
+        raise ValueError(
+            f"evaluation resource {overlay.schema_version} overlay must extend schema "
+            f"{expected_base}"
+        )
     known = {item.resource_id for item in base.resources}
     additions = {item.resource_id for item in overlay.resources_additions}
     if known & additions:
         raise ValueError("evaluation resource overlay cannot replace existing resources")
+    overrides = {item.resource_id: item for item in overlay.resource_overrides}
+    if set(overrides) - known:
+        raise ValueError("evaluation resource overlay cannot revise unknown resources")
+    revised: list[ExternalEvaluationResource] = []
+    for resource in base.resources:
+        override = overrides.get(resource.resource_id)
+        if override is None:
+            revised.append(resource)
+            continue
+        gates = dict(resource.gates)
+        gates.update(override.gates)
+        notes = (*resource.notes, *override.notes_append)
+        if len(notes) != len(set(notes)):
+            raise ValueError("evaluation resource override introduced duplicate notes")
+        revised.append(resource.model_copy(update={"gates": gates, "notes": notes}))
     return ExternalResourceCorpus(
         schema_version=overlay.schema_version,
         corpus_id=overlay.corpus_id,
         audited_on=overlay.audited_on,
         authorization_scope=overlay.authorization_scope,
         prior_snapshot=base.prior_snapshot,
-        resources=(*base.resources, *overlay.resources_additions),
+        resources=(*revised, *overlay.resources_additions),
     )
 
 

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from scitaste.evaluation import (
     AnalysisContract,
     ApiModelResource,
+    AutomatedJudgeRole,
     EvaluationCriticDomain,
     EvaluationCriticSuite,
     ExecutionLane,
@@ -23,8 +24,10 @@ from scitaste.evaluation import (
     ProviderPricing,
     ReadinessStatus,
     RetentionContract,
+    ScientificEndpointKind,
     ScientificLaneRole,
     SystemRole,
+    TaskSignalKind,
     inspect_prelaunch_manifest,
     load_external_resource_corpus,
     load_prelaunch_manifest,
@@ -284,6 +287,81 @@ def test_provider_alternatives_require_separate_manifests() -> None:
     payload["launch_order"] = ["deepseek-api", "zhipu-api"]
 
     with pytest.raises(ValidationError, match="separate prelaunch manifests"):
+        ExperimentPrelaunchManifest.model_validate(payload)
+
+
+def _v11_manifest(*, endpoint: ScientificEndpointKind) -> ExperimentPrelaunchManifest:
+    source = _manifest()
+    task_signal = (
+        TaskSignalKind.OBJECTIVE_SCORE
+        if endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
+        else TaskSignalKind.RESEARCH_PACKAGE_REVIEW
+    )
+    return ExperimentPrelaunchManifest.model_validate(
+        {
+            **source.model_dump(mode="json"),
+            "schema_version": "1.1",
+            "primary_endpoint": endpoint.value,
+            "automated_judge_role": AutomatedJudgeRole.SECONDARY_DIAGNOSTIC.value,
+            "tasks": [
+                {
+                    **task.model_dump(mode="json"),
+                    "signal_kind": task_signal.value,
+                }
+                for task in source.tasks
+            ],
+            "analysis": AnalysisContract(
+                primary_outcome="A structurally matched primary endpoint.",
+                estimand="A paired task-level contrast.",
+                analysis_unit="One task-by-seed block.",
+                aggregation_method="Average tasks equally.",
+                uncertainty_method="Task-stratified paired bootstrap.",
+            ).model_dump(mode="json"),
+            "integrity": IntegrityContract(
+                preregistration_ref="protocol.md",
+                preregistration_sha256=HASH,
+                task_freeze_ref="protocol.md",
+                task_freeze_sha256=HASH,
+                failure_policy_ref="protocol.md",
+                failure_policy_sha256=HASH,
+                repair_policy_ref="protocol.md",
+                repair_policy_sha256=HASH,
+                leakage_audit_ref="protocol.md",
+                leakage_audit_sha256=HASH,
+            ).model_dump(mode="json"),
+        }
+    )
+
+
+def test_v11_machine_checks_objective_and_research_package_endpoints() -> None:
+    objective = _v11_manifest(endpoint=ScientificEndpointKind.OBJECTIVE_PROGRESS)
+    package = _v11_manifest(endpoint=ScientificEndpointKind.BLINDED_PACKAGE_PREFERENCE)
+
+    assert objective.tasks[0].signal_kind is TaskSignalKind.OBJECTIVE_SCORE
+    assert package.tasks[0].signal_kind is TaskSignalKind.RESEARCH_PACKAGE_REVIEW
+
+    payload = package.model_dump(mode="json")
+    payload["primary_endpoint"] = ScientificEndpointKind.OBJECTIVE_PROGRESS.value
+    with pytest.raises(ValidationError, match="objective or mixed task signals"):
+        ExperimentPrelaunchManifest.model_validate(payload)
+
+
+def test_v11_blinded_package_endpoint_requires_humans_as_primary_judges() -> None:
+    manifest = _v11_manifest(endpoint=ScientificEndpointKind.BLINDED_PACKAGE_PREFERENCE)
+    payload = manifest.model_dump(mode="json")
+    payload["human_review"] = {
+        **payload["human_review"],
+        "required": False,
+        "minimum_reviewers_per_artifact": 0,
+        "condition_blinded": False,
+        "conflict_check_required": False,
+    }
+    with pytest.raises(ValidationError, match="independent human review"):
+        ExperimentPrelaunchManifest.model_validate(payload)
+
+    payload = manifest.model_dump(mode="json")
+    payload["automated_judge_role"] = AutomatedJudgeRole.CALIBRATED_PRIMARY.value
+    with pytest.raises(ValidationError, match="cannot replace"):
         ExperimentPrelaunchManifest.model_validate(payload)
 
 
