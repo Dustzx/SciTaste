@@ -116,6 +116,22 @@ does not acquire data, contact a provider, inspect the remote GPU host, or launc
 a cell; even an approved proposal remains data-only until a separate launch
 service revalidates its exact authority.
 
+Inspect the selected proposal at decision scale without hiding its exact
+diagnostics:
+
+```bash
+.venv/bin/scitaste project evaluation status \
+  --project-id scitaste-self-development \
+  --outputs-root outputs
+```
+
+The output deterministically groups repeated task/cell/resource diagnostics into
+seven ordered decisions: task scope, comparator adapters, statistical design,
+temporal integrity, independent review, runtime resources, and exact-hash owner
+approval. `diagnostic_blocker_count` remains the number of exact unique codes;
+`decision_blocker_count` is the number of unresolved decision domains. Unknown
+diagnostic codes fail closed into the integrity domain.
+
 The critic review is explicitly advisory: its schema fixes
 `authorizes_execution=false`. `ready_for_author_review` becomes true only when
 all five critic domains and the resource gate have no blockers. Even then, only

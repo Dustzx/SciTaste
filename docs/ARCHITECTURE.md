@@ -1426,3 +1426,10 @@ cell, or elevate proposal data into executable authority. A future launch
 service must revalidate the selected proposal hash, readiness, exact human
 approval, current provider revision and price, local/remote resources, and every
 task and comparator adapter before admitting work.
+
+Verbose readiness checks are not themselves an information architecture. One
+task can create parallel gate, cell-plan, and critic codes, so the receiver
+derives seven stable decision domains without deleting the original
+diagnostics. The projection is deterministic and self-hashed. Unrecognized
+future codes are assigned to the temporal-integrity domain and disclosed, so a
+new validator cannot silently disappear behind an outdated interface.

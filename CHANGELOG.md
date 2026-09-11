@@ -7,6 +7,21 @@ semantic versioning.
 
 ### Added
 
+- Experiment proposal diagnostics now have a deterministic seven-gate decision
+  map for task scope, real comparator adapters, statistical design, temporal
+  integrity, independent review, runtime resources, and exact-hash owner
+  approval. It preserves every raw blocker in content-bound evidence while
+  collapsing repeated per-cell/resource findings into a compact next-decision
+  rail. The same projection is available through `project evaluation status`
+  and on the Generation-as-Content project home; unknown future diagnostics
+  fail closed into the integrity gate instead of disappearing.
+
+- Project conversation catalogs now keep known older progress turns navigable
+  as inert `archive_incompatible` entries after additive component-schema
+  changes. Their stale renderer payload is never repaired or replayed, so a
+  project home can survive upgrades without treating archived UI bytes as new
+  authority.
+
 - API and GPU experiment plans can now be materialized as immutable,
   project-owned no-run evaluation bundles. Each bundle binds the exact
   prelaunch manifest, resource corpus, gate report, five-critic review, and

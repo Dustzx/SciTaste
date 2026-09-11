@@ -152,6 +152,30 @@ class ResearchTurnSummary(BaseModel):
     status: str = Field(min_length=1, max_length=64)
 
 
+class _ArchivedGeneratedDocumentEnvelope(BaseModel):
+    """Minimal inert envelope used only to list a known older turn."""
+
+    model_config = ConfigDict(extra="ignore", frozen=True, str_strip_whitespace=True)
+
+    status: str = Field(min_length=1, max_length=64)
+
+
+class _ArchivedResearchTurnEnvelope(BaseModel):
+    """Safe identity and prompt fields; renderer payload remains untrusted and unused."""
+
+    model_config = ConfigDict(extra="ignore", frozen=True, str_strip_whitespace=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: ProjectIdentifier
+    workspace_id: SafeIdentifier
+    turn_id: SafeIdentifier
+    ordinal: int = Field(ge=1)
+    created_at: datetime
+    prompt: ResearchTurnPrompt
+    generation_id: SafeIdentifier | None = None
+    document: _ArchivedGeneratedDocumentEnvelope
+
+
 class ResearchWorkspaceSummary(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -468,21 +492,15 @@ class ResearchWorkspaceStore:
         try:
             turn = ResearchTurnRecord.model_validate_json(content)
         except ValidationError as exc:
-            compatible_envelope = _known_legacy_progress_turn(content)
-            if compatible_envelope is not None:
-                if (
-                    compatible_envelope.workspace_id != directory.name
-                    or compatible_envelope.turn_id != turn_id
+            archived_summary = _known_legacy_progress_turn(content)
+            if archived_summary is not None:
+                if archived_summary.turn_id != turn_id or not _archived_workspace_matches(
+                    content, directory.name
                 ):
                     raise AuditIntegrityError(
                         "research turn path does not match its identity"
                     ) from exc
-                raise IncompatibleResearchTurnError(
-                    _turn_summary(
-                        compatible_envelope,
-                        status="archive_incompatible",
-                    )
-                ) from exc
+                raise IncompatibleResearchTurnError(archived_summary) from exc
             raise AuditIntegrityError("research turn contains invalid state") from exc
         if turn.workspace_id != directory.name or turn.turn_id != turn_id:
             raise AuditIntegrityError("research turn path does not match its identity")
@@ -548,14 +566,15 @@ def _turn_summary(
     )
 
 
-def _known_legacy_progress_turn(content: bytes) -> ResearchTurnRecord | None:
-    """Recognize only the pre-lifecycle progress shape without rewriting stored bytes."""
+def _known_legacy_progress_turn(content: bytes) -> ResearchTurnSummary | None:
+    """Recognize an older progress page while refusing to render its stale payload."""
 
     try:
         payload = json.loads(content)
         renderer = payload["document"]["renderer"]
         components = renderer["components"]
-    except (json.JSONDecodeError, KeyError, TypeError):
+        envelope = _ArchivedResearchTurnEnvelope.model_validate(payload)
+    except (json.JSONDecodeError, KeyError, TypeError, ValidationError):
         return None
     if (
         not isinstance(renderer, dict)
@@ -563,52 +582,29 @@ def _known_legacy_progress_turn(content: bytes) -> ResearchTurnRecord | None:
         or renderer.get("catalog_version") != "scitaste-trusted-components-v2"
     ):
         return None
-    patched_count = 0
-    for component in components:
-        if not isinstance(component, dict) or component.get("renderer") != "ProjectProgressBoard":
-            continue
-        data = component.get("data")
-        if not isinstance(data, dict) or "lifecycle" in data:
-            continue
-        project_ref_id = data.get("project_ref_id")
-        if not isinstance(project_ref_id, str):
-            return None
-        data["lifecycle"] = {
-            "lifecycle_state": "discovery",
-            "current_paper_id": None,
-            "current_review_id": None,
-            "idea_to_paper_complete": False,
-            "internal_review_cycle_complete": False,
-            "independent_pre_submission_review_complete": False,
-            "official_decision_authority": False,
-            "scientific_effectiveness_established": False,
-            "gates": [
-                {
-                    "gate_id": gate_id,
-                    "state": "unavailable",
-                    "reason_code": "legacy-archive-missing-lifecycle",
-                    "support_ref_ids": [],
-                }
-                for gate_id in (
-                    "idea",
-                    "evidence",
-                    "lineage",
-                    "paper",
-                    "submission",
-                    "review",
-                    "response_verification",
-                    "independent_review",
-                )
-            ],
-            "support_ref_ids": [project_ref_id],
-        }
-        patched_count += 1
-    if patched_count != 1:
+    progress_components = [
+        item
+        for item in components
+        if isinstance(item, dict) and item.get("renderer") == "ProjectProgressBoard"
+    ]
+    if len(progress_components) != 1:
         return None
+    return ResearchTurnSummary(
+        turn_id=envelope.turn_id,
+        ordinal=envelope.ordinal,
+        created_at=envelope.created_at,
+        prompt=envelope.prompt,
+        generation_id=envelope.generation_id,
+        status="archive_incompatible",
+    )
+
+
+def _archived_workspace_matches(content: bytes, workspace_id: str) -> bool:
     try:
-        return ResearchTurnRecord.model_validate(payload)
+        envelope = _ArchivedResearchTurnEnvelope.model_validate_json(content)
     except ValidationError:
-        return None
+        return False
+    return envelope.workspace_id == workspace_id
 
 
 def _fingerprint(value: object) -> str:

@@ -243,6 +243,11 @@ its API/checkpoint identity, closed cell count, unresolved-gate count, and
 authorization state. The page is a verified read-only projection and cannot
 turn selection or author approval into execution.
 
+`project evaluation status` reopens and rehashes the selected bundle before
+deriving its seven decision-scale readiness gates. This keeps a large expanded
+cell matrix inspectable without allowing summary prose or a UI count to replace
+the underlying blocker codes.
+
 ## Paper review and lifecycle
 
 Review rounds are first-class project records beneath

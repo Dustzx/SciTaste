@@ -1215,9 +1215,13 @@ function renderProjectProgress(data) {
       facts.className = "evaluation-proposal-facts";
       const cells = document.createElement("span");
       appendText(cells, t("progress.evaluations.cells", {count: item.planned_cells}));
+      const decisionGates = document.createElement("span");
+      appendText(decisionGates, t("progress.evaluations.decision_gates", {
+        count: item.decision_blocker_count,
+      }));
       const blockers = document.createElement("span");
-      appendText(blockers, t("progress.evaluations.blockers", {count: item.blocker_count}));
-      facts.append(cells, blockers);
+      appendText(blockers, t("progress.evaluations.diagnostics", {count: item.blocker_count}));
+      facts.append(cells, decisionGates, blockers);
 
       const resources = document.createElement("ul");
       resources.className = "evaluation-resource-list";
@@ -1226,6 +1230,35 @@ function renderProjectProgress(data) {
         appendText(entry, resource);
         resources.appendChild(entry);
       }
+      const gateRail = document.createElement("ol");
+      gateRail.className = "evaluation-gate-rail";
+      for (const gate of item.gates) {
+        const gateItem = document.createElement("li");
+        gateItem.className = `evaluation-gate state-${gate.state}`;
+        const gateName = document.createElement("strong");
+        appendText(gateName, t(`progress.evaluations.gate.${gate.gate_id}`));
+        const gateState = document.createElement("span");
+        appendText(gateState, t(`progress.evaluations.gate_state.${gate.state}`));
+        const gateIssues = document.createElement("small");
+        appendText(gateIssues, gate.issue_count > 0
+          ? t("progress.evaluations.gate_issues", {
+            count: gate.issue_count,
+            affected: gate.affected_count,
+          })
+          : t("progress.evaluations.gate_clear"));
+        gateItem.append(gateName, gateState, gateIssues);
+        gateRail.appendChild(gateItem);
+      }
+      const nextAction = document.createElement("p");
+      nextAction.className = "evaluation-next-action";
+      if (item.next_gate_id) {
+        const nextGate = item.gates.find((gate) => gate.gate_id === item.next_gate_id);
+        appendText(nextAction, t("progress.evaluations.next", {
+          action: t(`progress.evaluations.action.${nextGate.next_action_code}`),
+        }));
+      } else {
+        appendText(nextAction, t("progress.evaluations.ready"));
+      }
       const boundary = document.createElement("p");
       boundary.className = "muted compact-copy";
       appendText(boundary, t("progress.evaluations.no_execution"));
@@ -1233,6 +1266,8 @@ function renderProjectProgress(data) {
         header,
         facts,
         resources,
+        gateRail,
+        nextAction,
         boundary,
         evidenceDisclosure(item.support_ref_ids, {
           data: {
@@ -1240,12 +1275,14 @@ function renderProjectProgress(data) {
             ready_for_author_review: item.ready_for_author_review,
             execution_authorized: item.execution_authorized,
             selected: item.selected,
+            decision_map_sha256: item.gate_map_sha256,
           },
           names: [
             "evaluation_id",
             "ready_for_author_review",
             "execution_authorized",
             "selected",
+            "decision_map_sha256",
           ],
         }),
       );

@@ -711,6 +711,34 @@ class ProjectProgressPaperItem(BaseModel):
         return self
 
 
+class ProjectProgressEvaluationGateItem(BaseModel):
+    """One compact decision gate; detailed diagnostics remain in evidence."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    gate_id: Literal[
+        "task_scope",
+        "comparator_adapters",
+        "statistical_design",
+        "temporal_integrity",
+        "independent_review",
+        "runtime_resources",
+        "owner_approval",
+    ]
+    state: Literal["satisfied", "blocked", "awaiting_approval"]
+    issue_count: int = Field(ge=0)
+    affected_count: int = Field(ge=0)
+    next_action_code: SafeIdentifier
+
+    @model_validator(mode="after")
+    def gate_state_matches_issues(self) -> ProjectProgressEvaluationGateItem:
+        if self.state == "satisfied" and self.issue_count:
+            raise ValueError("a satisfied evaluation gate cannot retain issues")
+        if self.state == "blocked" and not self.issue_count:
+            raise ValueError("a blocked evaluation gate requires an issue")
+        return self
+
+
 class ProjectProgressEvaluationItem(BaseModel):
     """One exact no-run experiment proposal displayed on its project home."""
 
@@ -735,6 +763,21 @@ class ProjectProgressEvaluationItem(BaseModel):
     ready_for_author_review: bool
     execution_authorized: bool
     blocker_count: int = Field(ge=0)
+    decision_blocker_count: int = Field(ge=0, le=7)
+    next_gate_id: (
+        Literal[
+            "task_scope",
+            "comparator_adapters",
+            "statistical_design",
+            "temporal_integrity",
+            "independent_review",
+            "runtime_resources",
+            "owner_approval",
+        ]
+        | None
+    ) = None
+    gate_map_sha256: Sha256
+    gates: tuple[ProjectProgressEvaluationGateItem, ...] = Field(min_length=7, max_length=7)
     selected: bool
     no_execution_performed: Literal[True] = True
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
@@ -749,6 +792,23 @@ class ProjectProgressEvaluationItem(BaseModel):
             raise ValueError("project evaluation must name an API or GPU resource")
         if self.execution_authorized and not self.ready_for_author_review:
             raise ValueError("project evaluation authority requires readiness")
+        expected_order = (
+            "task_scope",
+            "comparator_adapters",
+            "statistical_design",
+            "temporal_integrity",
+            "independent_review",
+            "runtime_resources",
+            "owner_approval",
+        )
+        if tuple(item.gate_id for item in self.gates) != expected_order:
+            raise ValueError("project evaluation gates must use the decision order")
+        open_gates = [item for item in self.gates if item.state != "satisfied"]
+        if self.decision_blocker_count != len(open_gates):
+            raise ValueError("project evaluation decision count must match its gates")
+        expected_next = open_gates[0].gate_id if open_gates else None
+        if self.next_gate_id != expected_next:
+            raise ValueError("project evaluation next gate must be the first unresolved gate")
         return self
 
 

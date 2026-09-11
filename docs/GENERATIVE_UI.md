@@ -110,6 +110,14 @@ closed. Selecting a proposal is navigation only: the card explicitly retains
 `no_execution_performed=true`, and the interface has no provider-call, download,
 GPU-launch, or approval-escalation path.
 
+The card does not present hundreds of expanded diagnostics as hundreds of user
+decisions. A deterministic seven-segment rail groups them into task scope,
+comparator adapters, statistical design, temporal integrity, independent
+review, runtime resources, and owner approval. It shows the next unresolved
+decision, affected-identity count, exact diagnostic count, and content hash;
+collapsed evidence still retains every original code. This is presentation
+taste over verified state, not a model summary.
+
 The canonical progress summary and a generated workspace have distinct roles.
 `project-progress` is the stable, reproducible landing view. The left-side quick
 prompts, free-question form, and the progress view's `Explore next` buttons all

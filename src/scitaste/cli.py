@@ -75,6 +75,7 @@ from scitaste.evaluation import (
     publish_project_evaluation,
     run_live_direct_agent,
     save_evaluation_cell_plan,
+    summarize_evaluation_readiness,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
@@ -399,6 +400,14 @@ def build_parser() -> argparse.ArgumentParser:
     project_evaluation_select.add_argument("--expected-revision", type=int, required=True)
     _add_project_options(project_evaluation_select)
     project_evaluation_select.set_defaults(handler=_handle_project_evaluation_select)
+    project_evaluation_status = project_evaluation_commands.add_parser(
+        "status", help="Summarize one proposal as seven decision-scale gates"
+    )
+    project_evaluation_status.add_argument("--project-id", required=True)
+    project_evaluation_status.add_argument("--evaluation-id")
+    project_evaluation_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(project_evaluation_status)
+    project_evaluation_status.set_defaults(handler=_handle_project_evaluation_status)
 
     project_run = project_commands.add_parser("run", help="Register and select project runs")
     project_run_commands = project_run.add_subparsers(dest="project_run_command", required=True)
@@ -1355,6 +1364,34 @@ def _handle_project_evaluation_select(args: argparse.Namespace) -> int:
         expected_revision=args.expected_revision,
     )
     print(snapshot.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_evaluation_status(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    evaluation_id = args.evaluation_id or snapshot.manifest.current_evaluation
+    if evaluation_id is None:
+        raise ValueError("project has no current evaluation; pass --evaluation-id")
+    bundle = runtime.open_evaluation(args.project_id, evaluation_id)
+    decision_map = summarize_evaluation_readiness(bundle)
+    print(
+        json.dumps(
+            {
+                "project_id": args.project_id,
+                "project_revision": snapshot.revision,
+                "evaluation_id": evaluation_id,
+                "status": bundle.status,
+                "planned_cells": bundle.planned_cells,
+                "api_resources": bundle.api_resources,
+                "gpu_resources": bundle.gpu_resources,
+                "decision_map": decision_map.model_dump(mode="json"),
+                "no_execution_performed": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

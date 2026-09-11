@@ -515,6 +515,34 @@ class ProjectRuntime:
             )
         return self._snapshot(project, manifest)
 
+    def open_evaluation(
+        self,
+        project_id: str,
+        evaluation_id: str,
+    ) -> ProjectEvaluationBundle:
+        """Open one immutable proposal only after revalidating every bound byte."""
+
+        validate_entry_id(evaluation_id, field_name="evaluation_id")
+        project = self._project_path(project_id)
+        with _locked(project / ".project.lock"):
+            manifest = self._load_manifest(project)
+            entry = next(
+                (item for item in manifest.evaluations if item.evaluation_id == evaluation_id),
+                None,
+            )
+            if entry is None:
+                raise ValueError(f"unknown project evaluation {evaluation_id!r}")
+            record_path = _contained_project_path(project, entry.record_locator)
+            raw = record_path.read_bytes()
+            if hashlib.sha256(raw).hexdigest() != entry.record_sha256:
+                raise ValueError("registered evaluation record has drifted")
+            bundle = ProjectEvaluationBundle.model_validate_json(raw)
+            if bundle.project_id != manifest.project_id:
+                raise ValueError("registered evaluation belongs to another project")
+            _require_evaluation_entry_matches_bundle(entry, bundle)
+            _verify_evaluation_bundle(record_path.parent, bundle)
+        return bundle
+
     def _project_path(self, project_id: str) -> Path:
         validate_project_id(project_id)
         return self.projects_root / project_id

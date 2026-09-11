@@ -92,6 +92,13 @@ from scitaste.evaluation.project_materialization import (
     prepare_project_evaluation,
     publish_project_evaluation,
 )
+from scitaste.evaluation.readiness import (
+    EvaluationDecisionGate,
+    EvaluationDecisionGateState,
+    EvaluationDecisionMap,
+    EvaluationGateDecision,
+    summarize_evaluation_readiness,
+)
 from scitaste.evaluation.resources import (
     DatasetPin,
     EvaluationResourceKind,
@@ -154,6 +161,10 @@ __all__ = [
     "EvaluationCriticReport",
     "EvaluationCriticSuite",
     "EvaluationCriticVerdict",
+    "EvaluationDecisionGate",
+    "EvaluationDecisionGateState",
+    "EvaluationDecisionMap",
+    "EvaluationGateDecision",
     "EvaluationResourceKind",
     "EvaluationTask",
     "EvaluationTrack",
@@ -220,4 +231,5 @@ __all__ = [
     "publish_project_evaluation",
     "run_live_direct_agent",
     "save_evaluation_cell_plan",
+    "summarize_evaluation_readiness",
 ]

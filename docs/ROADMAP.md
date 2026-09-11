@@ -39,6 +39,14 @@ blocker. Exact no-run proposal bundles can now be registered under the owning
 project and inspected on its Generation-as-Content home, but registration and
 selection confer no execution authority.
 
+The homepage now compresses repeated proposal diagnostics into seven stable
+decision gates while retaining the exact codes underneath. For the current
+DeepSeek prepilot, the API identity, dated pricing, and declared runtime budget
+are ready, while task qualification, comparator adapters, analysis/replication,
+integrity, blinded review, and owner approval remain open. This distinction
+prevents a large repeated blocker count from obscuring the actual launch
+decisions.
+
 ## Phase 2/3 progress
 
 - Done: immutable fixed-candidate fixtures for Idea, Experiment, Evidence,

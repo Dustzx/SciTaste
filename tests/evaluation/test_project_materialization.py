@@ -130,6 +130,9 @@ def test_project_publication_is_atomic_content_bound_and_visible_on_home(
     ).data
     assert progress["counts"]["evaluations_registered"] == 1
     assert progress["evaluations"][0]["planned_cells"] == 50
+    assert progress["evaluations"][0]["decision_blocker_count"] == 6
+    assert progress["evaluations"][0]["next_gate_id"] == "task_scope"
+    assert len(progress["evaluations"][0]["gates"]) == 7
     assert progress["evaluations"][0]["no_execution_performed"] is True
     reference = next(
         item
@@ -224,3 +227,22 @@ def test_project_evaluation_cli_dry_run_then_registers_without_execution(
     assert runtime.open("evaluation-project").manifest.current_evaluation == (
         "zhipu-glm53-prepilot"
     )
+
+    assert (
+        main(
+            [
+                "project",
+                "evaluation",
+                "status",
+                "--project-id",
+                "evaluation-project",
+                "--outputs-root",
+                str(outputs),
+            ]
+        )
+        == 0
+    )
+    status = json.loads(capsys.readouterr().out)
+    assert status["decision_map"]["next_gate_id"] == "task_scope"
+    assert len(status["decision_map"]["gates"]) == 7
+    assert status["no_execution_performed"] is True

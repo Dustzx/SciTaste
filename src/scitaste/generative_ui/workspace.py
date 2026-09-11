@@ -20,6 +20,7 @@ from pydantic import (
     model_validator,
 )
 
+from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
     ProposalControlledAudit,
@@ -509,6 +510,12 @@ class WorkspaceSurfaceFactory:
 
         evaluation_rows: list[dict[str, object]] = []
         for evaluation in snapshot.manifest.evaluations:
+            bundle = self._runtime.open_evaluation(snapshot.project_id, evaluation.evaluation_id)
+            decision_map = summarize_evaluation_readiness(bundle)
+            if decision_map.diagnostic_blocker_count != evaluation.blocker_count:
+                raise ValueError(
+                    "project evaluation diagnostic count differs from its decision map"
+                )
             evaluation_ref = _evidence_for_locator(
                 binding,
                 EvidenceKind.EVALUATION,
@@ -531,6 +538,19 @@ class WorkspaceSurfaceFactory:
                     "ready_for_author_review": evaluation.ready_for_author_review,
                     "execution_authorized": evaluation.execution_authorized,
                     "blocker_count": evaluation.blocker_count,
+                    "decision_blocker_count": decision_map.decision_blocker_count,
+                    "next_gate_id": decision_map.next_gate_id,
+                    "gate_map_sha256": decision_map.map_sha256,
+                    "gates": [
+                        {
+                            "gate_id": gate.gate_id,
+                            "state": gate.state,
+                            "issue_count": gate.issue_count,
+                            "affected_count": len(gate.affected_ids),
+                            "next_action_code": gate.next_action_code,
+                        }
+                        for gate in decision_map.gates
+                    ],
                     "selected": (evaluation.evaluation_id == snapshot.manifest.current_evaluation),
                     "no_execution_performed": evaluation.no_execution_performed,
                     "support_ref_ids": [
