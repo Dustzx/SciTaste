@@ -179,7 +179,10 @@ class EvaluationCriticSuite:
         problems: list[str] = []
         for lane in manifest.lanes:
             selected = [systems[system_id] for system_id in lane.system_ids]
-            if lane.scientific_role is ScientificLaneRole.MATCHED_BACKBONE:
+            if lane.scientific_role in {
+                ScientificLaneRole.MATCHED_BACKBONE,
+                ScientificLaneRole.BEST_NATIVE_SYSTEM,
+            }:
                 counts = {
                     role: sum(item.role is role for item in selected)
                     for role in (

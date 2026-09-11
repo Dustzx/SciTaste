@@ -12,6 +12,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from scitaste.evaluation.prelaunch import (
+    ApiModelResource,
+    ComparisonRegime,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
@@ -99,6 +101,8 @@ class PlannedEvaluationCell(BaseModel):
     lane_id: str
     lane_kind: ExecutionLaneKind
     scientific_role: ScientificLaneRole
+    comparison_regime: ComparisonRegime | None = None
+    model_effects_confounded: bool | None = None
     system_id: str
     system_role: SystemRole
     implementation_ref: str | None = None
@@ -131,7 +135,11 @@ class PlannedEvaluationLane(BaseModel):
     lane_id: str
     kind: ExecutionLaneKind
     scientific_role: ScientificLaneRole
-    resource: EvaluationCellResource
+    comparison_regime: ComparisonRegime | None = None
+    model_effects_confounded: bool | None = None
+    comparison_claim_boundary: str | None = None
+    resource: EvaluationCellResource | None = None
+    system_resources: dict[str, EvaluationCellResource] | None = None
     system_ids: tuple[str, ...]
     task_ids: tuple[str, ...]
     seeds: tuple[int, ...]
@@ -147,6 +155,15 @@ class PlannedEvaluationLane(BaseModel):
             raise ValueError("planned lane cell IDs do not cover the declared matrix")
         if self.ready_cells + self.blocked_cells != expected:
             raise ValueError("planned lane readiness counts do not cover every cell")
+        if self.comparison_regime is ComparisonRegime.BEST_NATIVE:
+            if self.resource is not None or self.system_resources is None:
+                raise ValueError("best-native planned lanes require per-system resources")
+            if set(self.system_resources) != set(self.system_ids):
+                raise ValueError("best-native planned resources must cover every system")
+            if self.model_effects_confounded is not True:
+                raise ValueError("best-native planned lanes must retain model confounding")
+        elif self.resource is None or self.system_resources is not None:
+            raise ValueError("matched and legacy planned lanes require one common resource")
         return self
 
 
@@ -155,7 +172,7 @@ class EvaluationCellPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     manifest_id: str
     protocol_id: str
     protocol_version: str
@@ -190,7 +207,20 @@ class EvaluationCellPlan(BaseModel):
     @computed_field
     @property
     def plan_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"plan_sha256"})
+        if self.schema_version == "1.0":
+            for lane in payload["lanes"]:
+                for key in (
+                    "comparison_regime",
+                    "model_effects_confounded",
+                    "comparison_claim_boundary",
+                    "system_resources",
+                ):
+                    lane.pop(key, None)
+            for cell in payload["cells"]:
+                cell.pop("comparison_regime", None)
+                cell.pop("model_effects_confounded", None)
+        return _canonical_sha256(payload)
 
 
 def compile_evaluation_cell_plan(
@@ -204,10 +234,23 @@ def compile_evaluation_cell_plan(
     planned_lanes: list[PlannedEvaluationLane] = []
     proposal_sha256 = manifest.proposal_sha256
     for lane in manifest.lanes:
-        resource = _resource_for(lane)
+        common_resource = (
+            _resource_for(lane, None)
+            if lane.comparison_regime is not ComparisonRegime.BEST_NATIVE
+            else None
+        )
+        system_resources = (
+            {system_id: _resource_for(lane, system_id) for system_id in lane.system_ids}
+            if lane.comparison_regime is ComparisonRegime.BEST_NATIVE
+            else None
+        )
         lane_cells: list[PlannedEvaluationCell] = []
         for system_id in lane.system_ids:
             system = systems[system_id]
+            resource = (
+                system_resources[system_id] if system_resources is not None else common_resource
+            )
+            assert resource is not None
             for task_id in lane.task_ids:
                 task = tasks[task_id]
                 for seed in lane.seeds:
@@ -230,6 +273,8 @@ def compile_evaluation_cell_plan(
                             lane_id=lane.lane_id,
                             lane_kind=lane.kind,
                             scientific_role=lane.scientific_role,
+                            comparison_regime=lane.comparison_regime,
+                            model_effects_confounded=lane.model_effects_confounded,
                             system_id=system_id,
                             system_role=system.role,
                             implementation_ref=system.implementation_ref,
@@ -252,7 +297,11 @@ def compile_evaluation_cell_plan(
                 lane_id=lane.lane_id,
                 kind=lane.kind,
                 scientific_role=lane.scientific_role,
-                resource=resource,
+                comparison_regime=lane.comparison_regime,
+                model_effects_confounded=lane.model_effects_confounded,
+                comparison_claim_boundary=lane.comparison_claim_boundary,
+                resource=common_resource,
+                system_resources=system_resources,
                 system_ids=lane.system_ids,
                 task_ids=lane.task_ids,
                 seeds=lane.seeds,
@@ -265,6 +314,13 @@ def compile_evaluation_cell_plan(
 
     plan_blockers = _plan_blockers(manifest, tuple(all_cells))
     return EvaluationCellPlan(
+        schema_version=(
+            "1.1"
+            if any(
+                lane.comparison_regime is ComparisonRegime.BEST_NATIVE for lane in manifest.lanes
+            )
+            else "1.0"
+        ),
         manifest_id=manifest.manifest_id,
         protocol_id=manifest.protocol_id,
         protocol_version=manifest.protocol_version,
@@ -322,22 +378,25 @@ def load_evaluation_cell_plan(path: str | Path) -> EvaluationCellPlan:
     return plan
 
 
-def _resource_for(lane: ExecutionLane) -> EvaluationCellResource:
+def _resource_for(
+    lane: ExecutionLane,
+    system_id: str | None,
+) -> EvaluationCellResource:
     if lane.kind is ExecutionLaneKind.API_ONLY:
-        assert lane.api_model is not None
-        snapshot = lane.api_model.model_dump(mode="json")
+        model = _api_model_for(lane, system_id)
+        snapshot = model.model_dump(mode="json")
         return EvaluationCellResource(
             kind=lane.kind,
             resource_sha256=_canonical_sha256(snapshot),
-            provider_id=lane.api_model.provider_id,
-            model_id=lane.api_model.model_id,
-            model_revision=lane.api_model.model_revision,
-            api_key_env=lane.api_model.api_key_env,
-            max_input_tokens_per_call=lane.api_model.max_input_tokens_per_call,
-            max_output_tokens_per_call=lane.api_model.max_output_tokens_per_call,
-            max_requests=lane.api_model.max_requests,
-            max_total_tokens=lane.api_model.max_total_tokens,
-            max_cost=lane.api_model.max_cost,
+            provider_id=model.provider_id,
+            model_id=model.model_id,
+            model_revision=model.model_revision,
+            api_key_env=model.api_key_env,
+            max_input_tokens_per_call=model.max_input_tokens_per_call,
+            max_output_tokens_per_call=model.max_output_tokens_per_call,
+            max_requests=model.max_requests,
+            max_total_tokens=model.max_total_tokens,
+            max_cost=model.max_cost,
         )
     assert lane.gpu_resource is not None
     snapshot = lane.gpu_resource.model_dump(mode="json")
@@ -350,6 +409,21 @@ def _resource_for(lane: ExecutionLane) -> EvaluationCellResource:
         max_gpu_hours=lane.gpu_resource.max_gpu_hours,
         max_storage_bytes=lane.gpu_resource.max_storage_bytes,
     )
+
+
+def _api_model_for(lane: ExecutionLane, system_id: str | None) -> ApiModelResource:
+    if lane.api_model is not None:
+        if system_id is not None:
+            raise ValueError("matched API lane does not accept a system-specific model lookup")
+        return lane.api_model
+    if system_id is None or lane.system_api_models is None:
+        raise ValueError("best-native API lane requires a system-specific model lookup")
+    try:
+        return next(
+            item.api_model for item in lane.system_api_models if item.system_id == system_id
+        )
+    except StopIteration as exc:
+        raise ValueError(f"best-native API model is missing for system {system_id}") from exc
 
 
 def _cell_blockers(
@@ -378,10 +452,14 @@ def _cell_blockers(
     ):
         if not ready:
             blockers.append(f"task:{task.task_id}:{label}-unverified")
-    if lane.api_model is not None:
-        if lane.api_model.identity_status is not ReadinessStatus.VERIFIED:
+    if lane.kind is ExecutionLaneKind.API_ONLY:
+        model = _api_model_for(
+            lane,
+            system.system_id if lane.comparison_regime is ComparisonRegime.BEST_NATIVE else None,
+        )
+        if model.identity_status is not ReadinessStatus.VERIFIED:
             blockers.append(f"lane:{lane.lane_id}:api-identity-unverified")
-        if lane.api_model.pricing.status is not ReadinessStatus.VERIFIED:
+        if model.pricing.status is not ReadinessStatus.VERIFIED:
             blockers.append(f"lane:{lane.lane_id}:api-pricing-unverified")
     if lane.gpu_resource is not None:
         for label, status in (

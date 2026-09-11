@@ -1,5 +1,17 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.acquisition import (
+    AcquisitionApproval,
+    AcquisitionEvidenceBinding,
+    AcquisitionFinding,
+    AcquisitionGateReport,
+    AcquisitionItem,
+    AcquisitionRequestInspection,
+    DatasetAcquisitionRequest,
+    inspect_dataset_acquisition_request,
+    load_dataset_acquisition_request,
+    save_acquisition_gate_report,
+)
 from scitaste.evaluation.adapter_contract import (
     AdapterContractEvidence,
     AdapterContractFinding,
@@ -113,6 +125,7 @@ from scitaste.evaluation.prelaunch import (
     AnalysisContract,
     ApiModelResource,
     AutomatedJudgeRole,
+    ComparisonRegime,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
@@ -130,6 +143,7 @@ from scitaste.evaluation.prelaunch import (
     RetentionContract,
     ScientificEndpointKind,
     ScientificLaneRole,
+    SystemApiModelResource,
     SystemRole,
     TaskSignalKind,
     inspect_git_source,
@@ -207,6 +221,12 @@ from scitaste.evaluation.task_selection import (
 )
 
 __all__ = [
+    "AcquisitionApproval",
+    "AcquisitionEvidenceBinding",
+    "AcquisitionFinding",
+    "AcquisitionGateReport",
+    "AcquisitionItem",
+    "AcquisitionRequestInspection",
     "AdapterContractEvidence",
     "AdapterContractFinding",
     "AdapterContractInspection",
@@ -239,6 +259,8 @@ __all__ = [
     "CampaignTrackState",
     "CandidateBenchmarkTask",
     "ComparisonBlock",
+    "ComparisonRegime",
+    "DatasetAcquisitionRequest",
     "DatasetPin",
     "DesignBlocker",
     "DesignGatePolicy",
@@ -335,6 +357,7 @@ __all__ = [
     "ScientificEndpointKind",
     "ScientificLaneRole",
     "StatisticalDesign",
+    "SystemApiModelResource",
     "SystemRole",
     "TaskPackageAcquisition",
     "TaskPackageFile",
@@ -355,6 +378,7 @@ __all__ = [
     "execute_direct_agent",
     "inspect_adapter_contract",
     "inspect_adapter_preflight",
+    "inspect_dataset_acquisition_request",
     "inspect_evaluation_results",
     "inspect_experiment_decision_dossier",
     "inspect_git_source",
@@ -363,6 +387,7 @@ __all__ = [
     "inspect_task_selection",
     "load_adapter_contract_manifest",
     "load_adapter_preflight_manifest",
+    "load_dataset_acquisition_request",
     "load_direct_agent_invocation",
     "load_direct_agent_task",
     "load_evaluation_cell_plan",
@@ -377,6 +402,7 @@ __all__ = [
     "publish_project_evaluation",
     "publish_project_evaluation_result",
     "run_live_direct_agent",
+    "save_acquisition_gate_report",
     "save_evaluation_cell_plan",
     "save_experiment_decision_dossier_report",
     "summarize_evaluation_readiness",

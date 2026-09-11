@@ -153,11 +153,17 @@ def publish_project_evaluation(
 def _api_resources(manifest: ExperimentPrelaunchManifest) -> list[str]:
     resources = []
     for lane in manifest.lanes:
-        model = lane.api_model
-        if model is None:
-            continue
-        revision = model.model_revision or "revision-unverified"
-        resources.append(f"{model.provider_id}/{model.model_id}@{revision}")
+        if lane.api_model is not None:
+            model = lane.api_model
+            revision = model.model_revision or "revision-unverified"
+            resources.append(f"{model.provider_id}/{model.model_id}@{revision}")
+        elif lane.system_api_models is not None:
+            for system_model in lane.system_api_models:
+                model = system_model.api_model
+                revision = model.model_revision or "revision-unverified"
+                resources.append(
+                    f"{system_model.system_id}:{model.provider_id}/{model.model_id}@{revision}"
+                )
     return list(dict.fromkeys(resources))
 
 

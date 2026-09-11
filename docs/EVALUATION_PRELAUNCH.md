@@ -19,6 +19,26 @@ resource ceilings, paper title, and review closure path while granting no
 download or execution authority. The older individual proposal files remain
 immutable evidence and are not silently promoted when the campaign changes.
 
+Prelaunch schema `1.2` makes the unresolved external-system choice explicit.
+An API lane must declare either:
+
+- `matched_backbone`, with one common provider/model resource, an unconfounded
+  model-effect declaration, and a matched-backbone claim boundary; or
+- `best_native`, with one content-bound API resource per system, an explicit
+  `model_effects_confounded=true` declaration, and a claim boundary that
+  prohibits interpreting the result as a causal scaffold effect.
+
+The resulting cell plan carries the actual system-specific model resource into
+every cell. Best-native cells receive the separate
+`best_native_system` scientific role and are therefore excluded from the
+matched-backbone headline-completeness calculation. Different estimands may be
+reported side by side, but the result verifier cannot pool or relabel them.
+
+Exact source acquisition is governed separately by
+[`DATA_ACQUISITION_APPROVAL.md`](DATA_ACQUISITION_APPROVAL.md). An acquisition
+request can become ready for owner review without granting download authority;
+it never authorizes ingestion or experiment execution.
+
 A Benchmark repository cannot satisfy a method-comparator gate, and a method
 repository cannot satisfy a task-source gate. The prelaunch validator enforces
 that distinction through the audited external-resource corpus rather than the

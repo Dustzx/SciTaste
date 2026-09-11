@@ -1,0 +1,148 @@
+schema_version: "1.0"
+request_id: mlr-bench-official-ten-briefs-v1
+project_id: scitaste-self-development
+track_id: external-idea-to-paper
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire only the ten pinned MLR-Bench research-brief Markdown files needed to
+  audit starting-input bytes, licenses, source overlap, and cross-system task
+  translation before any API experiment proposal can become launchable.
+claim_boundary: >-
+  Downloading or validating these research briefs establishes no task
+  executability, external-system compatibility, scientific result, model
+  comparison, paper evidence, or permission to ingest or execute the content.
+selection_id: mlr-bench-official-ten-candidate-v2
+selection_proposal_sha256: 4a5c30c834de8a633c22b83d3056d3cc86edf178bdef91e4e9d28c03baf0da2b
+destination_root: >-
+  outputs/projects/scitaste-self-development/evaluations/acquisitions/mlr-bench-official-ten-briefs-v1/raw
+allowed_hosts: [raw.githubusercontent.com]
+items:
+  - item_id: iclr2025_bi_align
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_bi_align.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_bi_align.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_buildingtrust
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_buildingtrust.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_buildingtrust.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_data_problems
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_data_problems.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_data_problems.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_dl4c
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_dl4c.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_dl4c.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_mldpr
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_mldpr.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_mldpr.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_question
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_question.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_question.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_scope
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_scope.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_scope.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_scsl
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_scsl.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_scsl.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_verifai
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_verifai.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_verifai.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: iclr2025_wsl
+    source_url: https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/tasks/iclr2025_wsl.md
+    source_revision: f728d571a992d71c8b526eeb4d9ab6bb5c8cc824
+    destination: iclr2025_wsl.md
+    maximum_bytes: 1048576
+    media_type: text/markdown
+    license_identifier: MIT
+    license_scope: Pinned MLR-Bench repository research-brief file only; no runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+maximum_total_bytes: 10485760
+evidence:
+  - evidence_id: task-selection
+    path: docs/research/data/mlr_bench_official_ten_candidate_v2.yaml
+    sha256: bac6d543072e545d9f5239c5721de1475d3cc330a6ba762dffcf7c5e7fdc025a
+  - evidence_id: resource-corpus
+    path: docs/research/data/autoresearch_evaluation_resources_v6.yaml
+    sha256: 8a2ff439cb1a073f7187751dc80e2101877ed805e080ee5199d866a590436dfa
+approval:
+  approved: false
+  request_sha256: null
+  approved_by: null
+  approved_at: null
+  scope: null
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

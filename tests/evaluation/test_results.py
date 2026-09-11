@@ -239,6 +239,44 @@ def _formal_manifest() -> ExperimentPrelaunchManifest:
     return ExperimentPrelaunchManifest.model_validate(payload)
 
 
+def _best_native_formal_manifest() -> ExperimentPrelaunchManifest:
+    payload = _formal_manifest().model_dump(mode="json")
+    payload.update(
+        {
+            "schema_version": "1.2",
+            "primary_endpoint": "blinded_package_preference",
+            "automated_judge_role": "secondary_diagnostic",
+            "approval": {"approved": False},
+        }
+    )
+    for task in payload["tasks"]:
+        task["signal_kind"] = "research_package_review"
+    lane = payload["lanes"][0]
+    api_model = lane.pop("api_model")
+    lane.update(
+        {
+            "scientific_role": "best_native_system",
+            "comparison_regime": "best_native",
+            "model_effects_confounded": True,
+            "comparison_claim_boundary": (
+                "This estimates native package performance with model effects confounded; "
+                "it cannot establish the causal effect of the SciTaste scaffold."
+            ),
+            "system_api_models": [
+                {"system_id": system_id, "api_model": api_model} for system_id in lane["system_ids"]
+            ],
+        }
+    )
+    draft = ExperimentPrelaunchManifest.model_validate(payload)
+    payload["approval"] = {
+        "approved": True,
+        "approved_proposal_sha256": draft.proposal_sha256,
+        "approved_by": "project-owner",
+        "approved_at": "2026-09-11T00:00:00Z",
+    }
+    return ExperimentPrelaunchManifest.model_validate(payload)
+
+
 def _gpu_manifest() -> ExperimentPrelaunchManifest:
     payload = _common_manifest_payload()
     systems = (
@@ -847,6 +885,33 @@ def test_complete_gpu_robustness_results_do_not_become_headline_evidence(
     assert assessment.headline_eligible is False
     assert assessment.scientific_effectiveness_established is False
     assert "headline:formal-scope-required" in assessment.blocker_codes
+
+
+def test_best_native_results_cannot_become_matched_backbone_headline_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    manifest = _best_native_formal_manifest()
+    plan = compile_evaluation_cell_plan(manifest)
+    results = _result_set(root, manifest)
+
+    assessment = inspect_evaluation_results(
+        manifest,
+        plan,
+        results,
+        project_root=root,
+        project_id="result-project",
+        evaluation_id="formal-evaluation",
+        execution_authorized=True,
+    )
+
+    assert assessment.status == "complete"
+    assert assessment.matched_backbone_cells == 0
+    assert assessment.scientific_evidence_complete is False
+    assert assessment.headline_eligible is False
+    assert assessment.scientific_effectiveness_established is False
+    assert "headline:matched-backbone-lane-missing" in assessment.blocker_codes
 
 
 def test_result_is_registered_under_project_and_revalidated_on_open(

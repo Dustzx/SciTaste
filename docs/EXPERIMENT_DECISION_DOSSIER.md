@@ -57,6 +57,13 @@ scale-out, paper revision, internal model critique, two independent expert
 reviews, and original-reviewer closure each remain separate stages and require
 their own exact evidence or approval.
 
+The prelaunch schema can represent either decision without conflating them.
+Schema `1.2` assigns a common resource to every `matched_backbone` cell, while a
+`best_native` lane must bind one provider/model resource to each system and
+declare `model_effects_confounded=true`. The compiled cell plan preserves those
+per-system identities, and best-native results cannot satisfy the
+matched-backbone headline gate.
+
 ## Why this is part of the product
 
 The dossier is more than project prose. It provides a stable projection that a

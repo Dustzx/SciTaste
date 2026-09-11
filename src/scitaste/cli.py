@@ -73,6 +73,7 @@ from scitaste.evaluation import (
     compile_evaluation_cell_plan,
     inspect_adapter_contract,
     inspect_adapter_preflight,
+    inspect_dataset_acquisition_request,
     inspect_experiment_decision_dossier,
     inspect_git_source,
     inspect_prelaunch_manifest,
@@ -80,6 +81,7 @@ from scitaste.evaluation import (
     inspect_task_selection,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_dataset_acquisition_request,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
     load_prelaunch_manifest,
@@ -90,6 +92,7 @@ from scitaste.evaluation import (
     publish_project_evaluation,
     publish_project_evaluation_result,
     run_live_direct_agent,
+    save_acquisition_gate_report,
     save_evaluation_cell_plan,
     save_experiment_decision_dossier_report,
     summarize_evaluation_readiness,
@@ -1248,6 +1251,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(decision_dossier)
     decision_dossier.set_defaults(handler=_handle_evaluation_decision_dossier)
+    acquisition_request = evaluation_commands.add_parser(
+        "acquisition-request",
+        help="Inspect an exact download allowlist without accessing the network",
+    )
+    acquisition_request.add_argument("--manifest", type=Path, required=True)
+    acquisition_request.add_argument("--workspace-root", type=Path, default=Path("."))
+    acquisition_request.add_argument("--output", type=Path, default=None)
+    acquisition_request.add_argument(
+        "--require-review-ready",
+        action="store_true",
+        help="return nonzero when evidence, license, or destination gates block owner review",
+    )
+    acquisition_request.add_argument(
+        "--require-authorized",
+        action="store_true",
+        help="return nonzero until the exact request hash has explicit owner approval",
+    )
+    _add_log_level_option(acquisition_request)
+    acquisition_request.set_defaults(handler=_handle_evaluation_acquisition_request)
     task_selection = evaluation_commands.add_parser(
         "task-selection",
         help="Inspect an exact metadata-only benchmark task selection",
@@ -3839,6 +3861,27 @@ def _handle_evaluation_decision_dossier(args: argparse.Namespace) -> int:
         payload["report"] = str(save_experiment_decision_dossier_report(report, args.output))
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_artifacts and not report.artifact_bindings_verified:
+        return 1
+    return 0
+
+
+def _handle_evaluation_acquisition_request(args: argparse.Namespace) -> int:
+    inspection = load_dataset_acquisition_request(args.manifest)
+    report = inspect_dataset_acquisition_request(
+        inspection.request,
+        workspace_root=args.workspace_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report"] = str(save_acquisition_gate_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_review_ready and not report.ready_for_owner_approval:
+        return 1
+    if args.require_authorized and not report.download_authorized:
         return 1
     return 0
 

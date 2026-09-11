@@ -46,8 +46,16 @@ class ExecutionLaneKind(StrEnum):
 
 class ScientificLaneRole(StrEnum):
     MATCHED_BACKBONE = "matched_backbone"
+    BEST_NATIVE_SYSTEM = "best_native_system"
     SMALL_MODEL_ROBUSTNESS = "small_model_robustness"
     EXPERIMENT_WORKLOAD = "experiment_workload"
+
+
+class ComparisonRegime(StrEnum):
+    """Whether model identity is controlled or intentionally confounded."""
+
+    MATCHED_BACKBONE = "matched_backbone"
+    BEST_NATIVE = "best_native"
 
 
 class ScientificEndpointKind(StrEnum):
@@ -161,6 +169,15 @@ class ApiModelResource(BaseModel):
         return self
 
 
+class SystemApiModelResource(BaseModel):
+    """One native API resource assigned to exactly one comparison system."""
+
+    model_config = _CONFIG
+
+    system_id: str = Field(pattern=_ID)
+    api_model: ApiModelResource
+
+
 class GpuModelResource(BaseModel):
     model_config = _CONFIG
 
@@ -219,7 +236,13 @@ class ExecutionLane(BaseModel):
     repetitions: int = Field(default=1, gt=0, le=100)
     planned_cells: int = Field(gt=0)
     api_model: ApiModelResource | None = None
+    system_api_models: tuple[SystemApiModelResource, ...] | None = Field(
+        default=None, min_length=1, max_length=20
+    )
     gpu_resource: GpuModelResource | None = None
+    comparison_regime: ComparisonRegime | None = None
+    model_effects_confounded: bool | None = None
+    comparison_claim_boundary: str | None = Field(default=None, min_length=1, max_length=2_000)
 
     @model_validator(mode="after")
     def lane_is_closed(self) -> ExecutionLane:
@@ -229,11 +252,46 @@ class ExecutionLane(BaseModel):
             raise ValueError("lane task IDs must be unique")
         if len(set(self.seeds)) != len(self.seeds):
             raise ValueError("lane seeds must be unique")
-        if self.kind is ExecutionLaneKind.API_ONLY:
-            if self.api_model is None or self.gpu_resource is not None:
-                raise ValueError("API-only lanes require only api_model")
-        elif self.gpu_resource is None or self.api_model is not None:
-            raise ValueError("GPU lanes require only gpu_resource")
+        if self.comparison_regime is None:
+            if self.system_api_models is not None:
+                raise ValueError("legacy lanes cannot declare per-system API models")
+            if (
+                self.model_effects_confounded is not None
+                or self.comparison_claim_boundary is not None
+            ):
+                raise ValueError("legacy lanes cannot declare comparison-confounding semantics")
+            if self.kind is ExecutionLaneKind.API_ONLY:
+                if self.api_model is None or self.gpu_resource is not None:
+                    raise ValueError("API-only lanes require only api_model")
+            elif self.gpu_resource is None or self.api_model is not None:
+                raise ValueError("GPU lanes require only gpu_resource")
+        elif self.kind is not ExecutionLaneKind.API_ONLY:
+            raise ValueError("comparison regimes apply only to API system-comparison lanes")
+        elif self.comparison_regime is ComparisonRegime.MATCHED_BACKBONE:
+            if self.api_model is None or self.system_api_models is not None:
+                raise ValueError("matched-backbone lanes require one common API model")
+            if self.gpu_resource is not None or self.model_effects_confounded is not False:
+                raise ValueError("matched-backbone lanes must declare model effects unconfounded")
+            if self.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE:
+                raise ValueError("matched comparison regime requires matched-backbone role")
+            if self.comparison_claim_boundary is None:
+                raise ValueError("matched-backbone lanes require a comparison claim boundary")
+        else:
+            if self.api_model is not None or self.gpu_resource is not None:
+                raise ValueError("best-native lanes require per-system API models only")
+            if self.system_api_models is None:
+                raise ValueError("best-native lanes require one API model per system")
+            model_system_ids = [item.system_id for item in self.system_api_models]
+            if len(model_system_ids) != len(set(model_system_ids)):
+                raise ValueError("best-native system API model IDs must be unique")
+            if set(model_system_ids) != set(self.system_ids):
+                raise ValueError("best-native API models must cover every lane system exactly")
+            if self.model_effects_confounded is not True:
+                raise ValueError("best-native lanes must declare model effects confounded")
+            if self.scientific_role is not ScientificLaneRole.BEST_NATIVE_SYSTEM:
+                raise ValueError("best-native comparison requires best-native scientific role")
+            if self.comparison_claim_boundary is None:
+                raise ValueError("best-native lanes require an explicit comparison claim boundary")
         expected = len(self.system_ids) * len(self.task_ids) * len(self.seeds) * self.repetitions
         if self.planned_cells != expected:
             raise ValueError(f"planned_cells must equal the closed lane matrix ({expected})")
@@ -342,7 +400,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -380,7 +438,7 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(f"prelaunch {label} IDs must be unique")
         known_systems = set(system_ids)
         known_tasks = set(task_ids)
-        providers: set[str] = set()
+        matched_providers: set[str] = set()
         for lane in self.lanes:
             unknown_systems = set(lane.system_ids) - known_systems
             unknown_tasks = set(lane.task_ids) - known_tasks
@@ -390,11 +448,15 @@ class ExperimentPrelaunchManifest(BaseModel):
                     f"tasks={sorted(unknown_tasks)}"
                 )
             if lane.api_model is not None:
-                providers.add(lane.api_model.provider_id)
-        if len(providers) > 1:
+                matched_providers.add(lane.api_model.provider_id)
+        if len(matched_providers) > 1:
             raise ValueError("provider alternatives require separate prelaunch manifests")
         if tuple(lane_ids) != self.launch_order:
             raise ValueError("launch_order must name every lane exactly once in declared order")
+        if self.schema_version in {"1.0", "1.1"} and any(
+            lane.comparison_regime is not None for lane in self.lanes
+        ):
+            raise ValueError("prelaunch v1.2 is required for comparison-regime semantics")
         if self.schema_version == "1.0":
             if self.primary_endpoint is not None or self.automated_judge_role is not None:
                 raise ValueError("prelaunch v1.0 cannot declare v1.1 endpoint semantics")
@@ -426,11 +488,24 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "automated judges cannot replace the primary blinded human preference"
                 )
+        if self.schema_version == "1.2":
+            api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
+            if any(lane.comparison_regime is None for lane in api_lanes):
+                raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
         return self
 
     @property
     def proposal_sha256(self) -> str:
         payload = self.model_dump(mode="json", exclude={"approval"})
+        if self.schema_version in {"1.0", "1.1"}:
+            for lane in payload["lanes"]:
+                for key in (
+                    "system_api_models",
+                    "comparison_regime",
+                    "model_effects_confounded",
+                    "comparison_claim_boundary",
+                ):
+                    lane.pop(key, None)
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -567,18 +642,19 @@ def inspect_prelaunch_manifest(
             )
 
     for lane in manifest.lanes:
-        if lane.api_model is not None:
-            if lane.api_model.identity_status is not ReadinessStatus.VERIFIED:
+        for system_id, model in _lane_api_models(lane):
+            suffix = f":{lane.lane_id}" if system_id is None else f":{lane.lane_id}:{system_id}"
+            if model.identity_status is not ReadinessStatus.VERIFIED:
                 _block(
                     blockers,
-                    f"api_identity_{lane.api_model.identity_status.value}:{lane.lane_id}",
-                    f"API model identity is {lane.api_model.identity_status.value}",
+                    f"api_identity_{model.identity_status.value}{suffix}",
+                    f"API model identity is {model.identity_status.value}",
                 )
-            if lane.api_model.pricing.status is not ReadinessStatus.VERIFIED:
+            if model.pricing.status is not ReadinessStatus.VERIFIED:
                 _block(
                     blockers,
-                    f"api_pricing_{lane.api_model.pricing.status.value}:{lane.lane_id}",
-                    f"API pricing is {lane.api_model.pricing.status.value}",
+                    f"api_pricing_{model.pricing.status.value}{suffix}",
+                    f"API pricing is {model.pricing.status.value}",
                 )
         if lane.gpu_resource is not None:
             for label, status in (
@@ -659,6 +735,14 @@ def _block(blockers: list[PrelaunchBlocker], code: str, message: str) -> None:
     blockers.append(PrelaunchBlocker(code=code, message=message))
 
 
+def _lane_api_models(lane: ExecutionLane) -> tuple[tuple[str | None, ApiModelResource], ...]:
+    if lane.api_model is not None:
+        return ((None, lane.api_model),)
+    if lane.system_api_models is None:
+        return ()
+    return tuple((item.system_id, item.api_model) for item in lane.system_api_models)
+
+
 def _git(cwd: Path, *arguments: str) -> str:
     try:
         result = subprocess.run(
@@ -680,6 +764,7 @@ __all__ = [
     "AnalysisContract",
     "ApiModelResource",
     "AutomatedJudgeRole",
+    "ComparisonRegime",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",
@@ -697,6 +782,7 @@ __all__ = [
     "RetentionContract",
     "ScientificEndpointKind",
     "ScientificLaneRole",
+    "SystemApiModelResource",
     "SystemRole",
     "TaskSignalKind",
     "inspect_git_source",
