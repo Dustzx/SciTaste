@@ -4,7 +4,7 @@ paper_id: scitaste-iclr2027-submission-draft-v6
 archetype: empirical-system
 central_question: Under matched information and resource budgets, does explicit scientific taste improve the scientific value and evidence validity of autonomous research?
 central_answer: SciTaste implements explicit precedent-informed scientific decisions over persistent research state, but the headline improvement claim remains unestablished until the registered external package-preference, objective-progress, ablation, and independent-review evidence is complete.
-manuscript_sha256: 2fec58422d6351bd92c7bdfe5c3f701e5cb013490f1038b6dacb5de08293b592
+manuscript_sha256: d36bb5e9f445ead71082ea4e52941808ff6f28e03c6737b3fd588dbeb8a5d22d
 required_entry_points:
 - title
 - abstract
@@ -69,14 +69,14 @@ carriers:
   kind: system-diagram
   evidentiary_role: explanatory
   status: available
-  title: SciTaste control loop
-  intended_takeaway: Models and executors perform bounded work while the Taste Controller and deterministic admission retain decision and transition authority.
+  title: SciTaste scientific-taste framework
+  intended_takeaway: Verified decision precedents shape next-action selection, while models and executors perform bounded work and deterministic admission retains transition authority.
   target_claim_ids:
   - claim-decision-ownership
   evidence_ids:
   - evidence-repository-suite
   artifact_locator: assets/fig1-scitaste-control.pdf
-  artifact_sha256: fafb1eb4083c16c38bc0bb29105f3f887f8321870a8a48956dc890ae98a06613
+  artifact_sha256: 91ce4512daab68ceb8a5a3d70a592ccc7a9f63d4d7e13101cf5e17d770dcf122
   absence_reason: null
 entry_points:
 - location: title
@@ -187,4 +187,4 @@ material_limitations:
   - claim-bounded-completion
   disclosed_in:
   - Limitations
-contract_sha256: 43b6555c7c70744ccffc95eca729c39ee43609cf660d1230eb8ef5bea42dbd8a
+contract_sha256: 79084b70aad77fd1d8e37faaaf437e21e29f5d8dfcb95bb7fb6fe6722478c3a3

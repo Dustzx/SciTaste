@@ -8,7 +8,24 @@
       content="SciTaste is an independent autonomous-research system that turns scientific taste into explicit, evidence-bound research decisions."
     >
     <meta name="theme-color" content="#fbfaf7">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="SciTaste — Scientific Taste for Autonomous Research">
+    <meta
+      property="og:description"
+      content="An independent, evidence-native system for deciding what an autonomous researcher should do next."
+    >
+    <meta property="og:url" content="https://dustzx.github.io/SciTaste/">
+    <meta property="og:site_name" content="SciTaste">
+    <meta property="og:image" content="https://dustzx.github.io/SciTaste/assets/scitaste-lineage.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SciTaste — Scientific Taste for Autonomous Research">
+    <meta
+      name="twitter:description"
+      content="An independent, evidence-native system for deciding what an autonomous researcher should do next."
+    >
+    <meta name="twitter:image" content="https://dustzx.github.io/SciTaste/assets/scitaste-lineage.webp">
     <title>SciTaste — Scientific Taste for Autonomous Research</title>
+    <link rel="canonical" href="https://dustzx.github.io/SciTaste/">
     <link rel="icon" href="assets/scitaste-mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
@@ -79,31 +96,26 @@
           </p>
         </div>
 
-        <div class="taste-layout">
-          <div class="taste-map reveal" aria-label="Scientific Taste decision map">
-            <div class="source-stack">
-              <span>papers</span><span>reviews</span><span>revisions</span>
-            </div>
-            <div class="map-arrow" aria-hidden="true">→</div>
-            <div class="map-node">
-              <small>abstract</small>
-              <strong>Taste cases</strong>
-              <span>decision · context · outcome</span>
-            </div>
-            <div class="map-arrow" aria-hidden="true">→</div>
-            <div class="map-node map-node-dark">
-              <small>rank</small>
-              <strong>Next action</strong>
-              <span>value · evidence · cost</span>
-            </div>
-          </div>
+        <figure class="framework-figure reveal">
+          <a href="assets/scientific-taste-loop.svg" aria-label="Open the SciTaste framework figure at full size">
+            <img
+              src="assets/scientific-taste-loop.svg"
+              width="1200"
+              height="630"
+              alt="SciTaste forms verified Taste Cases from high-quality research, uses them with factual knowledge and project state to select the next action, and admits only validated results into the next research state."
+            >
+          </a>
+          <figcaption>
+            <strong>Figure 1 · SciTaste framework.</strong>
+            Taste is provenance-bearing decision precedent. It changes which action is selected;
+            bounded workers cannot directly change project state.
+          </figcaption>
+        </figure>
 
-          <dl class="taste-criteria reveal">
-            <div><dt>Scientific value</dt><dd>Will the action materially improve the research?</dd></div>
-            <div><dt>Information gain</dt><dd>Which uncertainty or failure mode can it resolve?</dd></div>
-            <div><dt>Precedent</dt><dd>What verified decisions transfer to this stage and context?</dd></div>
-            <div><dt>Feasibility</dt><dd>Does it fit the evidence, time, compute, and API budget?</dd></div>
-          </dl>
+        <div class="figure-reading-guide reveal" aria-label="How to read the SciTaste framework figure">
+          <div><span>01</span><strong>Abstract</strong><small>Turn decisions and observed outcomes—not passages—into verified Taste Cases.</small></div>
+          <div><span>02</span><strong>Choose</strong><small>Rank a closed action set by value, information gain, evidence, risk, and budget.</small></div>
+          <div><span>03</span><strong>Admit</strong><small>Commit the next state only after deterministic identity, evidence, and budget checks.</small></div>
         </div>
 
         <div class="innovation-grid">

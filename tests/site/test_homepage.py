@@ -15,6 +15,7 @@ class _PageParser(HTMLParser):
         self.references: list[str] = []
         self.title_parts: list[str] = []
         self.meta_names: set[str] = set()
+        self.meta_properties: set[str] = set()
         self._in_title = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -27,6 +28,8 @@ class _PageParser(HTMLParser):
             self.references.append(source)
         if tag == "meta" and (name := values.get("name")):
             self.meta_names.add(name)
+        if tag == "meta" and (property_name := values.get("property")):
+            self.meta_properties.add(property_name)
         if tag == "title":
             self._in_title = True
 
@@ -49,7 +52,23 @@ def test_homepage_is_self_contained_and_has_closed_navigation() -> None:
     parser = _parse_homepage()
     assert len(parser.ids) == len(set(parser.ids))
     assert {"main", "taste", "workflow", "interface", "quickstart", "research"} <= set(parser.ids)
-    assert {"viewport", "description", "theme-color"} <= parser.meta_names
+    assert {
+        "viewport",
+        "description",
+        "theme-color",
+        "twitter:card",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+    } <= parser.meta_names
+    assert {
+        "og:type",
+        "og:title",
+        "og:description",
+        "og:url",
+        "og:site_name",
+        "og:image",
+    } <= parser.meta_properties
     assert "Scientific Taste for Autonomous Research" in "".join(parser.title_parts)
 
     for reference in parser.references:
@@ -59,7 +78,7 @@ def test_homepage_is_self_contained_and_has_closed_navigation() -> None:
             continue
         if parsed.scheme:
             assert parsed.scheme == "https"
-            assert parsed.netloc == "github.com"
+            assert parsed.netloc in {"github.com", "dustzx.github.io"}
             continue
         target = (_SITE / parsed.path).resolve()
         assert target.is_relative_to(_SITE.resolve())
@@ -75,7 +94,13 @@ def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None
     taste_loop_source = taste_loop.read_text(encoding="utf-8")
     assert "<title" in taste_loop_source
     assert "<desc" in taste_loop_source
-    assert "Scientific Taste" in taste_loop_source
+    assert 'id="taste-library"' in taste_loop_source
+    assert 'id="taste-controller"' in taste_loop_source
+    assert 'id="admission-gate"' in taste_loop_source
+    assert (
+        taste_loop.read_bytes()
+        == (_ROOT / "manuscripts/scitaste/assets/fig1-scitaste-control.svg").read_bytes()
+    )
 
     homepage = (_SITE / "index.html").read_text(encoding="utf-8")
     assert "effectiveness claim is not yet established" in homepage
@@ -89,5 +114,18 @@ def test_homepage_assets_are_bounded_and_readme_uses_the_current_title() -> None
     )
     assert "site/assets/scitaste-mark.svg" in readme
     assert "site/assets/scientific-taste-loop.svg" in readme
+    assert "https://dustzx.github.io/SciTaste/" in readme
+    assert "actions/workflows/ci.yml/badge.svg" not in readme
     assert "```mermaid" not in readme
     assert len(readme.splitlines()) <= 180
+
+
+def test_pages_workflow_publishes_only_the_static_site() -> None:
+    workflow = (_ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "actions/configure-pages@v5" in workflow
+    assert "actions/upload-pages-artifact@v4" in workflow
+    assert "actions/deploy-pages@v4" in workflow
+    assert "path: site" in workflow
+    assert "outputs/" not in workflow

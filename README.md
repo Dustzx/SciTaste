@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Dustzx/SciTaste/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Dustzx/SciTaste/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3d3a34">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-a65d2e"></a>
   <img alt="Status: research preview" src="https://img.shields.io/badge/Status-research_preview-68715e">
 </p>
 
 <p align="center">
+  <a href="https://dustzx.github.io/SciTaste/">Project page</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/INNOVATION_MAP.md">Innovations</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
@@ -50,8 +50,12 @@ not just passages to retrieve. SciTaste abstracts that experience into verified
 uncertainty, scientific value, and budget.
 
 <p align="center">
-  <img src="site/assets/scientific-taste-loop.svg" width="720" alt="High-quality research is abstracted into scientific taste, which selects the next action and learns from the observed outcome.">
+  <a href="manuscripts/scitaste/assets/fig1-scitaste-control.svg">
+    <img src="site/assets/scientific-taste-loop.svg" width="1000" alt="SciTaste forms verified Taste Cases from high-quality research, uses them to rank the next research action, and admits only evidence-bound results into project state.">
+  </a>
 </p>
+
+<p align="center"><sub>Figure 1 of the working paper. Select the figure to inspect it at full size.</sub></p>
 
 Retrieval helps locate relevant material; it is a transport layer, not the whole
 mechanism. The core problem is learning **why a decision was good in context** and

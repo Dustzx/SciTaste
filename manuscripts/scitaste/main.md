@@ -97,7 +97,7 @@ unexecuted. Keeping these questions separate prevents engineering completion or
 a model-judge rubric score from being counted as scientific-effectiveness
 evidence.
 
-![SciTaste control loop. Canonical scientific state is projected into a closed action set; the Taste Controller selects one action; bounded workers return a typed result; and deterministic admission alone may commit the next state. The diagram explains authority boundaries and is not an effectiveness result.](assets/fig1-scitaste-control.pdf)
+![SciTaste framework. High-quality papers, reviews, revisions, and outcomes are abstracted into provenance-bearing Taste Cases rather than passages to imitate. At each step, the Taste Controller combines current research state, factual Knowledge, decision-precedent Taste, and remaining budget to rank a closed action set. Bounded workers return typed results; deterministic admission alone may commit the next state, while verified outcomes can become new Taste Cases. The diagram explains the method and authority boundaries; it is not an effectiveness result.](assets/fig1-scitaste-control.pdf)
 
 # Related Work
 

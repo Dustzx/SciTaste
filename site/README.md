@@ -17,10 +17,20 @@ or asset requests; outbound links activate only after a user follows them.
 
 ## Publishing boundary
 
-No GitHub Pages deployment workflow is included yet. This prevents a repository
-without Pages enabled from generating another failing Actions notification. Once
-the owner selects the Pages source, deploy this directory as an immutable static
-artifact and add the resulting public URL to the root README.
+The `Project page` workflow publishes only this directory to
+<https://dustzx.github.io/SciTaste/>. It never uploads repository outputs,
+manuscripts, credentials, or the local Generation as Content workspace.
+
+GitHub requires one owner action before the first deployment:
+
+1. Open **Settings → Pages** for the repository.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Open **Actions → Project page** and select **Run workflow** once.
+
+After that, any push to `main` that changes `site/**` automatically publishes a
+new immutable Pages artifact. Before the one-time setting is enabled, the
+workflow reports a successful readiness notice and skips deployment instead of
+creating a failing notification.
 
 ## Visual provenance
 
@@ -30,9 +40,9 @@ artifact and add the resulting public URL to the root README.
   2026-09-11 with the built-in image-generation path, then encoded locally as a
   metadata-free WebP. It depicts evidence converging into a taste decision and
   continuing through experiment, paper, and review.
-- `scientific-taste-loop.svg` is a repository-native, text-safe diagram reducing
-  the public Scientific Taste explanation to four readable nodes and one feedback
-  loop.
+- `scientific-taste-loop.svg` is an exact publication copy of the paper's
+  repository-native Figure 1. It shows Taste Case formation, the Knowledge/Taste
+  boundary, next-action control, bounded work, and deterministic state admission.
 
 The generated illustration is decorative; it is not a workflow result, evidence
 artifact, product screenshot, or scientific claim.

@@ -1,0 +1,76 @@
+name: Project page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    name: Pages readiness
+    runs-on: ubuntu-24.04
+    outputs:
+      enabled: ${{ steps.pages.outputs.enabled }}
+    steps:
+      - name: Check one-time repository configuration
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status="$(curl --silent --show-error --location \
+            --output /tmp/scitaste-pages.json --write-out '%{http_code}' \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages")"
+          if [[ "${status}" == "200" ]] && \
+             [[ "$(jq --raw-output '.build_type // ""' /tmp/scitaste-pages.json)" == "workflow" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          elif [[ "${status}" == "404" ]] || [[ "${status}" == "200" ]]; then
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice title=Enable GitHub Pages::In Settings > Pages, set Source to GitHub Actions, then run this workflow once."
+          else
+            jq . /tmp/scitaste-pages.json
+            echo "Unexpected GitHub Pages API status: ${status}" >&2
+            exit 1
+          fi
+
+  build:
+    name: Build static page
+    if: needs.readiness.outputs.enabled == 'true'
+    needs: readiness
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    name: Deploy static page
+    if: needs.readiness.outputs.enabled == 'true'
+    needs: [readiness, build]
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

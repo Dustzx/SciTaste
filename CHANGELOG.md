@@ -7,6 +7,19 @@ semantic versioning.
 
 ### Added
 
+- A dependency-free public project page now presents SciTaste's positioning,
+  framework, implemented capabilities, local quick start, Generation-as-Content
+  workspace, and honest ICLR 2027 research boundary. A least-privilege GitHub
+  Pages workflow publishes only `site/`, skips safely until the repository's
+  one-time Pages setting is enabled, and deploys automatically after later site
+  changes.
+
+- The paper, README, and public project page now share one publication-grade
+  Figure 1. It separates Taste Case formation from the online control loop,
+  distinguishes factual Knowledge from decision-precedent Taste, and makes the
+  controller, bounded-worker, and deterministic-admission authority boundaries
+  visually explicit in synchronized SVG, PDF, and draw.io sources.
+
 - Generation-as-Content now generates a bounded heterogeneous evidence graph
   from each project's manifest, recent runs, papers, stage history, evaluation
   proposals, and registered results. Selecting a graph node exposes its exact
@@ -17,12 +30,18 @@ semantic versioning.
   The permanent right inspector has been removed from the browser layout;
   proposal decisions and verified artifact previews appear inline only after an
   explicit action. The proposal controller remains non-executable and audited.
-  Project selection, conversation history, fixed views, and advanced evidence
-  controls now live in a toggleable left drawer; the free-question composer is
-  a horizontal surface below the scrollable workspace. The project home exposes
+  The left drawer now manages only project-scoped conversation and immutable
+  turn history. It is closed by default, previews from the desktop left edge,
+  can be pinned by click or opened by keyboard/touch, and does not reflow the
+  evidence surface. Project switching remains in the content toolbar; fixed
+  views and advanced selectors live in one `Evidence tools` disclosure. The
+  bottom composer is text-entry-first, bounded in height, supports
+  Enter/Shift+Enter semantics, and keeps context selection secondary. The project home exposes
   four evidence-bound research-room launchers for direction,
   experiments/evaluation, paper/review, and risks/decisions, creating a
-  conversation page only when selected.
+  conversation page only when selected. Unrenamed quick-intent histories now
+  display the server-issued localized prompt label rather than an internal
+  intent slug while retaining the slug as their stable stored identity.
 
 - Dataset acquisition now has separate hash-confirmed approval and explicit
   download commands. Approval creates an immutable derivative without network
@@ -785,9 +804,9 @@ semantic versioning.
   on packages left over in a maintainer environment. Ubuntu 24.04 CI runners now
   load the distribution's restricted Bubblewrap AppArmor profile and prove the
   native no-network sandbox before testing, without disabling the system-wide
-  user-namespace policy. The public README is also a shorter project entry point
-  with a readable four-node Scientific Taste diagram; detailed implementation
-  and research boundaries remain in the linked docs.
+  user-namespace policy. The public README is also a shorter project entry point,
+  omits the CI-status badge, and links to the public project page and paper Figure
+  1; detailed implementation and research boundaries remain in the linked docs.
 
 - The public `scitaste.writing` package now lazily exposes review-dependent
   paper-revision context APIs, removing a cold-import cycle that could prevent
