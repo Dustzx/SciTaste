@@ -626,6 +626,7 @@ class ProjectProgressCounts(BaseModel):
     benchmark_metadata_screenings: int = Field(default=0, ge=0)
     benchmark_metadata_allocation_plans: int = Field(default=0, ge=0)
     benchmark_metadata_allocations: int = Field(default=0, ge=0)
+    reference_selection_comparisons: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1361,6 +1362,87 @@ class ProjectProgressBenchmarkMetadataAllocationItem(BaseModel):
         return self
 
 
+class ProjectProgressReferenceSelectionComparisonItem(BaseModel):
+    """One outcome-blind H0 quality-versus-prestige source-selection state."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    comparison_id: SafeIdentifier
+    plan_file_sha256: Sha256
+    plan_sha256: Sha256
+    report_file_sha256: Sha256 | None = None
+    report_sha256: Sha256 | None = None
+    approval_sha256: Sha256 | None = None
+    selection_implementation_current: bool
+    candidate_count: int = Field(gt=0)
+    target_source_count: int = Field(gt=0)
+    content_grounded_admitted_count: int = Field(ge=0)
+    downstream_eligible_count: int = Field(ge=0)
+    matched_stratum_count: int | None = Field(default=None, gt=0)
+    cross_arm_overlap_count: int | None = Field(default=None, ge=0)
+    blocker_codes: tuple[SafeText, ...] = ()
+    selection_performed: bool
+    status: Literal[
+        "blocked",
+        "implementation_drift",
+        "awaiting_owner_approval",
+        "selection_frozen",
+    ]
+    next_gate: Literal[
+        "resolve_source_selection_controls",
+        "regenerate_source_selection_plan",
+        "approve_exact_source_selection",
+        "materialize_matched_h0_inputs",
+    ]
+    raw_source_content_read: Literal[False]
+    model_calls_performed: Literal[False]
+    experiment_performed: Literal[False]
+    authorizes_experiment: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def reference_selection_state_is_closed(
+        self,
+    ) -> ProjectProgressReferenceSelectionComparisonItem:
+        expected_status = (
+            "implementation_drift"
+            if not self.selection_implementation_current
+            else "selection_frozen"
+            if self.selection_performed
+            else "blocked"
+            if self.blocker_codes
+            else "awaiting_owner_approval"
+        )
+        if self.status != expected_status:
+            raise ValueError("reference-selection status differs from its evidence")
+        expected_gate = {
+            "implementation_drift": "regenerate_source_selection_plan",
+            "selection_frozen": "materialize_matched_h0_inputs",
+            "blocked": "resolve_source_selection_controls",
+            "awaiting_owner_approval": "approve_exact_source_selection",
+        }[self.status]
+        if self.next_gate != expected_gate:
+            raise ValueError("reference-selection next gate differs from its status")
+        report_values = (
+            self.report_file_sha256,
+            self.report_sha256,
+            self.approval_sha256,
+            self.matched_stratum_count,
+            self.cross_arm_overlap_count,
+        )
+        if self.selection_performed != all(value is not None for value in report_values):
+            raise ValueError("reference-selection frozen evidence is incomplete")
+        if self.target_source_count > self.candidate_count:
+            raise ValueError("reference-selection target exceeds the broad pool")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("reference-selection state must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("reference-selection evidence references must be unique")
+        return self
+
+
 class ProjectProgressDatasetPackageTaskItem(BaseModel):
     """One task-level large-asset acquisition qualification."""
 
@@ -1805,6 +1887,8 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_metadata_screening",
         "approve_metadata_allocation",
         "review_metadata_allocation",
+        "approve_reference_selection",
+        "review_reference_selection",
         "review_benchmark_qualification",
         "review_iteration",
     ]
@@ -1966,6 +2050,9 @@ class ProjectProgressBoardData(BaseModel):
         ProjectProgressBenchmarkMetadataAllocationPlanItem, ...
     ] = ()
     benchmark_metadata_allocations: tuple[ProjectProgressBenchmarkMetadataAllocationItem, ...] = ()
+    reference_selection_comparisons: tuple[
+        ProjectProgressReferenceSelectionComparisonItem, ...
+    ] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -2030,6 +2117,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.benchmark_metadata_screenings,
             *self.benchmark_metadata_allocation_plans,
             *self.benchmark_metadata_allocations,
+            *self.reference_selection_comparisons,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -2097,6 +2185,14 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress allocation scope IDs must be unique")
         if self.counts.benchmark_metadata_allocations != len(self.benchmark_metadata_allocations):
             raise ValueError("project progress allocation count must match its rows")
+
+        reference_selection_ids = [
+            item.comparison_id for item in self.reference_selection_comparisons
+        ]
+        if len(reference_selection_ids) != len(set(reference_selection_ids)):
+            raise ValueError("project progress reference-selection IDs must be unique")
+        if self.counts.reference_selection_comparisons != len(self.reference_selection_comparisons):
+            raise ValueError("project progress reference-selection count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

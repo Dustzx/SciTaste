@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added an executable H0 source-selection comparator for the title-critical
+  Scientific Reference Quality claim. One complete, hash-bound mining pool now
+  feeds a content-grounded quality selector and a type-separated prestige
+  selector using frozen age-normalized citations; source count,
+  decision-pattern × evidence-role × domain strata, source-group uniqueness, downstream
+  protocol identities, and context budgets are matched exactly. Natural overlap
+  and every unselected candidate remain visible. Planning, exact approval,
+  deterministic freeze, and replay are distinct CLI gates and grant no source
+  read, model, human, GPU, or experiment authority. Generation-as-Content
+  collapses each comparison to a compact project card with its next decision.
 - Closed the formal objective-task identity gap between powered benchmark
   allocation and result admission. Prelaunch schema 1.5 requires the replayed
   allocation report and semantic task-set hash, exact ordered task/source-group

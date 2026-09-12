@@ -208,6 +208,19 @@ from scitaste.evaluation import (
     screen_benchmark_metadata_population,
     summarize_evaluation_readiness,
 )
+from scitaste.evaluation.reference_selection_comparison import (
+    ReferenceSelectionDownstreamEnvelope,
+    ReferenceSelectionSourceLink,
+    approve_reference_selection_comparison,
+    freeze_reference_selection_comparison,
+    inspect_reference_selection_comparison_chain,
+    load_reference_selection_approval,
+    load_reference_selection_plan,
+    plan_reference_selection_comparison_from_files,
+    save_reference_selection_approval,
+    save_reference_selection_plan,
+    save_reference_selection_report,
+)
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
 from scitaste.executor.autoresearchclaw import AutoResearchClawExecutor
 from scitaste.executor.native_code import inspect_native_code_proposal
@@ -2120,6 +2133,69 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(source_admission)
     source_admission.set_defaults(handler=_handle_evaluation_source_admission)
+    reference_selection_plan = evaluation_commands.add_parser(
+        "reference-selection-plan",
+        help="Bind the complete H0 pool and matched quality-versus-prestige selection rules",
+    )
+    reference_selection_plan.add_argument("--mining-run", type=Path, required=True)
+    reference_selection_plan.add_argument("--mining-report", type=Path, required=True)
+    reference_selection_plan.add_argument("--source-admission-report", type=Path, required=True)
+    reference_selection_plan.add_argument("--evidence-root", type=Path, default=Path("."))
+    reference_selection_plan.add_argument(
+        "--source-link",
+        action="append",
+        required=True,
+        metavar="CANDIDATE_ID=SOURCE_ID",
+    )
+    reference_selection_plan.add_argument("--comparison-id", required=True)
+    reference_selection_plan.add_argument("--project-id", required=True)
+    reference_selection_plan.add_argument("--report-output", required=True)
+    reference_selection_plan.add_argument("--metadata-snapshot-year", type=int, required=True)
+    reference_selection_plan.add_argument(
+        "--minimum-observed-prestige-fraction", type=float, default=0.8
+    )
+    reference_selection_plan.add_argument("--stable-tie-break-salt-sha256", required=True)
+    reference_selection_plan.add_argument("--target-source-count", type=int, required=True)
+    reference_selection_plan.add_argument("--held-out-decision-set-sha256", required=True)
+    reference_selection_plan.add_argument("--representation-protocol-sha256", required=True)
+    reference_selection_plan.add_argument("--execution-protocol-sha256", required=True)
+    reference_selection_plan.add_argument(
+        "--per-source-context-token-ceiling", type=int, required=True
+    )
+    reference_selection_plan.add_argument("--created-at", required=True)
+    reference_selection_plan.add_argument("--output", type=Path, required=True)
+    reference_selection_plan.add_argument("--require-ready", action="store_true")
+    _add_log_level_option(reference_selection_plan)
+    reference_selection_plan.set_defaults(handler=_handle_evaluation_reference_selection_plan)
+    reference_selection_approve = evaluation_commands.add_parser(
+        "reference-selection-approve",
+        help="Authorize one exact deterministic H0 reference selection",
+    )
+    reference_selection_approve.add_argument("--plan", type=Path, required=True)
+    reference_selection_approve.add_argument("--confirm-plan-sha256", required=True)
+    reference_selection_approve.add_argument("--approved-by", required=True)
+    reference_selection_approve.add_argument("--approved-at", required=True)
+    reference_selection_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(reference_selection_approve)
+    reference_selection_approve.set_defaults(handler=_handle_evaluation_reference_selection_approve)
+    reference_selection_freeze = evaluation_commands.add_parser(
+        "reference-selection-freeze",
+        help="Freeze matched H0 source lists without opening source content or running models",
+    )
+    reference_selection_freeze.add_argument("--plan", type=Path, required=True)
+    reference_selection_freeze.add_argument("--approval", type=Path, required=True)
+    reference_selection_freeze.add_argument("--workspace-root", type=Path, default=Path("."))
+    reference_selection_freeze.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(reference_selection_freeze)
+    reference_selection_freeze.set_defaults(handler=_handle_evaluation_reference_selection_freeze)
+    reference_selection_inspect = evaluation_commands.add_parser(
+        "reference-selection-inspect",
+        help="Replay the complete H0 selection chain and verify its frozen output",
+    )
+    reference_selection_inspect.add_argument("--report", type=Path, required=True)
+    reference_selection_inspect.add_argument("--workspace-root", type=Path, default=Path("."))
+    _add_log_level_option(reference_selection_inspect)
+    reference_selection_inspect.set_defaults(handler=_handle_evaluation_reference_selection_inspect)
     source_projection_plan = evaluation_commands.add_parser(
         "source-projection-plan",
         help="Freeze admitted JSON fields for identical raw-RAG and Taste source use",
@@ -6108,6 +6184,141 @@ def _handle_evaluation_source_admission(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_projection_proposal_ready and not report.ready_for_projection_proposal:
         return 1
+    return 0
+
+
+def _handle_evaluation_reference_selection_plan(args: argparse.Namespace) -> int:
+    links: list[ReferenceSelectionSourceLink] = []
+    for raw in args.source_link:
+        try:
+            candidate_id, source_id = raw.split("=", 1)
+        except ValueError as exc:
+            raise ValueError(
+                "reference-selection source links must use CANDIDATE_ID=SOURCE_ID"
+            ) from exc
+        links.append(
+            ReferenceSelectionSourceLink(
+                candidate_id=candidate_id,
+                source_id=source_id,
+            )
+        )
+    root = args.evidence_root.resolve(strict=True)
+    if not args.output.resolve(strict=False).is_relative_to(root):
+        raise ValueError("reference-selection plan output must remain inside the workspace")
+    plan = plan_reference_selection_comparison_from_files(
+        mining_run_path=args.mining_run,
+        mining_report_path=args.mining_report,
+        source_admission_report_path=args.source_admission_report,
+        evidence_root=root,
+        source_links=tuple(links),
+        comparison_id=args.comparison_id,
+        project_id=args.project_id,
+        report_output_locator=args.report_output,
+        metadata_snapshot_year=args.metadata_snapshot_year,
+        minimum_observed_prestige_fraction=args.minimum_observed_prestige_fraction,
+        stable_tie_break_salt_sha256=args.stable_tie_break_salt_sha256,
+        target_source_count=args.target_source_count,
+        downstream=ReferenceSelectionDownstreamEnvelope(
+            held_out_decision_set_sha256=args.held_out_decision_set_sha256,
+            representation_protocol_sha256=args.representation_protocol_sha256,
+            execution_protocol_sha256=args.execution_protocol_sha256,
+            sources_per_condition=args.target_source_count,
+            per_source_context_token_ceiling=args.per_source_context_token_ceiling,
+            total_context_token_ceiling=(
+                args.target_source_count * args.per_source_context_token_ceiling
+            ),
+        ),
+        created_at=datetime.fromisoformat(args.created_at),
+    )
+    output = save_reference_selection_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "plan_path": str(output),
+                **plan.model_dump(mode="json"),
+                "raw_source_content_read": False,
+                "model_calls_performed": False,
+                "gpu_work_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_ready and not plan.ready_for_owner_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_reference_selection_approve(args: argparse.Namespace) -> int:
+    approval = approve_reference_selection_comparison(
+        load_reference_selection_plan(args.plan),
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_reference_selection_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_reference_selection_freeze(args: argparse.Namespace) -> int:
+    root = args.workspace_root.resolve(strict=True)
+    plan = load_reference_selection_plan(args.plan)
+    expected_output = root.joinpath(*PurePosixPath(plan.plan.report_output_locator).parts)
+    if args.output.resolve(strict=False) != expected_output:
+        raise ValueError("reference-selection output differs from the approved locator")
+    report = freeze_reference_selection_comparison(
+        plan,
+        load_reference_selection_approval(args.approval),
+        workspace_root=root,
+    )
+    output = save_reference_selection_report(report, expected_output)
+    replay = inspect_reference_selection_comparison_chain(output, workspace_root=root)
+    print(
+        json.dumps(
+            {
+                "report_path": str(output),
+                **report.model_dump(mode="json"),
+                "deterministic_replay_verified": replay.implementation_current,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_reference_selection_inspect(args: argparse.Namespace) -> int:
+    inspection = inspect_reference_selection_comparison_chain(
+        args.report,
+        workspace_root=args.workspace_root,
+    )
+    print(
+        json.dumps(
+            {
+                "report_path": str(inspection.report.path),
+                "report_file_sha256": inspection.report.file_sha256,
+                "report_sha256": inspection.report.report.report_sha256,
+                "plan_path": str(inspection.plan.path),
+                "plan_file_sha256": inspection.plan.file_sha256,
+                "approval_path": str(inspection.approval.path),
+                "approval_file_sha256": inspection.approval.file_sha256,
+                "implementation_current": inspection.implementation_current,
+                "deterministic_replay_verified": True,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

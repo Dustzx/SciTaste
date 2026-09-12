@@ -52,6 +52,13 @@ from scitaste.evaluation.executable_candidate import (
     load_executable_candidate_report,
 )
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
+from scitaste.evaluation.reference_selection_comparison import (
+    ReferenceSelectionComparisonPlan,
+    ReferenceSelectionComparisonReport,
+    inspect_reference_selection_comparison_chain,
+    load_reference_selection_plan,
+    reference_selection_implementation_sha256,
+)
 from scitaste.evaluation.structured_metadata_plan_bundle import (
     StructuredMetadataAuditPlanBundle,
     load_structured_metadata_audit_plan_bundle,
@@ -993,6 +1000,116 @@ class WorkspaceSurfaceFactory:
             if item["scope_id"] not in advanced_allocation_scopes
         ]
 
+        reference_selection_by_comparison: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected_plan = _reference_selection_plan_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_plan is None:
+                continue
+            selection_plan, plan_file_sha256, implementation_current = inspected_plan
+            if selection_plan.project_id != snapshot.project_id:
+                raise ProjectSurfaceChangedError(
+                    "registered reference-selection plan belongs to another project"
+                )
+            run_ref = run_refs[run.run_id]
+            status = (
+                "implementation_drift"
+                if not implementation_current
+                else "blocked"
+                if selection_plan.blocker_codes
+                else "awaiting_owner_approval"
+            )
+            next_gate = {
+                "implementation_drift": "regenerate_source_selection_plan",
+                "blocked": "resolve_source_selection_controls",
+                "awaiting_owner_approval": "approve_exact_source_selection",
+            }[status]
+            reference_selection_by_comparison[selection_plan.comparison_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "comparison_id": selection_plan.comparison_id,
+                "plan_file_sha256": plan_file_sha256,
+                "plan_sha256": selection_plan.plan_sha256,
+                "report_file_sha256": None,
+                "report_sha256": None,
+                "approval_sha256": None,
+                "selection_implementation_current": implementation_current,
+                "candidate_count": len(selection_plan.candidates),
+                "target_source_count": selection_plan.target_source_count,
+                "content_grounded_admitted_count": sum(
+                    item.content_grounded_admitted for item in selection_plan.candidates
+                ),
+                "downstream_eligible_count": sum(
+                    item.downstream_eligible for item in selection_plan.candidates
+                ),
+                "matched_stratum_count": None,
+                "cross_arm_overlap_count": None,
+                "blocker_codes": list(selection_plan.blocker_codes),
+                "selection_performed": False,
+                "status": status,
+                "next_gate": next_gate,
+                "raw_source_content_read": selection_plan.raw_source_content_read,
+                "model_calls_performed": False,
+                "experiment_performed": False,
+                "authorizes_experiment": selection_plan.authorizes_experiment,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        for run in snapshot.manifest.runs:
+            inspected_report = _reference_selection_report_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                self._runtime.outputs_root.resolve(strict=True).parent,
+                run,
+            )
+            if inspected_report is None:
+                continue
+            selection_report, selection_plan, report_file_sha256, implementation_current = (
+                inspected_report
+            )
+            if selection_report.project_id != snapshot.project_id:
+                raise ProjectSurfaceChangedError(
+                    "registered reference-selection report belongs to another project"
+                )
+            run_ref = run_refs[run.run_id]
+            status = "selection_frozen" if implementation_current else "implementation_drift"
+            next_gate = (
+                "materialize_matched_h0_inputs"
+                if implementation_current
+                else "regenerate_source_selection_plan"
+            )
+            reference_selection_by_comparison[selection_report.comparison_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "comparison_id": selection_report.comparison_id,
+                "plan_file_sha256": selection_report.plan_file_sha256,
+                "plan_sha256": selection_report.plan_sha256,
+                "report_file_sha256": report_file_sha256,
+                "report_sha256": selection_report.report_sha256,
+                "approval_sha256": selection_report.approval_sha256,
+                "selection_implementation_current": implementation_current,
+                "candidate_count": len(selection_plan.candidates),
+                "target_source_count": selection_report.target_source_count,
+                "content_grounded_admitted_count": sum(
+                    item.content_grounded_admitted for item in selection_plan.candidates
+                ),
+                "downstream_eligible_count": sum(
+                    item.downstream_eligible for item in selection_plan.candidates
+                ),
+                "matched_stratum_count": len(selection_report.strata),
+                "cross_arm_overlap_count": len(selection_report.cross_arm_overlap_candidate_ids),
+                "blocker_codes": [],
+                "selection_performed": selection_report.selection_performed,
+                "status": status,
+                "next_gate": next_gate,
+                "raw_source_content_read": selection_report.raw_source_content_read,
+                "model_calls_performed": selection_report.model_calls_performed,
+                "experiment_performed": selection_report.experiment_performed,
+                "authorizes_experiment": selection_report.authorizes_experiment,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        reference_selection_rows = list(reference_selection_by_comparison.values())
+
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -1678,6 +1795,50 @@ class WorkspaceSurfaceFactory:
                     "target_ids": [item["scope_id"] for item in review_allocation_rows],
                 }
             )
+        reference_selection_approval_rows = [
+            item for item in reference_selection_rows if item["status"] == "awaiting_owner_approval"
+        ]
+        if reference_selection_approval_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "approve-reference-selection-comparison",
+                    "kind": "approve_reference_selection",
+                    "label_code": "approve-exact-quality-versus-prestige-selection",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in reference_selection_approval_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [
+                        item["comparison_id"] for item in reference_selection_approval_rows
+                    ],
+                }
+            )
+        reference_selection_review_rows = [
+            item for item in reference_selection_rows if item["status"] != "awaiting_owner_approval"
+        ]
+        if reference_selection_review_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-reference-selection-comparison",
+                    "kind": "review_reference_selection",
+                    "label_code": "review-quality-versus-prestige-selection",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in reference_selection_review_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [
+                        item["comparison_id"] for item in reference_selection_review_rows
+                    ],
+                }
+            )
         if acquisition_rows or receipt_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
@@ -1866,6 +2027,7 @@ class WorkspaceSurfaceFactory:
                         benchmark_metadata_allocation_plan_rows
                     ),
                     "benchmark_metadata_allocations": len(benchmark_metadata_allocation_rows),
+                    "reference_selection_comparisons": len(reference_selection_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -1910,6 +2072,7 @@ class WorkspaceSurfaceFactory:
                 "benchmark_metadata_screenings": benchmark_metadata_screening_rows,
                 "benchmark_metadata_allocation_plans": (benchmark_metadata_allocation_plan_rows),
                 "benchmark_metadata_allocations": benchmark_metadata_allocation_rows,
+                "reference_selection_comparisons": reference_selection_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -2905,6 +3068,78 @@ def _benchmark_metadata_allocation_for_run(
         plan,
         inspection.report.file_sha256,
         inspection.allocation_implementation_current,
+    )
+
+
+def _reference_selection_plan_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[ReferenceSelectionComparisonPlan, str, bool] | None:
+    """Load one registered H0 source-selection plan without selecting either arm."""
+
+    expected = f"runs/{run.run_id}/reference_selection_planning/PLAN.json"
+    if run.stage_path != "reference_selection_planning" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered reference-selection plan is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError("registered reference-selection plan escaped its project")
+    try:
+        inspection = load_reference_selection_plan(resolved)
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered reference-selection plan is invalid") from exc
+    plan = inspection.plan
+    return (
+        plan,
+        inspection.file_sha256,
+        plan.implementation_sha256 == reference_selection_implementation_sha256(),
+    )
+
+
+def _reference_selection_report_for_run(
+    project_root: Path,
+    workspace_root: Path,
+    run: ProjectRun,
+) -> (
+    tuple[
+        ReferenceSelectionComparisonReport,
+        ReferenceSelectionComparisonPlan,
+        str,
+        bool,
+    ]
+    | None
+):
+    """Replay one frozen H0 source-selection contrast without materializing content."""
+
+    expected = f"runs/{run.run_id}/reference_selection_comparison/REPORT.json"
+    if run.stage_path != "reference_selection_comparison" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered reference-selection report is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError(
+            "registered reference-selection report escaped its project"
+        )
+    try:
+        inspection = inspect_reference_selection_comparison_chain(
+            resolved,
+            workspace_root=workspace_root,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError(
+            "registered reference-selection report is invalid"
+        ) from exc
+    return (
+        inspection.report.report,
+        inspection.plan.plan,
+        inspection.report.file_sha256,
+        inspection.implementation_current,
     )
 
 

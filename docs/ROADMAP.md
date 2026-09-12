@@ -26,6 +26,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.6 — content-grounded reference quality | done | prestige-blind five-dimensional screening, content-free qualification receipts, and dual-human schema-1.1 source admission define which records can teach transferable judgment |
 | Phase 8.7 — decision-gap-driven reference mining | done | contrastive query families, marginal decision/evidence/domain coverage, source-group caps, and explicit saturation freeze a metadata-only audit cohort without ranking quality by prestige |
 | Phase 8.8 — real reference search and frozen replay | done | accepted concise queries drive bounded OpenAlex/Crossref metadata transactions; identity, record type, relevance, family, and grounded-domain gates freeze a replayable cohort before source-quality review |
+| Phase 8.9 — matched H0 source-selection freeze | done | one complete pool feeds type-separated quality and age-normalized-prestige selectors at exact source-count, pattern/role/domain-stratum, downstream-protocol, and token-budget parity; approval and replay still grant no experiment authority |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -77,6 +78,16 @@ reduced to a content-free receipt before schema-1.1 source admission requires
 two independent, prestige- and model-blind human reviews. H0 compares this gate
 with prestige-only selection from the same pool at equal source and downstream
 budgets. Real source projections, calls, reviews, and H0 outcomes remain open.
+
+The H0 comparator is no longer merely a prose obligation. A deterministic,
+approval-gated source-selection chain now binds the complete mining and
+source-admission population, keeps the quality selector structurally blind to
+prestige, keeps the prestige selector structurally blind to content quality,
+matches the quality arm's pattern/role/domain strata, and preserves natural overlap.
+The project interface exposes whether controls are blocked, awaiting approval,
+or frozen. This closes experimental specification and provenance only; real
+source-list construction, treatment rendering, blinded judgments, and powered
+H0 outcomes remain open.
 
 Reference discovery is no longer defined as a manually chosen top-k list. A
 proposal-only node expands each live decision and its evidence gaps into direct,

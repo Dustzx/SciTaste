@@ -664,6 +664,8 @@ _CANDIDATE_GOALS = {
     "review_metadata_screening": IntentGoal.NEXT_STEP_REVIEW,
     "approve_metadata_allocation": IntentGoal.NEXT_STEP_REVIEW,
     "review_metadata_allocation": IntentGoal.NEXT_STEP_REVIEW,
+    "approve_reference_selection": IntentGoal.NEXT_STEP_REVIEW,
+    "review_reference_selection": IntentGoal.NEXT_STEP_REVIEW,
     "review_benchmark_qualification": IntentGoal.NEXT_STEP_REVIEW,
     "review_iteration": IntentGoal.NEXT_STEP_REVIEW,
 }
@@ -681,6 +683,8 @@ _QUICK_LABELS = {
     "review_metadata_screening": "Review the complete benchmark eligibility screen",
     "approve_metadata_allocation": "Decide the exact powered benchmark allocation",
     "review_metadata_allocation": "Review the powered benchmark task-set gate",
+    "approve_reference_selection": "Decide the exact quality-versus-prestige source selection",
+    "review_reference_selection": "Review the frozen H0 source-selection contrast",
     "review_benchmark_qualification": "Review the executable benchmark qualification",
     "review_iteration": "Review the reviewer-driven research iteration plan",
 }

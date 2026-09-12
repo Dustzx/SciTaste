@@ -1269,6 +1269,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.metadata_screenings"), data.counts.benchmark_metadata_screenings || 0, t("progress.metric.metadata_screenings_note")),
     progressMetric(t("progress.metric.metadata_allocation_plans"), data.counts.benchmark_metadata_allocation_plans || 0, t("progress.metric.metadata_allocation_plans_note")),
     progressMetric(t("progress.metric.metadata_allocations"), data.counts.benchmark_metadata_allocations || 0, t("progress.metric.metadata_allocations_note")),
+    progressMetric(t("progress.metric.reference_selections"), data.counts.reference_selection_comparisons || 0, t("progress.metric.reference_selections_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1285,6 +1286,9 @@ function renderProjectProgress(data) {
   const metadataAllocations = renderBenchmarkMetadataAllocations(
     data.benchmark_metadata_allocation_plans || [],
     data.benchmark_metadata_allocations || [],
+  );
+  const referenceSelections = renderReferenceSelectionComparisons(
+    data.reference_selection_comparisons || [],
   );
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
@@ -1757,6 +1761,9 @@ function renderProjectProgress(data) {
     || (data.benchmark_metadata_allocations || []).length > 0
   ) {
     container.appendChild(metadataAllocations);
+  }
+  if ((data.reference_selection_comparisons || []).length > 0) {
+    container.appendChild(referenceSelections);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -2519,6 +2526,106 @@ function renderBenchmarkMetadataAllocations(plans, allocations) {
         "powered_sample_size_satisfied",
         "experiment_performed",
         "authorizes_execution",
+      ],
+    }));
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderReferenceSelectionComparisons(items) {
+  const section = progressSection(
+    t("progress.reference_selection.title"),
+    items.length > 0
+      ? t("progress.reference_selection.subtitle", {count: items.length})
+      : t("progress.reference_selection.empty"),
+  );
+  if (items.length === 0) return section;
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  const stateMap = {
+    blocked: "blocked",
+    implementation_drift: "blocked",
+    awaiting_owner_approval: "candidate",
+    selection_frozen: "observed_completed",
+  };
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.status}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.reference_selection.comparison"));
+    const title = document.createElement("strong");
+    appendText(title, item.comparison_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        stateMap[item.status] || "unknown",
+        t(`progress.reference_selection.status.${item.status}`),
+      ),
+    );
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const value of [
+      t("progress.reference_selection.pool", {count: item.candidate_count}),
+      t("progress.reference_selection.arms", {count: item.target_source_count}),
+      t("progress.reference_selection.quality", {count: item.content_grounded_admitted_count}),
+      t("progress.reference_selection.prestige", {count: item.downstream_eligible_count}),
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, value);
+      facts.appendChild(fact);
+    }
+    if (item.selection_performed) {
+      for (const value of [
+        t("progress.reference_selection.strata", {count: item.matched_stratum_count}),
+        t("progress.reference_selection.overlap", {count: item.cross_arm_overlap_count}),
+      ]) {
+        const fact = document.createElement("span");
+        appendText(fact, value);
+        facts.appendChild(fact);
+      }
+    }
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t(`progress.reference_selection.next.${item.next_gate}`));
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.reference_selection.boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button acquisition-review";
+    appendText(open, t("progress.reference_selection.inspect"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(header, facts, next, boundary, open, evidenceDisclosure(item.support_ref_ids, {
+      data: {
+        plan_sha256: item.plan_sha256,
+        report_sha256: item.report_sha256,
+        selection_implementation_current: item.selection_implementation_current,
+        blocker_codes: item.blocker_codes,
+        raw_source_content_read: item.raw_source_content_read,
+        model_calls_performed: item.model_calls_performed,
+        experiment_performed: item.experiment_performed,
+        authorizes_experiment: item.authorizes_experiment,
+      },
+      names: [
+        "plan_sha256",
+        "report_sha256",
+        "selection_implementation_current",
+        "blocker_codes",
+        "raw_source_content_read",
+        "model_calls_performed",
+        "experiment_performed",
+        "authorizes_experiment",
       ],
     }));
     grid.appendChild(card);

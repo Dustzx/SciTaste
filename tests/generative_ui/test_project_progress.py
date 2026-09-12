@@ -194,6 +194,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "benchmark_metadata_screenings": 0,
         "benchmark_metadata_allocation_plans": 0,
         "benchmark_metadata_allocations": 0,
+        "reference_selection_comparisons": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -255,6 +256,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "benchmark_metadata_screenings": 0,
         "benchmark_metadata_allocation_plans": 0,
         "benchmark_metadata_allocations": 0,
+        "reference_selection_comparisons": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -743,6 +745,63 @@ def test_progress_surfaces_identity_free_powered_allocation_plan(
         if item["kind"] == "approve_metadata_allocation"
     )
     assert candidate["target_ids"] == ["benchmark-powered-allocation-v1"]
+
+
+def test_progress_surfaces_h0_quality_versus_prestige_selection_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "h0-reference-selection-plan-run"
+    artifact = f"runs/{run_id}/reference_selection_planning/PLAN.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="reference_selection_planning",
+        artifact=artifact,
+    )
+    plan = SimpleNamespace(
+        comparison_id="h0-quality-vs-prestige-v1",
+        project_id="progress-project",
+        plan_sha256="1" * 64,
+        candidates=(
+            SimpleNamespace(content_grounded_admitted=True, downstream_eligible=True),
+            SimpleNamespace(content_grounded_admitted=True, downstream_eligible=True),
+            SimpleNamespace(content_grounded_admitted=False, downstream_eligible=True),
+        ),
+        target_source_count=2,
+        blocker_codes=(),
+        raw_source_content_read=False,
+        authorizes_experiment=False,
+    )
+
+    def inspect_plan(project_root, run):
+        del project_root
+        if run.run_id != run_id:
+            return None
+        return plan, "2" * 64, True
+
+    monkeypatch.setattr(
+        workspace_module,
+        "_reference_selection_plan_for_run",
+        inspect_plan,
+    )
+
+    _, data = _progress(runtime)
+
+    assert data["counts"]["reference_selection_comparisons"] == 1
+    row = data["reference_selection_comparisons"][0]
+    assert row["status"] == "awaiting_owner_approval"
+    assert row["content_grounded_admitted_count"] == 2
+    assert row["downstream_eligible_count"] == 3
+    candidate = next(
+        item
+        for item in data["next_step_candidates"]
+        if item["kind"] == "approve_reference_selection"
+    )
+    assert candidate["target_ids"] == ["h0-quality-vs-prestige-v1"]
 
 
 def test_progress_replaces_acquisition_gate_with_download_only_receipt(tmp_path: Path) -> None:

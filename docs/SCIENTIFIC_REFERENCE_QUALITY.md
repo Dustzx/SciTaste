@@ -93,12 +93,32 @@ precision, reviewer agreement, dimension failures, and cost are diagnostics.
 H0 shares the same held-out decision cases and compatible downstream runs with
 H1--H2b; it is not a request for arbitrary seed multiplication.
 
+The H0 selection boundary is now executable. A plan binds the exact mining run,
+mining report, source-admission report, complete candidate-to-source map,
+metadata snapshot year, source count, tie-break salt, held-out decision set,
+representation protocol, execution protocol, and per-source/total context
+ceilings. It performs no selection. After exact owner approval, the quality arm
+uses only admission and scientific-coverage fields; the prestige arm uses only
+rights/isolation eligibility, publication year, and citation count. The latter
+ranks age-normalized citations inside the exact decision-pattern × evidence-role
+× domain quotas created by the quality arm. Missing stratum-level prestige
+observations block selection rather than becoming zero-valued evidence.
+
+The frozen report preserves the full unselected population, exact stratum
+parity, and natural overlap between arms. It is deterministically replayed from
+the approved plan and rechecks every upstream byte and semantic hash. Generation
+as Content presents this chain as a compact project decision card rather than an
+effectiveness result. Treatment rendering and experimental outcomes remain
+separate gates.
+
 ## Remaining evidence
 
 The method contract is executable, but the claim remains open. Real progress
 now requires separately authorized bounded content projection of acquired
-sources, real model proposals, two conflict-cleared reviewers, a frozen
-prestige-only comparator, source-group-disjoint held-out cases, and powered
-outcome analysis. Until then, SciTaste has a falsifiable definition of a
-high-quality scientific reference, not evidence that the definition improves
-research.
+sources, real model proposals, two conflict-cleared reviewers, a real
+task-specific broad pool with observed prestige metadata, source-group-disjoint
+held-out cases, matched treatment materialization, and powered outcome analysis.
+The comparator selection algorithm is now frozen in software, but no formal H0
+source list or outcome exists. Until then, SciTaste has a falsifiable definition
+and non-leaking comparator for a high-quality scientific reference, not evidence
+that the definition improves research.

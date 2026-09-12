@@ -51,9 +51,15 @@ driven by registered decision/evidence gaps and complementary direct,
 alternative, negative/null, failure, replication, and transfer queries; it is
 frozen by source-group-aware coverage and saturation rather than a scalar
 quality rank. Given that same frozen broad source pool, select the same number
-of references either by the five content-grounded quality dimensions or by
-venue/citation metadata alone. Keep the abstraction model, abstraction prompt,
-downstream model, tools, and context budget fixed.
+of references either by the five content-grounded quality dimensions or by a
+precommitted prestige signal. The primary prestige comparator is frozen
+citation count divided by years of exposure, ranked only within the exact
+decision-pattern × evidence-role × domain strata induced by the quality arm.
+Venue is retained as descriptive metadata and may support a separately declared
+sensitivity analysis; it is not silently combined with citations into an
+arbitrary score.
+Keep the abstraction model, abstraction prompt, downstream model, tools, source
+count, per-source token ceiling, and total context budget fixed.
 
 Primary contrast: `quality-grounded-reference-admission` versus
 `prestige-only-reference-selection`.
@@ -64,6 +70,26 @@ rating requires exact source support; author, venue, citations, experimental
 relation, and downstream task identity are hidden from the quality assessor.
 This tests source selection rather than assuming that an accepted paper is a
 usable scientific precedent.
+
+The executable selector freezes the complete broad pool and its exact file and
+semantic hashes before either arm is selected. The quality implementation has
+no prestige fields in its input type; the prestige implementation has no
+content-quality field. The quality arm first covers registered decision
+patterns, evidence roles, and domains, with a precommitted hash tie-break. The
+prestige arm then satisfies the quality arm's exact pattern/role/domain stratum
+counts using age-normalized citations and the same source-group uniqueness
+constraint. A missing observed prestige signal in any required stratum blocks
+the plan. Both
+arms may naturally overlap: forcing disjoint arms would change the estimand by
+discarding sources that both policies genuinely choose. The overlap is reported
+and can be used in a predeclared per-protocol sensitivity analysis, while the
+intention-to-select contrast preserves it.
+
+Planning, exact owner approval, deterministic selection, and replay are four
+separate artifacts. They authorize neither source-body access nor treatment
+materialization, model/API calls, human review, GPU work, or experiment launch.
+The CLI chain is `reference-selection-plan` → `reference-selection-approve` →
+`reference-selection-freeze` → `reference-selection-inspect`.
 
 ### H1: abstraction beyond retrieval
 
@@ -175,7 +201,10 @@ quality-admitted source set fixed, preventing source quality and representation
 effects from being conflated. Decision-gap mining is applied once upstream of
 both H0 arms and cannot use source bodies, arm labels, or downstream outcomes;
 therefore it is a common-pool construction policy rather than an extra
-treatment.
+treatment. The deterministic H0 freeze additionally matches the quality arm's
+decision-pattern × evidence-role × domain strata, uses identical downstream
+protocol hashes and token ceilings, preserves natural cross-arm overlap, and
+fails if the bound mining or source-admission bytes change.
 
 H2b is a separate paired selector contrast, not another reinterpretation of the
 three-arm context. Both selector conditions receive the same frozen broad pool.

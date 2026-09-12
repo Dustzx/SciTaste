@@ -2799,3 +2799,42 @@ Cell-plan schema 1.3 copies both allocation bindings into its own canonical
 hash, and result admission checks them again against the prelaunch contract.
 This establishes identity continuity; it does not authorize source reading,
 asset download, model/API use, GPU work, human review, or experiment execution.
+
+### ADR-092: H0 selects quality and prestige arms from one immutable pool
+
+Status: accepted and executable at planning, approval, deterministic selection,
+replay, and project-surface boundaries; no formal H0 treatment or outcome has
+been produced.
+
+A prose instruction to compare “good” references with “prestigious” references
+does not identify a causal contrast. It permits different candidate pools,
+arbitrary prestige formulas, unmatched domains, unequal context, forced arm
+separation, and post-outcome source replacement. It can also leak citation
+signals into the quality policy or human quality judgments into the prestige
+policy.
+
+SciTaste therefore binds the complete metadata-mined population, its replayed
+report, the source-admission report, and a one-to-one candidate/source identity
+map before selection. The quality selector receives a dedicated view containing
+only content-grounded admission, decision patterns, evidence roles, domains, and
+source groups. It greedily closes registered scientific coverage using a frozen
+hash tie-break. The prestige selector receives a different view containing only
+downstream eligibility, publication year, citation count, balance stratum, and
+source group. It ranks age-normalized citations inside the exact
+decision-pattern × evidence-role × domain quotas induced by the quality
+selection. Required strata without enough observed prestige signals fail
+closed.
+
+The plan also binds the held-out decision set, representation and execution
+protocol hashes, equal sources per arm, and exact per-source and total context
+ceilings. A second artifact records owner approval of that exact plan. The
+report retains both selected lists, both unselected ledgers, strict stratum
+parity, and natural cross-arm overlap. Overlap is not prohibited because doing
+so would alter either policy; it is an observed property of the policy contrast.
+Replay reopens only bounded control JSON, verifies upstream byte and semantic
+hashes, recompiles the mining report, and reproduces the selection.
+
+Generation-as-Content shows the strongest registered comparison state and its
+next gate without converting selection into an effectiveness claim. None of the
+four stages reads raw source bodies, materializes treatments, calls a model,
+recruits reviewers, runs an experiment, or authorizes those actions.
