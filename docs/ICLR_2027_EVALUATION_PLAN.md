@@ -110,7 +110,7 @@ Track C or serve as a bridge study, but cannot be the Track B headline.
 
 Two no-run proposals now materialize this distinction:
 
-- `qwen3vl2b-native-taste-causal-prepilot-v9` uses schema 1.4 and expands to 12 trajectories:
+- `qwen3vl2b-native-taste-causal-prepilot-v10` uses schema 1.4 and expands to 12 trajectories:
   six native conditions × two MLRC objective-task candidates × one seed. It
   binds the same Qwen3-VL-2B checkpoint, GPU lane, implementation commit, and
   condition matrix to every condition; requires two confirmatory no-Taste and
@@ -123,9 +123,10 @@ Two no-run proposals now materialize this distinction:
   declares model effects confounded. Even a complete positive result is
   descriptive external evidence, never a causal Taste or headline result.
 
-Both proposals are unapproved. Native structural implementations and the
-Git-object-qualified fixed-candidate model-selection path now exist, but shared
-model-backed candidate generation, matched/placebo corpus parity, task bytes,
+Both proposals are unapproved. Native structural implementations plus the
+Git-object-qualified bounded candidate-generation and fixed-candidate selection
+path now exist. The production-retrieval corpus qualifier also exists, but no
+formal matched/placebo corpus bytes have been acquired or qualified. Task bytes,
 external adapters, remote checkpoint identity, credentials, and independent
 review remain explicit blockers. Their one-seed matrices are
 feasibility prepilots; formal task and seed counts require a new pilot-informed

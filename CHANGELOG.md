@@ -32,14 +32,17 @@ semantic versioning.
   candidate-set hashes, returned model identity, response hash, attempts, latency,
   cache state, and token/cost telemetry. A Qwen3-VL-2B config and mutation-free dry
   run are available, but no checkpoint was loaded and no GPU/model experiment was
-  executed; open-ended candidate generation and formal corpus parity remain open.
+  executed. Candidate construction was subsequently closed only through the
+  bounded template-concretization path above; formal corpus parity remains open.
 
-- A Git-object-based native-condition preflight now separates static action-path
+- A v1 Git-object-based native-condition preflight separates static action-path
   proof from experiment readiness. It binds the exact Qwen workflow, six-condition
   matrix, backend, checkpoint, controller, workflow, and decision-schema bytes at
   source commit `ddcd3f8...`; verifies the shared fixed-candidate selection path;
-  and fails closed on model candidate generation, real checkpoint execution, and
-  seven explicit matched/placebo corpus-parity dimensions. Its CLI performs no
+  and initially failed closed on model candidate generation, real checkpoint
+  execution, and seven explicit matched/placebo corpus-parity dimensions. The v2
+  preflight now verifies bounded candidate generation while preserving the latter
+  gates. Its CLI performs no
   download, API call, SSH, GPU/model execution, or experiment and can never grant
   launch authority.
 
@@ -49,10 +52,10 @@ semantic versioning.
   are mandatory mechanism diagnostics. Result assessment requires all five
   analyses but determines title eligibility from the two confirmation
   obligations only and reports both populations separately. The current no-run
-  v9 proposal binds every native condition to the exact `3cd9d75...` executable
-  implementation and Git-qualified model-selection preflight; model candidate
-  generation, paired corpora, task assets, remote checkpoint, reviewers, and
-  owner approval remain blocked.
+  v10 proposal binds every native condition to the exact `5bbf716...` executable
+  implementation and v2 candidate-generation/selection preflight; formal paired
+  corpora, task assets, remote checkpoint, reviewers, and owner approval remain
+  blocked.
 
 - Native Scientific Taste conditions are now executable across the complete
   first-party workflow instead of existing only as prelaunch labels. A closed,

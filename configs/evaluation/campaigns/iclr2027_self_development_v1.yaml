@@ -16,7 +16,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 2946cc17ce90f8ccc5ebcefd930af3c02921175025787e1d159c7f3ddc6e12c4
+    sha256: f7a87bfee87627c2cf5f972f3dc508205f514e4ef836d1ad19751210a659abe8
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
@@ -39,11 +39,11 @@ artifacts:
     path: docs/research/data/autoresearch_evaluation_resources_v8.yaml
     sha256: fe125229fa0477b1828b26854dc36f2d68ee23496426021150a3eb22553ca6c6
   - artifact_id: native-taste-causal-proposal
-    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v9.yaml
-    sha256: c4a53b4ca149672b9d1347f32914f9a6b2eacbf7f5fdf22e184fe41cffc345c0
+    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v10.yaml
+    sha256: 475287015ab464aceaf91acb00e2e5d892431b46b35bf8d1a197ee8775b8674d
   - artifact_id: native-condition-path-preflight
-    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml
-    sha256: 180c02987385cd9ec851eee241a948a6b3f1a87b9b24976fc4a4076490d1583d
+    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
@@ -143,8 +143,8 @@ tracks:
     role: native_taste_causal
     state: blocked
     scientific_question: >-
-      With executor, model, task, candidate actions, tools, seed, and budgets
-      fixed, do the complete Taste bundle and matched Taste context improve
+      With executor, model, task, controller-owned candidate templates and
+      admission, tools, seed, and budgets fixed, do the complete Taste bundle and matched Taste context improve
       objective task progress, and what mechanisms do component-only arms suggest?
     primary_endpoint: >-
       Equal-task paired objective progress for two confirmatory Full-versus-Base
@@ -211,7 +211,6 @@ tracks:
       - mlrc-license-policy
       - gpu-host-inventory
     blocker_codes:
-      - native-controls:model-candidate-generation-not-attested
       - taste-corpora:paired-qualification-not-complete
       - task-assets:not-acquired
       - held-out-audit:not-complete
@@ -375,17 +374,16 @@ stages:
     external_actions: []
     owner_approval_required: false
     blocker_codes:
-      - native-controls:model-candidate-generation-not-attested
       - taste-corpora:paired-qualification-not-complete
     completion_artifact_ids:
       - native-taste-causal-proposal
       - native-condition-path-preflight
     next_decision: >-
-      The six structural policies and shared fixed-candidate model-selection path
-      are bound. Implement one shared model-backed candidate generator and qualify
-      matched/placebo corpora for stage, role, case count, retrieval count, token,
-      provenance, curation, and outcome-information parity before clearing this
-      stage.
+      The six structural policies plus bounded candidate generation and
+      fixed-candidate selection are Git-bound. Acquire, abstract, and qualify
+      task-specific matched/placebo corpora for stage, role, case count,
+      retrieval count, token, provenance, curation, and outcome-information
+      parity before clearing this stage.
 
   - stage_id: qualify-best-native-adapters
     kind: runtime_preflight

@@ -243,19 +243,20 @@ All six profiles complete deterministic offline structural acceptance and fail
 closed on config or library drift. An opt-in Qwen3-VL-2B preference binding now
 routes every non-trivial fixed-candidate decision through one shared backend and
 records exact request, context, candidate-set, response, model, and usage identity.
-The model cannot expand the controller-owned candidate set, bypass budget
-feasibility, or silently fall back, and no checkpoint is loaded without explicit
-live-model authority. This closes the model-backed *selection* implementation,
-not the empirical gate: open-ended candidate generation remains scenario-bound,
-the path has not received a real GPU preflight, and the seed library is not a
-frozen formal matched/placebo corpus. A schema-v1.4 prelaunch proposal binds all six real
-implementation references at commit `7b82eb5...`, retains Full--Base and
+The model cannot expand the controller-owned candidate-template envelope, bypass
+budget feasibility, or silently fall back, and no checkpoint is loaded without
+explicit live-model authority. Bounded model-backed candidate concretization and
+fixed-candidate selection are now implemented and Git-object-qualified at
+`8378736...`, but this does not close the empirical gate: the path has not
+received a real GPU preflight, and the seed library is not a frozen formal
+matched/placebo corpus. A schema-v1.4 prelaunch proposal binds all six real
+implementation references at commit `5bbf716...`, retains Full--Base and
 Full--mismatched as the two confirmation obligations, and classifies the three
-component-only contrasts as mandatory mechanism diagnostics. The next empirical
-gate is to implement and attest one shared model-backed candidate-generation path
-and pair the matched/placebo corpora. The fixed-candidate action path is now
-qualified directly from Git objects at `ddcd3f8...`, with model execution still
-pending; assets, remote checkpoint, reviewers, and owner approval remain
+component-only contrasts as mandatory mechanism diagnostics. A local-only
+production-retrieval qualifier now enforces all seven corpus parity dimensions,
+but task-specific matched/placebo corpus acquisition and dual-human abstraction
+remain open. Model execution is still pending; assets, remote checkpoint,
+reviewers, and owner approval remain
 unresolved, so no execution is authorized.
 
 That distinction is now executable policy rather than an addendum alone.
@@ -647,7 +648,7 @@ citation/resource screen and exact adapters/licenses remain open.
   every Stage 14 debate role, and checked again at analysis, outline, and draft.
   These are adapter integrity results, not a completed cell or effectiveness
   evidence; each historical run remains immutable.
-- The evidence-bound v9 protocol passed offline/focused verification but its real
+- The immutable v9 protocol passed offline/focused verification but its real
   attempt stopped before any admitted model token or experiment when the local
   RTX 3090 reported NVIDIA Xid 79 (GPU fallen off the bus). The zero-token
   attempt and 0.023591 allocated GPU-hours remain immutable. Resume is deferred

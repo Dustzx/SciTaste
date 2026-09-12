@@ -1,0 +1,248 @@
+schema_version: "1.4"
+manifest_id: qwen3vl2b-native-taste-causal-prepilot-v10
+protocol_id: native-taste-causal-prepilot-v10
+protocol_version: "10.0"
+study_scope: pilot
+scientific_question: >-
+  With executor, Qwen3-VL-2B checkpoint, task bytes, controller-owned action
+  templates, candidate admission, tools, repair rules, seed, and resource ceilings
+  fixed, does the complete matched and
+  critic-checked Scientific Taste bundle improve objective research progress
+  over no-Taste and a source-disjoint mismatched-Taste placebo, and what
+  mechanisms are suggested by component-only conditions?
+claim_allowed: >-
+  A complete prepilot may establish implementation and measurement feasibility,
+  test isolation of the two confirmatory interventions, report all three
+  component-only mechanism diagnostics, expose failures, and estimate variance
+  and reviewer burden for a new powered formal proposal.
+claim_forbidden: >-
+  This two-task one-seed prepilot cannot establish the paper title, a formal
+  causal effect, generality beyond the admitted tasks and checkpoint,
+  external-system superiority, marginal effects of individual components, or
+  official peer-review readiness. Component-only contrasts are diagnostics and
+  must not be relabelled as leave-one-out causal ablations.
+primary_endpoint: objective_progress
+automated_judge_role: secondary_diagnostic
+source_commit: 5bbf716fb36afdff68fc02778adfffdc7ff0a0c6
+require_clean_tree: true
+resource_corpus_sha256: 5d590fa7b502cfc67ae03fc0afc0ce4d084bfaeeca4ed2f1cfb297de5d63462f
+systems:
+  - system_id: full-scitaste
+    role: scitaste
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=full-scitaste
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+  - system_id: native-base
+    role: ablation
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=native-base
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+  - system_id: native-knowledge
+    role: ablation
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=native-knowledge
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+  - system_id: native-taste
+    role: ablation
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=native-taste
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+  - system_id: native-critics
+    role: ablation
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=native-critics
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+  - system_id: mismatched-taste-placebo
+    role: ablation
+    implementation_ref: scitaste@5bbf716fb36afdff68fc02778adfffdc7ff0a0c6:full-workflow?condition=mismatched-taste-placebo
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
+    adapter_preflight_sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+tasks:
+  - task_id: perception-temporal-action-loc
+    benchmark_resource_id: mlrc-bench-code
+    split: first-preflight-held-out-objective-candidate
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: verified
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: mixed
+  - task_id: meta-learning
+    benchmark_resource_id: mlrc-bench-code
+    split: first-preflight-held-out-objective-candidate
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: pending
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: mixed
+lanes:
+  - lane_id: qwen3vl2b-native-causal-gpu
+    kind: gpu
+    scientific_role: matched_backbone
+    comparison_regime: matched_backbone
+    model_effects_confounded: false
+    comparison_claim_boundary: >-
+      Full versus Base estimates the complete explicit Taste bundle, while Full
+      versus a stage-, role-, count-, token-, provenance-, curation-, and
+      outcome-information-matched source-disjoint Taste corpus is the second
+      confirmatory contrast. Full versus each component-only condition is a
+      mechanism diagnostic only; no individual component marginal effect may
+      be inferred.
+    system_ids:
+      - full-scitaste
+      - native-base
+      - native-knowledge
+      - native-taste
+      - native-critics
+      - mismatched-taste-placebo
+    task_ids:
+      - perception-temporal-action-loc
+      - meta-learning
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 12
+    api_model: null
+    system_api_models: null
+    gpu_resource:
+      host_alias: 3090-2
+      device_count: 8
+      device_name: NVIDIA GeForce RTX 3090
+      minimum_memory_mb_per_device: 24000
+      checkpoint_id: qwen3-vl-2b-instruct
+      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+      checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+      checkpoint_bytes: 4266653057
+      license_identifier: Apache-2.0
+      local_preflight_status: verified
+      remote_inventory_status: verified
+      remote_inventory_ref: docs/research/data/gpu_host_3090_2_inventory_v1.yaml
+      remote_inventory_sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
+      remote_checkpoint_status: pending
+      remote_checkpoint_attestation_ref: null
+      remote_checkpoint_attestation_sha256: null
+      max_gpu_hours: 5.0
+      max_storage_bytes: 21474836480
+      network_access: false
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 12.0
+retention:
+  output_root: outputs/projects/scitaste-self-development/evaluations/native-taste-causal-prepilot-v10
+  archive_root: archives/scitaste-self-development/evaluations/native-taste-causal-prepilot-v10
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: false
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: >-
+    Task-normalized held-out objective progress, assigning every valid failed
+    intention-to-run cell the preregistered task floor.
+  estimand: >-
+    Equal-task paired mean differences under one fixed Qwen3-VL-2B execution
+    envelope. Full-versus-Base and Full-versus-mismatched-Taste are confirmatory;
+    Full-versus-Knowledge-only, Taste-only, and critics-only are reported as
+    mechanism diagnostics and do not determine the title claim.
+  analysis_unit: One paired task-by-seed trajectory for Full and one exact control.
+  aggregation_method: >-
+    Score each task with its frozen evaluator, normalize only by preregistered
+    constants, retain valid failures at the task floor, pair by task and seed,
+    and report all five contrasts, raw failures, resource use, retrieval counts,
+    model-decision traces, candidate-generation parity, and intervention-isolation
+    checks without favorable-result selection.
+  uncertainty_method: >-
+    This prepilot reports descriptive paired effects and task-level dispersion
+    only; a task-clustered interval and power analysis must be frozen in a new
+    formal proposal without inspecting formal outcomes.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+  claim_admission:
+    estimand_kind: native_taste_causal
+    lane_id: qwen3vl2b-native-causal-gpu
+    candidate_system_id: full-scitaste
+    contrasts:
+      - contrast_id: full-vs-native-base
+        candidate_system_id: full-scitaste
+        comparator_system_id: native-base
+        role: no_taste_control
+        inference_role: confirmatory
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: full-vs-mismatched-taste-placebo
+        candidate_system_id: full-scitaste
+        comparator_system_id: mismatched-taste-placebo
+        role: mismatched_taste_placebo
+        inference_role: confirmatory
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: full-vs-native-knowledge
+        candidate_system_id: full-scitaste
+        comparator_system_id: native-knowledge
+        role: component_only
+        inference_role: mechanism_diagnostic
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: full-vs-native-taste
+        candidate_system_id: full-scitaste
+        comparator_system_id: native-taste
+        role: component_only
+        inference_role: mechanism_diagnostic
+        favorable_direction: higher
+        minimum_effect: 0.0
+      - contrast_id: full-vs-native-critics
+        candidate_system_id: full-scitaste
+        comparator_system_id: native-critics
+        role: component_only
+        inference_role: mechanism_diagnostic
+        favorable_direction: higher
+        minimum_effect: 0.0
+    minimum_distinct_tasks: 2
+    requires_all_planned_units: true
+    failure_handling: include-as-outcome
+integrity:
+  preregistration_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  preregistration_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  task_freeze_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  task_freeze_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  failure_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  failure_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  repair_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  repair_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  leakage_audit_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  leakage_audit_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  judge_protocol_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  judge_protocol_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+launch_order: [qwen3vl2b-native-causal-gpu]
+stop_rules:
+  - Stop before dataset acquisition, SSH, GPU/model use, or experiment execution until exact task bytes, executable environments, remote checkpoint identity, sandbox, independent reviewers, and owner approval pass.
+  - The bounded candidate-generation and fixed-candidate selection path is statically qualified at 8378736; stop until the pinned checkpoint executes that path under explicit approval and every condition preserves the hash-bound action envelope.
+  - Stop unless matched and placebo Taste corpora are paired on stage and decision role, eligible and retrieved case counts, token budget, provenance tier, curation tier, and outcome-information availability.
+  - Stop the matched block on zero matched or placebo retrieval, candidate-set asymmetry, task, scorer, model, tool, repair, seed, budget, or condition-implementation drift; retain every attempt.
+  - Stop on missing or invalid telemetry, artifacts, blinding, intervention-isolation checks, or reviewer attestations; do not relabel invalid evidence as failure.
+  - Stop after one complete twelve-cell block and inspect feasibility, variance, and failures before creating any powered formal proposal.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null
+

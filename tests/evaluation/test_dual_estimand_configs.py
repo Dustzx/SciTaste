@@ -25,7 +25,7 @@ from scitaste.project.models import content_sha256
 
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS_PATH = ROOT / "docs/research/data/autoresearch_evaluation_resources_v8.yaml"
-NATIVE_PATH = ROOT / "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v9.yaml"
+NATIVE_PATH = ROOT / "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v10.yaml"
 EXTERNAL_PATH = ROOT / "configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml"
 AGENT_ADAPTER_PATH = (
     ROOT / "configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml"
@@ -90,9 +90,9 @@ def test_native_taste_prepilot_compiles_as_one_matched_gpu_estimand() -> None:
     )
     assert all(
         system.adapter_preflight_ref
-        == "configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml"
+        == "configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml"
         and system.adapter_preflight_sha256
-        == "180c02987385cd9ec851eee241a948a6b3f1a87b9b24976fc4a4076490d1583d"
+        == "4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3"
         for system in manifest.systems
     )
     assert plan.schema_version == "1.2"

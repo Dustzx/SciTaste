@@ -1877,7 +1877,7 @@ execution.
 ### ADR-061: Claim admission is estimand-specific and failure-inclusive
 
 Status: accepted through schema-1.4 prelaunch and schema-1.2 result assessment;
-the current native v9 and external v7 proposals remain blocked and unapproved.
+the current native v10 and external v7 proposals remain blocked and unapproved.
 
 A comparison lane, cell count, or positive aggregate does not identify the
 scientific claim it may support. SciTaste therefore binds one claim-admission
@@ -2014,8 +2014,8 @@ must be hash-pinned, configuration bytes and expanded semantics enter the workfl
 fingerprint, and execution requires the existing explicit live-model switch before
 project mutation. The dry run reports whether a checkpoint would load while
 remaining mutation-free. This proves the software route and telemetry contract;
-it does not prove checkpoint availability, model quality, candidate-generation
-parity, matched/placebo corpus parity, or experimental effectiveness.
+it does not prove checkpoint availability, model quality, matched/placebo corpus
+qualification, or experimental effectiveness.
 
 ### ADR-065: Native-path readiness is proven from Git objects, not worktree intent
 
@@ -2029,10 +2029,10 @@ exact source commit. Inspection reads those bytes with `git show` and verifies t
 workflow-to-matrix and workflow-to-backend relations plus the provider, model, and
 checkpoint identity chain. A later dirty worktree cannot satisfy an older claim.
 
-Readiness is deliberately factored. The current source commit verifies the shared
-condition runtime, fixed-candidate model selection, identity enforcement, and
-durable telemetry. It separately reports model candidate generation, real
-checkpoint execution, and matched/placebo corpora as unresolved. Corpus parity is
+Readiness is deliberately factored. The current v2 record verifies the shared
+condition runtime, bounded candidate generation, fixed-candidate model selection,
+identity enforcement, and durable telemetry. It separately reports real
+checkpoint execution and matched/placebo corpora as unresolved. Corpus parity is
 a closed seven-dimension contract, and Full versus placebo may differ only in
 source/domain relation. The report contains no launcher and permanently sets
 `authorizes_execution=false`; static path verification cannot substitute for
