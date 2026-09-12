@@ -20,7 +20,7 @@ artifacts:
     sha256: 2cde176e310aff374e94f000de380305e4d14e3bf83177276a629380f3892841
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 4fb6d9bff2e6379cfbc46d364c6161eeeee49fc594752fd500b6fa4fe1a1bce8
+    sha256: f08cc27a737951c921993392afa4c099dbe24ec3b9e858fb5b11155616e947b5
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -56,7 +56,10 @@ artifacts:
     sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
   - artifact_id: taste-corpus-curation-guide
     path: docs/TASTE_CORPUS_CURATION.md
-    sha256: 7cbd992b983c9a54a796b6b84fd43db00e059913db9511fc493cdf929b631aec
+    sha256: 34c365c8ade65c7c35f501fda86e35101b4113ddad9f1ab11fa2ec6e17fd5c3d
+  - artifact_id: grounded-taste-distillation
+    path: docs/GROUNDED_TASTE_DISTILLATION.md
+    sha256: ee496ec3d9a80af43aeb7b081f44df115b4d0ab6ac4023c686ede094c5f61372
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
