@@ -5150,7 +5150,11 @@ def _handle_evaluation_reference_mining(args: argparse.Namespace) -> int:
     print(
         json.dumps(
             {
-                "status": "reference-mining-cohort-frozen",
+                "status": (
+                    "reference-mining-cohort-frozen"
+                    if report.cohort_ready_for_reference_quality
+                    else "reference-mining-incomplete"
+                ),
                 **report.model_dump(mode="json"),
                 "output": str(output),
             },
