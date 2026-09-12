@@ -2424,3 +2424,30 @@ predeclared minimum only makes a separate projection proposal possible. The
 compiler never reads source bodies, recruits reviewers, projects fields, calls a
 model, or authorizes execution. This preserves source selection as a scientific
 design decision rather than a retrieval heuristic optimized on later outcomes.
+
+### ADR-081: Benchmark metadata needs a format-aware read gate before task screening
+
+Status: accepted for YAML/CSV audit planning; real acquired metadata remains
+unopened until the exact plans receive owner approval.
+
+Experiment-task configuration files and benchmark tables cannot use the AAAR
+paper-record identity assumptions. SciTaste therefore separates their first
+read from both task projection and scientific selection. A no-read plan binds
+the approved request, acquisition receipt, exact item inventory, auditor
+implementation, accepted media formats, and independent byte, depth, node,
+path, string, row, and column ceilings. The plan itself grants no content
+authority.
+
+After an exact plan approval and explicit local-read switch, the structured
+metadata auditor accepts only YAML and CSV. YAML parsing rejects anchors,
+aliases, explicit tags, duplicate keys, multiple documents, non-string mapping
+keys, and structural-limit overflow. CSV parsing requires a non-empty unique
+header, consistent row width, and bounded rows, columns, and fields; formula-like
+cells and external locators are counted but never evaluated or followed. Both
+paths first rehash the complete acquired inventory and emit only schema paths,
+headers, counts, and safety facts—not task text or projected values.
+
+Passing this audit means that a separate, source-specific metadata-screen
+proposal may be written. It does not choose tasks, resolve repositories,
+download runtime assets, ingest data, call a model, allocate compute, or establish
+an experimental result.

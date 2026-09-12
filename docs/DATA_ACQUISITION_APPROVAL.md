@@ -87,6 +87,34 @@ review and execution gates. A transaction above decimal 10 GB requires a new
 explicit owner decision, and the policy never creates or expands an unfrozen
 request.
 
+## Structured benchmark metadata
+
+Acquired InnovatorBench YAML and EXP-Bench CSV remain unopened after their
+download receipts. Their format-aware control path first creates a no-read plan:
+
+```bash
+.venv/bin/scitaste evaluation acquisition-metadata-audit-plan \
+  --approved-request '<approved request>' --receipt '<receipt>' \
+  --output '<new plan path>'
+```
+
+The plan binds the exact acquisition chain and explicit byte, structural, and
+table ceilings but keeps local content authority false. Only an explicit owner
+decision can create its approval:
+
+```bash
+.venv/bin/scitaste evaluation acquisition-metadata-audit-approve \
+  --plan '<plan path>' --confirm-plan-sha256 '<exact semantic hash>' \
+  --approved-by '<owner identity>' --approved-at '<timezone-aware ISO-8601>' \
+  --output '<new approval path>'
+```
+
+Execution then requires the approved request, receipt, plan, approval, and a
+separate `--allow-local-content-read` switch. It rehashes the inventory and
+performs bounded YAML/CSV structural checks only. The report may enable a later
+metadata-screen proposal; it cannot project task values, resolve URLs, ingest a
+dataset, execute code, or start an experiment.
+
 This request is valid under either future external comparison design because it
 only acquires starting briefs. It does not resolve whether the experiment uses
 a common backbone or best-native system configurations.

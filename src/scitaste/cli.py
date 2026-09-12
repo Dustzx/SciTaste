@@ -74,8 +74,10 @@ from scitaste.evaluation import (
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     approve_json_content_audit,
+    approve_structured_metadata_audit,
     compile_evaluation_cell_plan,
     inspect_acquired_json_content,
+    inspect_acquired_structured_metadata,
     inspect_acquired_task_cohort,
     inspect_adapter_contract,
     inspect_adapter_preflight,
@@ -116,6 +118,8 @@ from scitaste.evaluation import (
     load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
     load_source_admission_proposal,
+    load_structured_metadata_audit_approval,
+    load_structured_metadata_audit_plan,
     load_task_package_manifest,
     load_task_selection_manifest,
     load_taste_corpus_curation_package,
@@ -123,6 +127,7 @@ from scitaste.evaluation import (
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
     materialize_taste_corpus_pair,
+    plan_structured_metadata_audit,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     publish_project_evaluation,
@@ -142,6 +147,9 @@ from scitaste.evaluation import (
     save_json_content_audit_approval,
     save_json_content_audit_report,
     save_source_admission_report,
+    save_structured_metadata_audit_approval,
+    save_structured_metadata_audit_plan,
+    save_structured_metadata_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
@@ -1746,6 +1754,53 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(content_audit)
     content_audit.set_defaults(handler=_handle_evaluation_content_audit)
+    metadata_audit_plan = evaluation_commands.add_parser(
+        "acquisition-metadata-audit-plan",
+        help="Bind a no-read YAML/CSV structural-audit proposal to acquired bytes",
+    )
+    metadata_audit_plan.add_argument("--approved-request", type=Path, required=True)
+    metadata_audit_plan.add_argument("--receipt", type=Path, required=True)
+    metadata_audit_plan.add_argument("--output", type=Path, required=True)
+    metadata_audit_plan.add_argument(
+        "--maximum-source-bytes-per-item", type=int, default=16 * 1_048_576
+    )
+    metadata_audit_plan.add_argument(
+        "--maximum-total-source-bytes", type=int, default=64 * 1_048_576
+    )
+    metadata_audit_plan.add_argument("--maximum-structure-depth", type=int, default=32)
+    metadata_audit_plan.add_argument("--maximum-nodes-per-item", type=int, default=500_000)
+    metadata_audit_plan.add_argument("--maximum-distinct-paths", type=int, default=10_000)
+    metadata_audit_plan.add_argument("--maximum-string-utf8-bytes", type=int, default=1_048_576)
+    metadata_audit_plan.add_argument("--maximum-csv-rows", type=int, default=1_000_000)
+    metadata_audit_plan.add_argument("--maximum-csv-columns", type=int, default=4_096)
+    _add_log_level_option(metadata_audit_plan)
+    metadata_audit_plan.set_defaults(handler=_handle_evaluation_metadata_audit_plan)
+    metadata_audit_approve = evaluation_commands.add_parser(
+        "acquisition-metadata-audit-approve",
+        help="Authorize only the exact local YAML/CSV structural read in a plan",
+    )
+    metadata_audit_approve.add_argument("--plan", type=Path, required=True)
+    metadata_audit_approve.add_argument("--confirm-plan-sha256", required=True)
+    metadata_audit_approve.add_argument("--approved-by", required=True)
+    metadata_audit_approve.add_argument("--approved-at", required=True)
+    metadata_audit_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(metadata_audit_approve)
+    metadata_audit_approve.set_defaults(handler=_handle_evaluation_metadata_audit_approve)
+    metadata_audit = evaluation_commands.add_parser(
+        "acquisition-metadata-audit",
+        help="Inspect approved acquired YAML/CSV bytes without projection or execution",
+    )
+    metadata_audit.add_argument("--approved-request", type=Path, required=True)
+    metadata_audit.add_argument("--receipt", type=Path, required=True)
+    metadata_audit.add_argument("--plan", type=Path, required=True)
+    metadata_audit.add_argument("--approval", type=Path, required=True)
+    metadata_audit.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_audit.add_argument("--audited-at", required=True)
+    metadata_audit.add_argument("--output", type=Path, required=True)
+    metadata_audit.add_argument("--allow-local-content-read", action="store_true")
+    metadata_audit.add_argument("--require-metadata-screen-ready", action="store_true")
+    _add_log_level_option(metadata_audit)
+    metadata_audit.set_defaults(handler=_handle_evaluation_metadata_audit)
     source_admission = evaluation_commands.add_parser(
         "source-admission",
         help="Compile audited sources through rights, quality, and isolation gates",
@@ -5119,6 +5174,86 @@ def _handle_evaluation_content_audit(args: argparse.Namespace) -> int:
         )
     )
     if args.require_source_admission_ready and not report.ready_for_source_admission_proposal:
+        return 1
+    return 0
+
+
+def _handle_evaluation_metadata_audit_plan(args: argparse.Namespace) -> int:
+    request = load_dataset_acquisition_request(args.approved_request)
+    receipt = load_dataset_acquisition_receipt(args.receipt)
+    plan = plan_structured_metadata_audit(
+        request,
+        receipt,
+        maximum_source_bytes_per_item=args.maximum_source_bytes_per_item,
+        maximum_total_source_bytes=args.maximum_total_source_bytes,
+        maximum_structure_depth=args.maximum_structure_depth,
+        maximum_nodes_per_item=args.maximum_nodes_per_item,
+        maximum_distinct_paths=args.maximum_distinct_paths,
+        maximum_string_utf8_bytes=args.maximum_string_utf8_bytes,
+        maximum_csv_rows=args.maximum_csv_rows,
+        maximum_csv_columns=args.maximum_csv_columns,
+    )
+    output = save_structured_metadata_audit_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "plan_path": str(output),
+                **plan.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_metadata_audit_approve(args: argparse.Namespace) -> int:
+    plan = load_structured_metadata_audit_plan(args.plan)
+    approval = approve_structured_metadata_audit(
+        plan,
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_structured_metadata_audit_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_metadata_audit(args: argparse.Namespace) -> int:
+    request = load_dataset_acquisition_request(args.approved_request)
+    receipt = load_dataset_acquisition_receipt(args.receipt)
+    plan = load_structured_metadata_audit_plan(args.plan)
+    approval = load_structured_metadata_audit_approval(args.approval)
+    report = inspect_acquired_structured_metadata(
+        request,
+        receipt,
+        plan,
+        approval,
+        workspace_root=args.workspace_root,
+        allow_local_content_read=args.allow_local_content_read,
+        audited_at=datetime.fromisoformat(args.audited_at),
+    )
+    output = save_structured_metadata_audit_report(report, args.output)
+    print(
+        json.dumps(
+            {"report_path": str(output), **report.model_dump(mode="json")},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_metadata_screen_ready and not report.ready_for_metadata_screen_proposal:
         return 1
     return 0
 
