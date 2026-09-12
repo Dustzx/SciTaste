@@ -342,6 +342,29 @@ per-system best-native API trajectories respectively; all are blocked. This
 makes the gap between a YAML matrix count and an executable experiment explicit
 without using matrix size as a proxy for rigor.
 
+The model-backed native path has an additional implementation-level preflight:
+
+```bash
+.venv/bin/scitaste evaluation native-condition-preflight \
+  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml \
+  --source-root .
+```
+
+Unlike ordinary local-file inspection, this command reads the evidence bytes
+directly from the pinned Git commit. A dirty or newer worktree therefore cannot
+silently stand in for the claimed implementation. The current report verifies
+the closed six-condition runtime, hard-feasible fixed-candidate selection,
+provider/model/checkpoint identity checks, and durable decision telemetry at
+`ddcd3f8...`. It deliberately remains not experiment-ready: open-ended candidate
+generation is still scenario-defined, the exact checkpoint has not executed this
+path under an approved preflight, and no task-specific matched/placebo corpus pair
+exists. Corpus admission requires equality in stage/decision role, eligible and
+retrieved case counts, context-token budget, provenance tier, curation tier, and
+outcome-information availability; only source/domain relation may differ, and
+zero retrieval invalidates the cell. `--require-experiment-ready` returns nonzero
+while any of these gates remains open. The report always fixes execution authority
+to false.
+
 Static exact-commit translation review has now resolved one ambiguity inside
 that open adapter gate. MLR-Agent and Agent Laboratory are real method
 candidates, but their pinned releases cannot provide an unchanged-core, fully
@@ -404,8 +427,10 @@ protocol.
    baseline and held-out path before a formal objective-progress proposal.
 2. The dual-estimand architecture is materialized as native v8 and external v7
    immutable proposals. The six native structural policies are real and
-   hash-bound; next attest the shared model-backed candidate/action path and
-   matched/placebo corpus parity. Then close task, sandbox, telemetry, artifact,
+   hash-bound; the shared model-backed fixed-candidate action path is now
+   Git-object-qualified at `ddcd3f8...`. Next implement and attest the shared
+   model-backed candidate generator and matched/placebo corpus parity. Then close
+   task, sandbox, telemetry, artifact,
    and failure-resume requirements for only those external adapters whose exact
    static contracts pass. Unavailable systems remain unavailable rather than
    receiving a pseudo-implementation.

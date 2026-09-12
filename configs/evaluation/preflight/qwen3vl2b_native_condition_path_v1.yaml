@@ -1,0 +1,68 @@
+schema_version: "1.0"
+preflight_id: qwen3vl2b-native-condition-path-v1
+authorization_scope: static-git-inspection-only
+source_commit: ddcd3f81c701dc4fc4b70ac4c930ba77144a518f
+workflow_config_ref: configs/workflows/full_qwen3vl2b_native_taste_policy_v1.yaml
+workflow_config_sha256: e83347aa0f2338ca01cdc5176df8e2ffdb4c7176d81858930ed2c79716367c90
+condition_matrix_ref: configs/evaluation/native_taste_condition_matrix_v1.yaml
+condition_matrix_sha256: ab731a384863dc926680e80f5c5192abd1617ab03063b5477837f899e25b7212
+preference_backend_ref: configs/backends/local_transformers_qwen3vl2b_native_taste_v1.yaml
+preference_backend_sha256: 95f32e9469369e0a767a791ebe015f47df272e727989371ec061fc3ac86f3bdf
+expected_provider: local-transformers
+expected_model: Qwen/Qwen3-VL-2B-Instruct@local-snapshot-47f9c0e0
+expected_checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+requirements:
+  condition_runtime:
+    status: verified
+    summary: The Full Workflow constructs one selected condition runtime before project mutation.
+    evidence_ref: src/scitaste/full_workflow.py
+    evidence_sha256: befe62027707955945bfa7c124b03586d9b8319f5ec4875a2b3a7f045a3c6cf2
+  fixed_candidate_selection:
+    status: verified
+    summary: Hard feasibility closes candidates before one shared model preference call.
+    evidence_ref: src/scitaste/taste/controller.py
+    evidence_sha256: 14055dbfbe801e1e272149e66b7f563fc9ba97cea5d7bdc583ccdee41fce811c
+  backend_identity:
+    status: verified
+    summary: Workflow and returned provider/model identities are pinned and checked without fallback.
+    evidence_ref: src/scitaste/full_workflow.py
+    evidence_sha256: befe62027707955945bfa7c124b03586d9b8319f5ec4875a2b3a7f045a3c6cf2
+  decision_telemetry:
+    status: verified
+    summary: Durable decisions bind request, context, candidates, response, model, and usage identities.
+    evidence_ref: src/scitaste/schema/decisions.py
+    evidence_sha256: 1a3383271bb9e29b86cb1d72961a0dda4303cc2233dfea720c4f0c1dcd9b7fdf
+  model_candidate_generation:
+    status: blocked
+    summary: The bound workflow still receives scenario-defined action candidates rather than one shared model generator.
+    evidence_ref: configs/workflows/full_qwen3vl2b_native_taste_policy_v1.yaml
+    evidence_sha256: e83347aa0f2338ca01cdc5176df8e2ffdb4c7176d81858930ed2c79716367c90
+  matched_placebo_corpora:
+    status: blocked
+    summary: The integration seed library is not a task-specific paired matched/placebo corpus.
+    evidence_ref: configs/taste/library_seed_v1.yaml
+    evidence_sha256: 328e51e6c4391c37a08451a0ffbf4c1d462c2723ea75882430244387677036fc
+  checkpoint_execution:
+    status: pending
+    summary: The checkpoint is content-pinned but has not run through this decision path under an approved preflight.
+    evidence_ref: configs/backends/local_transformers_qwen3vl2b_native_taste_v1.yaml
+    evidence_sha256: 95f32e9469369e0a767a791ebe015f47df272e727989371ec061fc3ac86f3bdf
+corpus_pair:
+  matched_relation: task-domain-matched
+  placebo_relation: source-disjoint-domain-mismatched
+  only_permitted_difference: source_domain_relation
+  dimensions:
+    stage_decision_role: blocked
+    eligible_case_count: blocked
+    retrieved_case_count: blocked
+    context_token_budget: blocked
+    provenance_tier: blocked
+    curation_tier: blocked
+    outcome_information_availability: blocked
+  zero_retrieval_invalidates_cell: true
+no_dataset_download: true
+no_api_call: true
+no_ssh: true
+no_gpu_or_model_execution: true
+no_experiment_execution: true
+authorizes_execution: false

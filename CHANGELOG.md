@@ -18,6 +18,15 @@ semantic versioning.
   run are available, but no checkpoint was loaded and no GPU/model experiment was
   executed; open-ended candidate generation and formal corpus parity remain open.
 
+- A Git-object-based native-condition preflight now separates static action-path
+  proof from experiment readiness. It binds the exact Qwen workflow, six-condition
+  matrix, backend, checkpoint, controller, workflow, and decision-schema bytes at
+  source commit `ddcd3f8...`; verifies the shared fixed-candidate selection path;
+  and fails closed on model candidate generation, real checkpoint execution, and
+  seven explicit matched/placebo corpus-parity dimensions. Its CLI performs no
+  download, API call, SSH, GPU/model execution, or experiment and can never grant
+  launch authority.
+
 - Prelaunch schema 1.4 now separates contrast reporting from headline
   inference. Native Full--Base and Full--mismatched-Taste contrasts are
   confirmatory, while Knowledge-only, Taste-only, and critics-only contrasts

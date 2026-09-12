@@ -2016,3 +2016,24 @@ project mutation. The dry run reports whether a checkpoint would load while
 remaining mutation-free. This proves the software route and telemetry contract;
 it does not prove checkpoint availability, model quality, candidate-generation
 parity, matched/placebo corpus parity, or experimental effectiveness.
+
+### ADR-065: Native-path readiness is proven from Git objects, not worktree intent
+
+Status: accepted for no-run preflight; experiment readiness remains false.
+
+An implementation reference and a passing integration test do not by themselves
+show that every experimental condition uses the claimed model path. The native
+condition preflight therefore binds the workflow, condition matrix, preference
+backend, checkpoint, controller, workflow composition, and decision trace to one
+exact source commit. Inspection reads those bytes with `git show` and verifies the
+workflow-to-matrix and workflow-to-backend relations plus the provider, model, and
+checkpoint identity chain. A later dirty worktree cannot satisfy an older claim.
+
+Readiness is deliberately factored. The current source commit verifies the shared
+condition runtime, fixed-candidate model selection, identity enforcement, and
+durable telemetry. It separately reports model candidate generation, real
+checkpoint execution, and matched/placebo corpora as unresolved. Corpus parity is
+a closed seven-dimension contract, and Full versus placebo may differ only in
+source/domain relation. The report contains no launcher and permanently sets
+`authorizes_execution=false`; static path verification cannot substitute for
+owner approval or empirical evidence.

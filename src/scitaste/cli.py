@@ -83,6 +83,7 @@ from scitaste.evaluation import (
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
+    inspect_native_condition_preflight,
     inspect_prelaunch_manifest,
     inspect_task_package,
     inspect_task_selection,
@@ -96,6 +97,7 @@ from scitaste.evaluation import (
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
+    load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
     load_task_package_manifest,
     load_task_selection_manifest,
@@ -1257,6 +1259,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(prelaunch)
     prelaunch.set_defaults(handler=_handle_evaluation_prelaunch)
+    native_condition_preflight = evaluation_commands.add_parser(
+        "native-condition-preflight",
+        help="Inspect the Git-pinned native Taste path and corpus parity without execution",
+    )
+    native_condition_preflight.add_argument("--manifest", type=Path, required=True)
+    native_condition_preflight.add_argument("--source-root", type=Path, default=Path("."))
+    native_condition_preflight.add_argument(
+        "--require-experiment-ready",
+        action="store_true",
+        help="return nonzero until path, checkpoint, generation, and corpus gates all pass",
+    )
+    _add_log_level_option(native_condition_preflight)
+    native_condition_preflight.set_defaults(
+        handler=_handle_evaluation_native_condition_preflight
+    )
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -4091,6 +4108,20 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
     if args.require_ready and (
         not critic_report.ready_for_author_review or not report.execution_authorized
     ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_native_condition_preflight(args: argparse.Namespace) -> int:
+    inspection = load_native_condition_preflight_manifest(args.manifest)
+    report = inspect_native_condition_preflight(inspection, source_root=args.source_root)
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_experiment_ready and not report.ready_for_experiment:
         return 1
     return 0
 

@@ -242,10 +242,11 @@ frozen formal matched/placebo corpus. A schema-v1.4 prelaunch proposal binds all
 implementation references at commit `7b82eb5...`, retains Full--Base and
 Full--mismatched as the two confirmation obligations, and classifies the three
 component-only contrasts as mandatory mechanism diagnostics. The next empirical
-gate is to implement and attest one shared model-backed candidate-generation path,
-statically qualify the shared action path, and pair the matched/placebo corpora;
-assets, remote checkpoint, reviewers, and owner approval remain unresolved, so no
-execution is authorized.
+gate is to implement and attest one shared model-backed candidate-generation path
+and pair the matched/placebo corpora. The fixed-candidate action path is now
+qualified directly from Git objects at `ddcd3f8...`, with model execution still
+pending; assets, remote checkpoint, reviewers, and owner approval remain
+unresolved, so no execution is authorized.
 
 That distinction is now executable policy rather than an addendum alone.
 Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
