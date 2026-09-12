@@ -20,9 +20,12 @@ from scitaste.model_nodes.runtime import (
 )
 from scitaste.project import ProjectRuntime
 from scitaste.taste.semantic_models import (
+    GROUNDED_TASTE_ABSTRACTION_NODE,
     TASTE_ABSTRACTION_NODE,
+    GroundedTasteCaseAbstraction,
     TasteAbstractionInput,
     TasteCaseAbstraction,
+    validate_grounded_abstraction_against_projection,
 )
 
 
@@ -53,38 +56,47 @@ class TasteAbstractionNode(ModelNode[TasteAbstractionInput, TasteCaseAbstraction
         policy: NodePolicy,
     ) -> list[str]:
         del policy
-        reasons: list[str] = []
-        if proposal.case_id != input_data.case_id:
-            reasons.append("Taste abstraction changed the controller-issued case identity")
-        if input_data.outcome_information_availability == "withheld":
-            if proposal.outcome_summary is not None:
-                reasons.append("Taste abstraction invented a withheld outcome")
-        elif proposal.outcome_summary is None:
-            reasons.append("Taste abstraction omitted an available source outcome")
-        if (
-            context.stage != input_data.stage
-            or context.state_snapshot_id != input_data.source_projection_sha256
-            or context.evidence_ids != [input_data.source_id]
-        ):
-            reasons.append("Taste abstraction context differs from its source projection")
-        if context.claim_ids or context.section_ids or context.candidate_actions:
-            reasons.append("Taste abstraction context contains out-of-scope research state")
-        internal_ids = {
-            input_data.source_id,
-            input_data.candidate_id,
-        }
-        visible = (
-            proposal.context_summary,
-            proposal.problem_pattern or "",
-            proposal.evidence_state or "",
-            proposal.reviewer_context or "",
-            *proposal.candidate_actions,
-            proposal.decision_principle,
-            proposal.why_preferred,
-            proposal.outcome_summary or "",
+        return _common_proposal_rejections(proposal, input_data=input_data, context=context)
+
+
+class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTasteCaseAbstraction]):
+    """Distill a source-traceable principle with explicit transfer limits."""
+
+    node_name = GROUNDED_TASTE_ABSTRACTION_NODE
+    prompt_version = "grounded-taste-abstraction-v1"
+    system_instruction = (
+        "Distill one transferable scientific decision precedent from only the supplied canonical "
+        "source projection. Return a closed decision with alternatives, selected action, "
+        "rationale, and outcome only when available. Ground context, evidence, alternatives, "
+        "choice, principle, and any outcome with exact verbatim excerpts and their "
+        "projection-field names. The decision "
+        "principle must contrastively synthesize at least two semantic source roles, including a "
+        "scientific action and evidential, justificatory, limitation, or outcome support. State at "
+        "least two applicability conditions, two failure conditions, a counterfactual probe that "
+        "would change the action, and the source-specific details deliberately discarded during "
+        "transfer. Preserve controller-issued identities internally but never expose source, "
+        "candidate, relation, condition, or held-out-task identity in the abstraction. Do not use "
+        "outside facts, admit memory, call tools, execute actions, or claim that SciTaste works. "
+        "This is an untrusted proposal for independent human review."
+    )
+    input_model = TasteAbstractionInput
+    output_model = GroundedTasteCaseAbstraction
+
+    def _proposal_rejections(
+        self,
+        proposal: GroundedTasteCaseAbstraction,
+        *,
+        input_data: TasteAbstractionInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons = _common_proposal_rejections(
+            proposal,
+            input_data=input_data,
+            context=context,
         )
-        if any(identifier in text for identifier in internal_ids for text in visible):
-            reasons.append("Taste abstraction leaked internal source or candidate identity")
+        reasons.extend(validate_grounded_abstraction_against_projection(proposal, input_data))
         return sorted(set(reasons))
 
 
@@ -96,7 +108,12 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
             TasteAbstractionNode,
             TasteAbstractionInput,
             TasteCaseAbstraction,
-        )
+        ),
+        GROUNDED_TASTE_ABSTRACTION_NODE: ModelNodeRegistration(
+            GroundedTasteAbstractionNode,
+            TasteAbstractionInput,
+            GroundedTasteCaseAbstraction,
+        ),
     }
 
 
@@ -120,7 +137,10 @@ def taste_abstraction_candidate_from_ledger(
         ledger_entry,
         evidence_root=evidence_root,
     )
-    if entry.intent.node_name != TASTE_ABSTRACTION_NODE:
+    if entry.intent.node_name not in {
+        TASTE_ABSTRACTION_NODE,
+        GROUNDED_TASTE_ABSTRACTION_NODE,
+    }:
         raise ValueError("ledger entry is not a Taste abstraction invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste abstraction ledger entry is not accepted")
@@ -133,7 +153,12 @@ def taste_abstraction_candidate_from_ledger(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
     )
-    result_type = NodeResult[TasteCaseAbstraction]
+    output_type = (
+        GroundedTasteCaseAbstraction
+        if entry.intent.node_name == GROUNDED_TASTE_ABSTRACTION_NODE
+        else TasteCaseAbstraction
+    )
+    result_type = NodeResult[output_type]
     result = result_type.model_validate_json(
         json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -152,6 +177,49 @@ def taste_abstraction_candidate_from_ledger(
             sha256=hashlib.sha256(raw).hexdigest(),
         ),
     )
+
+
+def _common_proposal_rejections(
+    proposal: TasteCaseAbstraction,
+    *,
+    input_data: TasteAbstractionInput,
+    context: NodeContext,
+) -> list[str]:
+    reasons: list[str] = []
+    if proposal.case_id != input_data.case_id:
+        reasons.append("Taste abstraction changed the controller-issued case identity")
+    if input_data.outcome_information_availability == "withheld":
+        if proposal.outcome_summary is not None:
+            reasons.append("Taste abstraction invented a withheld outcome")
+    elif proposal.outcome_summary is None:
+        reasons.append("Taste abstraction omitted an available source outcome")
+    if (
+        context.stage != input_data.stage
+        or context.state_snapshot_id != input_data.source_projection_sha256
+        or context.evidence_ids != [input_data.source_id]
+    ):
+        reasons.append("Taste abstraction context differs from its source projection")
+    if context.claim_ids or context.section_ids or context.candidate_actions:
+        reasons.append("Taste abstraction context contains out-of-scope research state")
+    internal_ids = {input_data.source_id, input_data.candidate_id}
+    visible = [
+        proposal.context_summary,
+        proposal.problem_pattern or "",
+        proposal.evidence_state or "",
+        proposal.reviewer_context or "",
+        *proposal.candidate_actions,
+        proposal.decision_principle,
+        proposal.why_preferred,
+        proposal.outcome_summary or "",
+    ]
+    if isinstance(proposal, GroundedTasteCaseAbstraction):
+        visible.extend(proposal.transfer_boundary.applies_when)
+        visible.extend(proposal.transfer_boundary.fails_when)
+        visible.extend(proposal.transfer_boundary.deliberately_discarded_details)
+        visible.append(proposal.transfer_boundary.counterfactual_probe)
+    if any(identifier in text for identifier in internal_ids for text in visible):
+        reasons.append("Taste abstraction leaked internal source or candidate identity")
+    return sorted(set(reasons))
 
 
 def load_verified_taste_abstraction_ledger(
@@ -235,7 +303,10 @@ def save_taste_abstraction_candidate(candidate: Any, path: str | Path) -> Path:
 
 
 __all__ = [
+    "GROUNDED_TASTE_ABSTRACTION_NODE",
     "TASTE_ABSTRACTION_NODE",
+    "GroundedTasteAbstractionNode",
+    "GroundedTasteCaseAbstraction",
     "TasteAbstractionInput",
     "TasteAbstractionNode",
     "TasteCaseAbstraction",

@@ -1,0 +1,15 @@
+# Content-addressed candidate profiles for formal grounded Taste construction.
+# The set does not select a primary provider. Live use still requires a bound
+# runtime config, environment-only credential, owner-approved source projection,
+# resource decision, registered project run, and the caller's --allow-live switch.
+schema_version: "1.0"
+profile_set_id: grounded-taste-abstraction-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_grounded_taste_abstraction_v1.yaml
+    sha256: 036d0152be0d55a587605105c815e4ada58b30955b2196a3c35dd32a66575b19
+    profile_sha256: c8f0e1917875c055976032f8e5f43fd66d94bc2e20a7d8d16e1271bfc606631f
+  - path: profile_deepseek_v41flash_grounded_taste_abstraction_v1.yaml
+    sha256: a8e77f1dd3ac85b81a0e7629d58256316b2b2aa3342fa9ee384753e335e34678
+    profile_sha256: e29277d1ffadf9b1614e3c9b1ca2ac4837dae7270ab09883379b0bbd65e5342d

@@ -11,6 +11,12 @@ human reviews, and conditional adjudication before it can assign retrieval
 eligibility. The pair qualifier below verifies the resulting corpora; it does not
 construct or retroactively trust them.
 
+For formal SciTasteBench v3, both corpora must carry the
+`grounded-dual-human-verified` tier produced by schema-1.2
+[`grounded contrastive distillation`](GROUNDED_TASTE_DISTILLATION.md). Matching a
+weaker legacy curation tier across arms proves parity but is not sufficient for a
+formal H1/H2 mechanism study.
+
 The local-only qualifier is:
 
 ```bash

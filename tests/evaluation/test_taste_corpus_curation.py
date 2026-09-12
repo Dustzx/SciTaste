@@ -95,6 +95,33 @@ def test_dual_human_curation_materializes_a_qualified_pair(tmp_path: Path) -> No
     assert len(case["provenance"][0]["metadata"]["accepted_review_ids"]) == 2
 
 
+def test_formal_grounded_curation_preserves_trace_and_transfer_boundary(
+    tmp_path: Path,
+) -> None:
+    package_path = _write_grounded_package(tmp_path)
+    inspection = load_taste_corpus_curation_package(package_path)
+
+    report = inspect_taste_corpus_curation(inspection, evidence_root=tmp_path)
+    receipt = materialize_taste_corpus_pair(
+        inspection,
+        evidence_root=tmp_path,
+        output_dir="curated/grounded-pair-v1",
+    )
+    matched = json.loads((tmp_path / receipt.matched_corpus_path).read_text(encoding="utf-8"))
+    case = matched["entries"][0]["case"]
+
+    assert report.ready_to_materialize is True
+    assert report.ready_for_formal_taste_method is True
+    assert report.grounded_candidate_count == 2
+    assert report.grounding_traces_verified is True
+    assert report.transfer_boundaries_verified is True
+    assert case["applicability_conditions"]
+    assert case["failure_conditions"]
+    assert case["counterfactual_probe"]
+    assert len(case["taste_grounding_sha256"]) == 64
+    assert case["provenance"][0]["metadata"]["abstraction_contract"] == ("grounded-contrastive-v1")
+
+
 def test_legacy_no_action_package_migrates_to_explicit_processing_semantics(
     tmp_path: Path,
 ) -> None:
@@ -518,6 +545,166 @@ def _write_package(
     package = root / "curation-package.json"
     package.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return package
+
+
+def _write_grounded_package(root: Path) -> Path:
+    package = _write_package(root)
+    payload = json.loads(package.read_text(encoding="utf-8"))
+    payload["schema_version"] = "1.2"
+    payload["curation_tier"] = "grounded-dual-human-verified"
+    candidates: list[dict[str, object]] = []
+    for prefix in ("matched", "placebo"):
+        path = root / f"sources/{prefix}.txt"
+        projection = _grounded_projection(prefix)
+        path.write_text(projection, encoding="utf-8")
+        source = next(
+            item for item in payload["sources"] if item["source_id"] == f"{prefix}-source"
+        )
+        binding = {"path": f"sources/{prefix}.txt", "sha256": _sha(path)}
+        source["artifact"] = binding
+        source["abstraction_input"] = binding
+        candidates.append(_grounded_candidate_payload(prefix))
+    payload["candidates"] = candidates
+    candidate_models = [TasteAbstractionCandidate.model_validate(item) for item in candidates]
+    payload["reviews"] = []
+    for candidate in candidate_models:
+        for number, reviewer in enumerate(("expert-one", "expert-two"), start=1):
+            review = _review_payload(candidate, reviewer, number, verdict="accept")
+            review["grounding_trace_supported"] = True
+            review["transfer_boundary_supported"] = True
+            payload["reviews"].append(review)
+    package.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return package
+
+
+def _grounded_projection(prefix: str) -> str:
+    return json.dumps(
+        {
+            "schema_version": "1.0",
+            "outcome_information_availability": "available",
+            "fields": {
+                "problem": {
+                    "semantic_role": "problem_context",
+                    "value": f"{prefix} uncertainty remained before expensive scale-up.",
+                },
+                "evidence": {
+                    "semantic_role": "evidence",
+                    "value": f"{prefix} aggregate evidence could not separate two explanations.",
+                },
+                "alternatives": {
+                    "semantic_role": "alternative",
+                    "value": "Run an uncertainty probe or commit to the full experiment.",
+                },
+                "action": {
+                    "semantic_role": "scientific_action",
+                    "value": f"The {prefix} study ran the uncertainty probe first.",
+                },
+                "justification": {
+                    "semantic_role": "justification",
+                    "value": "The probe discriminated the explanations at lower cost.",
+                },
+                "outcome": {
+                    "semantic_role": "outcome",
+                    "value": f"The {prefix} probe ruled out one explanation.",
+                },
+            },
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def _grounded_candidate_payload(prefix: str) -> dict[str, object]:
+    candidate = _candidate_payload(prefix)
+    abstraction = candidate["abstraction"]
+    abstraction["grounding"] = [
+        {
+            "target": "context",
+            "supports": [
+                {
+                    "projection_field": "problem",
+                    "verbatim_evidence": "uncertainty remained before expensive scale-up",
+                }
+            ],
+            "derivation": "direct",
+            "rationale": "The decision context is explicit.",
+        },
+        {
+            "target": "evidence_state",
+            "supports": [
+                {
+                    "projection_field": "evidence",
+                    "verbatim_evidence": "could not separate two explanations",
+                }
+            ],
+            "derivation": "direct",
+            "rationale": "The uncertainty is explicit.",
+        },
+        {
+            "target": "alternatives",
+            "supports": [
+                {
+                    "projection_field": "alternatives",
+                    "verbatim_evidence": "Run an uncertainty probe or commit",
+                }
+            ],
+            "derivation": "direct",
+            "rationale": "The alternatives are source-visible.",
+        },
+        {
+            "target": "choice",
+            "supports": [
+                {
+                    "projection_field": "action",
+                    "verbatim_evidence": "ran the uncertainty probe first",
+                }
+            ],
+            "derivation": "direct",
+            "rationale": "The action is source-visible.",
+        },
+        {
+            "target": "decision_principle",
+            "supports": [
+                {
+                    "projection_field": "action",
+                    "verbatim_evidence": "uncertainty probe first",
+                },
+                {
+                    "projection_field": "justification",
+                    "verbatim_evidence": "discriminated the explanations at lower cost",
+                },
+            ],
+            "derivation": "contrastive-synthesis",
+            "rationale": "Action and justification support value-of-information triage.",
+        },
+        {
+            "target": "outcome",
+            "supports": [
+                {
+                    "projection_field": "outcome",
+                    "verbatim_evidence": "ruled out one explanation",
+                }
+            ],
+            "derivation": "direct",
+            "rationale": "The outcome is source-visible.",
+        },
+    ]
+    abstraction["transfer_boundary"] = {
+        "applies_when": [
+            "Candidate explanations predict distinguishable observations.",
+            "A diagnostic costs less than the full experiment.",
+        ],
+        "fails_when": [
+            "The diagnostic cannot distinguish the candidates.",
+            "The diagnostic consumes the entire budget.",
+        ],
+        "counterfactual_probe": "Skip the probe if its result cannot change the action.",
+        "deliberately_discarded_details": [
+            f"The {prefix} dataset identity is not part of the transferable principle."
+        ],
+    }
+    return candidate
 
 
 def _source_payload(

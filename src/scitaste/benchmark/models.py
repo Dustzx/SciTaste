@@ -551,6 +551,18 @@ class BenchmarkSuite(BaseModel):
                     raise ValueError(
                         "formal SciTasteBench v3 cases require qualified mechanism contexts"
                     )
+                if any(
+                    context.curation_tier != "grounded-dual-human-verified"
+                    for case in headline
+                    for context in (
+                        case.mechanism_context.raw_source_rag,
+                        case.mechanism_context.matched_abstracted_taste,
+                        case.mechanism_context.mismatched_taste,
+                    )
+                ):
+                    raise ValueError(
+                        "formal SciTasteBench v3 requires grounded dual-human Taste curation"
+                    )
         return self
 
     @property

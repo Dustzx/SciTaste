@@ -61,7 +61,7 @@ receipt stops at `ready_for_tokenization`; an exact model-tokenizer count and a
 separate abstraction-resource decision are still required before any provider
 call.
 
-One `TasteAbstractionCandidate` converts the source into a closed decision:
+Legacy schema-1.1 `TasteAbstractionCandidate` records convert the source into a closed decision:
 context, evidence state, candidate actions, preferred and rejected actions,
 decision principle, rationale, outcome summary, and confidence. Human-authored
 candidates cannot attach a model trace. Model-assisted candidates must attach the
@@ -73,7 +73,17 @@ between the accepted proposal and reviewed candidate. A scripted or replay
 fixture cannot qualify as historical model assistance. In either case the
 candidate remains untrusted and cannot enter retrieval directly.
 
-The curation package schema is `1.1`. It reports
+Formal schema-1.2 packages use the stronger
+[`grounded-taste-abstraction`](GROUNDED_TASTE_DISTILLATION.md) node. Every
+decision-bearing element names exact projection fields and verbatim support; the
+principle must synthesize a scientific action with a distinct evidential or
+justificatory role. Applicability conditions, failure conditions, a
+decision-changing counterfactual probe, and deliberately discarded source detail
+make transfer scope explicit. These boundaries are retained in the production
+controller context rather than disappearing after curation.
+
+The backward-compatible curation package accepts schema `1.1`, while formal H1/H2
+construction requires schema `1.2` and tier `grounded-dual-human-verified`. It reports
 `historical_model_invocation_count` separately from
 `package_processing_performs_no_external_action`. The former describes how
 candidates were produced; the latter describes only current inspection or
@@ -92,6 +102,10 @@ label are explicit attestations. Each reviewer checks:
 - whether the principle generalizes beyond source wording;
 - whether the decision represents defensible scientific value; and
 - whether outcome information is handled according to the frozen policy.
+
+Schema-1.2 reviewers also attest that the element-level source trace and transfer
+boundary are supported. Formal materialization fails if either attestation is
+absent, even when the legacy five criteria pass.
 
 An acceptance requires every criterion. Agreement needs no adjudicator. A split
 decision requires exactly one distinct adjudicator; two rejections block the
@@ -139,7 +153,7 @@ The machine path is therefore:
 1. content-audit and quality-qualify the complete frozen source population;
 2. freeze and approve one common raw-RAG/abstraction source projection;
 3. tokenize the exact projection under the selected model tokenizer;
-4. construct `TasteAbstractionInput` and run `taste-abstraction` through the
+4. construct `TasteAbstractionInput` and run `grounded-taste-abstraction` through the
    normal project-owned model-node runtime;
 5. compile the accepted ledger entry with
    `scitaste evaluation taste-abstraction-candidate`;

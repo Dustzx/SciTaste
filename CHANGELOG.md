@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Replaced summary-like formal Taste construction with grounded contrastive
+  distillation. A proposal must trace every decision-bearing element to exact
+  source-projection excerpts, synthesize its principle across scientific-action
+  and evidential roles, and state applicability, failure, counterfactual, and
+  discarded-detail boundaries. Schema-1.2 dual-human curation preserves these
+  fields in controller-visible Taste cases, while formal SciTasteBench v3 now
+  rejects legacy curation tiers. Separate GLM-5.3-Flash and DeepSeek-V4.1-Flash
+  profiles allow 32,768 output tokens without granting tool or execution authority.
+
 - Added a pilot-bound clustered power planner for the H1/H2 and H3 title
   families. It powers held-out source groups or tasks, uses a conservative
   bootstrap upper dispersion bound and outcome-independent smallest effect of

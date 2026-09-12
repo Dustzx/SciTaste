@@ -21,6 +21,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.1 — SciTasteBench v2 | in progress | powered source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced matched-model results |
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
 | Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts with conservative dispersion, joint-family power, explicit ceilings, and no seed-based sample inflation |
+| Phase 8.4 — grounded contrastive Taste distillation | done | formal abstractions bind every decision element to exact source excerpts, expose transfer/failure boundaries, and cannot enter SciTasteBench v3 under a legacy curation tier |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -40,6 +41,15 @@ planning bound for the Holm family, and exact sign-flip resolution jointly set
 the fixed independent-unit count. Seeds and repetitions only multiply the
 reported resource cost. A ceiling breach remains an explicit non-ready result,
 and no current real pilot means that no formal sample size is yet claimed.
+
+The title-critical abstraction is no longer admitted as a reviewer-approved
+summary. The formal node now emits a closed decision plus element-level verbatim
+source traces, synthesizes its principle across action and evidential roles, and
+states applicability, failure, counterfactual, and discarded-detail boundaries.
+Schema-1.2 corpus curation requires two humans to attest both trace and transfer
+scope, and formal SciTasteBench v3 refuses the legacy tier. This closes the
+software definition of the Taste treatment; real content, abstractions, reviews,
+and H1/H2 outcomes remain uncollected.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and

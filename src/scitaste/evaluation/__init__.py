@@ -539,6 +539,7 @@ from scitaste.evaluation.task_selection import (
     load_task_selection_manifest,
 )
 from scitaste.evaluation.taste_corpus_curation import (
+    GroundedTasteCaseAbstraction,
     TasteAbstractionCandidate,
     TasteAbstractionOrigin,
     TasteAbstractionReview,
@@ -780,6 +781,7 @@ __all__ = [
     "GpuModelResource",
     "GpuRuntimeInventory",
     "GpuStorageInventory",
+    "GroundedTasteCaseAbstraction",
     "HumanBlindKey",
     "HumanBlindKeyEntry",
     "HumanBlindOpening",

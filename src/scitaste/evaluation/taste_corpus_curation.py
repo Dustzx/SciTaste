@@ -30,9 +30,12 @@ from scitaste.evaluation.taste_corpus_pair import (
     save_taste_corpus_pair_report,
 )
 from scitaste.taste.semantic_models import (
+    GROUNDED_TASTE_ABSTRACTION_NODE,
     TASTE_ABSTRACTION_NODE,
+    GroundedTasteCaseAbstraction,
     TasteAbstractionInput,
     TasteCaseAbstraction,
+    validate_grounded_abstraction_against_projection,
 )
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -102,7 +105,7 @@ class TasteAbstractionCandidate(BaseModel):
     author_id: str = Field(pattern=_ID)
     origin: TasteAbstractionOrigin
     derivation_method: str = Field(min_length=1, max_length=4_000)
-    abstraction: TasteCaseAbstraction
+    abstraction: GroundedTasteCaseAbstraction | TasteCaseAbstraction
     model_trace: TasteCorpusFileBinding | None = None
 
     @model_validator(mode="after")
@@ -134,6 +137,8 @@ class TasteAbstractionReview(BaseModel):
     principle_generalization_supported: bool
     scientific_value_supported: bool
     outcome_handling_supported: bool
+    grounding_trace_supported: bool | None = None
+    transfer_boundary_supported: bool | None = None
     expertise_scope: str = Field(min_length=1, max_length=1_000)
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str = Field(min_length=1, max_length=4_000)
@@ -164,7 +169,7 @@ class TasteCorpusCurationPackage(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.1"] = "1.1"
+    schema_version: Literal["1.1", "1.2"] = "1.1"
     package_id: str = Field(pattern=_ID)
     task_id: str = Field(pattern=_ID)
     task_domain_tags: tuple[str, ...] = Field(min_length=1, max_length=20)
@@ -174,7 +179,10 @@ class TasteCorpusCurationPackage(BaseModel):
         max_length=10_000,
     )
     provenance_tier: str = Field(pattern=_ID)
-    curation_tier: Literal["dual-human-verified"] = "dual-human-verified"
+    curation_tier: Literal[
+        "dual-human-verified",
+        "grounded-dual-human-verified",
+    ] = "dual-human-verified"
     outcome_information_availability: OutcomeInformationAvailability
     source_selection_frozen: Literal[True] = True
     sources: tuple[TasteSourceRecord, ...] = Field(min_length=2, max_length=10_000)
@@ -228,6 +236,16 @@ class TasteCorpusCurationPackage(BaseModel):
             for candidate in self.candidates
         ):
             raise ValueError("model-assisted Taste abstraction requires a bound source projection")
+        if self.schema_version == "1.2":
+            if self.curation_tier != "grounded-dual-human-verified":
+                raise ValueError("Taste curation v1.2 requires the grounded curation tier")
+            if any(
+                not isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
+                for candidate in self.candidates
+            ):
+                raise ValueError("Taste curation v1.2 requires grounded abstractions")
+            if any(source.abstraction_input is None for source in self.sources):
+                raise ValueError("Taste curation v1.2 requires every source projection")
         observed_model_invocations = sum(
             candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED
             for candidate in self.candidates
@@ -277,16 +295,20 @@ class TasteCorpusCurationReport(BaseModel):
     source_count: int = Field(ge=0)
     candidate_count: int = Field(ge=0)
     historical_model_invocation_count: int = Field(ge=0)
+    grounded_candidate_count: int = Field(ge=0)
     primary_review_count: int = Field(ge=0)
     adjudication_count: int = Field(ge=0)
     source_bindings_verified: bool
     quality_evidence_verified: bool
     abstraction_input_bindings_verified: bool
     model_trace_bindings_verified: bool
+    grounding_traces_verified: bool
+    transfer_boundaries_verified: bool
     pair_structure_verified: bool
     dual_human_review_verified: bool
     accepted_candidate_ids: tuple[str, ...]
     ready_to_materialize: bool
+    ready_for_formal_taste_method: bool
     blockers: tuple[TasteCorpusCurationFinding, ...]
     no_external_action_performed: Literal[True] = True
     authorizes_execution: Literal[False] = False
@@ -411,8 +433,12 @@ def inspect_taste_corpus_curation(
     quality_verified = True
     abstraction_inputs_verified = True
     traces_verified = True
+    grounding_verified = True
     source_by_id = {item.source_id: item for item in package.sources}
     candidate_by_id = {item.candidate_id: item for item in package.candidates}
+    grounded_count = sum(
+        isinstance(item.abstraction, GroundedTasteCaseAbstraction) for item in package.candidates
+    )
 
     for source in package.sources:
         if not _binding_matches(
@@ -431,15 +457,53 @@ def inspect_taste_corpus_curation(
             quality_verified = False
     for candidate in package.candidates:
         source = source_by_id[candidate.source_id]
-        if candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED:
-            assert source.abstraction_input is not None
-            if not _binding_matches(
+        needs_projection = candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED or isinstance(
+            candidate.abstraction,
+            GroundedTasteCaseAbstraction,
+        )
+        if needs_projection:
+            if source.abstraction_input is None:
+                abstraction_inputs_verified = False
+                _add(
+                    blockers,
+                    "source:abstraction_input_missing",
+                    source.source_id,
+                )
+            elif not _binding_matches(
                 source.abstraction_input,
                 root=root,
                 blockers=blockers,
                 owner=f"{source.source_id}:abstraction-input",
             ):
                 abstraction_inputs_verified = False
+        if isinstance(candidate.abstraction, GroundedTasteCaseAbstraction):
+            try:
+                grounding_input = build_taste_abstraction_input(
+                    source,
+                    candidate_id=candidate.candidate_id,
+                    case_id=candidate.abstraction.case_id,
+                    outcome_information_availability=package.outcome_information_availability,
+                    evidence_root=root,
+                )
+            except (OSError, ValueError) as exc:
+                grounding_verified = False
+                _add(
+                    blockers,
+                    "grounding:source_projection_invalid",
+                    f"{candidate.candidate_id}: {exc}",
+                )
+            else:
+                for finding in validate_grounded_abstraction_against_projection(
+                    candidate.abstraction,
+                    grounding_input,
+                ):
+                    grounding_verified = False
+                    _add(
+                        blockers,
+                        "grounding:trace_invalid",
+                        f"{candidate.candidate_id}: {finding}",
+                    )
+        if candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED:
             if not _inspect_model_trace(
                 candidate,
                 source=source,
@@ -454,6 +518,21 @@ def inspect_taste_corpus_curation(
     review_verified = len(accepted) == len(package.candidates) and not any(
         item.code.startswith("review:") for item in blockers
     )
+    all_grounded = grounded_count == len(package.candidates)
+    transfer_verified = all_grounded and all(
+        bool(candidate.abstraction.transfer_boundary.applies_when)
+        and bool(candidate.abstraction.transfer_boundary.fails_when)
+        and bool(candidate.abstraction.transfer_boundary.counterfactual_probe)
+        for candidate in package.candidates
+        if isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
+    )
+    formal_method_ready = (
+        package.schema_version == "1.2"
+        and all_grounded
+        and grounding_verified
+        and transfer_verified
+        and review_verified
+    )
     ready = (
         sources_verified
         and quality_verified
@@ -461,6 +540,7 @@ def inspect_taste_corpus_curation(
         and traces_verified
         and pair_structure
         and review_verified
+        and (formal_method_ready if package.schema_version == "1.2" else True)
         and not blockers
     )
     return TasteCorpusCurationReport(
@@ -469,6 +549,7 @@ def inspect_taste_corpus_curation(
         source_count=len(package.sources),
         candidate_count=len(package.candidates),
         historical_model_invocation_count=package.historical_model_invocation_count,
+        grounded_candidate_count=grounded_count,
         primary_review_count=sum(
             item.role is TasteAbstractionReviewRole.PRIMARY for item in package.reviews
         ),
@@ -479,10 +560,13 @@ def inspect_taste_corpus_curation(
         quality_evidence_verified=quality_verified,
         abstraction_input_bindings_verified=abstraction_inputs_verified,
         model_trace_bindings_verified=traces_verified,
+        grounding_traces_verified=all_grounded and grounding_verified,
+        transfer_boundaries_verified=transfer_verified,
         pair_structure_verified=pair_structure,
         dual_human_review_verified=review_verified,
         accepted_candidate_ids=tuple(sorted(accepted)),
         ready_to_materialize=ready,
+        ready_for_formal_taste_method=formal_method_ready and ready,
         blockers=tuple(blockers),
     )
 
@@ -714,6 +798,16 @@ def _inspect_reviews(
         expected_hash = candidate.semantic_sha256
         if any(item.candidate_sha256 != expected_hash for item in reviews):
             _add(blockers, "review:candidate_hash_mismatch", candidate_id)
+        if package.schema_version == "1.2" and any(
+            item.grounding_trace_supported is not True
+            or item.transfer_boundary_supported is not True
+            for item in reviews
+        ):
+            _add(
+                blockers,
+                "review:grounding_or_transfer_not_supported",
+                candidate_id,
+            )
         reviewer_ids = [item.reviewer_id for item in reviews]
         if len(reviewer_ids) != len(set(reviewer_ids)):
             _add(blockers, "review:reviewer_reused", candidate_id)
@@ -751,6 +845,17 @@ def _compile_entry(
     reviews: dict[str, list[TasteAbstractionReview]],
 ) -> TasteCorpusEntry:
     abstraction = candidate.abstraction
+    grounded = abstraction if isinstance(abstraction, GroundedTasteCaseAbstraction) else None
+    grounding_sha256 = (
+        _canonical_sha256(
+            {
+                "grounding": [item.model_dump(mode="json") for item in grounded.grounding],
+                "transfer_boundary": grounded.transfer_boundary.model_dump(mode="json"),
+            }
+        )
+        if grounded is not None
+        else None
+    )
     accepted_reviews = sorted(
         item.review_id
         for item in reviews[candidate.candidate_id]
@@ -782,6 +887,18 @@ def _compile_entry(
             "quality_tier": source.quality_tier,
             "quality_rationale": source.quality_rationale,
             "curation_package_id": package.package_id,
+            "abstraction_contract": (
+                "grounded-contrastive-v1" if grounded is not None else "legacy-summary-v1"
+            ),
+            "taste_grounding_sha256": grounding_sha256,
+            "grounding_targets": (
+                [item.target.value for item in grounded.grounding] if grounded is not None else []
+            ),
+            "deliberately_discarded_details": (
+                list(grounded.transfer_boundary.deliberately_discarded_details)
+                if grounded is not None
+                else []
+            ),
         },
     )
     case = TasteCase(
@@ -796,12 +913,26 @@ def _compile_entry(
         rejected_actions=list(abstraction.rejected_actions),
         decision_principle=abstraction.decision_principle,
         why_preferred=abstraction.why_preferred,
+        applicability_conditions=(
+            list(grounded.transfer_boundary.applies_when) if grounded is not None else []
+        ),
+        failure_conditions=(
+            list(grounded.transfer_boundary.fails_when) if grounded is not None else []
+        ),
+        counterfactual_probe=(
+            grounded.transfer_boundary.counterfactual_probe if grounded is not None else None
+        ),
+        taste_grounding_sha256=grounding_sha256,
         outcome_summary=abstraction.outcome_summary,
         provenance=[provenance],
         confidence=abstraction.confidence,
         domain_tags=list(source.domain_tags),
         label_basis="dual_human_verified_external_source",
-        extractor_version="scitaste-taste-abstraction-v1",
+        extractor_version=(
+            "scitaste-grounded-taste-abstraction-v1"
+            if grounded is not None
+            else "scitaste-taste-abstraction-v1"
+        ),
         human_verified=True,
         retrieval_eligible=True,
     )
@@ -863,6 +994,7 @@ def _inspect_model_trace(
     from scitaste.model_nodes.models import NodeResult, NodeResultStatus
     from scitaste.model_nodes.runtime import RuntimeBackendMode, RuntimeOutcome
     from scitaste.taste.semantic import (
+        GroundedTasteAbstractionNode,
         TasteAbstractionNode,
         load_verified_taste_abstraction_ledger,
     )
@@ -884,7 +1016,12 @@ def _inspect_model_trace(
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         _add(blockers, "model_trace:not_accepted", candidate.candidate_id)
         return False
-    if entry.intent.node_name != TASTE_ABSTRACTION_NODE:
+    expected_node_name = (
+        GROUNDED_TASTE_ABSTRACTION_NODE
+        if isinstance(candidate.abstraction, GroundedTasteCaseAbstraction)
+        else TASTE_ABSTRACTION_NODE
+    )
+    if entry.intent.node_name != expected_node_name:
         _add(blockers, "model_trace:wrong_node", candidate.candidate_id)
     if (
         entry.intent.backend_mode is not RuntimeBackendMode.LIVE
@@ -933,7 +1070,17 @@ def _inspect_model_trace(
     ):
         _add(blockers, "model_trace:authority_not_empty", candidate.candidate_id)
 
-    result_type = NodeResult[TasteCaseAbstraction]
+    output_type = (
+        GroundedTasteCaseAbstraction
+        if expected_node_name == GROUNDED_TASTE_ABSTRACTION_NODE
+        else TasteCaseAbstraction
+    )
+    node_type = (
+        GroundedTasteAbstractionNode
+        if expected_node_name == GROUNDED_TASTE_ABSTRACTION_NODE
+        else TasteAbstractionNode
+    )
+    result_type = NodeResult[output_type]
     try:
         result = result_type.model_validate_json(
             json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
@@ -944,7 +1091,7 @@ def _inspect_model_trace(
         return False
     if (
         result.status is not NodeResultStatus.ACCEPTED
-        or result.node_name != TASTE_ABSTRACTION_NODE
+        or result.node_name != expected_node_name
         or result.policy_id != entry.intent.policy.policy_id
         or result.proposal != candidate.abstraction
         or result.request.input_payload
@@ -952,10 +1099,10 @@ def _inspect_model_trace(
             "context": context.model_dump(mode="json"),
             "input": node_input.model_dump(mode="json"),
         }
-        or result.request.node_name != TASTE_ABSTRACTION_NODE
-        or result.request.prompt_version != TasteAbstractionNode.prompt_version
-        or result.request.system_instruction != TasteAbstractionNode.system_instruction
-        or result.request.output_schema != TasteCaseAbstraction.model_json_schema(mode="validation")
+        or result.request.node_name != expected_node_name
+        or result.request.prompt_version != node_type.prompt_version
+        or result.request.system_instruction != node_type.system_instruction
+        or result.request.output_schema != output_type.model_json_schema(mode="validation")
         or result.request.fingerprint != entry.request_fingerprint
         or result.request.fingerprint != entry.intent.expected_request_fingerprint
         or result.request.policy_fingerprint != entry.intent.policy.fingerprint
@@ -1046,6 +1193,7 @@ def _add(
 
 
 __all__ = [
+    "GroundedTasteCaseAbstraction",
     "TasteAbstractionCandidate",
     "TasteAbstractionOrigin",
     "TasteAbstractionReview",

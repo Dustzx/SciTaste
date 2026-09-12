@@ -54,6 +54,10 @@ class TasteCase(LibraryModel):
     rejected_actions: list[str] = Field(default_factory=list)
     decision_principle: str = Field(min_length=1)
     why_preferred: str = Field(min_length=1)
+    applicability_conditions: list[str] = Field(default_factory=list)
+    failure_conditions: list[str] = Field(default_factory=list)
+    counterfactual_probe: str | None = None
+    taste_grounding_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     outcome_summary: str | None = None
     provenance: list[ProvenanceRecord] = Field(min_length=1)
     confidence: float = Field(ge=0.0, le=1.0)
@@ -81,4 +85,13 @@ class TasteCase(LibraryModel):
         candidates = info.data.get("candidate_actions", [])
         if candidates and value not in candidates:
             raise ValueError("preferred_action must belong to candidate_actions")
+        return value
+
+    @field_validator("applicability_conditions", "failure_conditions")
+    @classmethod
+    def transfer_boundaries_are_bounded(cls, value: list[str]) -> list[str]:
+        if len(value) > 20 or any(not item.strip() or len(item) > 4_000 for item in value):
+            raise ValueError("Taste transfer-boundary items must be bounded non-empty strings")
+        if len(value) != len(set(item.casefold() for item in value)):
+            raise ValueError("Taste transfer-boundary items must be unique")
         return value

@@ -40,16 +40,25 @@ from scitaste.taste.memory import (
 )
 from scitaste.taste.retriever import TasteDomainRelation, retrieve_taste_cases
 from scitaste.taste.semantic_models import (
+    GROUNDED_TASTE_ABSTRACTION_NODE,
     TASTE_ABSTRACTION_NODE,
+    GroundedTasteCaseAbstraction,
     TasteAbstractionInput,
     TasteCaseAbstraction,
+    TasteGroundingClaim,
+    TasteGroundingSupport,
+    TasteGroundingTarget,
+    TasteTransferBoundary,
+    validate_grounded_abstraction_against_projection,
 )
 from scitaste.taste.utility import UtilityPolicy
 
 __all__ = [
+    "GROUNDED_TASTE_ABSTRACTION_NODE",
     "TASTE_ABSTRACTION_NODE",
     "CandidateGenerationAdmissionError",
     "CandidateGenerationResult",
+    "GroundedTasteCaseAbstraction",
     "NativeConditionComponents",
     "NativeConditionMatrix",
     "NativeConditionMatrixInspection",
@@ -65,6 +74,9 @@ __all__ = [
     "TasteCriticDimension",
     "TasteCriticFinding",
     "TasteDomainRelation",
+    "TasteGroundingClaim",
+    "TasteGroundingSupport",
+    "TasteGroundingTarget",
     "TasteMemory",
     "TasteMemoryAdmission",
     "TasteMemoryAdmissionFinding",
@@ -75,6 +87,7 @@ __all__ = [
     "TasteMemoryReviewVerdict",
     "TasteMode",
     "TasteOutcomeEvidence",
+    "TasteTransferBoundary",
     "UtilityPolicy",
     "build_native_condition_runtime",
     "concretize_candidate_actions",
@@ -84,4 +97,5 @@ __all__ = [
     "retrieve_taste_cases",
     "save_taste_memory_admission_report",
     "taste_case_sha256",
+    "validate_grounded_abstraction_against_projection",
 ]

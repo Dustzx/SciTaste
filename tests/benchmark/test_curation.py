@@ -134,7 +134,7 @@ def _reference_context(
         observed_token_count=32,
         truncation_policy="source-balanced",
         provenance_tier="peer-reviewed",
-        curation_tier="dual-human",
+        curation_tier="grounded-dual-human-verified",
         outcome_information_availability="withheld",
     )
 

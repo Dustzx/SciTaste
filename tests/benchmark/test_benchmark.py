@@ -67,7 +67,7 @@ def _treatment_context(
         observed_token_count=32,
         truncation_policy="source-balanced",
         provenance_tier="peer-reviewed",
-        curation_tier="dual-human",
+        curation_tier="grounded-dual-human-verified",
         outcome_information_availability="withheld",
     )
 
@@ -333,6 +333,12 @@ def test_formal_v3_requires_only_the_powered_mechanism_matrix() -> None:
     assert BenchmarkCondition.FULL_SCITASTE not in suite.conditions
     assert BenchmarkCondition.KNOWLEDGE_RAG not in suite.conditions
     assert len(suite.cases) == 120
+
+    legacy = suite.model_dump(mode="json")
+    for arm in ("raw_source_rag", "matched_abstracted_taste", "mismatched_taste"):
+        legacy["cases"][0]["mechanism_context"][arm]["curation_tier"] = "dual-human"
+    with pytest.raises(ValidationError, match="requires grounded dual-human"):
+        BenchmarkSuite.model_validate(legacy)
 
 
 def test_suite_hash_canonicalizes_unordered_transfer_axes() -> None:

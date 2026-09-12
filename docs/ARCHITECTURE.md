@@ -2561,3 +2561,30 @@ ceiling, the plan remains non-ready rather than substituting more seeds or
 dropping a confirmatory contrast. Formal sample size is fixed before outcomes;
 the planner authorizes no optional stopping, execution, model/API/GPU use, or
 human recruitment.
+
+### ADR-086: Formal Taste is grounded contrastive distillation, not a reviewed summary
+
+Status: accepted and executable at the construction boundary; no real source has
+yet produced a formal grounded abstraction.
+
+A binary source-fidelity review of a fluent decision summary is too weak to
+identify the Scientific Taste intervention. It cannot show which source evidence
+supports each element, distinguish a contrastive decision principle from generic
+advice, or state when transfer should fail.
+
+SciTaste therefore keeps the legacy abstraction readable but requires a stronger
+schema for formal work. `grounded-taste-abstraction` traces context, evidence,
+alternatives, choice, principle, and any available outcome to exact verbatim
+excerpts in the canonical source projection. Deterministic admission checks those
+excerpts and requires the principle to synthesize a scientific-action role with
+a distinct evidence, justification, limitation, or outcome role. The proposal
+also names applicability and failure conditions, a counterfactual that would
+change the action, and discarded source-specific details.
+
+Schema-1.2 corpus curation requires every candidate and source projection to use
+this contract and adds two independent-review attestations for grounding and
+transfer scope. Materialized Taste cases preserve the boundary in the controller
+context and bind a grounding hash in provenance. Formal SciTasteBench v3 rejects
+any weaker curation tier, so a legacy reviewed summary cannot silently enter H1
+or H2. This gate proves treatment construction only; usefulness remains a powered
+blinded outcome question.

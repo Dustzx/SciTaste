@@ -43,7 +43,7 @@ but cannot identify a causal Taste effect when systems use different models.
 ### H1: abstraction beyond retrieval
 
 Given the same source papers, source-quality tier, retrieval query, and context
-budget, a compact source-faithful Taste abstraction improves expert-aligned
+budget, a compact source-faithful grounded contrastive Taste abstraction improves expert-aligned
 scientific action selection over raw excerpt RAG.
 
 Primary contrast: `abstracted-matched-taste` versus `raw-source-rag`.
@@ -235,7 +235,8 @@ result:
 7. obtain exact owner approval for the resulting model, data, task count, cost,
    GPU/API allocation, and human-review burden.
 
-The source-to-Taste compiler, corpus parity checks, immutable failure evidence,
+The source-to-Taste compiler, element-level grounding and transfer-boundary gate,
+corpus parity checks, immutable failure evidence,
 and condition binding already cover items 2--4 at the software-contract level.
 They still lack real source/review bytes and empirical execution.
 
