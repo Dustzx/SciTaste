@@ -109,6 +109,7 @@ from scitaste.evaluation import (
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_clustered_power_request,
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
     load_dataset_license_policy,
@@ -144,6 +145,7 @@ from scitaste.evaluation import (
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
+    plan_clustered_power,
     plan_structured_metadata_audit,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
@@ -152,6 +154,7 @@ from scitaste.evaluation import (
     run_live_direct_agent,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
+    save_clustered_power_report,
     save_completed_objective_result_set,
     save_dataset_acquisition_request,
     save_dataset_archive_qualification_report,
@@ -1565,6 +1568,20 @@ def build_parser() -> argparse.ArgumentParser:
     human_preference_analysis.add_argument("--output", type=Path, required=True)
     _add_log_level_option(human_preference_analysis)
     human_preference_analysis.set_defaults(handler=_handle_evaluation_human_preference_analyze)
+    clustered_power = evaluation_commands.add_parser(
+        "clustered-power-plan",
+        help="Derive fixed H1/H2 or H3 formal units from an excluded pilot report",
+    )
+    clustered_power.add_argument("--request", type=Path, required=True)
+    clustered_power.add_argument("--evidence-root", type=Path, default=Path("."))
+    clustered_power.add_argument("--output", type=Path, required=True)
+    clustered_power.add_argument(
+        "--require-within-ceiling",
+        action="store_true",
+        help="return nonzero if the powered independent-unit count exceeds the ceiling",
+    )
+    _add_log_level_option(clustered_power)
+    clustered_power.set_defaults(handler=_handle_evaluation_clustered_power)
     taste_abstraction_candidate = evaluation_commands.add_parser(
         "taste-abstraction-candidate",
         help="Compile one accepted Taste abstraction ledger entry for human review",
@@ -5026,6 +5043,27 @@ def _handle_evaluation_human_preference_analyze(args: argparse.Namespace) -> int
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_clustered_power(args: argparse.Namespace) -> int:
+    inspection = load_clustered_power_request(args.request)
+    report = plan_clustered_power(inspection, evidence_root=args.evidence_root)
+    output = save_clustered_power_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "request_path": str(inspection.path),
+                "request_file_sha256": inspection.file_sha256,
+                "report_path": str(output),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_within_ceiling and not report.ready_for_formal_sample_size_freeze:
+        return 1
     return 0
 
 

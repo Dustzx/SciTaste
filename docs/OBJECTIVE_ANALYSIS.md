@@ -57,3 +57,7 @@ formal measurements. A new formal prelaunch manifest must bind the objective
 contract, powered task count, frozen source commit, exact task assets, model
 identity, and approved resource budget before any effectiveness claim is
 eligible.
+The excluded H3 pilot report feeds the separate
+[`CLUSTERED_POWER_ANALYSIS.md`](CLUSTERED_POWER_ANALYSIS.md) planner. That path
+powers independent held-out tasks and records seed/repetition blocks only in the
+resource count.

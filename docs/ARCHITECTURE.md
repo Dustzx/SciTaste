@@ -2534,3 +2534,30 @@ If the pilot shows material crossed-reviewer dependence, a new formal contract
 must name a suitable crossed-effects estimator; post-unblinding estimator changes
 are forbidden. Analysis performs no recruitment, model/API call, GPU work, or
 experiment and cannot turn pilot outcomes into formal evidence.
+
+### ADR-085: Formal power belongs to independent scientific units, not cells
+
+Status: accepted and executable for excluded pilot reports; no formal sample
+size has been established.
+
+Counting task/seed/repetition cells as independent would make a convenient
+compute budget look like broader scientific evidence. Choosing the observed
+pilot effect as the powered target would additionally shrink the formal study
+after a lucky pilot. Both behaviors are prohibited.
+
+SciTaste now accepts only a self-hashed pilot H1/H2 or H3 analysis report as the
+dispersion source. H1/H2 uses held-out source groups and H3 uses held-out tasks.
+The effect target is a separately justified smallest effect of interest, never
+the pilot mean. Planning dispersion is the maximum of the observed standard
+deviation, a frozen upper bootstrap percentile, and a justified nonzero floor.
+A Bonferroni bound supplies conservative joint-family planning for the formal
+Holm procedure, and the exact sign-flip p-value resolution supplies an
+additional finite-sample floor.
+
+The resulting report exposes independent units separately from generation
+trajectories and human judgments. Repetitions may improve reliability but only
+increase the cost projection. If the recommended units exceed the declared
+ceiling, the plan remains non-ready rather than substituting more seeds or
+dropping a confirmatory contrast. Formal sample size is fixed before outcomes;
+the planner authorizes no optional stopping, execution, model/API/GPU use, or
+human recruitment.

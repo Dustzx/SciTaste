@@ -37,3 +37,6 @@ pilot and before formal outcomes. If pilot diagnostics show that repeated
 reviewer effects materially dominate despite randomized X/Y order, the formal
 study must be frozen under a new contract with an appropriate crossed-effects
 model; SciTaste must not silently switch estimators after opening outcomes.
+The excluded pilot report feeds the separate
+[`CLUSTERED_POWER_ANALYSIS.md`](CLUSTERED_POWER_ANALYSIS.md) planner, which uses
+source-group dispersion but never the observed pilot mean as its effect target.

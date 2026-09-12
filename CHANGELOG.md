@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a pilot-bound clustered power planner for the H1/H2 and H3 title
+  families. It powers held-out source groups or tasks, uses a conservative
+  bootstrap upper dispersion bound and outcome-independent smallest effect of
+  interest, plans joint power under a Bonferroni bound for the Holm family, and
+  reports trajectory/reviewer cost separately. Seeds and repetitions cannot
+  inflate sample size; ceiling violations remain explicit non-ready reports.
+
 - Generation-as-Content now reconciles acquisition decisions by exact request
   hash: a post-download qualification supersedes the older pending gate in the
   active decision surface while retaining both immutable runs as provenance.

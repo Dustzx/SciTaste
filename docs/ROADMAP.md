@@ -20,6 +20,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
 | Phase 8.1 — SciTasteBench v2 | in progress | powered source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced matched-model results |
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
+| Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts with conservative dispersion, joint-family power, explicit ceilings, and no seed-based sample inflation |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -30,6 +31,15 @@ categories. This is an excluded instrument pilot, not a benchmark subset. The
 bytes remain quarantined: download authority did not permit parsing, abstraction,
 labeling, model calls, or GPU work. The next real gate is the exact
 request/receipt-bound local content audit already proposed to the owner.
+
+The pilot-to-formal statistical boundary is now executable without inventing a
+cell matrix. An exact H1/H2 or H3 pilot report supplies only source-group/task
+dispersion; an independently justified smallest effect of interest supplies the
+effect target. A bootstrap upper dispersion bound, nonzero floor, Bonferroni
+planning bound for the Holm family, and exact sign-flip resolution jointly set
+the fixed independent-unit count. Seeds and repetitions only multiply the
+reported resource cost. A ceiling breach remains an explicit non-ready result,
+and no current real pilot means that no formal sample size is yet claimed.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and
