@@ -5,6 +5,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Generation-as-Content now reconciles acquisition decisions by exact request
+  hash: a post-download qualification supersedes the older pending gate in the
+  active decision surface while retaining both immutable runs as provenance.
+  This removes the misleading state where an acquired MLR-Bench cohort appeared
+  simultaneously as “awaiting approval”; unrelated AAAR, InnovatorBench, and
+  EXP-Bench requests remain individually reviewable.
 - High-quality-source admission is now a machine-enforced bridge between the
   acquired-JSON audit and Taste abstraction. A frozen proposal must retain the
   complete audited population and bind independent rights, source-quality, and

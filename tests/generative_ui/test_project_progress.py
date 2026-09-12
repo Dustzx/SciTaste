@@ -384,6 +384,31 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
 
 def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path) -> None:
     runtime, snapshot = _create_runtime(tmp_path)
+    acquisition_run_id = "superseded-acquisition-run"
+    acquisition_artifact = f"runs/{acquisition_run_id}/acquisition/REPORT.json"
+    snapshot = _begin_run(
+        runtime,
+        snapshot,
+        run_id=acquisition_run_id,
+        status="complete",
+        stage_path="acquisition",
+        artifact=acquisition_artifact,
+    )
+    request = load_dataset_acquisition_request(
+        "configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml"
+    ).request
+    for binding in request.evidence:
+        destination = tmp_path / binding.path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(binding.path, destination)
+    acquisition_report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
+    acquisition_report_path = (
+        runtime.projects_root / "progress-project" / acquisition_artifact
+    )
+    acquisition_report_path.write_text(
+        acquisition_report.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
     run_id = "qualification-run"
     artifact = f"runs/{run_id}/acquisition_qualification/REPORT.json"
     _begin_run(
@@ -394,12 +419,19 @@ def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path
         stage_path="acquisition_qualification",
         artifact=artifact,
     )
-    report = _brief_only_cohort_report()
+    report = _brief_only_cohort_report().model_copy(
+        update={
+            "request_id": acquisition_report.request_id,
+            "request_sha256": acquisition_report.request_sha256,
+        }
+    )
     report_path = runtime.projects_root / "progress-project" / artifact
     report_path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
 
     _, data = _progress(runtime)
 
+    assert data["acquisitions"] == []
+    assert data["counts"]["acquisition_requests"] == 0
     assert data["acquisition_qualifications"] == [
         {
             "run_ref_id": data["acquisition_qualifications"][0]["run_ref_id"],

@@ -492,8 +492,6 @@ class WorkspaceSurfaceFactory:
                 "no_dataset_file_created": report.no_dataset_file_created,
                 "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
             }
-        acquisition_rows = list(acquisition_by_request.values())
-
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -547,6 +545,7 @@ class WorkspaceSurfaceFactory:
         dataset_package_rows = list(dataset_package_by_request.values())
 
         qualification_by_selection: dict[str, dict[str, object]] = {}
+        qualified_request_sha256: set[str] = set()
         for run in snapshot.manifest.runs:
             inspected = _acquired_cohort_report_for_run(
                 self._runtime.projects_root / snapshot.project_id,
@@ -555,6 +554,7 @@ class WorkspaceSurfaceFactory:
             if inspected is None:
                 continue
             report, report_file_sha256 = inspected
+            qualified_request_sha256.add(report.request_sha256)
             run_ref = run_refs[run.run_id]
             qualification_by_selection[report.selection_id] = {
                 "run_ref_id": run_ref.evidence_id,
@@ -590,6 +590,11 @@ class WorkspaceSurfaceFactory:
                 "report_file_sha256": report_file_sha256,
             }
         qualification_rows = list(qualification_by_selection.values())
+        acquisition_rows = [
+            item
+            for item in acquisition_by_request.values()
+            if item["request_sha256"] not in qualified_request_sha256
+        ]
 
         benchmark_qualification_by_candidate: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:

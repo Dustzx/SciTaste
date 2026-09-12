@@ -190,6 +190,13 @@ execute a task, call a provider, or use a GPU. This prevents an already
 downloaded prompt collection from looking like an executable benchmark merely
 because its acquisition step completed.
 
+When a qualification binds the exact request SHA-256 of an older acquisition
+gate, the stronger terminal evidence replaces that gate card in the active
+decision list. The immutable request run remains available in history and as
+provenance, but it no longer appears as “awaiting approval” beside proof that the
+same request was already acquired and qualified. Pending requests with different
+hashes remain separate decision cards.
+
 An executable-benchmark qualification is likewise projected only from the
 canonical `runs/<run-id>/benchmark_qualification/REPORT.json` locator of a
 registered run. The receiver revalidates the report's self-hash and exact
