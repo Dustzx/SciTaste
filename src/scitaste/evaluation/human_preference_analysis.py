@@ -74,9 +74,7 @@ class HumanPreferenceAnalysisContract(BaseModel):
         "matched-win-1_tie-0.5_comparator-win-0"
     )
     independent_unit: Literal["held-out-source-group"] = "held-out-source-group"
-    case_aggregation: Literal["mean-reviewers-then-mean-cases"] = (
-        "mean-reviewers-then-mean-cases"
-    )
+    case_aggregation: Literal["mean-reviewers-then-mean-cases"] = "mean-reviewers-then-mean-cases"
     source_group_weighting: Literal["equal"] = "equal"
     minimum_source_groups: int = Field(ge=4, le=500)
     minimum_observed_reviews_per_case: int = Field(default=2, ge=1, le=2)
@@ -88,9 +86,7 @@ class HumanPreferenceAnalysisContract(BaseModel):
     confidence_level: float = Field(default=0.95, gt=0.5, lt=1)
     bootstrap_resamples: int = Field(default=10_000, ge=1_000, le=1_000_000)
     bootstrap_seed: int = Field(default=202710, ge=0, le=2**63 - 1)
-    hypothesis_test: Literal["paired-source-group-sign-flip"] = (
-        "paired-source-group-sign-flip"
-    )
+    hypothesis_test: Literal["paired-source-group-sign-flip"] = "paired-source-group-sign-flip"
     maximum_exact_sign_flip_groups: int = Field(default=20, ge=4, le=24)
     monte_carlo_sign_flips: int = Field(default=100_000, ge=10_000, le=10_000_000)
     multiplicity_method: Literal["holm-over-h1-h2"] = "holm-over-h1-h2"
@@ -105,9 +101,7 @@ class HumanPreferenceAnalysisContract(BaseModel):
             TasteMechanismHypothesis
         ):
             raise ValueError("human preference contract must contain H1 and H2 exactly once")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"contract_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
         if self.contract_sha256 != expected:
             raise ValueError("human preference analysis contract hash mismatch")
         return self
@@ -263,9 +257,7 @@ def analyze_human_preferences(
     if study.preference_analysis_contract is None:
         raise ValueError("human study does not bind a preference analysis contract")
     _require_binding(study.preference_analysis_contract, root, "analysis contract")
-    expected_contract_path = _project_regular_file(
-        root, study.preference_analysis_contract.path
-    )
+    expected_contract_path = _project_regular_file(root, study.preference_analysis_contract.path)
     if contract_inspection.path.resolve(strict=True) != expected_contract_path:
         raise ValueError("human preference analysis contract path differs")
     if contract_inspection.file_sha256 != study.preference_analysis_contract.sha256:
@@ -294,8 +286,7 @@ def analyze_human_preferences(
         raise ValueError("human outcome report is not ready for this study's primary analysis")
     total = len(outcome_report.outcomes)
     missing = sum(
-        item.disposition is not HumanReviewDisposition.COMPLETED
-        for item in outcome_report.outcomes
+        item.disposition is not HumanReviewDisposition.COMPLETED for item in outcome_report.outcomes
     )
     missing_fraction = missing / total
     if missing_fraction > contract.maximum_missing_fraction:
@@ -316,10 +307,7 @@ def analyze_human_preferences(
                 continue
             grouped_cases[(outcome.source_group, outcome.case_id)].append(score)
             reviewer_scores[outcome.reviewer_identity_sha256].append(score)
-        expected_cases = {
-            (item.source_group, item.case_id)
-            for item in outcomes
-        }
+        expected_cases = {(item.source_group, item.case_id) for item in outcomes}
         if set(grouped_cases) != expected_cases:
             absent = sorted(expected_cases - set(grouped_cases))
             raise ValueError(f"human preference case has no observed review: {absent[0]}")
@@ -372,10 +360,7 @@ def analyze_human_preferences(
         }
 
     adjusted = _holm_adjust(
-        {
-            hypothesis.value: values["raw_p_value"]
-            for hypothesis, values in provisional.items()
-        }
+        {hypothesis.value: values["raw_p_value"] for hypothesis, values in provisional.items()}
     )
     hypothesis_results = tuple(
         HumanPreferenceHypothesisResult(
@@ -454,8 +439,7 @@ def _bootstrap_interval(
 ) -> tuple[float, float]:
     generator = random.Random(seed)
     draws = sorted(
-        _mean([values[generator.randrange(len(values))] for _ in values])
-        for _ in range(resamples)
+        _mean([values[generator.randrange(len(values))] for _ in values]) for _ in range(resamples)
     )
     tail = (1 - confidence_level) / 2
     return _quantile(draws, tail), _quantile(draws, 1 - tail)
@@ -470,9 +454,7 @@ def _sign_flip_p_value(
         exceed = 0
         total = 0
         for signs in product((-1.0, 1.0), repeat=len(values)):
-            statistic = _mean(
-                [sign * value for sign, value in zip(signs, values, strict=True)]
-            )
+            statistic = _mean([sign * value for sign, value in zip(signs, values, strict=True)])
             exceed += statistic >= observed - tolerance
             total += 1
         return exceed / total

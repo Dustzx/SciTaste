@@ -103,12 +103,8 @@ class ObjectiveTaskScoreContract(BaseModel):
 
     def normalize(self, raw_score: float) -> float:
         if self.direction is ObjectiveDirection.HIGHER:
-            return (raw_score - self.starting_score) / (
-                self.target_score - self.starting_score
-            )
-        return (self.starting_score - raw_score) / (
-            self.starting_score - self.target_score
-        )
+            return (raw_score - self.starting_score) / (self.target_score - self.starting_score)
+        return (self.starting_score - raw_score) / (self.starting_score - self.target_score)
 
 
 class ObjectiveOutcomeContract(BaseModel):
@@ -146,9 +142,7 @@ class ObjectiveOutcomeContract(BaseModel):
             raise ValueError("objective outcome task IDs must be unique")
         if len(source_groups) != len(set(source_groups)):
             raise ValueError("each held-out task must use a distinct source group")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"contract_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"contract_sha256"}))
         if self.contract_sha256 != expected:
             raise ValueError("objective outcome contract hash mismatch")
         return self
@@ -192,9 +186,7 @@ class ObjectiveCellMeasurement(BaseModel):
     def measurement_is_finite_and_self_hashed(self) -> ObjectiveCellMeasurement:
         if not math.isfinite(self.raw_score):
             raise ValueError("objective cell score must be finite")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"measurement_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"measurement_sha256"}))
         if self.measurement_sha256 != expected:
             raise ValueError("objective cell measurement hash mismatch")
         return self
@@ -232,9 +224,7 @@ class ObjectiveMeasurementSet(BaseModel):
         cell_ids = [item.cell_id for item in self.measurements]
         if len(cell_ids) != len(set(cell_ids)):
             raise ValueError("objective cell measurements must be unique")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"measurement_set_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"measurement_set_sha256"}))
         if self.measurement_set_sha256 != expected:
             raise ValueError("objective measurement-set hash mismatch")
         return self
@@ -431,15 +421,11 @@ def bind_objective_measurement_set(
     )
 
 
-def save_objective_outcome_contract(
-    contract: ObjectiveOutcomeContract, path: str | Path
-) -> Path:
+def save_objective_outcome_contract(contract: ObjectiveOutcomeContract, path: str | Path) -> Path:
     return _atomic_json(path, contract.model_dump(mode="json"), require_absent=True)
 
 
-def save_objective_measurement_set(
-    measurements: ObjectiveMeasurementSet, path: str | Path
-) -> Path:
+def save_objective_measurement_set(measurements: ObjectiveMeasurementSet, path: str | Path) -> Path:
     return _atomic_json(path, measurements.model_dump(mode="json"), require_absent=True)
 
 
@@ -489,8 +475,7 @@ def analyze_objective_outcomes(
         or measurements.evaluation_id != evaluation_id
         or measurements.proposal_sha256 != plan.proposal_sha256
         or measurements.plan_sha256 != plan.plan_sha256
-        or measurements.cell_result_population_sha256
-        != objective_cell_population_sha256(results)
+        or measurements.cell_result_population_sha256 != objective_cell_population_sha256(results)
         or measurements.objective_outcome_contract_sha256 != contract_inspection.file_sha256
     ):
         raise ValueError("objective measurement-set binding differs")
@@ -511,9 +496,7 @@ def analyze_objective_outcomes(
         raise ValueError("objective analysis is missing a claim-lane result record")
     claim_cell_ids = {item.cell_id for item in claim_cells}
     successful_ids = {
-        cell.cell_id
-        for cell in claim_cells
-        if record_by_cell[cell.cell_id].status == "succeeded"
+        cell.cell_id for cell in claim_cells if record_by_cell[cell.cell_id].status == "succeeded"
     }
     measurement_by_cell = {item.cell_id: item for item in measurements.measurements}
     if set(measurement_by_cell) != successful_ids:
@@ -615,10 +598,7 @@ def analyze_objective_outcomes(
         }
     )
     adjusted = _holm_adjust(
-        {
-            item["contrast"].contrast_id: item["raw_p_value"]
-            for item in confirmatory
-        }
+        {item["contrast"].contrast_id: item["raw_p_value"] for item in confirmatory}
     )
 
     comparison_results: list[ObjectiveContrastAnalysis] = []
@@ -795,9 +775,7 @@ def _task_effects(
     comparator_system_id: str,
 ) -> tuple[ObjectiveTaskContrast, ...]:
     selected = [
-        item
-        for item in cells
-        if item.system_id in {candidate_system_id, comparator_system_id}
+        item for item in cells if item.system_id in {candidate_system_id, comparator_system_id}
     ]
     by_identity = {
         (item.system_id, item.task_id, item.seed, item.repetition): item for item in selected
@@ -869,8 +847,7 @@ def _bootstrap_interval(
         raise ValueError("task-clustered bootstrap requires at least two tasks")
     generator = random.Random(seed)
     draws = sorted(
-        _mean([values[generator.randrange(len(values))] for _ in values])
-        for _ in range(resamples)
+        _mean([values[generator.randrange(len(values))] for _ in values]) for _ in range(resamples)
     )
     tail = (1 - confidence_level) / 2
     return _quantile(draws, tail), _quantile(draws, 1 - tail)
@@ -901,10 +878,7 @@ def _sign_flip_p_value(
     exceed = 0
     for _ in range(monte_carlo_samples):
         statistic = _mean(
-            [
-                value if generator.getrandbits(1) else -value
-                for value in centered_favorable_values
-            ]
+            [value if generator.getrandbits(1) else -value for value in centered_favorable_values]
         )
         exceed += statistic >= observed - tolerance
     return (exceed + 1) / (monte_carlo_samples + 1)

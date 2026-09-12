@@ -436,8 +436,7 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
         ),
     )
     assert (
-        acquisition_module._fetch_https_bytes(source_url, 1024, "application/x-yaml")
-        == yaml_body
+        acquisition_module._fetch_https_bytes(source_url, 1024, "application/x-yaml") == yaml_body
     )
 
     monkeypatch.setattr(

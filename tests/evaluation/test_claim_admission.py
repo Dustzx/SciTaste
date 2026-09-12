@@ -939,7 +939,7 @@ def test_objective_analysis_collapses_seed_blocks_before_confirmatory_inference(
         scorer = _artifact(
             root,
             f"evidence/scorers/{task_id}.py",
-            f'# frozen scorer for {task_id}\n',
+            f"# frozen scorer for {task_id}\n",
         )
         task_contracts.append(
             ObjectiveTaskScoreContract(
@@ -974,12 +974,8 @@ def test_objective_analysis_collapses_seed_blocks_before_confirmatory_inference(
     payload["lanes"][0]["seeds"] = [7, 11]
     payload["lanes"][0]["planned_cells"] = 12
     payload["analysis"]["power_analysis_sha256"] = power.sha256
-    payload["analysis"]["objective_outcome_contract_ref"] = (
-        "evidence/objective-contract.json"
-    )
-    payload["analysis"]["objective_outcome_contract_sha256"] = (
-        contract_inspection.file_sha256
-    )
+    payload["analysis"]["objective_outcome_contract_ref"] = "evidence/objective-contract.json"
+    payload["analysis"]["objective_outcome_contract_sha256"] = contract_inspection.file_sha256
     draft = ExperimentPrelaunchManifest.model_validate(payload)
     payload["approval"] = PrelaunchApproval(
         approved=True,

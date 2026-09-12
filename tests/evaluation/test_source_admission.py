@@ -138,9 +138,7 @@ def _entry(
             reviewer_id=f"reviewer-{index}",
             source_content_sha256=content_sha,
             quality_evidence_sha256=quality.sha256,
-            verdict=(
-                SourceAdmissionVerdict.ADMIT if admitted else SourceAdmissionVerdict.REJECT
-            ),
+            verdict=(SourceAdmissionVerdict.ADMIT if admitted else SourceAdmissionVerdict.REJECT),
             scientific_rigor_supported=admitted,
             decision_traceability_supported=admitted,
             transferable_taste_supported=admitted,

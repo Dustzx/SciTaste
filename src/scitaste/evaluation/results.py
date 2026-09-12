@@ -1106,8 +1106,7 @@ def _claim_comparison_status(
             or comparison.observed_block_count != expected_blocks
             or comparison.inference_role
             != (spec.inference_role or ContrastInferenceRole.CONFIRMATORY)
-            or comparison.objective_outcome_contract_sha256
-            != objective_outcome_contract_sha256
+            or comparison.objective_outcome_contract_sha256 != objective_outcome_contract_sha256
         ):
             issues.add(f"analysis:{comparison.comparison_id}:executable-inference-mismatch")
             continue

@@ -237,9 +237,7 @@ def _formal_study(
             ),
             HumanPreferenceHypothesisRule(
                 hypothesis=TasteMechanismHypothesis.H2_TASTE_SPECIFICITY,
-                comparator_condition=(
-                    TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE
-                ),
+                comparator_condition=(TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE),
             ),
         ),
         minimum_source_groups=source_groups,
