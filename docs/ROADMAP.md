@@ -145,14 +145,13 @@ genuinely common backbone or disclose a best-native-system comparison with
 model effects confounded; the choice is an author-level scientific-design
 decision.
 
-DeepSeek's live official model catalog was rechecked on 2026-09-12 and names
-callable ID `deepseek-flash` with version `DeepSeek-V4.1-Flash`. Legacy
-`deepseek-v4-flash` requests are served by V4.1. This confirms v6's identity and
-peak price ceilings, but cannot authorize a study while the task, adapter,
-reviewer, executable-binding, and owner-approval gates remain open. Every live
-run still requires authenticated requested-versus-returned identity evidence.
-The internal-review profile can be used independently because review feedback
-is advisory rather than an experiment result.
+DeepSeek's live official model catalog was rechecked again on 2026-09-12 and now
+names callable ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash`, rather
+than the earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` record. V3 preserves
+both identities instead of rewriting history. Existing V4.1 proposals are now
+historical no-run artifacts and cannot launch until a new proposal binds the
+current identity and an authenticated response. The internal-review profile is
+also blocked until the missing DeepSeek credential is bound.
 
 Shared compute ownership is no longer embedded only in project proposals. A
 secret-free `configs/resources/` catalog now names reusable API models and GPU
@@ -164,15 +163,16 @@ latter remains `reported` until an automated host refresh verifies exact bytes.
 This inventory layer neither reserves capacity nor authorizes work; concurrent
 allocation and usage roll-up remain the next scheduler boundary.
 
-The resource layer now has an explicit hash-indexed v2 topology. Three API
-manifests distinguish the current DeepSeek primary candidate, the pending Zhipu
-robustness candidate, and unavailable-but-preserved Bailian history. Two GPU
-host manifests distinguish the verified local 1×3090 from the reported remote
-8×3090 pool, and a separate checkpoint manifest binds the current local
-Qwen3-VL-2B full-tree hash. `scitaste-self-development` has a typed binding to
-all six roles under `outputs/resources/projects/`. The local hash is
-`47f9c0e0...`, not the `8e95e5f6...` frozen in the older GPU proposal, so the
-formal plan remains blocked against silent checkpoint substitution.
+The resource layer now has an explicit hash-indexed v3 topology. Four API
+entries distinguish current DeepSeek V4 Flash, historical DeepSeek V4.1,
+current GLM-5.3-Flash, and unavailable-but-preserved Bailian history. Two GPU
+hosts distinguish the verified local 1×3090 from a fresh read-only verification
+of the remote 8×3090 pool. Three checkpoint entries bind Qwen3-VL-2B and the
+content-identical local/remote Qwen3.5-4B replicas. A separate discovered-asset
+catalog records 18 local and eight remote paths without treating presence as
+experimental selection; the partial remote Qwen3.5-9B is explicitly blocked.
+The ICLR design remains independent of these assets and must select a model from
+the scientific estimand before any load or run is requested.
 
 The explicit resource audit then closed two operational ambiguities without
 launching work: Zhipu now uses the same `ZAI_API_KEY` binding as every live
@@ -187,6 +187,14 @@ all API/GPU/checkpoint resources into bound, missing, and credential-free sets
 without serializing values. Binding still conveys neither connectivity nor
 experiment authority; it simply removes undocumented operator memory from the
 future launch path.
+
+The resource-independent ICLR evidence strategy is now explicit in
+`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`. It promotes raw-RAG versus abstracted
+Taste, matched versus mismatched Taste, and Full versus Native Base to the
+three title-critical contrasts. A single frontier backbone is frozen before
+outcomes; the second provider is a non-pooled robustness slice, while discovered
+local/remote models remain reproducibility assets. This prevents the available
+8×3090 host or convenient checkpoints from choosing the scientific question.
 
 The first approved benchmark-source acquisition has now completed without
 model or GPU use. Ten MLR-Bench workshop briefs were atomically downloaded from

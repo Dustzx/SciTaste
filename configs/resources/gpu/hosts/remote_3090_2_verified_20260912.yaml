@@ -1,0 +1,24 @@
+schema_version: "1.0"
+resource:
+  kind: gpu_host
+  resource_id: gpu-host-3090-2
+  host_alias: 3090-2
+  location: remote
+  access_profile: operator-managed-ssh
+  connection_alias: 3090-2
+  connection_host: 10.7.33.15
+  connection_port: 22
+  connection_user: ubuntu
+  credential_env: SCITASTE_GPU_3090_2_SSH_PASSWORD
+  remote_forwards:
+    - remote_port: 7891
+      local_host: 127.0.0.1
+      local_port: 7890
+  device_count: 8
+  device_name: NVIDIA GeForce RTX 3090
+  minimum_memory_mb_per_device: 24000
+  baseline_inventory_ref: docs/research/data/gpu_host_3090_2_inventory_v2.yaml
+  baseline_inventory_sha256: 23d90433a11f8b1521cb7dfdf910ceb5158928f8bcf7b1eaf2edb808bee3fa5d
+  baseline_observed_at: 2026-09-12T14:34:17+08:00
+  availability: verified
+  availability_reason: Read-only SSH verified eight idle RTX 3090 devices, 311710777344 storage bytes available, isolation tools, and the exact remote Qwen3.5-4B tree; no workload ran.

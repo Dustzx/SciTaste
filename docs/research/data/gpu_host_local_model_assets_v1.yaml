@@ -1,0 +1,137 @@
+schema_version: "1.0"
+inventory_id: gpu-host-local-model-assets-20260912-v1
+gpu_resource_id: gpu-host-local-3090
+hostname: local
+model_root: /media/good/dxhismyson/weights
+observed_at: 2026-09-12T14:32:06+08:00
+observation_method: read-only-local
+assets:
+  - asset_id: all-minilm-l6-v2-local
+    path_name: all-MiniLM-L6-v2
+    category: embedding-model
+    architecture: BertModel
+    total_regular_file_bytes: 976948668
+    status: discovered-unhashed
+  - asset_id: fea-project-assets-local
+    path_name: FEA
+    category: experiment-project-assets
+    architecture: null
+    total_regular_file_bytes: 34745179042
+    status: non-model-asset
+  - asset_id: fea-reproduction-private-local
+    path_name: FEA_reproduction_sources_private_20260901
+    category: experiment-source-assets
+    architecture: null
+    total_regular_file_bytes: 17726216879
+    status: non-model-asset-private
+  - asset_id: focus-project-assets-local
+    path_name: focus
+    category: experiment-project-assets
+    architecture: null
+    total_regular_file_bytes: 3529298975
+    status: non-model-asset
+  - asset_id: internvl3-5-4b-local
+    path_name: InternVL3_5-4B
+    category: multimodal-generative-model
+    architecture: InternVLChatModel
+    total_regular_file_bytes: 9481141635
+    status: discovered-structurally-complete-unhashed
+  - asset_id: lavit-3b-local
+    path_name: LaViT-3B
+    category: multimodal-generative-model
+    architecture: Qwen2_5_VLForConditionalGeneration
+    total_regular_file_bytes: 15107866431
+    status: discovered-structurally-complete-unhashed
+  - asset_id: llava-1-5-7b-hf-local
+    path_name: llava-1.5-7b-hf
+    category: multimodal-generative-model
+    architecture: LlavaForConditionalGeneration
+    total_regular_file_bytes: 14131147585
+    status: discovered-structurally-complete-unhashed
+  - asset_id: llava-onevision-1-5-4b-local
+    path_name: LLaVA-OneVision-1.5-4B-Instruct
+    category: multimodal-generative-model
+    architecture: LLaVAOneVision1_5_ForConditionalGeneration
+    total_regular_file_bytes: 9592346034
+    status: discovered-structurally-complete-unhashed
+  - asset_id: pixelreasoner-local
+    path_name: PixelReasoner
+    category: multimodal-generative-model
+    architecture: Qwen2_5_VLForConditionalGeneration
+    total_regular_file_bytes: 16589541475
+    status: discovered-structurally-complete-unhashed
+  - asset_id: qwen3-vl-2b-instruct-local-47f9c0e0
+    path_name: Qwen3-VL-2B-Instruct
+    category: multimodal-generative-model
+    architecture: Qwen3VLForConditionalGeneration
+    total_regular_file_bytes_observed: 4266648961
+    checkpoint_resource_id: qwen3-vl-2b-local-47f9c0e0
+    checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+    status: verified-content
+  - asset_id: qwen3-vl-4b-instruct-local
+    path_name: Qwen3-VL-4B-Instruct
+    category: multimodal-generative-model
+    architecture: Qwen3VLForConditionalGeneration
+    total_regular_file_bytes: 8887292732
+    status: discovered-structurally-complete-unhashed
+  - asset_id: qwen3-vl-8b-instruct-local
+    path_name: Qwen3-VL-8B-Instruct
+    category: multimodal-generative-model
+    architecture: Qwen3VLForConditionalGeneration
+    total_regular_file_bytes: 17545915883
+    status: discovered-structurally-complete-unhashed
+  - asset_id: qwen3-5-4b-local-b4e05070
+    path_name: Qwen3.5-4B
+    category: multimodal-generative-model
+    architecture: Qwen3_5ForConditionalGeneration
+    total_regular_file_bytes: 9342907469
+    checkpoint_hash_scheme: SCITASTE_LOCAL_CHECKPOINT_V1
+    checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
+    replica_asset_id: qwen3-5-4b-remote-b4e05070
+    status: verified-content
+  - asset_id: sam-vit-base-local
+    path_name: sam-vit-base
+    category: vision-component
+    architecture: SamModel
+    total_regular_file_bytes: 1125337705
+    status: discovered-unhashed
+  - asset_id: sam2-1-hiera-tiny-local
+    path_name: sam2.1-hiera-tiny
+    category: vision-component
+    architecture: Sam2VideoModel
+    total_regular_file_bytes: 311947528
+    status: discovered-unhashed
+  - asset_id: seal-vqa-7b-local
+    path_name: seal_vqa_7b
+    category: multimodal-generative-model
+    architecture: LlavaSearchLlamaForCausalLM
+    total_regular_file_bytes: 14278271796
+    status: discovered-unhashed
+  - asset_id: visualcot-7b-local
+    path_name: visualCoT-7B
+    category: multimodal-generative-model
+    architecture: LlavaLlamaForCausalLM
+    total_regular_file_bytes: 14129008497
+    status: discovered-unhashed
+  - asset_id: zwz-4b-local
+    path_name: ZwZ-4B
+    category: multimodal-generative-model
+    architecture: Qwen3VLForConditionalGeneration
+    total_regular_file_bytes: 9669958026
+    status: discovered-structurally-complete-unhashed
+summary:
+  discovered_assets: 18
+  model_or_component_assets: 15
+  verified_content_assets: 2
+  unhashed_model_or_component_assets: 13
+  non_model_assets: 3
+selection_authority: none
+notes:
+  - Discovery does not imply experimental suitability, license clearance, loadability, or selection.
+  - Unhashed assets require exact identity, license, full-tree hash, and bounded load preflight only after scientific design selects them.
+external_actions:
+  api_calls: 0
+  model_loads: 0
+  gpu_jobs: 0
+  model_transfers: 0
+  dataset_downloads: 0

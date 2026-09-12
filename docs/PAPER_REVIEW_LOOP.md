@@ -225,13 +225,13 @@ identity-drifted entry. The older `--proposal --provider --model` mode remains
 readable for historical workflows, but it has no runtime-ledger provenance and
 should not be used for new project evidence.
 
-The DeepSeek V4.1 Flash review profile and inert backend example reserve a
-32,768-token output ceiling for this whole-paper node. A live 2026-09-12
-official-source recheck confirms its `deepseek-flash` /
-`DeepSeek-V4.1-Flash` identity and conservative peak pricing. This does not
-authorize a live review: the normal double gate and an authenticated returned
-identity remain mandatory. Older profile, proposal, and run bytes remain
-immutable history and are never relabelled.
+The historical DeepSeek V4.1 Flash review profile and inert backend example
+reserve a 32,768-token output ceiling for that whole-paper node. The current
+2026-09-12 official catalog instead names `deepseek-v4-flash` /
+`DeepSeek-V4-Flash`; therefore the old profile is not launchable and requires a
+new immutable revision before any review call. The normal double gate and an
+authenticated returned identity remain mandatory. Older profile, proposal, and
+run bytes remain immutable history and are never relabelled.
 This is neither the old 2,048-token probe limit nor a global SciTaste setting.
 The backend remains `live_enabled=false` in Git; a local ignored runtime config
 and explicit live switches are still required. A model report may close a

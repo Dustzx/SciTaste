@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: gpu-host-3090-2-probe-20260912-v2
+resource_id: gpu-host-3090-2
+resource_kind: gpu_host
+observed_at: 2026-09-12T14:34:17+08:00
+method: automated_probe
+status: verified
+available_storage_bytes: 311710777344
+available_storage_gb_reported: null
+observed_device_count: 8
+observed_device_name: NVIDIA GeForce RTX 3090
+notes:
+  - All eight devices reported 24576 MiB total and 24124 MiB free with zero utilization.
+  - Python 3.12.3, Docker, and bubblewrap were present; no workload or model load ran.
+credentials_recorded: false
+observation_only: true

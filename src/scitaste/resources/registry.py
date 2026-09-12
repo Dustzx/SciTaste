@@ -162,6 +162,8 @@ class ModelCheckpointDefinition(BaseModel):
     model_id: str = Field(min_length=1, max_length=300)
     model_revision: str = Field(min_length=1, max_length=300)
     local_path: str = Field(min_length=1, max_length=2_000)
+    storage_scope: Literal["local_filesystem", "gpu_host"] = "local_filesystem"
+    storage_gpu_resource_id: str | None = Field(default=None, pattern=_ID)
     checkpoint_sha256: str = Field(pattern=_SHA256)
     checkpoint_bytes: int = Field(gt=0)
     format: str = Field(min_length=1, max_length=200)
@@ -180,6 +182,13 @@ class ModelCheckpointDefinition(BaseModel):
         _validate_relative_locator(self.evidence_ref)
         if len(set(self.compatible_gpu_resource_ids)) != len(self.compatible_gpu_resource_ids):
             raise ValueError("compatible GPU resource IDs must be unique")
+        if self.storage_scope == "local_filesystem" and self.storage_gpu_resource_id is not None:
+            raise ValueError("local checkpoint storage cannot name a GPU host")
+        if self.storage_scope == "gpu_host":
+            if self.storage_gpu_resource_id is None:
+                raise ValueError("GPU-host checkpoint storage requires a host resource ID")
+            if self.storage_gpu_resource_id not in self.compatible_gpu_resource_ids:
+                raise ValueError("checkpoint storage host must be a compatible GPU resource")
         return self
 
 
@@ -250,6 +259,9 @@ class ComputeResourceCatalog(BaseModel):
                     raise ValueError(
                         "checkpoint references unknown GPU resources: " + ", ".join(sorted(missing))
                     )
+                if item.storage_gpu_resource_id is not None:
+                    if item.storage_gpu_resource_id not in gpu_ids:
+                        raise ValueError("checkpoint storage references an unknown GPU resource")
         return self
 
     def resource(self, resource_id: str) -> ComputeResourceDefinition:
@@ -722,8 +734,9 @@ def inspect_resource_access(
                 )
             )
         elif isinstance(resource, ModelCheckpointDefinition):
-            local_path = Path(resource.local_path).expanduser()
-            local_path_present = local_path.is_dir() and not local_path.is_symlink()
+            if resource.storage_scope == "local_filesystem":
+                local_path = Path(resource.local_path).expanduser()
+                local_path_present = local_path.is_dir() and not local_path.is_symlink()
 
         items.append(
             ResourceAccessBindingItem(
@@ -1201,6 +1214,12 @@ def _catalog_semantic_payload(catalog: ComputeResourceCatalog) -> dict[str, obje
 
     payload = catalog.model_dump(mode="json")
     for resource in payload["resources"]:
+        if resource.get("kind") == ResourceKind.MODEL_CHECKPOINT:
+            if resource.get("storage_scope") == "local_filesystem":
+                resource.pop("storage_scope", None)
+            if resource.get("storage_gpu_resource_id") is None:
+                resource.pop("storage_gpu_resource_id", None)
+            continue
         if resource.get("kind") != ResourceKind.GPU_HOST:
             continue
         for field in (

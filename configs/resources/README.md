@@ -1,53 +1,70 @@
 # Resource catalog layout
 
-`compute_catalog_v2.yaml` is the current project-superordinate resource index.
+`compute_catalog_v3.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v2.yaml
+├── compute_catalog_v3.yaml
+├── assets/
+│   └── model_asset_catalog_v1.yaml
 ├── api/
-│   ├── deepseek_v41_flash.yaml
-│   ├── zhipu_glm53_flash.yaml
+│   ├── deepseek_v4_flash.yaml
+│   ├── deepseek_v41_flash.yaml        # retained historical identity
+│   ├── zhipu_glm53_flash_v2.yaml
 │   └── bailian_qwen38_max.yaml
 ├── gpu/
 │   ├── hosts/
 │   │   ├── local_3090.yaml
-│   │   └── remote_3090_2.yaml
+│   │   └── remote_3090_2_verified_20260912.yaml
 │   └── checkpoints/
-│       └── qwen3_vl_2b_instruct_local.yaml
+│       ├── qwen3_vl_2b_instruct_local.yaml
+│       ├── qwen3_5_4b_local.yaml
+│       └── qwen3_5_4b_remote.yaml
 ├── projects/
-│   └── scitaste_self_development.yaml
+│   └── scitaste_self_development_v3.yaml
 └── observations/
-    ├── *.yaml                 # API and remote-host observations
-    └── v2/
-        ├── gpu_host_local_3090_20260912_v1.yaml
-        └── qwen3vl2b_local_20260912_v1.yaml
+    ├── *.yaml                 # historical API and remote-host observations
+    ├── v2/                    # local v2 observations
+    └── v3/                    # current official/API and remote-host facts
 ```
 
-The API manifests store endpoints, model identities, public pricing state, and
+API manifests store endpoints, model identities, public pricing state, and
 credential environment-variable names, never credential values. The current
 bindings use `DEEPSEEK_API_KEY`, `ZAI_API_KEY`, and `DASHSCOPE_API_KEY`, matching
 the executable backend configurations. GPU host manifests store capabilities,
 content-bound inventory references, and non-secret connection metadata. The
 remote `3090-2` entry also declares its SSH alias, host, port, user, password
-environment-variable name, and RemoteForward topology. Checkpoint manifests
-store exact current tree identity separately from host presence. Project
-bindings state why and at what evidence status each project uses a shared
-resource.
+environment-variable name, and RemoteForward topology.
 
-`compute_catalog_v1.yaml` remains readable as the immutable first inline-layout
-snapshot. New work uses v2; do not edit v1 into the new structure.
+Checkpoint manifests store exact content identity separately from host
+presence. Host-scoped checkpoints name their owning GPU resource, so a remote
+path is never probed as though it were a local directory. Project bindings state
+why and at what evidence status each project can use a shared resource.
+
+`compute_catalog_v1.yaml` and `compute_catalog_v2.yaml` remain immutable history.
+V3 adds the current official DeepSeek V4 Flash identity, the refreshed
+GLM-5.3-Flash identity, a verified remote-host snapshot, and content-identical
+local and remote Qwen3.5-4B replicas. New work uses v3; historical API records
+stay addressable instead of being relabeled.
+
+`assets/model_asset_catalog_v1.yaml` indexes bounded local and remote discovery
+inventories. Discovery records what already exists, not what the ICLR experiment
+should use. Only content-verified snapshots enter the compute catalog;
+structurally complete but unhashed models remain candidates, and the partial
+remote Qwen3.5-9B snapshot is explicitly blocked. Scientific design selects a
+model first, after which exact license, hash, loading, and runtime preflights are
+completed only for selected candidates.
 
 The catalog is stable identity; observation files are time-stamped facts. The
 runtime copies accepted observations into `outputs/resources/observations/`, so
 their source version remains auditable without turning an observation into a
 reservation or experiment approval.
 
-The Zhipu observation records the retained 2026-09-05 authenticated
-`glm-5.3-flash` response by its provider-response and recording hashes. It
-establishes historical model access only; it does not claim that the account is
-reachable today and does not perform a new provider call.
+The Zhipu observations separate the retained 2026-09-05 authenticated
+`glm-5.3-flash` response from the current official identity snapshot. Historical
+access evidence does not claim current reachability, while the official snapshot
+performs no provider call.
 
 Machine-local access material belongs only in the ignored runtime plane:
 

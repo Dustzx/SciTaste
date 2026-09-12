@@ -6,10 +6,10 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v2.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v3.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
-  `configs/resources/gpu/`; v1 remains readable history.
+  `configs/resources/gpu/`; v1 and v2 remain readable history.
 - `outputs/resources/` is the machine-local runtime registry, alongside rather
   than inside `outputs/projects/`. It stores content-bound observations of
   changing availability, catalog predecessors, and exact per-project resource
@@ -36,12 +36,15 @@ turning a weak password hash or bearer key into a tracked artifact.
 
 | Class | Resource | Current role/state |
 |---|---|---|
-| API | `deepseek-v41-flash` | primary API candidate; official identity verified and owner reports a successful current call |
-| API | `zhipu-glm53-flash` | separate robustness candidate; historical authenticated call verified, current connectivity unprobed |
+| API | `deepseek-v4-flash` | current official candidate; identity and pricing verified, local credential and authenticated response absent |
+| API | `deepseek-v41-flash` | retained historical identity only; not silently relabeled as the current official model |
+| API | `zhipu-glm53-flash` | current official multimodal candidate and locally bound key; current connectivity unprobed |
 | API | `bailian-qwen38-max` | historical provenance only; blocked by the latest recorded arrearage response |
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
-| GPU | `gpu-host-3090-2` | remote 8×RTX 3090 scale-out host; approximately 200 GB free is owner-reported pending a fresh probe |
+| GPU | `gpu-host-3090-2` | verified remote 8×RTX 3090 host; all devices idle and 311,710,777,344 storage bytes free at the read-only observation |
 | checkpoint | `qwen3-vl-2b-local-47f9c0e0` | verified current local Qwen3-VL-2B-Instruct tree |
+| checkpoint | `qwen3-5-4b-local-b4e05070` | content-verified local Qwen3.5-4B asset; not selected for an experiment |
+| checkpoint | `qwen3-5-4b-remote-b4e05070` | host-scoped replica of the same Qwen3.5-4B bytes; not selected for an experiment |
 
 The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 `10.7.33.15`, port 22, user `ubuntu`, password binding
@@ -49,20 +52,37 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development.yaml` explicitly binds all
-six resources to the self-development project with primary, robustness,
-historical, development, scale-out, and checkpoint roles. The registered copy
+`configs/resources/projects/scitaste_self_development_v3.yaml` explicitly binds
+all nine current and historical resources to the self-development project. The
+two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
+select the paper backbone. The registered copy
 lives at `outputs/resources/projects/scitaste-self-development/`; it does not
 duplicate the resources inside the project paper/run tree.
 
+## Discovered assets versus selected experimental resources
+
+`configs/resources/assets/model_asset_catalog_v1.yaml` content-binds two bounded
+inventories. The local weights root contains 18 top-level assets: 15 model or
+vision-component candidates and three experiment/project directories. The
+bounded remote search found eight model paths. Qwen3.5-4B was independently
+full-tree hashed on both hosts and produced the same digest; the remote
+Qwen3.5-9B directory is blocked because one of four weight shards, the index,
+and tokenizer files are absent. Other models remain structurally discovered but
+unhashed.
+
+This inventory is deliberately not an experiment menu. The ICLR design first
+chooses an estimand, comparison systems, task distribution, and model-control
+policy. Only then may an already present asset receive license review, a full
+hash, a bounded load check, and an experimental role. This prevents hardware
+convenience from determining the scientific question.
+
 ## Current observations
 
-The tracked GPU baseline remains the read-only 2026-09-11 inventory: eight RTX
-3090 devices were verified, about 59 GB root storage was then available, and
-the remote Qwen checkpoint was absent. On 2026-09-12 the project owner reported
-that cleanup increased free storage to approximately 200 GB. This is retained
-as `reported`, not silently promoted to `verified`; an automated SSH observation
-must replace it before checkpoint transfer or a GPU pilot.
+The 2026-09-12 read-only SSH observation supersedes the earlier capacity report:
+all eight RTX 3090 devices exposed 24,576 MiB total and 24,124 MiB free at zero
+utilization, driver 570.211.01, Python 3.12.3, Docker, and bubblewrap. The
+`/media/sdb` mount had 311,710,777,344 bytes free. No remote file was changed,
+no checkpoint was transferred, and no model was loaded.
 
 A new read-only local inventory verifies one RTX 3090, 24,576 MiB total VRAM,
 22,947 MiB free at capture, and 155,972,894,720 bytes free on the weights
@@ -72,14 +92,17 @@ for 4,266,653,057 bytes. The older GPU experiment proposal names
 `8e95e5f6...`; this mismatch remains visible and requires a new proposal or the
 exact old snapshot rather than silent substitution.
 
-The live official DeepSeek table was inspected on 2026-09-12. It names callable
-ID `deepseek-flash`, served version `DeepSeek-V4.1-Flash`, and peak prices of
-USD 0.006/M cached-input, USD 0.30/M uncached-input, and USD 1.20/M output
-tokens. It also says retired `deepseek-v4-flash` aliases are served by V4.1.
-The owner's successful same-day call is kept as a separate reported observation
-without storing a key or response bytes.
+The live official DeepSeek table was re-inspected on 2026-09-12. It currently
+names callable ID `deepseek-v4-flash`, version `DeepSeek-V4-Flash`, a 1M context
+window, tool calls, and prices of USD 0.0028/M cached input, USD 0.14/M uncached
+input, and USD 0.28/M output. The earlier `deepseek-flash` /
+`DeepSeek-V4.1-Flash` record remains in v3 as historical provenance, not as the
+current identity. Because no DeepSeek credential is locally bound, the current
+model remains pending until a separately approved authenticated identity probe.
 
-The retained 2026-09-05 Zhipu recording verifies one authenticated
+The official Zhipu page now identifies `glm-5.3-flash` as a native multimodal
+model with a 1M context window, 128K maximum output, thinking, function calling,
+caching, and structured output. The retained 2026-09-05 Zhipu recording verifies one authenticated
 `glm-5.3-flash` request and response, including a provider request ID and 1,588
 reported tokens. The shared observation binds the raw response hash and the
 recording's self-reported hash without copying response content or credentials.
@@ -93,7 +116,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v2.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
   --evidence-root .
 ```
 
@@ -102,26 +125,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v2.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v2.yaml \
-  --binding configs/resources/projects/scitaste_self_development.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v3.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v2.yaml \
-  --binding configs/resources/projects/scitaste_self_development.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v3.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v2.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v2.yaml \
+  --catalog configs/resources/compute_catalog_v3.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```

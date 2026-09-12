@@ -66,9 +66,9 @@ no silent fallback between Zhipu and DeepSeek.
 |---|---|---|---:|---|
 | `native-taste-causal-prepilot-v11` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.4 no-run proposal; six structural implementations bind commit `eca58df...`, while v3 preflight qualifies bounded candidate generation, fixed-candidate selection, and the source/quality-bound human curation runtime; Full--Base and Full--mismatched are the two confirmation obligations, while three component-only analyses are mandatory diagnostics; actual paired corpora, assets, remote checkpoint, reviewers, and approval remain blocked |
 | `external-best-native-prepilot-v7` | model-confounded ecological system feasibility | SciTaste/DeepSeek V4.1 Flash, Agent Laboratory/o3-mini, TinyScientist/GPT-4o-2024-08-06 | 3 real systems × 2 MLRC task candidates × 1 seed = 6 trajectories | current schema-v1.3 no-run proposal; model mapping is statically bound, but task/sandbox/telemetry/artifact/failure adapters, task assets, credentials, reviewers, and approval remain blocked; it can never establish the causal Taste/title claim |
-| `formal-v6-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | current schema-v1.1 no-run proposal; its 100 units are a ceiling pending pilot power analysis; task bytes, adapters, reviewers, clean executable binding, authenticated served identity, and approval remain blocked |
+| `formal-v6-package-prepilot` | historical API idea-to-paper package-preference feasibility | historical DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | superseded no-run identity snapshot; current official V4 Flash requires a new proposal, and the 100 units remain only a historical ceiling |
 | `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; the legacy alias is now routed to V4.1, so this record must not be relabeled or launched |
-| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable history with the current identity but an older source, resource snapshot, and governance contract; use v6 for current review |
+| `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable history with a superseded identity and older source/resource/governance contract; do not launch |
 | `formal-v4-accepted-method-prepilot` | historical API scope with an invalid endpoint/task binding | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; v3 incorrectly treated the MLR-Bench open-ended package rubric as objective task progress and must not be approved or launched |
 | `formal-v4-prepilot` | historical API scope proposal | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 1 seed = 50 cells | immutable history; included preprint comparators and lacked replication plus analysis/integrity contracts |
 | `formal-v3-prepilot` | historical API proposal | earlier DeepSeek V4 API identity | 5 system × task × seed cells | immutable history; do not edit it into current evidence |
@@ -77,16 +77,13 @@ no silent fallback between Zhipu and DeepSeek.
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-The live 2026-09-12 official DeepSeek catalog exposes callable ID
-`deepseek-flash` and served version `DeepSeek-V4.1-Flash`. Peak prices are USD
-0.006/M cache-hit input tokens, USD 0.30/M cache-miss input tokens, and USD
-1.20/M output tokens. The retired `deepseek-v4-flash` and
-`deepseek-v4-flash-vision-exp` names remain accepted only as compatibility
-aliases whose requests are served by V4.1. This confirms the v6 identity and
-conservative price ceilings without authorizing execution. Because
-`deepseek-flash` is a rolling alias, an authenticated returned-model observation
-remains mandatory immediately before an approved call. See the
-official [dated model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
+The current 2026-09-12 official DeepSeek catalog exposes callable ID
+`deepseek-v4-flash` and version `DeepSeek-V4-Flash`, with USD 0.0028/M
+cache-hit input, USD 0.14/M cache-miss input, and USD 0.28/M output. The earlier
+`deepseek-flash` / `DeepSeek-V4.1-Flash` observation and every proposal that
+binds it are historical no-run evidence, not current launch candidates. A new
+proposal and an authenticated returned-model observation are required. See the
+official [model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
 The official Zhipu model page now names callable ID `glm-5.3-flash`, version
 `GLM-5.3-Flash`, 1M context, and 128K maximum output. The proposal therefore
@@ -99,19 +96,14 @@ rolling alias. A future Zhipu package-preference proposal must bind the same
 schema-v1.1 endpoint semantics in its own immutable bytes; it cannot reuse the
 historical objective-progress proposal or act as a silent DeepSeek fallback.
 
-The local Qwen tree and license metadata have been inspected without starting a
-new workload. A read-only SSH observation on 2026-09-11 verified eight idle RTX
-3090 devices with 24,576 MiB each, driver 570.211.01, Python 3.12.3, Docker,
-Bubblewrap, and 59,034,427,392 bytes free on the 88%-used root filesystem. The
-intended remote checkpoint destination is absent. The exact observation is
-recorded in
-`research/data/gpu_host_3090_2_inventory_v1.yaml` with no address or credential;
-verified GPU inventory declarations now require this kind of content-bound
-evidence, and a verified remote checkpoint separately requires an attestation.
-The 2B model is a robustness condition, not a replacement for a frontier API
-backbone. Its replacement proposal must use the SciTasteBench mechanism track,
-a genuinely objective benchmark, or the package-preference protocol rather than
-reusing the invalid MLR-Bench objective-progress binding.
+A fresh read-only SSH observation on 2026-09-12 verified eight idle RTX 3090
+devices with 24,576 MiB each, driver 570.211.01, Python 3.12.3, Docker,
+Bubblewrap, and 311,710,777,344 bytes free on `/media/sdb`. Bounded discovery
+found eight remote model paths; Qwen3.5-4B was full-tree hashed and matches a
+local replica, while Qwen3.5-9B is incomplete and blocked. These assets are
+inventory only. The ICLR model policy is selected from the scientific design,
+not from what happens to be installed, and the old 2B proposal remains a
+feasibility prepilot rather than a frontier-backbone substitute.
 
 The historical DeepSeek package proposals name the exact ten-task MLR-Bench
 Appendix A candidate population used by the accepted benchmark for
@@ -187,7 +179,7 @@ catalog without acquiring data or launching a task:
 .venv/bin/scitaste evaluation executable-candidate \
   --manifest configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v7.yaml \
-  --compute-catalog configs/resources/compute_catalog_v2.yaml \
+  --compute-catalog configs/resources/compute_catalog_v3.yaml \
   --require-metadata-review-ready
 ```
 
@@ -445,10 +437,10 @@ protocol.
    revision. For DeepSeek, perform an
    authenticated identity preflight immediately before launch because the API
    name is a rolling alias.
-6. For the GPU lane, independently re-probe the owner-reported approximately
-   200 GB free storage and eight devices, then calculate the two candidate task
-   packages before any transfer. The current 24 GB-per-device guarantee admits
-   the four 16 GB MLRC tasks only; it cannot emulate the three 48 GB tasks.
+6. The GPU lane has now been independently re-probed: eight idle 24 GB devices,
+   311,710,777,344 free storage bytes, and current isolation tools are verified.
+   Next calculate only the scientifically selected task/model package before any
+   transfer. Per-device capacity still cannot emulate the three 48 GB tasks.
 7. Present the regenerated exact manifests and their proposal hashes to the
    project owner. Run one matched block only after explicit approval; require a
    second approval for scale-out.

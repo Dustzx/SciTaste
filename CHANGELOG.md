@@ -7,6 +7,21 @@ semantic versioning.
 
 ### Added
 
+- Shared compute catalog v3 now distinguishes the current official DeepSeek V4
+  Flash identity from retained V4.1 history, refreshes GLM-5.3-Flash, records a
+  verified read-only 8×RTX 3090 inventory, and represents host-scoped checkpoints
+  without probing remote paths as local. A separate content-bound asset catalog
+  records 18 local and eight remote assets while explicitly denying experiment
+  selection authority; two Qwen3.5-4B replicas share one verified content hash
+  and the incomplete remote 9B tree is blocked.
+
+- The ICLR 2027 core experiment strategy now makes three title-critical tests
+  explicit: abstracted Taste versus raw-source RAG, matched versus mismatched
+  Taste, and Full SciTaste versus Native Base under one frozen frontier model.
+  Existing hardware is excluded from scientific model selection, a second API
+  provider is a non-pooled robustness slice, and external-system comparisons
+  remain a separate model-confounded ecological estimand.
+
 - A no-run matched/mismatched Scientific Taste corpus qualifier now binds
   source bytes and provenance, exercises production retrieval, checks all seven
   parity dimensions, and fails closed on held-out or cross-corpus contamination.

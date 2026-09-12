@@ -1,0 +1,15 @@
+schema_version: "1.0"
+observation_id: qwen3-5-4b-local-probe-20260912-v1
+resource_id: qwen3-5-4b-local-b4e05070
+resource_kind: model_checkpoint
+observed_at: 2026-09-12T14:32:06+08:00
+method: automated_probe
+status: verified
+observed_checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
+observed_checkpoint_bytes: 9342907469
+destination_present: true
+notes:
+  - Full-byte local hashing independently matched the remote Qwen3.5-4B tree.
+  - This verifies content identity only; no model load, generation, or GPU work occurred.
+credentials_recorded: false
+observation_only: true

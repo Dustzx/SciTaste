@@ -14,6 +14,7 @@ from scitaste.resources import (
     ComputeResourceCatalog,
     ComputeResourceRuntime,
     CredentialBindingSource,
+    ModelCheckpointDefinition,
     ObservationStatus,
     ResourceKind,
     ResourceObservation,
@@ -26,9 +27,14 @@ from scitaste.resources import (
 
 CATALOG = Path("configs/resources/compute_catalog_v1.yaml")
 CATALOG_V2 = Path("configs/resources/compute_catalog_v2.yaml")
+CATALOG_V3 = Path("configs/resources/compute_catalog_v3.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
+PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
+REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
+LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
+REMOTE_MODEL_ASSETS = Path("docs/research/data/gpu_host_3090_2_model_assets_v1.yaml")
 LOCAL_CHECKPOINT_OBSERVATION = Path(
     "configs/resources/observations/v2/qwen3vl2b_local_20260912_v1.yaml"
 )
@@ -99,6 +105,67 @@ def test_explicit_catalog_hash_binds_api_gpu_and_checkpoint_manifests() -> None:
     assert remote_gpu.remote_forwards[0].local_port == 7890
 
 
+def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() -> None:
+    inspection = inspect_compute_resource_catalog(CATALOG_V3)
+    loaded = load_compute_resource_catalog(CATALOG_V3)
+
+    assert inspection.evidence_verified is True
+    assert loaded.semantic_sha256 == (
+        "973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a"
+    )
+    assert inspection.api_model_ids == (
+        "deepseek-v4-flash",
+        "deepseek-v41-flash",
+        "zhipu-glm53-flash",
+        "bailian-qwen38-max",
+    )
+    current_deepseek = loaded.catalog.resource("deepseek-v4-flash")
+    assert current_deepseek.model_id == "deepseek-v4-flash"
+    assert current_deepseek.model_revision == "DeepSeek-V4-Flash"
+    assert current_deepseek.pricing is not None
+    assert current_deepseek.pricing.output_per_million == 0.28
+    zhipu = loaded.catalog.resource("zhipu-glm53-flash")
+    assert zhipu.model_id == "glm-5.3-flash"
+    assert "models/vlm/glm-5.3-flash" in zhipu.identity_source_url
+
+    remote_inventory = load_gpu_host_inventory(REMOTE_GPU_INVENTORY_V2).inventory
+    assert len(remote_inventory.devices) == 8
+    assert remote_inventory.root_storage.available_bytes == 311_710_777_344
+    assert remote_inventory.checkpoint.observed_sha256 == (
+        "b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed"
+    )
+    local_copy = loaded.catalog.resource("qwen3-5-4b-local-b4e05070")
+    remote_copy = loaded.catalog.resource("qwen3-5-4b-remote-b4e05070")
+    assert local_copy.checkpoint_sha256 == remote_copy.checkpoint_sha256
+    assert local_copy.storage_scope == "local_filesystem"
+    assert local_copy.storage_gpu_resource_id is None
+    assert remote_copy.storage_scope == "gpu_host"
+    assert remote_copy.storage_gpu_resource_id == "gpu-host-3090-2"
+
+
+def test_discovered_asset_catalog_keeps_inventory_distinct_from_selection() -> None:
+    catalog_path = Path("configs/resources/assets/model_asset_catalog_v1.yaml")
+    catalog = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
+    local = yaml.safe_load(LOCAL_MODEL_ASSETS.read_text(encoding="utf-8"))
+    remote = yaml.safe_load(REMOTE_MODEL_ASSETS.read_text(encoding="utf-8"))
+
+    references = {item["inventory_id"]: item for item in catalog["inventories"]}
+    assert (
+        references[local["inventory_id"]]["sha256"]
+        == hashlib.sha256(LOCAL_MODEL_ASSETS.read_bytes()).hexdigest()
+    )
+    assert (
+        references[remote["inventory_id"]]["sha256"]
+        == hashlib.sha256(REMOTE_MODEL_ASSETS.read_bytes()).hexdigest()
+    )
+    assert local["summary"]["discovered_assets"] == 18
+    assert remote["summary"]["discovered_assets"] == 8
+    remote_by_id = {item["asset_id"]: item for item in remote["assets"]}
+    assert remote_by_id["qwen3-5-9b-remote-incomplete-20260912"]["status"] == ("blocked-incomplete")
+    assert catalog["selection_policy"]["discovered_is_selectable"] is False
+    assert catalog["selection_authority"] == "none"
+
+
 def test_self_development_binding_explicitly_selects_every_resource_class() -> None:
     inspection = inspect_project_resource_binding(CATALOG_V2, PROJECT_BINDING)
 
@@ -111,6 +178,23 @@ def test_self_development_binding_explicitly_selects_every_resource_class() -> N
     )
     assert inspection.gpu_resource_ids == ("gpu-host-local-3090", "gpu-host-3090-2")
     assert inspection.checkpoint_resource_ids == ("qwen3-vl-2b-local-47f9c0e0",)
+
+
+def test_v3_project_binding_registers_assets_without_preselecting_an_experiment() -> None:
+    inspection = inspect_project_resource_binding(CATALOG_V3, PROJECT_BINDING_V3)
+
+    assert inspection.valid is True
+    assert inspection.issues == ()
+    assert inspection.api_resource_ids[0] == "deepseek-v4-flash"
+    assert inspection.gpu_resource_ids == ("gpu-host-local-3090", "gpu-host-3090-2")
+    assert inspection.checkpoint_resource_ids == (
+        "qwen3-vl-2b-local-47f9c0e0",
+        "qwen3-5-4b-local-b4e05070",
+        "qwen3-5-4b-remote-b4e05070",
+    )
+    binding = yaml.safe_load(PROJECT_BINDING_V3.read_text(encoding="utf-8"))
+    discovered = [item for item in binding["bindings"] if "qwen35" in item["binding_id"]]
+    assert all(item["required_for"] == ["asset-inventory"] for item in discovered)
 
 
 def test_resource_access_explicitly_partitions_local_bindings_without_exposing_values(
@@ -173,6 +257,21 @@ def test_resource_access_explicitly_partitions_local_bindings_without_exposing_v
     assert status.remote_probe_performed is False
     assert status.workload_executed is False
     assert status.execution_authority == "none"
+
+
+def test_host_scoped_checkpoint_does_not_probe_a_remote_path_as_local() -> None:
+    status = inspect_resource_access(CATALOG_V3, environ={})
+    by_id = {item.resource_id: item for item in status.resources}
+
+    assert by_id["qwen3-5-4b-local-b4e05070"].local_path_present is True
+    assert by_id["qwen3-5-4b-remote-b4e05070"].local_path_present is None
+
+    payload = yaml.safe_load(
+        Path("configs/resources/gpu/checkpoints/qwen3_5_4b_remote.yaml").read_text(encoding="utf-8")
+    )
+    payload["resource"]["storage_gpu_resource_id"] = "gpu-host-unknown"
+    with pytest.raises(ValidationError, match="storage host must be a compatible GPU resource"):
+        ModelCheckpointDefinition.model_validate(payload["resource"])
 
 
 def test_resource_access_rejects_unsafe_or_overbroad_credential_files(tmp_path: Path) -> None:

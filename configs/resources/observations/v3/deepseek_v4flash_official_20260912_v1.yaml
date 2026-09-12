@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: deepseek-v4flash-official-20260912-v1
+resource_id: deepseek-v4-flash
+resource_kind: api_model
+observed_at: 2026-09-12T14:20:00+08:00
+method: official_catalog
+status: verified
+requested_model_id: deepseek-v4-flash
+returned_model_revision: DeepSeek-V4-Flash
+request_succeeded: null
+source_url: https://api-docs.deepseek.com/quick_start/pricing/
+notes:
+  - The official catalog names a 1M context window, tool calls, JSON output, and up to 384K output.
+  - This official identity observation is not an authenticated API response and does not establish account access.
+credentials_recorded: false
+observation_only: true

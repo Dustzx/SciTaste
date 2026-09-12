@@ -867,3 +867,65 @@ answering its stated question, repair the framework and protocol, and preserve
 the unresolved empirical question instead of manufacturing positive evidence.
 No dataset download, API call, SSH session, model load, GPU job, human
 recruitment, or experiment occurred.
+
+## Turning high-quality references into reviewable Taste experience (2026-09-12)
+
+The v10 gate made corpus parity testable but left a more important conceptual
+gap: a retrieval engine can locate text, yet it cannot establish that a source
+represents a good scientific choice or that the source was faithfully abstracted
+into a transferable decision principle. Letting a search score or model-written
+summary directly enter the Taste Library would collapse the project's central
+innovation back into ordinary RAG.
+
+SciTaste now treats source quality, abstraction, and retrieval as separate
+stages. Every source binds its exact bytes and independent quality evidence. A
+human-authored or trace-bound model-assisted candidate states a closed decision
+context, actions, principle, justification, and outcome boundary, but remains
+untrusted. Two independent, conflict-cleared humans inspect its exact hash for
+source fidelity, action grounding, generalization, scientific value, and outcome
+handling. The author cannot self-review; a split needs one distinct adjudicator;
+rejection cannot be hidden by silently dropping the source.
+
+Only the compiler assigns retrieval trust. It constructs matched and
+source-disjoint placebo corpora, invokes the production retriever, enforces all
+seven parity dimensions and contamination checks, and atomically removes a pair
+that fails qualification. Native-path preflight v3 proves this runtime exists at
+commit `7d01bb7...`; it separately reports that the real task-specific corpus and
+checkpoint execution do not exist.
+
+The resulting v11 no-run proposal still contains 12 Qwen3-VL-2B trajectories and
+remains unauthorized. This iteration therefore strengthens what Scientific
+Taste means and removes a source of favorable-treatment bias without inventing
+source records, human labels, or effectiveness evidence. No dataset download,
+API call, SSH session, model load, GPU job, reviewer recruitment, or experiment
+occurred.
+
+## Separating available assets from an ICLR-grade experiment (2026-09-12)
+
+The first resource registry made API and GPU access explicit, but it still
+encoded two assumptions that could distort the paper: a checkpoint path was
+implicitly local to the machine running the CLI, and the model already present
+on a GPU host looked like the natural experimental choice. A fresh official-
+source review also showed that the current DeepSeek callable identity differs
+from the earlier V4.1 record.
+
+SciTaste now has a v3 shared catalog. It preserves the historical DeepSeek
+identity and adds the current V4 Flash identity rather than rewriting prior
+proposals. A host-scoped checkpoint names the GPU resource on which its path was
+observed, so local access inspection cannot report a remote path as missing.
+Read-only discovery recorded 18 local and eight remote assets. Qwen3.5-4B was
+independently full-tree hashed on both hosts and matched exactly; the remote 9B
+tree was missing a weight shard, index, and tokenizer files and is blocked.
+
+The asset catalog deliberately has no selection authority. The associated ICLR
+strategy instead derives model choice from three title-critical hypotheses:
+abstracted Taste versus raw RAG under the same sources and context budget,
+matched versus mismatched Taste, and Full versus Native Base under one frozen
+frontier backbone. DeepSeek V4 Flash and GLM-5.3-Flash are conformance candidates;
+one can become primary before outcomes and the other a non-pooled robustness
+slice. Existing Qwen checkpoints remain reproducibility/diagnostic assets unless
+a scientific design independently selects them.
+
+This iteration used one bounded read-only SSH inventory and local full-tree
+hashing. It performed no API call, dataset download, model load, GPU job, model
+transfer, remote mutation, human recruitment, or experiment.

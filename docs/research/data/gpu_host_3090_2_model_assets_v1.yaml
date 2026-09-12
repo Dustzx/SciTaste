@@ -1,0 +1,150 @@
+schema_version: "1.0"
+inventory_id: gpu-host-3090-2-model-assets-20260912-v1
+gpu_resource_id: gpu-host-3090-2
+hostname: ubuntu-3090cx
+model_root: /media/sdb/wwh/models
+observed_at: 2026-09-12T14:34:17+08:00
+observation_method: read-only-ssh
+assets:
+  - asset_id: grounding-dino-tiny-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/c12_grounding/grounding-dino-tiny
+    architecture: GroundingDinoForObjectDetection
+    model_type: grounding-dino
+    status: discovered-unhashed
+    total_bytes: 690309644
+    regular_file_count: 10
+    weight_shards_expected: null
+    weight_shards_present: 1
+    index_present: false
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing task-specific vision component; no SciTaste experiment role is assigned.
+  - asset_id: siglip2-so400m-patch14-384-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/c12_grounding/siglip2-so400m-patch14-384
+    architecture: null
+    model_type: siglip
+    status: discovered-unhashed
+    total_bytes: 4582800818
+    regular_file_count: 9
+    weight_shards_expected: null
+    weight_shards_present: 1
+    index_present: false
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing task-specific vision encoder; no SciTaste experiment role is assigned.
+  - asset_id: route2step-mag-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/route2step/MAG
+    architecture: Qwen2_5_VLForConditionalGeneration
+    model_type: qwen2_5_vl
+    status: discovered-structurally-complete-unhashed
+    total_bytes: 7525285743
+    regular_file_count: 14
+    weight_shards_expected: 2
+    weight_shards_present: 2
+    index_present: true
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing task-specific checkpoint alias; exact upstream identity is unresolved.
+  - asset_id: route2step-mia-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/route2step/MIA
+    architecture: Qwen2_5_VLForConditionalGeneration
+    model_type: qwen2_5_vl
+    status: discovered-structurally-complete-unhashed
+    total_bytes: 7525285743
+    regular_file_count: 14
+    weight_shards_expected: 2
+    weight_shards_present: 2
+    index_present: true
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing task-specific checkpoint alias; exact upstream identity is unresolved.
+  - asset_id: streamvln-v1-3-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/streamvln_v1_3
+    architecture: StreamVLNForCausalLM
+    model_type: llava
+    status: discovered-structurally-complete-unhashed
+    total_bytes: 16072369148
+    regular_file_count: 27
+    weight_shards_expected: 4
+    weight_shards_present: 4
+    index_present: true
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing navigation-specific model; no SciTaste experiment role is assigned.
+  - asset_id: uninavid-7b-remote
+    model_id: null
+    path: /media/sdb/wwh/etpr1_taskedit_eval/models/uninavid-7b-full-224-video-fps-1-grid-2
+    architecture: LlavaLlamaAttForCausalLM
+    model_type: llama
+    status: discovered-unverified
+    total_bytes: 15495365896
+    regular_file_count: 12
+    weight_shards_expected: null
+    weight_shards_present: null
+    index_present: false
+    tokenizer_present: true
+    missing_artifacts: []
+    suitability: Existing navigation-specific model with custom weight layout; completeness is unresolved.
+  - asset_id: qwen3-5-4b-remote-b4e05070
+    model_id: Qwen/Qwen3.5-4B
+    path: /media/sdb/wwh/models/Qwen3.5-4B
+    architecture: Qwen3_5ForConditionalGeneration
+    model_type: qwen3_5
+    transformers_version_declared: 4.57.0.dev0
+    status: verified-static-complete
+    checkpoint_hash_scheme: SCITASTE_LOCAL_CHECKPOINT_V1
+    checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
+    total_bytes: 9342907469
+    regular_file_count: 14
+    weight_shards_expected: 2
+    weight_shards_present: 2
+    index_present: true
+    tokenizer_present: true
+    config_sha256: ddc63e1c717afa86c865bb5e01313d89d72bb53b97ad4a8a03ba8510c0621670
+    index_sha256: cf3f798ee02ba45f9622aa8892a47369ab667d0afbf154ee7c2212de42e6302d
+    tokenizer_config_sha256: 316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8
+    missing_artifacts: []
+    suitability: Candidate for bounded local-model mechanism and reproducibility experiments; no load or generation result exists yet.
+  - asset_id: qwen3-5-9b-remote-incomplete-20260912
+    model_id: Qwen/Qwen3.5-9B
+    path: /media/sdb/wwh/models/Qwen3.5-9B
+    architecture: Qwen3_5ForConditionalGeneration
+    model_type: qwen3_5
+    transformers_version_declared: 4.57.0.dev0
+    status: blocked-incomplete
+    checkpoint_hash_scheme: null
+    checkpoint_sha256: null
+    total_bytes_observed: 12318916266
+    weight_shards_expected: 4
+    weight_shards_present: 3
+    index_present: false
+    tokenizer_present: false
+    config_sha256: d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05
+    missing_artifacts:
+      - model.safetensors-00004-of-00004.safetensors
+      - model.safetensors.index.json
+      - tokenizer.json
+      - tokenizer_config.json
+    suitability: Ineligible for any experiment until exact source identity is established and the snapshot is completed and rehashed.
+external_actions:
+  api_calls: 0
+  model_loads: 0
+  gpu_jobs: 0
+  model_transfers: 0
+  dataset_downloads: 0
+  remote_mutations: 0
+summary:
+  discovered_assets: 8
+  verified_content_assets: 1
+  structurally_complete_unhashed_assets: 3
+  discovered_unhashed_or_unverified_assets: 3
+  blocked_incomplete_assets: 1
+selection_authority: none
+notes:
+  - The bounded discovery searched model/weight config paths under /media/sdb to depth seven.
+  - Asset presence never selects a model for the ICLR experiment and never establishes license clearance or loadability.

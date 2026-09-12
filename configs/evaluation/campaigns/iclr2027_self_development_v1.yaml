@@ -9,20 +9,24 @@ central_question: >-
   evidence-valid idea-to-paper trajectories?
 claim_boundary: >-
   The title-level claim requires a complete positive held-out native Taste
-  intervention with Full--Base and Full--mismatched-Taste confirmation, plus
-  complete separately interpreted component-only diagnostics.
+  intervention with abstracted-Taste--raw-RAG, matched--mismatched-Taste, and
+  Full--Base confirmation, plus complete separately interpreted component-only
+  diagnostics. The current prepilots do not contain that complete design.
   Best-native external comparisons are model-confounded ecological evidence;
   engineering, pilot, model-review, and self-iteration outputs establish neither.
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 1de92ec3784ecd8c887b1b33900c2aaad84becae298787edd36e6b8ddc4bd399
+    sha256: 192a06481ccaf6bb66688ec12bc747d19a7ef63d220832c7c820e8f8c2bbfc24
+  - artifact_id: iclr-core-experiment-strategy
+    path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
+    sha256: 7bbae2cd08ac79c71b98ac16ba7564bd3ffae05cc724b5419cfe4b2dcacc08a1
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 6326509cda6d8764c245e6a2374295313557404bf747a97aed99d34c732c2883
+    sha256: 469d4478f4b1dd5bce4e08c6850ee18c993fc41f94ceb489baf6a74ad1718cec
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3
@@ -67,7 +71,7 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: f13c33909562d007f134d4217e57ee2d0c37ceb16f6f11cee71fd590455b1f3c
+    sha256: cee694712afcd1c3bf89fd16c2a63a9556ac01fd1075b08a9ffe8effc556d89a
 tracks:
   - track_id: scientific-taste-decisions
     role: scientific_taste_mechanism

@@ -1555,7 +1555,7 @@ a blocked native mismatch cannot be hidden by a compatibility alias or by
 substituting a different coding agent. Both report schemas fix execution
 authority to false.
 
-For the current DeepSeek V4.1 package prepilot, exact-commit inspection finds
+For the historical DeepSeek V4.1 package prepilot, exact-commit inspection finds
 MLR-Agent and Agent Laboratory blocked on task/model/sandbox/telemetry mapping,
 with artifact and recovery qualification pending. This means the proposal's
 matched-external-comparator premise is infeasible as written. A common native

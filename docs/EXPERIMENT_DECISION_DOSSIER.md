@@ -36,7 +36,7 @@ The older Qwen/MLR-Bench objective-progress proposal remains historical. The
 new 12-trajectory Qwen proposal instead names two MLRC objective-task
 candidates, a separate claim contract, and explicit unresolved asset gates.
 
-The active dossier now records two additional exact but blocked prepilots. The
+The current dossier records two exact but blocked historical prepilots. The
 native v11 causal lane contains six SciTaste conditions over two MLRC
 objective-task candidates and one seed: 12 Qwen3-VL-2B trajectories under one
 shared GPU resource. Its v3 preflight separately verifies the bounded model path
@@ -44,16 +44,20 @@ and human-governed corpus-construction runtime without claiming that the real
 corpora exist. The external lane contains SciTaste Native, Agent Laboratory, and
 TinyScientist over the same two candidates and one seed: six trajectories with
 DeepSeek V4.1 Flash, o3-mini, and GPT-4o-2024-08-06 explicitly bound per system.
-The latter is best-native and model-confounded. The historical 100-trajectory
+The latter is best-native, model-confounded, and now non-launchable because the
+DeepSeek identity has been superseded. The historical 100-trajectory
 DeepSeek/MLR-Bench matrix remains evidence of an infeasible matched design, not
 an active quota.
 
-The methodological choice is now resolved in
+The current title-level scientific strategy is narrowed in
+[`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md):
+abstracted Taste versus raw-source RAG, matched versus mismatched Taste, and
+Full versus Native Base are separate confirmation obligations. The earlier
+dual-estimand architecture remains documented in
 [`ICLR_2027_EVALUATION_ADDENDUM_V2.md`](ICLR_2027_EVALUATION_ADDENDUM_V2.md).
-The title-supporting causal estimate is a matched, randomized intervention over
-SciTaste Native's Taste components. Real external systems occupy a separate
-best-native lane with model effects explicitly confounded. The latter measures
-ecological package performance and failure modes, not a causal Taste effect.
+Real external systems occupy a separate best-native lane with model effects
+explicitly confounded; it measures ecological package performance and failure
+modes, not a causal Taste effect.
 
 That choice is now materialized in schema-1.3 prelaunch proposals and a
 schema-1.1 campaign dossier. Source acquisition, runtime preflight, pilot

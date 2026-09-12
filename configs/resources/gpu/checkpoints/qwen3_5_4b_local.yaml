@@ -1,0 +1,19 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-5-4b-local-b4e05070
+  model_id: Qwen/Qwen3.5-4B
+  model_revision: local-tree-b4e05070
+  local_path: /media/good/dxhismyson/weights/Qwen3.5-4B
+  checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
+  checkpoint_bytes: 9342907469
+  format: Hugging Face safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-local-3090
+    - gpu-host-3090-2
+  evidence_ref: docs/research/data/gpu_host_local_model_assets_v1.yaml
+  evidence_sha256: 315af93a90f40450eebb6879a32d4609ce0c1d663920ee30e306789bbe979295
+  observed_at: 2026-09-12T14:32:06+08:00
+  availability: verified
+  availability_reason: The local tree independently matched the exact remote full-tree hash; no model load or generation was performed.

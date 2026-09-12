@@ -3,6 +3,13 @@
 Status: **proposal for author approval; no API, GPU, remote-environment, human-study,
 or formal-cell execution is authorized by this document**.
 
+The resource-independent title strategy is now
+[`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
+It adds raw-source RAG versus abstracted Taste as a title-critical contrast and
+requires model selection before outcomes. The earlier Qwen v11 and DeepSeek
+V4.1 proposals below remain feasibility/history artifacts rather than the final
+formal design.
+
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
 The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper
 is due September 25, 2026 at 23:59 AoE. The submission must use at most nine
@@ -117,10 +124,11 @@ Two no-run proposals now materialize this distinction:
   mismatched-Taste contrasts plus three mandatory component-only diagnostics;
   retains valid failed trajectories as outcomes; and forbids title or
   formal-effect claims from the prepilot.
-- `external-best-native-prepilot-v7` expands to six trajectories: SciTaste
+- `external-best-native-prepilot-v7` expands to six historical no-run trajectories: SciTaste
   Native, Agent Laboratory, and TinyScientist × the same two task candidates ×
   one seed. It pins DeepSeek V4.1 Flash, o3-mini, and GPT-4o respectively and
-  declares model effects confounded. Even a complete positive result is
+  declares model effects confounded. Its DeepSeek identity is now superseded,
+  so it is not launchable. Even a complete positive result would be
   descriptive external evidence, never a causal Taste or headline result.
 
 Both proposals are unapproved. Native structural implementations plus the
@@ -209,11 +217,12 @@ the manuscript claims broad external-system superiority. Publication status and
 execution readiness are independent: acceptance cannot waive adapter gates, and
 a runnable preprint cannot satisfy this archival-evidence minimum.
 
-The exact-commit translation audit found that the current DeepSeek v6
+The exact-commit translation audit found that the historical DeepSeek v6
 proposal cannot satisfy this rule: MLR-Agent and Agent Laboratory do not
 natively expose the same callable model across all research/coding roles, and
 their selected-task mappings are not losslessly admitted. The provider identity
-is current, but that does not repair comparator inequivalence. The systems
+is now also historical, and updating it would not repair comparator
+inequivalence. The systems
 remain valid candidates, while v6 is non-launchable feasibility evidence rather
 than a formal matched block. A common-backbone or explicitly confounded
 best-native comparison must be frozen in a new proposal; wrapper code cannot
@@ -286,12 +295,11 @@ package or if evaluation depends on unavailable private data.
 The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
-those controls. The current official DeepSeek candidate is
-`deepseek-flash` / `DeepSeek-V4.1-Flash`; Zhipu `glm-5.3-flash` remains a
-separate provider candidate whose exact dated price and authenticated served
-identity must be captured. Provider proposals have separate hashes, pricing,
-execution units, and approvals. They are never silent fallbacks and their
-estimates are never pooled as one backbone.
+those controls. Current conformance candidates are DeepSeek
+`deepseek-v4-flash` / `DeepSeek-V4-Flash` and Zhipu `glm-5.3-flash` /
+`GLM-5.3-Flash`. One primary backbone is frozen before study outcomes; the other
+is a separate non-pooled provider-robustness slice. Exact dated pricing and
+authenticated served identity must be captured in new immutable proposal bytes.
 
 A separate **official-configuration sensitivity track** may run each framework
 with its authors' recommended model and settings. It is labelled as a sensitivity
@@ -421,9 +429,9 @@ No formal run may start until all of these gates pass:
    allocated and sampled-active GPU time, peak memory/utilization, CPU/RAM,
    storage, failures/repairs/discards, and human minutes;
 4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
-   `glm-5.3-flash` uses the separate `formal-v2` family and the corrected
-   DeepSeek V4 Flash identity appears in historical `formal-v5`; v6 records the
-   current V4.1 identity but remains non-launchable for other gates. Any new provider plan needs new
+   `glm-5.3-flash` uses a separate family, while every V4.1 DeepSeek proposal is
+   historical. The current `deepseek-v4-flash` / `DeepSeek-V4-Flash` identity
+   needs a new proposal. Any new provider plan needs new
    IDs, blind IDs, hashes, and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and
    telemetry review without a pseudo-implementation;

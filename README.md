@@ -145,7 +145,8 @@ the repository tests; study dependencies are installed separately with
 The manuscript source is
 [`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md). Before interpreting
 any pilot, read the [ICLR 2027 evaluation plan](docs/ICLR_2027_EVALUATION_PLAN.md)
-and [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
+and [core experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md), then
+inspect the [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
 
 ## Models and integrations
 
@@ -163,6 +164,7 @@ variables and are not stored in source, YAML, or output receipts.
 | [Output layout](docs/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
 | [Roadmap](docs/ROADMAP.md) | [Evaluation prelaunch gates](docs/EVALUATION_PRELAUNCH.md) |
 | [Taste corpus curation](docs/TASTE_CORPUS_CURATION.md) | [Matched/placebo qualification](docs/TASTE_CORPUS_PAIRING.md) |
+| [Shared compute and model assets](docs/COMPUTE_RESOURCES.md) | [ICLR 2027 experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md) |
 
 ## Development
 

@@ -1,0 +1,27 @@
+schema_version: "1.0"
+catalog_id: scitaste-discovered-model-assets-v1
+inventories:
+  - inventory_id: gpu-host-local-model-assets-20260912-v1
+    gpu_resource_id: gpu-host-local-3090
+    locator: docs/research/data/gpu_host_local_model_assets_v1.yaml
+    sha256: 315af93a90f40450eebb6879a32d4609ce0c1d663920ee30e306789bbe979295
+    discovered_assets: 18
+    verified_content_assets: 2
+  - inventory_id: gpu-host-3090-2-model-assets-20260912-v1
+    gpu_resource_id: gpu-host-3090-2
+    locator: docs/research/data/gpu_host_3090_2_model_assets_v1.yaml
+    sha256: a965b07a286cc26a790ccb3feb55a3b72c1bdc32f90207d08b25943c23026da6
+    discovered_assets: 8
+    verified_content_assets: 1
+content_duplicate_groups:
+  - checkpoint_sha256: b4e05070ad829ee029fdd060bc320224e4f9bd97490073063f266654207933ed
+    asset_ids:
+      - qwen3-5-4b-local-b4e05070
+      - qwen3-5-4b-remote-b4e05070
+selection_policy:
+  discovered_is_selectable: false
+  structurally_complete_is_selectable: false
+  verified_content_requires_load_preflight: true
+  experiment_selection_source: preregistered-scientific-design
+  existing_asset_preference_allowed_only_after_scientific_equivalence: true
+selection_authority: none

@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: zhipu-glm53flash-official-20260912-v1
+resource_id: zhipu-glm53-flash
+resource_kind: api_model
+observed_at: 2026-09-12T14:21:00+08:00
+method: official_catalog
+status: verified
+requested_model_id: glm-5.3-flash
+returned_model_revision: GLM-5.3-Flash
+request_succeeded: null
+source_url: https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash
+notes:
+  - The official page declares native multimodal input, 1M context, 128K output, thinking, function calling, caching, and structured output.
+  - A local key is bound, but this observation performs no authenticated API request.
+credentials_recorded: false
+observation_only: true
