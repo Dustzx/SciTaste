@@ -830,3 +830,40 @@ not been attested. Task assets, remote checkpoint, independent reviewers, and
 owner approval are also still open. This self-iteration changed the protocol
 before compute spend, preserved all legacy v1.3 fingerprints, and performed no
 download, API call, SSH session, model load, GPU work, or experiment.
+
+## Converting autonomy and placebo quality into executable gates (2026-09-12)
+
+The v8/v9 design exposed two remaining mismatches between SciTaste's claim and
+its implementation. First, a model could select only scenario-authored actions,
+so the system's claimed research autonomy exceeded its option-construction
+ability. Second, the mismatched-Taste control was a domain filter over a generic
+integration seed, not a task-specific negative control with measured information
+parity. Running either design would have spent compute before the treatment was
+scientifically identifiable.
+
+SciTaste therefore added a bounded generation step before selection. The shared
+Qwen backend may concretize every feasible controller-owned template and refine
+only the query of an existing `SEARCH` action. Deterministic admission retains
+action identity, type, costs, values, preconditions, tags, limits, domains, and
+all other executable parameters. Missing templates, invented actions, protected
+overrides, identity drift, response-hash drift, or invalid JSON fail the decision
+without fallback. Generation and selection produce separate durable traces.
+
+The placebo problem became a separate corpus-pair qualification tool. It invokes
+the production retrieval policy and checks stage/role, eligible and retrieved
+case counts, context budget, provenance tier, curation tier, and outcome
+information. It also rejects held-out source/content reuse and any matched versus
+placebo overlap in case IDs, source groups, content hashes, or provenance
+locators. A native preflight can accept corpus parity only from a Git-bound
+`qualified=true` report that repeats both corpus hashes.
+
+The selected v10 proposal now binds six real native conditions to the bounded
+generation/selection path and compiles to 12 Qwen3-VL-2B trajectories. It remains
+blocked because no task-specific corpus pair or remote checkpoint execution has
+been qualified, task assets and reviewers are missing, and the owner has not
+approved execution. This is SciTaste self-iteration in the intended sense: use
+scientific Taste to detect that an attractive experiment is not yet capable of
+answering its stated question, repair the framework and protocol, and preserve
+the unresolved empirical question instead of manufacturing positive evidence.
+No dataset download, API call, SSH session, model load, GPU job, human
+recruitment, or experiment occurred.
