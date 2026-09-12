@@ -25,6 +25,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.5 — decision-grounded Taste selection | done | broad retrieval loses final authority; a closed-world deliberation trace proves applicability, excludes failure boundaries and duplicate sources, and preserves available action tension before controller use |
 | Phase 8.6 — content-grounded reference quality | done | prestige-blind five-dimensional screening, content-free qualification receipts, and dual-human schema-1.1 source admission define which records can teach transferable judgment |
 | Phase 8.7 — decision-gap-driven reference mining | done | contrastive query families, marginal decision/evidence/domain coverage, source-group caps, and explicit saturation freeze a metadata-only audit cohort without ranking quality by prestige |
+| Phase 8.8 — real reference search and frozen replay | done | accepted concise queries drive bounded OpenAlex/Crossref metadata transactions; identity, record type, relevance, family, and grounded-domain gates freeze a replayable cohort before source-quality review |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing

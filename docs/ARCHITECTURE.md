@@ -2672,3 +2672,36 @@ The compiler requires registered coverage plus consecutive no-new-coverage
 batches before declaring saturation. Its content-free receipt authorizes
 nothing; every selected item remains an unqualified candidate for the separate
 Reference Quality gate.
+
+### ADR-090: Real reference search separates adaptive planning from deterministic admission
+
+Status: accepted and exercised on the self-development project; source quality
+and downstream effects remain unmeasured.
+
+A model-written narrative query and a relevance-ranked top-k list were not a
+sufficient implementation of Scientific Reference Mining. The first live run
+demonstrated the failure concretely: broad provider matches were assigned the
+query's domain labels, new paper identities prevented meaningful saturation,
+and DOI/title disagreement could enter the selected cohort. Re-running search
+until an attractive bibliography appeared would have mixed method repair with
+a different evidence sample.
+
+SciTaste now keeps only query wording adaptive. The accepted ledger must contain
+short executable queries covering six contrastive families and registered
+metadata anchors. A separate first-party connector executes a fixed OpenAlex and
+Crossref schedule, forbids source-body fields, bounds request and transaction
+bytes, and atomically retains every URL and response hash. Identity conflicts,
+administrative records, weak title anchoring, duplicate titles, and ungrounded
+domain facets fail deterministic admission. Query-family and conjunctively
+grounded-domain coverage are part of readiness; venue and citation data remain
+outside priority.
+
+Selector revisions are evaluated by replaying the complete frozen transaction.
+Replay receipts bind the source receipt, require zero network calls, and fail if
+any recorded request is unused. Receipt schema 1.3 additionally binds the exact
+NEED, PROPOSAL, CONFIG, RUN, REPORT, normalized request URL, and response bytes.
+The accepted self-iteration v7 therefore shows that the connector and cohort
+compiler close on content-bound real metadata; it does not show that selected
+sources teach good judgment. Content-grounded Reference Quality, independent
+reviewers, Taste abstraction, and matched outcome evaluation remain separate
+authorization and evidence gates.

@@ -1,0 +1,69 @@
+schema_version: "1.1"
+execution_id: scitaste-reference-search-openalex-crossref-v1
+batches:
+  - provider: openalex
+    page: 1
+    minimum_interval_seconds: 0.10
+  - provider: crossref
+    page: 1
+    minimum_interval_seconds: 1.10
+  - provider: openalex
+    page: 2
+    minimum_interval_seconds: 0.10
+  - provider: crossref
+    page: 2
+    minimum_interval_seconds: 1.10
+per_query_results: 10
+max_requests: 48
+max_response_bytes: 4194304
+max_total_response_bytes: 67108864
+timeout_seconds: 30
+user_agent: SciTaste/0.1 (https://github.com/Dustzx/SciTaste; metadata-only-reference-search)
+held_out_source_group_ids: []
+self_development_source_group_ids: []
+credential_free_public_metadata_only: true
+source_bodies_requested: false
+metadata_relevance_anchor_terms:
+  - autonomous
+  - agent
+  - scientist
+  - scientific
+  - discovery
+  - experiment
+  - hypothesis
+  - taste
+  - judgment
+  - preference
+  - critique
+  - retrieval
+  - rag
+  - augmented
+  - clinical
+  - decision
+  - support
+  - reviewer
+  - grant
+  - expert
+  - evidence
+  - diagnostic
+min_metadata_anchor_matches: 2
+metadata_domain_anchor_terms:
+  autonomous-research:
+    - autonomous
+    - agent
+    - scientist
+    - scientific discovery
+  retrieval-augmentation:
+    - retrieval
+    - rag
+    - augmented
+  scientific-decision-support:
+    - clinical
+    - decision support
+    - judgment
+    - reviewer
+    - grant
+metadata_domain_min_anchor_matches:
+  autonomous-research: 2
+  retrieval-augmentation: 2
+  scientific-decision-support: 2

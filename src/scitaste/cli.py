@@ -277,7 +277,13 @@ from scitaste.taste.reference_quality import (
     compile_reference_quality_qualification,
     save_reference_quality_qualification,
 )
+from scitaste.taste.reference_search import (
+    execute_reference_search,
+    load_reference_search_config,
+    replay_reference_search,
+)
 from scitaste.taste.semantic import (
+    reference_mining_from_ledger,
     reference_quality_from_ledger,
     save_taste_abstraction_candidate,
     taste_abstraction_candidate_from_ledger,
@@ -1622,6 +1628,32 @@ def build_parser() -> argparse.ArgumentParser:
     reference_mining.add_argument("--output", type=Path, required=True)
     _add_log_level_option(reference_mining)
     reference_mining.set_defaults(handler=_handle_evaluation_reference_mining)
+    reference_search = evaluation_commands.add_parser(
+        "reference-search",
+        help="Execute an accepted query ledger against bounded public metadata indexes",
+    )
+    reference_search.add_argument("--ledger-entry", type=Path, required=True)
+    reference_search.add_argument("--evidence-root", type=Path, default=Path("."))
+    reference_search.add_argument("--config", type=Path, required=True)
+    reference_search.add_argument("--output-dir", type=Path, required=True)
+    reference_search.add_argument(
+        "--allow-network-search",
+        action="store_true",
+        help="permit credential-free metadata GET requests within the frozen config",
+    )
+    _add_log_level_option(reference_search)
+    reference_search.set_defaults(handler=_handle_evaluation_reference_search)
+    reference_search_replay = evaluation_commands.add_parser(
+        "reference-search-replay",
+        help="Recompile a verified frozen metadata transaction without network access",
+    )
+    reference_search_replay.add_argument("--source-receipt", type=Path, required=True)
+    reference_search_replay.add_argument("--ledger-entry", type=Path, required=True)
+    reference_search_replay.add_argument("--evidence-root", type=Path, default=Path("."))
+    reference_search_replay.add_argument("--config", type=Path, required=True)
+    reference_search_replay.add_argument("--output-dir", type=Path, required=True)
+    _add_log_level_option(reference_search_replay)
+    reference_search_replay.set_defaults(handler=_handle_evaluation_reference_search_replay)
     taste_corpus_pair = evaluation_commands.add_parser(
         "taste-corpus-pair",
         help="Qualify matched and mismatched Taste corpora without external actions",
@@ -5163,6 +5195,70 @@ def _handle_evaluation_reference_mining(args: argparse.Namespace) -> int:
         )
     )
     return 0 if report.cohort_ready_for_reference_quality else 1
+
+
+def _handle_evaluation_reference_search(args: argparse.Namespace) -> int:
+    verified = reference_mining_from_ledger(
+        args.ledger_entry,
+        evidence_root=args.evidence_root,
+    )
+    materialized = execute_reference_search(
+        verified,
+        load_reference_search_config(args.config),
+        output_dir=args.output_dir,
+        allow_network_search=args.allow_network_search,
+    )
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "reference-search-cohort-frozen"
+                    if materialized.report.cohort_ready_for_reference_quality
+                    else "reference-search-incomplete"
+                ),
+                "output_dir": str(materialized.output_dir),
+                "run": str(materialized.run_path),
+                "report": str(materialized.report_path),
+                "receipt": str(materialized.receipt_path),
+                **materialized.receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if materialized.report.cohort_ready_for_reference_quality else 1
+
+
+def _handle_evaluation_reference_search_replay(args: argparse.Namespace) -> int:
+    verified = reference_mining_from_ledger(
+        args.ledger_entry,
+        evidence_root=args.evidence_root,
+    )
+    materialized = replay_reference_search(
+        args.source_receipt,
+        verified,
+        load_reference_search_config(args.config),
+        output_dir=args.output_dir,
+    )
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "reference-search-replay-cohort-frozen"
+                    if materialized.report.cohort_ready_for_reference_quality
+                    else "reference-search-replay-incomplete"
+                ),
+                "output_dir": str(materialized.output_dir),
+                "run": str(materialized.run_path),
+                "report": str(materialized.report_path),
+                "receipt": str(materialized.receipt_path),
+                **materialized.receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if materialized.report.cohort_ready_for_reference_quality else 1
 
 
 def _handle_evaluation_decision_dossier(args: argparse.Namespace) -> int:

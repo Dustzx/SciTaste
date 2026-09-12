@@ -13,13 +13,19 @@ semantic versioning.
   weak validators. The receipt grants no archive inspection, extraction,
   ingestion, API, GPU, execution, or scientific-claim authority.
 
-- Added decision-gap-driven Scientific Reference mining before content-quality
-  assessment. A proposal-only node must cover direct, alternative, negative,
-  failure, replication, and transfer query families; a deterministic compiler
-  freezes metadata candidates by marginal decision/evidence/domain coverage,
-  source-group diversity, and consecutive-batch saturation. Venue and citation
-  metadata cannot affect cohort priority, and the content-free report grants no
-  search, download, source-read, model, human, or experiment authority.
+- Completed the real Scientific Reference mining path before content-quality
+  assessment. A proposal-only node now produces short, anchored queries across
+  direct, alternative, negative, failure, replication, and transfer families;
+  a bounded credential-free OpenAlex/Crossref connector atomically freezes every
+  metadata response. Cross-index identity conflicts, administrative records,
+  weak metadata anchors, duplicate titles, and ungrounded domains cannot satisfy
+  readiness. Offline replay binds the exact source receipt and performs zero
+  network calls. The self-development v7 cohort covers all registered families
+  and domains after retaining five failed selector diagnostics; venue and
+  citation metadata still cannot affect priority, and no source-quality or
+  effectiveness claim is granted. The final v7 replay receipt also binds the
+  exact NEED, PROPOSAL, CONFIG, RUN, REPORT, request URL, and response files;
+  earlier v2/v6 receipts remain verifiable under their original schema hashes.
 
 - Added content-grounded Scientific Reference qualification before Taste
   abstraction. A prestige-blind proposal-only node evaluates evidential rigor,

@@ -30,6 +30,7 @@ from scitaste.taste.reference_mining import (
     REFERENCE_MINING_NODE,
     ReferenceMiningNeed,
     ReferenceMiningProposal,
+    VerifiedReferenceMining,
     validate_reference_mining_proposal,
 )
 from scitaste.taste.reference_quality import (
@@ -211,13 +212,16 @@ class ReferenceMiningNode(ModelNode[ReferenceMiningNeed, ReferenceMiningProposal
     """Propose contrastive search queries without executing search or judging quality."""
 
     node_name = REFERENCE_MINING_NODE
-    prompt_version = "reference-mining-v1"
+    prompt_version = "reference-mining-v2"
     system_instruction = (
         "Plan a bounded metadata search for references that may inform the supplied scientific "
         "decision. Cover exactly the declared query families and all required decision patterns, "
         "evidence roles, and domain facets. Search deliberately for alternatives, negative or "
         "null results, failure boundaries, replications, reappraisals, and cross-domain transfer, "
-        "not only supportive or lexically similar work. Do not rank by venue, author, citation "
+        "not only supportive or lexically similar work. Make every query_text a concise, directly "
+        "executable bibliographic query within max_query_terms, containing at least the declared "
+        "minimum number of metadata_relevance_anchor_terms; do not write narrative search "
+        "instructions. Do not rank by venue, author, citation "
         "count, or reported success. The source body is unavailable. Every result remains an "
         "unqualified candidate. This proposal cannot call search tools, download or read content, "
         "qualify a reference, authorize resources, or execute a research action."
@@ -316,6 +320,49 @@ def taste_deliberation_from_ledger(
     if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
         raise ValueError("Taste deliberation ledger result has no accepted proposal")
     return VerifiedTasteDeliberation(
+        invocation_id=entry.intent.invocation_id,
+        backend=result.response.backend,
+        model=result.response.model,
+        ledger_locator=resolved.relative_to(Path(evidence_root).resolve(strict=True)).as_posix(),
+        ledger_sha256=hashlib.sha256(raw).hexdigest(),
+        input=input_data,
+        proposal=result.proposal,
+    )
+
+
+def reference_mining_from_ledger(
+    ledger_entry: str | Path,
+    *,
+    evidence_root: str | Path,
+) -> VerifiedReferenceMining:
+    """Compile one accepted live query plan from its verified project ledger."""
+
+    from scitaste.model_nodes.models import NodeResult, NodeResultStatus
+
+    entry, resolved, raw = load_verified_taste_abstraction_ledger(
+        ledger_entry,
+        evidence_root=evidence_root,
+    )
+    if entry.intent.node_name != REFERENCE_MINING_NODE:
+        raise ValueError("ledger entry is not a reference-mining invocation")
+    if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+        raise ValueError("reference-mining ledger entry is not accepted")
+    if (
+        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
+        or not entry.intent.profile.live_execution_permitted
+    ):
+        raise ValueError("reference mining requires a verified live query proposal")
+    input_data = ReferenceMiningNeed.model_validate_json(
+        json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    result = NodeResult[ReferenceMiningProposal].model_validate_json(
+        json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
+        raise ValueError("reference-mining ledger result has no accepted proposal")
+    return VerifiedReferenceMining(
         invocation_id=entry.intent.invocation_id,
         backend=result.response.backend,
         model=result.response.model,
@@ -576,6 +623,7 @@ __all__ = [
     "TasteDeliberationProposal",
     "VerifiedReferenceQuality",
     "load_verified_taste_abstraction_ledger",
+    "reference_mining_from_ledger",
     "reference_quality_from_ledger",
     "save_taste_abstraction_candidate",
     "taste_abstraction_candidate_from_ledger",

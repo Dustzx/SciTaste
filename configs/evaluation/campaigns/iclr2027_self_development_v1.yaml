@@ -19,7 +19,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 69d6ba247f5a31e7beb8eba812113f13d7960b38dec9fc05176af775b1861366
+    sha256: 5545fa21906711d95ae56f4fea3106447209379259ae474b88efa7dacaf6eb4e
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
     sha256: 076d9b95effe4c7d819fe1836b15ba9d2321faac6d2ad87ae3cc516474651afe
@@ -43,7 +43,13 @@ artifacts:
     sha256: 1063bf126efec56b9a43c5a3de0e19663003ab9c47e099815a8da7e14d22801d
   - artifact_id: scientific-reference-mining
     path: docs/SCIENTIFIC_REFERENCE_MINING.md
-    sha256: 089cf75bab57c63001256665919c973d4b8300b3c4d8bfd480e8e6d2859f1212
+    sha256: a35c26b4fd8f265f4ce1ff4ff6deef18ba0acfd759296253c7dfc9cfbf1886d4
+  - artifact_id: reference-search-config
+    path: configs/taste/reference_search_openalex_crossref_v1.yaml
+    sha256: 0029f9f30c0f78e19724be4cbab541c103c3ab7dfd030ecc4d868da1978f1b9d
+  - artifact_id: self-reference-mining-need
+    path: configs/taste/scitaste_self_reference_need_v1.yaml
+    sha256: 8e0f9fd48dcd007df764b845cb482bea2290aa064d43286deaa330fee70a69f3
   - artifact_id: reference-mining-profiles
     path: configs/model_nodes/runtime_profiles.reference_mining_v1.yaml
     sha256: 1ec57b17dced70832331e431817fe354450a826ee88172a3f980f5377843370b
@@ -172,6 +178,8 @@ tracks:
       - iclr-evaluation-contract
       - iclr-evidence-program
       - scientific-reference-mining
+      - reference-search-config
+      - self-reference-mining-need
       - reference-mining-profiles
       - scientific-reference-quality
       - reference-quality-profiles

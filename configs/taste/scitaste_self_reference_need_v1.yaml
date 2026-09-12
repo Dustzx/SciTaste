@@ -1,0 +1,67 @@
+schema_version: "1.1"
+mining_id: scitaste-abstraction-versus-retrieval-v1
+stage: experiment
+decision_question: >-
+  Which experimental design and scientific precedents can distinguish whether
+  grounded Scientific Taste abstraction improves autonomous-research decisions
+  beyond equal-source, equal-token raw-source retrieval, rather than merely
+  adding relevant text or a stronger source-selection prior?
+candidate_actions:
+  - Run paired held-out decision cases comparing same-source grounded Taste with equal-token raw-source RAG.
+  - Rely on end-to-end Full SciTaste versus Native Base objective progress alone.
+  - Treat source-quality selection, representation, and contextual selection as separately identified interventions.
+evidence_gap_ids:
+  - gap-source-quality-versus-prestige
+  - gap-abstraction-versus-retrieval
+  - gap-contextual-specificity
+  - gap-decision-to-objective-progress
+required_decision_patterns:
+  - problem-significance
+  - hypothesis-discrimination
+  - diagnostic-experiment
+  - confound-control
+  - pivot-or-stop
+  - claim-calibration
+required_evidence_roles:
+  - support
+  - challenge
+  - boundary
+  - alternative
+  - replication
+required_domain_facets:
+  - autonomous-research
+  - retrieval-augmentation
+  - scientific-decision-support
+max_query_count: 12
+max_batches: 4
+saturation_window: 2
+min_distinct_source_groups: 6
+max_per_source_group: 1
+max_cohort_size: 12
+metadata_relevance_anchor_terms:
+  - autonomous
+  - agent
+  - scientist
+  - scientific
+  - discovery
+  - experiment
+  - hypothesis
+  - taste
+  - judgment
+  - preference
+  - critique
+  - retrieval
+  - rag
+  - augmented
+  - clinical
+  - decision
+  - support
+  - reviewer
+  - grant
+  - expert
+  - evidence
+  - diagnostic
+min_metadata_anchor_matches: 2
+max_query_terms: 18
+source_content_available: false
+prestige_is_quality_signal: false

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 from enum import StrEnum
 from pathlib import Path
@@ -24,6 +25,27 @@ from scitaste.taste.intrinsic import TasteTask
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
 _MAX_RUN_BYTES = 8 * 1024 * 1024
+_LEXICAL_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "to",
+    "versus",
+    "with",
+}
 
 REFERENCE_MINING_NODE = "reference-mining"
 
@@ -79,12 +101,28 @@ class ReferenceMiningStopReason(StrEnum):
     SEARCH_INCOMPLETE = "search-incomplete"
 
 
+class ReferenceMetadataIdentityStatus(StrEnum):
+    """Whether independent indexes agree on the identity-bearing title metadata."""
+
+    SINGLE_INDEX_UNVERIFIED = "single-index-unverified"
+    CROSS_INDEX_CORROBORATED = "cross-index-corroborated"
+    CROSS_INDEX_CONFLICT = "cross-index-conflict"
+
+
+class ReferenceMetadataRelevanceStatus(StrEnum):
+    """Deterministic metadata-only admission before source-quality review."""
+
+    ELIGIBLE = "eligible"
+    ADMINISTRATIVE_RECORD = "administrative-record"
+    INSUFFICIENT_ANCHOR_EVIDENCE = "insufficient-anchor-evidence"
+
+
 class ReferenceMiningNeed(BaseModel):
     """Closed scientific need from which a bounded search may be proposed."""
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     mining_id: str = Field(pattern=_ID)
     stage: TasteTask
     decision_question: str = Field(min_length=1, max_length=4_000)
@@ -105,6 +143,12 @@ class ReferenceMiningNeed(BaseModel):
     min_distinct_source_groups: int = Field(ge=2, le=30)
     max_per_source_group: int = Field(ge=1, le=5)
     max_cohort_size: int = Field(ge=2, le=100)
+    metadata_relevance_anchor_terms: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=100,
+    )
+    min_metadata_anchor_matches: int = Field(default=0, ge=0, le=20)
+    max_query_terms: int = Field(default=60, ge=3, le=100)
     source_content_available: Literal[False] = False
     prestige_is_quality_signal: Literal[False] = False
 
@@ -132,10 +176,29 @@ class ReferenceMiningNeed(BaseModel):
             raise ValueError("reference-mining saturation window must be smaller than batch budget")
         if self.min_distinct_source_groups > self.max_cohort_size:
             raise ValueError("source-group floor cannot exceed the audit-cohort ceiling")
+        normalized_anchors = [
+            " ".join(term.casefold().split()) for term in self.metadata_relevance_anchor_terms
+        ]
+        if any(not term for term in normalized_anchors) or len(normalized_anchors) != len(
+            set(normalized_anchors)
+        ):
+            raise ValueError("reference-mining metadata anchors must be nonempty and unique")
+        if self.min_metadata_anchor_matches > len(normalized_anchors):
+            raise ValueError("reference-mining metadata anchor floor exceeds its inventory")
         return self
 
     @property
     def need_sha256(self) -> str:
+        if self.schema_version == "1.0":
+            return _semantic_sha256(
+                self,
+                exclude={
+                    "max_query_terms",
+                    "metadata_relevance_anchor_terms",
+                    "min_metadata_anchor_matches",
+                    "need_sha256",
+                },
+            )
         return _semantic_sha256(self, exclude={"need_sha256"})
 
 
@@ -199,6 +262,27 @@ class ReferenceMiningProposal(BaseModel):
         return _semantic_sha256(self, exclude={"proposal_sha256"})
 
 
+class VerifiedReferenceMining(BaseModel):
+    """An accepted live query proposal bound to its immutable project ledger."""
+
+    model_config = _CONFIG
+
+    invocation_id: str = Field(pattern=_ID)
+    backend: str = Field(min_length=1, max_length=200)
+    model: str = Field(min_length=1, max_length=300)
+    ledger_locator: str = Field(min_length=1, max_length=2_000)
+    ledger_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input: ReferenceMiningNeed
+    proposal: ReferenceMiningProposal
+
+    @model_validator(mode="after")
+    def proposal_matches_need(self) -> VerifiedReferenceMining:
+        findings = validate_reference_mining_proposal(self.input, self.proposal)
+        if findings:
+            raise ValueError("; ".join(findings))
+        return self
+
+
 class ReferenceCandidateMetadata(BaseModel):
     """Metadata-only search result; all semantic labels remain hypotheses."""
 
@@ -223,6 +307,24 @@ class ReferenceCandidateMetadata(BaseModel):
     venue: str | None = Field(default=None, max_length=300)
     citation_count: int | None = Field(default=None, ge=0)
     publication_year: int | None = Field(default=None, ge=1600, le=2200)
+    metadata_provider_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=20)
+    metadata_identity_status: ReferenceMetadataIdentityStatus = (
+        ReferenceMetadataIdentityStatus.SINGLE_INDEX_UNVERIFIED
+    )
+    metadata_title_variants: tuple[str, ...] = Field(default_factory=tuple, max_length=20)
+    metadata_relevance_status: ReferenceMetadataRelevanceStatus = (
+        ReferenceMetadataRelevanceStatus.ELIGIBLE
+    )
+    metadata_relevance_anchor_matches: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=100,
+    )
+    metadata_grounded_domain_facets: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=20,
+    )
+    best_result_rank: int | None = Field(default=None, ge=1, le=10_000)
+    retrieval_observation_count: int = Field(default=0, ge=0, le=10_000)
     source_body_read: Literal[False] = False
     quality_assessed: Literal[False] = False
 
@@ -233,9 +335,20 @@ class ReferenceCandidateMetadata(BaseModel):
             self.hypothesized_decision_patterns,
             self.hypothesized_evidence_roles,
             self.domain_facets,
+            self.metadata_provider_ids,
+            self.metadata_title_variants,
+            self.metadata_relevance_anchor_matches,
+            self.metadata_grounded_domain_facets,
         )
         if any(len(items) != len(set(items)) for items in values):
             raise ValueError("reference candidate metadata sets must be unique")
+        if (
+            self.metadata_identity_status is ReferenceMetadataIdentityStatus.CROSS_INDEX_CONFLICT
+            and len(self.metadata_provider_ids) < 2
+        ):
+            raise ValueError("cross-index metadata conflict requires at least two providers")
+        if self.retrieval_observation_count and self.best_result_rank is None:
+            raise ValueError("retrieval observations require a best result rank")
         return self
 
 
@@ -272,7 +385,7 @@ class ReferenceMiningRun(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     need: ReferenceMiningNeed
     proposal: ReferenceMiningProposal
     batches: tuple[ReferenceMiningBatch, ...] = Field(min_length=1, max_length=30)
@@ -309,6 +422,35 @@ class ReferenceMiningRun(BaseModel):
     @computed_field
     @property
     def run_sha256(self) -> str:
+        if self.schema_version == "1.0":
+            payload = self.model_dump(mode="json", exclude={"run_sha256"})
+            for field in (
+                "max_query_terms",
+                "metadata_relevance_anchor_terms",
+                "min_metadata_anchor_matches",
+            ):
+                payload["need"].pop(field, None)
+            legacy_only_fields = {
+                "best_result_rank",
+                "metadata_identity_status",
+                "metadata_provider_ids",
+                "metadata_relevance_anchor_matches",
+                "metadata_relevance_status",
+                "metadata_title_variants",
+                "retrieval_observation_count",
+            }
+            legacy_only_fields.add("metadata_grounded_domain_facets")
+            for batch in payload["batches"]:
+                for candidate in batch["candidates"]:
+                    for field in legacy_only_fields:
+                        candidate.pop(field, None)
+            return _mapping_sha256(payload)
+        if self.schema_version == "1.1":
+            payload = self.model_dump(mode="json", exclude={"run_sha256"})
+            for batch in payload["batches"]:
+                for candidate in batch["candidates"]:
+                    candidate.pop("metadata_grounded_domain_facets", None)
+            return _mapping_sha256(payload)
         return _semantic_sha256(self, exclude={"run_sha256"})
 
 
@@ -330,7 +472,7 @@ class ReferenceMiningReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.2"
     mining_id: str = Field(pattern=_ID)
     need_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -346,6 +488,8 @@ class ReferenceMiningReport(BaseModel):
     missing_decision_patterns: tuple[ReferenceDecisionPattern, ...]
     missing_evidence_roles: tuple[ReferenceEvidenceRole, ...]
     missing_domain_facets: tuple[str, ...]
+    covered_query_families: tuple[ReferenceQueryFamily, ...] = Field(default_factory=tuple)
+    missing_query_families: tuple[ReferenceQueryFamily, ...] = Field(default_factory=tuple)
     cohort_ready_for_reference_quality: bool
     batch_progress: tuple[ReferenceMiningBatchProgress, ...]
     selection_uses_prestige_signals: Literal[False] = False
@@ -360,6 +504,15 @@ class ReferenceMiningReport(BaseModel):
     @computed_field
     @property
     def report_sha256(self) -> str:
+        if self.schema_version == "1.0":
+            return _semantic_sha256(
+                self,
+                exclude={
+                    "covered_query_families",
+                    "missing_query_families",
+                    "report_sha256",
+                },
+            )
         return _semantic_sha256(self, exclude={"report_sha256"})
 
 
@@ -406,6 +559,15 @@ def validate_reference_mining_proposal(
         )
         if any(phrase in lowered for phrase in prestige_phrases):
             findings.append(f"query {query.query_id!r} ranks by prestige")
+        if len(re.findall(r"[a-z0-9]+", lowered)) > need.max_query_terms:
+            findings.append(f"query {query.query_id!r} exceeds the executable term budget")
+        anchor_matches = {
+            anchor
+            for anchor in need.metadata_relevance_anchor_terms
+            if _normalized_phrase_present(anchor, lowered)
+        }
+        if len(anchor_matches) < need.min_metadata_anchor_matches:
+            findings.append(f"query {query.query_id!r} lacks registered metadata anchors")
     return tuple(sorted(set(findings)))
 
 
@@ -418,8 +580,13 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
     available_patterns: set[ReferenceDecisionPattern] = set()
     available_roles: set[ReferenceEvidenceRole] = set()
     available_domains: set[str] = set()
+    available_families: set[ReferenceQueryFamily] = set()
     eligible_groups: set[str] = set()
     eligible_candidates: list[ReferenceCandidateMetadata] = []
+    query_families = {query.query_id: query.family for query in run.proposal.queries}
+    required_families = (
+        set(ReferenceQueryFamily) if run.need.schema_version == "1.1" else set()
+    )
     progress: list[ReferenceMiningBatchProgress] = []
     saturation_streak = 0
     terminal_batch: int | None = None
@@ -429,6 +596,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
         old_patterns = set(available_patterns)
         old_roles = set(available_roles)
         old_domains = set(available_domains)
+        old_families = set(available_families)
         for candidate in batch.candidates:
             if not _candidate_is_eligible(candidate):
                 continue
@@ -438,12 +606,34 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
                 set(candidate.hypothesized_decision_patterns) & required_patterns
             )
             available_roles.update(set(candidate.hypothesized_evidence_roles) & required_roles)
-            available_domains.update(set(candidate.domain_facets) & required_domains)
+            available_domains.update(
+                _candidate_domain_facets(candidate, run) & required_domains
+            )
+            available_families.update(
+                query_families[query_id]
+                for query_id in candidate.discovery_query_ids
+                if query_id in query_families
+            )
         new_groups = eligible_groups - old_groups
         new_patterns = available_patterns - old_patterns
         new_roles = available_roles - old_roles
         new_domains = available_domains - old_domains
-        adds_coverage = bool(new_groups or new_patterns or new_roles or new_domains)
+        new_families = available_families - old_families
+        # An open scholarly index can keep yielding valid new papers indefinitely.
+        # The registered stopping target is therefore scientific coverage, not an
+        # unprovable claim that the literature itself has been exhausted.  Source
+        # diversity contributes only until the declared group floor is reached;
+        # later batches must still run for the configured saturation window.
+        adds_required_group_coverage = bool(new_groups) and (
+            len(old_groups) < run.need.min_distinct_source_groups
+        )
+        adds_coverage = bool(
+            adds_required_group_coverage
+            or new_patterns
+            or new_roles
+            or new_domains
+            or new_families
+        )
         saturation_streak = 0 if adds_coverage else saturation_streak + 1
         progress.append(
             ReferenceMiningBatchProgress(
@@ -462,6 +652,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
             and required_roles <= available_roles
             and required_domains <= available_domains
             and len(eligible_groups) >= run.need.min_distinct_source_groups
+            and required_families <= available_families
         )
         if coverage_available and saturation_streak >= run.need.saturation_window:
             terminal_batch = batch.batch_index
@@ -475,7 +666,12 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
     else:
         stopping_reason = ReferenceMiningStopReason.SEARCH_INCOMPLETE
 
-    selected = _select_coverage_cohort(eligible_candidates, run.need)
+    selected = _select_coverage_cohort(
+        eligible_candidates,
+        run.need,
+        run.proposal,
+        use_grounded_domains=run.schema_version == "1.2",
+    )
     covered_patterns = {
         item for candidate in selected for item in candidate.hypothesized_decision_patterns
     } & required_patterns
@@ -483,17 +679,27 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
         item for candidate in selected for item in candidate.hypothesized_evidence_roles
     } & required_roles
     covered_domains = {
-        item for candidate in selected for item in candidate.domain_facets
+        item
+        for candidate in selected
+        for item in _candidate_domain_facets(candidate, run)
     } & required_domains
     selected_groups = {candidate.source_group_id for candidate in selected}
+    covered_families = {
+        query_families[query_id]
+        for candidate in selected
+        for query_id in candidate.discovery_query_ids
+        if query_id in query_families
+    }
     ready = (
         search_saturated
         and required_patterns <= covered_patterns
         and required_roles <= covered_roles
         and required_domains <= covered_domains
         and len(selected_groups) >= run.need.min_distinct_source_groups
+        and required_families <= covered_families
     )
     return ReferenceMiningReport(
+        schema_version=run.schema_version,
         mining_id=run.need.mining_id,
         need_sha256=run.need.need_sha256,
         proposal_sha256=run.proposal.proposal_sha256,
@@ -511,6 +717,11 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
         ),
         missing_evidence_roles=_enum_order(required_roles - covered_roles, ReferenceEvidenceRole),
         missing_domain_facets=tuple(sorted(required_domains - covered_domains)),
+        covered_query_families=_enum_order(covered_families, ReferenceQueryFamily),
+        missing_query_families=_enum_order(
+            required_families - covered_families,
+            ReferenceQueryFamily,
+        ),
         cohort_ready_for_reference_quality=ready,
         batch_progress=tuple(progress),
     )
@@ -558,58 +769,156 @@ def _candidate_is_eligible(candidate: ReferenceCandidateMetadata) -> bool:
     return (
         candidate.rights_status is ReferenceRightsStatus.COMPATIBLE_METADATA_ONLY
         and candidate.isolation_status is ReferenceIsolationStatus.ELIGIBLE_CANDIDATE
+        and candidate.metadata_identity_status
+        is not ReferenceMetadataIdentityStatus.CROSS_INDEX_CONFLICT
+        and candidate.metadata_relevance_status is ReferenceMetadataRelevanceStatus.ELIGIBLE
     )
+
+
+def _candidate_domain_facets(
+    candidate: ReferenceCandidateMetadata,
+    run: ReferenceMiningRun,
+) -> set[str]:
+    if run.schema_version == "1.2":
+        return set(candidate.metadata_grounded_domain_facets)
+    return set(candidate.domain_facets)
 
 
 def _select_coverage_cohort(
     candidates: list[ReferenceCandidateMetadata],
     need: ReferenceMiningNeed,
+    proposal: ReferenceMiningProposal,
+    *,
+    use_grounded_domains: bool,
 ) -> list[ReferenceCandidateMetadata]:
     remaining = list(candidates)
     selected: list[ReferenceCandidateMetadata] = []
+    selected_title_fingerprints: set[str] = set()
     group_counts: dict[str, int] = {}
     patterns: set[ReferenceDecisionPattern] = set()
     roles: set[ReferenceEvidenceRole] = set()
     domains: set[str] = set()
+    families: set[ReferenceQueryFamily] = set()
     required_patterns = set(need.required_decision_patterns)
     required_roles = set(need.required_evidence_roles)
     required_domains = set(need.required_domain_facets)
+    queries = {query.query_id: query for query in proposal.queries}
 
     while remaining and len(selected) < need.max_cohort_size:
         admissible = [
             candidate
             for candidate in remaining
             if group_counts.get(candidate.source_group_id, 0) < need.max_per_source_group
+            and _title_fingerprint(candidate.title) not in selected_title_fingerprints
         ]
         if not admissible:
             break
 
-        def priority(candidate: ReferenceCandidateMetadata) -> tuple[int, int, str]:
+        def priority(
+            candidate: ReferenceCandidateMetadata,
+        ) -> tuple[int, int, int, int, int, int, int, int, str]:
             new_coverage = (
                 len((set(candidate.hypothesized_decision_patterns) & required_patterns) - patterns)
                 + len((set(candidate.hypothesized_evidence_roles) & required_roles) - roles)
-                + len((set(candidate.domain_facets) & required_domains) - domains)
+                + len(
+                    (
+                        set(candidate.metadata_grounded_domain_facets)
+                        if use_grounded_domains
+                        else set(candidate.domain_facets)
+                    )
+                    & required_domains
+                    - domains
+                )
             )
             new_group = int(candidate.source_group_id not in group_counts)
+            candidate_families = {
+                queries[query_id].family
+                for query_id in candidate.discovery_query_ids
+                if query_id in queries
+            }
+            new_family_coverage = (
+                len(candidate_families - families) if need.schema_version == "1.1" else 0
+            )
+            matched_queries, best_overlap, total_overlap = _query_title_relevance(
+                candidate,
+                queries,
+            )
+            corroborated = int(
+                candidate.metadata_identity_status
+                is ReferenceMetadataIdentityStatus.CROSS_INDEX_CORROBORATED
+            )
+            rank = candidate.best_result_rank or 10_001
             stable = hashlib.sha256(candidate.candidate_id.encode()).hexdigest()
-            return (-new_coverage, -new_group, stable)
+            return (
+                -new_coverage,
+                -new_group,
+                -new_family_coverage,
+                -corroborated,
+                -matched_queries,
+                -best_overlap,
+                -total_overlap,
+                rank,
+                stable,
+            )
 
         chosen = min(admissible, key=priority)
         selected.append(chosen)
+        selected_title_fingerprints.add(_title_fingerprint(chosen.title))
         remaining.remove(chosen)
         group_counts[chosen.source_group_id] = group_counts.get(chosen.source_group_id, 0) + 1
         patterns.update(set(chosen.hypothesized_decision_patterns) & required_patterns)
         roles.update(set(chosen.hypothesized_evidence_roles) & required_roles)
-        domains.update(set(chosen.domain_facets) & required_domains)
-        complete = (
-            required_patterns <= patterns
-            and required_roles <= roles
-            and required_domains <= domains
-            and len(group_counts) >= need.min_distinct_source_groups
+        domains.update(
+            (
+                set(chosen.metadata_grounded_domain_facets)
+                if use_grounded_domains
+                else set(chosen.domain_facets)
+            )
+            & required_domains
         )
-        if complete:
-            break
+        families.update(
+            queries[query_id].family
+            for query_id in chosen.discovery_query_ids
+            if query_id in queries
+        )
     return selected
+
+
+def _query_title_relevance(
+    candidate: ReferenceCandidateMetadata,
+    queries: dict[str, ReferenceSearchQuery],
+) -> tuple[int, int, int]:
+    """Rank metadata evidence without venue, citation, author, or outcome signals."""
+
+    title_tokens = _lexical_tokens(candidate.title)
+    overlaps = [
+        len(title_tokens & _lexical_tokens(queries[query_id].query_text))
+        for query_id in candidate.discovery_query_ids
+        if query_id in queries
+    ]
+    return (
+        sum(value > 0 for value in overlaps),
+        max(overlaps, default=0),
+        sum(overlaps),
+    )
+
+
+def _lexical_tokens(value: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", value.casefold())
+        if len(token) >= 3 and token not in _LEXICAL_STOPWORDS
+    }
+
+
+def _title_fingerprint(value: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
+
+
+def _normalized_phrase_present(term: str, value: str) -> bool:
+    normalized_term = " ".join(re.findall(r"[a-z0-9]+", term.casefold()))
+    normalized_value = " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
+    return bool(normalized_term) and f" {normalized_term} " in f" {normalized_value} "
 
 
 def _enum_order(values: set, enum_type: type[StrEnum]) -> tuple:
@@ -618,6 +927,10 @@ def _enum_order(values: set, enum_type: type[StrEnum]) -> tuple:
 
 def _semantic_sha256(model: BaseModel, *, exclude: set[str]) -> str:
     payload = model.model_dump(mode="json", exclude=exclude)
+    return _mapping_sha256(payload)
+
+
+def _mapping_sha256(payload: dict) -> str:
     encoded = json.dumps(
         payload,
         ensure_ascii=False,
@@ -634,6 +947,8 @@ __all__ = [
     "ReferenceDecisionPattern",
     "ReferenceEvidenceRole",
     "ReferenceIsolationStatus",
+    "ReferenceMetadataIdentityStatus",
+    "ReferenceMetadataRelevanceStatus",
     "ReferenceMiningBatch",
     "ReferenceMiningBatchProgress",
     "ReferenceMiningNeed",
@@ -644,6 +959,7 @@ __all__ = [
     "ReferenceQueryFamily",
     "ReferenceRightsStatus",
     "ReferenceSearchQuery",
+    "VerifiedReferenceMining",
     "compile_reference_mining_report",
     "load_reference_mining_run",
     "save_reference_mining_report",

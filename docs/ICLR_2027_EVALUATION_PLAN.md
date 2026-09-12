@@ -20,6 +20,17 @@ arms. It cannot read content or qualify a source, so it neither bakes the
 content-grounded treatment into discovery nor treats metadata relevance as
 Scientific Taste.
 
+The connector path has now closed on real self-development evidence: an
+accepted 12-query GLM-5.3-Flash plan drove four bounded OpenAlex/Crossref passes
+and froze 48 request/response records. A record-aware, domain-grounded selector
+then replayed those same 350,848 metadata bytes with zero new model or network
+calls and produced a 12-source cohort covering every registered family and
+domain. The current v7 receipt binds all control, derived, request, and response
+files; earlier selector failures and the integrity-only v6 supersession remain
+in project history. This advances construction readiness only. The selected
+source bodies, prestige-blind quality judgments, independent reviews, and
+H0--H3 effects are still absent, so the experiment contract remains unauthorized.
+
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
 The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper
 is due September 25, 2026 at 23:59 AoE. The submission must use at most nine

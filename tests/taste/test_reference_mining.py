@@ -30,6 +30,7 @@ from scitaste.taste.semantic import ReferenceMiningNode, taste_node_types
 
 def _need() -> ReferenceMiningNeed:
     return ReferenceMiningNeed(
+        schema_version="1.0",
         mining_id="experiment-gap-one",
         stage="experiment",
         decision_question="Which probe distinguishes the two live mechanisms?",
@@ -213,6 +214,37 @@ def test_prestige_metadata_cannot_change_the_selected_cohort() -> None:
     assert reranked.selected_candidate_ids == baseline.selected_candidate_ids
 
 
+def test_metadata_cohort_fills_its_ceiling_and_prefers_query_grounded_titles() -> None:
+    payload = _run_payload()
+    payload["need"]["max_cohort_size"] = 4
+    relevant = _candidate(
+        "candidate-relevant",
+        "source-relevant",
+        patterns=("diagnostic-experiment",),
+        roles=("support",),
+        domains=("causal-inference",),
+        query="query-1",
+    )
+    relevant["title"] = "Decision evidence for direct experiments"
+    irrelevant = _candidate(
+        "candidate-irrelevant",
+        "source-irrelevant",
+        patterns=("diagnostic-experiment",),
+        roles=("support",),
+        domains=("causal-inference",),
+        query="query-1",
+    )
+    irrelevant["title"] = "Unrelated culinary report"
+    payload["batches"][1]["query_ids"].append("query-1")
+    payload["batches"][1]["candidates"].extend((relevant, irrelevant))
+
+    report = compile_reference_mining_report(ReferenceMiningRun.model_validate(payload))
+
+    assert len(report.selected_candidate_ids) == 4
+    assert "candidate-relevant" in report.selected_candidate_ids
+    assert "candidate-irrelevant" not in report.selected_candidate_ids
+
+
 def test_reference_mining_does_not_claim_readiness_before_saturation() -> None:
     payload = _run_payload()
     payload["batches"] = payload["batches"][:2]
@@ -221,6 +253,34 @@ def test_reference_mining_does_not_claim_readiness_before_saturation() -> None:
     assert report.stopping_reason == "search-incomplete"
     assert report.search_saturated is False
     assert report.cohort_ready_for_reference_quality is False
+
+
+def test_schema_v11_requires_anchored_queries_and_all_query_families_in_cohort() -> None:
+    payload = _run_payload()
+    payload["schema_version"] = "1.1"
+    payload["need"].update(
+        schema_version="1.1",
+        metadata_relevance_anchor_terms=["decision", "evidence"],
+        min_metadata_anchor_matches=2,
+        max_query_terms=12,
+    )
+
+    report = compile_reference_mining_report(ReferenceMiningRun.model_validate(payload))
+
+    assert set(report.missing_query_families) == {
+        "alternative-or-comparator",
+        "replication-or-reappraisal",
+        "cross-domain-transfer",
+    }
+    assert report.cohort_ready_for_reference_quality is False
+
+    unanchored = _proposal().model_dump(mode="json", exclude={"proposal_sha256"})
+    unanchored["queries"][0]["query_text"] = "unrelated bibliography"
+    findings = validate_reference_mining_proposal(
+        ReferenceMiningNeed.model_validate(payload["need"]),
+        ReferenceMiningProposal.model_validate(unanchored),
+    )
+    assert any("lacks registered metadata anchors" in finding for finding in findings)
 
 
 def test_reference_mining_node_accepts_only_a_closed_contrastive_plan() -> None:
