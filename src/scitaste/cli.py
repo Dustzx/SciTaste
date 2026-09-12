@@ -83,6 +83,7 @@ from scitaste.evaluation import (
     approve_structured_metadata_audit,
     bind_objective_measurement_set,
     build_source_projection_plan,
+    build_structured_metadata_audit_plan_bundle,
     compile_evaluation_cell_plan,
     complete_objective_result_set,
     inspect_acquired_json_content,
@@ -174,6 +175,7 @@ from scitaste.evaluation import (
     save_source_projection_receipt,
     save_structured_metadata_audit_approval,
     save_structured_metadata_audit_plan,
+    save_structured_metadata_audit_plan_bundle,
     save_structured_metadata_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
@@ -1887,6 +1889,30 @@ def build_parser() -> argparse.ArgumentParser:
     metadata_audit_plan.add_argument("--maximum-csv-columns", type=int, default=4_096)
     _add_log_level_option(metadata_audit_plan)
     metadata_audit_plan.set_defaults(handler=_handle_evaluation_metadata_audit_plan)
+    metadata_audit_plan_bundle = evaluation_commands.add_parser(
+        "acquisition-metadata-audit-plan-bundle",
+        help="Bundle project-owned no-read metadata plans into one visible gate",
+    )
+    metadata_audit_plan_bundle.add_argument("--project-id", required=True)
+    metadata_audit_plan_bundle.add_argument("--run-id", required=True)
+    metadata_audit_plan_bundle.add_argument("--project-root", type=Path, required=True)
+    metadata_audit_plan_bundle.add_argument(
+        "--plan",
+        type=Path,
+        action="append",
+        required=True,
+        help="repeat for each existing plan; acquired source bodies are not read",
+    )
+    metadata_audit_plan_bundle.add_argument(
+        "--receipt",
+        type=Path,
+        action="append",
+        required=True,
+        help="repeat for each exact acquisition receipt; raw source bodies are not read",
+    )
+    metadata_audit_plan_bundle.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(metadata_audit_plan_bundle)
+    metadata_audit_plan_bundle.set_defaults(handler=_handle_evaluation_metadata_audit_plan_bundle)
     metadata_audit_approve = evaluation_commands.add_parser(
         "acquisition-metadata-audit-approve",
         help="Authorize only the exact local YAML/CSV structural read in a plan",
@@ -5560,6 +5586,29 @@ def _handle_evaluation_metadata_audit_plan(args: argparse.Namespace) -> int:
             {
                 "plan_path": str(output),
                 **plan.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_metadata_audit_plan_bundle(args: argparse.Namespace) -> int:
+    bundle = build_structured_metadata_audit_plan_bundle(
+        project_id=args.project_id,
+        run_id=args.run_id,
+        project_root=args.project_root,
+        plan_paths=args.plan,
+        receipt_paths=args.receipt,
+    )
+    output = save_structured_metadata_audit_plan_bundle(bundle, args.output)
+    print(
+        json.dumps(
+            {
+                "bundle_path": str(output),
+                **bundle.model_dump(mode="json"),
                 "content_access_performed": False,
             },
             indent=2,

@@ -2427,8 +2427,8 @@ design decision rather than a retrieval heuristic optimized on later outcomes.
 
 ### ADR-081: Benchmark metadata needs a format-aware read gate before task screening
 
-Status: accepted for YAML/CSV audit planning; real acquired metadata remains
-unopened until the exact plans receive owner approval.
+Status: executable through project-level plan bundling; real acquired metadata
+remains unopened until the exact plans receive owner approval.
 
 Experiment-task configuration files and benchmark tables cannot use the AAAR
 paper-record identity assumptions. SciTaste therefore separates their first
@@ -2436,7 +2436,11 @@ read from both task projection and scientific selection. A no-read plan binds
 the approved request, acquisition receipt, exact item inventory, auditor
 implementation, accepted media formats, and independent byte, depth, node,
 path, string, row, and column ceilings. The plan itself grants no content
-authority.
+authority. Several plans may be compiled into one self-hashed project bundle
+only when their exact receipts, request hashes, item sets, byte ceilings, and
+auditor implementation identities still replay. The bundle is the canonical
+Generation-as-Content decision surface for this transition; it does not merge
+the underlying approvals or grant read authority.
 
 After an exact plan approval and explicit local-read switch, the structured
 metadata auditor accepts only YAML and CSV. YAML parsing rejects anchors,

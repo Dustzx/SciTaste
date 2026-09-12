@@ -1264,12 +1264,14 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.results"), data.counts.evaluation_results_registered, t("progress.metric.results_note")),
     progressMetric(t("progress.metric.acquisitions"), data.counts.acquisition_requests || 0, t("progress.metric.acquisitions_note")),
     progressMetric(t("progress.metric.receipts"), data.counts.acquisition_receipts || 0, t("progress.metric.receipts_note")),
+    progressMetric(t("progress.metric.metadata_plans"), data.counts.metadata_audit_plans || 0, t("progress.metric.metadata_plans_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
   const acquisitionQualifications = renderAcquisitionQualifications(
     data.acquisition_qualifications || [],
   );
+  const metadataAuditPlans = renderMetadataAuditPlans(data.metadata_audit_plans || []);
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
   );
@@ -1580,6 +1582,7 @@ function renderProjectProgress(data) {
     review_next_gate: t("progress.next.gate"),
     review_research_landscape: t("progress.next.research_landscape"),
     review_data_acquisition: t("progress.next.data_acquisition"),
+    approve_metadata_audit: t("progress.next.metadata_audit"),
     review_benchmark_qualification: t("progress.next.benchmark_qualification"),
     review_iteration: t("progress.next.review_iteration"),
   };
@@ -1591,6 +1594,7 @@ function renderProjectProgress(data) {
     {
       key: "experiment",
       kinds: [
+        "approve_metadata_audit",
         "review_data_acquisition",
         "review_benchmark_qualification",
         "review_research_landscape",
@@ -1716,6 +1720,9 @@ function renderProjectProgress(data) {
   container.appendChild(hero);
   if ((data.review_iterations || []).length > 0) {
     container.appendChild(reviewIterations);
+  }
+  if ((data.metadata_audit_plans || []).length > 0) {
+    container.appendChild(metadataAuditPlans);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -1990,6 +1997,107 @@ function renderReviewIterations(items) {
           "terminal_step_id",
           "authorizes_execution",
           "no_execution_performed",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderMetadataAuditPlans(items) {
+  const section = progressSection(
+    t("progress.metadata_plan.title"),
+    items.length > 0
+      ? t("progress.metadata_plan.subtitle", {count: items.length})
+      : t("progress.metadata_plan.empty"),
+  );
+  if (items.length === 0) return section;
+
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.status}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.metadata_plan.plan"));
+    const title = document.createElement("strong");
+    appendText(title, item.request_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.ready_for_owner_approval ? "candidate" : "blocked",
+        t(`progress.metadata_plan.status.${item.status}`),
+      ),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    const count = document.createElement("span");
+    appendText(count, t("progress.metadata_plan.items", {count: item.expected_item_count}));
+    const format = document.createElement("span");
+    appendText(format, t("progress.metadata_plan.formats", {formats: item.formats.join(" + ")}));
+    const ceiling = document.createElement("span");
+    appendText(ceiling, t("progress.metadata_plan.ceiling", {
+      size: formatByteCeiling(item.maximum_total_source_bytes),
+    }));
+    facts.append(count, format, ceiling);
+
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t(`progress.metadata_plan.next.${item.next_gate}`));
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.metadata_plan.boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button acquisition-review";
+    appendText(open, t("progress.metadata_plan.inspect"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(
+      header,
+      facts,
+      next,
+      boundary,
+      open,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          bundle_file_sha256: item.bundle_file_sha256,
+          bundle_sha256: item.bundle_sha256,
+          plan_file_sha256: item.plan_file_sha256,
+          plan_sha256: item.plan_sha256,
+          receipt_file_sha256: item.receipt_file_sha256,
+          receipt_sha256: item.receipt_sha256,
+          auditor_implementation_sha256: item.auditor_implementation_sha256,
+          auditor_implementation_current: item.auditor_implementation_current,
+          source_content_read: item.source_content_read,
+          authorizes_local_content_read: item.authorizes_local_content_read,
+          authorizes_projection: item.authorizes_projection,
+          authorizes_execution: item.authorizes_execution,
+        },
+        names: [
+          "bundle_file_sha256",
+          "bundle_sha256",
+          "plan_file_sha256",
+          "plan_sha256",
+          "receipt_file_sha256",
+          "receipt_sha256",
+          "auditor_implementation_sha256",
+          "auditor_implementation_current",
+          "source_content_read",
+          "authorizes_local_content_read",
+          "authorizes_projection",
+          "authorizes_execution",
         ],
       }),
     );

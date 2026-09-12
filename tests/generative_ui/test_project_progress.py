@@ -17,7 +17,10 @@ from scitaste.evaluation import (
     AcquiredTaskUse,
     DatasetAcquisitionReceipt,
     ReadinessStatus,
+    StructuredMetadataAuditPlan,
+    StructuredMetadataFormat,
     TaskSignalKind,
+    build_structured_metadata_audit_plan_bundle,
     inspect_dataset_acquisition_request,
     inspect_dataset_package_request,
     inspect_executable_candidate,
@@ -26,7 +29,10 @@ from scitaste.evaluation import (
     load_executable_candidate_manifest,
     save_dataset_package_gate_report,
     save_executable_candidate_report,
+    save_structured_metadata_audit_plan,
+    save_structured_metadata_audit_plan_bundle,
 )
+from scitaste.evaluation import structured_metadata_audit as audit_module
 from scitaste.generative_ui import (
     IntentGoal,
     ProjectProgressQuery,
@@ -175,6 +181,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "evaluation_results_registered": 0,
         "acquisition_requests": 0,
         "acquisition_receipts": 0,
+        "metadata_audit_plans": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -231,6 +238,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "evaluation_results_registered": 0,
         "acquisition_requests": 0,
         "acquisition_receipts": 0,
+        "metadata_audit_plans": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -347,7 +355,7 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
             "item_count": 10,
             "maximum_total_bytes": 10 * 1024 * 1024,
             "source_hosts": ["raw.githubusercontent.com"],
-            "ready_for_owner_approval": True,
+            "ready_for_owner_approval": report.ready_for_owner_approval,
             "download_authorized": False,
             "authorizes_ingestion": False,
             "authorizes_execution": False,
@@ -386,6 +394,124 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
     report_path.write_text(json.dumps(invalid), encoding="utf-8")
     with pytest.raises(ProjectSurfaceChangedError, match="acquisition report is invalid"):
         _progress(runtime)
+
+
+def test_progress_surfaces_exact_metadata_read_gate_without_reading_content(
+    tmp_path: Path,
+) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "metadata-audit-plan-run"
+    artifact = f"runs/{run_id}/metadata_audit_planning/BUNDLE.json"
+    snapshot = _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="awaiting-content-read-approval",
+        stage_path="metadata_audit_planning",
+        artifact=artifact,
+    )
+    project_root = runtime.projects_root / "progress-project"
+    revision = "a" * 40
+    item = AcquiredItemReceipt(
+        item_id="task-01",
+        source_url=f"https://example.test/{revision}/task-01",
+        source_revision=revision,
+        destination="task.yaml",
+        size_bytes=1,
+        sha256="1" * 64,
+        expected_sha256=None,
+    )
+    receipt = DatasetAcquisitionReceipt.create(
+        request_id="benchmark-metadata-v1",
+        request_sha256="2" * 64,
+        approved_by="test-owner",
+        approved_at=datetime(2026, 9, 13, 0, tzinfo=UTC),
+        acquired_at=datetime(2026, 9, 13, 1, tzinfo=UTC),
+        approval_scope="download-only-no-ingestion",
+        destination_root=(
+            "outputs/projects/progress-project/evaluations/acquisitions/benchmark-metadata-v1/raw"
+        ),
+        items=(item,),
+        item_count=1,
+        total_bytes=1,
+        maximum_total_bytes=1_048_576,
+        source_hosts=("example.test",),
+    )
+    receipt_path = project_root / "evaluations/acquisitions/benchmark-metadata-v1/RECEIPT.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text(receipt.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    implementation_sha256 = hashlib.sha256(Path(audit_module.__file__).read_bytes()).hexdigest()
+    plan = StructuredMetadataAuditPlan(
+        plan_id="benchmark-metadata-v1-content-audit-v1",
+        project_id="progress-project",
+        request_id="benchmark-metadata-v1",
+        request_file_sha256="3" * 64,
+        request_sha256=receipt.request_sha256,
+        receipt_file_sha256=hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+        receipt_sha256=receipt.receipt_sha256,
+        acquired_at=receipt.acquired_at,
+        auditor_id="scitaste-structured-metadata-audit-v1",
+        auditor_implementation_sha256=implementation_sha256,
+        expected_item_ids=(item.item_id,),
+        formats=(StructuredMetadataFormat.YAML,),
+        maximum_source_bytes_per_item=262_144,
+        maximum_total_source_bytes=1_048_576,
+        maximum_structure_depth=32,
+        maximum_nodes_per_item=500_000,
+        maximum_distinct_paths=10_000,
+        maximum_string_utf8_bytes=1_048_576,
+        maximum_csv_rows=1_000_000,
+        maximum_csv_columns=4_096,
+    )
+    plan_path = project_root / f"runs/{run_id}/metadata_audit_planning/PLAN.json"
+    save_structured_metadata_audit_plan(plan, plan_path)
+    bundle = build_structured_metadata_audit_plan_bundle(
+        project_id="progress-project",
+        run_id=run_id,
+        project_root=project_root,
+        plan_paths=(plan_path,),
+        receipt_paths=(receipt_path,),
+    )
+    save_structured_metadata_audit_plan_bundle(bundle, project_root / artifact)
+
+    _, data = _progress(runtime)
+
+    assert data["counts"]["metadata_audit_plans"] == 1
+    assert data["metadata_audit_plans"] == [
+        {
+            "run_ref_id": data["metadata_audit_plans"][0]["run_ref_id"],
+            "run_id": run_id,
+            "bundle_file_sha256": data["metadata_audit_plans"][0]["bundle_file_sha256"],
+            "bundle_sha256": bundle.bundle_sha256,
+            "plan_id": plan.plan_id,
+            "request_id": plan.request_id,
+            "plan_locator": f"runs/{run_id}/metadata_audit_planning/PLAN.json",
+            "plan_file_sha256": data["metadata_audit_plans"][0]["plan_file_sha256"],
+            "plan_sha256": plan.plan_sha256,
+            "receipt_sha256": receipt.receipt_sha256,
+            "receipt_locator": ("evaluations/acquisitions/benchmark-metadata-v1/RECEIPT.json"),
+            "receipt_file_sha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+            "auditor_implementation_sha256": implementation_sha256,
+            "auditor_implementation_current": True,
+            "expected_item_count": 1,
+            "formats": ["application/x-yaml"],
+            "maximum_total_source_bytes": 1_048_576,
+            "status": "awaiting_content_read_approval",
+            "next_gate": "approve_exact_local_structured_metadata_read",
+            "ready_for_owner_approval": True,
+            "source_content_read": False,
+            "owner_approval_recorded": False,
+            "authorizes_local_content_read": False,
+            "authorizes_projection": False,
+            "authorizes_ingestion": False,
+            "authorizes_execution": False,
+            "support_ref_ids": data["metadata_audit_plans"][0]["support_ref_ids"],
+        }
+    ]
+    candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "approve_metadata_audit"
+    )
+    assert candidate["target_ids"] == ["benchmark-metadata-v1"]
 
 
 def test_progress_replaces_acquisition_gate_with_download_only_receipt(tmp_path: Path) -> None:
@@ -752,7 +878,7 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
                 item.model_dump(mode="json") for item in report.task_qualifications
             ],
             "metadata_review_ready": True,
-            "ready_for_owner_approval": True,
+            "ready_for_owner_approval": report.ready_for_owner_approval,
             "pending_content_hash_count": 39,
             "integrity_blocker_codes": [],
             "approval_blocker_codes": [item.code for item in report.approval_blockers],

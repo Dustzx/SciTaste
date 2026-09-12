@@ -100,7 +100,24 @@ download receipts. Their format-aware control path first creates a no-read plan:
 
 The plan binds the exact acquisition chain and explicit byte, structural, and
 table ceilings but keeps local content authority false. Only an explicit owner
-decision can create its approval:
+decision can create its approval. When several acquired benchmark sources form
+one scientific decision, their existing plans and receipts can first be bound
+into one project-visible gate without opening any source body:
+
+```bash
+.venv/bin/scitaste evaluation acquisition-metadata-audit-plan-bundle \
+  --project-id '<project ID>' --run-id '<project run ID>' \
+  --project-root 'outputs/projects/<project ID>' \
+  --plan '<first plan>' --plan '<second plan>' \
+  --receipt '<first receipt>' --receipt '<second receipt>' \
+  --output 'outputs/projects/<project ID>/runs/<project run ID>/metadata_audit_planning/BUNDLE.json'
+```
+
+The bundle replays every plan/receipt binding, verifies the current auditor
+implementation hash, totals the exact item and byte ceilings, and grants no
+content-read or downstream authority. Once registered as the run artifact, it
+becomes the explicit next scientific-data gate in Generation-as-Content rather
+than another generic acquisition card. Approval remains per exact plan:
 
 ```bash
 .venv/bin/scitaste evaluation acquisition-metadata-audit-approve \

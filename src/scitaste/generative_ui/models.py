@@ -621,6 +621,7 @@ class ProjectProgressCounts(BaseModel):
     evaluation_results_registered: int = Field(ge=0)
     acquisition_requests: int = Field(default=0, ge=0)
     acquisition_receipts: int = Field(default=0, ge=0)
+    metadata_audit_plans: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1042,6 +1043,63 @@ class ProjectProgressAcquisitionReceiptItem(BaseModel):
             raise ValueError("project acquisition receipt must cite its registered run")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("project acquisition receipt references must be unique")
+        return self
+
+
+class ProjectProgressMetadataAuditPlanItem(BaseModel):
+    """One no-read metadata plan whose next action is explicit owner approval."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    bundle_file_sha256: Sha256
+    bundle_sha256: Sha256
+    plan_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    plan_locator: SafeLocator
+    plan_file_sha256: Sha256
+    plan_sha256: Sha256
+    receipt_sha256: Sha256
+    receipt_locator: SafeLocator
+    receipt_file_sha256: Sha256
+    auditor_implementation_sha256: Sha256
+    auditor_implementation_current: bool
+    expected_item_count: int = Field(gt=0)
+    formats: tuple[Literal["application/x-yaml", "text/csv"], ...] = Field(
+        min_length=1,
+        max_length=2,
+    )
+    maximum_total_source_bytes: int = Field(gt=0)
+    status: Literal["awaiting_content_read_approval", "implementation_drift"]
+    next_gate: Literal[
+        "approve_exact_local_structured_metadata_read",
+        "regenerate_plans_against_current_auditor",
+    ]
+    ready_for_owner_approval: bool
+    source_content_read: Literal[False]
+    owner_approval_recorded: Literal[False]
+    authorizes_local_content_read: Literal[False]
+    authorizes_projection: Literal[False]
+    authorizes_ingestion: Literal[False]
+    authorizes_execution: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def plan_state_is_closed(self) -> ProjectProgressMetadataAuditPlanItem:
+        if self.ready_for_owner_approval != self.auditor_implementation_current:
+            raise ValueError("metadata audit plan readiness differs from implementation")
+        expected_status = (
+            "awaiting_content_read_approval"
+            if self.ready_for_owner_approval
+            else "implementation_drift"
+        )
+        if self.status != expected_status:
+            raise ValueError("metadata audit plan status differs from readiness")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("metadata audit plan must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("metadata audit plan evidence references must be unique")
         return self
 
 
@@ -1484,6 +1542,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_next_gate",
         "review_research_landscape",
         "review_data_acquisition",
+        "approve_metadata_audit",
         "review_benchmark_qualification",
         "review_iteration",
     ]
@@ -1638,6 +1697,7 @@ class ProjectProgressBoardData(BaseModel):
     acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
     acquisition_receipts: tuple[ProjectProgressAcquisitionReceiptItem, ...] = ()
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
+    metadata_audit_plans: tuple[ProjectProgressMetadataAuditPlanItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -1697,6 +1757,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.acquisitions,
             *self.acquisition_receipts,
             *self.acquisition_qualifications,
+            *self.metadata_audit_plans,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -1732,6 +1793,12 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress acquisition receipt count must match its rows")
         if self.counts.acquisition_requests != len(self.acquisitions):
             raise ValueError("project progress acquisition count must match its rows")
+
+        metadata_plan_ids = [item.request_id for item in self.metadata_audit_plans]
+        if len(metadata_plan_ids) != len(set(metadata_plan_ids)):
+            raise ValueError("project progress metadata audit request IDs must be unique")
+        if self.counts.metadata_audit_plans != len(self.metadata_audit_plans):
+            raise ValueError("project progress metadata audit count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

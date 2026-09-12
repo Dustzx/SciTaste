@@ -1,5 +1,10 @@
 # Changelog
 
+All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
+semantic versioning.
+
+## [Unreleased]
+
 - Corrected the current DeepSeek resource generation against the live official
   model table: catalog v5 and identity protocol v2 bind `deepseek-flash` /
   `DeepSeek-V4.1-Flash` and current peak pricing while retaining v4 as immutable
@@ -9,11 +14,11 @@
   acquisitions with the project ledger. Exact receipts cover 20 task YAML files
   and one metadata CSV; separate no-read audit plans now stop at explicit
   content-read approval instead of pretending the downloads are still pending.
-
-All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
-semantic versioning.
-
-## [Unreleased]
+- Added a project-level structured-metadata audit-plan bundle that replays the
+  exact plans, download receipts, item inventories, byte ceilings, and current
+  auditor identity without opening source content. Generation-as-Content now
+  presents that bundle as the next scientific-data decision instead of leaving
+  the acquired InnovatorBench and EXP-Bench resources behind a generic gate.
 
 - Completed the first standing-policy-approved MLRC asset transaction: 39 frozen
   Google Drive/OpenML objects (3,761,168,137 bytes) were source-revalidated,

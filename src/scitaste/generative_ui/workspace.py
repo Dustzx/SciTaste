@@ -38,6 +38,10 @@ from scitaste.evaluation.executable_candidate import (
     load_executable_candidate_report,
 )
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
+from scitaste.evaluation.structured_metadata_plan_bundle import (
+    StructuredMetadataAuditPlanBundle,
+    load_structured_metadata_audit_plan_bundle,
+)
 from scitaste.generative_ui.audit import (
     AuditIntegrityError,
     ProposalControlledAudit,
@@ -656,6 +660,61 @@ class WorkspaceSurfaceFactory:
                     ],
                 }
         receipt_rows = list(receipt_by_request.values())
+
+        metadata_audit_plan_by_request: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected_bundle = _metadata_audit_plan_bundle_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_bundle is None:
+                continue
+            bundle, bundle_file_sha256 = inspected_bundle
+            run_ref = run_refs[run.run_id]
+            for item in bundle.plans:
+                if item.request_id in metadata_audit_plan_by_request:
+                    raise ProjectSurfaceChangedError(
+                        "project registers multiple metadata audit plans for one request"
+                    )
+                receipt = receipt_by_request.get(item.request_id)
+                if receipt is not None and receipt["receipt_sha256"] != item.receipt_sha256:
+                    raise ProjectSurfaceChangedError(
+                        "metadata audit plan differs from its registered acquisition receipt"
+                    )
+                support_ref_ids = [project_ref.evidence_id, run_ref.evidence_id]
+                if receipt is not None:
+                    support_ref_ids.append(str(receipt["run_ref_id"]))
+                metadata_audit_plan_by_request[item.request_id] = {
+                    "run_ref_id": run_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "bundle_file_sha256": bundle_file_sha256,
+                    "bundle_sha256": bundle.bundle_sha256,
+                    "plan_id": item.plan_id,
+                    "request_id": item.request_id,
+                    "plan_locator": item.plan_locator,
+                    "plan_file_sha256": item.plan_file_sha256,
+                    "plan_sha256": item.plan_sha256,
+                    "receipt_sha256": item.receipt_sha256,
+                    "receipt_locator": item.receipt_locator,
+                    "receipt_file_sha256": item.receipt_file_sha256,
+                    "auditor_implementation_sha256": (item.auditor_implementation_sha256),
+                    "auditor_implementation_current": (item.auditor_implementation_current),
+                    "expected_item_count": item.expected_item_count,
+                    "formats": [value.value for value in item.formats],
+                    "maximum_total_source_bytes": item.maximum_total_source_bytes,
+                    "status": bundle.status,
+                    "next_gate": bundle.next_gate,
+                    "ready_for_owner_approval": item.ready_for_owner_approval,
+                    "source_content_read": item.source_content_read,
+                    "owner_approval_recorded": item.owner_approval_recorded,
+                    "authorizes_local_content_read": item.authorizes_local_content_read,
+                    "authorizes_projection": item.authorizes_projection,
+                    "authorizes_ingestion": item.authorizes_ingestion,
+                    "authorizes_execution": item.authorizes_execution,
+                    "support_ref_ids": support_ref_ids,
+                }
+        metadata_audit_plan_rows = list(metadata_audit_plan_by_request.values())
+
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -1240,6 +1299,23 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
+        if metadata_audit_plan_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "approve-structured-metadata-audit",
+                    "kind": "approve_metadata_audit",
+                    "label_code": "approve-bounded-structured-metadata-read",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in metadata_audit_plan_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["request_id"] for item in metadata_audit_plan_rows],
+                }
+            )
         if acquisition_rows or receipt_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
@@ -1421,6 +1497,7 @@ class WorkspaceSurfaceFactory:
                     "evaluation_results_registered": len(evaluation_result_rows),
                     "acquisition_requests": len(acquisition_rows),
                     "acquisition_receipts": len(receipt_rows),
+                    "metadata_audit_plans": len(metadata_audit_plan_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -1460,6 +1537,7 @@ class WorkspaceSurfaceFactory:
                 "acquisitions": acquisition_rows,
                 "acquisition_receipts": receipt_rows,
                 "acquisition_qualifications": qualification_rows,
+                "metadata_audit_plans": metadata_audit_plan_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -2269,6 +2347,39 @@ def _acquired_cohort_report_for_run(
     except (ValidationError, ValueError) as exc:
         raise ProjectSurfaceChangedError("registered acquisition qualification is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
+
+
+def _metadata_audit_plan_bundle_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[StructuredMetadataAuditPlanBundle, str] | None:
+    """Load one canonical no-read metadata-plan bundle from its project run."""
+
+    expected = f"runs/{run.run_id}/metadata_audit_planning/BUNDLE.json"
+    if run.stage_path != "metadata_audit_planning" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered metadata audit plan bundle is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError(
+            "registered metadata audit plan bundle escaped its project"
+        )
+    try:
+        inspection = load_structured_metadata_audit_plan_bundle(
+            resolved,
+            project_root=root,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError(
+            "registered metadata audit plan bundle is invalid"
+        ) from exc
+    bundle = inspection.bundle
+    if bundle.project_id != root.name or bundle.run_id != run.run_id:
+        raise ProjectSurfaceChangedError("registered metadata audit plan bundle identity differs")
+    return bundle, inspection.file_sha256
 
 
 def _dataset_package_report_for_run(

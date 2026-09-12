@@ -517,6 +517,14 @@ from scitaste.evaluation.structured_metadata_audit import (
     save_structured_metadata_audit_plan,
     save_structured_metadata_audit_report,
 )
+from scitaste.evaluation.structured_metadata_plan_bundle import (
+    StructuredMetadataAuditPlanBundle,
+    StructuredMetadataAuditPlanBundleInspection,
+    StructuredMetadataAuditPlanBundleItem,
+    build_structured_metadata_audit_plan_bundle,
+    load_structured_metadata_audit_plan_bundle,
+    save_structured_metadata_audit_plan_bundle,
+)
 from scitaste.evaluation.task_package import (
     BenchmarkTaskPackageManifest,
     TaskPackageAcquisition,
@@ -903,6 +911,9 @@ __all__ = [
     "StructuredMetadataAuditApprovalInspection",
     "StructuredMetadataAuditItemReport",
     "StructuredMetadataAuditPlan",
+    "StructuredMetadataAuditPlanBundle",
+    "StructuredMetadataAuditPlanBundleInspection",
+    "StructuredMetadataAuditPlanBundleItem",
     "StructuredMetadataAuditPlanInspection",
     "StructuredMetadataAuditReport",
     "StructuredMetadataFormat",
@@ -958,6 +969,7 @@ __all__ = [
     "attribute_failure",
     "bind_objective_measurement_set",
     "build_source_projection_plan",
+    "build_structured_metadata_audit_plan_bundle",
     "build_taste_abstraction_input",
     "claim_analysis_input_sha256",
     "compare_gpu_inventory",
@@ -1030,6 +1042,7 @@ __all__ = [
     "load_source_projection_receipt",
     "load_structured_metadata_audit_approval",
     "load_structured_metadata_audit_plan",
+    "load_structured_metadata_audit_plan_bundle",
     "load_task_package_manifest",
     "load_task_selection_manifest",
     "load_taste_corpus_curation_package",
@@ -1074,6 +1087,7 @@ __all__ = [
     "save_source_projection_receipt",
     "save_structured_metadata_audit_approval",
     "save_structured_metadata_audit_plan",
+    "save_structured_metadata_audit_plan_bundle",
     "save_structured_metadata_audit_report",
     "save_taste_corpus_curation_report",
     "save_taste_corpus_pair_report",

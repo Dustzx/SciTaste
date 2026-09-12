@@ -189,6 +189,18 @@ next gate and does not relabel the source as ingested or experiment-ready.
 Once that receipt is present, the older gate is removed from the pending list,
 so completed downloads cannot continue to appear as awaiting owner approval.
 
+Downloaded structured benchmark metadata advances through a separate canonical
+`runs/<run-id>/metadata_audit_planning/BUNDLE.json` artifact. The receiver
+replays every bound YAML/CSV plan against its exact acquisition receipt, checks
+the plan, receipt, and bundle file hashes, and recomputes the current auditor
+implementation identity. It then renders the exact item count, accepted
+formats, aggregate read ceiling, and either the explicit content-read decision
+or an implementation-drift repair action as the next scientific-data gate.
+This card is intentionally visible before the collapsed evidence vault: it
+distinguishes bytes already acquired from content still unopened. Navigation to
+the frozen evidence is not approval, and the bundle cannot inspect content,
+project fields, ingest data, follow links, call a model, or start an experiment.
+
 A post-download qualification appears only through the separately registered
 `runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
 rechecks the report's embedded semantic hash, exact task and byte arithmetic,
