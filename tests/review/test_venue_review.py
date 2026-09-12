@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -448,6 +449,24 @@ def test_registered_review_routes_to_open_project_obligations(
     evidence_program = (
         _ROOT / "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
     )
+    source_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    with pytest.raises(ValueError, match="source commit is unavailable"):
+        prepare_project_review_followup_design(
+            runtime,
+            project_id="review-project",
+            review_iteration_run_id="review-iteration-v1",
+            mapping_path=mapping_path,
+            evidence_program_path=evidence_program,
+            run_id="review-followup-invalid-source",
+            source_commit="f" * 40,
+            expected_revision=published.revision,
+        )
     prepared_followup = prepare_project_review_followup_design(
         runtime,
         project_id="review-project",
@@ -455,7 +474,7 @@ def test_registered_review_routes_to_open_project_obligations(
         mapping_path=mapping_path,
         evidence_program_path=evidence_program,
         run_id="review-followup-design-v1",
-        source_commit="a" * 40,
+        source_commit=source_commit,
         expected_revision=published.revision,
     )
     published, followup = publish_project_review_followup_design(

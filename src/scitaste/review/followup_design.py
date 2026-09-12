@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
@@ -596,6 +597,10 @@ def prepare_project_review_followup_design(
     iteration = inspect_project_review_iteration(runtime, project_id, review_iteration_run_id)
     mapping = load_review_followup_mapping(mapping_path)
     program = load_evidence_program(evidence_program_path)
+    _require_git_bound_inputs(
+        source_commit=source_commit,
+        evidence_program=program,
+    )
     design = compile_review_followup_design(
         project_id=project_id,
         run_id=run_id,
@@ -718,6 +723,58 @@ def inspect_project_review_followup_design(
 
 def _json_bytes(value: BaseModel) -> bytes:
     return (value.model_dump_json(indent=2) + "\n").encode("utf-8")
+
+
+def _require_git_bound_inputs(
+    *,
+    source_commit: str,
+    evidence_program: EvidenceProgramInspection,
+) -> None:
+    """Require the named commit to contain the exact two scientific inputs."""
+
+    try:
+        root_result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=evidence_program.path.parent,
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        root = Path(root_result.stdout.decode("utf-8").strip()).resolve(strict=True)
+    except (OSError, UnicodeDecodeError, subprocess.SubprocessError) as exc:
+        raise ValueError("review follow-up inputs must belong to a Git repository") from exc
+    try:
+        program_locator = evidence_program.path.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ValueError("review follow-up evidence program must belong to the repository") from exc
+    try:
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{source_commit}^{{commit}}"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("review follow-up source commit is unavailable") from exc
+    for locator, expected in (
+        (program_locator, evidence_program.path.read_bytes()),
+        ("src/scitaste/review/followup_design.py", None),
+    ):
+        try:
+            result = subprocess.run(
+                ["git", "show", f"{source_commit}:{locator}"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise ValueError(
+                f"review follow-up source commit does not contain {locator}"
+            ) from exc
+        if expected is not None and result.stdout != expected:
+            raise ValueError(f"review follow-up source commit has different bytes for {locator}")
 
 
 def _write_exclusive(path: Path, payload: bytes) -> None:
