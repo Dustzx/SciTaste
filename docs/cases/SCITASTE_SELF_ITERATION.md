@@ -929,3 +929,28 @@ a scientific design independently selects them.
 This iteration used one bounded read-only SSH inventory and local full-tree
 hashing. It performed no API call, dataset download, model load, GPU job, model
 transfer, remote mutation, human recruitment, or experiment.
+
+## Compiling reviewer criticism into the exact evidence program (2026-09-12)
+
+The internal ICLR-style review correctly identified four unresolved issues:
+missing effectiveness evidence, absent accepted-system comparison, a title whose
+“Improving” claim exceeds current results, and single-task generalization. The
+first review DAG represented three of these as generic experiment-design nodes,
+but those nodes still did not say which causal question, task population, or
+endpoint would answer them. Launching from that representation would leave room
+for convenient resources to redefine the experiment.
+
+SciTaste now binds the concerns to its resource-independent evidence program.
+The effectiveness concern requires H1, H2, and H3; the external-baseline concern
+requires the separately reported E1 ecological comparison; generalization reuses
+the complete five-study non-process program, including the D1 experiment-chain
+diagnostic. The same study is never launched again merely because another
+concern depends on it. The longitudinal self-development trace remains process
+evidence and is excluded from population inference.
+
+The title is retained as the intended claim, but submission remains blocked
+until all title-critical evidence is complete and positive; otherwise an author
+must explicitly narrow it. The compiler cannot silently rename the paper. Its
+project package preserves exact mapping/program bytes, leaves the primary model,
+formal sample size, repetitions, and compute unset, and performs no download,
+API call, SSH session, model load, GPU job, human recruitment, or experiment.

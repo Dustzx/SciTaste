@@ -1773,6 +1773,53 @@ function renderReviewIterations(items) {
     }
 
     const stepById = new Map(item.steps.map((step) => [step.step_id, step]));
+    let followup = null;
+    if (item.followup_design) {
+      followup = document.createElement("div");
+      followup.className = "review-followup-summary";
+      const followupHeader = document.createElement("div");
+      followupHeader.className = "compact-row-header";
+      const followupIdentity = document.createElement("div");
+      const followupLabel = document.createElement("span");
+      followupLabel.className = "card-label";
+      appendText(followupLabel, t("progress.review_iteration.followup.title"));
+      const followupProgram = document.createElement("strong");
+      appendText(followupProgram, item.followup_design.evidence_program_id);
+      followupIdentity.append(followupLabel, followupProgram);
+      followupHeader.append(
+        followupIdentity,
+        progressPill("candidate", t("progress.review_iteration.followup.no_run")),
+      );
+      const hypothesisRow = document.createElement("div");
+      hypothesisRow.className = "review-followup-hypotheses";
+      for (const hypothesis of item.followup_design.hypothesis_ids) {
+        const badge = document.createElement("span");
+        appendText(badge, hypothesis);
+        hypothesisRow.appendChild(badge);
+      }
+      const resourceRow = document.createElement("div");
+      resourceRow.className = "review-followup-resources";
+      for (const [key, value] of [
+        ["studies", item.followup_design.study_ids.length],
+        ["tasks", item.followup_design.task_source_ids.length],
+        ["systems", item.followup_design.system_candidate_ids.length],
+        ["model", t("progress.review_iteration.followup.unselected")],
+        ["sample", t("progress.review_iteration.followup.after_pilot")],
+        ["compute", t("progress.review_iteration.followup.unallocated")],
+      ]) {
+        const resource = document.createElement("span");
+        const resourceValue = document.createElement("strong");
+        appendText(resourceValue, value);
+        const resourceLabel = document.createElement("small");
+        appendText(resourceLabel, t(`progress.review_iteration.followup.${key}`));
+        resource.append(resourceValue, resourceLabel);
+        resourceRow.appendChild(resource);
+      }
+      const titleGate = document.createElement("p");
+      titleGate.className = "review-iteration-boundary";
+      appendText(titleGate, t("progress.review_iteration.followup.title_gate"));
+      followup.append(followupHeader, hypothesisRow, resourceRow, titleGate);
+    }
     const lanes = document.createElement("div");
     lanes.className = "review-iteration-lanes";
     for (const lane of item.lanes) {
@@ -1807,6 +1854,16 @@ function renderReviewIterations(items) {
             ? t("progress.review_iteration.node_dependencies", {count: step.depends_on.length})
             : t("progress.review_iteration.node_ready"));
         node.append(nodeTitle, objective, nodeMeta);
+        if ((step.hypothesis_ids || []).length > 0) {
+          const bindings = document.createElement("div");
+          bindings.className = "review-followup-node-bindings";
+          for (const hypothesis of step.hypothesis_ids) {
+            const badge = document.createElement("span");
+            appendText(badge, hypothesis);
+            bindings.appendChild(badge);
+          }
+          node.appendChild(bindings);
+        }
         laneSteps.appendChild(node);
       }
       laneCard.append(summary, laneSteps);
@@ -1837,22 +1894,38 @@ function renderReviewIterations(items) {
       project_id: currentProjectId(),
       run_id: item.run_id,
     }));
+    card.append(header, facts);
+    if (followup) card.appendChild(followup);
     card.append(
-      header,
-      facts,
       lanes,
       flow,
       boundary,
       open,
+      ...(item.followup_design
+        ? [(() => {
+          const inspect = document.createElement("button");
+          inspect.type = "button";
+          inspect.className = "secondary-button";
+          appendText(inspect, t("progress.review_iteration.followup.inspect"));
+          inspect.addEventListener("click", () => loadWorkspace({
+            view: "run-stage-explorer",
+            project_id: currentProjectId(),
+            run_id: item.followup_design.run_id,
+          }));
+          return inspect;
+        })()]
+        : []),
       evidenceDisclosure(item.support_ref_ids, {
         data: {
           plan_sha256: item.plan_sha256,
+          followup_design_sha256: item.followup_design?.design_sha256 || null,
           terminal_step_id: item.terminal_step_id,
           authorizes_execution: item.authorizes_execution,
           no_execution_performed: item.no_execution_performed,
         },
         names: [
           "plan_sha256",
+          "followup_design_sha256",
           "terminal_step_id",
           "authorizes_execution",
           "no_execution_performed",

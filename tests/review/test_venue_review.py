@@ -23,11 +23,14 @@ from scitaste.review import (
     VenueReviewReport,
     VenueReviewResponse,
     import_venue_review_report,
+    inspect_project_review_followup_design,
     inspect_project_review_iteration,
     inspect_project_review_routing,
+    prepare_project_review_followup_design,
     prepare_project_review_iteration,
     prepare_project_review_routing,
     prepare_venue_review,
+    publish_project_review_followup_design,
     publish_project_review_iteration,
     publish_project_review_routing,
     route_venue_review_to_state,
@@ -403,6 +406,78 @@ def test_registered_review_routes_to_open_project_obligations(
     )
     assert planned_run.status == "complete-review-iteration-planned"
     assert planned_run.model_calls == 0
+
+    mapping_path = tmp_path / "review-followup-mapping.yaml"
+    mapping_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "mapping_id": "review-followup-test-v1",
+                "project_id": "review-project",
+                "review_id": "routing-round",
+                "review_iteration_run_id": "review-iteration-v1",
+                "paper_title": (
+                    "SciTaste: Improving Autonomous Research through Scientific Taste"
+                ),
+                "mappings": [
+                    {
+                        "concern_id": "routing-evidence",
+                        "objective": "title_effectiveness",
+                        "treatment_kind": "registered_study_bundle",
+                        "study_ids": [
+                            "taste-abstraction-mechanism",
+                            "taste-specificity-mechanism",
+                            "native-objective-progress",
+                        ],
+                        "rationale": (
+                            "Bind the concern to every registered title-critical study."
+                        ),
+                        "claim_action": None,
+                        "title_change_authorized": False,
+                    }
+                ],
+                "authorizes_download": False,
+                "authorizes_api_calls": False,
+                "authorizes_gpu_work": False,
+                "authorizes_human_recruitment": False,
+                "authorizes_execution": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_program = (
+        _ROOT / "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
+    )
+    prepared_followup = prepare_project_review_followup_design(
+        runtime,
+        project_id="review-project",
+        review_iteration_run_id="review-iteration-v1",
+        mapping_path=mapping_path,
+        evidence_program_path=evidence_program,
+        run_id="review-followup-design-v1",
+        source_commit="a" * 40,
+        expected_revision=published.revision,
+    )
+    published, followup = publish_project_review_followup_design(
+        runtime,
+        prepared=prepared_followup,
+        expected_revision=published.revision,
+    )
+    assert published.revision == snapshot.revision + 6
+    assert followup.primary_model_id is None
+    assert followup.fixed_formal_sample_size is None
+    assert followup.authorizes_execution is False
+    assert (
+        inspect_project_review_followup_design(
+            runtime, "review-project", "review-followup-design-v1"
+        )
+        == followup
+    )
+    followup_run = next(
+        item for item in published.manifest.runs if item.run_id == "review-followup-design-v1"
+    )
+    assert followup_run.status == "complete-review-followup-designed"
+    assert followup_run.model_calls == 0
     progress = WorkspaceSurfaceFactory(runtime).build(
         ProjectProgressQuery(project_id="review-project")
     )
@@ -415,6 +490,23 @@ def test_registered_review_routes_to_open_project_obligations(
     assert iteration_row["run_id"] == "review-iteration-v1"
     assert iteration_row["next_step_ids"] == ["design-experiment-routing-evidence"]
     assert iteration_row["authorizes_execution"] is False
+    assert iteration_row["followup_design"]["run_id"] == "review-followup-design-v1"
+    assert iteration_row["followup_design"]["hypothesis_ids"] == [
+        "H1_taste_abstraction",
+        "H2_taste_specificity",
+        "H3_native_effect",
+    ]
+    assert iteration_row["followup_design"]["primary_model_state"] == "unselected"
+    design_step = next(
+        item
+        for item in iteration_row["steps"]
+        if item["step_id"] == "design-experiment-routing-evidence"
+    )
+    assert design_step["study_ids"] == [
+        "taste-abstraction-mechanism",
+        "taste-specificity-mechanism",
+        "native-objective-progress",
+    ]
     assert {item["stage"] for item in iteration_row["lanes"]} == {
         "evidence",
         "writing",

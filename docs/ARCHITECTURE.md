@@ -2219,3 +2219,33 @@ project interfaces while retaining `authorizes_execution=false` and
 `scientific_evidence_established=false`. Generation-as-Content may visualize the
 same verified DAG and offer navigation, but it cannot skip dependencies or turn
 an approval marker into an API/GPU/tool authorization.
+
+### ADR-073: Reviewer experiment requests bind registered estimands before resources
+
+Status: accepted for native offline orchestration; acquisition, execution, and
+human review remain unauthorized.
+
+A review concern such as “add effectiveness evidence” is too underspecified to
+launch safely. Choosing a convenient available model or benchmark at that point
+would allow mutable inventory or reviewer wording to redefine the paper's
+scientific question. SciTaste therefore inserts a deterministic design compiler
+between the review DAG and every experiment proposal. Its input is an explicit
+concern mapping plus the immutable evidence program; it never maps free text by
+keyword or model guess.
+
+Each objective has a program-derived closed study set. Title effectiveness is
+the union of studies reciprocally linked to title-critical claims. External
+baseline evidence is the separately interpreted ecological comparison.
+Cross-task generalization is the complete non-process evidence program. A title
+overclaim is a conditional author decision: retain the target title only while
+submission is blocked on H1--H3, or narrow it before submission. The compiler
+cannot make that edit itself.
+
+Multiple concerns may reuse one study, but cannot duplicate its execution. The
+project-owned package binds the review plan, mapping bytes, program bytes, five
+unique estimands, conditions, task sources, accepted systems, endpoints, and
+experimental units. It deliberately records no primary model, fixed sample
+size, repetitions, or compute allocation. Copied inputs and deterministic
+recompilation are rehashed on inspection. All download, API, GPU, recruitment,
+and execution authorities remain false, so design completeness cannot be
+mistaken for empirical evidence.

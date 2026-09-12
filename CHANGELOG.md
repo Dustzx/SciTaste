@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a project-owned review follow-up design compiler. Explicit mappings bind
+  every reviewer concern to the exact H1/H2/H3, accepted-system ecological, and
+  experiment-integrity studies already registered in the ICLR evidence program;
+  shared studies are deduplicated, the self-development process case is excluded
+  from inference, and title changes remain an author decision. Published bundles
+  copy and rehash the mapping and program, keep model/sample/compute decisions
+  open, and authorize no download, API, GPU, human, or experiment activity.
+- Generation-as-Content now overlays that exact no-run evidence response on the
+  review DAG using compact hypothesis and resource summaries, with direct access
+  to the immutable design instead of expanding the project home into prose.
+
 ### Added
 
 - Reviewer feedback can now compile into a project-owned, self-hashed research

@@ -81,7 +81,10 @@ from scitaste.project.models import (
     validate_entry_id,
     validate_project_id,
 )
-from scitaste.review import inspect_project_review_iteration
+from scitaste.review import (
+    inspect_project_review_followup_design,
+    inspect_project_review_iteration,
+)
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -636,6 +639,20 @@ class WorkspaceSurfaceFactory:
             }
         benchmark_qualification_rows = list(benchmark_qualification_by_candidate.values())
 
+        review_followup_by_iteration: dict[str, tuple[object, EvidenceRef]] = {}
+        for run in snapshot.manifest.runs:
+            if run.condition != "review-followup-evidence-design" or run.superseded_by:
+                continue
+            design = inspect_project_review_followup_design(
+                self._runtime,
+                snapshot.project_id,
+                run.run_id,
+            )
+            review_followup_by_iteration[design.review_iteration_run_id] = (
+                design,
+                run_refs[run.run_id],
+            )
+
         review_iteration_rows: list[dict[str, object]] = []
         review_stage_order = ("research", "method", "evidence", "writing", "review")
         for run in snapshot.manifest.runs:
@@ -647,6 +664,15 @@ class WorkspaceSurfaceFactory:
                 run.run_id,
             )
             run_ref = run_refs[run.run_id]
+            followup_entry = review_followup_by_iteration.get(run.run_id)
+            treatment_by_step = (
+                {
+                    item.iteration_step_id: item
+                    for item in followup_entry[0].treatments
+                }
+                if followup_entry is not None
+                else {}
+            )
             step_rows: list[dict[str, object]] = []
             stage_steps: dict[str, list[dict[str, object]]] = {
                 stage: [] for stage in review_stage_order
@@ -670,6 +696,19 @@ class WorkspaceSurfaceFactory:
                     "state": state,
                     "requires_owner_approval": step.requires_owner_approval,
                     "project_interface": step.project_interface,
+                    "study_ids": list(
+                        treatment_by_step[step.step_id].study_ids
+                        if step.step_id in treatment_by_step
+                        else ()
+                    ),
+                    "hypothesis_ids": [
+                        item.value
+                        for item in (
+                            treatment_by_step[step.step_id].hypothesis_ids
+                            if step.step_id in treatment_by_step
+                            else ()
+                        )
+                    ],
                 }
                 step_rows.append(row)
                 stage_steps[step.stage].append(row)
@@ -706,6 +745,46 @@ class WorkspaceSurfaceFactory:
                     ),
                 )
             ]
+            followup_summary: dict[str, object] | None = None
+            support_ref_ids = [project_ref.evidence_id, run_ref.evidence_id]
+            if followup_entry is not None:
+                design, design_ref = followup_entry
+                support_ref_ids.append(design_ref.evidence_id)
+                followup_summary = {
+                    "run_ref_id": design_ref.evidence_id,
+                    "run_id": design.run_id,
+                    "design_sha256": design.design_sha256,
+                    "evidence_program_id": design.evidence_program_id,
+                    "treatment_count": len(design.treatments),
+                    "study_ids": [item.study_id for item in design.studies],
+                    "hypothesis_ids": [item.hypothesis.value for item in design.studies],
+                    "confirmatory_study_ids": [
+                        item.study_id
+                        for item in design.studies
+                        if item.inference_role.value == "confirmatory"
+                    ],
+                    "supporting_study_ids": [
+                        item.study_id
+                        for item in design.studies
+                        if item.inference_role.value == "supporting"
+                    ],
+                    "diagnostic_study_ids": [
+                        item.study_id
+                        for item in design.studies
+                        if item.inference_role.value == "diagnostic"
+                    ],
+                    "task_source_ids": [item.source_id for item in design.task_requirements],
+                    "system_candidate_ids": [
+                        item.system_id for item in design.system_requirements
+                    ],
+                    "primary_model_state": "unselected",
+                    "task_data_state": design.task_data_acquisition.value,
+                    "sample_size_state": design.sample_size_basis,
+                    "compute_state": "unallocated",
+                    "title_claim_status": design.title_claim_status,
+                    "authorizes_execution": design.authorizes_execution,
+                    "no_execution_performed": design.no_execution_performed,
+                }
             review_iteration_rows.append(
                 {
                     "run_ref_id": run_ref.evidence_id,
@@ -724,7 +803,8 @@ class WorkspaceSurfaceFactory:
                     "execution_approval_required": plan.execution_approval_required,
                     "authorizes_execution": plan.authorizes_execution,
                     "no_execution_performed": plan.no_execution_performed,
-                    "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+                    "followup_design": followup_summary,
+                    "support_ref_ids": support_ref_ids,
                 }
             )
 

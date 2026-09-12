@@ -14,6 +14,7 @@ Evidence
 → Structured reviewer concerns
 → Research obligations
 → Review iteration dependency graph
+→ Registered concern-to-evidence design
 → Evidence / method / claim / communication action
 → Obligation closure
 → Paper revision
@@ -82,6 +83,14 @@ depend on proof-backed obligation closure and makes response verification depend
 on the exact registered revision. A plan can guide both the controller and the
 generated project interface, but it never supplies execution authority or
 pretends that its planned artifacts already exist.
+
+`project paper review design-followup` converts each generic experiment-design
+root into an exact, program-bound response. It does not infer studies from review
+prose. A reviewed mapping must cover every concern, and the compiler verifies its
+study set against the title-critical, ecological, or cross-task role already
+registered in the evidence program. Studies reused by several concerns remain one
+execution unit. Model, task bytes, sample size, compute, and reviewers stay
+unselected or pending, and the published package authorizes no external action.
 
 After execution, `project paper review admit-evaluation-evidence` accepts only
 the project's selected result when the registered assessment is formal,

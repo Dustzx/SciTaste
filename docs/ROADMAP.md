@@ -12,6 +12,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
 | Phase 6.1 — reviewer-driven iteration planner | done | all reports compile through a cumulative routing chain into an approval-aware research-to-verification DAG |
+| Phase 6.2 — review-to-evidence design compiler | done | every experiment concern binds exact registered estimands, task roles, endpoints, and non-duplicated studies without selecting resources or authorizing execution |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |

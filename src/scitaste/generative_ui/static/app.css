@@ -1234,6 +1234,57 @@ fieldset {
   font-size: 0.67rem;
 }
 
+.review-followup-summary {
+  background: rgb(235 241 246 / 78%);
+  border: 1px solid #c4d4df;
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem;
+}
+
+.review-followup-hypotheses,
+.review-followup-node-bindings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.review-followup-hypotheses span,
+.review-followup-node-bindings span {
+  background: #dbe9f1;
+  border: 1px solid #bfd2df;
+  border-radius: 99rem;
+  color: #345e75;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 0.2rem 0.42rem;
+}
+
+.review-followup-resources {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(6, minmax(4.5rem, 1fr));
+}
+
+.review-followup-resources > span {
+  background: rgb(255 255 255 / 70%);
+  border-radius: 0.4rem;
+  display: grid;
+  gap: 0.05rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.review-followup-resources strong {
+  color: #345e75;
+  font-size: 0.78rem;
+}
+
+.review-followup-resources small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
 .review-iteration-lanes {
   display: grid;
   gap: 0.55rem;
@@ -1319,6 +1370,10 @@ fieldset {
   font-size: 0.68rem;
   line-height: 1.35;
   margin: 0;
+}
+
+.review-followup-node-bindings {
+  margin-top: 0.1rem;
 }
 
 .review-iteration-flow {
@@ -3056,6 +3111,10 @@ code {
 }
 
 @media (max-width: 720px) {
+  .review-followup-resources {
+    grid-template-columns: repeat(3, minmax(4.5rem, 1fr));
+  }
+
   .app-header {
     gap: 0.5rem;
     min-height: 4rem;

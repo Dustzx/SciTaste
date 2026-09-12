@@ -1201,6 +1201,19 @@ class ProjectProgressReviewIterationStepItem(BaseModel):
     ]
     requires_owner_approval: bool
     project_interface: SafeText
+    study_ids: tuple[SafeIdentifier, ...] = ()
+    hypothesis_ids: tuple[
+        Annotated[str, Field(max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = ()
+
+    @model_validator(mode="after")
+    def evidence_bindings_are_unique(self) -> ProjectProgressReviewIterationStepItem:
+        if len(self.study_ids) != len(set(self.study_ids)):
+            raise ValueError("review iteration UI study IDs must be unique")
+        if len(self.hypothesis_ids) != len(set(self.hypothesis_ids)):
+            raise ValueError("review iteration UI hypothesis IDs must be unique")
+        return self
 
 
 class ProjectProgressReviewIterationLaneItem(BaseModel):
@@ -1233,6 +1246,56 @@ class ProjectProgressReviewIterationEdgeItem(BaseModel):
     dependency_count: int = Field(gt=0)
 
 
+class ProjectProgressReviewFollowupDesignItem(BaseModel):
+    """Compact projection of the exact no-run evidence response to a review."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    design_sha256: Sha256
+    evidence_program_id: SafeIdentifier
+    treatment_count: int = Field(gt=0)
+    study_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=30)
+    hypothesis_ids: tuple[
+        Annotated[str, Field(max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = Field(min_length=1, max_length=30)
+    confirmatory_study_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=30)
+    supporting_study_ids: tuple[SafeIdentifier, ...] = Field(max_length=30)
+    diagnostic_study_ids: tuple[SafeIdentifier, ...] = Field(max_length=30)
+    task_source_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=30)
+    system_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=30)
+    primary_model_state: Literal["unselected"]
+    task_data_state: Literal["pending", "verified", "blocked"]
+    sample_size_state: Literal["pilot_then_power_analysis"]
+    compute_state: Literal["unallocated"]
+    title_claim_status: Literal["submission_blocked_pending_title_critical_evidence"]
+    authorizes_execution: Literal[False] = False
+    no_execution_performed: Literal[True] = True
+
+    @model_validator(mode="after")
+    def inventories_are_unique_and_partitioned(
+        self,
+    ) -> ProjectProgressReviewFollowupDesignItem:
+        inventories = (
+            self.study_ids,
+            self.hypothesis_ids,
+            self.task_source_ids,
+            self.system_candidate_ids,
+        )
+        if any(len(items) != len(set(items)) for items in inventories):
+            raise ValueError("review follow-up design inventories must be unique")
+        roles = (
+            *self.confirmatory_study_ids,
+            *self.supporting_study_ids,
+            *self.diagnostic_study_ids,
+        )
+        if len(roles) != len(set(roles)) or set(roles) != set(self.study_ids):
+            raise ValueError("review follow-up inference roles must partition its studies")
+        return self
+
+
 class ProjectProgressReviewIterationItem(BaseModel):
     """Condensed, evidence-bound review-to-research workflow for the project home."""
 
@@ -1262,6 +1325,7 @@ class ProjectProgressReviewIterationItem(BaseModel):
     execution_approval_required: bool
     authorizes_execution: Literal[False] = False
     no_execution_performed: Literal[True] = True
+    followup_design: ProjectProgressReviewFollowupDesignItem | None = None
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
 
     @model_validator(mode="after")
@@ -1270,6 +1334,11 @@ class ProjectProgressReviewIterationItem(BaseModel):
             raise ValueError("review iteration must cite its registered run")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("review iteration evidence references must be unique")
+        if (
+            self.followup_design is not None
+            and self.followup_design.run_ref_id not in self.support_ref_ids
+        ):
+            raise ValueError("review iteration must cite its follow-up evidence design")
         step_ids = [item.step_id for item in self.steps]
         if len(step_ids) != self.step_count or len(step_ids) != len(set(step_ids)):
             raise ValueError("review iteration step count differs from its unique inventory")

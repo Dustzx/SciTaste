@@ -113,6 +113,45 @@ map, highlights no-run roots and owner-approval gates, and links to the exact ru
 artifact. Large rounds remain collapsed within bounded lane panels instead of
 expanding into one long text page.
 
+The generic experiment-design roots must then be bound to the paper's registered
+scientific program before they can become launch candidates:
+
+```bash
+.venv/bin/scitaste project paper review design-followup \
+  --project-id <project-id> --iteration-run-id <iteration-plan-run> \
+  --mapping <review-followup-mapping.yaml> \
+  --evidence-program <registered-evidence-program.yaml> \
+  --run-id <followup-design-run> --source-commit <40-character-commit> \
+  --expected-revision <revision> --outputs-root outputs --dry-run
+```
+
+The mapping is explicit scientific judgment rather than keyword inference. The
+compiler requires every concern exactly once and derives the permitted study
+set from its purpose. Title effectiveness binds every title-critical
+confirmatory study; an external-baseline concern binds only the separately
+interpreted accepted-system ecological study; cross-task generalization binds
+all non-process study layers; and a title overclaim binds a conditional claim
+disposition without authorizing a title edit. A scientifically incomplete or
+extra study list fails closed.
+
+Shared studies are represented once even when several concerns depend on them.
+The current SciTaste response therefore contains five unique studies, not three
+duplicated experiment launches: H1 abstraction versus same-source raw RAG, H2
+matched versus source-disjoint Taste, H3 Full versus Native Base objective
+progress, E1 accepted-system ecological comparison, and D1 experiment-chain
+diagnosis. The longitudinal self-development case is explicitly excluded from
+population inference.
+
+Removing `--dry-run` publishes exact copies of the mapping and evidence program
+beside a self-hashed design. It still leaves the primary model unselected,
+compute unallocated, formal sample size unset until an excluded pilot and power
+analysis, task acquisition pending, and independent blind review pending. It
+sets every download, API, GPU, human-recruitment, and execution authority to
+false. `followup-design-status` rehashes both copied inputs, the upstream
+iteration plan, and deterministic recompilation. The project home projects the
+five hypotheses and unresolved resource decisions into the corresponding DAG
+nodes without expanding them into a long prose page.
+
 The additive `evidence-paper-revision` node enforces the same boundary at the
 long-form manuscript layer. It may revise text-only concerns and integrate new
 evidence only when a later project-state proof binds the new evidence, target

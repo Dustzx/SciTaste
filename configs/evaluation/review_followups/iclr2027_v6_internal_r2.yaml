@@ -1,0 +1,70 @@
+schema_version: "1.0"
+mapping_id: iclr2027-v6-internal-r2-followup-v1
+project_id: scitaste-self-development
+review_id: iclr2027-v6-internal-r2
+review_iteration_run_id: 2026-09-12__scitaste-native__review-iteration-plan-v1__seed-00
+paper_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
+mappings:
+  - concern_id: missing-effectiveness-evidence
+    objective: title_effectiveness
+    treatment_kind: registered_study_bundle
+    study_ids:
+      - taste-abstraction-mechanism
+      - taste-specificity-mechanism
+      - native-objective-progress
+    rationale: >-
+      The title-level effectiveness question requires all three registered
+      confirmatory estimands: abstracted Taste versus same-source raw RAG,
+      matched versus source-disjoint mismatched Taste, and Full SciTaste versus
+      Native Base objective progress. No engineering result or ecological
+      system comparison substitutes for these effects.
+    claim_action: null
+    title_change_authorized: false
+  - concern_id: missing-external-baseline
+    objective: external_ecological_comparison
+    treatment_kind: registered_study_bundle
+    study_ids:
+      - accepted-system-ecological-comparison
+    rationale: >-
+      Compare complete evidence-bearing research packages against independently
+      accepted autonomous-research methods on a shared full-lifecycle task
+      population. Report model confounding explicitly and do not pool this
+      supporting comparison into the causal Taste estimate.
+    claim_action: null
+    title_change_authorized: false
+  - concern_id: overclaim-title-improvement
+    objective: title_claim_disposition
+    treatment_kind: conditional_claim_disposition
+    study_ids:
+      - taste-abstraction-mechanism
+      - taste-specificity-mechanism
+      - native-objective-progress
+    rationale: >-
+      Preserve the original title as the target claim only while submission is
+      blocked on complete positive H1, H2, and H3 evidence. If the paper must be
+      submitted before those results exist, the author must explicitly narrow
+      the title and abstract; this mapping does not authorize either change.
+    claim_action: retain_target_title_pending_evidence_or_narrow_before_submission
+    title_change_authorized: false
+  - concern_id: single-task-generalization
+    objective: cross_task_generalization
+    treatment_kind: registered_study_bundle
+    study_ids:
+      - taste-abstraction-mechanism
+      - taste-specificity-mechanism
+      - native-objective-progress
+      - accepted-system-ecological-comparison
+      - experiment-chain-diagnostic
+    rationale: >-
+      Reuse the complete non-process evidence program across held-out decision
+      cases, objective-progress tasks, full-lifecycle research packages, and
+      experiment-chain diagnostics. The longitudinal self-development case is
+      excluded from population inference, and no duplicated experiment is
+      created merely because several concerns require the same study.
+    claim_action: null
+    title_change_authorized: false
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false
+authorizes_execution: false
