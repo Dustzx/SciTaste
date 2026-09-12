@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: zhipu-authenticated-20260905-v1
+resource_id: zhipu-glm53-flash
+resource_kind: api_model
+observed_at: 2026-09-05T11:29:30.339266Z
+method: authenticated_call
+status: verified
+requested_model_id: glm-5.3-flash
+returned_model_revision: glm-5.3-flash
+request_succeeded: true
+notes:
+  - The retained project recording contains a provider request ID and reports 1,588 total tokens.
+  - The raw provider response SHA-256 is 5f3551019c70d33a8dbb84460191c2ef5bc25d379171e1ece5984173b7901e83.
+  - The self-hashed recording reports aea0ec7d1b69ffe0ed45a6e4eef8e6408173b77eac1889e9ce5e7d6cdb253b03; current connectivity was not probed by this registration.
+credentials_recorded: false
+observation_only: true

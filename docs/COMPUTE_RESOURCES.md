@@ -37,7 +37,7 @@ turning a weak password hash or bearer key into a tracked artifact.
 | Class | Resource | Current role/state |
 |---|---|---|
 | API | `deepseek-v41-flash` | primary API candidate; official identity verified and owner reports a successful current call |
-| API | `zhipu-glm53-flash` | separate robustness candidate; exact GLM-5.3-Flash authenticated call still pending |
+| API | `zhipu-glm53-flash` | separate robustness candidate; historical authenticated call verified, current connectivity unprobed |
 | API | `bailian-qwen38-max` | historical provenance only; blocked by the latest recorded arrearage response |
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
 | GPU | `gpu-host-3090-2` | remote 8×RTX 3090 scale-out host; approximately 200 GB free is owner-reported pending a fresh probe |
@@ -78,6 +78,14 @@ USD 0.006/M cached-input, USD 0.30/M uncached-input, and USD 1.20/M output
 tokens. It also says retired `deepseek-v4-flash` aliases are served by V4.1.
 The owner's successful same-day call is kept as a separate reported observation
 without storing a key or response bytes.
+
+The retained 2026-09-05 Zhipu recording verifies one authenticated
+`glm-5.3-flash` request and response, including a provider request ID and 1,588
+reported tokens. The shared observation binds the raw response hash and the
+recording's self-reported hash without copying response content or credentials.
+This is historical access evidence, not a fresh connectivity result; the
+project binding therefore remains `pending` until a separately approved current
+preflight is performed.
 
 ## Commands
 

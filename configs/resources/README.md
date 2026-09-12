@@ -19,7 +19,7 @@ configs/resources/
 ├── projects/
 │   └── scitaste_self_development.yaml
 └── observations/
-    ├── *.yaml                 # v1-compatible API/remote-host observations
+    ├── *.yaml                 # API and remote-host observations
     └── v2/
         ├── gpu_host_local_3090_20260912_v1.yaml
         └── qwen3vl2b_local_20260912_v1.yaml
@@ -43,6 +43,11 @@ The catalog is stable identity; observation files are time-stamped facts. The
 runtime copies accepted observations into `outputs/resources/observations/`, so
 their source version remains auditable without turning an observation into a
 reservation or experiment approval.
+
+The Zhipu observation records the retained 2026-09-05 authenticated
+`glm-5.3-flash` response by its provider-response and recording hashes. It
+establishes historical model access only; it does not claim that the account is
+reachable today and does not perform a new provider call.
 
 Machine-local access material belongs only in the ignored runtime plane:
 

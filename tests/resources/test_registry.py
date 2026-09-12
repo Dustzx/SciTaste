@@ -32,6 +32,9 @@ LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.
 LOCAL_CHECKPOINT_OBSERVATION = Path(
     "configs/resources/observations/v2/qwen3vl2b_local_20260912_v1.yaml"
 )
+ZHIPU_AUTHENTICATED_OBSERVATION = Path(
+    "configs/resources/observations/zhipu_glm53flash_authenticated_20260905_v1.yaml"
+)
 
 
 def test_tracked_catalog_defines_project_superordinate_api_and_gpu_resources() -> None:
@@ -249,6 +252,19 @@ def test_owner_observations_cannot_claim_independent_verification() -> None:
 
     with pytest.raises(ValidationError, match="owner reports must retain reported status"):
         ResourceObservation.model_validate(payload)
+
+
+def test_zhipu_historical_authenticated_access_is_explicit_but_non_authorizing() -> None:
+    observation = load_resource_observation(ZHIPU_AUTHENTICATED_OBSERVATION)
+
+    assert observation.resource_id == "zhipu-glm53-flash"
+    assert observation.method.value == "authenticated_call"
+    assert observation.status is ObservationStatus.VERIFIED
+    assert observation.requested_model_id == "glm-5.3-flash"
+    assert observation.returned_model_revision == "glm-5.3-flash"
+    assert observation.request_succeeded is True
+    assert observation.credentials_recorded is False
+    assert observation.observation_only is True
 
 
 def test_checkpoint_observations_reject_api_and_gpu_fields() -> None:
