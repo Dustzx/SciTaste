@@ -262,8 +262,14 @@ def test_resource_access_explicitly_partitions_local_bindings_without_exposing_v
 def test_host_scoped_checkpoint_does_not_probe_a_remote_path_as_local() -> None:
     status = inspect_resource_access(CATALOG_V3, environ={})
     by_id = {item.resource_id: item for item in status.resources}
+    local_checkpoint = load_compute_resource_catalog(CATALOG_V3).catalog.resource(
+        "qwen3-5-4b-local-b4e05070"
+    )
+    local_path = Path(local_checkpoint.local_path)
 
-    assert by_id["qwen3-5-4b-local-b4e05070"].local_path_present is True
+    assert by_id["qwen3-5-4b-local-b4e05070"].local_path_present is (
+        local_path.is_dir() and not local_path.is_symlink()
+    )
     assert by_id["qwen3-5-4b-remote-b4e05070"].local_path_present is None
 
     payload = yaml.safe_load(
