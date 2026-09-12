@@ -82,6 +82,7 @@ from scitaste.project.models import (
     validate_project_id,
 )
 from scitaste.review import (
+    inspect_project_review_followup_activation,
     inspect_project_review_followup_design,
     inspect_project_review_iteration,
 )
@@ -639,6 +640,20 @@ class WorkspaceSurfaceFactory:
             }
         benchmark_qualification_rows = list(benchmark_qualification_by_candidate.values())
 
+        review_activation_by_design: dict[str, tuple[object, EvidenceRef]] = {}
+        for run in snapshot.manifest.runs:
+            if run.condition != "review-followup-activation-dossier" or run.superseded_by:
+                continue
+            activation = inspect_project_review_followup_activation(
+                self._runtime,
+                snapshot.project_id,
+                run.run_id,
+            )
+            review_activation_by_design[activation.followup_design_run_id] = (
+                activation,
+                run_refs[run.run_id],
+            )
+
         review_followup_by_iteration: dict[str, tuple[object, EvidenceRef]] = {}
         for run in snapshot.manifest.runs:
             if run.condition != "review-followup-evidence-design" or run.superseded_by:
@@ -747,6 +762,42 @@ class WorkspaceSurfaceFactory:
             if followup_entry is not None:
                 design, design_ref = followup_entry
                 support_ref_ids.append(design_ref.evidence_id)
+                activation_entry = review_activation_by_design.get(design.run_id)
+                activation_summary: dict[str, object] | None = None
+                if activation_entry is not None:
+                    activation, activation_ref = activation_entry
+                    support_ref_ids.append(activation_ref.evidence_id)
+                    activation_summary = {
+                        "run_ref_id": activation_ref.evidence_id,
+                        "run_id": activation.run_id,
+                        "activation_sha256": activation.activation_sha256,
+                        "study_count": len(activation.studies),
+                        "metadata_item_count": (
+                            activation.next_owner_decision.requested_item_count
+                        ),
+                        "metadata_byte_ceiling": (
+                            activation.next_owner_decision.maximum_requested_bytes
+                        ),
+                        "metadata_source_ids": list(activation.next_owner_decision.source_ids),
+                        "metadata_decision_ready": (activation.ready_for_metadata_owner_decision),
+                        "primary_model_candidate_count": len(activation.primary_model_candidates),
+                        "pilot_ready_model_count": sum(
+                            item.ready_for_conformance_pilot
+                            for item in activation.primary_model_candidates
+                        ),
+                        "external_system_count": len(activation.external_systems),
+                        "adapter_ready_system_count": sum(
+                            item.adapter_implementation_ready
+                            for item in activation.external_systems
+                        ),
+                        "minimum_reviewer_count": activation.minimum_independent_reviewers,
+                        "recruited_reviewer_count": activation.reviewer_count,
+                        "next_owner_decision_id": (activation.next_owner_decision.decision_id),
+                        "blocker_count": len(activation.blocker_codes),
+                        "ready_for_experiment": activation.ready_for_experiment,
+                        "authorizes_execution": activation.authorizes_execution,
+                        "no_external_action_performed": (activation.no_external_action_performed),
+                    }
                 followup_summary = {
                     "run_ref_id": design_ref.evidence_id,
                     "run_id": design.run_id,
@@ -779,6 +830,7 @@ class WorkspaceSurfaceFactory:
                     "title_claim_status": design.title_claim_status,
                     "authorizes_execution": design.authorizes_execution,
                     "no_execution_performed": design.no_execution_performed,
+                    "activation": activation_summary,
                 }
             review_iteration_rows.append(
                 {

@@ -1818,7 +1818,59 @@ function renderReviewIterations(items) {
       const titleGate = document.createElement("p");
       titleGate.className = "review-iteration-boundary";
       appendText(titleGate, t("progress.review_iteration.followup.title_gate"));
-      followup.append(followupHeader, hypothesisRow, resourceRow, titleGate);
+      let activation = null;
+      if (item.followup_design.activation) {
+        const data = item.followup_design.activation;
+        activation = document.createElement("div");
+        activation.className = "review-activation-summary";
+        const activationHeader = document.createElement("div");
+        activationHeader.className = "compact-row-header";
+        const activationTitle = document.createElement("strong");
+        appendText(activationTitle, t("progress.review_iteration.activation.title"));
+        activationHeader.append(
+          activationTitle,
+          progressPill("candidate", t("progress.review_iteration.activation.no_run")),
+        );
+        const activationFacts = document.createElement("div");
+        activationFacts.className = "review-activation-facts";
+        for (const [value, key] of [
+          [
+            `${data.metadata_item_count} / ${formatByteCeiling(data.metadata_byte_ceiling)}`,
+            "metadata",
+          ],
+          [`${data.pilot_ready_model_count}/${data.primary_model_candidate_count}`, "models"],
+          [`${data.adapter_ready_system_count}/${data.external_system_count}`, "adapters"],
+          [`${data.recruited_reviewer_count}/${data.minimum_reviewer_count}`, "reviewers"],
+          [t("progress.review_iteration.activation.blocked"), "experiment"],
+        ]) {
+          const fact = document.createElement("span");
+          const factValue = document.createElement("strong");
+          appendText(factValue, value);
+          const factLabel = document.createElement("small");
+          appendText(factLabel, t(`progress.review_iteration.activation.${key}`));
+          fact.append(factValue, factLabel);
+          activationFacts.appendChild(fact);
+        }
+        const decision = document.createElement("p");
+        decision.className = "review-activation-decision";
+        appendText(decision, t("progress.review_iteration.activation.next_decision", {
+          count: data.metadata_item_count,
+          size: formatByteCeiling(data.metadata_byte_ceiling),
+        }));
+        const inspectActivation = document.createElement("button");
+        inspectActivation.type = "button";
+        inspectActivation.className = "secondary-button";
+        appendText(inspectActivation, t("progress.review_iteration.activation.inspect"));
+        inspectActivation.addEventListener("click", () => loadWorkspace({
+          view: "run-stage-explorer",
+          project_id: currentProjectId(),
+          run_id: data.run_id,
+        }));
+        activation.append(activationHeader, activationFacts, decision, inspectActivation);
+      }
+      followup.append(followupHeader, hypothesisRow, resourceRow);
+      if (activation) followup.appendChild(activation);
+      followup.appendChild(titleGate);
     }
     const lanes = document.createElement("div");
     lanes.className = "review-iteration-lanes";
@@ -1919,6 +1971,8 @@ function renderReviewIterations(items) {
         data: {
           plan_sha256: item.plan_sha256,
           followup_design_sha256: item.followup_design?.design_sha256 || null,
+          followup_activation_sha256:
+            item.followup_design?.activation?.activation_sha256 || null,
           terminal_step_id: item.terminal_step_id,
           authorizes_execution: item.authorizes_execution,
           no_execution_performed: item.no_execution_performed,
@@ -1926,6 +1980,7 @@ function renderReviewIterations(items) {
         names: [
           "plan_sha256",
           "followup_design_sha256",
+          "followup_activation_sha256",
           "terminal_step_id",
           "authorizes_execution",
           "no_execution_performed",

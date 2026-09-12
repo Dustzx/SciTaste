@@ -2249,3 +2249,33 @@ size, repetitions, or compute allocation. Copied inputs and deterministic
 recompilation are rehashed on inspection. All download, API, GPU, recruitment,
 and execution authorities remain false, so design completeness cannot be
 mistaken for empirical evidence.
+
+### ADR-074: Experiment activation is a resource join, not a launch permission
+
+Status: accepted for the ICLR 2027 no-run activation boundary; owner decisions
+and all external actions remain unperformed.
+
+An exact study design is still insufficient to launch. Data proposals may cover
+only metadata, an accepted method may lack a usable adapter or code license, an
+API alias may be rolling or unverified, and an available checkpoint may be too
+weak or scientifically inappropriate for the paper. Treating a resource list as
+readiness would convert availability into scientific selection.
+
+SciTaste therefore compiles a second, review-bound activation record. It joins
+the five unique H1/H2/H3/E1/D1 studies to the exact evidence-review package,
+compute catalog, and project resource binding. Every task and accepted system is
+covered exactly once. The resulting record exposes per-study blockers, data
+scope, adapter viability, model identity and pricing gaps, human-review status,
+and the absence of a powered sample or compute allocation.
+
+DeepSeek V4 Flash and GLM-5.3-Flash remain candidates rather than selected
+models. Both currently use rolling identities without an approved authenticated
+revision observation; GLM pricing is also unbound. Qwen checkpoints remain
+diagnostic assets. The primary model may be frozen only after a task-excluded
+conformance pilot, whose observations cannot enter the formal test.
+
+The only current owner-decision-ready action is review of 21 pinned metadata
+files under an 8 MiB ceiling. The activation artifact records that decision as
+unapproved and unperformed. It cannot authorize downloads, repository checkout,
+API calls, GPU work, reviewer recruitment, or execution. Generation-as-Content
+may render this state and navigate to its evidence, but cannot mutate the gate.

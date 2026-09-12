@@ -7,17 +7,21 @@ from pydantic import ValidationError
 
 from scitaste.evaluation import load_evidence_program
 from scitaste.review import (
+    ProjectReviewFollowupActivation,
     ProjectReviewFollowupDesign,
     ProjectReviewIterationPlan,
     ReviewIterationStep,
     ReviewIterationWorkKind,
+    compile_review_followup_activation,
     compile_review_followup_design,
+    load_review_followup_activation_manifest,
     load_review_followup_mapping,
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PROGRAM = _ROOT / "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
 _MAPPING = _ROOT / "configs/evaluation/review_followups/iclr2027_v6_internal_r2.yaml"
+_ACTIVATION = _ROOT / "configs/evaluation/activation/iclr2027_review_followup_v2.yaml"
 _SHA = "a" * 64
 _COMMIT = "b" * 40
 _PROJECT = "scitaste-self-development"
@@ -260,3 +264,121 @@ def test_review_followup_design_is_self_hashed() -> None:
 
     with pytest.raises(ValidationError, match="design hash mismatch"):
         ProjectReviewFollowupDesign.model_validate(payload)
+
+
+def test_review_activation_closes_five_studies_without_selecting_available_resources() -> None:
+    design = compile_review_followup_design(
+        project_id=_PROJECT,
+        run_id="followup-design-v1",
+        source_commit=_COMMIT,
+        review_iteration=_iteration(),
+        mapping=load_review_followup_mapping(_MAPPING),
+        evidence_program=load_evidence_program(_PROGRAM),
+    )
+
+    activation = compile_review_followup_activation(
+        design=design,
+        manifest_inspection=load_review_followup_activation_manifest(_ACTIVATION),
+        workspace_root=_ROOT,
+        run_id="followup-activation-v1",
+        source_commit=_COMMIT,
+    )
+
+    assert [item.hypothesis for item in activation.studies] == [
+        "H1_taste_abstraction",
+        "H2_taste_specificity",
+        "H3_native_effect",
+        "E1_ecological_comparison",
+        "D1_integrity_diagnostic",
+    ]
+    assert activation.next_owner_decision.source_ids == (
+        "innovatorbench-objective-tasks",
+        "expbench-integrity",
+    )
+    assert activation.next_owner_decision.requested_item_count == 21
+    assert activation.next_owner_decision.maximum_requested_bytes == 8 * 1024 * 1024
+    assert activation.primary_model_id is None
+    assert activation.ready_for_model_conformance_pilot is False
+    assert activation.ready_for_adapter_preflight is False
+    assert activation.ready_for_human_recruitment is False
+    assert activation.ready_for_experiment is False
+    assert all(not item.selected for item in activation.primary_model_candidates)
+    assert all(not item.paper_backbone_selected for item in activation.diagnostic_checkpoints)
+    candidates = {item.resource_id: item for item in activation.primary_model_candidates}
+    assert candidates["deepseek-v4-flash"].blocker_codes == (
+        "stable_revision_not_pinned",
+        "authenticated_identity_not_verified",
+    )
+    assert candidates["zhipu-glm53-flash"].blocker_codes == (
+        "stable_revision_not_pinned",
+        "authenticated_identity_not_verified",
+        "pricing_ceiling_not_verified",
+    )
+    assert activation.historical_campaign_superseded_for_launch is True
+    assert activation.authorizes_download is False
+    assert activation.authorizes_api_calls is False
+    assert activation.authorizes_gpu_work is False
+    assert activation.authorizes_human_recruitment is False
+    assert activation.authorizes_execution is False
+    assert activation.no_external_action_performed is True
+
+
+def test_review_activation_rejects_design_and_resource_drift() -> None:
+    design = compile_review_followup_design(
+        project_id=_PROJECT,
+        run_id="followup-design-v1",
+        source_commit=_COMMIT,
+        review_iteration=_iteration(),
+        mapping=load_review_followup_mapping(_MAPPING),
+        evidence_program=load_evidence_program(_PROGRAM),
+    )
+    manifest = load_review_followup_activation_manifest(_ACTIVATION)
+
+    with pytest.raises(ValueError, match="evidence program differs"):
+        compile_review_followup_activation(
+            design=design.model_copy(update={"evidence_program_sha256": "0" * 64}),
+            manifest_inspection=manifest,
+            workspace_root=_ROOT,
+            run_id="followup-activation-v1",
+            source_commit=_COMMIT,
+        )
+
+    wrong_candidates = manifest.manifest.model_copy(
+        update={
+            "primary_api_candidate_ids": (
+                "qwen3-vl-2b-local-47f9c0e0",
+                "zhipu-glm53-flash",
+            )
+        }
+    )
+    with pytest.raises(ValueError, match="API model resources"):
+        compile_review_followup_activation(
+            design=design,
+            manifest_inspection=manifest.model_copy(update={"manifest": wrong_candidates}),
+            workspace_root=_ROOT,
+            run_id="followup-activation-v1",
+            source_commit=_COMMIT,
+        )
+
+
+def test_review_activation_is_self_hashed() -> None:
+    design = compile_review_followup_design(
+        project_id=_PROJECT,
+        run_id="followup-design-v1",
+        source_commit=_COMMIT,
+        review_iteration=_iteration(),
+        mapping=load_review_followup_mapping(_MAPPING),
+        evidence_program=load_evidence_program(_PROGRAM),
+    )
+    activation = compile_review_followup_activation(
+        design=design,
+        manifest_inspection=load_review_followup_activation_manifest(_ACTIVATION),
+        workspace_root=_ROOT,
+        run_id="followup-activation-v1",
+        source_commit=_COMMIT,
+    )
+    payload = activation.model_dump(mode="json")
+    payload["paper_title"] = "A drifted activation title"
+
+    with pytest.raises(ValidationError, match="review activation hash mismatch"):
+        ProjectReviewFollowupActivation.model_validate(payload)

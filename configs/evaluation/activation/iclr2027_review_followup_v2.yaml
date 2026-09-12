@@ -1,0 +1,31 @@
+schema_version: "1.0"
+manifest_id: iclr2027-review-followup-activation-v2
+project_id: scitaste-self-development
+evidence_review_package:
+  path: configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml
+  file_sha256: d056d262c8028c8c761c1115b1b89277b7d3b48a8868739f9a7095dc6ce1a7c4
+  semantic_sha256: 7141c531819b5bb74bc9a83265607c3559544a29885a1df754fb280b3f1a8e6d
+compute_catalog:
+  path: configs/resources/compute_catalog_v3.yaml
+  file_sha256: b28a4e8dcd9f27800c847c6d798b38d188acb4a28343d34fa6d4e275c3a50e4f
+  semantic_sha256: 973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a
+project_resource_binding:
+  path: configs/resources/projects/scitaste_self_development_v3.yaml
+  file_sha256: 59bf129490dfa9f9e6ae4da2c78541d0fa6d6a0abadbdbac7063d5cb6fac97f4
+  semantic_sha256: 77856c45f8887a7e205f400a84f7276c3b7a076c9c0c6b83bcfc5ed3757ae80c
+primary_api_candidate_ids:
+  - deepseek-v4-flash
+  - zhipu-glm53-flash
+diagnostic_checkpoint_ids:
+  - qwen3-vl-2b-local-47f9c0e0
+  - qwen3-5-4b-local-b4e05070
+primary_selection_stage: after_task_excluded_conformance_pilot
+stable_model_revision_required: true
+pilot_excluded_from_formal_test: true
+automated_judge_is_secondary: true
+authorizes_download: false
+authorizes_repository_checkout: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false
+authorizes_execution: false

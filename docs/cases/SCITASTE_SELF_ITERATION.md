@@ -954,3 +954,27 @@ must explicitly narrow it. The compiler cannot silently rename the paper. Its
 project package preserves exact mapping/program bytes, leaves the primary model,
 formal sample size, repetitions, and compute unset, and performs no download,
 API call, SSH session, model load, GPU job, human recruitment, or experiment.
+
+## Joining the review design to real launch constraints (2026-09-12)
+
+The five-study response resolved what evidence would answer the review, but it
+did not resolve whether the necessary tasks, systems, models, reviewers, and
+budgets were actually ready. The older campaign view also still carried an
+early Qwen3-VL-2B/Tiny Scientist/MLR feasibility matrix. Letting that historical
+matrix remain the operational view would allow an obsolete resource choice to
+override the new scientific design.
+
+SciTaste now compiles a separate activation dossier from the exact review
+design, evidence-review package, shared compute catalog, and self-project
+resource binding. It covers H1/H2/H3/E1/D1 exactly once, reports the 21-file,
+8 MiB metadata request as the only owner-decision-ready step, and preserves the
+older campaign as historical rather than launchable.
+
+The resulting diagnosis is concrete. Neither API candidate has a pinned stable
+revision or approved current identity observation, GLM pricing is unbound, none
+of the three accepted external systems has an experiment-ready adapter, no
+formal sample has been powered, and no independent reviewers have been
+recruited. Local Qwen checkpoints remain diagnostic assets rather than being
+promoted because they are available. This iteration performs no download,
+repository checkout, API call, SSH connection, model load, GPU job, reviewer
+recruitment, or experiment and establishes no effectiveness evidence.

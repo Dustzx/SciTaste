@@ -180,17 +180,20 @@ from scitaste.review import (
     import_venue_review_report,
     import_venue_review_verification,
     inspect_project_evaluation_evidence,
+    inspect_project_review_followup_activation,
     inspect_project_review_followup_design,
     inspect_project_review_iteration,
     inspect_project_review_routing,
     inspect_venue_review,
     load_venue_review_packet,
     prepare_project_evaluation_evidence,
+    prepare_project_review_followup_activation,
     prepare_project_review_followup_design,
     prepare_project_review_iteration,
     prepare_project_review_routing,
     prepare_venue_review,
     publish_project_evaluation_evidence,
+    publish_project_review_followup_activation,
     publish_project_review_followup_design,
     publish_project_review_iteration,
     publish_project_review_routing,
@@ -1004,6 +1007,34 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(review_followup_design_status)
     review_followup_design_status.set_defaults(
         handler=_handle_project_paper_review_followup_design_status
+    )
+
+    review_activate_followup = project_paper_review_commands.add_parser(
+        "activate-followup",
+        help="Join a review evidence design to exact no-run resource decisions",
+    )
+    review_activate_followup.add_argument("--project-id", required=True)
+    review_activate_followup.add_argument("--followup-design-run-id", required=True)
+    review_activate_followup.add_argument("--manifest", type=Path, required=True)
+    review_activate_followup.add_argument("--workspace-root", type=Path, default=Path("."))
+    review_activate_followup.add_argument("--run-id", required=True)
+    review_activate_followup.add_argument("--source-commit", required=True)
+    review_activate_followup.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_activate_followup)
+    review_activate_followup.set_defaults(handler=_handle_project_paper_review_activate_followup)
+
+    review_followup_activation_status = project_paper_review_commands.add_parser(
+        "followup-activation-status",
+        help="Rehash one project-owned no-run review activation dossier",
+    )
+    review_followup_activation_status.add_argument("--project-id", required=True)
+    review_followup_activation_status.add_argument("--run-id", required=True)
+    review_followup_activation_status.add_argument(
+        "--outputs-root", type=Path, default=Path("outputs")
+    )
+    _add_log_level_option(review_followup_activation_status)
+    review_followup_activation_status.set_defaults(
+        handler=_handle_project_paper_review_followup_activation_status
     )
 
     review_admit_evidence = project_paper_review_commands.add_parser(
@@ -3281,6 +3312,68 @@ def _handle_project_paper_review_followup_design_status(args: argparse.Namespace
         ProjectRuntime(args.outputs_root), args.project_id, args.run_id
     )
     print(design.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_project_paper_review_activate_followup(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    prepared = prepare_project_review_followup_activation(
+        runtime,
+        project_id=args.project_id,
+        followup_design_run_id=args.followup_design_run_id,
+        manifest_path=args.manifest,
+        workspace_root=args.workspace_root,
+        run_id=args.run_id,
+        source_commit=args.source_commit,
+        expected_revision=args.expected_revision,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "activation-decision-compiled",
+                    "project_id": args.project_id,
+                    "current_revision": args.expected_revision,
+                    "expected_published_revision": args.expected_revision + 2,
+                    "activation": prepared.activation.model_dump(mode="json"),
+                    "authorizes_download": False,
+                    "authorizes_repository_checkout": False,
+                    "authorizes_api_calls": False,
+                    "authorizes_gpu_work": False,
+                    "authorizes_human_recruitment": False,
+                    "authorizes_execution": False,
+                    "no_external_action_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, activation = publish_project_review_followup_activation(
+        runtime,
+        prepared=prepared,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "review_followup_activation": activation.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_followup_activation_status(
+    args: argparse.Namespace,
+) -> int:
+    activation = inspect_project_review_followup_activation(
+        ProjectRuntime(args.outputs_root), args.project_id, args.run_id
+    )
+    print(activation.model_dump_json(indent=2))
     return 0
 
 
