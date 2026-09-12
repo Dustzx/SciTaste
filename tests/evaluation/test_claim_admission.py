@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from scitaste.benchmark.study_models import StudyOutcome
@@ -16,6 +17,7 @@ from scitaste.evaluation import (
     ConfirmatoryContrastRole,
     ConfirmatoryContrastSpec,
     ConfirmatoryEstimandKind,
+    ContrastInferenceRole,
     EvaluationBlindReview,
     EvaluationCellResult,
     EvaluationCellUsage,
@@ -305,6 +307,49 @@ def _manifest(kind: ConfirmatoryEstimandKind) -> ExperimentPrelaunchManifest:
     return ExperimentPrelaunchManifest.model_validate(payload)
 
 
+def _v14_native_manifest() -> ExperimentPrelaunchManifest:
+    """Add one component-only diagnostic without changing legacy helper semantics."""
+
+    payload = _manifest(ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL).model_dump(mode="json")
+    payload["schema_version"] = "1.4"
+    payload["manifest_id"] = "claim-native-taste-causal-v14"
+    payload["protocol_id"] = "claim-native-taste-causal-v14"
+    payload["protocol_version"] = "test-v1.4"
+    payload["approval"] = {"approved": False}
+    payload["systems"].append(
+        {
+            "system_id": "native-knowledge",
+            "role": "ablation",
+            "implementation_ref": "git://scitaste@0123456789abcdef#native-knowledge",
+            "availability": "verified",
+            "real_implementation": True,
+        }
+    )
+    payload["lanes"][0]["system_ids"].append("native-knowledge")
+    payload["lanes"][0]["planned_cells"] = 8
+    for contrast in payload["analysis"]["claim_admission"]["contrasts"]:
+        contrast["inference_role"] = ContrastInferenceRole.CONFIRMATORY
+    payload["analysis"]["claim_admission"]["contrasts"].append(
+        {
+            "contrast_id": "scitaste-full-vs-native-knowledge",
+            "candidate_system_id": "scitaste-full",
+            "comparator_system_id": "native-knowledge",
+            "role": ConfirmatoryContrastRole.COMPONENT_ONLY,
+            "inference_role": ContrastInferenceRole.MECHANISM_DIAGNOSTIC,
+            "favorable_direction": "higher",
+            "minimum_effect": 0.05,
+        }
+    )
+    draft = ExperimentPrelaunchManifest.model_validate(payload)
+    payload["approval"] = PrelaunchApproval(
+        approved=True,
+        approved_proposal_sha256=draft.proposal_sha256,
+        approved_by="project-owner",
+        approved_at="2026-09-12T00:00:00Z",
+    )
+    return ExperimentPrelaunchManifest.model_validate(payload)
+
+
 def _artifact(root: Path, locator: str, content: str) -> EvaluationResultArtifact:
     path = root / locator
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -472,6 +517,49 @@ def _inspect(
     )
 
 
+def _replace_comparison_interval(
+    results: EvaluationResultSet,
+    comparison_id: str,
+    *,
+    interval_lower: float,
+    interval_upper: float,
+    conclusion: str,
+) -> EvaluationResultSet:
+    source = next(
+        item for item in results.primary_comparisons if item.comparison_id == comparison_id
+    )
+    replacement = EvaluationPrimaryComparison.create(
+        schema_version=source.schema_version,
+        comparison_id=source.comparison_id,
+        analysis_contract_sha256=source.analysis_contract_sha256,
+        analysis_input_sha256=source.analysis_input_sha256,
+        failure_handling=source.failure_handling,
+        candidate_system_id=source.candidate_system_id,
+        comparator_system_id=source.comparator_system_id,
+        analysis_unit_count=source.analysis_unit_count,
+        favorable_direction=source.favorable_direction,
+        minimum_effect=source.minimum_effect,
+        effect_estimate=(interval_lower + interval_upper) / 2,
+        interval_lower=interval_lower,
+        interval_upper=interval_upper,
+        conclusion=conclusion,
+        analysis_artifact=source.analysis_artifact,
+    )
+    comparisons = tuple(
+        replacement if item.comparison_id == comparison_id else item
+        for item in results.primary_comparisons
+    )
+    return EvaluationResultSet.create(
+        project_id=results.project_id,
+        evaluation_id=results.evaluation_id,
+        proposal_sha256=results.proposal_sha256,
+        plan_sha256=results.plan_sha256,
+        cell_results=results.cell_results,
+        blind_reviews=results.blind_reviews,
+        primary_comparisons=comparisons,
+    )
+
+
 def test_native_taste_contract_is_content_bound_and_keeps_real_failures() -> None:
     manifest = _manifest(ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL)
     plan = compile_evaluation_cell_plan(manifest)
@@ -480,6 +568,188 @@ def test_native_taste_contract_is_content_bound_and_keeps_real_failures() -> Non
     assert plan.claim_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
     assert plan.claim_lane_id == "confirmatory-lane"
     assert plan.claim_contract_sha256 == content_sha256(manifest.analysis.claim_admission)
+
+
+def test_v14_requires_explicit_scientifically_valid_inference_roles() -> None:
+    manifest = _v14_native_manifest()
+    claim = manifest.analysis.claim_admission
+    assert claim is not None
+    by_role = {item.role: item.inference_role for item in claim.contrasts}
+    assert by_role[ConfirmatoryContrastRole.NO_TASTE_CONTROL] is (
+        ContrastInferenceRole.CONFIRMATORY
+    )
+    assert by_role[ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO] is (
+        ContrastInferenceRole.CONFIRMATORY
+    )
+    assert by_role[ConfirmatoryContrastRole.COMPONENT_ONLY] is (
+        ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+    )
+
+    missing = manifest.model_dump(mode="json")
+    missing["approval"] = {"approved": False}
+    missing["analysis"]["claim_admission"]["contrasts"][0].pop("inference_role")
+    with pytest.raises(ValidationError, match="requires every contrast inference role"):
+        ExperimentPrelaunchManifest.model_validate(missing)
+
+    wrong_control = manifest.model_dump(mode="json")
+    wrong_control["approval"] = {"approved": False}
+    wrong_control["analysis"]["claim_admission"]["contrasts"][0]["inference_role"] = (
+        ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+    )
+    with pytest.raises(ValidationError, match="no-Taste and placebo contrasts"):
+        ExperimentPrelaunchManifest.model_validate(wrong_control)
+
+    wrong_component = manifest.model_dump(mode="json")
+    wrong_component["approval"] = {"approved": False}
+    component = next(
+        item
+        for item in wrong_component["analysis"]["claim_admission"]["contrasts"]
+        if item["role"] == ConfirmatoryContrastRole.COMPONENT_ONLY
+    )
+    component["inference_role"] = ContrastInferenceRole.CONFIRMATORY
+    with pytest.raises(ValidationError, match="component-only or component-ablation"):
+        ExperimentPrelaunchManifest.model_validate(wrong_component)
+
+    legacy = manifest.model_dump(mode="json")
+    legacy["approval"] = {"approved": False}
+    legacy["schema_version"] = "1.3"
+    with pytest.raises(ValidationError, match=r"v1\.4 is required"):
+        ExperimentPrelaunchManifest.model_validate(legacy)
+
+
+def test_v14_external_claims_cannot_downgrade_a_comparator_to_diagnostic() -> None:
+    payload = _manifest(ConfirmatoryEstimandKind.EXTERNAL_MATCHED_SUPERIORITY).model_dump(
+        mode="json"
+    )
+    payload["schema_version"] = "1.4"
+    payload["approval"] = {"approved": False}
+    for contrast in payload["analysis"]["claim_admission"]["contrasts"]:
+        contrast["inference_role"] = ContrastInferenceRole.CONFIRMATORY
+    ExperimentPrelaunchManifest.model_validate(payload)
+
+    payload["analysis"]["claim_admission"]["contrasts"][0]["inference_role"] = (
+        ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+    )
+    with pytest.raises(ValidationError, match="external claim contrasts must be confirmatory"):
+        ExperimentPrelaunchManifest.model_validate(payload)
+
+
+def test_v13_hashes_remain_stable_after_v14_extension() -> None:
+    root = Path(__file__).resolve().parents[2]
+    manifest = ExperimentPrelaunchManifest.model_validate(
+        yaml.safe_load(
+            (
+                root / "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v7.yaml"
+            ).read_text(encoding="utf-8")
+        )
+    )
+    assert manifest.proposal_sha256 == (
+        "f7a17de63440ea89dc69932c2d4826149e3f2346300b037ebded3994e6420396"
+    )
+    assert manifest.analysis is not None
+    assert manifest.analysis.claim_admission is not None
+    assert content_sha256(manifest.analysis.claim_admission) == (
+        "1ef8d14bc5e15cd1dcd9d597b953fc80fcead263ed8af5b2aad0fc7666a2dce4"
+    )
+    assert content_sha256(manifest.analysis) == (
+        "2ca6185689231e0eea4cfafba71b8e5dc430de32a8c8c4b8cd046f77520b49c7"
+    )
+
+
+@pytest.mark.parametrize(
+    ("interval_lower", "interval_upper", "conclusion"),
+    (
+        (-0.1, 0.1, "inconclusive"),
+        (-0.3, -0.1, "contradicts_claim"),
+    ),
+)
+def test_mechanism_diagnostic_need_not_support_title_claim(
+    tmp_path: Path,
+    interval_lower: float,
+    interval_upper: float,
+    conclusion: str,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    manifest = _v14_native_manifest()
+    results = _replace_comparison_interval(
+        _result_set(root, manifest),
+        "scitaste-full-vs-native-knowledge",
+        interval_lower=interval_lower,
+        interval_upper=interval_upper,
+        conclusion=conclusion,
+    )
+
+    assessment = _inspect(root, manifest, results)
+
+    assert assessment.schema_version == "1.2"
+    assert assessment.confirmatory_evidence_complete is True
+    assert assessment.confirmatory_conclusion_supported is True
+    assert assessment.title_claim_eligible is True
+    assert assessment.required_confirmatory_comparisons == 2
+    assert assessment.valid_confirmatory_comparisons == 2
+    assert assessment.supported_confirmatory_comparisons == 2
+    assert assessment.required_diagnostic_comparisons == 1
+    assert assessment.valid_diagnostic_comparisons == 1
+
+
+def test_missing_mechanism_diagnostic_keeps_title_evidence_incomplete(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    manifest = _v14_native_manifest()
+    results = _result_set(root, manifest)
+    results = EvaluationResultSet.create(
+        project_id=results.project_id,
+        evaluation_id=results.evaluation_id,
+        proposal_sha256=results.proposal_sha256,
+        plan_sha256=results.plan_sha256,
+        cell_results=results.cell_results,
+        blind_reviews=results.blind_reviews,
+        primary_comparisons=tuple(
+            item
+            for item in results.primary_comparisons
+            if item.comparison_id != "scitaste-full-vs-native-knowledge"
+        ),
+    )
+
+    assessment = _inspect(root, manifest, results)
+
+    assert assessment.confirmatory_evidence_complete is False
+    assert assessment.confirmatory_conclusion_supported is False
+    assert assessment.title_claim_eligible is False
+    assert assessment.required_diagnostic_comparisons == 1
+    assert assessment.valid_diagnostic_comparisons == 0
+    assert "analysis:scitaste-full-vs-native-knowledge:missing" in assessment.blocker_codes
+
+
+@pytest.mark.parametrize(
+    "comparison_id",
+    (
+        "scitaste-full-vs-native-base",
+        "scitaste-full-vs-mismatched-taste",
+    ),
+)
+def test_each_confirmatory_control_can_block_title_claim(
+    tmp_path: Path,
+    comparison_id: str,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    manifest = _v14_native_manifest()
+    results = _replace_comparison_interval(
+        _result_set(root, manifest),
+        comparison_id,
+        interval_lower=-0.1,
+        interval_upper=0.1,
+        conclusion="inconclusive",
+    )
+
+    assessment = _inspect(root, manifest, results)
+
+    assert assessment.confirmatory_evidence_complete is True
+    assert assessment.confirmatory_conclusion_supported is False
+    assert assessment.title_claim_eligible is False
+    assert assessment.supported_confirmatory_comparisons == 1
 
 
 def test_native_taste_result_can_close_with_preregistered_failures(tmp_path: Path) -> None:

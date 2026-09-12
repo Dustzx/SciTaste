@@ -213,11 +213,19 @@ class EvaluationCriticSuite:
                     or system.implementation_ref is None
                 ):
                     problems.append(f"{lane.lane_id}:{system.system_id}:implementation_unverified")
-                if system.role in {SystemRole.METHOD_COMPARATOR, SystemRole.CONTROL} and (
+                requires_preflight = system.role in {
+                    SystemRole.METHOD_COMPARATOR,
+                    SystemRole.CONTROL,
+                } or (
+                    manifest.schema_version == "1.4"
+                    and lane_claim is not None
+                    and lane_claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                )
+                if requires_preflight and (
                     system.adapter_preflight_ref is None or system.adapter_preflight_sha256 is None
                 ):
                     problems.append(f"{lane.lane_id}:{system.system_id}:adapter_preflight_unbound")
-                elif system.role in {SystemRole.METHOD_COMPARATOR, SystemRole.CONTROL}:
+                elif requires_preflight:
                     problems.extend(
                         f"{lane.lane_id}:{system.system_id}:{problem}"
                         for problem in _artifact_problems(

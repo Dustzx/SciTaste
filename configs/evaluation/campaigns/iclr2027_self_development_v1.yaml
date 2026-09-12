@@ -9,13 +9,14 @@ central_question: >-
   evidence-valid idea-to-paper trajectories?
 claim_boundary: >-
   The title-level claim requires a complete positive held-out native Taste
-  intervention with no-Taste, component, and mismatched-Taste controls.
+  intervention with Full--Base and Full--mismatched-Taste confirmation, plus
+  complete separately interpreted component-only diagnostics.
   Best-native external comparisons are model-confounded ecological evidence;
   engineering, pilot, model-review, and self-iteration outputs establish neither.
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 09217f25c139aafccac8369f5eb039d02192bec65ac6ae777494427989d716bd
+    sha256: 73636a115820d026799dbd3371b6f43638f3824a835dce387ba6580c83673b4f
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
@@ -38,8 +39,8 @@ artifacts:
     path: docs/research/data/autoresearch_evaluation_resources_v8.yaml
     sha256: fe125229fa0477b1828b26854dc36f2d68ee23496426021150a3eb22553ca6c6
   - artifact_id: native-taste-causal-proposal
-    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v7.yaml
-    sha256: e898ba75f83c84ea6a7c4e043dc2b862a184b186192ecce1317dfa2df54c419f
+    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml
+    sha256: 445985f8d2c91e1338f66c3538adf1e0c930a52427af6026d849706577e6b9ce
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
@@ -139,14 +140,17 @@ tracks:
     role: native_taste_causal
     state: blocked
     scientific_question: >-
-      With executor, model, task, tools, seed, and budgets fixed, does enabling
-      precedent-informed and critic-checked Taste improve objective task progress?
+      With executor, model, task, candidate actions, tools, seed, and budgets
+      fixed, do the complete Taste bundle and matched Taste context improve
+      objective task progress, and what mechanisms do component-only arms suggest?
     primary_endpoint: >-
-      Equal-task paired objective progress for Full SciTaste against no-Taste,
-      component, and mismatched-Taste controls, retaining valid failures at the floor.
+      Equal-task paired objective progress for two confirmatory Full-versus-Base
+      and Full-versus-mismatched-Taste contrasts, with three mandatory
+      component-only diagnostics and valid failures retained at the floor.
     comparison_design: >-
       One matched GPU lane with six native conditions, two objective-task
-      candidates, one prepilot seed, five preregistered contrasts, and no model confounding.
+      candidates, one prepilot seed, two confirmation obligations, three
+      mechanism diagnostics, and no model confounding.
     model:
       kind: gpu
       usage_scope: One identical checkpoint and execution envelope for every native condition.
@@ -186,11 +190,13 @@ tracks:
       output_storage_bytes: 107374182400
       human_hours: 12.0
     claim_allowed: >-
-      A complete prepilot may establish feasibility, failures, reviewer burden,
-      and variance inputs for a new powered formal proposal.
+      A complete prepilot may establish feasibility and treatment isolation,
+      report all confirmation and diagnostic analyses, expose failures and
+      reviewer burden, and supply variance inputs for a new powered proposal.
     claim_forbidden: >-
       One seed and two candidate tasks cannot establish the title, a formal
-      causal effect, broad generality, or external-system superiority.
+      causal effect, broad generality, external-system superiority, or marginal
+      effects of any individual component.
     evidence_artifact_ids:
       - iclr-evaluation-contract
       - dual-estimand-addendum
@@ -201,7 +207,8 @@ tracks:
       - mlrc-license-policy
       - gpu-host-inventory
     blocker_codes:
-      - native-controls:implementations-not-attested
+      - native-controls:model-backed-parity-not-attested
+      - taste-corpora:paired-qualification-not-complete
       - task-assets:not-acquired
       - held-out-audit:not-complete
       - remote-checkpoint:not-attested
@@ -363,11 +370,14 @@ stages:
     external_actions: []
     owner_approval_required: false
     blocker_codes:
-      - native-controls:implementation-contracts-not-complete
-    completion_artifact_ids: []
+      - native-controls:model-backed-parity-not-attested
+      - taste-corpora:paired-qualification-not-complete
+    completion_artifact_ids: [native-taste-causal-proposal]
     next_decision: >-
-      Bind six real first-party executors to the same model, tools, task, repair,
-      seed, budget, telemetry, and artifact projection.
+      The six structural policies are bound. Attest that one model-backed
+      candidate/action path is shared and qualify matched/placebo corpora for
+      stage, role, case count, retrieval count, token, provenance, and outcome
+      information parity before clearing this stage.
 
   - stage_id: qualify-best-native-adapters
     kind: runtime_preflight
@@ -392,7 +402,7 @@ stages:
     external_actions: [connect_remote_host, transfer_checkpoint]
     owner_approval_required: true
     blocker_codes:
-      - dependency:tasks-and-native-controls-not-ready
+      - dependency:tasks-model-backed-parity-and-corpora-not-ready
       - remote-checkpoint:not-present
     completion_artifact_ids: [gpu-host-inventory]
     next_decision: >-

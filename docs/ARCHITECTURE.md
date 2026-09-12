@@ -1462,12 +1462,14 @@ also selects its owning evaluation; selecting an incompatible evaluation clears
 the current result instead of leaving a misleading cross-protocol alias.
 
 A formal claim requires an authorized ready proposal, a complete
-schema-1.3 claim-admission contract, budget compliance, real outcomes, valid
+schema-1.3-or-newer claim-admission contract, budget compliance, real outcomes, valid
 external attested blind reviews, and every exact preregistered contrast. A valid
 failed execution remains in an `include-as-outcome` intention-to-run population;
 missing, invalid, synthetic, or unplanned records fail closure. Native Taste
-causality requires the no-Taste and mismatched-Taste controls plus every declared
-component ablation. External matched superiority requires at least two real
+causality requires valid analyses for the no-Taste and mismatched-Taste controls
+plus every declared component diagnostic. Schema 1.4 lets only the explicitly
+confirmatory controls determine the headline conclusion. External matched
+superiority requires at least two real
 independent method comparators. Best-native evidence is model-confounded and
 remains descriptive even when complete and positive. Pilot and internal-review
 evidence cannot pass any formal claim gate. Even a valid formal project result
@@ -1874,8 +1876,8 @@ execution.
 
 ### ADR-061: Claim admission is estimand-specific and failure-inclusive
 
-Status: accepted for schema-1.3 prelaunch and schema-1.1 result assessment; both
-current v7 proposals remain blocked and unapproved.
+Status: accepted through schema-1.4 prelaunch and schema-1.2 result assessment;
+the current native v8 and external v7 proposals remain blocked and unapproved.
 
 A comparison lane, cell count, or positive aggregate does not identify the
 scientific claim it may support. SciTaste therefore binds one claim-admission
@@ -1953,3 +1955,33 @@ model quality or scientific effectiveness. A formal proposal must additionally
 bind a model-backed Base decision policy, task-specific source-disjoint corpora,
 candidate-set parity, and the fixed implementation commit before execution can
 be considered.
+
+### ADR-063: Required analyses and confirmatory conclusions are different sets
+
+Status: accepted for schema-1.4 native prelaunch and schema-1.2 result admission;
+no experiment is authorized.
+
+Requiring every planned contrast to be present is an evidence-completeness rule;
+requiring every contrast to favor Full is a scientific hypothesis. Conflating
+them would turn three component-only arms into an invalid conjunction test for
+the paper title and would encourage post-hoc omission of informative null or
+adverse diagnostics. Schema 1.4 therefore assigns every contrast exactly one
+inference role. Both roles remain preregistered, paired, content-addressed, and
+mandatory to analyze.
+
+For native Taste causality, Full--Base estimates the complete explicit bundle and
+Full--mismatched-Taste estimates the value of matched rather than irrelevant
+Taste context under the paired-corpus constraints. Those two contrasts are
+`confirmatory`. Full against Knowledge-only, Taste-only, or critics-only changes
+multiple components and is therefore `mechanism_diagnostic`; it cannot establish
+an individual marginal contribution. A leave-one-out or factorial claim needs a
+new contract. External-system superiority contrasts remain confirmatory within
+their separately declared matched-backbone estimand.
+
+Result admission still blocks on any missing, invalid, unpaired, drifted, or
+unattested diagnostic. Once the complete evidence set is valid, only the
+confirmatory subset is evaluated for headline support. Schema-1.2 assessments
+publish required, valid, and supported confirmatory counts alongside required
+and valid diagnostic counts, preventing prose from hiding either population.
+Legacy schema-1.3 serialization omits the absent extension, preserving proposal,
+claim, and analysis fingerprints and the validity of existing evidence.

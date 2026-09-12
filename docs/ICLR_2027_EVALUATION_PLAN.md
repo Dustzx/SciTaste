@@ -88,7 +88,7 @@ comparison inventory rather than a frozen census.
 |---|---|---|---|
 | A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
 | B. External end-to-end systems | How does independent SciTaste Native compare with real accepted systems? | direct agent where applicable, accepted qualified systems, and SciTaste Native; preprint systems only in sensitivity analysis | ecological external validity under best-native models; external superiority only under a separately admissible matched design |
-| C. SciTaste native causal ablation | Does Taste change executable research outcomes and which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a mismatched-Taste placebo | title-supporting causal attribution on held-out tasks |
+| C. SciTaste native causal intervention | Does the complete Taste bundle and matched Taste context change executable research outcomes, and what mechanisms do component-only arms suggest? | Native Base, Knowledge-only, Taste-only, critics-only, Full SciTaste, plus a mismatched-Taste placebo | title-supporting bundle/context attribution plus separately labelled mechanism diagnostics on held-out tasks |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
 Benchmark papers and method papers are never rows in the same role. Track B
@@ -108,25 +108,28 @@ Track C or serve as a bridge study, but cannot be the Track B headline.
 
 ### Current dual-estimand prepilot freeze
 
-Two schema-1.3 no-run proposals now materialize this distinction:
+Two no-run proposals now materialize this distinction:
 
-- `qwen3vl2b-native-taste-causal-prepilot-v7` expands to 12 trajectories:
+- `qwen3vl2b-native-taste-causal-prepilot-v8` uses schema 1.4 and expands to 12 trajectories:
   six native conditions × two MLRC objective-task candidates × one seed. It
-  binds the same Qwen3-VL-2B checkpoint and GPU lane to every condition, requires
-  no-Taste and mismatched-Taste contrasts, retains valid failed trajectories as
-  outcomes, and forbids title or formal-effect claims from the prepilot.
+  binds the same Qwen3-VL-2B checkpoint, GPU lane, implementation commit, and
+  condition matrix to every condition; requires two confirmatory no-Taste and
+  mismatched-Taste contrasts plus three mandatory component-only diagnostics;
+  retains valid failed trajectories as outcomes; and forbids title or
+  formal-effect claims from the prepilot.
 - `external-best-native-prepilot-v7` expands to six trajectories: SciTaste
   Native, Agent Laboratory, and TinyScientist × the same two task candidates ×
   one seed. It pins DeepSeek V4.1 Flash, o3-mini, and GPT-4o respectively and
   declares model effects confounded. Even a complete positive result is
   descriptive external evidence, never a causal Taste or headline result.
 
-Both proposals are unapproved. Task bytes, native condition implementations,
-external adapters, remote checkpoint identity, credentials, and independent
-review remain explicit blockers. Their one-seed matrices are feasibility
-prepilots; formal task and seed counts require a new pilot-informed power
-analysis. No data download, provider call, SSH session, GPU work, or reviewer
-recruitment was performed to create them.
+Both proposals are unapproved. Native structural implementations now exist, but
+the shared model-backed candidate/action path, matched/placebo corpus parity,
+task bytes, external adapters, remote checkpoint identity, credentials, and
+independent review remain explicit blockers. Their one-seed matrices are
+feasibility prepilots; formal task and seed counts require a new pilot-informed
+power analysis. No data download, provider call, SSH session, GPU work, or
+reviewer recruitment was performed to create them.
 
 ## Track A: decision-level scientific taste
 
@@ -360,6 +363,15 @@ deterministic controller and a seed library, so it proves treatment isolation an
 gate invariance only. It does not establish Qwen-backed executability, corpus
 quality, or an outcome effect; the formal launcher must bind a model-backed Base
 policy and frozen task-specific matched/placebo corpora at a later fixed commit.
+
+Prelaunch schema 1.4 makes the reporting boundary executable. All five pairwise
+analyses remain required for result completeness. Only Full--Base and
+Full--mismatched-Taste carry `confirmatory`; the three component-only contrasts
+carry `mechanism_diagnostic`. Thus a null or adverse component diagnostic stays
+visible without incorrectly vetoing the bundle/context headline, while a null
+or adverse result for either confirmatory control blocks that headline. This
+contract does not weaken the evidence requirement: a missing diagnostic analysis
+still makes the result incomplete.
 
 At least one budget-scaling slice and one second-model slice are required to test
 whether the result is a fixed-budget or single-model artifact. The local 2B

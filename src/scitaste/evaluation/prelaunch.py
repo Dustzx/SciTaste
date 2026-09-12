@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from scitaste.evaluation.resources import (
     ExternalResourceCorpus,
@@ -88,16 +88,24 @@ class ConfirmatoryEstimandKind(StrEnum):
 
 
 class ConfirmatoryContrastRole(StrEnum):
-    """Why a preregistered contrast is required rather than merely reported."""
+    """Scientific control represented by one preregistered contrast."""
 
     NO_TASTE_CONTROL = "no_taste_control"
     MISMATCHED_TASTE_PLACEBO = "mismatched_taste_placebo"
     COMPONENT_ABLATION = "component_ablation"
+    COMPONENT_ONLY = "component_only"
     EXTERNAL_METHOD = "external_method"
 
 
+class ContrastInferenceRole(StrEnum):
+    """How one declared contrast may affect the preregistered headline claim."""
+
+    CONFIRMATORY = "confirmatory"
+    MECHANISM_DIAGNOSTIC = "mechanism_diagnostic"
+
+
 class ConfirmatoryContrastSpec(BaseModel):
-    """One exact, preregistered candidate/comparator conclusion."""
+    """One exact preregistered contrast, including v1.4 inference semantics."""
 
     model_config = _CONFIG
 
@@ -105,14 +113,24 @@ class ConfirmatoryContrastSpec(BaseModel):
     candidate_system_id: str = Field(pattern=_ID)
     comparator_system_id: str = Field(pattern=_ID)
     role: ConfirmatoryContrastRole
+    inference_role: ContrastInferenceRole | None = None
     favorable_direction: Literal["higher", "lower"]
     minimum_effect: float = Field(ge=0)
 
     @model_validator(mode="after")
     def systems_are_distinct(self) -> ConfirmatoryContrastSpec:
         if self.candidate_system_id == self.comparator_system_id:
-            raise ValueError("confirmatory contrast requires distinct systems")
+            raise ValueError("preregistered contrast requires distinct systems")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_v14_extension(self, handler):  # type: ignore[no-untyped-def]
+        """Keep every pre-v1.4 claim and analysis fingerprint byte-compatible."""
+
+        payload = handler(self)
+        if self.inference_role is None:
+            payload.pop("inference_role", None)
+        return payload
 
 
 class ClaimAdmissionContract(BaseModel):
@@ -133,11 +151,11 @@ class ClaimAdmissionContract(BaseModel):
         contrast_ids = [item.contrast_id for item in self.contrasts]
         pairs = [(item.candidate_system_id, item.comparator_system_id) for item in self.contrasts]
         if len(contrast_ids) != len(set(contrast_ids)):
-            raise ValueError("confirmatory contrast IDs must be unique")
+            raise ValueError("preregistered contrast IDs must be unique")
         if len(pairs) != len(set(pairs)):
-            raise ValueError("confirmatory candidate/comparator pairs must be unique")
+            raise ValueError("preregistered candidate/comparator pairs must be unique")
         if any(item.candidate_system_id != self.candidate_system_id for item in self.contrasts):
-            raise ValueError("every confirmatory contrast must use the declared candidate")
+            raise ValueError("every preregistered contrast must use the declared candidate")
         return self
 
 
@@ -468,7 +486,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -558,20 +576,28 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "automated judges cannot replace the primary blinded human preference"
                 )
-        if self.schema_version in {"1.2", "1.3"}:
+        if self.schema_version in {"1.2", "1.3", "1.4"}:
             api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
             if any(lane.comparison_regime is None for lane in api_lanes):
                 raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
-        if self.schema_version != "1.3":
+        if self.schema_version not in {"1.3", "1.4"}:
             if self.analysis.claim_admission is not None:
                 raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
             return self
         if self.analysis.claim_admission is None:
             raise ValueError("prelaunch v1.3 requires a claim-admission contract")
+        inference_roles = tuple(
+            contrast.inference_role for contrast in self.analysis.claim_admission.contrasts
+        )
+        if self.schema_version == "1.3" and any(role is not None for role in inference_roles):
+            raise ValueError("prelaunch v1.4 is required for contrast-inference semantics")
+        if self.schema_version == "1.4" and any(role is None for role in inference_roles):
+            raise ValueError("prelaunch v1.4 requires every contrast inference role")
         self._validate_claim_admission(
             self.analysis.claim_admission,
             systems={item.system_id: item for item in self.systems},
             lanes={item.lane_id: item for item in self.lanes},
+            explicit_inference=self.schema_version == "1.4",
         )
         return self
 
@@ -581,6 +607,7 @@ class ExperimentPrelaunchManifest(BaseModel):
         *,
         systems: dict[str, PrelaunchSystem],
         lanes: dict[str, ExecutionLane],
+        explicit_inference: bool,
     ) -> None:
         try:
             lane = lanes[claim.lane_id]
@@ -614,6 +641,23 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError("native Taste causality requires no-Taste and placebo contrasts")
             if ConfirmatoryContrastRole.EXTERNAL_METHOD in roles:
                 raise ValueError("native Taste causality cannot use external-method contrasts")
+            if explicit_inference:
+                for contrast in claim.contrasts:
+                    expected = (
+                        ContrastInferenceRole.CONFIRMATORY
+                        if contrast.role
+                        in {
+                            ConfirmatoryContrastRole.NO_TASTE_CONTROL,
+                            ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
+                        }
+                        else ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+                    )
+                    if contrast.inference_role is not expected:
+                        raise ValueError(
+                            "native no-Taste and placebo contrasts must be confirmatory; "
+                            "component-only or component-ablation contrasts must be "
+                            "mechanism diagnostics"
+                        )
         else:
             if len(claim.contrasts) < 2 or any(
                 systems[item].role is not SystemRole.METHOD_COMPARATOR for item in comparator_ids
@@ -624,6 +668,11 @@ class ExperimentPrelaunchManifest(BaseModel):
                 for item in claim.contrasts
             ):
                 raise ValueError("external claims require external-method contrast roles")
+            if explicit_inference and any(
+                item.inference_role is not ContrastInferenceRole.CONFIRMATORY
+                for item in claim.contrasts
+            ):
+                raise ValueError("external claim contrasts must be confirmatory")
             if claim.estimand_kind is ConfirmatoryEstimandKind.EXTERNAL_MATCHED_SUPERIORITY:
                 if (
                     lane.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE
@@ -658,6 +707,11 @@ class ExperimentPrelaunchManifest(BaseModel):
                     lane.pop(key, None)
         if self.schema_version in {"1.0", "1.1", "1.2"} and payload["analysis"] is not None:
             payload["analysis"].pop("claim_admission", None)
+        if self.schema_version == "1.3" and payload["analysis"] is not None:
+            claim = payload["analysis"].get("claim_admission")
+            if claim is not None:
+                for contrast in claim["contrasts"]:
+                    contrast.pop("inference_role", None)
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -921,6 +975,7 @@ __all__ = [
     "ConfirmatoryContrastRole",
     "ConfirmatoryContrastSpec",
     "ConfirmatoryEstimandKind",
+    "ContrastInferenceRole",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",

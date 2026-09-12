@@ -803,3 +803,30 @@ so it cannot validate Qwen-backed behavior or scientific effectiveness. Recordin
 that limitation before updating the formal proposal is itself a Scientific Taste
 decision: prevent treatment-label leakage now, then build and freeze the real
 model-backed adapter before asking the owner to spend GPU or API resources.
+
+## Separating required diagnostics from the title hypothesis (2026-09-12)
+
+Binding the six executable conditions exposed a subtler experimental-design
+error in the selected v7 proposal. It correctly required five analyses, but its
+result gate also required all five confidence intervals to favor Full before the
+title could be supported. That silently treated Knowledge-only, Taste-only, and
+critics-only arms as three independent marginal-effect hypotheses even though
+Full differs from each arm in several components.
+
+SciTaste now distinguishes evidence completeness from confirmatory inference.
+The schema-v1.4 v8 proposal still requires all 12 trajectories and all five
+paired analyses. Full--Base and Full--mismatched-Taste are the two confirmation
+obligations; the three component-only comparisons are mandatory mechanism
+diagnostics. A missing diagnostic blocks the result, while a valid null or
+adverse diagnostic remains reportable without being misrepresented as failure
+of the bundle/context hypothesis. Conversely, either non-supporting confirmation
+blocks title eligibility. Result assessments expose the two populations as
+separate counts.
+
+The v8 proposal binds every condition to executable commit `7b82eb5...` and the
+exact condition-matrix hash, but retains `pending` system availability because
+the model-backed candidate/action path and formal matched/placebo corpora have
+not been attested. Task assets, remote checkpoint, independent reviewers, and
+owner approval are also still open. This self-iteration changed the protocol
+before compute spend, preserved all legacy v1.3 fingerprints, and performed no
+download, API call, SSH session, model load, GPU work, or experiment.

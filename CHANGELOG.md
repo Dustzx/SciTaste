@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- Prelaunch schema 1.4 now separates contrast reporting from headline
+  inference. Native Full--Base and Full--mismatched-Taste contrasts are
+  confirmatory, while Knowledge-only, Taste-only, and critics-only contrasts
+  are mandatory mechanism diagnostics. Result assessment requires all five
+  analyses but determines title eligibility from the two confirmation
+  obligations only and reports both populations separately. The new no-run v8
+  proposal binds every native condition to the exact `7b82eb5...` executable
+  implementation and condition-matrix hash; model-backed parity, paired corpora,
+  task assets, remote checkpoint, reviewers, and owner approval remain blocked.
+
 - Native Scientific Taste conditions are now executable across the complete
   first-party workflow instead of existing only as prelaunch labels. A closed,
   hash-bound six-profile matrix isolates utility, Knowledge, matched/mismatched

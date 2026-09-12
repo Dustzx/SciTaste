@@ -14,6 +14,7 @@ from scitaste.evaluation.prelaunch import (
     ClaimAdmissionContract,
     ConfirmatoryContrastSpec,
     ConfirmatoryEstimandKind,
+    ContrastInferenceRole,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     ScientificLaneRole,
@@ -355,7 +356,7 @@ class EvaluationOutcomeAssessment(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     project_id: str
     evaluation_id: str
     proposal_sha256: str = Field(pattern=_SHA256)
@@ -378,6 +379,11 @@ class EvaluationOutcomeAssessment(BaseModel):
     confirmatory_estimand_kind: ConfirmatoryEstimandKind | None = None
     confirmatory_evidence_complete: bool | None = None
     confirmatory_conclusion_supported: bool | None = None
+    required_confirmatory_comparisons: int | None = Field(default=None, ge=0)
+    valid_confirmatory_comparisons: int | None = Field(default=None, ge=0)
+    supported_confirmatory_comparisons: int | None = Field(default=None, ge=0)
+    required_diagnostic_comparisons: int | None = Field(default=None, ge=0)
+    valid_diagnostic_comparisons: int | None = Field(default=None, ge=0)
     title_claim_eligible: bool | None = None
     external_superiority_eligible: bool | None = None
     descriptive_external_complete: bool | None = None
@@ -402,6 +408,13 @@ class EvaluationOutcomeAssessment(BaseModel):
             self.title_claim_eligible,
             self.external_superiority_eligible,
             self.descriptive_external_complete,
+        )
+        inference_counts = (
+            self.required_confirmatory_comparisons,
+            self.valid_confirmatory_comparisons,
+            self.supported_confirmatory_comparisons,
+            self.required_diagnostic_comparisons,
+            self.valid_diagnostic_comparisons,
         )
         if self.schema_version == "1.0":
             if any(value is not None for value in extensions):
@@ -447,9 +460,50 @@ class EvaluationOutcomeAssessment(BaseModel):
             )
             if self.descriptive_external_complete != expected_descriptive:
                 raise ValueError("descriptive completion differs from best-native evidence")
+        if self.schema_version in {"1.0", "1.1"}:
+            if any(value is not None for value in inference_counts):
+                raise ValueError("outcome assessment v1.2 is required for inference counts")
+        else:
+            if any(value is None for value in inference_counts):
+                raise ValueError("outcome assessment v1.2 requires complete inference counts")
+            assert self.required_confirmatory_comparisons is not None
+            assert self.valid_confirmatory_comparisons is not None
+            assert self.supported_confirmatory_comparisons is not None
+            assert self.required_diagnostic_comparisons is not None
+            assert self.valid_diagnostic_comparisons is not None
+            if self.required_confirmatory_comparisons < 1:
+                raise ValueError("claim admission requires at least one confirmatory comparison")
+            if (
+                self.required_confirmatory_comparisons + self.required_diagnostic_comparisons
+                != self.required_primary_comparisons
+                or self.valid_confirmatory_comparisons + self.valid_diagnostic_comparisons
+                != self.valid_primary_comparisons
+            ):
+                raise ValueError("inference comparison counts do not partition all analyses")
+            if (
+                not (
+                    self.supported_confirmatory_comparisons
+                    <= self.valid_confirmatory_comparisons
+                    <= self.required_confirmatory_comparisons
+                )
+                or self.valid_diagnostic_comparisons > self.required_diagnostic_comparisons
+            ):
+                raise ValueError("inference comparison counts exceed their declared populations")
+            expected_supported = bool(
+                self.confirmatory_evidence_complete
+                and self.supported_confirmatory_comparisons
+                == self.required_confirmatory_comparisons
+            )
+            if self.confirmatory_conclusion_supported != expected_supported:
+                raise ValueError(
+                    "confirmatory conclusion differs from explicit confirmatory comparisons"
+                )
         if self.scientific_effectiveness_established and not self.headline_eligible:
             raise ValueError("effectiveness requires headline-eligible evidence")
-        if self.schema_version == "1.1" and self.scientific_effectiveness_established != bool(
+        if self.schema_version in {
+            "1.1",
+            "1.2",
+        } and self.scientific_effectiveness_established != bool(
             self.confirmatory_conclusion_supported and self.headline_eligible
         ):
             raise ValueError("effectiveness differs from complete supported causal evidence")
@@ -479,6 +533,15 @@ def _outcome_hash_payload(assessment: EvaluationOutcomeAssessment) -> dict[str, 
             "title_claim_eligible",
             "external_superiority_eligible",
             "descriptive_external_complete",
+        ):
+            payload.pop(field, None)
+    if assessment.schema_version in {"1.0", "1.1"}:
+        for field in (
+            "required_confirmatory_comparisons",
+            "valid_confirmatory_comparisons",
+            "supported_confirmatory_comparisons",
+            "required_diagnostic_comparisons",
+            "valid_diagnostic_comparisons",
         ):
             payload.pop(field, None)
     return payload
@@ -676,11 +739,19 @@ def inspect_evaluation_results(
             and not unplanned_reviews
             and len(distinct_tasks) >= claim.minimum_distinct_tasks
         )
-        conclusion_supported = confirmatory_complete and supported_specs == required_specs
+        confirmatory_specs = {
+            item.contrast_id
+            for item in claim.contrasts
+            if item.inference_role in {None, ContrastInferenceRole.CONFIRMATORY}
+        }
+        diagnostic_specs = required_specs - confirmatory_specs
+        conclusion_supported = (
+            confirmatory_complete and (supported_specs & confirmatory_specs) == confirmatory_specs
+        )
         causal = claim.estimand_kind is not ConfirmatoryEstimandKind.EXTERNAL_BEST_NATIVE
         scientific_complete = confirmatory_complete and causal
         effectiveness = scientific_complete and conclusion_supported
-        assessment_version = "1.1"
+        assessment_version = "1.2" if manifest.schema_version == "1.4" else "1.1"
         claim_fields = {
             "confirmatory_estimand_kind": claim.estimand_kind,
             "confirmatory_evidence_complete": confirmatory_complete,
@@ -698,6 +769,16 @@ def inspect_evaluation_results(
                 and confirmatory_complete
             ),
         }
+        if assessment_version == "1.2":
+            claim_fields.update(
+                {
+                    "required_confirmatory_comparisons": len(confirmatory_specs),
+                    "valid_confirmatory_comparisons": len(valid_specs & confirmatory_specs),
+                    "supported_confirmatory_comparisons": len(supported_specs & confirmatory_specs),
+                    "required_diagnostic_comparisons": len(diagnostic_specs),
+                    "valid_diagnostic_comparisons": len(valid_specs & diagnostic_specs),
+                }
+            )
     missing = sum(item.status == "missing" for item in audits)
     invalid = sum(item.status == "invalid" for item in audits)
     verified = len(audits) - missing - invalid

@@ -7,6 +7,7 @@ from scitaste.evaluation import (
     ComparisonRegime,
     ConfirmatoryContrastRole,
     ConfirmatoryEstimandKind,
+    ContrastInferenceRole,
     EvaluationCriticDomain,
     EvaluationCriticSuite,
     EvaluationCriticVerdict,
@@ -24,7 +25,7 @@ from scitaste.project.models import content_sha256
 
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS_PATH = ROOT / "docs/research/data/autoresearch_evaluation_resources_v8.yaml"
-NATIVE_PATH = ROOT / "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v7.yaml"
+NATIVE_PATH = ROOT / "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml"
 EXTERNAL_PATH = ROOT / "configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml"
 AGENT_ADAPTER_PATH = (
     ROOT / "configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml"
@@ -67,6 +68,32 @@ def test_native_taste_prepilot_compiles_as_one_matched_gpu_estimand() -> None:
         ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
     }
     assert len(claim.contrasts) == 5
+    assert (
+        sum(item.inference_role is ContrastInferenceRole.CONFIRMATORY for item in claim.contrasts)
+        == 2
+    )
+    assert (
+        sum(
+            item.inference_role is ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+            for item in claim.contrasts
+        )
+        == 3
+    )
+    assert {
+        item.role
+        for item in claim.contrasts
+        if item.inference_role is ContrastInferenceRole.MECHANISM_DIAGNOSTIC
+    } == {ConfirmatoryContrastRole.COMPONENT_ONLY}
+    assert all(
+        system.real_implementation and system.implementation_ref is not None
+        for system in manifest.systems
+    )
+    assert all(
+        system.adapter_preflight_ref == "configs/evaluation/native_taste_condition_matrix_v1.yaml"
+        and system.adapter_preflight_sha256
+        == "ab731a384863dc926680e80f5c5192abd1617ab03063b5477837f899e25b7212"
+        for system in manifest.systems
+    )
     assert plan.schema_version == "1.2"
     assert plan.claim_contract_sha256 == content_sha256(claim)
     assert len(plan.cells) == 12
@@ -128,6 +155,7 @@ def test_dual_estimand_prepilots_fail_closed_without_false_critic_requirements()
         assert review.authorizes_execution is False
         assert "missing_direct_control" not in baseline.message
         assert "fewer_than_two_method_comparators" not in baseline.message
+        assert "adapter_preflight_unbound" not in baseline.message
         assert replication.verdict is EvaluationCriticVerdict.ADVISORY
         assert "statistics:independent_replication" not in review.blocking_codes
         assert "gpu_inventory_checkpoint_sha256_mismatch" not in " ".join(

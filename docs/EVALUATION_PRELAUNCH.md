@@ -37,6 +37,16 @@ scientific role and are excluded from causal and headline-completeness
 calculations. Different estimands may be reported side by side, but the result
 verifier cannot pool or relabel them.
 
+Schema `1.4` separates a declared contrast's analysis obligation from its
+inferential role. Every contrast must still produce a valid, content-bound
+analysis. Only `confirmatory` contrasts can determine the preregistered headline
+conclusion; `mechanism_diagnostic` contrasts remain mandatory to report but may
+be positive, null, or negative without being silently converted into a failed
+headline hypothesis. For native Taste causality, Full--Base and
+Full--mismatched-Taste are confirmatory. Knowledge-only, Taste-only, and
+critics-only arms are component diagnostics, not marginal ablations. Legacy
+schema-1.3 proposal, claim, and analysis hashes remain unchanged.
+
 Exact source acquisition is governed separately by
 [`DATA_ACQUISITION_APPROVAL.md`](DATA_ACQUISITION_APPROVAL.md). An acquisition
 request can become ready for owner review without granting download authority;
@@ -54,7 +64,7 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource named in its immutable bytes | Declared matrix | Current state |
 |---|---|---|---:|---|
-| `native-taste-causal-prepilot-v7` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.3 no-run proposal; exact claim admission requires Base/no-Taste, Knowledge, Taste, critics, and mismatched-Taste controls; native implementations, assets, remote checkpoint, reviewers, and approval remain blocked |
+| `native-taste-causal-prepilot-v8` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.4 no-run proposal; six structural implementations bind commit `7b82eb5...` and the exact condition matrix; Full--Base and Full--mismatched are the two confirmation obligations, while three component-only analyses are mandatory diagnostics; model-backed parity, paired corpora, assets, remote checkpoint, reviewers, and approval remain blocked |
 | `external-best-native-prepilot-v7` | model-confounded ecological system feasibility | SciTaste/DeepSeek V4.1 Flash, Agent Laboratory/o3-mini, TinyScientist/GPT-4o-2024-08-06 | 3 real systems × 2 MLRC task candidates × 1 seed = 6 trajectories | current schema-v1.3 no-run proposal; model mapping is statically bound, but task/sandbox/telemetry/artifact/failure adapters, task assets, credentials, reviewers, and approval remain blocked; it can never establish the causal Taste/title claim |
 | `formal-v6-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | current schema-v1.1 no-run proposal; its 100 units are a ceiling pending pilot power analysis; task bytes, adapters, reviewers, clean executable binding, authenticated served identity, and approval remain blocked |
 | `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; the legacy alias is now routed to V4.1, so this record must not be relabeled or launched |
@@ -151,7 +161,7 @@ Inspect any proposal without provider or GPU access:
 
 ```bash
 .venv/bin/scitaste evaluation prelaunch \
-  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v7.yaml \
+  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v8.yaml \
   --source-root /path/to/exact-clean-executable-checkout \
   --evidence-root /path/to/proposal-and-protocol-checkout
@@ -282,10 +292,13 @@ planned cell must have a budget-compliant real outcome and every required blind
 review must be external and attested. A preregistered execution failure remains
 in the intention-to-run population at its frozen task floor; it is not silently
 excluded. A missing/invalid record, drifted artifact, unplanned contrast, or
-changed analysis rule blocks the claim. The native Taste title gate requires
-its complete no-Taste, placebo, and component contrast family. External matched
-superiority requires at least two qualified method comparators. Best-native
-evidence stays descriptive even when complete and positive.
+changed analysis rule blocks the claim. Under schema 1.4, the native Taste title
+gate requires valid analyses for the complete no-Taste, placebo, and component
+contrast family, but its positive conclusion depends only on the two explicitly
+confirmatory controls. The assessment reports confirmatory and diagnostic
+required/valid counts separately. External matched superiority requires at
+least two qualified method comparators. Best-native evidence stays descriptive
+even when complete and positive.
 
 Each schema-1.1 primary comparison also carries `analysis_input_sha256`, derived
 from every exact candidate/comparator cell record, record hash, and
@@ -315,7 +328,7 @@ without preparing or executing a launcher:
 
 ```bash
 .venv/bin/scitaste evaluation cell-plan \
-  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v7.yaml \
+  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml \
   --output /tmp/native-taste-causal-cell-plan.json
 ```
 
@@ -323,11 +336,11 @@ The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. The two v7 proposals produce
-12 matched native GPU trajectories and six per-system best-native API
-trajectories respectively; all are blocked. This makes the gap between a YAML
-matrix count and an executable experiment explicit without using matrix size as
-a proxy for rigor.
+provider call, GPU work, or task download occurred. The current native v8 and
+external v7 proposals produce 12 matched native GPU trajectories and six
+per-system best-native API trajectories respectively; all are blocked. This
+makes the gap between a YAML matrix count and an executable experiment explicit
+without using matrix size as a proxy for rigor.
 
 Static exact-commit translation review has now resolved one ambiguity inside
 that open adapter gate. MLR-Agent and Agent Laboratory are real method
@@ -389,11 +402,13 @@ protocol.
    runtime policy. Do not promote these broad prompts to empirical tasks. After
    an approved MLRC acquisition and package qualification, reproduce each
    baseline and held-out path before a formal objective-progress proposal.
-2. The dual-estimand architecture is now materialized as two immutable v7
-   proposals. Implement and attest the five real native controls; then close
-   task, sandbox, telemetry, artifact, and failure-resume requirements for only
-   those external adapters whose exact static contracts pass. Unavailable
-   systems remain unavailable rather than receiving a pseudo-implementation.
+2. The dual-estimand architecture is materialized as native v8 and external v7
+   immutable proposals. The six native structural policies are real and
+   hash-bound; next attest the shared model-backed candidate/action path and
+   matched/placebo corpus parity. Then close task, sandbox, telemetry, artifact,
+   and failure-resume requirements for only those external adapters whose exact
+   static contracts pass. Unavailable systems remain unavailable rather than
+   receiving a pseudo-implementation.
 3. Instantiate the package-preference protocol with common tools, repair
    budget, telemetry, blinded artifacts, and the later pilot-informed formal
    power analysis. Starting anchors and failure floors belong only to the

@@ -233,9 +233,13 @@ All six profiles complete deterministic offline structural acceptance and fail
 closed on config or library drift. This closes treatment-isolation software, not
 the empirical gate: the committed fixture does not yet use Qwen for open-ended
 candidate generation/selection, and the seed library is not a frozen formal
-matched/placebo corpus. The next implementation gate is the model-backed native
-condition adapter; only after it is fixed can a new prelaunch proposal bind real
-implementation references.
+matched/placebo corpus. A schema-v1.4 prelaunch proposal now binds all six real
+implementation references at commit `7b82eb5...`, retains Full--Base and
+Full--mismatched as the two confirmation obligations, and classifies the three
+component-only contrasts as mandatory mechanism diagnostics. The next empirical
+gate is to attest one shared model-backed candidate/action path plus paired
+matched/placebo corpora; assets, remote checkpoint, reviewers, and owner approval
+remain unresolved, so no execution is authorized.
 
 That distinction is now executable policy rather than an addendum alone.
 Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
