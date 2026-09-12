@@ -429,13 +429,31 @@ class AnalysisContract(BaseModel):
     uncertainty_method: str = Field(min_length=1, max_length=1_000)
     power_analysis_ref: str | None = Field(default=None, max_length=1_000)
     power_analysis_sha256: str | None = Field(default=None, pattern=_SHA256)
+    objective_outcome_contract_ref: str | None = Field(default=None, max_length=1_000)
+    objective_outcome_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     claim_admission: ClaimAdmissionContract | None = None
 
     @model_validator(mode="after")
     def power_analysis_is_content_bound(self) -> AnalysisContract:
         if (self.power_analysis_ref is None) != (self.power_analysis_sha256 is None):
             raise ValueError("power-analysis reference and SHA-256 must be supplied together")
+        if (self.objective_outcome_contract_ref is None) != (
+            self.objective_outcome_contract_sha256 is None
+        ):
+            raise ValueError(
+                "objective-outcome contract reference and SHA-256 must be supplied together"
+            )
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_objective_outcome_contract(self, handler):  # type: ignore[no-untyped-def]
+        """Keep manifests created before executable objective analysis byte-compatible."""
+
+        payload = handler(self)
+        if self.objective_outcome_contract_ref is None:
+            payload.pop("objective_outcome_contract_ref", None)
+            payload.pop("objective_outcome_contract_sha256", None)
+        return payload
 
 
 class IntegrityContract(BaseModel):

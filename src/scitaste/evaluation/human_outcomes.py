@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer, model_validator
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -99,12 +99,15 @@ class HumanOutcomeStudyManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     study_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol: HumanStudyFileBinding
     rubric: HumanStudyFileBinding
     interface: HumanStudyFileBinding
+    study_scope: Literal["pilot", "formal"] | None = None
+    preference_analysis_contract: HumanStudyFileBinding | None = None
+    power_analysis: HumanStudyFileBinding | None = None
     blind_key_sha256: str = Field(pattern=_SHA256)
     comparisons: tuple[BlindedHumanComparison, ...] = Field(min_length=4, max_length=100_000)
     reviewers_per_case_contrast: Literal[2] = 2
@@ -119,6 +122,19 @@ class HumanOutcomeStudyManifest(BaseModel):
 
     @model_validator(mode="after")
     def assignments_form_complete_dual_review_blocks(self) -> HumanOutcomeStudyManifest:
+        analysis_extensions = (
+            self.study_scope,
+            self.preference_analysis_contract,
+        )
+        if self.schema_version == "1.0" and any(
+            value is not None for value in (*analysis_extensions, self.power_analysis)
+        ):
+            raise ValueError("human outcome study v1.1 is required for analysis bindings")
+        if self.schema_version == "1.1":
+            if any(value is None for value in analysis_extensions):
+                raise ValueError("human outcome study v1.1 requires scope and analysis contract")
+            if self.study_scope == "formal" and self.power_analysis is None:
+                raise ValueError("formal human outcome study requires a bound power analysis")
         _require_unique((item.comparison_id for item in self.comparisons), "comparison IDs")
         grouped: dict[tuple[TasteMechanismHypothesis, str], list[BlindedHumanComparison]] = (
             defaultdict(list)
@@ -146,6 +162,17 @@ class HumanOutcomeStudyManifest(BaseModel):
             if len(set(output_pairs)) != 1:
                 raise ValueError(f"human outcome block {key} does not show the same output pair")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_analysis_extensions(self, handler):  # type: ignore[no-untyped-def]
+        """Keep frozen v1.0 reviewer manifests byte-compatible."""
+
+        payload = handler(self)
+        if self.schema_version == "1.0":
+            payload.pop("study_scope", None)
+            payload.pop("preference_analysis_contract", None)
+            payload.pop("power_analysis", None)
+        return payload
 
     @computed_field
     @property

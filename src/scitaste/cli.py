@@ -70,17 +70,21 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    EvaluationResultSet,
     OutcomeInformationAvailability,
     ProjectionSemanticRole,
     SourceProjectionField,
     align_evidence_program_to_benchmark,
+    analyze_human_preferences,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     approve_json_content_audit,
     approve_source_projection,
     approve_structured_metadata_audit,
+    bind_objective_measurement_set,
     build_source_projection_plan,
     compile_evaluation_cell_plan,
+    complete_objective_result_set,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
     inspect_acquired_task_cohort,
@@ -111,6 +115,7 @@ from scitaste.evaluation import (
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
+    load_evaluation_cell_plan,
     load_evidence_program,
     load_evidence_review_package,
     load_executable_candidate_manifest,
@@ -118,9 +123,12 @@ from scitaste.evaluation import (
     load_external_resource_corpus,
     load_human_blind_opening,
     load_human_outcome_study,
+    load_human_preference_analysis_contract,
     load_json_content_audit_approval,
     load_locked_human_reviews,
     load_native_condition_preflight_manifest,
+    load_objective_measurement_set,
+    load_objective_outcome_contract,
     load_prelaunch_manifest,
     load_source_admission_proposal,
     load_source_projection_approval,
@@ -133,6 +141,7 @@ from scitaste.evaluation import (
     load_taste_corpus_pair_manifest,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
+    materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
     plan_structured_metadata_audit,
@@ -143,6 +152,7 @@ from scitaste.evaluation import (
     run_live_direct_agent,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
+    save_completed_objective_result_set,
     save_dataset_acquisition_request,
     save_dataset_archive_qualification_report,
     save_dataset_license_policy_report,
@@ -152,6 +162,7 @@ from scitaste.evaluation import (
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
     save_human_outcome_study_report,
+    save_human_preference_analysis_report,
     save_json_content_audit_approval,
     save_json_content_audit_report,
     save_source_admission_report,
@@ -1542,6 +1553,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(human_outcome)
     human_outcome.set_defaults(handler=_handle_evaluation_human_outcome)
+    human_preference_analysis = evaluation_commands.add_parser(
+        "human-preference-analyze",
+        help="Compute preregistered source-group H1/H2 inference after blind opening",
+    )
+    human_preference_analysis.add_argument("--study", type=Path, required=True)
+    human_preference_analysis.add_argument("--reviews", type=Path, required=True)
+    human_preference_analysis.add_argument("--opening", type=Path, required=True)
+    human_preference_analysis.add_argument("--analysis-contract", type=Path, required=True)
+    human_preference_analysis.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_preference_analysis.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(human_preference_analysis)
+    human_preference_analysis.set_defaults(handler=_handle_evaluation_human_preference_analyze)
     taste_abstraction_candidate = evaluation_commands.add_parser(
         "taste-abstraction-candidate",
         help="Compile one accepted Taste abstraction ledger entry for human review",
@@ -1905,6 +1928,22 @@ def build_parser() -> argparse.ArgumentParser:
     source_projection_materialize.set_defaults(
         handler=_handle_evaluation_source_projection_materialize
     )
+    objective_analyze = evaluation_commands.add_parser(
+        "objective-analyze",
+        help="Compute preregistered task-level H3 inference from frozen cell scores",
+    )
+    objective_analyze.add_argument("--manifest", type=Path, required=True)
+    objective_analyze.add_argument("--cell-plan", type=Path, required=True)
+    objective_analyze.add_argument("--raw-result-set", type=Path, required=True)
+    objective_analyze.add_argument("--objective-contract", type=Path, required=True)
+    objective_analyze.add_argument("--measurement-set", type=Path, required=True)
+    objective_analyze.add_argument("--project-root", type=Path, required=True)
+    objective_analyze.add_argument("--project-id", required=True)
+    objective_analyze.add_argument("--evaluation-id", required=True)
+    objective_analyze.add_argument("--analysis-output", type=Path, required=True)
+    objective_analyze.add_argument("--completed-result-set-output", type=Path, required=True)
+    _add_log_level_option(objective_analyze)
+    objective_analyze.set_defaults(handler=_handle_evaluation_objective_analyze)
     acquired_cohort = evaluation_commands.add_parser(
         "acquired-task-cohort",
         help="Classify acquired benchmark briefs without treating them as executable tasks",
@@ -4964,6 +5003,32 @@ def _handle_evaluation_human_outcome(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_evaluation_human_preference_analyze(args: argparse.Namespace) -> int:
+    study = load_human_outcome_study(args.study)
+    reviews = load_locked_human_reviews(args.reviews)
+    opening = load_human_blind_opening(args.opening)
+    contract = load_human_preference_analysis_contract(args.analysis_contract)
+    analysis = analyze_human_preferences(
+        study,
+        reviews,
+        opening,
+        contract,
+        evidence_root=args.evidence_root,
+    )
+    output = save_human_preference_analysis_report(analysis, args.output)
+    print(
+        json.dumps(
+            {
+                "analysis_path": str(output),
+                **analysis.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _handle_evaluation_taste_abstraction_candidate(args: argparse.Namespace) -> int:
     candidate = taste_abstraction_candidate_from_ledger(
         args.ledger_entry,
@@ -5447,6 +5512,69 @@ def _handle_evaluation_source_projection_materialize(args: argparse.Namespace) -
     print(
         json.dumps(
             {"receipt_path": str(output), **receipt.model_dump(mode="json")},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_objective_analyze(args: argparse.Namespace) -> int:
+    manifest = load_prelaunch_manifest(args.manifest).manifest
+    plan = load_evaluation_cell_plan(args.cell_plan)
+    raw_result_path = args.raw_result_set
+    if (
+        raw_result_path.is_symlink()
+        or not raw_result_path.is_file()
+        or raw_result_path.stat().st_size > 64 * 1024 * 1024
+    ):
+        raise ValueError("raw objective result set must be a bounded regular file")
+    results = EvaluationResultSet.model_validate_json(raw_result_path.read_bytes())
+    if results.primary_comparisons:
+        raise ValueError("raw objective result set already contains primary comparisons")
+    contract = load_objective_outcome_contract(args.objective_contract)
+    measurements = load_objective_measurement_set(args.measurement_set)
+    measurement_artifact = bind_objective_measurement_set(
+        args.measurement_set,
+        project_root=args.project_root,
+    )
+    materialized = materialize_objective_analysis(
+        manifest,
+        plan,
+        results,
+        contract,
+        measurements,
+        measurement_artifact,
+        project_root=args.project_root,
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        output_path=args.analysis_output,
+    )
+    completed = complete_objective_result_set(results, materialized)
+    completed_path = save_completed_objective_result_set(
+        completed,
+        args.completed_result_set_output,
+        project_root=args.project_root,
+    )
+    print(
+        json.dumps(
+            {
+                "analysis_path": str(materialized.output_path),
+                "analysis_report_sha256": materialized.report.report_sha256,
+                "completed_result_set_path": str(completed_path),
+                "completed_result_set_sha256": completed.result_set_sha256,
+                "independent_unit": "held-out-task",
+                "confirmatory_comparisons": materialized.report.confirmatory_comparisons,
+                "supported_confirmatory_comparisons": (
+                    materialized.report.supported_confirmatory_comparisons
+                ),
+                "formal_effectiveness_established": (
+                    materialized.report.formal_effectiveness_established
+                ),
+                "model_calls": 0,
+                "api_spend": 0,
+                "gpu_work": 0,
+            },
             indent=2,
             ensure_ascii=False,
         )

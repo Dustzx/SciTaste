@@ -30,6 +30,11 @@ from scitaste.evaluation import (
     GpuModelResource,
     HumanReviewResource,
     IntegrityContract,
+    ObjectiveCellMeasurement,
+    ObjectiveDirection,
+    ObjectiveMeasurementSet,
+    ObjectiveOutcomeContract,
+    ObjectiveTaskScoreContract,
     PrelaunchApproval,
     PrelaunchSystem,
     PrelaunchTask,
@@ -41,9 +46,16 @@ from scitaste.evaluation import (
     SystemApiModelResource,
     SystemRole,
     TaskSignalKind,
+    bind_objective_measurement_set,
     claim_analysis_input_sha256,
     compile_evaluation_cell_plan,
+    complete_objective_result_set,
     inspect_evaluation_results,
+    load_objective_outcome_contract,
+    materialize_objective_analysis,
+    objective_cell_population_sha256,
+    save_objective_measurement_set,
+    save_objective_outcome_contract,
 )
 from scitaste.project.models import content_sha256
 
@@ -914,3 +926,185 @@ def test_result_analysis_input_must_bind_every_failure_in_the_contrast(tmp_path:
 
     assert assessment.confirmatory_evidence_complete is False
     assert f"analysis:{first.comparison_id}:analysis-input-mismatch" in assessment.blocker_codes
+
+
+def test_objective_analysis_collapses_seed_blocks_before_confirmatory_inference(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    power = _artifact(root, "evidence/power.json", '{"independent_units":"tasks"}\n')
+    task_contracts = []
+    for task_id in ("heldout-a", "heldout-b"):
+        scorer = _artifact(
+            root,
+            f"evidence/scorers/{task_id}.py",
+            f'# frozen scorer for {task_id}\n',
+        )
+        task_contracts.append(
+            ObjectiveTaskScoreContract(
+                task_id=task_id,
+                source_group_id=f"source-{task_id}",
+                metric_id="normalized-objective-gain",
+                metric_version="test-v1",
+                direction=ObjectiveDirection.HIGHER,
+                raw_minimum=0,
+                raw_maximum=1,
+                starting_score=0.5,
+                target_score=1,
+                failure_normalized_score=-1,
+                scorer_artifact=scorer,
+            )
+        )
+    objective_contract = ObjectiveOutcomeContract.create(
+        contract_id="objective-test-v1",
+        protocol_id="claim-native_taste_causal",
+        endpoint_id="normalized-objective-gain",
+        task_scores=tuple(task_contracts),
+        bootstrap_resamples=1_000,
+        monte_carlo_sign_flips=10_000,
+    )
+    contract_path = save_objective_outcome_contract(
+        objective_contract, root / "evidence/objective-contract.json"
+    )
+    contract_inspection = load_objective_outcome_contract(contract_path)
+
+    payload = _manifest(ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL).model_dump(mode="json")
+    payload["approval"] = {"approved": False}
+    payload["lanes"][0]["seeds"] = [7, 11]
+    payload["lanes"][0]["planned_cells"] = 12
+    payload["analysis"]["power_analysis_sha256"] = power.sha256
+    payload["analysis"]["objective_outcome_contract_ref"] = (
+        "evidence/objective-contract.json"
+    )
+    payload["analysis"]["objective_outcome_contract_sha256"] = (
+        contract_inspection.file_sha256
+    )
+    draft = ExperimentPrelaunchManifest.model_validate(payload)
+    payload["approval"] = PrelaunchApproval(
+        approved=True,
+        approved_proposal_sha256=draft.proposal_sha256,
+        approved_by="project-owner",
+        approved_at="2026-09-12T00:00:00Z",
+    )
+    manifest = ExperimentPrelaunchManifest.model_validate(payload)
+    plan = compile_evaluation_cell_plan(manifest)
+    result_with_manual_comparisons = _result_set(root, manifest, failed_system="native-base")
+    raw_results = EvaluationResultSet.create(
+        project_id=result_with_manual_comparisons.project_id,
+        evaluation_id=result_with_manual_comparisons.evaluation_id,
+        proposal_sha256=result_with_manual_comparisons.proposal_sha256,
+        plan_sha256=result_with_manual_comparisons.plan_sha256,
+        cell_results=result_with_manual_comparisons.cell_results,
+        blind_reviews=result_with_manual_comparisons.blind_reviews,
+        primary_comparisons=(),
+    )
+    records = {item.cell_id: item for item in raw_results.cell_results}
+    scored = []
+    for cell in plan.cells:
+        if records[cell.cell_id].status == "failed":
+            continue
+        raw_score = 0.95 if cell.system_id == "scitaste-full" else 0.55
+        score_artifact = _artifact(
+            root,
+            f"scores/{cell.cell_id}.json",
+            f'{{"cell_id":"{cell.cell_id}","raw_score":{raw_score}}}\n',
+        )
+        scored.append(
+            ObjectiveCellMeasurement.create(
+                cell_id=cell.cell_id,
+                result_record_sha256=records[cell.cell_id].record_sha256,
+                metric_id="normalized-objective-gain",
+                metric_version="test-v1",
+                raw_score=raw_score,
+                score_artifact=score_artifact,
+            )
+        )
+    measurements = ObjectiveMeasurementSet.create(
+        project_id=raw_results.project_id,
+        evaluation_id=raw_results.evaluation_id,
+        proposal_sha256=plan.proposal_sha256,
+        plan_sha256=plan.plan_sha256,
+        cell_result_population_sha256=objective_cell_population_sha256(raw_results),
+        objective_outcome_contract_sha256=contract_inspection.file_sha256,
+        measurements=tuple(scored),
+    )
+    measurement_path = save_objective_measurement_set(
+        measurements, root / "scores/measurement-set.json"
+    )
+    measurement_artifact = bind_objective_measurement_set(
+        measurement_path,
+        project_root=root,
+    )
+    analysis_dir = root / "analysis"
+    analysis_dir.mkdir(exist_ok=True)
+    materialized = materialize_objective_analysis(
+        manifest,
+        plan,
+        raw_results,
+        contract_inspection,
+        measurements,
+        measurement_artifact,
+        project_root=root,
+        project_id=raw_results.project_id,
+        evaluation_id=raw_results.evaluation_id,
+        output_path="analysis/objective-report.json",
+    )
+
+    assert len(materialized.primary_comparisons) == 2
+    assert all(item.schema_version == "1.2" for item in materialized.primary_comparisons)
+    assert all(item.analysis_unit_count == 2 for item in materialized.primary_comparisons)
+    assert all(item.observed_block_count == 4 for item in materialized.primary_comparisons)
+    assert all(item.adjusted_p_value is not None for item in materialized.primary_comparisons)
+    base_contrast = next(
+        item
+        for item in materialized.report.comparisons
+        if item.comparator_system_id == "native-base"
+    )
+    failed_task = next(item for item in base_contrast.task_effects if item.task_id == "heldout-a")
+    assert failed_task.comparator_normalized_mean == -1
+
+    final_results = complete_objective_result_set(raw_results, materialized)
+    assessment = inspect_evaluation_results(
+        manifest,
+        plan,
+        final_results,
+        project_root=root,
+        project_id=raw_results.project_id,
+        evaluation_id=raw_results.evaluation_id,
+        execution_authorized=True,
+    )
+
+    assert assessment.scientific_evidence_complete is True
+    assert assessment.scientific_effectiveness_established is False
+
+    first = final_results.primary_comparisons[0]
+    tampered_payload = first.model_dump(mode="python", exclude={"comparison_sha256"})
+    tampered_payload["raw_p_value"] = 0.9
+    tampered_payload["objective_measurement_set_artifact"] = (
+        first.objective_measurement_set_artifact
+    )
+    tampered_payload["analysis_artifact"] = first.analysis_artifact
+    tampered = EvaluationPrimaryComparison.create(**tampered_payload)
+    tampered_results = EvaluationResultSet.create(
+        project_id=final_results.project_id,
+        evaluation_id=final_results.evaluation_id,
+        proposal_sha256=final_results.proposal_sha256,
+        plan_sha256=final_results.plan_sha256,
+        cell_results=final_results.cell_results,
+        blind_reviews=final_results.blind_reviews,
+        primary_comparisons=(tampered, *final_results.primary_comparisons[1:]),
+    )
+    tampered_assessment = inspect_evaluation_results(
+        manifest,
+        plan,
+        tampered_results,
+        project_root=root,
+        project_id=raw_results.project_id,
+        evaluation_id=raw_results.evaluation_id,
+        execution_authorized=True,
+    )
+    assert (
+        f"analysis:{first.comparison_id}:executable-analysis-mismatch"
+        in tampered_assessment.blocker_codes
+    )

@@ -398,16 +398,21 @@ changing the formal primary model.
 
 ## Statistical contract
 
-- The experimental unit is a task-seed research trajectory, not a tool call,
-  generated paragraph, experiment row, or reviewer rating.
-- Systems are paired by task, seed, starting evidence, and budget block.
+- The title-confirmatory H3 experimental unit is an independent held-out task
+  (and unique source group), not a seed, tool call, generated paragraph,
+  experiment row, or reviewer rating. Seed/repetition trajectories are paired
+  blocks averaged within task before inference.
+- Systems are paired by task, seed, starting evidence, and budget block, while
+  task-level estimates receive equal weight.
 - The title-confirmatory native comparison uses the preregistered objective
   task score and independent evidence-validity review. External package
   preference uses a separate task- and reviewer-aware paired model. Each reports
   effect sizes, 95% intervals, raw outcomes, and paired sensitivity analyses.
-- Continuous secondary outcomes use hierarchical or task-blocked models with
-  task and seed effects. Binary failures remain outcomes and are not silently
-  dropped.
+- H3 uses the frozen objective-analysis contract: task-specific normalized
+  progress, preregistered task floors for failures, a task-clustered bootstrap,
+  a paired task sign-flip test, and Holm adjustment over confirmatory contrasts
+  only. Continuous secondary outcomes use hierarchical or task-blocked models;
+  binary failures remain outcomes and are not silently dropped.
 - One headline hypothesis is tested. Secondary confirmatory families use a
   prespecified multiplicity correction; all other analyses are explicitly
   exploratory.

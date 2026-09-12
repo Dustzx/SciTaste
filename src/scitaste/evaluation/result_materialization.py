@@ -173,6 +173,11 @@ def _evidence_bindings(
         artifacts.extend(record.artifacts)
     artifacts.extend(review.attestation for review in results.blind_reviews)
     artifacts.extend(item.analysis_artifact for item in results.primary_comparisons)
+    artifacts.extend(
+        item.objective_measurement_set_artifact
+        for item in results.primary_comparisons
+        if item.objective_measurement_set_artifact is not None
+    )
     by_locator: dict[str, EvaluationResultArtifact] = {}
     for artifact in artifacts:
         previous = by_locator.get(artifact.locator)

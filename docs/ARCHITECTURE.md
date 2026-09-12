@@ -2479,3 +2479,58 @@ absent, and publishes all projections atomically. The receipt records the same
 projection hash for raw RAG and abstraction input. It grants no tokenization,
 model, reviewer, or experiment authority; model-specific token counts remain a
 separate prerequisite for an abstraction resource proposal.
+
+### ADR-083: H3 inference is task-level executable evidence, not supplied prose
+
+Status: accepted and executable for frozen objective measurements; no formal H3
+effect has been measured.
+
+Earlier result admission could verify the hash, interval, and declared conclusion
+of a supplied primary-comparison artifact, but it did not compute that comparison.
+It also counted every task/seed/repetition tuple as an analysis unit. Treating
+repeat trajectories as independent samples would understate uncertainty and make
+the title claim easier to pass without adding held-out scientific problems.
+
+SciTaste now binds a separate objective-outcome contract into the prelaunch
+analysis. The contract freezes task-specific scorer bytes, metric direction and
+bounds, normalization anchors, failure floors, source-group identities, task
+weighting, interval/test methods, random seeds, alpha, and the confirmatory
+multiplicity family. Successful scores require content-bound score artifacts;
+failed cells receive their preregistered task floor.
+
+The analyzer pairs systems within each task/seed/repetition block, averages those
+blocks within task, and performs inference across equally weighted held-out tasks.
+It emits task-clustered bootstrap intervals, paired task sign-flip p-values, and
+Holm-adjusted confirmatory decisions. Diagnostic contrasts remain reported but
+outside the title-claim family. Schema-1.2 comparisons expose task count and block
+count separately, and result admission rechecks that distinction. Pilot analysis
+cannot establish effectiveness. Every v1.2 comparison binds the measurement set;
+result admission reloads it and the objective contract, reruns the estimator, and
+requires the persisted report and comparison records to match exactly. The
+analyzer performs no experiment, model, API, GPU, or human action.
+
+### ADR-084: H1/H2 analysis begins only after locked blind opening
+
+Status: accepted and executable for a post-pilot frozen design; no real H1/H2
+effect has been measured.
+
+The human-outcome audit deliberately stopped at an unblinded outcome ledger. A
+`ready_for_primary_analysis` flag established ordering and integrity, not a
+scientific effect. Treating the two reviewer judgments or multiple cases from a
+single source as independent samples would also inflate the apparent population.
+
+Schema-1.1 human studies therefore bind a separate post-pilot analysis contract
+and, for formal work, power-analysis bytes before outcomes. The executable
+design-based estimator codes matched-Taste preference as one, ties as one half,
+and comparator preference as zero; averages reviewers within case and cases
+within source group; and gives held-out source groups equal weight. It retains
+missingness and disagreement, enforces the frozen missingness ceiling, reports
+reviewer diagnostics, and computes source-group bootstrap intervals plus paired
+source-group sign-flip tests. Holm correction covers H1 and H2, and both must pass
+the formal joint title gate.
+
+This engine does not choose the final model before pilot variance is observed.
+If the pilot shows material crossed-reviewer dependence, a new formal contract
+must name a suitable crossed-effects estimator; post-unblinding estimator changes
+are forbidden. Analysis performs no recruitment, model/API call, GPU work, or
+experiment and cannot turn pilot outcomes into formal evidence.

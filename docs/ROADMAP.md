@@ -1136,6 +1136,32 @@ citation/resource screen and exact adapters/licenses remain open.
   conformance, real abstraction generation, and independent source-fidelity
   review before a powered study is launched.
 
+## H3 objective-analysis closure
+
+- Done: the formal outcome schema can bind a task-specific scorer, score range,
+  normalization anchors, failure floor, and unique held-out source group before
+  outcomes exist.
+- Done: successful-cell scores and their evidence bytes are content addressed;
+  failed cells remain in the estimand at the preregistered task floor.
+- Done: seed/repetition blocks are averaged within task before the paired test,
+  task-clustered interval, and equal-weight task estimate. Confirmatory contrasts
+  receive Holm correction; mechanism diagnostics stay outside that family.
+- Done: `scitaste evaluation objective-analyze` freezes the analysis report and
+  a completed result set without launching a model, API, GPU job, or experiment.
+- Pending scientific evidence: select and power the formal held-out tasks, freeze
+  a new formal manifest at one executable commit, approve its declared resources,
+  collect real measurements, and run the already-frozen analysis. No H3 effect is
+  currently established.
+- Done at the software boundary: a schema-1.1 human study binds the post-pilot
+  analysis and power bytes, and `human-preference-analyze` computes equal-weight
+  source-group H1/H2 effects, intervals, sign-flip tests, Holm decisions,
+  missingness, and reviewer diagnostics after valid blind opening.
+- Pending scientific evidence: run the approved pilot, use its disagreement and
+  reviewer/source variance to choose and power the final formal estimator, freeze
+  a new formal contract, recruit independent reviewers, and collect real H1/H2
+  outcomes. If crossed-reviewer dependence is material, implement and register
+  that model before—not after—formal outcomes are opened.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

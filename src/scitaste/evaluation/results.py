@@ -166,11 +166,20 @@ class EvaluationPrimaryComparison(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     comparison_id: str = Field(pattern=r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$")
     analysis_contract_sha256: str = Field(pattern=_SHA256)
     analysis_input_sha256: str | None = Field(default=None, pattern=_SHA256)
     failure_handling: Literal["include-as-outcome"] | None = None
+    objective_outcome_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    objective_measurement_set_artifact: EvaluationResultArtifact | None = None
+    independent_unit_kind: Literal["held-out-task"] | None = None
+    observed_block_count: int | None = Field(default=None, gt=0)
+    inference_role: ContrastInferenceRole | None = None
+    raw_p_value: float | None = Field(default=None, ge=0, le=1)
+    adjusted_p_value: float | None = Field(default=None, ge=0, le=1)
+    alpha: float | None = Field(default=None, gt=0, lt=1)
+    multiplicity_family_sha256: str | None = Field(default=None, pattern=_SHA256)
     candidate_system_id: str
     comparator_system_id: str
     analysis_unit_count: int = Field(gt=0)
@@ -186,20 +195,60 @@ class EvaluationPrimaryComparison(BaseModel):
     @model_validator(mode="after")
     def conclusion_is_derived_and_self_hashed(self) -> EvaluationPrimaryComparison:
         extensions = (self.analysis_input_sha256, self.failure_handling)
+        executable_extensions = (
+            self.objective_outcome_contract_sha256,
+            self.objective_measurement_set_artifact,
+            self.independent_unit_kind,
+            self.observed_block_count,
+            self.inference_role,
+            self.raw_p_value,
+            self.alpha,
+        )
         if self.schema_version == "1.0" and any(value is not None for value in extensions):
             raise ValueError("primary comparison v1.1 is required for claim-analysis inputs")
-        if self.schema_version == "1.1" and any(value is None for value in extensions):
+        if self.schema_version in {"1.1", "1.2"} and any(value is None for value in extensions):
             raise ValueError("primary comparison v1.1 requires claim-analysis inputs")
+        if self.schema_version != "1.2" and any(
+            value is not None
+            for value in (
+                *executable_extensions,
+                self.adjusted_p_value,
+                self.multiplicity_family_sha256,
+            )
+        ):
+            raise ValueError("primary comparison v1.2 is required for executable inference")
+        if self.schema_version == "1.2":
+            if any(value is None for value in executable_extensions):
+                raise ValueError("primary comparison v1.2 requires executable inference fields")
+            if self.inference_role is ContrastInferenceRole.CONFIRMATORY:
+                if self.adjusted_p_value is None or self.multiplicity_family_sha256 is None:
+                    raise ValueError(
+                        "confirmatory comparison v1.2 requires multiplicity-adjusted inference"
+                    )
+            elif self.adjusted_p_value is not None or self.multiplicity_family_sha256 is not None:
+                raise ValueError(
+                    "diagnostic comparison v1.2 cannot enter the confirmatory multiplicity family"
+                )
         if self.candidate_system_id == self.comparator_system_id:
             raise ValueError("primary comparison requires distinct systems")
         if not self.interval_lower <= self.effect_estimate <= self.interval_upper:
             raise ValueError("primary comparison estimate must lie inside its interval")
         if self.favorable_direction == "higher":
-            supports = self.interval_lower > self.minimum_effect
+            supports_interval = self.interval_lower > self.minimum_effect
             contradicts = self.interval_upper < -self.minimum_effect
         else:
-            supports = self.interval_upper < -self.minimum_effect
+            supports_interval = self.interval_upper < -self.minimum_effect
             contradicts = self.interval_lower > self.minimum_effect
+        if self.schema_version == "1.2":
+            significance = (
+                self.adjusted_p_value
+                if self.inference_role is ContrastInferenceRole.CONFIRMATORY
+                else self.raw_p_value
+            )
+            assert significance is not None and self.alpha is not None
+            supports = supports_interval and significance < self.alpha
+        else:
+            supports = supports_interval
         expected_conclusion = (
             "supports_claim" if supports else "contradicts_claim" if contradicts else "inconclusive"
         )
@@ -268,9 +317,23 @@ class EvaluationResultSet(BaseModel):
 
 def _comparison_hash_payload(comparison: EvaluationPrimaryComparison) -> dict[str, object]:
     payload = comparison.model_dump(mode="json", exclude={"comparison_sha256"})
+    executable_fields = (
+        "objective_outcome_contract_sha256",
+        "objective_measurement_set_artifact",
+        "independent_unit_kind",
+        "observed_block_count",
+        "inference_role",
+        "raw_p_value",
+        "adjusted_p_value",
+        "alpha",
+        "multiplicity_family_sha256",
+    )
     if comparison.schema_version == "1.0":
         payload.pop("analysis_input_sha256", None)
         payload.pop("failure_handling", None)
+    if comparison.schema_version in {"1.0", "1.1"}:
+        for field in executable_fields:
+            payload.pop(field, None)
     return payload
 
 
@@ -280,6 +343,19 @@ def _result_set_hash_payload(result_set: EvaluationResultSet) -> dict[str, objec
         if comparison["schema_version"] == "1.0":
             comparison.pop("analysis_input_sha256", None)
             comparison.pop("failure_handling", None)
+        if comparison["schema_version"] in {"1.0", "1.1"}:
+            for field in (
+                "objective_outcome_contract_sha256",
+                "objective_measurement_set_artifact",
+                "independent_unit_kind",
+                "observed_block_count",
+                "inference_role",
+                "raw_p_value",
+                "adjusted_p_value",
+                "alpha",
+                "multiplicity_family_sha256",
+            ):
+                comparison.pop(field, None)
     return payload
 
 
@@ -648,6 +724,11 @@ def inspect_evaluation_results(
     analysis_contract_sha256 = (
         content_sha256(manifest.analysis) if manifest.analysis is not None else None
     )
+    objective_outcome_contract_sha256 = (
+        manifest.analysis.objective_outcome_contract_sha256
+        if manifest.analysis is not None
+        else None
+    )
     if claim is None:
         for cell in matched:
             record = valid_records.get(cell.cell_id)
@@ -706,6 +787,10 @@ def inspect_evaluation_results(
             valid_records,
             results.primary_comparisons,
             analysis_contract_sha256=analysis_contract_sha256,
+            objective_outcome_contract_sha256=objective_outcome_contract_sha256,
+            manifest=manifest,
+            plan=plan,
+            result_set=results,
         )
         blockers.update(comparison_issues)
         if manifest.study_scope != "formal":
@@ -945,6 +1030,10 @@ def _claim_comparison_status(
     comparisons: tuple[EvaluationPrimaryComparison, ...],
     *,
     analysis_contract_sha256: str | None,
+    objective_outcome_contract_sha256: str | None,
+    manifest: ExperimentPrelaunchManifest,
+    plan: EvaluationCellPlan,
+    result_set: EvaluationResultSet,
 ) -> tuple[set[str], set[str], set[str], set[str]]:
     """Check exact preregistered contrasts without treating failures as exclusions."""
 
@@ -965,6 +1054,23 @@ def _claim_comparison_status(
         if not candidate_units or candidate_units != comparator_units:
             issues.add(f"analysis:{spec.contrast_id}:planned-units-not-paired")
 
+    executable_comparisons = [item for item in comparisons if item.schema_version == "1.2"]
+    expected_executable: dict[str, EvaluationPrimaryComparison] = {}
+    if executable_comparisons:
+        try:
+            expected_executable = _recompute_objective_comparisons(
+                root,
+                manifest,
+                plan,
+                result_set,
+                executable_comparisons,
+            )
+        except (OSError, ValueError):
+            issues.update(
+                f"analysis:{item.comparison_id}:executable-recomputation-failed"
+                for item in executable_comparisons
+            )
+
     for comparison in comparisons:
         spec = specs.get(comparison.comparison_id)
         if spec is None:
@@ -982,9 +1088,33 @@ def _claim_comparison_status(
         ):
             issues.add(f"analysis:{comparison.comparison_id}:decision-rule-mismatch")
             continue
-        expected_units = len(units_by_system.get(spec.candidate_system_id, set()))
+        expected_blocks = len(units_by_system.get(spec.candidate_system_id, set()))
+        expected_tasks = len(
+            {
+                task_id
+                for task_id, _seed, _repetition in units_by_system.get(
+                    spec.candidate_system_id, set()
+                )
+            }
+        )
+        expected_units = expected_tasks if comparison.schema_version == "1.2" else expected_blocks
         if comparison.analysis_unit_count != expected_units:
             issues.add(f"analysis:{comparison.comparison_id}:analysis-unit-count-mismatch")
+            continue
+        if comparison.schema_version == "1.2" and (
+            comparison.independent_unit_kind != "held-out-task"
+            or comparison.observed_block_count != expected_blocks
+            or comparison.inference_role
+            != (spec.inference_role or ContrastInferenceRole.CONFIRMATORY)
+            or comparison.objective_outcome_contract_sha256
+            != objective_outcome_contract_sha256
+        ):
+            issues.add(f"analysis:{comparison.comparison_id}:executable-inference-mismatch")
+            continue
+        if comparison.schema_version == "1.2" and (
+            expected_executable.get(comparison.comparison_id) != comparison
+        ):
+            issues.add(f"analysis:{comparison.comparison_id}:executable-analysis-mismatch")
             continue
         try:
             expected_input = claim_analysis_input_sha256(claim, spec, cells, records)
@@ -992,7 +1122,7 @@ def _claim_comparison_status(
             issues.add(f"analysis:{comparison.comparison_id}:analysis-input-incomplete")
             continue
         if (
-            comparison.schema_version != "1.1"
+            comparison.schema_version not in {"1.1", "1.2"}
             or comparison.failure_handling != claim.failure_handling
             or comparison.analysis_input_sha256 != expected_input
         ):
@@ -1011,6 +1141,77 @@ def _claim_comparison_status(
     for contrast_id in sorted(required - valid):
         issues.add(f"analysis:{contrast_id}:missing")
     return issues, required, valid, supported
+
+
+def _recompute_objective_comparisons(
+    root: Path,
+    manifest: ExperimentPrelaunchManifest,
+    plan: EvaluationCellPlan,
+    result_set: EvaluationResultSet,
+    comparisons: list[EvaluationPrimaryComparison],
+) -> dict[str, EvaluationPrimaryComparison]:
+    """Re-run v1.2 inference from its bound measurements before claim admission."""
+
+    from scitaste.evaluation.objective_analysis import (  # avoid an import cycle
+        ObjectiveAnalysisReport,
+        analyze_objective_outcomes,
+        load_objective_measurement_set,
+        load_objective_outcome_contract,
+        primary_comparisons_from_objective_report,
+    )
+
+    analysis_artifacts = {item.analysis_artifact for item in comparisons}
+    measurement_artifacts = {
+        item.objective_measurement_set_artifact
+        for item in comparisons
+        if item.objective_measurement_set_artifact is not None
+    }
+    if len(analysis_artifacts) != 1 or len(measurement_artifacts) != 1:
+        raise ValueError("executable comparisons must share analysis and measurement artifacts")
+    analysis_artifact = next(iter(analysis_artifacts))
+    measurement_artifact = next(iter(measurement_artifacts))
+    if not _artifact_matches(root, analysis_artifact) or not _artifact_matches(
+        root, measurement_artifact
+    ):
+        raise ValueError("executable objective artifact is missing or changed")
+    if manifest.analysis is None or manifest.analysis.objective_outcome_contract_ref is None:
+        raise ValueError("objective outcome contract is not bound")
+    contract = load_objective_outcome_contract(
+        root / PurePosixPath(manifest.analysis.objective_outcome_contract_ref)
+    )
+    measurements = load_objective_measurement_set(
+        root / PurePosixPath(measurement_artifact.locator)
+    )
+    raw_results = EvaluationResultSet.create(
+        project_id=result_set.project_id,
+        evaluation_id=result_set.evaluation_id,
+        proposal_sha256=result_set.proposal_sha256,
+        plan_sha256=result_set.plan_sha256,
+        cell_results=result_set.cell_results,
+        blind_reviews=result_set.blind_reviews,
+        primary_comparisons=(),
+    )
+    recomputed_report = analyze_objective_outcomes(
+        manifest,
+        plan,
+        raw_results,
+        contract,
+        measurements,
+        project_root=root,
+        project_id=result_set.project_id,
+        evaluation_id=result_set.evaluation_id,
+    )
+    report_path = root / PurePosixPath(analysis_artifact.locator)
+    reported = ObjectiveAnalysisReport.model_validate_json(report_path.read_bytes())
+    if reported != recomputed_report:
+        raise ValueError("objective analysis report differs from recomputation")
+    expected = primary_comparisons_from_objective_report(
+        recomputed_report,
+        contract.contract,
+        analysis_artifact=analysis_artifact,
+        measurement_set_artifact=measurement_artifact,
+    )
+    return {item.comparison_id: item for item in expected}
 
 
 def _artifact_matches(root: Path, artifact: EvaluationResultArtifact) -> bool:
