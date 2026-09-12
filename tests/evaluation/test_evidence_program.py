@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from scitaste.evaluation import (
+    EvidenceHypothesis,
     IclrEvidenceProgram,
     InferenceRole,
     inspect_evidence_program,
@@ -99,7 +100,12 @@ def test_benchmark_cannot_be_used_as_an_external_method(tmp_path: Path) -> None:
 def test_ecological_layer_must_bind_accepted_method_candidates(tmp_path: Path) -> None:
     program = _program()
     studies = list(program.study_layers)
-    studies[3] = studies[3].model_copy(update={"system_candidate_ids": ()})
+    index = next(
+        index
+        for index, study in enumerate(studies)
+        if study.hypothesis is EvidenceHypothesis.ECOLOGICAL_COMPARISON
+    )
+    studies[index] = studies[index].model_copy(update={"system_candidate_ids": ()})
     invalid = program.model_copy(update={"study_layers": tuple(studies)})
 
     loaded = load_evidence_program(_write_program(tmp_path, invalid))
@@ -109,6 +115,28 @@ def test_ecological_layer_must_bind_accepted_method_candidates(tmp_path: Path) -
     assert "ecological_study_lacks_accepted_methods" in {
         item.code for item in report.scientific_blockers
     }
+
+
+def test_h2b_requires_deliberative_selection_against_lexical_retrieval(
+    tmp_path: Path,
+) -> None:
+    program = _program()
+    studies = list(program.study_layers)
+    index = next(
+        index
+        for index, study in enumerate(studies)
+        if study.hypothesis is EvidenceHypothesis.TASTE_SELECTION
+    )
+    studies[index] = studies[index].model_copy(
+        update={"condition_ids": ("deliberative-taste-selection",)}
+    )
+    invalid = program.model_copy(update={"study_layers": tuple(studies)})
+
+    loaded = load_evidence_program(_write_program(tmp_path, invalid))
+    report = inspect_evidence_program(loaded.program, load_external_resource_corpus(CORPUS).corpus)
+
+    assert report.scientifically_coherent is False
+    assert "missing_required_contrast" in {item.code for item in report.scientific_blockers}
 
 
 def test_self_development_cannot_be_promoted_to_confirmatory(tmp_path: Path) -> None:

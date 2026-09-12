@@ -94,6 +94,33 @@ class ModelCandidateGenerationTrace(BaseModel):
         return self
 
 
+class TasteDeliberationTrace(BaseModel):
+    """Ledger identity and closed-pool result for decision-aware Taste selection."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    invocation_id: str = Field(min_length=1)
+    backend: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    ledger_locator: str = Field(min_length=1)
+    ledger_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    input_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    proposal_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    broad_candidate_case_ids: tuple[str, ...] = Field(min_length=2, max_length=20)
+    selected_case_ids: tuple[str, ...] = Field(min_length=1, max_length=5)
+
+    @model_validator(mode="after")
+    def selection_is_a_closed_subset(self) -> TasteDeliberationTrace:
+        if len(self.broad_candidate_case_ids) != len(set(self.broad_candidate_case_ids)):
+            raise ValueError("Taste deliberation broad candidate IDs must be unique")
+        if len(self.selected_case_ids) != len(set(self.selected_case_ids)):
+            raise ValueError("Taste deliberation selected case IDs must be unique")
+        if not set(self.selected_case_ids).issubset(self.broad_candidate_case_ids):
+            raise ValueError("Taste deliberation selection must stay inside the broad pool")
+        return self
+
+
 class ResearchDecision(BaseModel):
     """Controller output and the unit of future taste memory."""
 
@@ -112,6 +139,7 @@ class ResearchDecision(BaseModel):
     expected_value: dict[str, float] = Field(default_factory=dict)
     candidate_scores: dict[str, float | None] = Field(default_factory=dict)
     model_candidate_generation: ModelCandidateGenerationTrace | None = None
+    taste_deliberation: TasteDeliberationTrace | None = None
     model_decision: ModelDecisionTrace | None = None
     executor_result_id: str | None = None
     actual_outcome: dict[str, Any] | None = None
@@ -121,6 +149,8 @@ class ResearchDecision(BaseModel):
         payload: dict[str, Any] = handler(self)
         if self.model_candidate_generation is None:
             payload.pop("model_candidate_generation", None)
+        if self.taste_deliberation is None:
+            payload.pop("taste_deliberation", None)
         if self.model_decision is None:
             payload.pop("model_decision", None)
         return payload

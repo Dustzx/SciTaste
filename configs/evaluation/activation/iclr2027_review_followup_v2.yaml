@@ -3,8 +3,8 @@ manifest_id: iclr2027-review-followup-activation-v2
 project_id: scitaste-self-development
 evidence_review_package:
   path: configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml
-  file_sha256: 8ed1cdb6bc0e46f4ed67dffeffa3c44a70b07162d206ae9d9a8097e68677599c
-  semantic_sha256: 61c82f3ec25082bb231248c71b0d95da693b07872babc95af59022df39a31521
+  file_sha256: 5e4f6410d70c9ac61c062a4ff3b92d09e4fcbaa856ea621c37b1970ebd705127
+  semantic_sha256: e9bf938a9b04f740ca2e20385cefc1c2675daa356a1a89be0ca5240dc71a6cab
 compute_catalog:
   path: configs/resources/compute_catalog_v3.yaml
   file_sha256: b28a4e8dcd9f27800c847c6d798b38d188acb4a28343d34fa6d4e275c3a50e4f

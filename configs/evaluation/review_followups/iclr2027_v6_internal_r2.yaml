@@ -11,13 +11,15 @@ mappings:
     study_ids:
       - taste-abstraction-mechanism
       - taste-specificity-mechanism
+      - taste-selection-mechanism
       - native-objective-progress
     rationale: >-
-      The title-level effectiveness question requires all three registered
+      The title-level effectiveness question requires all four registered
       confirmatory estimands: abstracted Taste versus same-source raw RAG,
-      matched versus source-disjoint mismatched Taste, and Full SciTaste versus
-      Native Base objective progress. No engineering result or ecological
-      system comparison substitutes for these effects.
+      matched versus source-disjoint mismatched Taste, decision-grounded versus
+      lexical same-pool selection, and Full SciTaste versus Native Base objective
+      progress. No engineering result or ecological system comparison substitutes
+      for these effects.
     claim_action: null
     title_change_authorized: false
   - concern_id: missing-external-baseline
@@ -38,12 +40,13 @@ mappings:
     study_ids:
       - taste-abstraction-mechanism
       - taste-specificity-mechanism
+      - taste-selection-mechanism
       - native-objective-progress
     rationale: >-
       Preserve the original title as the target claim only while submission is
-      blocked on complete positive H1, H2, and H3 evidence. If the paper must be
-      submitted before those results exist, the author must explicitly narrow
-      the title and abstract; this mapping does not authorize either change.
+      blocked on complete positive H1, H2a, H2b, and H3 evidence. If the paper
+      must be submitted before those results exist, the author must explicitly
+      narrow the title and abstract; this mapping does not authorize either change.
     claim_action: retain_target_title_pending_evidence_or_narrow_before_submission
     title_change_authorized: false
   - concern_id: single-task-generalization
@@ -52,6 +55,7 @@ mappings:
     study_ids:
       - taste-abstraction-mechanism
       - taste-specificity-mechanism
+      - taste-selection-mechanism
       - native-objective-progress
       - accepted-system-ecological-comparison
       - experiment-chain-diagnostic

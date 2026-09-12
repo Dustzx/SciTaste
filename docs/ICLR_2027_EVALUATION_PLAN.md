@@ -5,10 +5,10 @@ or formal-cell execution is authorized by this document**.
 
 The resource-independent title strategy is now
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
-It adds raw-source RAG versus abstracted Taste as a title-critical contrast and
-requires model selection before outcomes. The earlier Qwen v11 and DeepSeek
-V4.1 proposals below remain feasibility/history artifacts rather than the final
-formal design.
+It adds raw-source RAG versus abstracted Taste and decision-grounded versus
+lexical same-pool selection as title-critical contrasts, and requires model
+selection before outcomes. The earlier Qwen v11 and DeepSeek V4.1 proposals
+below remain feasibility/history artifacts rather than the final formal design.
 
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
 The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper

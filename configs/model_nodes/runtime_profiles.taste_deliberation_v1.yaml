@@ -1,0 +1,15 @@
+# Content-addressed candidate profiles for decision-aware Taste selection.
+# The set does not select a primary provider or authorize calls. Live use still
+# requires a frozen current decision, grounded candidate pool, registered run,
+# owner-approved resource decision, environment-only credential, and --allow-live.
+schema_version: "1.0"
+profile_set_id: taste-deliberation-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_taste_deliberation_v1.yaml
+    sha256: c4afa66330a61530aab1208d90f7f9cb630d27da305057f095dc8feebc3c5ba6
+    profile_sha256: 835b10cdbb8e79d0d88ac59cfb3b405aee9398fa49c6a1fb18d90b87a491cc5f
+  - path: profile_deepseek_v41flash_taste_deliberation_v1.yaml
+    sha256: 31de983b5a925e2422d037f5e5472e0c6f904a36b063833827261b08894ae055
+    profile_sha256: 76d07130eefaa190595f85e5704a52d1b0c07de5ecc1495470d879187f4eb46e

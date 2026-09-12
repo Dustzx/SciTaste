@@ -54,6 +54,10 @@ class RetrievedTasteCase(BaseModel):
     case: TasteCase
     score: float = Field(ge=0.0)
     matched_fields: list[str] = Field(default_factory=list)
+    selection_role: str | None = None
+    applicability_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    selection_fact_ids: list[str] = Field(default_factory=list)
+    deliberation_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class TasteRetriever:

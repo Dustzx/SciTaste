@@ -1,7 +1,12 @@
 """Stable schemas shared across SciTaste components."""
 
 from scitaste.schema.actions import MetaAction, ResearchAction
-from scitaste.schema.decisions import ModelDecisionTrace, ModelDecisionUsage, ResearchDecision
+from scitaste.schema.decisions import (
+    ModelDecisionTrace,
+    ModelDecisionUsage,
+    ResearchDecision,
+    TasteDeliberationTrace,
+)
 from scitaste.schema.review import ConcernCategory, ConcernSeverity
 
 __all__ = [
@@ -12,4 +17,5 @@ __all__ = [
     "ModelDecisionUsage",
     "ResearchAction",
     "ResearchDecision",
+    "TasteDeliberationTrace",
 ]

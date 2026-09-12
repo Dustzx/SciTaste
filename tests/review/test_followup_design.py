@@ -208,11 +208,12 @@ def test_review_followup_design_binds_exact_studies_without_duplicate_execution(
     assert [item.hypothesis.value for item in design.studies] == [
         "H1_taste_abstraction",
         "H2_taste_specificity",
+        "H2b_taste_selection",
         "H3_native_effect",
         "E1_ecological_comparison",
         "D1_integrity_diagnostic",
     ]
-    assert len(design.studies) == 5
+    assert len(design.studies) == 6
     assert design.studies[0].reused_by_concern_ids == (
         "missing-effectiveness-evidence",
         "overclaim-title-improvement",
@@ -266,7 +267,7 @@ def test_review_followup_design_is_self_hashed() -> None:
         ProjectReviewFollowupDesign.model_validate(payload)
 
 
-def test_review_activation_closes_five_studies_without_selecting_available_resources() -> None:
+def test_review_activation_closes_six_studies_without_selecting_available_resources() -> None:
     design = compile_review_followup_design(
         project_id=_PROJECT,
         run_id="followup-design-v1",
@@ -287,6 +288,7 @@ def test_review_activation_closes_five_studies_without_selecting_available_resou
     assert [item.hypothesis for item in activation.studies] == [
         "H1_taste_abstraction",
         "H2_taste_specificity",
+        "H2b_taste_selection",
         "H3_native_effect",
         "E1_ecological_comparison",
         "D1_integrity_diagnostic",

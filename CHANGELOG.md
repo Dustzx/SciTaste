@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Replaced direct top-ranked Taste use with an optional decision-grounded
+  deliberation path. Broad lexical retrieval now freezes only a candidate pool;
+  a proposal-only selector must ground applicability and failure judgments in
+  current decision facts, align cases to live actions, keep sources disjoint,
+  and preserve available action tension. Accepted live-ledger traces are bound
+  into `ResearchDecision`, state or pool reuse fails closed, and the ICLR
+  evidence program adds a same-pool H2b comparison against lexical retrieval.
+  Separate GLM-5.3-Flash and DeepSeek-V4.1-Flash profiles grant no call authority.
+
 - Replaced summary-like formal Taste construction with grounded contrastive
   distillation. A proposal must trace every decision-bearing element to exact
   source-projection excerpts, synthesize its principle across scientific-action

@@ -24,18 +24,20 @@ false.
 
 The paper is a method paper about explicit Scientific Taste, not a benchmark
 paper and not a report on how much infrastructure SciTaste contains. Its central
-claim has four separable parts:
+claim has five separable parts:
 
 1. high-quality references can be transformed into transferable decision
    experience rather than copied as retrieved text;
-2. the resulting experience changes scientific decisions for the right reason,
+2. the system can select applicable experience from hard negatives using the
+   current scientific decision, rather than an oracle relation label;
+3. the resulting experience changes scientific decisions for the right reason,
    rather than because the model received more tokens or generally good prose;
-3. those decisions improve held-out executable research outcomes under matched
+4. those decisions improve held-out executable research outcomes under matched
    model, task, tool, and budget conditions;
-4. the complete SciTaste system remains competitive with real autonomous-
+5. the complete SciTaste system remains competitive with real autonomous-
    research systems under their usable configurations.
 
-The first three are title-critical. The fourth establishes ecological relevance
+The first four are title-critical. The fifth establishes ecological relevance
 but cannot identify a causal Taste effect when systems use different models.
 
 ## Confirmatory hypotheses
@@ -53,7 +55,7 @@ papers and put them in context.” Retrieval is transport; the treatment is the
 source-faithful transformation into a decision context, alternatives, principle,
 justification, and outcome boundary.
 
-### H2: contextual relevance rather than generic inspiration
+### H2a: contextual relevance rather than generic inspiration
 
 With provenance tier, curation tier, case count, token budget, stage, role, and
 outcome-information availability matched, task-relevant Taste experience
@@ -61,6 +63,23 @@ improves decisions over source-disjoint mismatched Taste.
 
 Primary contrast: `abstracted-matched-taste` versus
 `abstracted-mismatched-taste`.
+
+### H2b: autonomous decision-grounded selection rather than oracle matching
+
+Given the same frozen outcome-hidden hard-negative precedent pool, source bytes,
+model, prompt, action set, context ceiling, tools, and budget, applicability- and
+tension-constrained Taste deliberation improves held-out decisions over the
+recorded lexical/metadata Taste retriever.
+
+Primary contrast: `deliberative-taste-selection` versus
+`lexical-taste-retrieval`.
+
+Every deliberative assessment must cite current decision facts against exact
+case transfer conditions. Selected cases must trigger no failure boundary,
+remain source-disjoint, and preserve available action tension. Relation labels
+and source outcomes remain hidden until selection and downstream decisions lock.
+This contrast closes the oracle gap left by H2a: H2a asks whether relevance is
+causal, while H2b asks whether SciTaste can discover relevance autonomously.
 
 ### H3: end-to-end research progress
 
@@ -70,8 +89,8 @@ SciTaste improves task-normalized held-out objective progress over Native Base.
 Primary contrast: `full-scitaste` versus `native-base`. Every valid failed run
 remains an intention-to-run outcome at the preregistered task floor.
 
-No title claim is admitted unless all three hypotheses have complete evidence.
-H1 and H2 are primarily powered at the decision level; H3 is powered over
+No title claim is admitted unless H1, H2a, H2b, and H3 have complete evidence.
+H1, H2a, and H2b are primarily powered at the decision level; H3 is powered over
 independent tasks rather than inflated by many seeds on a few tasks.
 
 ## Minimal evidence stack
@@ -118,20 +137,28 @@ receipt. Held-out decision sources are forbidden from every reference arm. The
 model sees the neutral label `Reference context`; treatment names remain
 evaluation metadata.
 
-Two directional contrasts are preregistered: H1 compares matched abstraction
-against same-source raw RAG with representation as the only permitted
-difference; H2 compares matched against mismatched abstractions with source-domain
-relation as the only permitted difference. The benchmark runner reports these
-contrasts by ID rather than deriving them from Base deltas.
+Two oracle-controlled directional contrasts are preregistered: H1 compares
+matched abstraction against same-source raw RAG with representation as the only
+permitted difference; H2a compares matched against mismatched abstractions with
+source-domain relation as the only permitted difference. The benchmark runner
+reports these contrasts by ID rather than deriving them from Base deltas.
+
+H2b is a separate paired selector contrast, not another reinterpretation of the
+three-arm context. Both selector conditions receive the same frozen broad pool.
+The deliberative arm uses the fact-grounded applicability node and deterministic
+set admission; the lexical arm uses the pre-existing broad score. Only the
+selected, token-matched context enters the common downstream decision prompt.
+The frozen pool includes source-disjoint hard negatives and independently
+assigned applicability labels that remain unavailable to both selectors.
 
 The v3 mechanism package requires only Base plus these three reference arms.
 Full SciTaste may be added as a supporting condition, but v2 Knowledge-only,
 Critics-only, and legacy-placebo cells are not mandatory. This prevents an old
-software matrix from inflating the powered experiment without answering H1/H2.
+software matrix from inflating the powered experiment without answering H1/H2a.
 
 Runner accuracy measures agreement with a previously collected expert action
 label. It is a useful diagnostic, but it is not the frozen confirmatory endpoint.
-For H1/H2, the primary endpoint remains condition-blinded independent expert
+For H1/H2a/H2b, the primary endpoint remains condition-blinded independent expert
 preference over the produced decision and claim calibration. Consequently a v3
 runner report leaves the confirmatory result incomplete until a separately
 content-bound blind-review artifact is attached. The local alignment command is:

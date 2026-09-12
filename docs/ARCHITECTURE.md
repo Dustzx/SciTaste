@@ -2588,3 +2588,31 @@ context and bind a grounding hash in provenance. Formal SciTasteBench v3 rejects
 any weaker curation tier, so a legacy reviewed summary cannot silently enter H1
 or H2. This gate proves treatment construction only; usefulness remains a powered
 blinded outcome question.
+
+### ADR-087: Taste selection deliberates over transfer boundaries after broad retrieval
+
+Status: accepted and executable at the software boundary; no real selector
+effect has been measured.
+
+Stage-, domain-, and text-weighted retrieval is an efficient candidate generator,
+but it cannot establish that a precedent applies to the current scientific
+decision. Treating its top results as Scientific Taste would leave the method
+vulnerable to the same oracle and topicality failures as curated RAG.
+
+SciTaste therefore freezes 2--20 grounded, transfer-bounded broad candidates and
+an exact projection of current decision facts and actions. The proposal-only
+`taste-deliberation` node assesses every case, cites exact fact IDs for at least
+two applicability conditions, reports triggered failure conditions, and maps
+the precedent to current actions without seeing outcomes, relation labels, or
+held-out task content. Deterministic admission rejects unknown references,
+unsupported applicable verdicts, failure-triggered selections, repeated source
+identities, and avoidable one-sided action coverage. It never falls back to the
+lexical ranking after a failed proposal.
+
+Only an accepted live project-ledger entry compiles into the controller input.
+State, action, candidate, score, source, or case-content drift invalidates the
+trace; the final research decision records both the broad pool and selected set.
+The ICLR evidence program adds a matched H2b selector contrast against the
+unchanged lexical retriever, because the oracle-controlled H2a relevance contrast
+cannot prove autonomous selection. Real cases, applicability labels, provider
+calls, blinded decisions, and powered outcomes remain separate evidence gates.

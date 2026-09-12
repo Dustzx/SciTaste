@@ -43,9 +43,14 @@ explicit applicability, failure, discarded-detail, and counterfactual boundaries
 prevent generic advice from masquerading as transferable Taste. Candidates remain
 untrusted, and two independent humans
 plus conditional adjudication decide whether the result may become
-retrieval-eligible. Retrieval is therefore an
-efficiency mechanism downstream of Taste construction, not the definition of
-Taste itself. The continual path applies the same discipline to SciTaste's own
+retrieval-eligible. At decision time, lexical and metadata retrieval now only
+construct a broad pool. A separate proposal-only deliberation node must bind at
+least two reviewed applicability conditions to current decision facts, trigger
+no failure condition, align to a live action, avoid duplicate sources, and retain
+available action tension. The controller fails closed on state or pool drift and
+records the complete selection identity. Retrieval is therefore an efficiency
+mechanism downstream of Taste construction, not the definition of Taste itself.
+The continual path applies the same discipline to SciTaste's own
 experience: executed decisions first become quarantined reflections, then require
 exact outcome evidence, two independent conflict-cleared reviews, and conditional
 adjudication before the production retriever can see them. This prevents a
@@ -126,7 +131,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, one opt-in content-bound model path that concretizes and selects every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation with source traces and transfer boundaries, a source/quality-bound dual-human corpus compiler, and outcome-gated continual project memory are implemented and offline-tested | Actual high-quality task-specific sources, real model-generated matched/placebo abstractions, independent human reviews, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
+| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, one opt-in content-bound model path that concretizes every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation, decision-grounded source-diverse and tension-preserving Taste selection, a source/quality-bound dual-human corpus compiler, and outcome-gated continual project memory are implemented and offline-tested | Actual high-quality task-specific sources, real model-generated matched/placebo abstractions and selector traces, independent human reviews, H2b hard-negative selector evidence, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, and a deterministic Full Workflow evidence-hotspot trigger implemented; one registered live study is a narrow preliminary signal | Independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

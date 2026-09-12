@@ -30,6 +30,7 @@ _MAX_PROGRAM_BYTES = 1_048_576
 class EvidenceHypothesis(StrEnum):
     TASTE_ABSTRACTION = "H1_taste_abstraction"
     TASTE_SPECIFICITY = "H2_taste_specificity"
+    TASTE_SELECTION = "H2b_taste_selection"
     NATIVE_EFFECT = "H3_native_effect"
     ECOLOGICAL_COMPARISON = "E1_ecological_comparison"
     INTEGRITY_DIAGNOSTIC = "D1_integrity_diagnostic"
@@ -56,6 +57,8 @@ class ProgramConditionKind(StrEnum):
     MATCHED_TASTE = "matched_abstracted_taste"
     RAW_SOURCE_RAG = "raw_source_rag"
     MISMATCHED_TASTE = "source_disjoint_mismatched_taste"
+    DELIBERATIVE_TASTE_SELECTION = "decision_grounded_taste_selection"
+    LEXICAL_TASTE_RETRIEVAL = "lexical_taste_retrieval"
     NATIVE_BASE = "native_base"
     DIRECT_TOOL_AGENT = "direct_tool_agent"
 
@@ -522,6 +525,10 @@ def _scientific_findings(
             ProgramConditionKind.MATCHED_TASTE,
             ProgramConditionKind.MISMATCHED_TASTE,
         },
+        EvidenceHypothesis.TASTE_SELECTION: {
+            ProgramConditionKind.DELIBERATIVE_TASTE_SELECTION,
+            ProgramConditionKind.LEXICAL_TASTE_RETRIEVAL,
+        },
         EvidenceHypothesis.NATIVE_EFFECT: {
             ProgramConditionKind.FULL_SCITASTE,
             ProgramConditionKind.NATIVE_BASE,
@@ -530,6 +537,7 @@ def _scientific_findings(
     expected_layers = {
         EvidenceHypothesis.TASTE_ABSTRACTION: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_SPECIFICITY: EvidenceLayer.DECISION_MECHANISM,
+        EvidenceHypothesis.TASTE_SELECTION: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.NATIVE_EFFECT: EvidenceLayer.OBJECTIVE_PROGRESS,
         EvidenceHypothesis.ECOLOGICAL_COMPARISON: EvidenceLayer.FULL_LIFECYCLE,
         EvidenceHypothesis.INTEGRITY_DIAGNOSTIC: EvidenceLayer.EXPERIMENT_INTEGRITY,

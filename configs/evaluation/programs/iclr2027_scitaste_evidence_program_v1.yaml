@@ -20,6 +20,13 @@ claims:
       context as the useful mechanism.
     title_critical: true
     study_ids: [taste-specificity-mechanism]
+  - claim_id: taste-selection-is-decision-grounded
+    statement: >-
+      From the same closed hard-negative precedent pool, decision-grounded
+      applicability and tension deliberation improves held-out scientific
+      decisions over lexical Taste retrieval without oracle relation labels.
+    title_critical: true
+    study_ids: [taste-selection-mechanism]
   - claim_id: taste-improves-objective-progress
     statement: >-
       With one frozen capable model and matched task, tools, information,
@@ -45,6 +52,18 @@ conditions:
     kind: source_disjoint_mismatched_taste
     intervention: Supply source-disjoint Taste abstractions from a different decision domain.
     keeps_fixed: [source count, model, context budget, tools, decision prompt]
+  - condition_id: deliberative-taste-selection
+    kind: decision_grounded_taste_selection
+    intervention: >-
+      Select grounded precedents only after fact-bound applicability, failure,
+      current-action alignment, source-diversity, and decision-tension checks.
+    keeps_fixed: [candidate pool, sources, model, context budget, tools, decision prompt]
+  - condition_id: lexical-taste-retrieval
+    kind: lexical_taste_retrieval
+    intervention: >-
+      Select precedents from the identical closed pool using the production
+      lexical and metadata retrieval score without applicability deliberation.
+    keeps_fixed: [candidate pool, sources, model, context budget, tools, decision prompt]
   - condition_id: native-base
     kind: native_base
     intervention: Use the same native executor without Taste-guided research control.
@@ -179,6 +198,25 @@ study_layers:
     estimand: >-
       Effect of domain-matched versus source-disjoint mismatched Taste under
       source-count and context parity.
+    experimental_unit: held-out source-group-disjoint decision case
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: taste-selection-mechanism
+    hypothesis: H2b_taste_selection
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [taste-selection-is-decision-grounded]
+    condition_ids: [deliberative-taste-selection, lexical-taste-retrieval]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: >-
+      Paired condition-blinded expert preference on the resulting scientific
+      action and claim calibration.
+    estimand: >-
+      Effect of decision-grounded deliberative selection versus lexical
+      retrieval from the same outcome-hidden hard-negative candidate pool.
     experimental_unit: held-out source-group-disjoint decision case
     matched_backbone: true
     matched_starting_information: true

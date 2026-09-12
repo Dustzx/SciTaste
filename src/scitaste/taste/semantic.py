@@ -19,6 +19,13 @@ from scitaste.model_nodes.runtime import (
     RuntimeOutcome,
 )
 from scitaste.project import ProjectRuntime
+from scitaste.taste.deliberation import (
+    TASTE_DELIBERATION_NODE,
+    TasteDeliberationInput,
+    TasteDeliberationProposal,
+    VerifiedTasteDeliberation,
+    validate_taste_deliberation,
+)
 from scitaste.taste.semantic_models import (
     GROUNDED_TASTE_ABSTRACTION_NODE,
     TASTE_ABSTRACTION_NODE,
@@ -100,6 +107,48 @@ class GroundedTasteAbstractionNode(ModelNode[TasteAbstractionInput, GroundedTast
         return sorted(set(reasons))
 
 
+class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationProposal]):
+    """Assess transfer before selecting a diverse set of decision precedents."""
+
+    node_name = TASTE_DELIBERATION_NODE
+    prompt_version = "taste-deliberation-v1"
+    system_instruction = (
+        "Select Scientific Taste precedents for the current research decision, not passages that "
+        "merely share vocabulary. Assess every supplied case exactly once. Cite exact current "
+        "decision-fact IDs for each satisfied applicability or triggered failure condition; never "
+        "invent a condition, fact, case, or action. A selected case must satisfy at least two of "
+        "its stated applicability conditions, trigger none of its stated failure conditions, and "
+        "align to a current action. Preserve decision tension: when the applicable pool supports "
+        "different actions, select source-disjoint precedents covering more than one action; when "
+        "an applicable challenge or boundary case is available, do not return only supportive "
+        "precedents. Source outcomes, held-out task content, relation labels, and external facts "
+        "are unavailable and must not be inferred. The output is a proposal only: do not execute "
+        "an action, admit memory, call tools, or claim effectiveness."
+    )
+    input_model = TasteDeliberationInput
+    output_model = TasteDeliberationProposal
+
+    def _proposal_rejections(
+        self,
+        proposal: TasteDeliberationProposal,
+        *,
+        input_data: TasteDeliberationInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons = list(validate_taste_deliberation(input_data, proposal))
+        if context.stage != input_data.stage:
+            reasons.append("Taste deliberation context stage differs from the closed input")
+        if context.state_snapshot_id != input_data.state_snapshot_id:
+            reasons.append("Taste deliberation context state differs from the closed input")
+        if context.candidate_actions != list(input_data.current_actions):
+            reasons.append("Taste deliberation context actions differ from the closed input")
+        if context.claim_ids or context.evidence_ids or context.section_ids or context.metadata:
+            reasons.append("Taste deliberation context contains information outside the input")
+        return sorted(set(reasons))
+
+
 def taste_node_types() -> dict[str, ModelNodeRegistration]:
     """Return the Scientific Taste extension understood by the durable runtime."""
 
@@ -114,7 +163,55 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
             TasteAbstractionInput,
             GroundedTasteCaseAbstraction,
         ),
+        TASTE_DELIBERATION_NODE: ModelNodeRegistration(
+            TasteDeliberationNode,
+            TasteDeliberationInput,
+            TasteDeliberationProposal,
+        ),
     }
+
+
+def taste_deliberation_from_ledger(
+    ledger_entry: str | Path,
+    *,
+    evidence_root: str | Path,
+) -> VerifiedTasteDeliberation:
+    """Compile one accepted live selector proposal from its verified project ledger."""
+
+    from scitaste.model_nodes.models import NodeResult, NodeResultStatus
+
+    entry, resolved, raw = load_verified_taste_abstraction_ledger(
+        ledger_entry,
+        evidence_root=evidence_root,
+    )
+    if entry.intent.node_name != TASTE_DELIBERATION_NODE:
+        raise ValueError("ledger entry is not a Taste deliberation invocation")
+    if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+        raise ValueError("Taste deliberation ledger entry is not accepted")
+    if (
+        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
+        or not entry.intent.profile.live_execution_permitted
+    ):
+        raise ValueError("decision-aware Taste selection requires a verified live invocation")
+    input_data = TasteDeliberationInput.model_validate_json(
+        json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    result = NodeResult[TasteDeliberationProposal].model_validate_json(
+        json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
+        raise ValueError("Taste deliberation ledger result has no accepted proposal")
+    return VerifiedTasteDeliberation(
+        invocation_id=entry.intent.invocation_id,
+        backend=result.response.backend,
+        model=result.response.model,
+        ledger_locator=resolved.relative_to(Path(evidence_root).resolve(strict=True)).as_posix(),
+        ledger_sha256=hashlib.sha256(raw).hexdigest(),
+        input=input_data,
+        proposal=result.proposal,
+    )
 
 
 def taste_abstraction_candidate_from_ledger(
@@ -305,13 +402,18 @@ def save_taste_abstraction_candidate(candidate: Any, path: str | Path) -> Path:
 __all__ = [
     "GROUNDED_TASTE_ABSTRACTION_NODE",
     "TASTE_ABSTRACTION_NODE",
+    "TASTE_DELIBERATION_NODE",
     "GroundedTasteAbstractionNode",
     "GroundedTasteCaseAbstraction",
     "TasteAbstractionInput",
     "TasteAbstractionNode",
     "TasteCaseAbstraction",
+    "TasteDeliberationInput",
+    "TasteDeliberationNode",
+    "TasteDeliberationProposal",
     "load_verified_taste_abstraction_ledger",
     "save_taste_abstraction_candidate",
     "taste_abstraction_candidate_from_ledger",
+    "taste_deliberation_from_ledger",
     "taste_node_types",
 ]

@@ -19,12 +19,19 @@ from scitaste.schema.decisions import (
     ModelDecisionTrace,
     ModelDecisionUsage,
     ResearchDecision,
+    TasteDeliberationTrace,
 )
 from scitaste.state.persistence import snapshot_id
 from scitaste.state.research_state import ResearchState, ResourceBudget
 from scitaste.state.resources import remaining_budget
 from scitaste.taste.candidate_generation import concretize_candidate_actions
 from scitaste.taste.critics import StageTasteCriticSuite, TasteCriticFinding
+from scitaste.taste.deliberation import (
+    TasteDeliberationInput,
+    VerifiedTasteDeliberation,
+    build_taste_deliberation_input,
+    select_deliberated_taste_cases,
+)
 from scitaste.taste.retriever import (
     RetrievedTasteCase,
     TasteQuery,
@@ -54,6 +61,7 @@ class TasteController:
         mode: TasteMode = TasteMode.INTRINSIC,
         retriever: TasteRetriever | None = None,
         retrieval_limit: int = 3,
+        deliberation_candidate_limit: int = 12,
         precedent_weight: float = 0.25,
         utility_enabled: bool = True,
         critics_enabled: bool = True,
@@ -74,6 +82,7 @@ class TasteController:
         self.mode = mode
         self.retriever = retriever
         self.retrieval_limit = retrieval_limit
+        self.deliberation_candidate_limit = deliberation_candidate_limit
         self.precedent_weight = precedent_weight
         self.utility_enabled = utility_enabled
         self.critics_enabled = critics_enabled
@@ -90,6 +99,12 @@ class TasteController:
         self.expected_candidate_generation_model = expected_candidate_generation_model
         if mode == TasteMode.AUGMENTED and retriever is None:
             raise ValueError("augmented taste mode requires a TasteRetriever")
+        if retrieval_limit < 1:
+            raise ValueError("Taste retrieval limit must be positive")
+        if not retrieval_limit <= deliberation_candidate_limit <= 20:
+            raise ValueError(
+                "Taste deliberation candidate limit must cover retrieval_limit and not exceed 20"
+            )
         if not critics_enabled and critic_suite is not None:
             raise ValueError("a custom critic suite requires critics_enabled")
         if (expected_preference_backend is None) != (expected_preference_model is None):
@@ -112,12 +127,17 @@ class TasteController:
         state: ResearchState,
         candidate_actions: Sequence[ResearchAction],
         budget: ResourceBudget | None = None,
+        taste_deliberation: VerifiedTasteDeliberation | None = None,
     ) -> ResearchDecision:
         actions = list(candidate_actions)
         if not actions:
             raise ValueError("candidate_actions must not be empty")
         if len({action.action_id for action in actions}) != len(actions):
             raise ValueError("candidate action ids must be unique")
+        if taste_deliberation is not None and self.candidate_generation_backend is not None:
+            raise ValueError(
+                "Taste deliberation must follow candidate concretization; pass fixed candidates"
+            )
 
         active_budget = budget or remaining_budget(state.resource_budget, state.resource_usage)
         assessments = [self.policy.assess(action, active_budget) for action in actions]
@@ -126,7 +146,8 @@ class TasteController:
             details = "; ".join(reason for item in assessments for reason in item.reasons)
             raise NoViableActionError(f"all candidate actions exceed budget: {details}")
 
-        retrieved = self._retrieve(state, actions)
+        retrieved = self._retrieve(state, actions, deliberation=taste_deliberation)
+        deliberation_trace = self._deliberation_trace(taste_deliberation)
         critic_findings = self.critic_suite.review(state, actions) if self.critics_enabled else ()
         generation_trace: ModelCandidateGenerationTrace | None = None
         if self.candidate_generation_backend is not None and len(feasible) >= 2:
@@ -308,14 +329,67 @@ class TasteController:
                 else {item.action_id: None for item in assessments}
             ),
             model_candidate_generation=generation_trace,
+            taste_deliberation=deliberation_trace,
             model_decision=model_trace,
         )
 
-    def _retrieve(self, state: ResearchState, actions: list[ResearchAction]):
+    def prepare_taste_deliberation(
+        self,
+        *,
+        state: ResearchState,
+        candidate_actions: Sequence[ResearchAction],
+    ) -> TasteDeliberationInput:
+        """Freeze the broad candidate pool before a proposal-only selector invocation."""
+
+        actions = list(candidate_actions)
+        if self.mode is TasteMode.INTRINSIC or self.retriever is None:
+            raise ValueError("Taste deliberation requires augmented mode and a retriever")
+        if len(actions) < 2 or len({item.action_id for item in actions}) != len(actions):
+            raise ValueError("Taste deliberation requires at least two unique current actions")
+        broad = self.retriever.retrieve(
+            self._taste_query(state, actions),
+            limit=self.deliberation_candidate_limit,
+        )
+        return build_taste_deliberation_input(
+            state=state,
+            actions=actions,
+            broad_candidates=broad,
+            maximum_selected_cases=self.retrieval_limit,
+        )
+
+    def _retrieve(
+        self,
+        state: ResearchState,
+        actions: list[ResearchAction],
+        *,
+        deliberation: VerifiedTasteDeliberation | None = None,
+    ):
         if self.mode == TasteMode.INTRINSIC:
+            if deliberation is not None:
+                raise ValueError("intrinsic mode cannot accept a Taste deliberation")
             return []
         assert self.retriever is not None  # guarded by __init__
-        query = TasteQuery(
+        query = self._taste_query(state, actions)
+        if deliberation is None:
+            return self.retriever.retrieve(query, limit=self.retrieval_limit)
+        broad = self.retriever.retrieve(query, limit=self.deliberation_candidate_limit)
+        expected_input = build_taste_deliberation_input(
+            state=state,
+            actions=actions,
+            broad_candidates=broad,
+            maximum_selected_cases=self.retrieval_limit,
+        )
+        if expected_input != deliberation.input:
+            raise ValueError("Taste deliberation input differs from the current closed pool")
+        return select_deliberated_taste_cases(
+            input_data=deliberation.input,
+            proposal=deliberation.proposal,
+            broad_candidates=broad,
+        )
+
+    @staticmethod
+    def _taste_query(state: ResearchState, actions: list[ResearchAction]) -> TasteQuery:
+        return TasteQuery(
             text=" ".join([state.research_direction, *(action.description for action in actions)]),
             policy=TasteRetrievalPolicy.STAGE_CONDITIONED,
             stage=state.current_stage.value,
@@ -323,7 +397,24 @@ class TasteController:
             domain_tags=[state.target_domain],
             venue=state.target_venue,
         )
-        return self.retriever.retrieve(query, limit=self.retrieval_limit)
+
+    @staticmethod
+    def _deliberation_trace(
+        deliberation: VerifiedTasteDeliberation | None,
+    ) -> TasteDeliberationTrace | None:
+        if deliberation is None:
+            return None
+        return TasteDeliberationTrace(
+            invocation_id=deliberation.invocation_id,
+            backend=deliberation.backend,
+            model=deliberation.model,
+            ledger_locator=deliberation.ledger_locator,
+            ledger_sha256=deliberation.ledger_sha256,
+            input_sha256=deliberation.input.fingerprint,
+            proposal_sha256=deliberation.proposal.fingerprint,
+            broad_candidate_case_ids=tuple(item.case_id for item in deliberation.input.candidates),
+            selected_case_ids=deliberation.proposal.selected_case_ids,
+        )
 
     def _tie_break(self, action_id: str) -> str:
         value = f"{self.seed}:{action_id}".encode()
@@ -432,6 +523,10 @@ def _model_decision_context(
             "confidence": item.case.confidence,
             "score": item.score,
             "matched_fields": item.matched_fields,
+            "selection_role": item.selection_role,
+            "applicability_confidence": item.applicability_confidence,
+            "selection_fact_ids": item.selection_fact_ids,
+            "deliberation_sha256": item.deliberation_sha256,
         }
         for item in retrieved
     ]

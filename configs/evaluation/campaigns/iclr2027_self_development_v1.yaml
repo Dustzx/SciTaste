@@ -9,33 +9,34 @@ central_question: >-
   evidence-valid idea-to-paper trajectories?
 claim_boundary: >-
   The title-level claim requires a complete positive held-out native Taste
-  intervention with abstracted-Taste--raw-RAG, matched--mismatched-Taste, and
-  Full--Base confirmation, plus complete separately interpreted component-only
-  diagnostics. The current prepilots do not contain that complete design.
+  intervention with abstracted-Taste--raw-RAG, matched--mismatched-Taste,
+  decision-grounded--lexical selection, and Full--Base confirmation, plus
+  complete separately interpreted component-only diagnostics. The current
+  prepilots do not contain that complete design.
   Best-native external comparisons are model-confounded ecological evidence;
   engineering, pilot, model-review, and self-iteration outputs establish neither.
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 2cde176e310aff374e94f000de380305e4d14e3bf83177276a629380f3892841
+    sha256: 94db71c2e580d45d6d4bc654c5b8c4536dd8215cedc7684a6cdf973cdd35ffe6
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: f08cc27a737951c921993392afa4c099dbe24ec3b9e858fb5b11155616e947b5
+    sha256: 0c93473779da39f611764b5faa8b24f091e5a7378e227dddabd142f835cd5eb6
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
   - artifact_id: iclr-evidence-program
     path: configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml
-    sha256: 2f69cf433db2cd3030e9c5e7702017695b80c0aff4a1c3ba0200b8b42e50b4cc
+    sha256: 356182e888b76346aff5cc7c9553923a36c867c5dad7f99bef51d207cf4250d5
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 67f30876737fd25ca66dcc670dcb9d77aaa9aa2695eb10d3913adbceec8963c1
+    sha256: 9473603f4c9a8ae7380712a17c0572d79acbf6f979a8a86a8dadd78216decb94
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: acb381b92941007ab4b67105366d92d6a394d9bff8f7d6fb13abab562561559e
+    sha256: ed3c68028c08888678ee8b0703cd25fe36a8bef7665904df1269174bb1b35f98
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -60,6 +61,12 @@ artifacts:
   - artifact_id: grounded-taste-distillation
     path: docs/GROUNDED_TASTE_DISTILLATION.md
     sha256: ee496ec3d9a80af43aeb7b081f44df115b4d0ab6ac4023c686ede094c5f61372
+  - artifact_id: decision-grounded-taste-selection
+    path: docs/TASTE_DELIBERATIVE_SELECTION.md
+    sha256: 9859c1d63366a3f6daa7268ac7ebcc1fad1d61c0c5ef9d1b1a36ac4af43ab1ee
+  - artifact_id: taste-deliberation-profiles
+    path: configs/model_nodes/runtime_profiles.taste_deliberation_v1.yaml
+    sha256: 8775ec346f5584639356f33e047d886e02734d615161dbfa0adbe5f2cfb94120
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
@@ -88,16 +95,18 @@ tracks:
     scientific_question: >-
       Under identical high-quality sources and context budgets, does reviewed
       Taste abstraction improve scientific decisions beyond same-source raw RAG,
-      and is domain match rather than generic context the causal mechanism?
+      is domain match rather than generic context causal, and can SciTaste select
+      applicable source-disjoint precedents without oracle relation labels?
     primary_endpoint: >-
       Condition-blinded independent-expert preference on decision quality and
-      claim calibration for registered H1 and H2 contrasts. Agreement with
+      claim calibration for registered H1, H2a, and H2b contrasts. Agreement with
       pre-collected action labels is diagnostic only.
     comparison_design: >-
       Resource-independent SciTasteBench v3 design: Base plus same-source raw
-      RAG, same-source abstracted Taste, and source-disjoint mismatched Taste.
-      Full SciTaste is optional supporting evidence; legacy component cells are
-      not required by H1 or H2.
+      RAG, same-source abstracted Taste, and source-disjoint mismatched Taste;
+      a separate paired same-pool selector contrast compares decision-grounded
+      deliberation with lexical retrieval. Full SciTaste is optional supporting
+      evidence; legacy component cells are not required by H1 or H2a.
     model:
       kind: unselected
       usage_scope: >-

@@ -22,6 +22,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
 | Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts with conservative dispersion, joint-family power, explicit ceilings, and no seed-based sample inflation |
 | Phase 8.4 — grounded contrastive Taste distillation | done | formal abstractions bind every decision element to exact source excerpts, expose transfer/failure boundaries, and cannot enter SciTasteBench v3 under a legacy curation tier |
+| Phase 8.5 — decision-grounded Taste selection | done | broad retrieval loses final authority; a closed-world deliberation trace proves applicability, excludes failure boundaries and duplicate sources, and preserves available action tension before controller use |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -50,6 +51,19 @@ Schema-1.2 corpus curation requires two humans to attest both trace and transfer
 scope, and formal SciTasteBench v3 refuses the legacy tier. This closes the
 software definition of the Taste treatment; real content, abstractions, reviews,
 and H1/H2 outcomes remain uncollected.
+
+The runtime selection path no longer treats topical retrieval as Scientific
+Taste. A bounded broad pool is projected into an outcome-hidden
+`taste-deliberation` node; every transfer judgment must bind exact current-state
+facts to a case's reviewed applicability or failure conditions. Deterministic
+admission rejects unknown references, applicable cases with fewer than two
+supports, triggered failure boundaries, duplicate-source selections, and
+avoidable support-only sets when live actions conflict. The controller accepts
+only a verified live ledger proposal, detects state/action/pool drift, and writes
+the selector trace into the final decision. The evidence program adds H2b
+against the unchanged lexical retriever on identical hard-negative pools,
+because oracle-matched H2a alone cannot show autonomous selection competence.
+No real selection call or H2b outcome has yet been collected.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and
