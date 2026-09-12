@@ -110,7 +110,7 @@ Track C or serve as a bridge study, but cannot be the Track B headline.
 
 Two no-run proposals now materialize this distinction:
 
-- `qwen3vl2b-native-taste-causal-prepilot-v10` uses schema 1.4 and expands to 12 trajectories:
+- `qwen3vl2b-native-taste-causal-prepilot-v11` uses schema 1.4 and expands to 12 trajectories:
   six native conditions × two MLRC objective-task candidates × one seed. It
   binds the same Qwen3-VL-2B checkpoint, GPU lane, implementation commit, and
   condition matrix to every condition; requires two confirmatory no-Taste and
@@ -139,7 +139,7 @@ quality evidence, preserves human- or model-assisted abstraction provenance,
 requires two condition-blinded human verifications with conditional third-party
 adjudication, and materializes a pair only if the production retriever passes all
 parity and contamination checks. This is protocol and product readiness, not a
-claim that the v10 task-specific sources or reviews have been collected.
+claim that the v11 task-specific sources or reviews have been collected.
 
 ## Track A: decision-level scientific taste
 

@@ -34,11 +34,12 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     mechanism, native, external = dossier.tracks
     artifacts = {item.artifact_id: item for item in dossier.artifacts}
     assert artifacts["native-taste-causal-proposal"].path.endswith(
-        "qwen3vl2b_native_taste_causal_prepilot_v10.yaml"
+        "qwen3vl2b_native_taste_causal_prepilot_v11.yaml"
     )
     assert artifacts["native-condition-path-preflight"].path.endswith(
-        "qwen3vl2b_native_condition_path_v2.yaml"
+        "qwen3vl2b_native_condition_path_v3.yaml"
     )
+    assert artifacts["taste-corpus-curation-guide"].path.endswith("TASTE_CORPUS_CURATION.md")
     assert mechanism.state is CampaignTrackState.DESIGN_ONLY
     assert mechanism.model.model_id == "Qwen3-VL-2B-Instruct"
     assert mechanism.model.device_count == 8
@@ -134,7 +135,7 @@ def test_dossier_rejects_unsafe_artifact_paths_and_false_cell_arithmetic() -> No
         ExperimentDecisionDossier.model_validate(payload)
 
 
-def test_dossier_v10_cannot_smuggle_per_system_api_identities() -> None:
+def test_dossier_v11_cannot_smuggle_per_system_api_identities() -> None:
     dossier = load_experiment_decision_dossier(DOSSIER_PATH).dossier
     payload = dossier.model_dump(mode="json", exclude={"dossier_sha256"})
     payload["schema_version"] = "1.0"

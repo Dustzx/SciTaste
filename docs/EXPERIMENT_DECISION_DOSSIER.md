@@ -37,9 +37,11 @@ new 12-trajectory Qwen proposal instead names two MLRC objective-task
 candidates, a separate claim contract, and explicit unresolved asset gates.
 
 The active dossier now records two additional exact but blocked prepilots. The
-native causal lane contains six SciTaste conditions over two MLRC objective-task
-candidates and one seed: 12 Qwen3-VL-2B trajectories under one shared GPU
-resource. The external lane contains SciTaste Native, Agent Laboratory, and
+native v11 causal lane contains six SciTaste conditions over two MLRC
+objective-task candidates and one seed: 12 Qwen3-VL-2B trajectories under one
+shared GPU resource. Its v3 preflight separately verifies the bounded model path
+and human-governed corpus-construction runtime without claiming that the real
+corpora exist. The external lane contains SciTaste Native, Agent Laboratory, and
 TinyScientist over the same two candidates and one seed: six trajectories with
 DeepSeek V4.1 Flash, o3-mini, and GPT-4o-2024-08-06 explicitly bound per system.
 The latter is best-native and model-confounded. The historical 100-trajectory

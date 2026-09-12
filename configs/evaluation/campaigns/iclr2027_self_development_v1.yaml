@@ -16,13 +16,13 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: f7a87bfee87627c2cf5f972f3dc508205f514e4ef836d1ad19751210a659abe8
+    sha256: 1de92ec3784ecd8c887b1b33900c2aaad84becae298787edd36e6b8ddc4bd399
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 454be9da258f44fd6db81a50553d18d29f4469c9bf391a608f002d4d033090c1
+    sha256: 6326509cda6d8764c245e6a2374295313557404bf747a97aed99d34c732c2883
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3
@@ -39,11 +39,14 @@ artifacts:
     path: docs/research/data/autoresearch_evaluation_resources_v8.yaml
     sha256: fe125229fa0477b1828b26854dc36f2d68ee23496426021150a3eb22553ca6c6
   - artifact_id: native-taste-causal-proposal
-    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v10.yaml
-    sha256: 475287015ab464aceaf91acb00e2e5d892431b46b35bf8d1a197ee8775b8674d
+    path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v11.yaml
+    sha256: ebe7d55ef022d09afd352373a267b37352f9f24bdc2a24a2a9bc5c222e024022
   - artifact_id: native-condition-path-preflight
-    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml
-    sha256: 4deb44837d8f8d67abed579a8edbeb64040b41e698a636627360cbdd787b28a3
+    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
+    sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+  - artifact_id: taste-corpus-curation-guide
+    path: docs/TASTE_CORPUS_CURATION.md
+    sha256: 89333d64236ddf82e597a2208ddf208ddf12667543a5169ed0a07d385d9e2dd6
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
@@ -131,6 +134,7 @@ tracks:
       - experiment-decision-brief
       - mechanism-source-screen
       - mechanism-governance
+      - taste-corpus-curation-guide
       - gpu-host-inventory
     blocker_codes:
       - natural-case-bytes:not-acquired
@@ -207,10 +211,12 @@ tracks:
       - resource-corpus-v8
       - native-taste-causal-proposal
       - native-condition-path-preflight
+      - taste-corpus-curation-guide
       - mlrc-first-assets
       - mlrc-license-policy
       - gpu-host-inventory
     blocker_codes:
+      - taste-corpora:source-and-review-bytes-not-present
       - taste-corpora:paired-qualification-not-complete
       - task-assets:not-acquired
       - held-out-audit:not-complete
@@ -330,6 +336,7 @@ stages:
       - dual-estimand-governance
       - native-taste-causal-proposal
       - native-condition-path-preflight
+      - taste-corpus-curation-guide
       - external-best-native-proposal
       - agent-laboratory-contract
       - tiny-scientist-contract
@@ -379,11 +386,10 @@ stages:
       - native-taste-causal-proposal
       - native-condition-path-preflight
     next_decision: >-
-      The six structural policies plus bounded candidate generation and
-      fixed-candidate selection are Git-bound. Acquire, abstract, and qualify
-      task-specific matched/placebo corpora for stage, role, case count,
-      retrieval count, token, provenance, curation, and outcome-information
-      parity before clearing this stage.
+      The six structural policies, bounded candidate generation, fixed-candidate
+      selection, and source/quality-bound curation runtime are Git-bound.
+      Acquire and independently review the task-specific sources, then qualify
+      matched/placebo parity before clearing this stage.
 
   - stage_id: qualify-best-native-adapters
     kind: runtime_preflight
