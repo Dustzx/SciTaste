@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +14,14 @@ from typing import Any, Protocol
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from scitaste.backends.base import PreferenceRequest, PreferenceResponse, Usage
+from scitaste.backends.base import (
+    CandidateGenerationRequest,
+    CandidateGenerationResponse,
+    GeneratedCandidateProposal,
+    PreferenceRequest,
+    PreferenceResponse,
+    Usage,
+)
 from scitaste.backends.openai_compatible import (
     _SYSTEM_PROMPT,
     _parse_json_object,
@@ -227,6 +236,8 @@ class LocalTransformersBackend:
         prompt = _preference_prompt(request)
         started = time.perf_counter()
         attempt = 0
+        input_tokens = 0
+        output_tokens = 0
         while True:
             attempt += 1
             generated = self.runtime.generate(
@@ -235,6 +246,8 @@ class LocalTransformersBackend:
                 seed=request.seed,
                 max_new_tokens=self.config.max_new_tokens,
             )
+            input_tokens += generated.input_tokens
+            output_tokens += generated.output_tokens
             try:
                 parsed = _parse_json_object(generated.text)
                 break
@@ -259,9 +272,50 @@ class LocalTransformersBackend:
             latency_ms=(time.perf_counter() - started) * 1000,
             semantic_attempts=attempt,
             usage=Usage(
-                input_tokens=generated.input_tokens,
-                output_tokens=generated.output_tokens,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             ),
+        )
+
+    def generate_candidates(
+        self,
+        request: CandidateGenerationRequest,
+    ) -> CandidateGenerationResponse:
+        prompt = _candidate_generation_prompt(request)
+        started = time.perf_counter()
+        attempt = 0
+        input_tokens = 0
+        output_tokens = 0
+        while True:
+            attempt += 1
+            generated = self.runtime.generate(
+                system_prompt=_CANDIDATE_GENERATION_SYSTEM_PROMPT,
+                user_prompt=prompt,
+                seed=request.seed,
+                max_new_tokens=self.config.max_new_tokens,
+            )
+            input_tokens += generated.input_tokens
+            output_tokens += generated.output_tokens
+            try:
+                parsed = _CandidateProposalBatch.model_validate(
+                    _parse_candidate_json_object(generated.text)
+                )
+                break
+            except ValueError:
+                if attempt > self.config.max_retries:
+                    raise
+                prompt = f"{prompt}\n\n{_CANDIDATE_FORMAT_REPAIR_REMINDER}"
+        return CandidateGenerationResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            candidates=list(parsed.candidates),
+            backend=self.name,
+            model=f"{self.config.model_id}@{self.config.model_revision}",
+            raw_response=generated.text,
+            raw_response_sha256=hashlib.sha256(generated.text.encode()).hexdigest(),
+            latency_ms=(time.perf_counter() - started) * 1000,
+            semantic_attempts=attempt,
+            usage=Usage(input_tokens=input_tokens, output_tokens=output_tokens),
         )
 
 
@@ -319,6 +373,63 @@ _FORMAT_REPAIR_REMINDER = (
     "containing selected_action_id (string), rationale (non-empty string), and confidence "
     "(number from 0 to 1). Do not add Markdown fences or commentary."
 )
+
+
+class _CandidateProposalBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    candidates: tuple[GeneratedCandidateProposal, ...] = Field(min_length=2, max_length=12)
+
+
+_CANDIDATE_GENERATION_SYSTEM_PROMPT = (
+    "You concretize scientific research actions inside a deterministic execution envelope. "
+    "Return JSON only. Cover every supplied template exactly once. Never invent an action ID, "
+    "action type, tool, cost, or evidence. Parameter overrides must be empty except that an "
+    "existing SEARCH template may override only its query string."
+)
+
+_CANDIDATE_FORMAT_REPAIR_REMINDER = (
+    "Your previous response violated the required schema. Return exactly one JSON object with "
+    "a candidates array. Every item must contain template_action_id, description, "
+    "parameter_overrides, and rationale. Cover each template exactly once and add no fields."
+)
+
+
+def _candidate_generation_prompt(request: CandidateGenerationRequest) -> str:
+    payload = {
+        "schema_version": "1.0",
+        "request_id": request.request_id,
+        "task": request.task,
+        "stage": request.stage,
+        "decision_context": request.decision_context,
+        "action_templates": [item.model_dump(mode="json") for item in request.action_templates],
+        "required_output": {
+            "candidates": [
+                {
+                    "template_action_id": "one supplied action_id",
+                    "description": "bounded concrete action description",
+                    "parameter_overrides": {
+                        "query": "optional only for an existing SEARCH template"
+                    },
+                    "rationale": "why this concretization fits the supplied context",
+                }
+            ]
+        },
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _parse_candidate_json_object(text: str) -> dict[str, Any]:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
+    try:
+        value = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise ValueError("candidate model did not return valid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError("candidate model response JSON must be an object")
+    return value
 
 
 def _expand_environment(value: Any) -> Any:

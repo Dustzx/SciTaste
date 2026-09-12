@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import builtins
+import json
 import sys
 from contextlib import nullcontext
 from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from scitaste.backends.base import PreferenceRequest
+from scitaste.backends.base import CandidateGenerationRequest, PreferenceRequest
 from scitaste.backends.local_transformers import (
     LocalGeneration,
     LocalTransformersBackend,
@@ -79,6 +80,18 @@ def _request() -> PreferenceRequest:
     )
 
 
+def _candidate_request() -> CandidateGenerationRequest:
+    selection = _request()
+    return CandidateGenerationRequest(
+        request_id="local-candidates",
+        task="candidate-generation",
+        stage=selection.stage,
+        decision_context=selection.decision_context,
+        action_templates=selection.candidate_actions,
+        seed=selection.seed,
+    )
+
+
 def test_local_backend_preserves_pinned_model_and_usage() -> None:
     runtime = StubRuntime(
         ['{"selected_action_id":"probe","rationale":"More informative","confidence":0.82}']
@@ -105,8 +118,67 @@ def test_local_backend_retries_schema_failure_without_changing_candidates() -> N
     response = LocalTransformersBackend(_config(), runtime=runtime).rank(_request())
 
     assert response.semantic_attempts == 2
+    assert response.usage.input_tokens == 82
+    assert response.usage.output_tokens == 34
     assert "violated the required schema" in str(runtime.calls[1]["user_prompt"])
     assert '"action_id": "probe"' in str(runtime.calls[1]["user_prompt"])
+
+
+def test_local_backend_generates_one_bounded_candidate_per_template() -> None:
+    runtime = StubRuntime(
+        [
+            """{
+              "candidates": [
+                {
+                  "template_action_id": "probe",
+                  "description": "Probe the dominant uncertainty first",
+                  "parameter_overrides": {},
+                  "rationale": "It is the cheapest discriminator."
+                },
+                {
+                  "template_action_id": "write",
+                  "description": "Draft only if the probe is unnecessary",
+                  "parameter_overrides": {},
+                  "rationale": "This preserves the alternative."
+                }
+              ]
+            }"""
+        ]
+    )
+
+    response = LocalTransformersBackend(_config(), runtime=runtime).generate_candidates(
+        _candidate_request()
+    )
+
+    assert [item.template_action_id for item in response.candidates] == ["probe", "write"]
+    assert response.request_fingerprint == _candidate_request().fingerprint
+    assert response.raw_response_sha256 is not None
+    assert "Cover every supplied template exactly once" in str(runtime.calls[0]["system_prompt"])
+    assert '"action_templates"' in str(runtime.calls[0]["user_prompt"])
+
+
+def test_local_candidate_backend_retries_and_accounts_for_every_attempt() -> None:
+    valid = {
+        "candidates": [
+            {
+                "template_action_id": action.action_id,
+                "description": action.description,
+                "parameter_overrides": {},
+                "rationale": "Retain this bounded template.",
+            }
+            for action in _candidate_request().action_templates
+        ]
+    }
+    runtime = StubRuntime(["not-json", json.dumps(valid)])
+
+    response = LocalTransformersBackend(_config(), runtime=runtime).generate_candidates(
+        _candidate_request()
+    )
+
+    assert response.semantic_attempts == 2
+    assert response.usage.input_tokens == 82
+    assert response.usage.output_tokens == 34
+    assert "previous response violated" in str(runtime.calls[1]["user_prompt"])
 
 
 def test_local_config_expands_model_path(monkeypatch, tmp_path) -> None:

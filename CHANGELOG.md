@@ -7,6 +7,18 @@ semantic versioning.
 
 ### Added
 
+- The native Scientific Taste path now performs model-backed candidate
+  concretization before fixed-candidate selection. The shared backend receives
+  the condition-sensitive state, utility, Taste, and critic context but must
+  cover every controller-owned executable template exactly once. Deterministic
+  admission preserves action identity, type, cost, value, preconditions, tags,
+  and protected parameters; only the bounded query of an existing `SEARCH`
+  template may change execution semantics. Durable generation traces bind the
+  request, context, template and admitted sets, rationales, safe overrides,
+  provider/model identity, response hash, attempts, latency, and cumulative
+  retry-token usage. The Qwen3-VL-2B policy enables the offline-tested path, but
+  no checkpoint was loaded and no effectiveness claim is made.
+
 - The native Scientific Taste controller now has an opt-in model-backed action
   policy for every non-trivial fixed-candidate decision. One pinned local
   Transformers backend is reused across the complete Full Workflow; hard budget

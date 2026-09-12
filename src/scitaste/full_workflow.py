@@ -15,7 +15,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
-from scitaste.backends.base import PreferenceBackend
+from scitaste.backends.base import CandidateGenerationBackend, PreferenceBackend
 from scitaste.backends.local_transformers import (
     LocalTransformersBackend,
     LocalTransformersConfig,
@@ -144,6 +144,7 @@ class FullWorkflowConfig(BaseModel):
     native_knowledge_config: Path | None = None
     native_condition_config: Path | None = None
     native_preference_backend_config: Path | None = None
+    native_candidate_generation_enabled: bool = False
     native_execution_profile: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
@@ -218,6 +219,11 @@ class FullWorkflowConfig(BaseModel):
                 raise ValueError("native preference control requires the scitaste-native executor")
             if self.native_condition_config is None:
                 raise ValueError("native preference control requires a native condition matrix")
+        if (
+            self.native_candidate_generation_enabled
+            and self.native_preference_backend_config is None
+        ):
+            raise ValueError("native candidate generation requires a native preference backend")
         return self
 
 
@@ -358,6 +364,11 @@ class FullWorkflow:
         preference_backend = self.preference_backend or (
             LocalTransformersBackend(preference_config) if preference_config is not None else None
         )
+        candidate_generation_backend: CandidateGenerationBackend | None = None
+        if config.native_candidate_generation_enabled:
+            if not isinstance(preference_backend, CandidateGenerationBackend):
+                raise ValueError("native candidate generation requires a compatible bound backend")
+            candidate_generation_backend = preference_backend
         model_advisory = (
             load_full_workflow_model_advisory(config.model_node_advisory)
             if config.model_node_advisory is not None
@@ -579,6 +590,13 @@ class FullWorkflow:
                         preference_config.provider if preference_config is not None else None
                     ),
                     expected_preference_model=(
+                        config.model if preference_config is not None else None
+                    ),
+                    candidate_generation_backend=candidate_generation_backend,
+                    expected_candidate_generation_backend=(
+                        preference_config.provider if preference_config is not None else None
+                    ),
+                    expected_candidate_generation_model=(
                         config.model if preference_config is not None else None
                     ),
                 )
@@ -1837,6 +1855,7 @@ def _native_condition_summary(
         "knowledge_retrieval_enabled": runtime.knowledge_retrieval_enabled,
         "taste_context_enabled": runtime.taste_context_enabled,
         "model_backed_action_selection": runtime.model_backed,
+        "model_backed_candidate_generation": runtime.model_backed_candidate_generation,
         "integrity_gates_invariant": True,
     }
 
@@ -2629,6 +2648,8 @@ def _workflow_config_sha256(
     condition_inspection: NativeConditionMatrixInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
+    if not config.native_candidate_generation_enabled:
+        payload.pop("native_candidate_generation_enabled", None)
     if config.research_brief is None:
         payload.pop("research_brief", None)
     else:

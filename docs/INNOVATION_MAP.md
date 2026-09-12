@@ -98,7 +98,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, and an opt-in content-bound model policy for every non-trivial fixed-candidate selection are implemented and offline-tested | Model-backed candidate generation, frozen task-specific Taste corpora, model/GPU path preflight, and formal independent matched-system effectiveness evidence |
+| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, and one opt-in content-bound model path that concretizes and selects every non-trivial controller-owned candidate set are implemented and offline-tested | Frozen task-specific matched/placebo Taste corpora, approved model/GPU execution evidence, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, and a deterministic Full Workflow evidence-hotspot trigger implemented; one registered live study is a narrow preliminary signal | Independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

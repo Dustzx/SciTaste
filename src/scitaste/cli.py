@@ -3639,6 +3639,9 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "role": condition_profile.role.value,
                                 "components": condition_profile.components.model_dump(mode="json"),
                                 "model_backed_action_selection": (preference_config is not None),
+                                "model_backed_candidate_generation": (
+                                    config.native_candidate_generation_enabled
+                                ),
                                 "integrity_gates_invariant": True,
                             }
                         ),
@@ -3662,6 +3665,9 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "max_new_tokens": preference_config.max_new_tokens,
                                 "max_context_tokens": preference_config.max_context_tokens,
                                 "model_backed_action_selection": True,
+                                "model_backed_candidate_generation": (
+                                    config.native_candidate_generation_enabled
+                                ),
                                 "caller_authorized": args.allow_live_model_nodes,
                                 "would_load_checkpoint": args.allow_live_model_nodes,
                                 "would_contact_network": False,

@@ -1,6 +1,10 @@
 """Provider-neutral model backends for taste calibration and decisions."""
 
 from scitaste.backends.base import (
+    CandidateGenerationBackend,
+    CandidateGenerationRequest,
+    CandidateGenerationResponse,
+    GeneratedCandidateProposal,
     PreferenceBackend,
     PreferenceRequest,
     PreferenceResponse,
@@ -22,6 +26,10 @@ from scitaste.backends.scripted import ScriptedPreferenceBackend, ScriptedSelect
 
 __all__ = [
     "APIStyle",
+    "CandidateGenerationBackend",
+    "CandidateGenerationRequest",
+    "CandidateGenerationResponse",
+    "GeneratedCandidateProposal",
     "LocalTransformersBackend",
     "LocalTransformersConfig",
     "OpenAICompatibleBackend",

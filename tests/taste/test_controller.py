@@ -4,7 +4,13 @@ import json
 
 import pytest
 
-from scitaste.backends.base import PreferenceRequest, PreferenceResponse
+from scitaste.backends.base import (
+    CandidateGenerationRequest,
+    CandidateGenerationResponse,
+    GeneratedCandidateProposal,
+    PreferenceRequest,
+    PreferenceResponse,
+)
 from scitaste.data.models import ProvenanceRecord, TasteCase
 from scitaste.data.store import TasteLibrary
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -29,6 +35,37 @@ class _CapturingPreferenceBackend:
             selected_action_id=self.selected_action_id,
             rationale="The fixed candidate better targets the remaining uncertainty.",
             confidence=0.82,
+            backend=self.name,
+            model="fixture-model@pinned",
+        )
+
+
+class _GeneratingPreferenceBackend(_CapturingPreferenceBackend):
+    def __init__(self, selected_action_id: str) -> None:
+        super().__init__(selected_action_id)
+        self.generation_requests: list[CandidateGenerationRequest] = []
+
+    def generate_candidates(
+        self,
+        request: CandidateGenerationRequest,
+    ) -> CandidateGenerationResponse:
+        self.generation_requests.append(request)
+        return CandidateGenerationResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            candidates=[
+                GeneratedCandidateProposal(
+                    template_action_id=action.action_id,
+                    description=f"Generated focus for {action.description}",
+                    parameter_overrides=(
+                        {"query": "generated conflict-aware research query"}
+                        if action.type is MetaAction.SEARCH
+                        else {}
+                    ),
+                    rationale="The candidate remains inside the executable template.",
+                )
+                for action in request.action_templates
+            ],
             backend=self.name,
             model="fixture-model@pinned",
         )
@@ -144,6 +181,92 @@ def test_model_backed_controller_selects_only_from_feasible_fixed_candidates(
     assert decision.confidence == 0.82
     restored = ResearchDecision.model_validate_json(decision.model_dump_json())
     assert restored.model_decision == decision.model_decision
+
+
+def test_controller_generates_then_selects_bounded_candidates(
+    research_state: ResearchState,
+) -> None:
+    backend = _GeneratingPreferenceBackend("search")
+    actions = [
+        ResearchAction(
+            action_id="search",
+            type=MetaAction.SEARCH,
+            description="Search broadly",
+            parameters={"query": "initial query", "limit": 5},
+        ),
+        ResearchAction(
+            action_id="probe",
+            type=MetaAction.PROBE,
+            description="Probe uncertainty",
+        ),
+        ResearchAction(
+            action_id="over-budget",
+            type=MetaAction.EXPERIMENT,
+            description="Run an infeasible experiment",
+            expected_cost={"gpu_hours": 20.0},
+        ),
+    ]
+
+    decision = TasteController(
+        seed=7,
+        preference_backend=backend,
+        candidate_generation_backend=backend,
+        expected_preference_backend=backend.name,
+        expected_preference_model="fixture-model@pinned",
+        expected_candidate_generation_backend=backend.name,
+        expected_candidate_generation_model="fixture-model@pinned",
+    ).decide(state=research_state, candidate_actions=actions)
+
+    assert len(backend.generation_requests) == 1
+    assert [item.action_id for item in backend.generation_requests[0].action_templates] == [
+        "search",
+        "probe",
+    ]
+    assert decision.selected_action.action_id == "search"
+    assert decision.selected_action.parameters["query"] == (
+        "generated conflict-aware research query"
+    )
+    assert {item.action_id for item in decision.candidate_actions} == {
+        "search",
+        "probe",
+        "over-budget",
+    }
+    assert decision.model_candidate_generation is not None
+    assert decision.model_candidate_generation.admitted_candidate_ids == ("search", "probe")
+    assert decision.model_decision is not None
+    restored = ResearchDecision.model_validate_json(decision.model_dump_json())
+    assert restored.model_candidate_generation == decision.model_candidate_generation
+
+
+def test_single_feasible_candidate_spends_no_generation_or_selection_call(
+    research_state: ResearchState,
+) -> None:
+    backend = _GeneratingPreferenceBackend("probe")
+    decision = TasteController(
+        candidate_generation_backend=backend,
+        preference_backend=backend,
+    ).decide(
+        state=research_state,
+        candidate_actions=[
+            ResearchAction(
+                action_id="probe",
+                type=MetaAction.PROBE,
+                description="Only feasible action",
+            ),
+            ResearchAction(
+                action_id="over-budget",
+                type=MetaAction.EXPERIMENT,
+                description="Infeasible action",
+                expected_cost={"gpu_hours": 20.0},
+            ),
+        ],
+    )
+
+    assert decision.selected_action.action_id == "probe"
+    assert backend.generation_requests == []
+    assert backend.requests == []
+    assert decision.model_candidate_generation is None
+    assert decision.model_decision is None
 
 
 def test_model_decision_context_exposes_declared_components_without_condition_label(

@@ -55,6 +55,45 @@ class ModelDecisionTrace(BaseModel):
         return self
 
 
+class ModelCandidateGenerationTrace(BaseModel):
+    """Content identity for one model-backed candidate concretization call."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(min_length=1)
+    request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    prompt_version: str = Field(min_length=1)
+    decision_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    template_action_ids: tuple[str, ...] = Field(min_length=2, max_length=12)
+    template_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    admitted_candidate_ids: tuple[str, ...] = Field(min_length=2, max_length=12)
+    admitted_candidate_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    parameter_override_keys: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    proposal_rationales: dict[str, str] = Field(default_factory=dict)
+    backend: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    response_raw_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    latency_ms: float | None = Field(default=None, ge=0)
+    semantic_attempts: int = Field(default=1, ge=1)
+    usage: ModelDecisionUsage = Field(default_factory=ModelDecisionUsage)
+    cached: bool = False
+
+    @model_validator(mode="after")
+    def admitted_candidates_preserve_template_identity(self) -> ModelCandidateGenerationTrace:
+        if len(set(self.template_action_ids)) != len(self.template_action_ids):
+            raise ValueError("candidate-generation template action IDs must be unique")
+        if self.admitted_candidate_ids != self.template_action_ids:
+            raise ValueError(
+                "candidate generation must preserve template action identity and order"
+            )
+        if set(self.parameter_override_keys) - set(self.admitted_candidate_ids):
+            raise ValueError("candidate override trace references an unknown admitted action")
+        if set(self.proposal_rationales) != set(self.admitted_candidate_ids):
+            raise ValueError("candidate-generation rationale coverage must be exact")
+        return self
+
+
 class ResearchDecision(BaseModel):
     """Controller output and the unit of future taste memory."""
 
@@ -72,6 +111,7 @@ class ResearchDecision(BaseModel):
     expected_cost: dict[str, float] = Field(default_factory=dict)
     expected_value: dict[str, float] = Field(default_factory=dict)
     candidate_scores: dict[str, float | None] = Field(default_factory=dict)
+    model_candidate_generation: ModelCandidateGenerationTrace | None = None
     model_decision: ModelDecisionTrace | None = None
     executor_result_id: str | None = None
     actual_outcome: dict[str, Any] | None = None
@@ -79,6 +119,8 @@ class ResearchDecision(BaseModel):
     @model_serializer(mode="wrap")
     def omit_absent_model_trace(self, handler: Any) -> dict[str, Any]:
         payload: dict[str, Any] = handler(self)
+        if self.model_candidate_generation is None:
+            payload.pop("model_candidate_generation", None)
         if self.model_decision is None:
             payload.pop("model_decision", None)
         return payload
@@ -93,4 +135,8 @@ class ResearchDecision(BaseModel):
             and self.model_decision.selected_action_id != self.selected_action.action_id
         ):
             raise ValueError("model decision and selected action must agree")
+        if self.model_candidate_generation is not None and not set(
+            self.model_candidate_generation.admitted_candidate_ids
+        ).issubset(candidate_ids):
+            raise ValueError("model-generated candidates must belong to candidate_actions")
         return self

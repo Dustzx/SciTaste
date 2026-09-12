@@ -16,6 +16,7 @@ figure_scenario: ../visual/mechanism_demo.yaml
 native_knowledge_config: ../taste/library_seed_v1.yaml
 native_condition_config: ../evaluation/native_taste_condition_matrix_v1.yaml
 native_preference_backend_config: ../backends/local_transformers_qwen3vl2b_native_taste_v1.yaml
+native_candidate_generation_enabled: true
 native_code_proposal_config: ../experiments/native_code_proposal_support_v1.yaml
 paper_id: native-model-policy-preflight-paper
 paper_directory: native-model-policy-preflight-paper

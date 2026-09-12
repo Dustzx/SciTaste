@@ -2037,3 +2037,34 @@ a closed seven-dimension contract, and Full versus placebo may differ only in
 source/domain relation. The report contains no launcher and permanently sets
 `authorizes_execution=false`; static path verification cannot substitute for
 owner approval or empirical evidence.
+
+### ADR-066: Candidate autonomy is template-bounded and separately traced
+
+Status: accepted for offline integration; model execution and effectiveness
+evidence remain pending.
+
+A fixed candidate set prevents an unconstrained model from inventing tools, but
+it also leaves all option construction inside handwritten workflows. SciTaste
+therefore inserts a candidate-concretization call before preference selection.
+The workflow supplies the executable template set; the same condition-bound
+backend must return one proposal for every feasible template. The response can
+specialize the description and rationale, while action identity, type, cost,
+value, preconditions, tags, and protected parameters remain immutable. Only an
+existing `SEARCH` action may receive a bounded query refinement. Its result limit
+and domain scope remain fixed, so generation can improve information targeting
+without silently increasing authority or resources.
+
+Generation and selection are distinct evidence-producing operations. A durable
+generation trace binds request and context identity, ordered templates, admitted
+candidates, rationales, override keys, backend/model identity, raw-response hash,
+attempt count, latency, cache state, and usage across all repair attempts. Exact
+template coverage, response identity, safe overrides, and raw-response integrity
+are deterministic admission conditions. Any violation fails the decision; there
+is no hidden deterministic fallback. Single-option transitions bypass both calls.
+
+The full native workflow reuses one resident pinned backend for both operations
+and exposes the two capabilities separately in dry-run and completion summaries.
+This closes the software candidate-generation gap while preserving the causal
+condition boundary. It does not qualify paired Taste corpora, attest a remote
+checkpoint, authorize GPU use, or show that generated candidates improve research
+outcomes.

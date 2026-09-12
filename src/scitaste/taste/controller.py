@@ -7,12 +7,23 @@ import json
 from collections.abc import Sequence
 from enum import StrEnum
 
-from scitaste.backends.base import PreferenceBackend, PreferenceRequest, PreferenceResponse
+from scitaste.backends.base import (
+    CandidateGenerationBackend,
+    PreferenceBackend,
+    PreferenceRequest,
+    PreferenceResponse,
+)
 from scitaste.schema.actions import ResearchAction
-from scitaste.schema.decisions import ModelDecisionTrace, ModelDecisionUsage, ResearchDecision
+from scitaste.schema.decisions import (
+    ModelCandidateGenerationTrace,
+    ModelDecisionTrace,
+    ModelDecisionUsage,
+    ResearchDecision,
+)
 from scitaste.state.persistence import snapshot_id
 from scitaste.state.research_state import ResearchState, ResourceBudget
 from scitaste.state.resources import remaining_budget
+from scitaste.taste.candidate_generation import concretize_candidate_actions
 from scitaste.taste.critics import StageTasteCriticSuite, TasteCriticFinding
 from scitaste.taste.retriever import (
     RetrievedTasteCase,
@@ -52,6 +63,11 @@ class TasteController:
         preference_prompt_version: str = "native-taste-policy-v1",
         expected_preference_backend: str | None = None,
         expected_preference_model: str | None = None,
+        candidate_generation_backend: CandidateGenerationBackend | None = None,
+        candidate_generation_task: str = "research-action-candidate-generation",
+        candidate_generation_prompt_version: str = "native-candidate-generation-v1",
+        expected_candidate_generation_backend: str | None = None,
+        expected_candidate_generation_model: str | None = None,
     ) -> None:
         self.policy = policy or UtilityPolicy()
         self.seed = seed
@@ -67,6 +83,11 @@ class TasteController:
         self.preference_prompt_version = preference_prompt_version
         self.expected_preference_backend = expected_preference_backend
         self.expected_preference_model = expected_preference_model
+        self.candidate_generation_backend = candidate_generation_backend
+        self.candidate_generation_task = candidate_generation_task
+        self.candidate_generation_prompt_version = candidate_generation_prompt_version
+        self.expected_candidate_generation_backend = expected_candidate_generation_backend
+        self.expected_candidate_generation_model = expected_candidate_generation_model
         if mode == TasteMode.AUGMENTED and retriever is None:
             raise ValueError("augmented taste mode requires a TasteRetriever")
         if not critics_enabled and critic_suite is not None:
@@ -75,6 +96,15 @@ class TasteController:
             raise ValueError("expected preference backend and model must be paired")
         if expected_preference_backend is not None and preference_backend is None:
             raise ValueError("expected preference identity requires a preference backend")
+        if (expected_candidate_generation_backend is None) != (
+            expected_candidate_generation_model is None
+        ):
+            raise ValueError("expected candidate backend and model must be paired")
+        if (
+            expected_candidate_generation_backend is not None
+            and candidate_generation_backend is None
+        ):
+            raise ValueError("expected candidate identity requires a candidate backend")
 
     def decide(
         self,
@@ -98,6 +128,39 @@ class TasteController:
 
         retrieved = self._retrieve(state, actions)
         critic_findings = self.critic_suite.review(state, actions) if self.critics_enabled else ()
+        generation_trace: ModelCandidateGenerationTrace | None = None
+        if self.candidate_generation_backend is not None and len(feasible) >= 2:
+            generation_context = _model_decision_context(
+                state,
+                active_budget,
+                assessments=assessments,
+                retrieved=retrieved,
+                critic_findings=critic_findings,
+                utility_enabled=self.utility_enabled,
+                taste_enabled=self.mode is TasteMode.AUGMENTED,
+                critics_enabled=self.critics_enabled,
+            )
+            feasible_ids = {item.action_id for item in feasible}
+            generated = concretize_candidate_actions(
+                backend=self.candidate_generation_backend,
+                state=state,
+                action_templates=[action for action in actions if action.action_id in feasible_ids],
+                decision_context=generation_context,
+                seed=self.seed,
+                task=self.candidate_generation_task,
+                prompt_version=self.candidate_generation_prompt_version,
+                expected_backend=self.expected_candidate_generation_backend,
+                expected_model=self.expected_candidate_generation_model,
+            )
+            replacements = {item.action_id: item for item in generated.candidates}
+            actions = [replacements.get(action.action_id, action) for action in actions]
+            generation_trace = generated.trace
+            assessments = [self.policy.assess(action, active_budget) for action in actions]
+            feasible = [item for item in assessments if item.feasible]
+            retrieved = self._retrieve(state, actions)
+            critic_findings = (
+                self.critic_suite.review(state, actions) if self.critics_enabled else ()
+            )
         critic_adjustments = {action.action_id: 0.0 for action in actions}
         for finding in critic_findings:
             critic_adjustments[finding.action_id] += finding.score_adjustment
@@ -221,6 +284,11 @@ class TasteController:
             )
         )
         rationale += precedent_text + critic_text
+        if generation_trace is not None:
+            rationale += (
+                " Candidate templates were concretized by the bound model and admitted "
+                "without changing action identity, type, cost, value, or protected parameters."
+            )
         return ResearchDecision(
             stage=state.current_stage.value,
             state_snapshot_id=snapshot_id(state),
@@ -239,6 +307,7 @@ class TasteController:
                 if model_response is None
                 else {item.action_id: None for item in assessments}
             ),
+            model_candidate_generation=generation_trace,
             model_decision=model_trace,
         )
 

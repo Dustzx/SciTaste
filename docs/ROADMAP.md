@@ -17,6 +17,16 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.1 — SciTasteBench v2 | in progress | 120+ source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced local/API results |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
+The native decision path now includes a shared model-backed candidate
+concretization protocol before fixed-candidate selection. Every feasible
+controller-owned template must survive exactly once; deterministic admission
+preserves tool, action, cost, value, and protected parameter identity, while an
+existing SEARCH query may be refined within a strict bound. Generation and
+selection have separate content-addressed traces and cumulative retry-token
+accounting. Offline integration is complete; a real Qwen3-VL-2B run,
+matched/placebo corpus qualification, and formal effects remain pending explicit
+resource approval.
+
 The independent product path now also has a project-owned paper-review registry
 and an eight-gate lifecycle projection from native idea through independent
 pre-submission review. This closes the software control path, but the

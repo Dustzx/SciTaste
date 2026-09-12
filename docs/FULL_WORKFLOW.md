@@ -89,6 +89,32 @@ The committed workflow uses `provider: mock` and a deterministic controller: it
 is an integration fixture, not evidence of model-backed effectiveness or a
 formal experiment launcher.
 
+### Bounded candidate generation
+
+`native_candidate_generation_enabled: true` extends the pinned native
+preference backend to the step immediately before action selection. The stage
+workflow still owns a closed set of executable templates. For every feasible
+template the model must return exactly one concrete description and rationale;
+it cannot invent an action identifier, type, tool, cost, value, precondition, or
+protected parameter. Deterministic admission permits only one operational
+override: a bounded non-empty `query` for a template that is already a `SEARCH`
+action and already declares a query. Retrieval limits and domains remain
+controller-owned.
+
+The admitted actions retain template identifiers and order. The durable
+decision stores a separate candidate-generation trace before the fixed-candidate
+selection trace, including hashes of the context, template set, admitted set,
+raw response, backend/model identity, attempts, latency, token usage, rationales,
+and admitted override keys. Missing or duplicate templates, identity or
+fingerprint drift, malformed output, protected overrides, and raw-response hash
+drift fail closed without deterministic fallback. A single feasible action
+remains deterministic and spends no generation or selection call.
+
+This is bounded autonomy rather than open execution. The current Qwen3-VL-2B
+configuration enables the path for offline integration testing, but enabling it
+does not authorize checkpoint loading. `--allow-live-model-nodes` remains
+mandatory, and no real model execution is claimed by the fixture tests.
+
 ## Open-question intake
 
 The optional `research_brief` config field moves Full Workflow's entry boundary

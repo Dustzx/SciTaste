@@ -12,7 +12,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
-from scitaste.backends.base import PreferenceBackend
+from scitaste.backends.base import CandidateGenerationBackend, PreferenceBackend
 from scitaste.data.store import TasteLibrary
 from scitaste.taste.controller import TasteController, TasteMode
 from scitaste.taste.retriever import TasteDomainRelation, TasteRetriever
@@ -178,6 +178,10 @@ class NativeConditionRuntime:
         return self.controller.preference_backend is not None
 
     @property
+    def model_backed_candidate_generation(self) -> bool:
+        return self.controller.candidate_generation_backend is not None
+
+    @property
     def knowledge_retrieval_enabled(self) -> bool:
         return self.profile.components.knowledge_retrieval_enabled
 
@@ -216,6 +220,9 @@ def build_native_condition_runtime(
     preference_backend: PreferenceBackend | None = None,
     expected_preference_backend: str | None = None,
     expected_preference_model: str | None = None,
+    candidate_generation_backend: CandidateGenerationBackend | None = None,
+    expected_candidate_generation_backend: str | None = None,
+    expected_candidate_generation_model: str | None = None,
 ) -> NativeConditionRuntime:
     mode = profile.components.taste_retrieval
     retriever: TasteRetriever | None = None
@@ -237,6 +244,9 @@ def build_native_condition_runtime(
         preference_backend=preference_backend,
         expected_preference_backend=expected_preference_backend,
         expected_preference_model=expected_preference_model,
+        candidate_generation_backend=candidate_generation_backend,
+        expected_candidate_generation_backend=expected_candidate_generation_backend,
+        expected_candidate_generation_model=expected_candidate_generation_model,
     )
     return NativeConditionRuntime(
         profile=profile,

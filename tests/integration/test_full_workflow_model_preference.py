@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 import scitaste.benchmark.manuscript as manuscript
-from scitaste.backends.base import PreferenceRequest, PreferenceResponse
+from scitaste.backends.base import (
+    CandidateGenerationRequest,
+    CandidateGenerationResponse,
+    GeneratedCandidateProposal,
+    PreferenceRequest,
+    PreferenceResponse,
+)
 from scitaste.cli import main
 from scitaste.full_workflow import FullWorkflow, load_full_workflow_config
 from scitaste.state.persistence import StateStore
@@ -20,6 +26,7 @@ class _FirstCandidateBackend:
 
     def __init__(self) -> None:
         self.requests: list[PreferenceRequest] = []
+        self.generation_requests: list[CandidateGenerationRequest] = []
 
     def rank(self, request: PreferenceRequest) -> PreferenceResponse:
         self.requests.append(request)
@@ -29,6 +36,26 @@ class _FirstCandidateBackend:
             selected_action_id=request.candidate_actions[0].action_id,
             rationale="Selected the first fixed candidate in the offline integration fixture.",
             confidence=0.8,
+            backend=self.name,
+            model=MODEL,
+        )
+
+    def generate_candidates(
+        self,
+        request: CandidateGenerationRequest,
+    ) -> CandidateGenerationResponse:
+        self.generation_requests.append(request)
+        return CandidateGenerationResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            candidates=[
+                GeneratedCandidateProposal(
+                    template_action_id=action.action_id,
+                    description=f"Model-concretized: {action.description}",
+                    rationale="Retain the executable template under the current evidence.",
+                )
+                for action in request.action_templates
+            ],
             backend=self.name,
             model=MODEL,
         )
@@ -65,6 +92,7 @@ def test_model_preference_dry_run_is_explicit_and_mutation_free(
     assert preference["model"] == MODEL
     assert preference["checkpoint_sha256"].startswith("47f9c0e0")
     assert preference["model_backed_action_selection"] is True
+    assert preference["model_backed_candidate_generation"] is True
     assert preference["caller_authorized"] is False
     assert preference["would_load_checkpoint"] is False
     assert preference["would_contact_network"] is False
@@ -86,6 +114,19 @@ def test_model_preference_requires_explicit_run_authority_before_project_mutatio
         )
 
     assert not outputs.exists()
+
+
+def test_candidate_generation_requires_a_bound_compatible_backend(tmp_path: Path) -> None:
+    config = load_full_workflow_config(CONFIG)
+
+    with pytest.raises(ValueError, match="compatible bound backend"):
+        FullWorkflow(preference_backend=object()).run(  # type: ignore[arg-type]
+            config,
+            outputs_root=tmp_path / "outputs",
+            run_id="candidate-backend-invalid",
+            allow_live_model_nodes=True,
+        )
+    assert not (tmp_path / "outputs").exists()
 
 
 def test_model_preference_persists_one_backend_for_every_nontrivial_choice(
@@ -113,15 +154,21 @@ def test_model_preference_persists_one_backend_for_every_nontrivial_choice(
 
     assert result["status"] == "complete"
     assert result["native_condition"]["model_backed_action_selection"] is True
+    assert result["native_condition"]["model_backed_candidate_generation"] is True
     run_root = outputs / "projects/native-model-policy-integration/runs/native-model-policy-seed-07"
     state = StateStore(run_root / "stages/figure").load()
     traced = [item for item in state.decision_history if item.model_decision is not None]
+    generated = [
+        item for item in state.decision_history if item.model_candidate_generation is not None
+    ]
     assert traced
     nontrivial = [item for item in state.decision_history if len(item.candidate_actions) >= 2]
     assert traced == nontrivial
+    assert generated == nontrivial
     assert {item.model_decision.backend for item in traced if item.model_decision} == {
         "local-transformers"
     }
     assert {item.model_decision.model for item in traced if item.model_decision} == {MODEL}
     assert len(backend.requests) == len(traced)
+    assert len(backend.generation_requests) == len(generated)
     assert all(len(request.candidate_actions) >= 2 for request in backend.requests)
