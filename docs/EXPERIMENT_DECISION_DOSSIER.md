@@ -59,6 +59,16 @@ Real external systems occupy a separate best-native lane with model effects
 explicitly confounded; it measures ecological package performance and failure
 modes, not a causal Taste effect.
 
+That strategy is now encoded separately in
+[`iclr2027_scitaste_evidence_program_v1.yaml`](../configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml).
+It is the scientific authority; this dossier remains a historical resource and
+workflow projection. The evidence program gives InnovatorBench objective
+progress, MLR-Bench full-lifecycle, and EXP-Bench integrity-diagnostic roles,
+while Agent Laboratory, AI-Researcher, and DeepScientist occupy the accepted
+method-candidate set. Its current no-run inspection is scientifically coherent
+but blocks acquisition, experiment, and authorization. The Qwen and provider
+identities below therefore cannot select or revise the experiment design.
+
 That choice is now materialized in schema-1.3 prelaunch proposals and a
 schema-1.1 campaign dossier. Source acquisition, runtime preflight, pilot
 execution, formal scale-out, paper revision, internal model critique, two

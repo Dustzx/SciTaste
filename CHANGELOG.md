@@ -7,6 +7,21 @@ semantic versioning.
 
 ### Added
 
+- A machine-checkable ICLR 2027 evidence program now separates three
+  title-critical hypotheses from mutable compute availability. It requires
+  abstracted Taste versus same-source raw RAG, matched versus source-disjoint
+  mismatched Taste, and Full SciTaste versus Native Base; assigns InnovatorBench,
+  MLR-Bench, and EXP-Bench distinct objective-progress, full-lifecycle, and
+  integrity roles; and keeps accepted external methods in a separate candidate
+  set. The no-run CLI reports scientific coherence independently from
+  acquisition, experiment, and owner-authorization blockers.
+
+- The accepted AutoResearch resource corpus v9 adds pinned metadata for ICLR
+  2026 DeepScientist and InnovatorBench. It records the current DeepScientist
+  product/paper-equivalence and sandbox gaps, the 69.7-GB InnovatorBench archive
+  pin and missing dataset-level license, and refuses to treat either publication
+  acceptance or local resource availability as execution readiness.
+
 - Shared compute catalog v3 now distinguishes the current official DeepSeek V4
   Flash identity from retained V4.1 history, refreshes GLM-5.3-Flash, records a
   verified read-only 8×RTX 3090 inventory, and represents host-scoped checkpoints

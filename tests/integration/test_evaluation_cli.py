@@ -6,6 +6,8 @@ from pathlib import Path
 from scitaste.cli import main
 
 MANIFEST = "configs/evaluation/prelaunch/deepseek_v41flash_pilot_v2.yaml"
+EVIDENCE_PROGRAM = "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
+RESOURCE_CORPUS_V9 = "docs/research/data/autoresearch_evaluation_resources_v9.yaml"
 
 
 def test_cell_plan_cli_materializes_exact_blocked_matrix(tmp_path: Path, capsys) -> None:
@@ -47,3 +49,26 @@ def test_cell_plan_cli_materializes_exact_blocked_matrix(tmp_path: Path, capsys)
         )
         == 1
     )
+
+
+def test_evidence_program_cli_separates_science_from_execution(capsys) -> None:
+    base = [
+        "evaluation",
+        "evidence-program",
+        "--manifest",
+        EVIDENCE_PROGRAM,
+        "--resource-corpus",
+        RESOURCE_CORPUS_V9,
+    ]
+
+    assert main([*base, "--require-scientifically-coherent"]) == 0
+    report = json.loads(capsys.readouterr().out)
+
+    assert report["scientifically_coherent"] is True
+    assert report["scientific_findings"] == []
+    assert report["ready_for_acquisition_proposal"] is False
+    assert report["ready_for_experiment"] is False
+    assert report["execution_authorized"] is False
+    assert report["no_external_action_performed"] is True
+
+    assert main([*base, "--require-experiment-ready"]) == 1

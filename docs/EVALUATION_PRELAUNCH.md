@@ -8,8 +8,8 @@ SciTaste keeps three experimental objects separate:
 
 | Object | Examples | What it determines |
 |---|---|---|
-| research method/system | SciTaste Native, accepted MLR-Agent, Agent Laboratory, AI-Researcher, TinyScientist, and the direct agent; preprints only in sensitivity analysis | who is compared |
-| benchmark/task source | MLR-Bench, MLRC-Bench, EXP-Bench, HeurekaBench, AAAR-1.0 | where and on what evidence the systems are evaluated |
+| research method/system | SciTaste Native, Agent Laboratory, AI-Researcher, DeepScientist, other admitted accepted methods, and the direct agent | who is compared |
+| benchmark/task source | SciTasteBench decision cases, InnovatorBench/InnoGym objective tasks, MLR-Bench lifecycle tasks, and EXP-Bench diagnostics | where and on what evidence the systems are evaluated |
 | review/judge protocol | blinded experts, adjudication, calibrated model judge | how the outputs are judged |
 
 The cross-track approval view is the
@@ -56,6 +56,23 @@ A Benchmark repository cannot satisfy a method-comparator gate, and a method
 repository cannot satisfy a task-source gate. The prelaunch validator enforces
 that distinction through the audited external-resource corpus rather than the
 display label in a YAML file.
+
+The scientific authority now precedes these resource manifests. Inspect
+[`iclr2027_scitaste_evidence_program_v1.yaml`](../configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml)
+before interpreting any lane:
+
+```bash
+.venv/bin/scitaste evaluation evidence-program \
+  --manifest configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml \
+  --resource-corpus docs/research/data/autoresearch_evaluation_resources_v9.yaml \
+  --require-scientifically-coherent
+```
+
+This inspection currently passes scientific coherence and fails acquisition,
+experiment, and launch readiness. Consequently every model-bound lane below is
+historical feasibility evidence until a new prelaunch manifest is derived from
+the approved task, adapter, conformance, power, and human-review decisions. A
+newly discovered Qwen checkpoint cannot promote an old lane.
 
 ## Resource lanes
 

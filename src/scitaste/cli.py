@@ -80,6 +80,7 @@ from scitaste.evaluation import (
     inspect_dataset_license_policy,
     inspect_dataset_package_archives,
     inspect_dataset_package_request,
+    inspect_evidence_program,
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
@@ -96,6 +97,7 @@ from scitaste.evaluation import (
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
+    load_evidence_program,
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
@@ -1266,6 +1268,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(prelaunch)
     prelaunch.set_defaults(handler=_handle_evaluation_prelaunch)
+
+    evidence_program = evaluation_commands.add_parser(
+        "evidence-program",
+        help="Inspect an ICLR claim architecture without launching external work",
+    )
+    evidence_program.add_argument("--manifest", type=Path, required=True)
+    evidence_program.add_argument("--resource-corpus", type=Path, required=True)
+    evidence_program.add_argument(
+        "--require-scientifically-coherent",
+        action="store_true",
+        help="Return non-zero when claim/control/task roles are incoherent",
+    )
+    evidence_program.add_argument(
+        "--require-experiment-ready",
+        action="store_true",
+        help="Return non-zero until acquisition, pilot, review, and approval gates pass",
+    )
+    _add_log_level_option(evidence_program)
+    evidence_program.set_defaults(handler=_handle_evaluation_evidence_program)
     native_condition_preflight = evaluation_commands.add_parser(
         "native-condition-preflight",
         help="Inspect the Git-pinned native Taste path and corpus parity without execution",
@@ -4156,6 +4177,27 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
     if args.require_ready and (
         not critic_report.ready_for_author_review or not report.execution_authorized
     ):
+        return 1
+    return 0
+
+
+def _handle_evaluation_evidence_program(args: argparse.Namespace) -> int:
+    inspection = load_evidence_program(args.manifest)
+    corpus = load_external_resource_corpus(args.resource_corpus)
+    report = inspect_evidence_program(inspection.program, corpus.corpus)
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        "resource_corpus_path": str(corpus.path),
+        "resource_corpus_file_sha256": corpus.file_sha256,
+        "resource_corpus_semantic_sha256": corpus.semantic_sha256,
+        **report.model_dump(mode="json"),
+        "no_external_action_performed": True,
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_scientifically_coherent and not report.scientifically_coherent:
+        return 1
+    if args.require_experiment_ready and not report.ready_for_experiment:
         return 1
     return 0
 

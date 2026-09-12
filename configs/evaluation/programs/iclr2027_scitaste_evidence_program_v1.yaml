@@ -1,0 +1,303 @@
+schema_version: "1.0"
+program_id: scitaste-iclr2027-evidence-program-v1
+paper_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
+target_venue: ICLR 2027
+design_authority: scientific_question_not_available_inventory
+resource_corpus_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+
+claims:
+  - claim_id: taste-abstraction-improves-decisions
+    statement: >-
+      Under identical high-quality sources, model, context, tools, and budget,
+      abstracted matched Taste improves held-out scientific decision quality
+      over raw-source retrieval.
+    title_critical: true
+    study_ids: [taste-abstraction-mechanism]
+  - claim_id: taste-specificity-is-causal
+    statement: >-
+      Matched Taste outperforms source-disjoint mismatched Taste with equal
+      source count and context budget, identifying alignment rather than extra
+      context as the useful mechanism.
+    title_critical: true
+    study_ids: [taste-specificity-mechanism]
+  - claim_id: taste-improves-objective-progress
+    statement: >-
+      With one frozen capable model and matched task, tools, information,
+      repair policy, and budget, Full SciTaste improves executable scientific
+      progress over SciTaste Native Base.
+    title_critical: true
+    study_ids: [native-objective-progress]
+
+conditions:
+  - condition_id: full-scitaste
+    kind: full_scitaste
+    intervention: Enable native Taste, Knowledge, critics, evidence gates, and execution control.
+    keeps_fixed: [model, task, starting information, tools, repair policy, resource budget]
+  - condition_id: matched-abstracted-taste
+    kind: matched_abstracted_taste
+    intervention: Supply source-grounded Taste abstractions matched to the decision domain.
+    keeps_fixed: [sources, source count, model, context budget, tools, decision prompt]
+  - condition_id: raw-source-rag
+    kind: raw_source_rag
+    intervention: Retrieve directly from the same admitted source material without Taste abstraction.
+    keeps_fixed: [sources, source count, model, context budget, tools, decision prompt]
+  - condition_id: mismatched-taste
+    kind: source_disjoint_mismatched_taste
+    intervention: Supply source-disjoint Taste abstractions from a different decision domain.
+    keeps_fixed: [source count, model, context budget, tools, decision prompt]
+  - condition_id: native-base
+    kind: native_base
+    intervention: Use the same native executor without Taste-guided research control.
+    keeps_fixed: [model, task, starting information, tools, repair policy, resource budget]
+  - condition_id: direct-tool-agent
+    kind: direct_tool_agent
+    intervention: Use a real direct execution-capable agent without the SciTaste controller.
+    keeps_fixed: [task, starting information, tool permissions, repair policy, resource ceiling]
+
+task_sources:
+  - source_id: scitastebench-decision-cases
+    role: decision_cases
+    formal_role: construction_target
+    resource_id: null
+    accepted_venue: null
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Expert-conflict-cleared decision cases isolate problem choice, hypothesis
+      refinement, diagnostic experiment choice, interpretation, stop or pivot,
+      and claim calibration. A content-bound construction package is still needed.
+  - source_id: innovatorbench-objective-tasks
+    role: objective_progress
+    formal_role: primary
+    resource_id: innovator-bench
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Long-horizon research tasks with objective evaluators directly test H3;
+      admission remains contingent on license, leakage, asset, runtime, and
+      adapter qualification, not on available local checkpoints.
+  - source_id: innogym-objective-tasks
+    role: objective_progress
+    formal_role: contingent
+    resource_id: null
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: false
+    rationale: >-
+      Valid performance-gain plus novelty scoring is closely aligned with H3,
+      but no exact public implementation and asset revision has yet passed the
+      metadata admission gate.
+  - source_id: mlrbench-full-lifecycle
+    role: full_lifecycle
+    formal_role: primary
+    resource_id: mlr-bench
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Idea-to-paper task structure supports ecological research-package and
+      final-paper comparison but does not replace objective-progress evidence.
+  - source_id: expbench-integrity
+    role: integrity_diagnostic
+    formal_role: diagnostic
+    resource_id: exp-bench
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Experiment-chain tasks diagnose design, implementation, execution,
+      conclusion, and conjunctive success without being mislabeled as a full
+      autonomous-research comparison.
+  - source_id: scitaste-self-development
+    role: process_case
+    formal_role: contingent
+    resource_id: null
+    accepted_venue: null
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: false
+    rationale: >-
+      Longitudinal dogfooding demonstrates project utility and defect discovery
+      but is excluded from confirmatory population estimates.
+
+system_candidates:
+  - system_id: agent-laboratory
+    resource_id: agent-laboratory
+    accepted_venue: Findings of EMNLP 2025
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: >-
+      A real accepted research-agent workflow candidate; best-native comparison
+      remains secondary and model-confounded until an adapter passes.
+  - system_id: ai-researcher
+    resource_id: ai-researcher
+    accepted_venue: NeurIPS 2025 Main Conference Spotlight
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: >-
+      Accepted end-to-end method with implementation and paper evaluation;
+      missing root license and adapter evidence currently block execution.
+  - system_id: deep-scientist
+    resource_id: deep-scientist
+    accepted_venue: ICLR 2026
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: >-
+      Accepted autonomous discovery method with strong ecological relevance;
+      the current product's equivalence to the paper system and its safe common
+      task mapping remain unverified.
+
+study_layers:
+  - study_id: taste-abstraction-mechanism
+    hypothesis: H1_taste_abstraction
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [taste-abstraction-improves-decisions]
+    condition_ids: [matched-abstracted-taste, raw-source-rag]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Blinded expert preference on decision quality and claim calibration.
+    estimand: >-
+      Paired effect of matched abstraction versus raw-source retrieval on an
+      independent held-out scientific decision.
+    experimental_unit: held-out source-group-disjoint decision case
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: taste-specificity-mechanism
+    hypothesis: H2_taste_specificity
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [taste-specificity-is-causal]
+    condition_ids: [matched-abstracted-taste, mismatched-taste]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Paired blinded expert difference in scientific decision quality.
+    estimand: >-
+      Effect of domain-matched versus source-disjoint mismatched Taste under
+      source-count and context parity.
+    experimental_unit: held-out source-group-disjoint decision case
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: native-objective-progress
+    hypothesis: H3_native_effect
+    layer: objective_progress
+    inference_role: confirmatory
+    claim_ids: [taste-improves-objective-progress]
+    condition_ids: [full-scitaste, native-base]
+    task_source_ids: [innovatorbench-objective-tasks, innogym-objective-tasks]
+    primary_endpoint: Paired held-out objective progress with every failure retained.
+    estimand: >-
+      Effect of Full SciTaste versus Native Base on an independent task under a
+      frozen capable model and matched execution boundary.
+    experimental_unit: held-out source-group-disjoint executable research task
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: accepted-system-ecological-comparison
+    hypothesis: E1_ecological_comparison
+    layer: full_lifecycle
+    inference_role: supporting
+    claim_ids: []
+    condition_ids: [full-scitaste, direct-tool-agent]
+    task_source_ids: [mlrbench-full-lifecycle]
+    system_candidate_ids: [agent-laboratory, ai-researcher, deep-scientist]
+    primary_endpoint: Blinded expert preference over complete evidence-bearing research packages.
+    estimand: >-
+      Equal-task ecological difference between SciTaste and independently
+      accepted real systems, with model confounding reported rather than pooled.
+    experimental_unit: complete held-out task-system research trajectory
+    matched_backbone: false
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: true
+  - study_id: experiment-chain-diagnostic
+    hypothesis: D1_integrity_diagnostic
+    layer: experiment_integrity
+    inference_role: diagnostic
+    claim_ids: []
+    condition_ids: [full-scitaste, native-base]
+    task_source_ids: [expbench-integrity]
+    primary_endpoint: Design, implementation, execution, conclusion, and conjunctive success.
+    estimand: Diagnostic stagewise difference, not a full-lifecycle superiority claim.
+    experimental_unit: held-out executable experiment-chain task
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: longitudinal-self-development-case
+    hypothesis: P1_self_development
+    layer: process_case
+    inference_role: process_only
+    claim_ids: []
+    condition_ids: [full-scitaste]
+    task_source_ids: [scitaste-self-development]
+    primary_endpoint: Versioned defects, decisions, evidence admissions, paper changes, and costs.
+    estimand: Descriptive process case only; never part of H1-H3 estimates.
+    experimental_unit: one longitudinal self-development project
+    matched_backbone: false
+    matched_starting_information: false
+    matched_tool_permissions: false
+    matched_repair_policy: false
+    final_paper_required: true
+
+model_policy:
+  inventory_can_select_scientific_design: false
+  primary_model_id: null
+  primary_selection_stage: after_conformance_pilot
+  selection_criteria:
+    - instruction and tool conformance on representative no-formal-data tasks
+    - sufficient context and structured-output reliability
+    - stable identifiable model version and reproducible API or local serving path
+    - cost and capacity after scientific validity requirements pass
+  matched_within_confirmatory_study: true
+  robustness_provider_non_pooled: true
+  local_models_role: capacity_and_robustness_candidates
+
+sampling_policy:
+  sample_size_basis: pilot_then_power_analysis
+  fixed_formal_sample_size: null
+  fixed_repetitions: null
+  independent_unit: held_out_task
+  source_group_split_required: true
+  intention_to_run: true
+  failures_are_outcomes: true
+  pilot_data_excluded_from_formal_test: true
+
+human_review:
+  minimum_independent_reviewers: 2
+  condition_blinded: true
+  conflict_screening: true
+  adjudication: true
+  automated_judge_role: secondary_calibrated_measure
+  judge_validation_required: true
+
+operational_readiness:
+  task_subset_freeze: pending
+  task_data_acquisition: pending
+  adapter_preflight: pending
+  model_conformance_pilot: pending
+  power_analysis: pending
+  reviewer_recruitment: pending
+  judge_validation: pending
+
+approval:
+  approved: false
+  approved_program_sha256: null
+  approved_by: null
+  approved_at: null
+
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

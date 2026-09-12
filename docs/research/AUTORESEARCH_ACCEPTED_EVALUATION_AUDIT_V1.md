@@ -24,10 +24,15 @@ leaderboard. It instead combines three evidence forms:
 3. **frontier progress**, where the system must execute experiments and improve
    a real external objective rather than merely write a plausible paper.
 
-SciTaste should combine these forms, while keeping their estimands separate.
-The primary full-lifecycle scaffold should be MLR-Bench; EXP-Bench should test
-the experiment-design-to-conclusion middle of the pipeline; a small bounded
-frontier-progress study is a stretch track rather than a substitute for either.
+SciTaste should combine these forms while keeping their estimands separate. The
+title-critical system test is objective research progress on held-out tasks,
+with [InnovatorBench](https://proceedings.iclr.cc/paper_files/paper/2026/hash/3d13d910b48ac2e672a32cfdf98be1bf-Abstract-Conference.html)
+as the primary acquisition candidate and
+[InnoGym](https://proceedings.iclr.cc/paper_files/paper/2026/hash/743514dfa1ef705f378424bd1effb57b-Abstract-Conference.html)
+as a contingent source pending an exact public implementation. MLR-Bench tests
+the complete idea-to-paper package as supporting ecological evidence, while
+EXP-Bench diagnoses the experiment-design-to-conclusion chain. Neither benchmark
+is itself a competing autonomous-research method.
 
 ## Scope and correction to the existing resource ledger
 
@@ -51,11 +56,12 @@ fabricated. The snapshot must remain immutable; a future project-owned corpus
 revision should add these works, inclusion rules, acquisition hashes, license
 status, and adapter feasibility rather than silently editing the old ledger.
 
-That revision now exists as the tracked, metadata-only
-[`autoresearch_evaluation_resources_v2.yaml`](data/autoresearch_evaluation_resources_v2.yaml).
-It preserves the ignored v3 resource-disclosure ledger by locator and SHA-256
-and adds five exact official repository pins. Deterministic code derives four
-different permissions from its evidence gates:
+The current additive revision is the tracked, metadata-only
+[`autoresearch_evaluation_resources_v9.yaml`](data/autoresearch_evaluation_resources_v9.yaml).
+It preserves every earlier snapshot by content hash and adds exact metadata for
+DeepScientist and InnovatorBench. Deterministic code derives four different
+permissions from evidence gates; scientific relevance never implies operational
+admission:
 
 | Resource | Reference | Code audit | Benchmark task source | External comparison system |
 |---|---:|---:|---:|---:|
@@ -64,6 +70,8 @@ different permissions from its evidence gates:
 | MLR-Agent | yes | yes | not applicable | blocked |
 | AI Scientist-v2 | yes | yes | not applicable | blocked |
 | AutoResearchClaw `v0.5.0` | yes | yes | not applicable | blocked |
+| InnovatorBench | yes | yes | blocked | not applicable |
+| DeepScientist | yes | yes | not applicable | blocked |
 
 MLR-Bench and EXP-Bench still need a frozen source-disjoint executable subset,
 asset inventory, and per-task upstream-license audit. MLR-Agent still needs a
@@ -75,14 +83,24 @@ artifact mapping, but its MLR/EXP task semantics, matched model mode, sandbox on
 those assets, and telemetry remain unqualified. Therefore no formal external
 run is authorized.
 
+The v9 additions remain equally explicit. InnovatorBench lacks a dataset-level
+license, frozen task selection, acquired assets, upstream-license audit, and
+runtime qualification. DeepScientist lacks proof that its current product is
+equivalent to the ICLR system, plus common task/model mapping, sandbox,
+telemetry, artifact, and resume acceptance. Its reported 20,000-plus GPU-hour
+campaign is a literature observation, not a compute prescription for SciTaste.
+
 ## What accepted work actually evaluates
 
 | Work | Accepted venue | Evaluation unit and scale | Compared against | Principal evidence | Boundary |
 |---|---|---|---|---|---|
 | [MLR-Bench](https://proceedings.neurips.cc/paper_files/paper/2025/hash/ab8dd000d6f87f40061a73f8bca7fae4-Abstract-Datasets_and_Benchmarks_Track.html) | NeurIPS 2025 D&B | 201 open-ended ML tasks; idea, proposal, experiment, writing, and end-to-end stages | six frontier LMs, coding agents, its MLR-Agent, and an AI Scientist-v2 comparison | stage rubrics, final-paper review, expert validation, and invalid/fabricated-result auditing | broad early-stage coverage but only a smaller task subset is practical for executable end-to-end evaluation |
 | [AI-Researcher](https://proceedings.neurips.cc/paper_files/paper/2025/hash/0d904d300a105809a2114d727851e759-Abstract-Conference.html) | NeurIPS 2025 | Scientist-Bench over target AI papers, with guided and open-ended innovation settings | human target papers and model/backbone variants | implementation completion/correctness and blinded paper-level novelty, rigor, and validation judgments | broad direct comparison with other autonomous-research frameworks is not its main design |
+| [Agent Laboratory](https://aclanthology.org/2025.findings-emnlp.320/) | Findings of EMNLP 2025 | staged literature, experimentation, report-writing, and human-feedback workflow | system variants and human-feedback settings | phase outputs, empirical results, report quality, and efficiency | an accepted method candidate, but matched-task semantics and current model mapping require a new adapter |
 | CycleResearcher | ICLR 2025 | generated research papers and review/research corpora | human papers, AI Scientist, training and search ablations | reviewer-score prediction, simulated acceptance, expert paper judgments | training papers can contain fabricated experimental results; it is not evidence of executable end-to-end research |
 | [DeepScientist](https://proceedings.iclr.cc/paper_files/paper/2026/hash/4f64494ecc3442f1c9261baa036378bc-Abstract-Conference.html) | ICLR 2026 | about 5,000 ideas and 1,100 experimental validations on three frontier AI tasks | human 2025 state of the art, system variants, and publicly available AI-scientist papers | real external scores, progressive discovery traces, generated-paper review, scaling, and failure analysis | strongest frontier-progress precedent but uses more than 20,000 GPU hours and only three target tasks |
+| [InnovatorBench](https://proceedings.iclr.cc/paper_files/paper/2026/hash/3d13d910b48ac2e672a32cfdf98be1bf-Abstract-Conference.html) | ICLR 2026 | 20 long-horizon LLM research tasks derived from 14 papers across six categories | ReAct-style agents with several frontier models | executable objective score, best/final score, multi-host action traces, checkpoints, and failures | objective-progress benchmark rather than an external method; tasks take roughly 2--36 hours and require additional data/checkpoints |
+| [InnoGym](https://proceedings.iclr.cc/paper_files/paper/2026/hash/743514dfa1ef705f378424bd1effb57b-Abstract-Conference.html) | ICLR 2026 | 18 curated improvable tasks, with ten used in the main evaluation | multiple agents/models under visible and hidden evaluation | valid performance gain plus separately judged novelty | highly aligned objective/novelty task source, but an exact public code and asset pin is not yet established |
 | [EXP-Bench](https://proceedings.iclr.cc/paper_files/paper/2026/hash/c411f5b2d9c55f1685e72db224ad8b0e-Abstract-Conference.html) | ICLR 2026 | 461 tasks from 51 top-tier papers | OpenHands/IterativeAgent and multiple model backbones | hypothesis, design, implementation, execution, conclusion, and conjunctive full success | starts from a question and incomplete code; does not test original idea selection or final-paper quality |
 | [PaperBench](https://proceedings.mlr.press/v267/starace25a.html) | ICML 2025 | replication of 20 ICML 2024 Spotlight/Oral papers with 8,316 rubric items | multiple frontier agents and top ML PhD baselines | author-developed replication rubrics, executed artifacts, and a separately tested judge | tests faithful replication, not creation and selection of a new idea |
 | [RE-Bench](https://proceedings.mlr.press/v267/wijk25a.html) | ICML 2025 | seven open-ended ML R&D environments; 71 eight-hour attempts from 61 experts | several agents/models and human experts at 2-, 8-, and 32-hour budgets | external task score, best-of-k scaling, and score-versus-time curves | evaluates research engineering progress, not manuscript generation |
@@ -98,6 +116,26 @@ or invalid experimental outcomes in a large fraction of coding-agent cases;
 EXP-Bench reports only 0.5% complete executable success even though individual
 sub-stage scores are much higher. SciTaste must therefore admit a paper only
 after its claims resolve to executable, provenance-bearing evidence.
+
+### Method and benchmark admission are separate
+
+The formal program now gives every external item exactly one operational role:
+
+- **method candidates** are executable systems such as Agent Laboratory,
+  AI-Researcher, and DeepScientist; at least two real accepted systems must pass
+  unchanged-core adapter admission before the ecological comparison can run;
+- **task sources** are benchmarks such as InnovatorBench, MLR-Bench, and
+  EXP-Bench; they provide environments and endpoints but never count toward the
+  accepted-method minimum;
+- **hybrid papers** may contribute both a benchmark and a named baseline only
+  when the resource corpus registers and gates those identities separately; and
+- **historical paper artifacts** can support a common review analysis but cannot
+  be presented as a matched system execution.
+
+The distinction is executable in
+[`iclr2027_scitaste_evidence_program_v1.yaml`](../../configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml):
+putting `innovator-bench` in the system-candidate set makes the scientific
+coherence gate fail even though it is an accepted ICLR paper.
 
 ## Evaluation patterns supported by accepted papers
 
@@ -161,8 +199,9 @@ The self-iteration design contains four nested levels:
    It plans changes to L0, records failures, runs admissible studies, and builds
    the ICLR manuscript.
 3. **L2 — external formal research projects.** L1 launches independent,
-   content-addressed projects for held-out MLR-Bench, EXP-Bench, and optional
-   frontier tasks. SciTaste Native and pinned baselines each traverse their real
+   content-addressed projects for held-out decision cases, InnovatorBench-style
+   objective tasks, MLR-Bench full-lifecycle tasks, and EXP-Bench diagnostics.
+   SciTaste Native and pinned baselines each traverse their real
    lifecycle and produce trajectories, evidence, code, results, and—where the
    task requires it—papers.
 4. **L3 — evidence-guided return.** Failures and measured effects from L2 become
@@ -182,42 +221,36 @@ refinement, diagnostic experiment choice, evidence interpretation, stop/pivot,
 and claim calibration. This isolates the Taste contribution without requiring a
 full paper for every case.
 
-### E2: accepted-benchmark full lifecycle
+### E2: native objective-progress causal study
 
-Use MLR-Bench as the primary external scaffold:
+Use a source-disjoint, license-cleared subset of InnovatorBench as the first task
+acquisition candidate, with InnoGym contingent on an exact public
+implementation. Compare Full SciTaste with Native Base under one frozen capable
+model, identical starting information, tools, repair policy, time/compute
+budget, and failure accounting. The independent unit is a held-out task;
+repeated stochastic runs are nested measurements rather than artificial sample
+inflation. The formal task and repetition counts follow a non-formal pilot and
+power analysis, not an arbitrary `N systems × M tasks × K seeds` matrix.
 
-- run idea/proposal assessment over all feasible official tasks or a frozen,
-  powered, source-stratified subset no smaller than 120 cases;
-- use the official executable end-to-end subset as the starting task population
-  rather than inventing 12 arbitrary tasks;
-- compare SciTaste Native, MLR-Agent, AI Scientist-v2, and a direct
-  execution-capable agent when their official licenses and adapters pass;
-- include AutoResearchClaw as another real system only if it can consume the
-  same task package and expose comparable evidence without altering its core;
-- use matched models and resource ceilings as the primary analysis and each
-  framework's official configuration only as a separate sensitivity analysis;
-- make blinded expert judgment of the complete evidence-bearing package primary,
-  with MLR-Judge as a calibrated secondary measure.
+### E3: accepted-benchmark full lifecycle and external methods
 
-The final system/task/seed count must follow an adapter feasibility study and a
-pilot-based power analysis. As a planning reference, four systems on ten tasks
-with three seeds yield 120 independent task-system-seed trajectories; this is a
-reference count, not launch authorization.
+Use MLR-Bench as the primary complete research-package scaffold. Compare
+SciTaste Native, a direct tool agent, and at least two accepted methods only
+after unchanged-core adapters preserve the same task meaning. Agent Laboratory,
+AI-Researcher, and DeepScientist form the current high-relevance candidate pool;
+license or adapter blockers remain genuine exclusions rather than reasons to
+insert a pseudo-implementation. Matched-model and best-native configurations are
+different estimands and must be reported separately. Blinded expert assessment
+of the evidence-bearing package is primary; a validated model judge is
+secondary.
 
-### E3: executable experiment-chain integrity
+### E4: executable experiment-chain integrity
 
 Run a preregistered, source-stratified EXP-Bench subset large enough to estimate
 design, implementation, execution, conclusion, and conjunctive success. The
 subset size must be selected from a no-formal-data pilot and resource model. A
 small convenient subset can be an adapter smoke test but not a paper result.
-
-### E4: bounded frontier-progress cases
-
-Use two or three open-ended tasks with external continuous objectives and human
-or strong public baselines to test whether better decisions translate into
-actual scientific progress. This is explicitly a low-n, high-cost case series,
-not the main population estimate. The 8xRTX 3090 host may support it only after
-the exact model, data, storage, runtime, and stop manifest receives approval.
+EXP-Bench remains diagnostic and cannot replace E2 or E3.
 
 ### E5: longitudinal self-development case
 
@@ -283,9 +316,12 @@ framework deficiencies even if a human can repair the prose afterward.
 3. completed: add benchmark-fit, baseline-applicability, statistics, integrity,
    and resource critics whose outputs are content-bound proposals and whose
    schema cannot authorize execution;
-4. continue from the completed read-only identity/license audit to exact task
-   selection and adapter preflight; do not download or execute until the user
-   approves the resulting model/data/resource manifest;
-5. have SciTaste generate the concrete prelaunch proposal inside
-   `scitaste-self-development`, then require human approval before any download,
-   model call, human recruitment, API spend, or GPU run.
+4. completed: encode H1--H3, task-source roles, accepted method candidates,
+   model-selection independence, pilot-based power, human review, and recursive
+   self-development boundaries in a machine-checkable ICLR evidence program;
+5. next: prepare separately reviewable acquisition proposals for the
+   decision-case corpus and exact benchmark task subsets, plus unchanged-core
+   adapter proposals; do not download, install, recruit, or execute yet;
+6. after those proposals are accepted, present the exact model/data/runtime/cost
+   conformance pilot for owner approval, then use its failure/variance evidence
+   to freeze a new formal prelaunch manifest.

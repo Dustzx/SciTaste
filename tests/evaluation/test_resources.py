@@ -23,6 +23,7 @@ CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml
 V3_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v3.yaml")
 V4_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v4.yaml")
 V8_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v8.yaml")
+V9_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v9.yaml")
 
 
 @pytest.fixture(scope="module")
@@ -298,6 +299,33 @@ def test_v25_overlay_can_correct_content_bound_license_without_replacing_identit
     assert "blocked_gate:code_license" not in comparison.blocker_codes
     assert "blocked_gate:license_acceptance" not in comparison.blocker_codes
     assert "blocked_gate:task_mapping" in comparison.blocker_codes
+
+
+def test_v26_adds_method_and_benchmark_without_claiming_execution_readiness() -> None:
+    before = load_external_resource_corpus(V8_CORPUS_PATH).corpus
+    after = load_external_resource_corpus(V9_CORPUS_PATH).corpus
+    before_ids = {item.resource_id for item in before.resources}
+    resources = {item.resource_id: item for item in after.resources}
+
+    assert after.schema_version == "2.6"
+    assert set(resources) - before_ids == {"deep-scientist", "innovator-bench"}
+    assert resources["deep-scientist"].accepted_venue == "ICLR 2026"
+    assert resources["innovator-bench"].datasets[0].revision == (
+        "5b349af1c988a5128a0d5d6b902e70f16906d373"
+    )
+    assert evaluate_resource_feasibility(
+        after,
+        "deep-scientist",
+        ResourceUse.COMPARISON_SYSTEM,
+    ).eligible is False
+    innovator = evaluate_resource_feasibility(
+        after,
+        "innovator-bench",
+        ResourceUse.TASK_SOURCE,
+    )
+    assert innovator.eligible is False
+    assert "blocked_gate:dataset_license" in innovator.blocker_codes
+    assert "blocked_gate:task_assets" in innovator.blocker_codes
 
 
 def test_old_overlay_schema_cannot_smuggle_license_correction(tmp_path: Path) -> None:

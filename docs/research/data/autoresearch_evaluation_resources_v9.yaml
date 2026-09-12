@@ -1,0 +1,235 @@
+schema_version: "2.6"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v9
+audited_on: 2026-09-12
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v8.yaml
+base_source_sha256: fe125229fa0477b1828b26854dc36f2d68ee23496426021150a3eb22553ca6c6
+
+resources_additions:
+  - resource_id: deep-scientist
+    resource_kind: system
+    official_repository: https://github.com/ResearAI/DeepScientist
+    repository_commit: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    implementation_path: .
+    publication_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/4f64494ecc3442f1c9261baa036378bc-Abstract-Conference.html
+    accepted_venue: ICLR 2026
+    code_license:
+      identifier: Apache-2.0
+      scope: >-
+        Source covered by the root LICENSE at the pinned official repository
+        commit; dependencies, generated artifacts, task data, model services,
+        and third-party integrations retain their own terms.
+      official_url: https://raw.githubusercontent.com/ResearAI/DeepScientist/b36624417f0c6b8238ec02db37b94d6db2faa5b0/LICENSE
+      sha256: 7da7c1fd9f2c66c4ee6f5cb72abf36b8520964ed364dc516655051c87ce316c5
+      review_required: true
+      obligations:
+        - Preserve the Apache-2.0 license and notices when required.
+        - Review language-model, runner, task-data, and generated-artifact terms separately.
+    datasets: []
+    lifecycle_stages:
+      - research-question
+      - literature-search
+      - idea-generation
+      - experiment-implementation
+      - experiment-execution
+      - result-analysis
+      - artifact-generation
+    native_model_interfaces:
+      - Codex runner
+      - Claude Code runner
+      - Kimi runner
+      - OpenCode runner
+    resource_requirements:
+      - Node.js 18.18 or later
+      - npm 9 or later
+      - credentials and runtimes required by the selected runner
+      - isolated workspace for generated commands and files
+      - task-specific data, dependencies, and compute
+    gates:
+      official_identity:
+        status: verified
+        evidence: >-
+          The official ICLR proceedings and the ResearAI repository identify
+          DeepScientist as an autonomous scientific-discovery system.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/4f64494ecc3442f1c9261baa036378bc-Abstract-Conference.html
+      repository_pin:
+        status: verified
+        evidence: >-
+          Official repository HEAD was resolved to the recorded 40-character
+          commit on the audit date.
+        evidence_url: https://github.com/ResearAI/DeepScientist/tree/b36624417f0c6b8238ec02db37b94d6db2faa5b0
+      publication_identity:
+        status: verified
+        evidence: Official ICLR proceedings list DeepScientist at ICLR 2026.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/4f64494ecc3442f1c9261baa036378bc-Abstract-Conference.html
+      code_license:
+        status: verified
+        evidence: The pinned root Apache-2.0 license is bound by SHA-256 above.
+        evidence_url: https://raw.githubusercontent.com/ResearAI/DeepScientist/b36624417f0c6b8238ec02db37b94d6db2faa5b0/LICENSE
+      license_acceptance:
+        status: verified
+        evidence: >-
+          Non-redistributive adapter research is compatible with the pinned
+          Apache-2.0 root source subject to separate dependency and service review.
+      core_unmodified:
+        status: blocked
+        evidence: No isolated checkout or unchanged-core attestation has been prepared.
+      task_mapping:
+        status: blocked
+        evidence: >-
+          The current quest interface has not been mapped to a frozen SciTaste
+          task package with equivalent starting information and success criteria.
+      model_mapping:
+        status: blocked
+        evidence: >-
+          Runner-specific model behavior has not been qualified under either a
+          matched-frontier or disclosed best-native comparison regime.
+      sandbox:
+        status: blocked
+        evidence: >-
+          The current launcher can execute commands, modify files, install
+          dependencies, and use external services; its permissive default has
+          not passed the SciTaste isolation boundary.
+        evidence_url: https://github.com/ResearAI/DeepScientist/tree/b36624417f0c6b8238ec02db37b94d6db2faa5b0
+      telemetry:
+        status: blocked
+        evidence: >-
+          Model calls, token classes, cost, commands, retries, wall time, human
+          interventions, allocated compute, and active compute are not mapped.
+      artifact_mapping:
+        status: blocked
+        evidence: >-
+          Quest, branch, experiment, result, and generated artifact identities
+          are not mapped into immutable SciTaste evidence records.
+      failure_resume:
+        status: blocked
+        evidence: >-
+          Upstream pause/resume and branch features have not passed exact-cell,
+          failure-retention, timeout, retry, and content-addressed resume tests.
+      disclosure_acceptance:
+        status: not_applicable
+        evidence: >-
+          No system-specific manuscript disclosure obligation beyond normal
+          attribution was identified in the pinned root license.
+    notes:
+      - >-
+        The pinned repository reports package version 1.6.0 and may postdate the
+        accepted paper; equivalence to the evaluated ICLR 2026 system is unverified.
+      - >-
+        The paper's more-than-20,000-GPU-hour campaign is a published scale
+        observation, not a resource requirement imposed on SciTaste.
+      - No checkout, installation, runner invocation, API call, or experiment occurred.
+
+  - resource_id: innovator-bench
+    resource_kind: benchmark
+    official_repository: https://github.com/GAIR-NLP/InnovatorBench
+    repository_commit: 934ead34675a0fc610618094dabeaf7bdcb44818
+    implementation_path: .
+    publication_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/3d13d910b48ac2e672a32cfdf98be1bf-Abstract-Conference.html
+    accepted_venue: ICLR 2026
+    code_license:
+      identifier: Apache-2.0
+      scope: >-
+        Source covered by the root LICENSE at the pinned GitHub commit;
+        benchmark archives, task datasets, checkpoints, vendored packages, and
+        third-party services retain separate terms.
+      official_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/LICENSE
+      sha256: ab013f71f161c3925c4879a47e0bd86059a54c03301c970a5b41b626902ec893
+      review_required: true
+      obligations:
+        - Preserve the Apache-2.0 license and notices when required.
+        - Audit every task dataset, checkpoint, baseline, and vendored dependency separately.
+    datasets:
+      - dataset_id: innovator-bench-hf-archive
+        official_url: https://huggingface.co/datasets/GAIR/InnovatorBench/tree/5b349af1c988a5128a0d5d6b902e70f16906d373
+        revision: 5b349af1c988a5128a0d5d6b902e70f16906d373
+        license_identifier: unverified
+        reported_rows: 20
+        reported_size: 69.7 GB compressed archive plus task-specific external assets
+        local_copy_present: false
+    lifecycle_stages:
+      - task-intake
+      - literature-search
+      - method-design
+      - implementation
+      - experiment-execution
+      - objective-scoring
+    native_model_interfaces:
+      - ResearchGym language-agent interface
+      - OpenAI-compatible model client
+      - multi-host action backend
+    resource_requirements:
+      - approximately 69.7 GB official compressed benchmark archive
+      - task-specific datasets and checkpoints
+      - Python 3.10 environment and benchmark dependencies
+      - Docker and web-service backends
+      - one distinct computer endpoint per concurrently active task
+      - task-dependent multi-GPU or multi-node compute
+      - provider credentials for language agents and evaluators
+    gates:
+      official_identity:
+        status: verified
+        evidence: >-
+          The official ICLR paper, GitHub repository, and linked Hugging Face
+          dataset identify the same 20-task InnovatorBench benchmark.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/3d13d910b48ac2e672a32cfdf98be1bf-Abstract-Conference.html
+      repository_pin:
+        status: verified
+        evidence: >-
+          Official GitHub repository HEAD was resolved to the recorded commit on
+          the audit date; no repository checkout was made.
+        evidence_url: https://github.com/GAIR-NLP/InnovatorBench/tree/934ead34675a0fc610618094dabeaf7bdcb44818
+      publication_identity:
+        status: verified
+        evidence: Official ICLR proceedings list InnovatorBench at ICLR 2026.
+        evidence_url: https://proceedings.iclr.cc/paper_files/paper/2026/hash/3d13d910b48ac2e672a32cfdf98be1bf-Abstract-Conference.html
+      code_license:
+        status: verified
+        evidence: The pinned GitHub root Apache-2.0 license is bound by SHA-256 above.
+        evidence_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/LICENSE
+      dataset_pin:
+        status: verified
+        evidence: >-
+          The official Hugging Face archive is pinned to a full commit; its LFS
+          pointer reports SHA-256 b053251699ab65eef7a67f27ae1776d700f10310629b1227965d1aed3be80776
+          and 69,700,021,672 bytes. No archive bytes were acquired.
+        evidence_url: https://huggingface.co/datasets/GAIR/InnovatorBench/commit/5b349af1c988a5128a0d5d6b902e70f16906d373
+      dataset_license:
+        status: blocked
+        evidence: >-
+          The official dataset page has no dataset card or dataset-level license;
+          the GitHub Apache license cannot be imputed to the archive or its inputs.
+        evidence_url: https://huggingface.co/datasets/GAIR/InnovatorBench
+      source_groups:
+        status: blocked
+        evidence: >-
+          Paper/repository-derived task families and a source-disjoint
+          pilot/formal partition have not been frozen.
+      selected_task_manifest:
+        status: blocked
+        evidence: >-
+          No exact task subset, scientific strata, exclusions, task versions,
+          or task-asset hashes are registered.
+      task_assets:
+        status: blocked
+        evidence: >-
+          The official archive and task-specific datasets/checkpoints have not
+          been downloaded, inventoried, or qualified.
+      upstream_licenses:
+        status: blocked
+        evidence: >-
+          Dataset, checkpoint, baseline, vendored alpaca_eval, and task-specific
+          terms remain unaudited.
+      executable_signal:
+        status: blocked
+        evidence: >-
+          Objective task scores are reported, but no selected task has passed a
+          SciTaste environment, metric, failure, and reproducibility preflight.
+    notes:
+      - >-
+        InnovatorBench is a task source for objective research progress, not an
+        external autonomous-research method comparator.
+      - >-
+        Its 2-to-36-hour task horizon and multi-host setup make it a qualified
+        high-cost candidate, not a reason to choose a convenient local model.
+      - No archive, task data, checkpoint, code checkout, or experiment was acquired or run.

@@ -4,6 +4,15 @@ Status: scientific design freeze candidate. This document selects questions and
 estimands, not compute. It authorizes no dataset download, API call, GPU job,
 model transfer, human recruitment, or experiment.
 
+The executable contract is
+[`iclr2027_scitaste_evidence_program_v1.yaml`](../configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml),
+inspected against the additive
+[`autoresearch_evaluation_resources_v9.yaml`](research/data/autoresearch_evaluation_resources_v9.yaml)
+snapshot. The current deterministic report is scientifically coherent but not
+acquisition-ready, experiment-ready, or execution-authorized. In particular,
+the program fixes claims and roles before choosing a model: changes in local or
+remote inventory update feasibility evidence, not H1--H3.
+
 ## What the paper must establish
 
 The paper is a method paper about explicit Scientific Taste, not a benchmark
@@ -103,6 +112,12 @@ Primary endpoint: task-normalized objective progress. Secondary endpoints:
 valid completion, unsupported-claim rate, evidence sufficiency, resource use,
 and condition-blinded expert preference over the complete research package.
 
+The first task-source acquisition candidate is InnovatorBench because its
+long-horizon tasks expose executable objective scores. InnoGym is a contingent
+alternative once an exact public implementation and task assets can be pinned.
+This source order is based on endpoint fit, not on whether its models or data
+already exist on either available machine.
+
 ### 3. External-system ecological comparison
 
 Compare SciTaste Native, a direct tool-using agent, and at least two accepted
@@ -117,6 +132,12 @@ effects are explicit confounds. It supports “competitive with real systems,”
 “Taste caused the cross-system difference.” AutoResearchClaw and AI
 Scientist-v2 may appear as sensitivity systems but do not replace the accepted-
 method minimum.
+
+MLR-Bench is the primary full-lifecycle task scaffold for this layer, while
+Agent Laboratory, AI-Researcher, and DeepScientist are method candidates. A
+benchmark cannot satisfy the two-method requirement, and a method that fails
+license, unchanged-core, task-mapping, sandbox, telemetry, artifact, or resume
+admission cannot be replaced by a mock implementation.
 
 ## Model policy, independent of current hardware
 

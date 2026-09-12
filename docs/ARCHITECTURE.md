@@ -2110,3 +2110,32 @@ attempt, and every output remains no-run with `authorizes_execution=false`. This
 closes the software route from high-quality references to auditable Taste
 experience without claiming that the presently missing human corpus exists or
 that the resulting Taste is effective.
+
+### ADR-069: Scientific design precedes resource admission
+
+Status: accepted for ICLR 2027 evidence planning; acquisition and experiments
+remain unauthorized.
+
+Available checkpoints, API credentials, and GPU hosts are mutable capacity
+observations. They cannot define the paper's claims, choose its controls, or turn
+an available benchmark into a scientifically appropriate one. SciTaste therefore
+stores the ICLR evidence program separately from its resource corpus and inspects
+four ordered states: scientific coherence, acquisition-proposal readiness,
+experiment readiness, and hash-bound owner authorization.
+
+The scientific layer requires three confirmatory contrasts: reviewed abstracted
+Taste versus raw retrieval from the same sources, matched versus source-disjoint
+mismatched Taste under parity, and Full SciTaste versus Native Base on held-out
+objective progress. It also assigns each external artifact one type. Benchmarks
+provide decision, objective-progress, full-lifecycle, or integrity tasks;
+accepted systems provide method comparators. A benchmark placed in the system
+candidate set fails coherence even if its paper is highly ranked.
+
+Operational evidence is an additive overlay. Resource corpus v9 pins
+DeepScientist and InnovatorBench while preserving their unresolved license,
+equivalence, asset, adapter, sandbox, telemetry, and resume gates. A conformance
+pilot may later choose one capable primary model and a non-pooled robustness
+provider, but no inventory entry can rewrite H1--H3. Formal sample size and
+replication remain unset until an excluded pilot supports a power analysis, and
+the self-development case remains process evidence outside every headline
+population estimate.

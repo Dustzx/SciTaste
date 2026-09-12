@@ -20,13 +20,13 @@ artifacts:
     sha256: 192a06481ccaf6bb66688ec12bc747d19a7ef63d220832c7c820e8f8c2bbfc24
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 7bbae2cd08ac79c71b98ac16ba7564bd3ffae05cc724b5419cfe4b2dcacc08a1
+    sha256: a6badcdf4b942f36c79e3423925d746901d820e2c269a9aebd4dbaa5db64b8d2
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 469d4478f4b1dd5bce4e08c6850ee18c993fc41f94ceb489baf6a74ad1718cec
+    sha256: e7771fa58bab593527d38dc44fceb5d16387712dfb17aae96c6a80ea188f1fa1
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3

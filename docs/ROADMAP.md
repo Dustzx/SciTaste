@@ -207,7 +207,8 @@ the executable signal is unverified, and held-out overlap remains pending. This
 negative qualification replaces the earlier assumption that task acquisition
 alone would make the 100-trajectory v6 matrix suitable for launch.
 
-The next objective-source gate is now concrete rather than aspirational. A v7
+An earlier resource-feasibility route made the MLRC objective-source gate
+concrete. A v7
 resource overlay distinguishes the official MLRC-Bench executable repository
 from its earlier leaderboard/Space identity, and a no-run candidate partitions
 all seven accepted tasks against the shared compute catalog. Four published
@@ -241,7 +242,17 @@ The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external
 systems use a separately disclosed best-native, model-confounded lane for
 ecological validity. An executable EXP-Bench/MLRC-Bench-style population remains
-the next data gate before any title-level evidence-validity claim.
+an earlier feasibility target rather than the complete title-level population.
+
+The ICLR evidence-program v1 now supersedes that resource-driven route as the
+scientific authority. It assigns InnovatorBench first priority for H3 objective
+progress, MLR-Bench to supporting full-lifecycle packages, and EXP-Bench to
+experiment-integrity diagnosis. It separately names Agent Laboratory,
+AI-Researcher, and DeepScientist as method candidates, so benchmark papers cannot
+inflate the system-comparison count. Deterministic inspection currently passes
+scientific coherence while blocking acquisition, experiment, and execution on
+the still-unresolved source, license, adapter, model, power, and human-review
+gates. No Qwen, API, or GPU resource selects this architecture.
 
 The native condition names are now backed by executable first-party policies
 rather than metadata. A closed six-profile matrix controls utility, Knowledge,

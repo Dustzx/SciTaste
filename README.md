@@ -138,7 +138,7 @@ the repository tests; study dependencies are installed separately with
 | Area | Current boundary |
 |---|---|
 | System | Core offline paths are implemented and tested; engineering correctness is not a scientific effectiveness result. |
-| Evaluation | Protocols, matched-budget cells, resource gates, and baseline contracts exist; formal comparative cells have not been launched. |
+| Evaluation | The ICLR evidence program is scientifically coherent and resource-independent; data, adapters, model choice, power, human review, and formal runs remain gated. |
 | Paper | The tracked ICLR 2027 manuscript is a working research draft, not a publication-ready or accepted paper. |
 | Review | Typed model and reviewer-obligation loops exist; independent expert review of the current manuscript remains incomplete. |
 
@@ -146,7 +146,9 @@ The manuscript source is
 [`manuscripts/scitaste/main.md`](manuscripts/scitaste/main.md). Before interpreting
 any pilot, read the [ICLR 2027 evaluation plan](docs/ICLR_2027_EVALUATION_PLAN.md)
 and [core experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md), then
-inspect the [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
+inspect the
+[machine-checkable evidence program](configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml)
+and [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
 
 ## Models and integrations
 
