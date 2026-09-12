@@ -390,12 +390,12 @@ def _inspect_semantic_bindings(
     ].status
     if (
         generation_status is ReadinessStatus.VERIFIED
-        and workflow.get("native_code_generation_config") is None
+        and workflow.get("native_candidate_generation_enabled") is not True
     ):
         _add(
             blockers,
             "candidate_generation_claim_inconsistent",
-            "verified candidate generation has no workflow binding",
+            "verified candidate generation is not enabled by the bound workflow",
         )
 
 

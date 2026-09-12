@@ -16,6 +16,7 @@ from scitaste.evaluation.native_condition_preflight import (
 )
 
 MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml")
+V2_MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v2.yaml")
 
 
 def test_tracked_preflight_proves_static_selection_but_blocks_experiment() -> None:
@@ -42,6 +43,26 @@ def test_tracked_preflight_proves_static_selection_but_blocks_experiment() -> No
     }
     assert report.pending_requirements == (NativePathRequirement.CHECKPOINT_EXECUTION,)
     assert len(report.proposal_sha256) == 64
+    assert report.no_external_action_performed is True
+
+
+def test_v2_proves_bounded_candidate_generation_but_keeps_external_gates_closed() -> None:
+    inspection = load_native_condition_preflight_manifest(V2_MANIFEST)
+    report = inspect_native_condition_preflight(inspection, source_root=".")
+
+    assert report.source_commit_available is True
+    assert report.source_commit_is_ancestor is True
+    assert report.static_action_path_verified is True
+    assert report.model_candidate_generation_verified is True
+    assert report.corpus_pair_verified is False
+    assert report.checkpoint_execution_verified is False
+    assert report.ready_for_experiment is False
+    assert set(report.blocked_requirements) == {
+        NativePathRequirement.MATCHED_PLACEBO_CORPORA,
+    }
+    assert report.pending_requirements == (NativePathRequirement.CHECKPOINT_EXECUTION,)
+    assert "candidate_generation_claim_inconsistent" not in {item.code for item in report.blockers}
+    assert report.authorizes_execution is False
     assert report.no_external_action_performed is True
 
 
