@@ -77,6 +77,7 @@ from scitaste.evaluation import (
     inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_dataset_acquisition_request,
+    inspect_dataset_license_policy,
     inspect_dataset_package_archives,
     inspect_dataset_package_request,
     inspect_executable_candidate,
@@ -88,6 +89,7 @@ from scitaste.evaluation import (
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_dataset_acquisition_request,
+    load_dataset_license_policy,
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
@@ -108,6 +110,7 @@ from scitaste.evaluation import (
     save_acquisition_gate_report,
     save_dataset_acquisition_request,
     save_dataset_archive_qualification_report,
+    save_dataset_license_policy_report,
     save_dataset_package_approval,
     save_dataset_package_gate_report,
     save_evaluation_cell_plan,
@@ -1311,6 +1314,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(dataset_package_request)
     dataset_package_request.set_defaults(handler=_handle_evaluation_dataset_package_request)
+    dataset_package_license = evaluation_commands.add_parser(
+        "dataset-package-license",
+        help="Inspect a content-bound package license policy without network or data access",
+    )
+    dataset_package_license.add_argument("--manifest", type=Path, required=True)
+    dataset_package_license.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_package_license.add_argument("--output", type=Path, default=None)
+    dataset_package_license.add_argument(
+        "--require-acquisition-ready",
+        action="store_true",
+        help="return nonzero unless the exact package is license-ready for owner approval",
+    )
+    dataset_package_license.add_argument(
+        "--require-ingestion-ready",
+        action="store_true",
+        help="return nonzero while post-acquisition license checks remain open",
+    )
+    _add_log_level_option(dataset_package_license)
+    dataset_package_license.set_defaults(handler=_handle_evaluation_dataset_package_license)
     dataset_package_approve = evaluation_commands.add_parser(
         "dataset-package-approve",
         help="Bind owner approval to one exact, review-ready large package without downloading",
@@ -4063,6 +4085,23 @@ def _handle_evaluation_dataset_package_request(args: argparse.Namespace) -> int:
     if args.require_metadata_review_ready and not report.metadata_review_ready:
         return 1
     if args.require_owner_approval_ready and not report.ready_for_owner_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_dataset_package_license(args: argparse.Namespace) -> int:
+    inspection = load_dataset_license_policy(args.manifest)
+    report = inspect_dataset_license_policy(inspection, workspace_root=args.workspace_root)
+    payload = {
+        "manifest_path": str(inspection.path),
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report"] = str(save_dataset_license_policy_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_acquisition_ready and not report.acquisition_license_ready:
+        return 1
+    if args.require_ingestion_ready and not report.ingestion_license_ready:
         return 1
     return 0
 

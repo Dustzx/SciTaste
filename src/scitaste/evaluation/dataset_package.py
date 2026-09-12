@@ -221,6 +221,7 @@ class DatasetPackageAcquisitionRequest(BaseModel):
     resource_corpus: DatasetPackageFileBinding
     compute_catalog: DatasetPackageFileBinding
     inventory: DatasetPackageFileBinding
+    license_policy: DatasetPackageFileBinding | None = None
     selected_task_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=20)
     destination_root: str = Field(min_length=1, max_length=1_000)
@@ -389,9 +390,19 @@ def inspect_dataset_package_request(
     corpus_path = _verify_binding(root, request.resource_corpus, integrity, "resource-corpus")
     compute_path = _verify_binding(root, request.compute_catalog, integrity, "compute-catalog")
     inventory_path = _verify_binding(root, request.inventory, integrity, "inventory")
+    license_policy_path = None
+    if request.license_policy is not None:
+        license_policy_path = _verify_binding(
+            root,
+            request.license_policy,
+            integrity,
+            "license-policy",
+        )
 
     inventory_inspection: DatasetPackageInventoryInspection | None = None
     candidate_report = None
+    license_policy_inspection = None
+    license_policy_report = None
     if inventory_path is not None:
         try:
             inventory_inspection = load_dataset_package_inventory(inventory_path)
@@ -407,6 +418,53 @@ def inspect_dataset_package_request(
             )
         except (OSError, ValueError) as exc:
             _add(integrity, "candidate:invalid", str(exc))
+    if license_policy_path is not None:
+        try:
+            from scitaste.evaluation.dataset_license_policy import (
+                inspect_dataset_license_policy,
+                load_dataset_license_policy,
+            )
+
+            license_policy_inspection = load_dataset_license_policy(license_policy_path)
+            license_policy_report = inspect_dataset_license_policy(
+                license_policy_inspection,
+                workspace_root=root,
+            )
+        except (OSError, ValueError) as exc:
+            _add(integrity, "license-policy:invalid", str(exc))
+        else:
+            if license_policy_inspection.policy.project_id != request.project_id:
+                _add(
+                    integrity,
+                    "license-policy:project-mismatch",
+                    "license policy targets a different project",
+                )
+            if license_policy_inspection.policy.inventory != request.inventory:
+                _add(
+                    integrity,
+                    "license-policy:inventory-mismatch",
+                    "license policy targets different inventory bytes",
+                )
+            if license_policy_report.asset_count != request.expected_asset_count:
+                _add(
+                    integrity,
+                    "license-policy:asset-count-mismatch",
+                    "license policy asset count differs from the request",
+                )
+            for finding in license_policy_report.integrity_blockers:
+                _add(
+                    integrity,
+                    f"license-policy:{finding.code}",
+                    finding.message,
+                    finding.task_id,
+                )
+            for finding in license_policy_report.pending_post_acquisition_checks:
+                _add(
+                    pending,
+                    finding.code,
+                    finding.message,
+                    finding.task_id,
+                )
 
     tasks: list[DatasetPackageTaskQualification] = []
     source_hosts: tuple[str, ...] = ()
@@ -433,9 +491,30 @@ def inspect_dataset_package_request(
         observed_bytes = inventory.observed_compressed_bytes
         unpacked_bytes = inventory.maximum_unpacked_bytes
         pending_hashes = sum(item.expected_sha256 is None for item in assets)
+        license_task_ready = {
+            item.task_id: item.acquisition_license_ready
+            for item in (
+                license_policy_report.task_qualifications
+                if license_policy_report is not None
+                else ()
+            )
+        }
         for task in inventory.tasks:
             blockers: list[str] = []
-            if task.license_disposition is not DatasetAssetLicenseDisposition.VERIFIED:
+            policy_ready = license_task_ready.get(task.task_id, False)
+            if request.license_policy is not None and not policy_ready:
+                code = f"license-policy:{task.task_id}:not-acquisition-ready"
+                blockers.append(code)
+                _add(
+                    approvals,
+                    code,
+                    "bound license policy does not close the acquisition scope",
+                    task.task_id,
+                )
+            elif (
+                request.license_policy is None
+                and task.license_disposition is not DatasetAssetLicenseDisposition.VERIFIED
+            ):
                 code = f"license:{task.task_id}:{task.license_disposition.value}"
                 blockers.append(code)
                 _add(
@@ -450,7 +529,11 @@ def inspect_dataset_package_request(
                     asset_count=len(task.assets),
                     observed_compressed_bytes=task.observed_compressed_bytes,
                     maximum_unpacked_bytes=task.maximum_unpacked_bytes,
-                    license_disposition=task.license_disposition,
+                    license_disposition=(
+                        DatasetAssetLicenseDisposition.VERIFIED
+                        if policy_ready
+                        else task.license_disposition
+                    ),
                     exact_source_metadata_ready=True,
                     ready_for_owner_approval=not blockers,
                     blocker_codes=tuple(blockers),

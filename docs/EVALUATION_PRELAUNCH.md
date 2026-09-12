@@ -197,11 +197,13 @@ review-only request:
 ```
 
 It binds 39 archives with 3,761,168,137 observed compressed bytes, a 16 GiB
-unpacked ceiling, and a 32 GiB minimum-free-storage requirement. It is not
-owner-approval-ready: the Perception Test/MLRC derivative-license descriptions
-conflict, Meta-Album's per-dataset licenses are heterogeneous, and AWA lacks a
-precise Creative Commons variant. Content hashes and archive safety also remain
-post-acquisition qualifications. See
+unpacked ceiling, and a 32 GiB minimum-free-storage requirement. It is
+owner-review-ready but not approved. The bound license policy preserves
+CC-BY-4.0 for Perception materials and Meta-Album's CC-BY-NC-4.0 overlay plus
+source-specific obligations. AWA correctly remains a per-image license case:
+acquisition is reviewable, while ingestion requires license-record presence and
+coverage checks. Content hashes and archive safety also remain post-acquisition
+qualifications. See
 [`MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md`](research/MLRC_FIRST_PREFLIGHT_ACQUISITION_AUDIT_V1.md).
 
 ## Project-owned proposal bundles
@@ -366,10 +368,10 @@ protocol.
 
 ## Remaining work before the first approved block
 
-1. Resolve the two exact MLRC large-asset license blockers, freeze the
-   attribution/obligation manifest, and implement the bounded streaming plus
-   archive-safety path. Present the regenerated request hash before any
-   transfer. Separately select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
+1. Review the exact MLRC license policy, proposal hash, and gate hash before any
+   transfer. If approved, use the implemented bounded streaming and archive
+   safety path, then close AWA's per-image license-record checks before
+   ingestion. Separately select a deliberately non-formal MLR-Bench brief-only prepilot from the ten
    exact acquired inputs; freeze output package hashes, reviewer blinding, and
    runtime policy. Do not promote these broad prompts to empirical tasks. After
    an approved MLRC acquisition and package qualification, reproduce each

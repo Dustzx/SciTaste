@@ -24,6 +24,9 @@ compute_catalog:
 inventory:
   path: docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml
   sha256: 7e1d3b3bd66716691b8a70aead205e2af9a361a60971a81e46a91584b078f8ad
+license_policy:
+  path: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
+  sha256: d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
 selected_task_ids:
   - perception_temporal_action_loc
   - meta-learning

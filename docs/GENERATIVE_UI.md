@@ -267,6 +267,16 @@ project conversation at revision 303 and disclosed deterministic planning with
 no execution authority. The check is receiver engineering evidence, not a
 human-usability result.
 
+Project revision 308 replaces that package card's coarse license disposition
+with the content-bound MLRC first-preflight policy result. The selected run now
+shows that all 39 archive identities are acquisition-license-ready for an exact
+owner decision while preserving two AWA per-image-license checks as unresolved
+ingestion qualifications. The same card continues to report an empty approval-
+blocker set separately from the five post-approval qualifications and retains
+`authorizes_download=false` and `authorizes_ingestion=false`. This registration
+is self-dogfooding evidence for the interface and control plane only; it is not
+a dataset acquisition, experiment, or scientific-effectiveness result.
+
 Every visible progress row carries supporting evidence references. Run and
 paper status rows cite both `PROJECT.json` and their content-addressed run or
 paper record because selection and status come from the project manifest.

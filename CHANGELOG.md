@@ -7,6 +7,16 @@ semantic versioning.
 
 ### Added
 
+- Large benchmark license decisions now use a content-bound policy instead of
+  flattening layered rights into one scalar label. The first MLRC policy maps
+  all 39 assets to nine obligation profiles under an explicit non-commercial
+  academic scope. It preserves upstream CC-BY-4.0 for Perception materials,
+  composes Meta-Album's CC-BY-NC-4.0 release boundary with source-specific
+  duties, and models AWA as per-image licensing. The package is now ready for
+  exact owner review while AWA ingestion remains blocked on two acquired-byte
+  checks; the policy itself authorizes no download, ingestion, API, GPU, or
+  execution.
+
 - Large benchmark packages now have a separate post-approval streaming path.
   Owner authority binds the exact proposal, request, inventory, and no-network
   gate hashes; download additionally requires confirmed proposal/approval
@@ -15,8 +25,8 @@ semantic versioning.
   writing to atomic staging, and never overwrites a transaction. A subsequent
   no-extraction ZIP qualifier rehashes receipt bytes and rejects path escapes,
   symbolic links, encryption, duplicate members, suspicious compression, and
-  expanded-byte excess. The current MLRC request remains license-blocked, and
-  implementation/testing performed no source, API, SSH, GPU, or model action.
+  expanded-byte excess. The current MLRC request remains unapproved, and
+  implementation/testing performed no dataset, API, SSH, GPU, or model action.
 
 - Shared resources now have a redacted local-access inspection boundary. A
   mode-`0600`, Git-ignored credential file can bind the catalog's DeepSeek,
@@ -37,11 +47,11 @@ semantic versioning.
 - The first MLRC executable-task slice now has an exact, no-download package
   gate. It binds 39 Google Drive/OpenML archives and their source identities,
   3.503 GiB of observed compressed bytes, per-task unpack ceilings, a 32-GiB
-  free-space floor, and heterogeneous license evidence. Perception Test
-  derivative-license and Meta-Album AWA-license conflicts remain explicit
-  approval blockers; all network, download, ingestion, API, GPU, and execution
-  authority remains false. Generation as Content projects the decision as a
-  compact review card instead of expanding the archive ledger on the homepage.
+  free-space floor, and heterogeneous license evidence. Its separate policy
+  resolves the narrow acquisition scope without pretending AWA has one license;
+  all network, download, ingestion, API, GPU, and execution authority remains
+  false. Generation as Content projects the decision as a compact review card
+  instead of expanding the archive ledger on the homepage.
 
 - API and GPU resources are now operationally explicit inside the shared
   resource directory. The Zhipu manifest uses the executable backend's

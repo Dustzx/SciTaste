@@ -44,7 +44,7 @@ def test_repository_inventory_freezes_exact_first_preflight_assets() -> None:
     assert inventory.authorizes_execution is False
 
 
-def test_repository_request_is_metadata_ready_but_not_approval_ready() -> None:
+def test_repository_request_is_license_policy_bound_and_approval_ready() -> None:
     inspection = load_dataset_package_request(REQUEST_PATH)
 
     report = inspect_dataset_package_request(inspection, workspace_root=".")
@@ -58,15 +58,15 @@ def test_repository_request_is_metadata_ready_but_not_approval_ready() -> None:
     assert report.observed_download_bytes == 3_761_168_137
     assert report.minimum_free_storage_bytes == 32 * 1024**3
     assert report.metadata_review_ready is True
-    assert report.ready_for_owner_approval is False
+    assert report.ready_for_owner_approval is True
     assert report.pending_content_hash_count == 39
-    assert {item.code for item in report.approval_blockers} == {
-        "license:meta-learning:blocked",
-        "license:perception_temporal_action_loc:review_required",
-    }
+    assert report.approval_blockers == ()
+    assert {item.license_disposition.value for item in report.task_qualifications} == {"verified"}
     assert {item.code for item in report.pending_qualifications} == {
         "archive-safety:qualification-pending",
         "content-hashes:pending-first-acquisition",
+        "license-post-acquisition:meta-learning:awa-per-image-license-coverage-complete",
+        "license-post-acquisition:meta-learning:awa-per-image-license-records-present",
         "network-preflight:not-approved",
     }
     assert [item.code for item in report.authorization_blockers] == ["owner-approval-required"]
@@ -110,6 +110,31 @@ def test_candidate_or_inventory_drift_fails_closed() -> None:
     )
     assert report.asset_count == 0
     assert "inventory:hash-mismatch" in {item.code for item in report.integrity_blockers}
+
+
+def test_license_policy_drift_fails_the_package_gate_closed() -> None:
+    inspection = load_dataset_package_request(REQUEST_PATH)
+    request = inspection.request
+    assert request.license_policy is not None
+    drifted_policy = request.license_policy.model_copy(update={"sha256": "a" * 64})
+    drifted = request.model_copy(update={"license_policy": drifted_policy})
+
+    report = inspect_dataset_package_request(
+        DatasetPackageRequestInspection(
+            path=inspection.path,
+            file_sha256=inspection.file_sha256,
+            request=drifted,
+        ),
+        workspace_root=".",
+    )
+
+    assert report.metadata_review_ready is False
+    assert report.ready_for_owner_approval is False
+    assert "license-policy:hash-mismatch" in {item.code for item in report.integrity_blockers}
+    assert {item.code for item in report.approval_blockers} == {
+        "license-policy:meta-learning:not-acquisition-ready",
+        "license-policy:perception_temporal_action_loc:not-acquisition-ready",
+    }
 
 
 def test_inventory_rejects_false_arithmetic_and_source_identity() -> None:
@@ -170,11 +195,11 @@ def test_cli_separates_metadata_readiness_from_owner_approval(
     assert main([*base, "--require-metadata-review-ready", "--output", str(output)]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["metadata_review_ready"] is True
-    assert payload["ready_for_owner_approval"] is False
+    assert payload["ready_for_owner_approval"] is True
     assert payload["report"] == str(output)
     assert load_dataset_package_gate_report(output).request_id == "mlrc-first-preflight-assets-v1"
 
-    assert main([*base, "--require-owner-approval-ready"]) == 1
+    assert main([*base, "--require-owner-approval-ready"]) == 0
     capsys.readouterr()
 
 

@@ -771,8 +771,11 @@ def _validate_inventory_against_authority(
     gate: DatasetPackageGateReport,
     approval: DatasetPackageApproval,
 ) -> None:
-    if any(task.license_disposition.value != "verified" for task in inventory.tasks):
-        raise ValueError("dataset package inventory contains an unresolved license disposition")
+    if any(
+        task.license_disposition.value != "verified" or not task.ready_for_owner_approval
+        for task in gate.task_qualifications
+    ):
+        raise ValueError("dataset package gate contains an unresolved license disposition")
     if len(assets) != approval.asset_count or len(assets) != gate.asset_count:
         raise ValueError("dataset package inventory asset count differs from authority")
     size = sum(asset.observed_content_length_bytes for _, asset in assets)

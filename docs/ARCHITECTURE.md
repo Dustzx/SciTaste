@@ -1798,8 +1798,9 @@ execution authority are separate partitions. An initial transfer cannot claim
 a content SHA-256 before bytes exist; it must record that hash in an atomic
 receipt. Archive path traversal and expanded-size safety are likewise
 post-transfer gates. A license conflict blocks owner-approval readiness even
-when every source object is exact. The current report grants no network,
-download, ingestion, API, GPU, or execution authority.
+when every source object is exact, unless a separate content-bound policy
+preserves all applicable obligations for a narrower use scope. The report still
+grants no network, download, ingestion, API, GPU, or execution authority.
 
 Generation as Content may show the bounded task/size/license decision and link
 to the content-addressed report. It does not inline 39 object records on the
@@ -1828,5 +1829,35 @@ rehashes every archive and inspects ZIP central directories without extraction.
 Path escapes, symbolic links, encrypted or duplicate members, suspicious
 compression, member-count excess, and task-level expanded-byte excess fail
 closed. Even a safe report grants no ingestion, provider, GPU, or experiment
-authority. This separation lets software readiness advance while the current
-license gate remains truthfully unresolved.
+authority. This separation lets software readiness advance while rights and
+post-acquisition checks remain independently visible.
+
+### ADR-060: Acquisition license readiness is not ingestion clearance
+
+Status: accepted for the first MLRC package; no transfer is approved.
+
+One scalar license label cannot represent layered dataset rights. SciTaste now
+binds the exact asset inventory to a separate policy containing a fixed academic
+non-commercial use scope, reusable obligation profiles, a one-to-one asset map,
+task closure, and literal false authority fields. The deterministic inspector
+rejects inventory hash drift, missing or duplicate assets, task-order drift,
+profile/license mismatch, unused profiles, unsafe use scope, and any acquisition
+profile that remains blocked.
+
+For Perception Test material, the conservative effective basis is upstream
+CC-BY-4.0. A downstream MLRC Apache statement is retained as provenance but does
+not erase upstream attribution or modification-notice duties. For Meta-Album,
+the CC-BY-NC-4.0 transformed-release boundary composes with each source label;
+redistribution and raw/derived dataset publication remain outside the policy.
+This permits an owner to review a download for the paper's local academic use
+without claiming general legal clearance.
+
+AWA demonstrates why acquisition and ingestion are distinct. Official sources
+describe freely redistributable images with one license record per image, not a
+single Creative Commons variant. The policy can therefore make the exact archive
+acquisition-review-ready while keeping ingestion false until acquired bytes
+prove license-record presence and complete image coverage. The package proposal
+hash binds the policy file, so weakening its scope or obligations invalidates
+the owner decision. No policy inspection calls a network, creates dataset bytes,
+approves a transfer, or authorizes extraction, ingestion, API, GPU, or experiment
+execution.

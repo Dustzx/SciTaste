@@ -213,22 +213,24 @@ def _fetcher(payload: bytes, asset: DatasetPackageAsset):
     return fetch
 
 
-def test_repository_request_cannot_be_approved_while_license_gates_are_open() -> None:
+def test_repository_request_needs_exact_owner_confirmation_after_license_policy() -> None:
     inspection = load_dataset_package_request(REPOSITORY_REQUEST)
     report = inspect_dataset_package_request(inspection, workspace_root=".")
 
-    with pytest.raises(ValueError, match="not owner-approval-ready"):
+    assert report.ready_for_owner_approval is True
+    assert report.authorizes_download is False
+    with pytest.raises(ValueError, match="proposal hash does not match"):
         approve_dataset_package_request(
             inspection,
             report,
-            confirmed_proposal_sha256=inspection.request.proposal_sha256,
+            confirmed_proposal_sha256="0" * 64,
             confirmed_gate_report_sha256=report.report_sha256,
             approved_by="owner",
             approved_at=OBSERVED_AT,
         )
 
 
-def test_cli_cannot_approve_the_repository_request(
+def test_cli_cannot_approve_repository_request_with_wrong_hash(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -245,7 +247,7 @@ def test_cli_cannot_approve_the_repository_request(
                 "--workspace-root",
                 ".",
                 "--confirm-proposal-sha256",
-                inspection.request.proposal_sha256,
+                "0" * 64,
                 "--confirm-gate-report-sha256",
                 report.report_sha256,
                 "--approved-by",
@@ -257,7 +259,7 @@ def test_cli_cannot_approve_the_repository_request(
             ]
         )
     assert exc_info.value.code == 2
-    assert "not owner-approval-ready" in capsys.readouterr().err
+    assert "proposal hash does not match" in capsys.readouterr().err
     assert not (tmp_path / "APPROVAL.json").exists()
 
 

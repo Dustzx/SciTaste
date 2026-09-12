@@ -1,0 +1,296 @@
+schema_version: "1.0"
+policy_id: mlrc-first-preflight-license-policy-v1
+project_id: scitaste-self-development
+purpose: >-
+  Freeze the license basis, attribution duties, non-commercial research scope,
+  redistribution boundary, and post-acquisition checks for the exact 39-archive
+  MLRC first-preflight package before an owner is asked to approve a transfer.
+claim_boundary: >-
+  This policy establishes acquisition readiness only for local, non-commercial
+  academic research. It is not legal advice; it does not approve a download,
+  extraction, ingestion, provider call, GPU job, experiment, dataset
+  redistribution, or publication of raw or derived dataset bytes.
+inventory:
+  path: docs/research/data/mlrc_first_preflight_asset_inventory_v1.yaml
+  sha256: 7e1d3b3bd66716691b8a70aead205e2af9a361a60971a81e46a91584b078f8ad
+use_scope:
+  purpose: non-commercial-academic-research
+  dataset_redistribution_allowed: false
+  raw_data_publication_allowed: false
+  derived_dataset_publication_allowed: false
+  aggregate_result_publication_allowed: true
+  source_attribution_required: true
+  source_citation_required: true
+
+profiles:
+  - profile_id: perception-materials-cc-by-4.0
+    declared_license_identifiers: [CC-BY-4.0-vs-upstream-Apache-claim]
+    effective_license_basis: [Perception-Test-non-software-materials-CC-BY-4.0]
+    evidence_urls:
+      - https://raw.githubusercontent.com/google-deepmind/perception_test/3938d2f1ba3a6b502025741cea4cd73c7b3bdfaf/README.md
+      - https://raw.githubusercontent.com/yunx-z/MLRC-Bench/0d26417034811d2d4587646c4520cc305ea09dd6/MLAgentBench/benchmarks_base/perception_temporal_action_loc/README.md
+    required_actions:
+      - attribute-perception-test-and-deepmind
+      - cite-perception-test
+      - identify-mlrc-split-modifications
+      - retain-cc-by-4.0-license-reference
+    restrictions:
+      - mlrc-apache-claim-does-not-relicense-upstream-materials
+      - no-dataset-redistribution-under-this-request
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      The pinned upstream repository assigns CC-BY-4.0 to every non-software
+      material. The MLRC README's Apache statement is treated only as a code or
+      modification claim and cannot reduce the upstream attribution duty.
+
+  - profile_id: meta-cc0-with-release-overlay
+    declared_license_identifiers: [CC0-1.0]
+    effective_license_basis: [CC0-1.0-upstream, Meta-Album-CC-BY-NC-4.0-release]
+    evidence_urls: &meta_release_evidence
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/index.html
+    required_actions: &meta_common_actions
+      - attribute-meta-album
+      - cite-meta-album
+      - cite-original-dataset
+      - retain-source-license-record
+    restrictions: &meta_common_restrictions
+      - non-commercial-research-only
+      - no-dataset-redistribution-under-this-request
+      - no-derived-dataset-release-without-separate-license-review
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      The transformed Meta-Album release retains its CC-BY-NC-4.0 citation and
+      non-commercial boundary even where the source dataset is CC0.
+
+  - profile_id: meta-permissive-with-release-overlay
+    declared_license_identifiers: [MIT, BSD-3-Clause]
+    effective_license_basis:
+      - source-permissive-license
+      - Meta-Album-CC-BY-NC-4.0-release
+    evidence_urls: *meta_release_evidence
+    required_actions:
+      - attribute-meta-album
+      - cite-meta-album
+      - cite-original-dataset
+      - retain-source-license-record
+      - retain-source-notice-if-separately-redistributed
+    restrictions: *meta_common_restrictions
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      Local academic use is within the documented release scope. Any later
+      redistribution must separately preserve the permissive notice and is not
+      authorized by this policy.
+
+  - profile_id: meta-gpl-with-release-overlay
+    declared_license_identifiers: [GPL-2.0-only]
+    effective_license_basis: [GPL-2.0-only-source, Meta-Album-CC-BY-NC-4.0-release]
+    evidence_urls: *meta_release_evidence
+    required_actions:
+      - attribute-meta-album
+      - cite-meta-album
+      - cite-original-dataset
+      - retain-source-license-record
+    restrictions:
+      - non-commercial-research-only
+      - local-use-only-unless-license-compatibility-is-reviewed
+      - no-dataset-redistribution-under-this-request
+      - no-derived-dataset-release-without-separate-license-review
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      This policy permits only local benchmark use. It makes no compatibility
+      claim between the source GPL label and the Meta-Album release overlay and
+      forbids redistribution or derived-data release.
+
+  - profile_id: meta-cc-by-with-release-overlay
+    declared_license_identifiers: [CC-BY-4.0]
+    effective_license_basis: [CC-BY-4.0-source, Meta-Album-CC-BY-NC-4.0-release]
+    evidence_urls: *meta_release_evidence
+    required_actions: *meta_common_actions
+    restrictions: *meta_common_restrictions
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      Local non-commercial academic use observes both the source attribution
+      requirement and the transformed-release citation and NC boundary.
+
+  - profile_id: meta-noncommercial-with-release-overlay
+    declared_license_identifiers: [CC-BY-NC-4.0, CC-BY-NC-2.0]
+    effective_license_basis:
+      - source-CC-BY-NC-license
+      - Meta-Album-CC-BY-NC-4.0-release
+    evidence_urls: *meta_release_evidence
+    required_actions: *meta_common_actions
+    restrictions: *meta_common_restrictions
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      The declared SciTaste use is academic and non-commercial, with source and
+      Meta-Album attribution retained and all data redistribution disabled.
+
+  - profile_id: meta-sharealike-with-release-overlay
+    declared_license_identifiers: [CC-BY-NC-SA-4.0, CC-BY-SA-3.0]
+    effective_license_basis:
+      - source-share-alike-license
+      - Meta-Album-CC-BY-NC-4.0-release
+    evidence_urls: *meta_release_evidence
+    required_actions:
+      - attribute-meta-album
+      - cite-meta-album
+      - cite-original-dataset
+      - retain-source-license-record
+      - preserve-share-alike-if-separately-redistributed
+    restrictions: *meta_common_restrictions
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      Local research use is admitted, while the separate release review would
+      have to honor share-alike duties; this policy grants no such release.
+
+  - profile_id: meta-imagenet-terms-with-release-overlay
+    declared_license_identifiers: [ImageNet-Terms]
+    effective_license_basis: [ImageNet-research-use-terms, Meta-Album-CC-BY-NC-4.0-release]
+    evidence_urls:
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/datasets/CRS.html
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/index.html
+    required_actions: *meta_common_actions
+    restrictions:
+      - academic-non-commercial-research-only
+      - no-dataset-redistribution-under-this-request
+      - no-derived-dataset-release-without-separate-license-review
+    acquisition_status: verified
+    ingestion_status: verified
+    rationale: >-
+      The package is admitted only for the academic research purpose published
+      by Meta-Album; no claim is made that ImageNet-derived bytes can be
+      redistributed.
+
+  - profile_id: meta-awa-per-image-with-release-overlay
+    declared_license_identifiers: [Creative-Commons-unspecified]
+    effective_license_basis:
+      - AwA2-per-image-license-files
+      - Meta-Album-CC-BY-NC-4.0-release
+    evidence_urls:
+      - https://cvml.ista.ac.at/AwA2/
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/datasets/AWA.html
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/assets/files/info/AWA_info.json
+      - https://raw.githubusercontent.com/meta-album/meta-album.github.io/f81089755c1d3f6af4c8318863581ff2b536fbd9/index.html
+    required_actions:
+      - attribute-meta-album
+      - cite-meta-album
+      - cite-animals-with-attributes-2
+      - retain-every-image-license-record
+    restrictions:
+      - non-commercial-research-only
+      - no-dataset-redistribution-under-this-request
+      - no-derived-dataset-release-without-separate-license-review
+      - no-ingestion-before-per-image-license-coverage-check
+    acquisition_status: verified
+    ingestion_status: pending_post_acquisition_checks
+    post_acquisition_checks:
+      - awa-per-image-license-records-present
+      - awa-per-image-license-coverage-complete
+    rationale: >-
+      AWA has no truthful single CC variant: the official AwA2 source says the
+      images were selected for free use and redistribution and that the archive
+      carries individual license files; the pinned Meta-Album metadata confirms
+      one license per image. Acquisition for local academic review is therefore
+      defined, but ingestion remains closed until the acquired Mini archive
+      proves complete image-to-license coverage.
+
+asset_bindings:
+  - {asset_id: perception-action-train-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-action-valid-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-sound-train-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-sound-valid-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-action-train-annotations, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-action-valid-annotations, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-action-test-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-sound-test-features, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: perception-action-test-annotations, task_id: perception_temporal_action_loc, profile_id: perception-materials-cc-by-4.0, declared_license_identifier: CC-BY-4.0-vs-upstream-Apache-claim}
+  - {asset_id: meta-44285-brd-mini, task_id: meta-learning, profile_id: meta-cc0-with-release-overlay, declared_license_identifier: CC0-1.0}
+  - {asset_id: meta-44282-plk-mini, task_id: meta-learning, profile_id: meta-permissive-with-release-overlay, declared_license_identifier: MIT}
+  - {asset_id: meta-44283-flw-mini, task_id: meta-learning, profile_id: meta-gpl-with-release-overlay, declared_license_identifier: GPL-2.0-only}
+  - {asset_id: meta-44286-plt-vil-mini, task_id: meta-learning, profile_id: meta-cc0-with-release-overlay, declared_license_identifier: CC0-1.0}
+  - {asset_id: meta-44281-bct-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44290-resisc-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44289-crs-mini, task_id: meta-learning, profile_id: meta-imagenet-terms-with-release-overlay, declared_license_identifier: ImageNet-Terms}
+  - {asset_id: meta-44288-tex-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44284-spt-mini, task_id: meta-learning, profile_id: meta-cc0-with-release-overlay, declared_license_identifier: CC0-1.0}
+  - {asset_id: meta-44287-md-mix-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44298-dog-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44292-ins-2-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44293-plt-net-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44299-med-lf-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44297-pnu-mini, task_id: meta-learning, profile_id: meta-sharealike-with-release-overlay, declared_license_identifier: CC-BY-NC-SA-4.0}
+  - {asset_id: meta-44300-rsicb-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44295-apl-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44294-tex-dtd-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44291-act-40-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44296-md-5-bis-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44305-awa-mini, task_id: meta-learning, profile_id: meta-awa-per-image-with-release-overlay, declared_license_identifier: Creative-Commons-unspecified}
+  - {asset_id: meta-44306-ins-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-2.0}
+  - {asset_id: meta-44302-fng-mini, task_id: meta-learning, profile_id: meta-permissive-with-release-overlay, declared_license_identifier: BSD-3-Clause}
+  - {asset_id: meta-44303-plt-doc-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+  - {asset_id: meta-44308-prt-mini, task_id: meta-learning, profile_id: meta-sharealike-with-release-overlay, declared_license_identifier: CC-BY-SA-3.0}
+  - {asset_id: meta-44307-rsd-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44309-bts-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44304-tex-alot-mini, task_id: meta-learning, profile_id: meta-noncommercial-with-release-overlay, declared_license_identifier: CC-BY-NC-4.0}
+  - {asset_id: meta-44301-act-410-mini, task_id: meta-learning, profile_id: meta-permissive-with-release-overlay, declared_license_identifier: BSD-3-Clause}
+  - {asset_id: meta-44310-md-6-mini, task_id: meta-learning, profile_id: meta-cc-by-with-release-overlay, declared_license_identifier: CC-BY-4.0}
+
+task_policies:
+  - task_id: perception_temporal_action_loc
+    asset_ids:
+      - perception-action-train-features
+      - perception-action-valid-features
+      - perception-sound-train-features
+      - perception-sound-valid-features
+      - perception-action-train-annotations
+      - perception-action-valid-annotations
+      - perception-action-test-features
+      - perception-sound-test-features
+      - perception-action-test-annotations
+  - task_id: meta-learning
+    asset_ids:
+      - meta-44285-brd-mini
+      - meta-44282-plk-mini
+      - meta-44283-flw-mini
+      - meta-44286-plt-vil-mini
+      - meta-44281-bct-mini
+      - meta-44290-resisc-mini
+      - meta-44289-crs-mini
+      - meta-44288-tex-mini
+      - meta-44284-spt-mini
+      - meta-44287-md-mix-mini
+      - meta-44298-dog-mini
+      - meta-44292-ins-2-mini
+      - meta-44293-plt-net-mini
+      - meta-44299-med-lf-mini
+      - meta-44297-pnu-mini
+      - meta-44300-rsicb-mini
+      - meta-44295-apl-mini
+      - meta-44294-tex-dtd-mini
+      - meta-44291-act-40-mini
+      - meta-44296-md-5-bis-mini
+      - meta-44305-awa-mini
+      - meta-44306-ins-mini
+      - meta-44302-fng-mini
+      - meta-44303-plt-doc-mini
+      - meta-44308-prt-mini
+      - meta-44307-rsd-mini
+      - meta-44309-bts-mini
+      - meta-44304-tex-alot-mini
+      - meta-44301-act-410-mini
+      - meta-44310-md-6-mini
+
+authorizes_network_preflight: false
+authorizes_download: false
+authorizes_extraction: false
+authorizes_ingestion: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

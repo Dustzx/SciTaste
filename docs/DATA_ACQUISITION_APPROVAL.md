@@ -93,12 +93,13 @@ Inspect it without a download:
   --workspace-root . --require-metadata-review-ready
 ```
 
-The current metadata gate passes but `--require-owner-approval-ready` fails.
-Temporal Action Localisation has a Perception Test versus MLRC derivative-data
-license discrepancy; Meta-Album has heterogeneous per-dataset obligations and
-an unspecified AWA Creative Commons variant. The request therefore retains all
-network, download, ingestion, API, GPU, and execution authority as false.
-Closing those license issues would make the exact request reviewable, not
-approved. A later downloader must still recheck provider identity immediately
-before transfer, stream into an atomic staging area, compute every archive hash,
-and run ZIP path/expanded-size checks before extraction.
+The exact request now binds a separate license policy. It conservatively keeps
+CC-BY-4.0 on Perception Test materials and applies the Meta-Album
+CC-BY-NC-4.0 release boundary together with every source-dataset duty. It does
+not invent one AWA license: local academic acquisition is reviewable, while AWA
+ingestion requires acquired per-image license records and complete coverage.
+Consequently `--require-owner-approval-ready` now passes, but the request still
+retains all network, download, ingestion, API, GPU, and execution authority as
+false until the owner confirms the new proposal and gate hashes. A later
+downloader must still recheck provider identity, stream atomically, compute
+every archive hash, and qualify ZIP safety before extraction.

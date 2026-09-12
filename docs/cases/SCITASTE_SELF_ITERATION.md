@@ -710,3 +710,29 @@ This is a self-iteration example of Scientific Taste as boundary selection: the
 useful next action was to remove an implementation risk while preserving the
 rights gate, not to force experimental progress or label software completeness
 as empirical evidence.
+
+## Turning license ambiguity into staged policy (2026-09-12)
+
+The next recursive pass challenged the earlier assumption that the two license
+issues needed a single definitive label before any transfer could be reviewed.
+Official source inspection showed two different problems. Perception Test
+already gives a conservative answer—CC-BY-4.0 for non-software material—so the
+downstream MLRC Apache wording cannot remove upstream attribution. AWA has the
+opposite shape: there is deliberately one license per image, so inventing one
+Creative Commons variant would be false precision.
+
+SciTaste converted that distinction into a content-bound policy rather than a
+prose exception. Thirty-nine assets map one-to-one into nine obligation
+profiles, the declared use is fixed to non-commercial academic research, and
+raw/derived data redistribution remains prohibited. This closes acquisition
+review for both tasks while leaving AWA ingestion blocked until acquired bytes
+prove license-record presence and complete per-image coverage. The package
+request binds the policy hash, so weakening a restriction changes the proposal
+identity and invalidates any approval.
+
+The resulting gate is now `ready_for_owner_approval=true`, but there is no owner
+approval and every external authority remains false. No dataset byte, API call,
+SSH session, GPU use, model load, or experiment occurred. This iteration is an
+example of Scientific Taste as problem decomposition: resolve what evidence can
+resolve, preserve irreducible uncertainty at the stage where it can actually be
+tested, and avoid both needless blockage and unsupported clearance.

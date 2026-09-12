@@ -8,8 +8,9 @@ SciTaste treats large benchmark data as four different states:
 4. the downloaded archives have passed no-extraction safety qualification.
 
 None of these states authorizes ingestion, benchmark execution, API calls, GPU
-work, or scientific claims. The current MLRC first-preflight request is only in
-state 1 because both selected tasks still have license blockers.
+work, or scientific claims. The current MLRC first-preflight request now passes
+state 2's *review-readiness* gate through a content-bound license policy, but it
+has not received owner approval and remains in state 1 operationally.
 
 ## Approval boundary
 
@@ -38,9 +39,12 @@ scitaste evaluation dataset-package-approve \
 ```
 
 Running this command against
-`configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml` currently
-fails closed. Do not construct an approval manually to bypass the unresolved
-Perception Test and Meta-Album license decisions.
+`configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml` now reaches
+the hash-confirmation boundary. The Perception materials retain CC-BY-4.0 and
+the Meta-Album packages use an explicit non-commercial obligation stack. AWA
+remains closed for ingestion until its acquired per-image license records pass
+two checks. See `docs/DATASET_LICENSE_POLICY.md`. Do not create an approval
+unless the owner has reviewed the exact proposal and gate-report hashes.
 
 ## Streaming transaction
 
@@ -97,7 +101,8 @@ scitaste evaluation dataset-package-qualify \
 
 A safe report is evidence for a later extraction proposal; it is not extraction
 authority. Extraction, task-layout checks, environment reproduction, baseline
-execution, and formal experiments remain later gates.
+execution, and formal experiments remain later gates. For AWA, archive safety
+also does not satisfy the separate per-image license-record coverage gate.
 
 ## Test boundary
 

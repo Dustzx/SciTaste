@@ -555,7 +555,7 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
                 item.model_dump(mode="json") for item in report.task_qualifications
             ],
             "metadata_review_ready": True,
-            "ready_for_owner_approval": False,
+            "ready_for_owner_approval": True,
             "pending_content_hash_count": 39,
             "integrity_blocker_codes": [],
             "approval_blocker_codes": [item.code for item in report.approval_blockers],

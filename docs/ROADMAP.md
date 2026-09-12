@@ -205,17 +205,19 @@ That first-line choice now reaches exact asset review. Temporal Action
 Localisation contributes nine multimodal Google Drive archives and Cross-Domain
 Meta Learning contributes 30 OpenML image archives: 3,761,168,137 compressed
 bytes under a 16-GiB unpack ceiling and 32-GiB free-space floor. The metadata
-contract is internally complete, but download approval remains blocked by the
-Perception Test/MLRC derivative-license discrepancy, heterogeneous Meta-Album
-obligations, and an unspecified AWA Creative Commons variant. Every first-copy
-content hash and archive-safety check also remains pending by construction.
+contract is internally complete. A content-bound nine-profile license policy
+now retains upstream CC-BY-4.0 for Perception materials, layers Meta-Album's
+CC-BY-NC-4.0 release terms over each source license, and treats AWA truthfully
+as per-image licensing. The package is ready for exact owner review, not
+approved: every first-copy content hash and archive-safety check remains
+pending, and AWA ingestion requires acquired license-record coverage.
 The post-approval software path is now complete: exact-hash approval, streaming
 same-connection source revalidation, free-space enforcement, atomic publication,
 per-archive SHA-256 receipts, and no-extraction ZIP safety qualification all
-have deterministic offline coverage. The real request remains blocked exactly
-where it should: rights closure must precede owner approval, and no MLRC byte has
-been downloaded. The next external step is therefore authoritative license
-resolution, not GPU or API execution.
+have deterministic offline coverage. The real request remains unapproved and no
+MLRC byte has been downloaded. The next external step is owner review of the
+exact request, license policy, proposal hash, and gate hash—not GPU or API
+execution.
 
 The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external
