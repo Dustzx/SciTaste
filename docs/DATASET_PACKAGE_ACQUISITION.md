@@ -8,9 +8,11 @@ SciTaste treats large benchmark data as four different states:
 4. the downloaded archives have passed no-extraction safety qualification.
 
 None of these states authorizes ingestion, benchmark execution, API calls, GPU
-work, or scientific claims. The current MLRC first-preflight request now passes
-state 2's *review-readiness* gate through a content-bound license policy, but it
-has not received owner approval and remains in state 1 operationally.
+work, or scientific claims. The current MLRC first-preflight request has now
+completed state 3 under the project's standing owner policy: 39 objects totaling
+3,761,168,137 bytes were atomically published and independently rehashed with no
+size or SHA-256 mismatch. State 4 remains unopened because it reads archive
+central directories and therefore requires a separate content-boundary decision.
 
 ## Approval boundary
 
@@ -38,13 +40,12 @@ scitaste evaluation dataset-package-approve \
   --output path/to/APPROVAL.json
 ```
 
-Running this command against
-`configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml` now reaches
-the hash-confirmation boundary. The Perception materials retain CC-BY-4.0 and
+The MLRC request was approved by the checked-in standing policy for one frozen
+transaction below decimal 10 GB. The Perception materials retain CC-BY-4.0 and
 the Meta-Album packages use an explicit non-commercial obligation stack. AWA
 remains closed for ingestion until its acquired per-image license records pass
-two checks. See `docs/DATASET_LICENSE_POLICY.md`. Do not create an approval
-unless the owner has reviewed the exact proposal and gate-report hashes.
+two checks. See `docs/DATASET_LICENSE_POLICY.md`. A different request, changed
+hash, or larger byte count requires its own applicable authority.
 
 ## Streaming transaction
 
@@ -56,7 +57,10 @@ content-bound inventory, verifies the free-space floor, and requires an explicit
 - accepts only the exact credential-free HTTPS URL and never follows redirects;
 - requests identity encoding and requires HTTP 200;
 - compares Content-Length and Last-Modified on the body-producing connection;
-- compares Google Drive's returned filename or OpenML's ETag as applicable;
+- compares the whole-second HTTP-date representation when object metadata has
+  finer timestamp precision;
+- compares Google Drive's returned filename or the strong OpenML ETag opaque
+  value as applicable, while rejecting weak or malformed ETags;
 - streams one MiB chunks into exclusive mode-`0600` staging files while hashing;
 - rejects short, long, or aggregate-byte drift;
 - publishes the entire request directory and a self-hashed receipt only after
@@ -64,7 +68,10 @@ content-bound inventory, verifies the free-space floor, and requires an explicit
 
 Any failure deletes staging. Existing transaction destinations are never
 overwritten. A successful receipt still says `authorizes_extraction=false` and
-`authorizes_execution=false`.
+`authorizes_execution=false`. The real MLRC receipt is project-owned under
+`outputs/projects/scitaste-self-development/evaluations/acquisitions/` and binds
+all 39 content hashes. Two earlier attempts failed closed on HTTP representation
+differences, removed their staging trees, and published no partial destination.
 
 ```bash
 scitaste evaluation dataset-package-download \
@@ -100,9 +107,10 @@ scitaste evaluation dataset-package-qualify \
 ```
 
 A safe report is evidence for a later extraction proposal; it is not extraction
-authority. Extraction, task-layout checks, environment reproduction, baseline
-execution, and formal experiments remain later gates. For AWA, archive safety
-also does not satisfy the separate per-image license-record coverage gate.
+authority. No such report has been produced for the acquired MLRC package.
+Extraction, task-layout checks, environment reproduction, baseline execution,
+and formal experiments remain later gates. For AWA, archive safety also does not
+satisfy the separate per-image license-record coverage gate.
 
 ## Test boundary
 

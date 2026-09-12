@@ -339,23 +339,21 @@ Kaggle and AIcrowd tasks remain blocked by terms, credentials, or manual test
 steps. This slice supplies transfer/mechanism evidence, not the complete ICLR
 claim.
 
-That first-line choice now reaches exact asset review. Temporal Action
+That first-line choice has now completed exact asset acquisition. Temporal Action
 Localisation contributes nine multimodal Google Drive archives and Cross-Domain
 Meta Learning contributes 30 OpenML image archives: 3,761,168,137 compressed
 bytes under a 16-GiB unpack ceiling and 32-GiB free-space floor. The metadata
 contract is internally complete. A content-bound nine-profile license policy
 now retains upstream CC-BY-4.0 for Perception materials, layers Meta-Album's
 CC-BY-NC-4.0 release terms over each source license, and treats AWA truthfully
-as per-image licensing. The package is ready for exact owner review, not
-approved: every first-copy content hash and archive-safety check remains
-pending, and AWA ingestion requires acquired license-record coverage.
-The post-approval software path is now complete: exact-hash approval, streaming
-same-connection source revalidation, free-space enforcement, atomic publication,
-per-archive SHA-256 receipts, and no-extraction ZIP safety qualification all
-have deterministic offline coverage. The real request remains unapproved and no
-MLRC byte has been downloaded. The next external step is owner review of the
-exact request, license policy, proposal hash, and gate hash—not GPU or API
-execution.
+as per-image licensing. The standing-policy-approved transfer atomically
+published all 39 objects; an independent streaming pass reproduced every size
+and SHA-256 hash. The real transaction also exposed and fixed two fail-closed
+wire-representation gaps: HTTP-date whole-second precision and optional quotes
+around strong ETags. No archive central directory has been opened, no content
+has been parsed, and AWA ingestion still requires acquired license-record
+coverage. The next gate is a separately authorized no-extraction archive safety
+qualification—not GPU or API execution.
 
 The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external

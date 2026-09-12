@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Completed the first standing-policy-approved MLRC asset transaction: 39 frozen
+  Google Drive/OpenML objects (3,761,168,137 bytes) were source-revalidated,
+  streamed into an atomic destination, and independently rehashed with no
+  mismatch. Real transfer failures tightened the downloader to compare HTTP
+  dates at wire precision and strong ETags by opaque value without accepting
+  weak validators. The receipt grants no archive inspection, extraction,
+  ingestion, API, GPU, execution, or scientific-claim authority.
+
 - Added decision-gap-driven Scientific Reference mining before content-quality
   assessment. A proposal-only node must cover direct, alternative, negative,
   failure, replication, and transfer query families; a deterministic compiler
