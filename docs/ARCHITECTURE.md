@@ -2331,3 +2331,44 @@ produce useful Taste when the resulting principle and transfer scope are sound;
 success alone is insufficient. Formal human identity and recruitment evidence
 remain project-owned study artifacts rather than claims inferred from a typed
 manifest.
+
+### ADR-077: Model-assisted Taste abstraction is ledger-bound and relation-blind
+
+Status: accepted for implementation; real source acquisition, API generation,
+and human review remain pending.
+
+The same-source H1 contrast is invalid if an abstraction can be hand-filled,
+condition-aware, or detached from the model response that produced it. SciTaste
+therefore exposes a dedicated `taste-abstraction` model node. It sees one exact
+UTF-8 source projection, source identity, decision role, stage, domains, and the
+declared outcome-information boundary. The matched/placebo relation, held-out
+task content, unrelated project state, tools, and action authority are excluded.
+
+An accepted response still has no retrieval trust. Candidate compilation requires
+the canonical project-owned runtime entry and verifies the complete hash chain and
+recording. Curation rechecks the live profile, prompt and output schema, request,
+policy and profile fingerprints, source bytes, provider/model identity, raw
+response, usage, zero-authority boundary, and exact proposal-to-candidate equality.
+Scripted and replay fixtures are engineering evidence only. Two independent human
+reviews, plus adjudication only on a split, remain the sole admission route.
+
+Curation schema 1.1 separates historical model invocation count from the fact
+that package inspection performs no external action; valid 1.0 records migrate
+deterministically. This closes the executable transformation path but does not
+claim that a task-specific corpus, real model response, valid human judgment, or
+H1 effect currently exists.
+
+### ADR-078: One CPython 3.12 control environment
+
+Status: accepted for repository development and CI.
+
+SciTaste supports the CPython 3.12 minor line rather than maintaining a duplicate
+3.11 compatibility matrix. `.python-version` and CI select 3.12.14, while one
+checked-in constraints file fixes the Linux development and study dependency
+resolution. Local development uses the repository-owned `.venv` instead of a
+cross-project interpreter.
+
+Formal GPU/API conditions remain separately content-bound because CUDA, model,
+and provider environments are measured experimental resources. Historical
+3.11 runtime inventories and receipts are not rewritten; they are evidence of
+past execution, not declarations of current repository support.

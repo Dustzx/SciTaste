@@ -11,8 +11,8 @@
 
 ```bash
 git submodule update --init
-python3.11 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+python3.12 -m venv .venv
+.venv/bin/pip install -c requirements/python312-dev-study.lock -e '.[dev,study]'
 make check
 make demo
 ```

@@ -27,8 +27,11 @@ through Evidence, Writing, and Figure generation while leaving evidence-integrit
 writing-integrity, visual, budget, and sandbox gates enabled in every condition.
 High-quality references enter Taste through a separate source-abstraction path:
 source content and quality evidence are both hash-bound, abstraction candidates
-remain untrusted, and two independent humans plus conditional adjudication decide
-whether the result may become retrieval-eligible. Retrieval is therefore an
+can be produced by a relation-blind, proposal-only model node whose exact source,
+prompt, response, model identity, usage, and output remain in a verified
+project-owned ledger. Candidates remain untrusted, and two independent humans
+plus conditional adjudication decide whether the result may become
+retrieval-eligible. Retrieval is therefore an
 efficiency mechanism downstream of Taste construction, not the definition of
 Taste itself. The continual path applies the same discipline to SciTaste's own
 experience: executed decisions first become quarantined reflections, then require
@@ -111,7 +114,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, one opt-in content-bound model path that concretizes and selects every non-trivial controller-owned candidate set, a source/quality-bound dual-human Taste abstraction compiler, and outcome-gated continual project memory are implemented and offline-tested | Actual reviewed task-specific matched/placebo Taste corpora, real longitudinal admitted project memories, approved model/GPU execution evidence, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
+| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, one opt-in content-bound model path that concretizes and selects every non-trivial controller-owned candidate set, a ledger-bound relation-blind Taste abstraction node, a source/quality-bound dual-human corpus compiler, and outcome-gated continual project memory are implemented and offline-tested | Actual high-quality task-specific sources, real model-generated matched/placebo abstractions, independent human reviews, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, and a deterministic Full Workflow evidence-hotspot trigger implemented; one registered live study is a narrow preliminary signal | Independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

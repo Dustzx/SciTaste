@@ -1,9 +1,19 @@
 # SciTaste experiment decision brief v1
 
-Status: **awaiting data/resource admission; no experiment execution is
-authorized**. This brief separates the first API and GPU blocks that can produce
-paper evidence. It does not treat a model review of the manuscript as an
-experiment, and it does not pool provider inference with local accelerator use.
+Status: **historical feasibility brief; superseded for launch planning**. The
+Qwen3-VL-2B choice, 120-case floor, and 100-trajectory API matrix below predate
+the resource-independent H1/H2/H3/E1/D1 evidence program and must not authorize
+or size a current experiment. Current scientific authority belongs to
+`configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml`; current
+resource joining belongs to
+`configs/evaluation/activation/iclr2027_review_followup_v3.yaml`. Those records
+leave the primary model, formal sample size, repetitions, and compute allocation
+unset until task metadata, a task-excluded conformance pilot, and power analysis
+are complete. No experiment execution is authorized.
+
+This retained brief separates the earlier API and GPU feasibility blocks. It does
+not treat a model review of the manuscript as an experiment, and it does not pool
+provider inference with local accelerator use.
 
 ## GPU block — Track A scientific-taste mechanism
 

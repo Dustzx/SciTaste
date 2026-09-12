@@ -221,6 +221,10 @@ from scitaste.taste.memory import (
     save_taste_memory_admission_report,
     taste_case_sha256,
 )
+from scitaste.taste.semantic import (
+    save_taste_abstraction_candidate,
+    taste_abstraction_candidate_from_ledger,
+)
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
 from scitaste.writing.argument import (
     PaperArgumentAssessment,
@@ -1484,6 +1488,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    taste_abstraction_candidate = evaluation_commands.add_parser(
+        "taste-abstraction-candidate",
+        help="Compile one accepted Taste abstraction ledger entry for human review",
+    )
+    taste_abstraction_candidate.add_argument("--ledger-entry", type=Path, required=True)
+    taste_abstraction_candidate.add_argument("--evidence-root", type=Path, default=Path("."))
+    taste_abstraction_candidate.add_argument("--author-id", required=True)
+    taste_abstraction_candidate.add_argument("--derivation-method", required=True)
+    taste_abstraction_candidate.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_abstraction_candidate)
+    taste_abstraction_candidate.set_defaults(handler=_handle_evaluation_taste_abstraction_candidate)
     taste_corpus_pair = evaluation_commands.add_parser(
         "taste-corpus-pair",
         help="Qualify matched and mismatched Taste corpora without external actions",
@@ -4690,6 +4705,32 @@ def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_ready and not report.ready_to_materialize:
         return 1
+    return 0
+
+
+def _handle_evaluation_taste_abstraction_candidate(args: argparse.Namespace) -> int:
+    candidate = taste_abstraction_candidate_from_ledger(
+        args.ledger_entry,
+        evidence_root=args.evidence_root,
+        author_id=args.author_id,
+        derivation_method=args.derivation_method,
+    )
+    output = save_taste_abstraction_candidate(candidate, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "taste-abstraction-candidate-created",
+                "candidate": candidate.model_dump(mode="json"),
+                "candidate_sha256": candidate.semantic_sha256,
+                "output": str(output),
+                "retrieval_eligible": False,
+                "human_review_required": True,
+                "authorizes_execution": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

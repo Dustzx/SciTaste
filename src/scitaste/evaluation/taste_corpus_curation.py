@@ -29,6 +29,11 @@ from scitaste.evaluation.taste_corpus_pair import (
     inspect_taste_corpus_pair,
     save_taste_corpus_pair_report,
 )
+from scitaste.taste.semantic_models import (
+    TASTE_ABSTRACTION_NODE,
+    TasteAbstractionInput,
+    TasteCaseAbstraction,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -64,6 +69,7 @@ class TasteSourceRecord(BaseModel):
     decision_role: str = Field(min_length=1, max_length=300)
     source_group: str = Field(pattern=_ID)
     artifact: TasteCorpusFileBinding
+    abstraction_input: TasteCorpusFileBinding | None = None
     quality_evidence: TasteCorpusFileBinding
     quality_tier: str = Field(pattern=_ID)
     quality_rationale: str = Field(min_length=1, max_length=4_000)
@@ -83,38 +89,6 @@ class TasteSourceRecord(BaseModel):
             raise ValueError("Taste source domain tags must be unique")
         if any(not item or len(item) > 200 for item in self.domain_tags):
             raise ValueError("Taste source domain tags must be bounded non-empty strings")
-        return self
-
-
-class TasteCaseAbstraction(BaseModel):
-    """Untrusted proposed decision principle; trust is added only by review."""
-
-    model_config = _CONFIG
-
-    case_id: str = Field(pattern=_ID)
-    context_summary: str = Field(min_length=1, max_length=20_000)
-    problem_pattern: str | None = Field(default=None, max_length=4_000)
-    evidence_state: str | None = Field(default=None, max_length=10_000)
-    reviewer_context: str | None = Field(default=None, max_length=10_000)
-    candidate_actions: tuple[str, ...] = Field(min_length=2, max_length=20)
-    preferred_action: str = Field(min_length=1, max_length=500)
-    rejected_actions: tuple[str, ...] = Field(min_length=1, max_length=19)
-    decision_principle: str = Field(min_length=1, max_length=10_000)
-    why_preferred: str = Field(min_length=1, max_length=10_000)
-    outcome_summary: str | None = Field(default=None, max_length=10_000)
-    confidence: float = Field(ge=0.0, le=1.0)
-
-    @model_validator(mode="after")
-    def actions_form_a_closed_decision(self) -> TasteCaseAbstraction:
-        if len(self.candidate_actions) != len(set(self.candidate_actions)):
-            raise ValueError("Taste abstraction candidate actions must be unique")
-        if self.preferred_action not in self.candidate_actions:
-            raise ValueError("Taste abstraction preferred action must be a candidate")
-        if self.preferred_action in self.rejected_actions:
-            raise ValueError("Taste abstraction cannot reject its preferred action")
-        expected = set(self.candidate_actions) - {self.preferred_action}
-        if set(self.rejected_actions) != expected:
-            raise ValueError("Taste abstraction must explicitly reject every other candidate")
         return self
 
 
@@ -190,7 +164,7 @@ class TasteCorpusCurationPackage(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     package_id: str = Field(pattern=_ID)
     task_id: str = Field(pattern=_ID)
     task_domain_tags: tuple[str, ...] = Field(min_length=1, max_length=20)
@@ -208,16 +182,13 @@ class TasteCorpusCurationPackage(BaseModel):
         min_length=2,
         max_length=10_000,
     )
+    historical_model_invocation_count: int = Field(default=0, ge=0, le=10_000)
     reviews: tuple[TasteAbstractionReview, ...] = Field(min_length=4, max_length=100_000)
     qualification_queries: tuple[TasteCorpusQualificationQuery, ...] = Field(
         min_length=1,
         max_length=100,
     )
-    no_dataset_download: Literal[True] = True
-    no_api_call: Literal[True] = True
-    no_ssh: Literal[True] = True
-    no_gpu_or_model_execution: Literal[True] = True
-    no_experiment_execution: Literal[True] = True
+    package_processing_performs_no_external_action: Literal[True] = True
     authorizes_execution: Literal[False] = False
 
     @model_validator(mode="after")
@@ -244,12 +215,28 @@ class TasteCorpusCurationPackage(BaseModel):
         ):
             raise ValueError("Taste qualification queries must bind the exact task domains")
         known_sources = {item.source_id for item in self.sources}
+        source_by_id = {item.source_id: item for item in self.sources}
         candidate_sources = [item.source_id for item in self.candidates]
         if set(candidate_sources) != known_sources or len(candidate_sources) != len(known_sources):
             raise ValueError("Taste curation requires exactly one candidate per source")
         known_candidates = {item.candidate_id for item in self.candidates}
         if any(item.candidate_id not in known_candidates for item in self.reviews):
             raise ValueError("Taste curation reviews must reference known candidates")
+        if any(
+            candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED
+            and source_by_id[candidate.source_id].abstraction_input is None
+            for candidate in self.candidates
+        ):
+            raise ValueError("model-assisted Taste abstraction requires a bound source projection")
+        observed_model_invocations = sum(
+            candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED
+            for candidate in self.candidates
+        )
+        if self.historical_model_invocation_count != observed_model_invocations:
+            raise ValueError(
+                "historical_model_invocation_count must equal the number of "
+                "model-assisted Taste candidates"
+            )
         slots: dict[TasteCorpusRelation, set[str]] = defaultdict(set)
         for source in self.sources:
             if source.pair_slot_id in slots[source.relation]:
@@ -289,10 +276,12 @@ class TasteCorpusCurationReport(BaseModel):
     package_sha256: str = Field(pattern=_SHA256)
     source_count: int = Field(ge=0)
     candidate_count: int = Field(ge=0)
+    historical_model_invocation_count: int = Field(ge=0)
     primary_review_count: int = Field(ge=0)
     adjudication_count: int = Field(ge=0)
     source_bindings_verified: bool
     quality_evidence_verified: bool
+    abstraction_input_bindings_verified: bool
     model_trace_bindings_verified: bool
     pair_structure_verified: bool
     dual_human_review_verified: bool
@@ -331,10 +320,80 @@ def load_taste_corpus_curation_package(path: str | Path) -> TasteCorpusCurationI
         raise ValueError("Taste corpus curation package must be valid YAML or JSON") from exc
     if not isinstance(payload, dict):
         raise ValueError("Taste corpus curation package must contain a mapping")
+    payload = _migrate_curation_payload(payload)
     return TasteCorpusCurationInspection(
         path=source.resolve(strict=True),
         file_sha256=hashlib.sha256(raw).hexdigest(),
         package=TasteCorpusCurationPackage.model_validate(payload),
+    )
+
+
+def _migrate_curation_payload(payload: dict[object, object]) -> dict[object, object]:
+    """Migrate the ambiguous v1.0 no-action fields into explicit v1.1 semantics."""
+
+    if payload.get("schema_version") != "1.0":
+        return payload
+    migrated = dict(payload)
+    legacy_action_fields = (
+        "no_dataset_download",
+        "no_api_call",
+        "no_ssh",
+        "no_gpu_or_model_execution",
+        "no_experiment_execution",
+    )
+    invalid = [name for name in legacy_action_fields if migrated.get(name, True) is not True]
+    if invalid:
+        raise ValueError("Taste curation v1.0 action flags must be true to migrate")
+    for name in legacy_action_fields:
+        migrated.pop(name, None)
+    candidates = migrated.get("candidates")
+    model_count = (
+        sum(
+            isinstance(item, dict) and item.get("origin") == "model-assisted" for item in candidates
+        )
+        if isinstance(candidates, list)
+        else 0
+    )
+    migrated["schema_version"] = "1.1"
+    migrated.setdefault("historical_model_invocation_count", model_count)
+    migrated["package_processing_performs_no_external_action"] = True
+    return migrated
+
+
+def build_taste_abstraction_input(
+    source: TasteSourceRecord,
+    *,
+    candidate_id: str,
+    case_id: str,
+    outcome_information_availability: OutcomeInformationAvailability,
+    evidence_root: str | Path,
+) -> TasteAbstractionInput:
+    """Project one bound source into the exact relation-blind model-node input."""
+
+    if source.abstraction_input is None:
+        raise ValueError("Taste source has no bound abstraction input")
+    root = Path(evidence_root).resolve(strict=True)
+    raw = _read_bounded_file(
+        Path(source.abstraction_input.path),
+        root=root,
+        maximum_bytes=_MAX_SOURCE_BYTES,
+    )
+    if hashlib.sha256(raw).hexdigest() != source.abstraction_input.sha256:
+        raise ValueError("Taste abstraction input binding hash mismatch")
+    try:
+        projection = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Taste abstraction input must be UTF-8 text") from exc
+    return TasteAbstractionInput(
+        source_id=source.source_id,
+        candidate_id=candidate_id,
+        case_id=case_id,
+        stage=source.stage,
+        decision_role=source.decision_role,
+        source_projection=projection,
+        source_projection_sha256=source.abstraction_input.sha256,
+        domain_tags=source.domain_tags,
+        outcome_information_availability=outcome_information_availability.value,
     )
 
 
@@ -350,6 +409,7 @@ def inspect_taste_corpus_curation(
     blockers: list[TasteCorpusCurationFinding] = []
     sources_verified = True
     quality_verified = True
+    abstraction_inputs_verified = True
     traces_verified = True
     source_by_id = {item.source_id: item for item in package.sources}
     candidate_by_id = {item.candidate_id: item for item in package.candidates}
@@ -370,13 +430,24 @@ def inspect_taste_corpus_curation(
         ):
             quality_verified = False
     for candidate in package.candidates:
-        if candidate.model_trace is not None and not _binding_matches(
-            candidate.model_trace,
-            root=root,
-            blockers=blockers,
-            owner=candidate.candidate_id,
-        ):
-            traces_verified = False
+        source = source_by_id[candidate.source_id]
+        if candidate.origin is TasteAbstractionOrigin.MODEL_ASSISTED:
+            assert source.abstraction_input is not None
+            if not _binding_matches(
+                source.abstraction_input,
+                root=root,
+                blockers=blockers,
+                owner=f"{source.source_id}:abstraction-input",
+            ):
+                abstraction_inputs_verified = False
+            if not _inspect_model_trace(
+                candidate,
+                source=source,
+                outcome_information_availability=package.outcome_information_availability,
+                root=root,
+                blockers=blockers,
+            ):
+                traces_verified = False
 
     pair_structure = _inspect_pair_structure(package, source_by_id, blockers)
     accepted = _inspect_reviews(package, candidate_by_id, blockers)
@@ -386,6 +457,7 @@ def inspect_taste_corpus_curation(
     ready = (
         sources_verified
         and quality_verified
+        and abstraction_inputs_verified
         and traces_verified
         and pair_structure
         and review_verified
@@ -396,6 +468,7 @@ def inspect_taste_corpus_curation(
         package_sha256=package.semantic_sha256,
         source_count=len(package.sources),
         candidate_count=len(package.candidates),
+        historical_model_invocation_count=package.historical_model_invocation_count,
         primary_review_count=sum(
             item.role is TasteAbstractionReviewRole.PRIMARY for item in package.reviews
         ),
@@ -404,6 +477,7 @@ def inspect_taste_corpus_curation(
         ),
         source_bindings_verified=sources_verified,
         quality_evidence_verified=quality_verified,
+        abstraction_input_bindings_verified=abstraction_inputs_verified,
         model_trace_bindings_verified=traces_verified,
         pair_structure_verified=pair_structure,
         dual_human_review_verified=review_verified,
@@ -759,6 +833,147 @@ def _binding_matches(
     return True
 
 
+def _inspect_model_trace(
+    candidate: TasteAbstractionCandidate,
+    *,
+    source: TasteSourceRecord,
+    outcome_information_availability: OutcomeInformationAvailability,
+    root: Path,
+    blockers: list[TasteCorpusCurationFinding],
+) -> bool:
+    """Verify that model assistance is an exact accepted runtime ledger entry."""
+
+    assert candidate.model_trace is not None
+    assert source.abstraction_input is not None
+    start = len(blockers)
+    try:
+        raw = _read_bounded_file(
+            Path(candidate.model_trace.path),
+            root=root,
+            maximum_bytes=_MAX_SOURCE_BYTES,
+        )
+    except (OSError, ValueError) as exc:
+        _add(blockers, "model_trace:binding_invalid", f"{candidate.candidate_id}: {exc}")
+        return False
+    if hashlib.sha256(raw).hexdigest() != candidate.model_trace.sha256:
+        _add(blockers, "model_trace:file_hash_mismatch", candidate.candidate_id)
+        return False
+
+    # Local imports avoid coupling the curation schema to model-node initialization.
+    from scitaste.model_nodes.models import NodeResult, NodeResultStatus
+    from scitaste.model_nodes.runtime import RuntimeBackendMode, RuntimeOutcome
+    from scitaste.taste.semantic import (
+        TasteAbstractionNode,
+        load_verified_taste_abstraction_ledger,
+    )
+
+    try:
+        entry, verified_path, verified_raw = load_verified_taste_abstraction_ledger(
+            candidate.model_trace.path,
+            evidence_root=root,
+        )
+    except (OSError, ValueError):
+        _add(blockers, "model_trace:ledger_invalid", candidate.candidate_id)
+        return False
+    if verified_path.resolve(strict=True) != (root / candidate.model_trace.path).resolve(
+        strict=True
+    ):
+        _add(blockers, "model_trace:ledger_path_mismatch", candidate.candidate_id)
+    if verified_raw != raw:
+        _add(blockers, "model_trace:ledger_bytes_mismatch", candidate.candidate_id)
+    if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+        _add(blockers, "model_trace:not_accepted", candidate.candidate_id)
+        return False
+    if entry.intent.node_name != TASTE_ABSTRACTION_NODE:
+        _add(blockers, "model_trace:wrong_node", candidate.candidate_id)
+    if (
+        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
+        or not entry.intent.profile.live_execution_permitted
+    ):
+        _add(blockers, "model_trace:not_live_model_assistance", candidate.candidate_id)
+
+    try:
+        node_input = TasteAbstractionInput.model_validate_json(
+            json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
+            strict=True,
+        )
+    except ValueError:
+        _add(blockers, "model_trace:input_invalid", candidate.candidate_id)
+        return False
+    try:
+        expected_input = build_taste_abstraction_input(
+            source,
+            candidate_id=candidate.candidate_id,
+            case_id=candidate.abstraction.case_id,
+            outcome_information_availability=outcome_information_availability,
+            evidence_root=root,
+        )
+    except (OSError, ValueError):
+        _add(blockers, "model_trace:source_projection_invalid", candidate.candidate_id)
+        return False
+    if node_input != expected_input:
+        _add(blockers, "model_trace:source_or_identity_mismatch", candidate.candidate_id)
+
+    context = entry.intent.context
+    if (
+        context.stage != source.stage
+        or context.state_snapshot_id != source.abstraction_input.sha256
+        or context.evidence_ids != [source.source_id]
+        or context.claim_ids
+        or context.section_ids
+        or context.candidate_actions
+        or context.metadata
+    ):
+        _add(blockers, "model_trace:context_mismatch", candidate.candidate_id)
+    if (
+        entry.intent.policy.allowed_tool_names
+        or entry.intent.policy.allowed_action_types
+        or entry.intent.profile.admission.allowed_tool_names
+        or entry.intent.profile.admission.max_tool_call_proposals != 0
+    ):
+        _add(blockers, "model_trace:authority_not_empty", candidate.candidate_id)
+
+    result_type = NodeResult[TasteCaseAbstraction]
+    try:
+        result = result_type.model_validate_json(
+            json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
+            strict=True,
+        )
+    except ValueError:
+        _add(blockers, "model_trace:result_invalid", candidate.candidate_id)
+        return False
+    if (
+        result.status is not NodeResultStatus.ACCEPTED
+        or result.node_name != TASTE_ABSTRACTION_NODE
+        or result.policy_id != entry.intent.policy.policy_id
+        or result.proposal != candidate.abstraction
+        or result.request.input_payload
+        != {
+            "context": context.model_dump(mode="json"),
+            "input": node_input.model_dump(mode="json"),
+        }
+        or result.request.node_name != TASTE_ABSTRACTION_NODE
+        or result.request.prompt_version != TasteAbstractionNode.prompt_version
+        or result.request.system_instruction != TasteAbstractionNode.system_instruction
+        or result.request.output_schema != TasteCaseAbstraction.model_json_schema(mode="validation")
+        or result.request.fingerprint != entry.request_fingerprint
+        or result.request.fingerprint != entry.intent.expected_request_fingerprint
+        or result.request.policy_fingerprint != entry.intent.policy.fingerprint
+        or result.request.profile_fingerprint != entry.intent.profile.fingerprint
+        or result.request.expected_backend != entry.intent.policy.expected_backend
+        or result.request.expected_model != entry.intent.policy.expected_model
+        or result.response.backend != entry.intent.policy.expected_backend
+        or result.response.model != entry.intent.policy.expected_model
+        or result.response.request_fingerprint != result.request.fingerprint
+        or result.response.raw_response is None
+        or result.response.tool_calls
+        or entry.recording_sha256 is None
+        or entry.replayed
+    ):
+        _add(blockers, "model_trace:proposal_mismatch", candidate.candidate_id)
+    return len(blockers) == start
+
+
 def _read_bounded_file(path: Path, *, root: Path | None, maximum_bytes: int) -> bytes:
     candidate = path if root is None or path.is_absolute() else root / path
     resolved = candidate.resolve(strict=True)
@@ -843,6 +1058,7 @@ __all__ = [
     "TasteCorpusCurationReport",
     "TasteCorpusMaterializationReceipt",
     "TasteSourceRecord",
+    "build_taste_abstraction_input",
     "inspect_taste_corpus_curation",
     "load_taste_corpus_curation_package",
     "materialize_taste_corpus_pair",

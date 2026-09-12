@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- The supported development and CI environment is now one CPython 3.12 line,
+  with 3.12.14 selected by `.python-version` and CI and a checked-in Linux
+  development/study constraints lock. The former duplicate 3.11 CI job and the
+  repository's accidental cross-project 3.11 virtual environment are retired;
+  historical experiment-runtime observations remain immutable evidence.
+- Scientific Taste source abstraction now has a proposal-only model node whose
+  exact source projection, policy, prompt, response, usage, and output are bound
+  to a verified project-owned runtime ledger. Model-assisted candidates remain
+  quarantined until two independent human reviews, and package inspection now
+  distinguishes historical model calls from its own no-external-action status.
 - Added a project-owned review follow-up design compiler. Explicit mappings bind
   every reviewer concern to the exact H1/H2/H3, accepted-system ecological, and
   experiment-integrity studies already registered in the ICLR evidence program;

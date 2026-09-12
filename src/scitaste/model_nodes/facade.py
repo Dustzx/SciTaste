@@ -29,6 +29,7 @@ from scitaste.model_nodes.tool_intelligence import (
     ToolPlanInput,
 )
 from scitaste.schema.actions import ResearchAction
+from scitaste.taste.semantic_models import TASTE_ABSTRACTION_NODE, TasteAbstractionInput
 
 
 class FacadeModel(BaseModel):
@@ -81,6 +82,7 @@ _INPUT_TYPES = {
     "tool-plan": ToolPlanInput,
     "structured-repair": StructuredRepairInput,
     "venue-paper-review": VenuePaperReviewInput,
+    TASTE_ABSTRACTION_NODE: TasteAbstractionInput,
 }
 
 

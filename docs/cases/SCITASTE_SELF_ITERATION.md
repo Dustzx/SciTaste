@@ -1030,3 +1030,35 @@ study must measure whether outcome-admitted memory improves later held-out
 decisions without reducing calibration or diversity. No API call, dataset
 download, SSH session, model load, GPU job, human recruitment, or experiment was
 performed.
+
+## Making reference-derived Taste an executable but untrusted treatment (2026-09-12)
+
+The previous source-curation compiler could represent a model-assisted
+abstraction, but its trace was only a file binding. Arbitrary JSON could satisfy
+that label, and the package simultaneously declared that no model execution had
+occurred. More subtly, the generic Pydantic configuration stripped terminal
+whitespace from the source text, so a source file ending in a newline did not
+have the same hash as the text visible to the node. That was sufficient for an
+offline fixture but invalid for a same-source causal comparison.
+
+SciTaste now has a dedicated `taste-abstraction` node and an exact-source input
+builder. Source bytes, including terminal newlines, are preserved; relation arm
+and held-out task content are excluded; runtime context has no unrelated state or
+authority. Candidate creation accepts only a canonical live-mode entry whose
+complete project ledger and response recording verify. Curation independently
+rechecks request, policy, prompt, schema, provider/model, raw response, usage,
+source projection, zero-tool boundary, and proposal equality before considering
+the still-required human reviews. Scripted and replay data remain test fixtures.
+
+Curation schema 1.1 separately records historical model invocation count and the
+fact that current package processing performs no external action, with a
+deterministic migration for valid 1.0 records. The repository itself also moved
+from an accidental cross-project Python 3.11 environment to one local CPython
+3.12.14 development/study environment shared with CI; historical runtime
+receipts remain unchanged.
+
+This iteration closes treatment-construction integrity, not the empirical claim.
+The task-specific high-quality sources have not been acquired, no real
+abstraction API call or human review was performed, and H1/H2 remain unmeasured.
+The next resource-bearing step must name those sources, the conformance model,
+call ceiling, review plan, and stopping rule before execution.

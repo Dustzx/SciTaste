@@ -3,19 +3,63 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
 
+from scitaste.backends.base import Usage
 from scitaste.cli import main
 from scitaste.evaluation import (
+    OutcomeInformationAvailability,
     TasteAbstractionCandidate,
+    TasteSourceRecord,
+    build_taste_abstraction_input,
     inspect_taste_corpus_curation,
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
     materialize_taste_corpus_pair,
 )
 from scitaste.evaluation.taste_corpus_pair import inspect_taste_corpus_pair
+from scitaste.model_nodes import (
+    CumulativeProjectBudget,
+    ModelNodeProfile,
+    NodeAdmissionBudget,
+    NodeContext,
+    NodePolicy,
+    ProviderGenerationEnvelope,
+    ScriptedStructuredBackend,
+    ScriptedStructuredReply,
+)
+from scitaste.model_nodes.runtime import ModelNodeRuntime, ModelNodeTrigger, RuntimeBackendMode
+from scitaste.project import ProjectManifest, ProjectRun, ProjectRuntime
+from scitaste.taste.semantic import (
+    taste_abstraction_candidate_from_ledger,
+    taste_node_types,
+)
+
+
+class _LiveFixtureBackend:
+    """Use the live ledger branch while keeping the test offline and deterministic."""
+
+    name = "fixture-provider"
+    model = "fixture-model-v1"
+    config = SimpleNamespace(live_enabled=True, max_output_tokens=2_000)
+
+    def __init__(self, *, request_id: str, payload: object) -> None:
+        self.delegate = ScriptedStructuredBackend(
+            name=self.name,
+            model=self.model,
+            replies={
+                request_id: ScriptedStructuredReply(
+                    output_payload=payload,
+                    usage=Usage(input_tokens=30, output_tokens=40, cost_usd=0.001),
+                )
+            },
+        )
+
+    def complete(self, request):
+        return self.delegate.complete(request)
 
 
 def test_dual_human_curation_materializes_a_qualified_pair(tmp_path: Path) -> None:
@@ -49,6 +93,29 @@ def test_dual_human_curation_materializes_a_qualified_pair(tmp_path: Path) -> No
     assert case["retrieval_eligible"] is True
     assert case["label_basis"] == "dual_human_verified_external_source"
     assert len(case["provenance"][0]["metadata"]["accepted_review_ids"]) == 2
+
+
+def test_legacy_no_action_package_migrates_to_explicit_processing_semantics(
+    tmp_path: Path,
+) -> None:
+    package_path = _write_package(tmp_path)
+    payload = json.loads(package_path.read_text(encoding="utf-8"))
+    payload["schema_version"] = "1.0"
+    payload.pop("package_processing_performs_no_external_action")
+    payload.update(
+        no_dataset_download=True,
+        no_api_call=True,
+        no_ssh=True,
+        no_gpu_or_model_execution=True,
+        no_experiment_execution=True,
+    )
+    package_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    package = load_taste_corpus_curation_package(package_path).package
+
+    assert package.schema_version == "1.1"
+    assert package.historical_model_invocation_count == 0
+    assert package.package_processing_performs_no_external_action is True
 
 
 def test_curation_fails_closed_on_source_hash_drift(tmp_path: Path) -> None:
@@ -120,6 +187,150 @@ def test_model_assisted_candidate_requires_content_bound_trace() -> None:
         TasteAbstractionCandidate.model_validate(payload)
 
 
+def test_model_assisted_candidate_rejects_arbitrary_trace_bytes(tmp_path: Path) -> None:
+    package_path = _write_package(tmp_path)
+    payload = json.loads(package_path.read_text(encoding="utf-8"))
+    trace = tmp_path / "sources/model-trace.json"
+    trace.write_text('{"claimed":"model-assisted"}\n', encoding="utf-8")
+    source = next(item for item in payload["sources"] if item["source_id"] == "matched-source")
+    source["abstraction_input"] = source["artifact"]
+    candidate = next(
+        item for item in payload["candidates"] if item["candidate_id"] == "matched-candidate"
+    )
+    candidate["origin"] = "model-assisted"
+    candidate["model_trace"] = {
+        "path": "sources/model-trace.json",
+        "sha256": _sha(trace),
+    }
+    payload["historical_model_invocation_count"] = 1
+    validated = TasteAbstractionCandidate.model_validate(candidate)
+    for review in payload["reviews"]:
+        if review["candidate_id"] == candidate["candidate_id"]:
+            review["candidate_sha256"] = validated.semantic_sha256
+    package_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    report = inspect_taste_corpus_curation(
+        load_taste_corpus_curation_package(package_path),
+        evidence_root=tmp_path,
+    )
+
+    assert report.abstraction_input_bindings_verified is True
+    assert report.model_trace_bindings_verified is False
+    assert "model_trace:ledger_invalid" in {item.code for item in report.blockers}
+    assert report.ready_to_materialize is False
+
+
+def test_verified_live_model_abstraction_can_pass_the_human_curation_gate(
+    tmp_path: Path,
+) -> None:
+    package_path = _write_package(tmp_path)
+    payload = json.loads(package_path.read_text(encoding="utf-8"))
+    source_payload = next(
+        item for item in payload["sources"] if item["source_id"] == "matched-source"
+    )
+    source_payload["abstraction_input"] = source_payload["artifact"]
+    source = TasteSourceRecord.model_validate(source_payload)
+    input_data = build_taste_abstraction_input(
+        source,
+        candidate_id="matched-candidate",
+        case_id="matched-taste-case",
+        outcome_information_availability=OutcomeInformationAvailability.AVAILABLE,
+        evidence_root=tmp_path,
+    )
+    project = ProjectRuntime(tmp_path)
+    project.create(
+        ProjectManifest(
+            project_id="taste-curation-project",
+            title="Taste curation fixture",
+            research_direction="Verify the model-assisted abstraction evidence chain.",
+            status="active",
+        )
+    )
+    snapshot = project.begin_run(
+        "taste-curation-project",
+        ProjectRun(
+            run_id="taste-curation-model-run",
+            provider="fixture-provider",
+            model="fixture-model-v1",
+            condition="model-assisted-abstraction-fixture",
+            seed=0,
+            status="running",
+            evidence_scope="engineering-fixture",
+        ),
+        expected_revision=0,
+    )
+    profile = _live_profile()
+    policy = NodePolicy(
+        policy_id="taste-abstraction-live-fixture",
+        enabled=True,
+        allowed_node_names=["taste-abstraction"],
+        expected_backend=profile.provider,
+        expected_model=profile.model,
+        max_request_bytes=profile.admission.max_request_bytes,
+        max_input_tokens=profile.admission.max_input_tokens,
+        max_output_tokens=profile.admission.max_output_tokens,
+        max_total_tokens=profile.admission.max_total_tokens,
+        max_api_cost_usd=profile.cumulative_project.max_api_cost_usd,
+        max_latency_ms=profile.admission.max_latency_ms,
+    )
+    proposal = _candidate_payload("matched")["abstraction"]
+    receipt = ModelNodeRuntime(project, node_types=taste_node_types()).execute(
+        project_id="taste-curation-project",
+        run_id="taste-curation-model-run",
+        invocation_id="matched-abstraction",
+        request_id="matched-abstraction-request",
+        expected_project_revision=snapshot.revision,
+        state_revision=0,
+        node_name="taste-abstraction",
+        node_input=input_data,
+        context=NodeContext(
+            project_id="taste-curation-project",
+            stage=input_data.stage,
+            state_snapshot_id=input_data.source_projection_sha256,
+            cumulative_api_cost_usd=0,
+            evidence_ids=[input_data.source_id],
+        ),
+        trigger=ModelNodeTrigger(
+            trigger_id="curate-matched-source",
+            reason="Create one untrusted abstraction for independent review.",
+        ),
+        profile=profile,
+        policy=policy,
+        backend_mode=RuntimeBackendMode.LIVE,
+        backend=_LiveFixtureBackend(
+            request_id="matched-abstraction-request",
+            payload=proposal,
+        ),
+        allow_live=True,
+    )
+    ledger = next((tmp_path / receipt.ledger_locator).glob("*.json"))
+    candidate = taste_abstraction_candidate_from_ledger(
+        ledger,
+        evidence_root=tmp_path,
+        author_id="matched-curator",
+        derivation_method="Model proposal pending two independent human reviews.",
+    )
+    payload["candidates"] = [
+        candidate.model_dump(mode="json") if item["candidate_id"] == "matched-candidate" else item
+        for item in payload["candidates"]
+    ]
+    payload["historical_model_invocation_count"] = 1
+    for review in payload["reviews"]:
+        if review["candidate_id"] == candidate.candidate_id:
+            review["candidate_sha256"] = candidate.semantic_sha256
+    package_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    report = inspect_taste_corpus_curation(
+        load_taste_corpus_curation_package(package_path),
+        evidence_root=tmp_path,
+    )
+
+    assert report.historical_model_invocation_count == 1
+    assert report.abstraction_input_bindings_verified is True
+    assert report.model_trace_bindings_verified is True
+    assert report.ready_to_materialize is True
+
+
 def test_failed_retrieval_qualification_rolls_back_all_outputs(tmp_path: Path) -> None:
     package_path = _write_package(tmp_path)
     payload = json.loads(package_path.read_text(encoding="utf-8"))
@@ -174,6 +385,35 @@ def test_cli_inspects_and_materializes_without_execution_authority(
     assert payload["authorizes_execution"] is False
     assert payload["materialization"]["pair_qualified"] is True
     assert (tmp_path / "curation-report.json").is_file()
+
+
+def _live_profile() -> ModelNodeProfile:
+    return ModelNodeProfile(
+        profile_id="taste-abstraction-live-fixture",
+        profile_version="1.0.0",
+        provider="fixture-provider",
+        model="fixture-model-v1",
+        allowed_node_names=("taste-abstraction",),
+        live_execution_permitted=True,
+        generation=ProviderGenerationEnvelope(
+            max_request_bytes=1_000_000,
+            max_output_tokens=2_000,
+            context_window_tokens=20_000,
+        ),
+        admission=NodeAdmissionBudget(
+            max_request_bytes=900_000,
+            max_input_tokens=10_000,
+            max_output_tokens=1_000,
+            max_total_tokens=11_000,
+            max_latency_ms=1_000,
+            max_response_cost_usd=0.10,
+        ),
+        cumulative_project=CumulativeProjectBudget(
+            max_invocations=4,
+            max_total_tokens=40_000,
+            max_api_cost_usd=0.40,
+        ),
+    )
 
 
 def _write_package(
@@ -244,7 +484,7 @@ def _write_package(
                 )
             )
     payload = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "package_id": "heldout-vision-taste-v1",
         "task_id": "heldout-vision-task",
         "task_domain_tags": ["vision"],
@@ -272,11 +512,7 @@ def _write_package(
                 "context_token_budget": 256,
             }
         ],
-        "no_dataset_download": True,
-        "no_api_call": True,
-        "no_ssh": True,
-        "no_gpu_or_model_execution": True,
-        "no_experiment_execution": True,
+        "package_processing_performs_no_external_action": True,
         "authorizes_execution": False,
     }
     package = root / "curation-package.json"

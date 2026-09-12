@@ -77,7 +77,7 @@
         <ul class="hero-facts reveal" aria-label="Project facts">
           <li>Independent native runtime</li>
           <li>Offline-first</li>
-          <li>Python 3.11+</li>
+          <li>Python 3.12</li>
           <li>MIT licensed</li>
         </ul>
       </section>
@@ -242,8 +242,10 @@
           </div>
           <pre><code data-copy-source>git clone https://github.com/Dustzx/SciTaste.git
 cd SciTaste
-python3.11 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+python3.12 -m venv .venv
+.venv/bin/pip install \
+  -c requirements/python312-dev-study.lock \
+  -e '.[dev,study]'
 
 # Run a deterministic trajectory and its checks
 .venv/bin/scitaste run demo --output outputs/demo --seed 7

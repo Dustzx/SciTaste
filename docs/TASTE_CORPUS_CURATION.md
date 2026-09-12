@@ -11,10 +11,13 @@ separates four operations:
 3. abstract a source-supported decision principle; and
 4. independently review the abstraction before it becomes retrieval-eligible.
 
-The no-run implementation is `scitaste.evaluation.taste_corpus_curation`. It
-turns a fully reviewed curation package into the two corpus files and pair
-qualification report consumed by the native Taste preflight. It never downloads
-data, calls a model, connects to a host, loads a checkpoint, or authorizes an
+The implementation has two deliberately separate boundaries. The optional
+`taste-abstraction` model node creates an untrusted proposal and records the
+complete invocation. The offline
+`scitaste.evaluation.taste_corpus_curation` compiler turns a fully reviewed
+curation package into the two corpus files and pair qualification report consumed
+by the native Taste preflight. Inspection and materialization never download
+data, call a model, connect to a host, load a checkpoint, or authorize an
 experiment.
 
 ## Evidence chain
@@ -30,12 +33,32 @@ stage, decision role, license, privacy handling, task domains, quality rationale
 and outcome-information policy before review. A self-declared venue name without
 bound quality evidence is insufficient.
 
+For model-assisted abstraction, `abstraction_input` binds a third file: the exact
+UTF-8 projection shown to the model. Its bytes are preserved, including boundary
+whitespace and terminal newlines. The model input omits the matched/placebo
+relation and held-out task content; its runtime context contains no claims,
+sections, candidate actions, metadata, tools, or action authority.
+`build_taste_abstraction_input` constructs this projection so the experiment does
+not depend on hand-copied text.
+
 One `TasteAbstractionCandidate` converts the source into a closed decision:
 context, evidence state, candidate actions, preferred and rejected actions,
 decision principle, rationale, outcome summary, and confidence. Human-authored
 candidates cannot attach a model trace. Model-assisted candidates must attach the
-exact trace by path and hash. In either case the candidate remains untrusted and
-cannot enter retrieval directly.
+exact canonical entry from a project-owned `ModelNodeRuntime` ledger. The checker
+verifies its complete chain and recording, live-mode profile, request and policy
+fingerprints, exact source input, prompt and output schema, provider/model
+identity, raw response, resource telemetry, zero tool authority, and equality
+between the accepted proposal and reviewed candidate. A scripted or replay
+fixture cannot qualify as historical model assistance. In either case the
+candidate remains untrusted and cannot enter retrieval directly.
+
+The curation package schema is `1.1`. It reports
+`historical_model_invocation_count` separately from
+`package_processing_performs_no_external_action`. The former describes how
+candidates were produced; the latter describes only current inspection or
+materialization. A deterministic migration preserves valid `1.0` packages while
+removing their ambiguous historical no-call wording.
 
 ## Independent human gate
 
@@ -91,10 +114,23 @@ the bound construction and retrieval behavior; it does not prove that Scientific
 Taste improves outcomes, that reviewers were representative, or that an
 experiment may begin.
 
+The machine path is therefore:
+
+1. create and quality-qualify a frozen source plus exact abstraction projection;
+2. construct `TasteAbstractionInput` and run `taste-abstraction` through the
+   normal project-owned model-node runtime;
+3. compile the accepted ledger entry with
+   `scitaste evaluation taste-abstraction-candidate`;
+4. collect two independent reviews, with adjudication only on a split; and
+5. inspect and materialize the matched/placebo pair.
+
+Steps 1, 2, and 4 require separately approved source, model, and human resources.
+The candidate compiler and package inspector do not perform those actions.
+
 ## Current ICLR 2027 boundary
 
 The implementation closes the missing transformation path between approved
 source acquisition and `taste-corpus-pair` qualification. It does not fabricate
-the task-specific source files or human reviews needed by the active native v10
-prepilot. Those remain an empirical/human-resource gate and require an exact
+the task-specific source files or human reviews needed by the title-critical
+H1/H2 study. Those remain an empirical/human-resource gate and require an exact
 source plan plus owner approval before acquisition.

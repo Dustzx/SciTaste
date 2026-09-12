@@ -14,13 +14,9 @@ permissions:
 
 jobs:
   quality:
-    name: Quality / Python ${{ matrix.python-version }}
+    name: Quality / Python 3.12
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12"]
     steps:
       - name: Check out SciTaste and pinned substrate
         uses: actions/checkout@v7
@@ -29,10 +25,10 @@ jobs:
           # A depth-1 checkout makes those objects falsely appear unavailable.
           fetch-depth: 0
           submodules: recursive
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12.14"
           cache: pip
       - name: Install native isolation dependency
         run: |
@@ -48,7 +44,10 @@ jobs:
             --ro-bind /lib /lib --ro-bind /lib64 /lib64 \
             --proc /proc --dev /dev /bin/true
       - name: Install SciTaste test environment
-        run: python -m pip install -e '.[dev]'
+        run: >-
+          python -m pip install
+          -c requirements/python312-dev-study.lock
+          -e '.[dev,study]'
       - name: Check formatting
         run: python -m ruff format --check .
       - name: Lint
@@ -58,18 +57,18 @@ jobs:
         continue-on-error: true
         run: >-
           python -m pytest --cov=scitaste --cov-report=term-missing
-          --junitxml=/tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+          --junitxml=/tmp/scitaste-pytest-python312.xml
       - name: Publish test failure annotations
         if: steps.tests.outcome == 'failure'
         run: >-
           python .github/scripts/report_pytest_failures.py
-          /tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+          /tmp/scitaste-pytest-python312.xml
       - name: Retain failed test report
         if: always() && steps.tests.outcome == 'failure'
         uses: actions/upload-artifact@v6
         with:
-          name: pytest-python-${{ matrix.python-version }}
-          path: /tmp/scitaste-pytest-${{ matrix.python-version }}.xml
+          name: pytest-python-3.12
+          path: /tmp/scitaste-pytest-python312.xml
           if-no-files-found: error
           retention-days: 7
       - name: Run installed CLI smoke test

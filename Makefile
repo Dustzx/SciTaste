@@ -4,7 +4,7 @@ PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
 
 install:
-	$(PIP) install -e '.[dev]'
+	$(PIP) install -c requirements/python312-dev-study.lock -e '.[dev,study]'
 
 install-substrate:
 	git submodule update --init third_party/autoresearchclaw

@@ -39,9 +39,15 @@ from scitaste.taste.memory import (
     taste_case_sha256,
 )
 from scitaste.taste.retriever import TasteDomainRelation, retrieve_taste_cases
+from scitaste.taste.semantic_models import (
+    TASTE_ABSTRACTION_NODE,
+    TasteAbstractionInput,
+    TasteCaseAbstraction,
+)
 from scitaste.taste.utility import UtilityPolicy
 
 __all__ = [
+    "TASTE_ABSTRACTION_NODE",
     "CandidateGenerationAdmissionError",
     "CandidateGenerationResult",
     "NativeConditionComponents",
@@ -53,6 +59,8 @@ __all__ = [
     "NativeTasteCondition",
     "NativeTasteRetrievalMode",
     "StageTasteCriticSuite",
+    "TasteAbstractionInput",
+    "TasteCaseAbstraction",
     "TasteController",
     "TasteCriticDimension",
     "TasteCriticFinding",

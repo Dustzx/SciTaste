@@ -7,7 +7,7 @@ name = "scitaste"
 version = "0.1.0"
 description = "Taste-guided, decision-centric autonomous research control"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.13"
 authors = [{ name = "SciTaste contributors" }]
 license = { file = "LICENSE" }
 dependencies = [
@@ -55,12 +55,13 @@ show_missing = true
 skip_covered = true
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 extend-exclude = ["third_party", "outputs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["UP040", "UP046", "UP047"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]

@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3d3a34">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3d3a34">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-a65d2e"></a>
   <img alt="Status: research preview" src="https://img.shields.io/badge/Status-research_preview-68715e">
 </p>
@@ -99,14 +99,18 @@ See the [architecture](docs/ARCHITECTURE.md) for component boundaries and the
 
 ## Quick start
 
-Python 3.11 or newer is required. The default path is deterministic and offline;
+Python 3.12 is required. The supported interpreter range is intentionally fixed
+to the 3.12 minor series so local development, CI, and formal runtime preparation
+share one language environment. The default path is deterministic and offline;
 it needs no API key, model download, GPU, or external research framework.
 
 ```bash
 git clone https://github.com/Dustzx/SciTaste.git
 cd SciTaste
-python3.11 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
+python3.12 -m venv .venv
+.venv/bin/pip install \
+  -c requirements/python312-dev-study.lock \
+  -e '.[dev,study]'
 
 .venv/bin/scitaste run demo --output outputs/demo --seed 7
 ```
@@ -129,9 +133,11 @@ Open <http://127.0.0.1:8765>. Loopback access establishes its protected browser
 session automatically; the main page has no credential field.
 
 For the complete offline Discovery → Evidence → Communication → Figure path, use
-the [full-workflow guide](docs/FULL_WORKFLOW.md). The default developer extra runs
-the repository tests; study dependencies are installed separately with
-`pip install -e '.[study]'`.
+the [full-workflow guide](docs/FULL_WORKFLOW.md). The checked-in constraints file
+defines the canonical Linux Python 3.12 development and study environment. GPU
+workloads retain experiment-specific immutable runtime profiles because CUDA and
+model dependencies are part of the measured condition rather than the repository
+control environment.
 
 ## Research status
 

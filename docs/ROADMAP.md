@@ -308,10 +308,14 @@ implementation references at commit `5bbf716...`, retains Full--Base and
 Full--mismatched as the two confirmation obligations, and classifies the three
 component-only contrasts as mandatory mechanism diagnostics. A local-only
 production-retrieval qualifier and its source/quality-bound dual-human
-abstraction compiler now enforce the construction path, but task-specific source
-bytes and actual review records remain open. Model execution is still pending;
-assets, remote checkpoint, reviewers, and owner approval remain unresolved, so
-no execution is authorized.
+abstraction compiler now enforce the construction path. A relation-blind
+`taste-abstraction` model node preserves exact source bytes and the complete
+project-owned request/response ledger; scripted output cannot qualify as model
+assistance, and accepted output remains quarantined before two-person review.
+Task-specific source bytes, real abstraction calls, and actual review records
+remain open. Formal model execution is still pending; task assets, external
+method adapters, reviewers, model selection, and owner approval remain
+unresolved, so no experiment is authorized.
 
 That distinction is now executable policy rather than an addendum alone.
 Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
@@ -1078,9 +1082,27 @@ citation/resource screen and exact adapters/licenses remain open.
   real outcome artifacts and reviewers, measuring whether admitted experience
   improves later held-out decisions without degrading calibration or diversity.
 
+## Ledger-bound reference abstraction
+
+- High-quality references can now pass through a dedicated, relation-blind
+  `taste-abstraction` model node. The exact UTF-8 projection, bounded context,
+  prompt, schema, provider/model identity, raw response, token/cost use, and
+  accepted proposal remain in the normal project ledger.
+- Candidate compilation verifies the whole ledger chain and recording. Corpus
+  curation independently rechecks that trace and still requires two human
+  reviewers; neither model acceptance nor a scripted fixture grants retrieval
+  eligibility.
+- This completes the software path for H1 treatment construction. The next
+  scientific milestone is not more fixture coverage: it is owner-approved
+  acquisition of the selected high-quality sources, task-excluded API
+  conformance, real abstraction generation, and independent source-fidelity
+  review before a powered study is launched.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.
+- Repository development and CI use the single locked CPython 3.12 environment;
+  formal GPU/API runtimes remain separately hash-bound experimental resources.
 - Weekly triage: blockers, risks, decisions, and evidence of exit criteria.
 - Every architecture change receives an ADR in `docs/ARCHITECTURE.md` or a
   dedicated `docs/adr/` record once ADR count grows.
