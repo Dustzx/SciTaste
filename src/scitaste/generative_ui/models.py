@@ -1284,9 +1284,7 @@ class ProjectProgressReviewActivationItem(BaseModel):
             raise ValueError("identity-protocol model count exceeds candidate count")
         if self.pilot_proposal_ready_model_count > self.primary_model_candidate_count:
             raise ValueError("pilot-proposal model count exceeds candidate count")
-        if (self.model_identity_protocol_id is None) != (
-            self.identity_protocol_model_count == 0
-        ):
+        if (self.model_identity_protocol_id is None) != (self.identity_protocol_model_count == 0):
             raise ValueError("identity protocol ID and candidate count must agree")
         if self.adapter_ready_system_count > self.external_system_count:
             raise ValueError("adapter-ready system count exceeds system count")

@@ -274,9 +274,7 @@ class ProjectReviewFollowupActivation(BaseModel):
     project_resource_binding_semantic_sha256: str = Field(pattern=_SHA256)
     model_identity_protocol_id: str | None = Field(default=None, pattern=_ID)
     model_identity_protocol_file_sha256: str | None = Field(default=None, pattern=_SHA256)
-    model_identity_protocol_semantic_sha256: str | None = Field(
-        default=None, pattern=_SHA256
-    )
+    model_identity_protocol_semantic_sha256: str | None = Field(default=None, pattern=_SHA256)
     paper_title: str
     target_venue: Literal["ICLR 2027"]
     studies: tuple[ActivationStudyStatus, ...] = Field(min_length=1, max_length=30)
@@ -356,8 +354,7 @@ class ProjectReviewFollowupActivation(BaseModel):
             if any(item is None for item in identity_values):
                 raise ValueError("activation v1.1 requires temporal identity provenance")
             expected_owner_ready = all(
-                item.pilot_proposal_ready is True
-                for item in self.primary_model_candidates
+                item.pilot_proposal_ready is True for item in self.primary_model_candidates
             )
             if self.ready_for_model_pilot_proposal != expected_owner_ready:
                 raise ValueError("model pilot-proposal readiness differs from candidates")
@@ -458,10 +455,7 @@ def compile_review_followup_activation(
     if manifest.model_identity_protocol is not None:
         identity_path = _verify_binding(root, manifest.model_identity_protocol)
         identity_inspection = load_api_identity_protocol(identity_path)
-        if (
-            identity_inspection.semantic_sha256
-            != manifest.model_identity_protocol.semantic_sha256
-        ):
+        if identity_inspection.semantic_sha256 != manifest.model_identity_protocol.semantic_sha256:
             raise ValueError("review activation API identity semantic hash differs")
         if identity_inspection.protocol.project_id != design.project_id:
             raise ValueError("review activation API identity protocol belongs to another project")
@@ -599,9 +593,7 @@ def compile_review_followup_activation(
         compute_catalog_semantic_sha256=loaded_catalog.semantic_sha256,
         project_resource_binding_semantic_sha256=(binding_inspection.binding_semantic_sha256),
         model_identity_protocol_id=(
-            identity_inspection.protocol.protocol_id
-            if identity_inspection is not None
-            else None
+            identity_inspection.protocol.protocol_id if identity_inspection is not None else None
         ),
         model_identity_protocol_file_sha256=(
             identity_inspection.file_sha256 if identity_inspection is not None else None
@@ -846,8 +838,7 @@ def _model_candidate(
         pilot_proposal_ready=qualification.pilot_proposal_ready,
         formal_identity_window_open=qualification.formal_identity_ready,
         ready_for_conformance_pilot=(
-            qualification.authenticated_identity_attested
-            and qualification.pricing_verified
+            qualification.authenticated_identity_attested and qualification.pricing_verified
         ),
         blocker_codes=qualification.blocker_codes,
     )
@@ -986,9 +977,7 @@ def _require_git_bound_inputs(
     ]
     if manifest.manifest.model_identity_protocol is not None:
         paths.append(
-            root.joinpath(
-                *PurePosixPath(manifest.manifest.model_identity_protocol.path).parts
-            )
+            root.joinpath(*PurePosixPath(manifest.manifest.model_identity_protocol.path).parts)
         )
     for path in dict.fromkeys(paths):
         try:

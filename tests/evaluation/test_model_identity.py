@@ -132,9 +132,7 @@ def test_identity_protocol_rejects_missing_provenance_capture() -> None:
 
 def test_revision_backed_policy_rejects_catalog_drift() -> None:
     protocol = load_api_identity_protocol(_PROTOCOL).protocol
-    resource = load_compute_resource_catalog(_CATALOG).catalog.resource(
-        "deepseek-v4-flash"
-    )
+    resource = load_compute_resource_catalog(_CATALOG).catalog.resource("deepseek-v4-flash")
     drifted = resource.model_copy(update={"model_revision": "DeepSeek-V4-Flash-new"})
 
     with pytest.raises(ValueError, match="revision differs"):
@@ -143,9 +141,7 @@ def test_revision_backed_policy_rejects_catalog_drift() -> None:
 
 def test_closed_conformance_window_is_admitted_as_identity_not_effectiveness() -> None:
     inspection = load_api_identity_protocol(_PROTOCOL)
-    resource = load_compute_resource_catalog(_CATALOG).catalog.resource(
-        "deepseek-v4-flash"
-    )
+    resource = load_compute_resource_catalog(_CATALOG).catalog.resource("deepseek-v4-flash")
 
     report = inspect_api_identity_window(
         _window(), protocol_inspection=inspection, resource=resource
@@ -161,9 +157,7 @@ def test_closed_conformance_window_is_admitted_as_identity_not_effectiveness() -
 
 def test_unannounced_returned_identity_blocks_the_whole_window() -> None:
     inspection = load_api_identity_protocol(_PROTOCOL)
-    resource = load_compute_resource_catalog(_CATALOG).catalog.resource(
-        "deepseek-v4-flash"
-    )
+    resource = load_compute_resource_catalog(_CATALOG).catalog.resource("deepseek-v4-flash")
 
     report = inspect_api_identity_window(
         _window(returned_model="unannounced-model"),

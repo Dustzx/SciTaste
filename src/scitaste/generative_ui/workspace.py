@@ -785,9 +785,7 @@ class WorkspaceSurfaceFactory:
                             item.ready_for_conformance_pilot
                             for item in activation.primary_model_candidates
                         ),
-                        "model_identity_protocol_id": (
-                            activation.model_identity_protocol_id
-                        ),
+                        "model_identity_protocol_id": (activation.model_identity_protocol_id),
                         "identity_protocol_model_count": sum(
                             item.temporal_identity_protocol_defined is True
                             for item in activation.primary_model_candidates

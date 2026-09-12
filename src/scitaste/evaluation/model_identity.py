@@ -97,16 +97,12 @@ class ApiIdentityProtocol(BaseModel):
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     sentinel: ApiIdentitySentinel
-    candidate_policies: tuple[ApiIdentityCandidatePolicy, ...] = Field(
-        min_length=1, max_length=10
-    )
+    candidate_policies: tuple[ApiIdentityCandidatePolicy, ...] = Field(min_length=1, max_length=10)
     capture_fields: tuple[str, ...] = Field(min_length=12, max_length=30)
     retain_raw_request: Literal[True] = True
     retain_raw_response: Literal[True] = True
     missing_identity_action: Literal["abort_window"] = "abort_window"
-    drift_action: Literal["close_window_and_open_new_stratum"] = (
-        "close_window_and_open_new_stratum"
-    )
+    drift_action: Literal["close_window_and_open_new_stratum"] = "close_window_and_open_new_stratum"
     cross_window_pooling: Literal[False] = False
     cross_revision_pooling: Literal[False] = False
     cross_provider_pooling: Literal[False] = False
@@ -142,16 +138,13 @@ class ApiIdentityProtocol(BaseModel):
         missing = required_capture - set(self.capture_fields)
         if missing:
             raise ValueError(
-                "API identity protocol omits required capture fields: "
-                + ", ".join(sorted(missing))
+                "API identity protocol omits required capture fields: " + ", ".join(sorted(missing))
             )
         return self
 
     def policy(self, resource_id: str) -> ApiIdentityCandidatePolicy:
         try:
-            return next(
-                item for item in self.candidate_policies if item.resource_id == resource_id
-            )
+            return next(item for item in self.candidate_policies if item.resource_id == resource_id)
         except StopIteration as exc:
             raise ValueError(f"API identity protocol omits {resource_id!r}") from exc
 
@@ -298,9 +291,7 @@ class ApiIdentityWindowAttestation(BaseModel):
                 raise ValueError("formal model selection must precede the identity window")
         elif any(item is not None for item in formal_fields):
             raise ValueError("conformance windows cannot carry formal selection provenance")
-        expected = content_sha256(
-            self.model_dump(mode="json", exclude={"attestation_sha256"})
-        )
+        expected = content_sha256(self.model_dump(mode="json", exclude={"attestation_sha256"}))
         if self.attestation_sha256 != expected:
             raise ValueError("API identity window attestation hash mismatch")
         return self
@@ -395,8 +386,7 @@ def qualify_api_identity_candidate(
     ):
         raise ValueError("official API revision is absent from the identity allowlist")
     pricing_verified = (
-        resource.pricing is not None
-        and resource.pricing.status is ObservationStatus.VERIFIED
+        resource.pricing is not None and resource.pricing.status is ObservationStatus.VERIFIED
     )
     authenticated = resource.availability is ObservationStatus.VERIFIED
     blockers = []
@@ -436,9 +426,7 @@ def inspect_api_identity_window(
         blockers.append("protocol_identity_mismatch")
     if attestation.resource_id != resource.resource_id:
         blockers.append("resource_identity_mismatch")
-    duration_seconds = (
-        attestation.closed_at_utc - attestation.opened_at_utc
-    ).total_seconds()
+    duration_seconds = (attestation.closed_at_utc - attestation.opened_at_utc).total_seconds()
     if duration_seconds > policy.maximum_formal_window_hours * 3_600:
         blockers.append("identity_window_duration_exceeded")
     if policy.official_revision is not None:
