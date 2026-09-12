@@ -61,6 +61,9 @@ def _symlink_zip_bytes() -> bytes:
 def _fixture(
     root: Path,
     payload: bytes,
+    *,
+    asset_last_modified: datetime = OBSERVED_AT,
+    asset_etag: str = '"etag-1"',
 ):
     inventory_path = root / "inventory.yaml"
     asset = DatasetPackageAsset(
@@ -72,9 +75,9 @@ def _fixture(
         provider_object_id="12345",
         openml_dataset_id=12345,
         openml_dataset_version=1,
-        source_etag='"etag-1"',
+        source_etag=asset_etag,
         observed_content_length_bytes=len(payload),
-        observed_last_modified=OBSERVED_AT,
+        observed_last_modified=asset_last_modified,
         license_identifier="CC0-1.0",
         license_evidence_urls=("https://example.org/license",),
         license_status=DatasetAssetLicenseStatus.VERIFIED,
@@ -305,6 +308,146 @@ def test_approval_streaming_receipt_and_safe_archive_are_hash_bound(tmp_path: Pa
         transaction / "ARCHIVE_QUALIFICATION.json",
     )
     assert load_dataset_archive_qualification_report(report_path) == report
+
+
+def test_http_date_accepts_only_the_exact_second_of_subsecond_object_metadata(
+    tmp_path: Path,
+) -> None:
+    payload = _zip_bytes(content=b"subsecond object metadata")
+    precise = OBSERVED_AT.replace(microsecond=869_000)
+    inspection, gate, approval, asset = _fixture(
+        tmp_path,
+        payload,
+        asset_last_modified=precise,
+    )
+
+    def fetch(selected: DatasetPackageAsset, sink):
+        assert selected == asset
+        sink.write(payload)
+        return DatasetPackageSourceObservation(
+            final_url=asset.source_url,
+            content_type="application/zip",
+            content_length_bytes=len(payload),
+            last_modified=precise.replace(microsecond=0),
+            etag=asset.source_etag,
+        )
+
+    receipt = materialize_dataset_package_acquisition(
+        inspection,
+        gate,
+        approval,
+        workspace_root=tmp_path,
+        confirmed_proposal_sha256=inspection.request.proposal_sha256,
+        confirmed_approval_sha256=approval.approval_sha256,
+        allow_network_download=True,
+        fetcher=fetch,
+        free_space_probe=lambda _: 10**9,
+        acquired_at=OBSERVED_AT,
+    )
+
+    assert receipt.assets[0].observed_last_modified == precise.replace(microsecond=0)
+
+    drift_root = tmp_path / "drift"
+    drift_root.mkdir()
+    drift_inspection, drift_gate, drift_approval, drift_asset = _fixture(
+        drift_root,
+        payload,
+        asset_last_modified=precise,
+    )
+
+    def drifted_fetch(selected: DatasetPackageAsset, sink):
+        assert selected == drift_asset
+        sink.write(payload)
+        return DatasetPackageSourceObservation(
+            final_url=drift_asset.source_url,
+            content_type="application/zip",
+            content_length_bytes=len(payload),
+            last_modified=precise.replace(microsecond=0, second=precise.second + 1),
+            etag=drift_asset.source_etag,
+        )
+
+    with pytest.raises(ValueError, match="Last-Modified drifted"):
+        materialize_dataset_package_acquisition(
+            drift_inspection,
+            drift_gate,
+            drift_approval,
+            workspace_root=drift_root,
+            confirmed_proposal_sha256=drift_inspection.request.proposal_sha256,
+            confirmed_approval_sha256=drift_approval.approval_sha256,
+            allow_network_download=True,
+            fetcher=drifted_fetch,
+            free_space_probe=lambda _: 10**9,
+            acquired_at=OBSERVED_AT,
+        )
+
+
+def test_openml_strong_etag_compares_the_same_opaque_value_with_optional_quotes(
+    tmp_path: Path,
+) -> None:
+    payload = _zip_bytes(content=b"strong etag identity")
+    inspection, gate, approval, asset = _fixture(
+        tmp_path,
+        payload,
+        asset_etag="etag-from-object-metadata",
+    )
+
+    def fetch(selected: DatasetPackageAsset, sink):
+        assert selected == asset
+        sink.write(payload)
+        return DatasetPackageSourceObservation(
+            final_url=asset.source_url,
+            content_type="application/zip",
+            content_length_bytes=len(payload),
+            last_modified=asset.observed_last_modified,
+            etag='"etag-from-object-metadata"',
+        )
+
+    receipt = materialize_dataset_package_acquisition(
+        inspection,
+        gate,
+        approval,
+        workspace_root=tmp_path,
+        confirmed_proposal_sha256=inspection.request.proposal_sha256,
+        confirmed_approval_sha256=approval.approval_sha256,
+        allow_network_download=True,
+        fetcher=fetch,
+        free_space_probe=lambda _: 10**9,
+        acquired_at=OBSERVED_AT,
+    )
+    assert receipt.assets[0].observed_etag == '"etag-from-object-metadata"'
+
+    weak_root = tmp_path / "weak"
+    weak_root.mkdir()
+    weak_inspection, weak_gate, weak_approval, weak_asset = _fixture(
+        weak_root,
+        payload,
+        asset_etag="etag-from-object-metadata",
+    )
+
+    def weak_fetch(selected: DatasetPackageAsset, sink):
+        assert selected == weak_asset
+        sink.write(payload)
+        return DatasetPackageSourceObservation(
+            final_url=weak_asset.source_url,
+            content_type="application/zip",
+            content_length_bytes=len(payload),
+            last_modified=weak_asset.observed_last_modified,
+            etag='W/"etag-from-object-metadata"',
+        )
+
+    with pytest.raises(ValueError, match="ETag drifted"):
+        materialize_dataset_package_acquisition(
+            weak_inspection,
+            weak_gate,
+            weak_approval,
+            workspace_root=weak_root,
+            confirmed_proposal_sha256=weak_inspection.request.proposal_sha256,
+            confirmed_approval_sha256=weak_approval.approval_sha256,
+            allow_network_download=True,
+            fetcher=weak_fetch,
+            free_space_probe=lambda _: 10**9,
+            acquired_at=OBSERVED_AT,
+        )
 
 
 def test_cli_qualifies_existing_receipt_without_extraction(

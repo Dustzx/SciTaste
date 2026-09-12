@@ -876,13 +876,39 @@ def _validate_source_observation(
         raise ValueError(f"dataset package media type drifted: {asset.asset_id}")
     if observation.content_length_bytes != asset.observed_content_length_bytes:
         raise ValueError(f"dataset package Content-Length drifted: {asset.asset_id}")
-    if observation.last_modified != asset.observed_last_modified:
+    # HTTP-date has one-second precision (RFC 9110), while object-store metadata
+    # can expose sub-second timestamps for the same immutable object.  Compare
+    # the exact UTC HTTP representation rather than treating unavailable
+    # fractional digits as source drift.
+    expected_http_date = asset.observed_last_modified.astimezone(UTC).replace(microsecond=0)
+    observed_http_date = observation.last_modified.astimezone(UTC)
+    if observed_http_date.microsecond or observed_http_date != expected_http_date:
         raise ValueError(f"dataset package Last-Modified drifted: {asset.asset_id}")
     if asset.source_kind is DatasetAssetSourceKind.GOOGLE_DRIVE_FILE:
         if observation.content_disposition_filename != asset.filename:
             raise ValueError(f"dataset package filename drifted: {asset.asset_id}")
-    elif observation.etag != asset.source_etag:
-        raise ValueError(f"dataset package ETag drifted: {asset.asset_id}")
+    else:
+        expected_etag = _strong_etag_opaque_value(asset.source_etag)
+        observed_etag = _strong_etag_opaque_value(observation.etag)
+        if expected_etag is None or observed_etag is None or observed_etag != expected_etag:
+            raise ValueError(f"dataset package ETag drifted: {asset.asset_id}")
+
+
+def _strong_etag_opaque_value(value: str | None) -> str | None:
+    """Normalize only optional HTTP quotes; weak or malformed validators fail closed."""
+
+    if value is None:
+        return None
+    candidate = value.strip()
+    if not candidate or candidate[:2].casefold() == "w/":
+        return None
+    if candidate.startswith('"') or candidate.endswith('"'):
+        if len(candidate) < 3 or not (candidate.startswith('"') and candidate.endswith('"')):
+            return None
+        candidate = candidate[1:-1]
+    if not candidate or '"' in candidate or any(ord(character) < 33 for character in candidate):
+        return None
+    return candidate
 
 
 class _BoundedHashWriter:
