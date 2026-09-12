@@ -26,7 +26,12 @@ applies one declared Knowledge/Taste/critic policy consistently from Discovery
 through Evidence, Writing, and Figure generation while leaving evidence-integrity,
 writing-integrity, visual, budget, and sandbox gates enabled in every condition.
 High-quality references enter Taste through a separate source-abstraction path:
-the complete audited population is frozen before outcomes, and rights,
+candidate discovery begins from the live decision and evidence gaps rather than
+a single relevance or prestige ranking. Six contrastive query families seek
+alternatives, null results, failure boundaries, replications, and transfer cases;
+a source-group-aware coverage compiler freezes the metadata-only audit cohort
+only after explicit saturation. These records remain unqualified candidates.
+The complete audited population is frozen before outcomes, and rights,
 scientific-source quality, and held-out/self-evidence isolation are evaluated as
 three separate arguments. Each admitted source needs two independent quality
 reviews while every rejection stays visible. Source content and quality evidence
@@ -131,7 +136,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, prestige-blind five-dimensional reference qualification, one opt-in content-bound model path that concretizes every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation, decision-grounded source-diverse and tension-preserving Taste selection, schema-1.1 dual-human source admission, a paired corpus compiler, and outcome-gated continual project memory are implemented and offline-tested | Real quality-screened task-specific sources, provider-produced qualification/abstraction/selector traces, independent human reviews, H0 source-quality and H1/H2 mechanism evidence, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
+| Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, decision-gap-driven contrastive reference mining with source-group-aware saturation, prestige-blind five-dimensional reference qualification, one opt-in content-bound model path that concretizes every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation, decision-grounded source-diverse and tension-preserving Taste selection, schema-1.1 dual-human source admission, a paired corpus compiler, and outcome-gated continual project memory are implemented and offline-tested | Real search-connector batches, quality-screened task-specific sources, provider-produced mining/qualification/abstraction/selector traces, independent human reviews, H0 source-quality and H1/H2 mechanism evidence, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, and a deterministic Full Workflow evidence-hotspot trigger implemented; one registered live study is a narrow preliminary signal | Independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

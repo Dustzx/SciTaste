@@ -46,10 +46,14 @@ but cannot identify a causal Taste effect when systems use different models.
 
 ### H0: decision-bearing quality beyond prestige
 
-Given the same frozen broad source pool, select the same number of references
-either by the five content-grounded quality dimensions or by venue/citation
-metadata alone. Keep the abstraction model, abstraction prompt, downstream
-model, tools, and context budget fixed.
+Construct one common broad source pool before arm assignment. The pool is
+driven by registered decision/evidence gaps and complementary direct,
+alternative, negative/null, failure, replication, and transfer queries; it is
+frozen by source-group-aware coverage and saturation rather than a scalar
+quality rank. Given that same frozen broad source pool, select the same number
+of references either by the five content-grounded quality dimensions or by
+venue/citation metadata alone. Keep the abstraction model, abstraction prompt,
+downstream model, tools, and context budget fixed.
 
 Primary contrast: `quality-grounded-reference-admission` versus
 `prestige-only-reference-selection`.
@@ -168,7 +172,10 @@ H0 is a source-selection contrast over the same broad source pool. It shares
 held-out decisions and compatible downstream outputs with H1--H2b, but changes
 only the source-selection rule at equal source count. H1 then holds the
 quality-admitted source set fixed, preventing source quality and representation
-effects from being conflated.
+effects from being conflated. Decision-gap mining is applied once upstream of
+both H0 arms and cannot use source bodies, arm labels, or downstream outcomes;
+therefore it is a common-pool construction policy rather than an extra
+treatment.
 
 H2b is a separate paired selector contrast, not another reinterpretation of the
 three-arm context. Both selector conditions receive the same frozen broad pool.

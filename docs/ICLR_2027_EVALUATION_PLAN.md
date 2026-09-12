@@ -11,6 +11,15 @@ selection as title-critical contrasts, and requires model selection before
 outcomes. The earlier Qwen v11 and DeepSeek V4.1 proposals
 below remain feasibility/history artifacts rather than the final formal design.
 
+The broad source pool is now governed by the no-action contract in
+[`SCIENTIFIC_REFERENCE_MINING.md`](SCIENTIFIC_REFERENCE_MINING.md). It starts
+from the registered decision and evidence gaps, covers six contrastive query
+families, and freezes only after decision/evidence/domain/source-group coverage
+plus consecutive-batch saturation. This procedure runs once upstream of both H0
+arms. It cannot read content or qualify a source, so it neither bakes the
+content-grounded treatment into discovery nor treats metadata relevance as
+Scientific Taste.
+
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
 The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper
 is due September 25, 2026 at 23:59 AoE. The submission must use at most nine

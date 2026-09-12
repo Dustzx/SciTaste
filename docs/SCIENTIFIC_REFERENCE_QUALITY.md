@@ -15,8 +15,12 @@ them, or the conditions under which the selected action would fail.
 
 SciTaste therefore separates three operations:
 
-1. **Discovery** constructs a broad, rights-compatible source pool. Search,
-   citations, venues, and metadata are permitted here as recall aids.
+1. **Discovery** constructs a broad, rights-compatible source pool from the
+   live decision and evidence gaps. Complementary query families and a
+   source-group-aware saturation rule are defined in
+   [`SCIENTIFIC_REFERENCE_MINING.md`](SCIENTIFIC_REFERENCE_MINING.md). Search,
+   citations, venues, and metadata are permitted here as recall aids, never as
+   the downstream quality verdict.
 2. **Reference qualification** sees a prestige-blind content projection and
    tests whether the source contains a complete contrastive decision episode.
 3. **Taste abstraction** distills an admitted episode into a grounded principle

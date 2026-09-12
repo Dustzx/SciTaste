@@ -24,6 +24,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.4 — grounded contrastive Taste distillation | done | formal abstractions bind every decision element to exact source excerpts, expose transfer/failure boundaries, and cannot enter SciTasteBench v3 under a legacy curation tier |
 | Phase 8.5 — decision-grounded Taste selection | done | broad retrieval loses final authority; a closed-world deliberation trace proves applicability, excludes failure boundaries and duplicate sources, and preserves available action tension before controller use |
 | Phase 8.6 — content-grounded reference quality | done | prestige-blind five-dimensional screening, content-free qualification receipts, and dual-human schema-1.1 source admission define which records can teach transferable judgment |
+| Phase 8.7 — decision-gap-driven reference mining | done | contrastive query families, marginal decision/evidence/domain coverage, source-group caps, and explicit saturation freeze a metadata-only audit cohort without ranking quality by prestige |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -75,6 +76,17 @@ reduced to a content-free receipt before schema-1.1 source admission requires
 two independent, prestige- and model-blind human reviews. H0 compares this gate
 with prestige-only selection from the same pool at equal source and downstream
 budgets. Real source projections, calls, reviews, and H0 outcomes remain open.
+
+Reference discovery is no longer defined as a manually chosen top-k list. A
+proposal-only node expands each live decision and its evidence gaps into direct,
+alternative, negative/null, failure/limitation, replication/reappraisal, and
+cross-domain query families. A deterministic compiler then freezes a metadata-
+only cohort by marginal decision-pattern, evidence-role, domain, and source-
+group coverage. Venue and citation metadata never enter cohort priority, and
+search is not considered complete until registered coverage is reachable and a
+two-to-five-batch no-new-coverage saturation rule passes. This supplies the
+common broad pool for H0; it performs no search itself and does not qualify any
+source. Real search-connector execution and batches remain open.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and

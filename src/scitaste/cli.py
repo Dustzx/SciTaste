@@ -268,6 +268,11 @@ from scitaste.taste.memory import (
     save_taste_memory_admission_report,
     taste_case_sha256,
 )
+from scitaste.taste.reference_mining import (
+    compile_reference_mining_report,
+    load_reference_mining_run,
+    save_reference_mining_report,
+)
 from scitaste.taste.reference_quality import (
     compile_reference_quality_qualification,
     save_reference_quality_qualification,
@@ -1609,6 +1614,14 @@ def build_parser() -> argparse.ArgumentParser:
     reference_quality_qualification.set_defaults(
         handler=_handle_evaluation_reference_quality_qualification
     )
+    reference_mining = evaluation_commands.add_parser(
+        "reference-mining",
+        help="Freeze a coverage- and saturation-controlled metadata candidate cohort",
+    )
+    reference_mining.add_argument("--run", type=Path, required=True)
+    reference_mining.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(reference_mining)
+    reference_mining.set_defaults(handler=_handle_evaluation_reference_mining)
     taste_corpus_pair = evaluation_commands.add_parser(
         "taste-corpus-pair",
         help="Qualify matched and mismatched Taste corpora without external actions",
@@ -5128,6 +5141,24 @@ def _handle_evaluation_reference_quality_qualification(args: argparse.Namespace)
         )
     )
     return 0
+
+
+def _handle_evaluation_reference_mining(args: argparse.Namespace) -> int:
+    run = load_reference_mining_run(args.run)
+    report = compile_reference_mining_report(run)
+    output = save_reference_mining_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "reference-mining-cohort-frozen",
+                **report.model_dump(mode="json"),
+                "output": str(output),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if report.cohort_ready_for_reference_quality else 1
 
 
 def _handle_evaluation_decision_dossier(args: argparse.Namespace) -> int:

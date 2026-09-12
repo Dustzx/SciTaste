@@ -26,6 +26,12 @@ from scitaste.taste.deliberation import (
     VerifiedTasteDeliberation,
     validate_taste_deliberation,
 )
+from scitaste.taste.reference_mining import (
+    REFERENCE_MINING_NODE,
+    ReferenceMiningNeed,
+    ReferenceMiningProposal,
+    validate_reference_mining_proposal,
+)
 from scitaste.taste.reference_quality import (
     REFERENCE_QUALITY_NODE,
     ReferenceQualityInput,
@@ -201,10 +207,59 @@ class ReferenceQualityNode(ModelNode[ReferenceQualityInput, ReferenceQualityProp
         return sorted(set(reasons))
 
 
+class ReferenceMiningNode(ModelNode[ReferenceMiningNeed, ReferenceMiningProposal]):
+    """Propose contrastive search queries without executing search or judging quality."""
+
+    node_name = REFERENCE_MINING_NODE
+    prompt_version = "reference-mining-v1"
+    system_instruction = (
+        "Plan a bounded metadata search for references that may inform the supplied scientific "
+        "decision. Cover exactly the declared query families and all required decision patterns, "
+        "evidence roles, and domain facets. Search deliberately for alternatives, negative or "
+        "null results, failure boundaries, replications, reappraisals, and cross-domain transfer, "
+        "not only supportive or lexically similar work. Do not rank by venue, author, citation "
+        "count, or reported success. The source body is unavailable. Every result remains an "
+        "unqualified candidate. This proposal cannot call search tools, download or read content, "
+        "qualify a reference, authorize resources, or execute a research action."
+    )
+    input_model = ReferenceMiningNeed
+    output_model = ReferenceMiningProposal
+
+    def _proposal_rejections(
+        self,
+        proposal: ReferenceMiningProposal,
+        *,
+        input_data: ReferenceMiningNeed,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons = list(validate_reference_mining_proposal(input_data, proposal))
+        if context.stage != input_data.stage.value:
+            reasons.append("reference-mining context stage differs from the closed need")
+        if context.state_snapshot_id != input_data.need_sha256:
+            reasons.append("reference-mining context differs from the closed need")
+        if context.evidence_ids != sorted(input_data.evidence_gap_ids):
+            reasons.append("reference-mining context evidence gaps differ from the closed need")
+        if (
+            context.claim_ids
+            or context.section_ids
+            or context.candidate_actions
+            or context.metadata
+        ):
+            reasons.append("reference-mining context contains information outside the need")
+        return sorted(set(reasons))
+
+
 def taste_node_types() -> dict[str, ModelNodeRegistration]:
     """Return the Scientific Taste extension understood by the durable runtime."""
 
     return {
+        REFERENCE_MINING_NODE: ModelNodeRegistration(
+            ReferenceMiningNode,
+            ReferenceMiningNeed,
+            ReferenceMiningProposal,
+        ),
         REFERENCE_QUALITY_NODE: ModelNodeRegistration(
             ReferenceQualityNode,
             ReferenceQualityInput,
@@ -501,11 +556,15 @@ def save_taste_abstraction_candidate(candidate: Any, path: str | Path) -> Path:
 
 __all__ = [
     "GROUNDED_TASTE_ABSTRACTION_NODE",
+    "REFERENCE_MINING_NODE",
     "REFERENCE_QUALITY_NODE",
     "TASTE_ABSTRACTION_NODE",
     "TASTE_DELIBERATION_NODE",
     "GroundedTasteAbstractionNode",
     "GroundedTasteCaseAbstraction",
+    "ReferenceMiningNeed",
+    "ReferenceMiningNode",
+    "ReferenceMiningProposal",
     "ReferenceQualityInput",
     "ReferenceQualityNode",
     "ReferenceQualityProposal",

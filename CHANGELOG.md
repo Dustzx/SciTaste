@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added decision-gap-driven Scientific Reference mining before content-quality
+  assessment. A proposal-only node must cover direct, alternative, negative,
+  failure, replication, and transfer query families; a deterministic compiler
+  freezes metadata candidates by marginal decision/evidence/domain coverage,
+  source-group diversity, and consecutive-batch saturation. Venue and citation
+  metadata cannot affect cohort priority, and the content-free report grants no
+  search, download, source-read, model, human, or experiment authority.
+
 - Added content-grounded Scientific Reference qualification before Taste
   abstraction. A prestige-blind proposal-only node evaluates evidential rigor,
   decision traceability, visible alternatives, failure boundaries, and transfer

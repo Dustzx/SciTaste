@@ -2643,3 +2643,32 @@ source-group isolation remain separate gates. The ICLR program registers H0
 against prestige-only source selection from the same broad pool, while H1 holds
 the admitted source set fixed to isolate abstraction. Real content access,
 model calls, reviewers, and outcomes remain independently authorized work.
+
+### ADR-089: Reference discovery optimizes contrastive decision coverage before quality
+
+Status: accepted and executable at the no-action planning and cohort-freeze
+boundary; no real search connector has been run.
+
+A relevance-ranked or prestige-ranked top-k list is structurally biased toward
+supportive, successful, and repeatedly cited work. It can omit null results,
+failed approaches, transfer boundaries, and genuine alternatives before the
+content-quality method has any chance to inspect them. A hand-curated source
+manifest has the same reproducibility gap when its search and stopping process
+is not explicit.
+
+SciTaste therefore compiles each current decision and its evidence gaps into six
+closed query families: direct, alternative/comparator, negative/null,
+failure/limitation, replication/reappraisal, and cross-domain transfer. The
+model may propose bounded wording but cannot invoke a search tool. Deterministic
+validation requires all registered decision patterns, contrastive evidence
+roles, and domain facets and rejects prestige-ranking directives.
+
+Completed metadata batches enter a deterministic set-cover compiler. Marginal
+required coverage is primary, new source-group identity is secondary, and a
+stable hash resolves remaining ties. Citation count and venue are retained only
+as optional discovery metadata and are absent from priority. Held-out, self-
+development, rights-blocked, or isolation-unknown candidates are ineligible.
+The compiler requires registered coverage plus consecutive no-new-coverage
+batches before declaring saturation. Its content-free receipt authorizes
+nothing; every selected item remains an unqualified candidate for the separate
+Reference Quality gate.

@@ -1,0 +1,13 @@
+# Candidate profiles for decision-gap-driven reference query planning.
+# Query proposals call no tools and grant no search, download, content, or experiment authority.
+schema_version: "1.0"
+profile_set_id: reference-mining-v1
+profile_set_version: 1.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_reference_mining_v1.yaml
+    sha256: 7a9785990f790b82a9d4495703d9d5696633873edd946a0486da6f64fdacaafb
+    profile_sha256: 5b73e3e710503fdb3f025c3d3299ef235c02fa0acc4d808574681d6dc78ae16f
+  - path: profile_deepseek_v41flash_reference_mining_v1.yaml
+    sha256: 06b9b43c5c6da37e347636aa7a05f17d895f9ee1c1a858198fa7c08a3eee6b72
+    profile_sha256: 532fb2a150542ad6686e3c08db11e0b73b2f0b0f25f0ee5878e28956b05f01b6
