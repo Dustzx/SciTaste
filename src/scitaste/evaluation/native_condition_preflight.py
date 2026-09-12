@@ -242,6 +242,31 @@ def inspect_native_condition_preflight(
                             f"one Git object has conflicting hashes: {evidence.evidence_ref}",
                         )
                     expected_objects[evidence.evidence_ref] = evidence.evidence_sha256
+            corpus_evidence = (
+                (
+                    manifest.corpus_pair.matched_corpus_ref,
+                    manifest.corpus_pair.matched_corpus_sha256,
+                ),
+                (
+                    manifest.corpus_pair.placebo_corpus_ref,
+                    manifest.corpus_pair.placebo_corpus_sha256,
+                ),
+                (
+                    manifest.corpus_pair.pair_attestation_ref,
+                    manifest.corpus_pair.pair_attestation_sha256,
+                ),
+            )
+            for locator, expected_sha256 in corpus_evidence:
+                if locator is None or expected_sha256 is None:
+                    continue
+                prior = expected_objects.get(locator)
+                if prior is not None and prior != expected_sha256:
+                    _add(
+                        blockers,
+                        "conflicting_evidence_hash",
+                        f"one Git object has conflicting hashes: {locator}",
+                    )
+                expected_objects[locator] = expected_sha256
             for locator, expected_sha256 in expected_objects.items():
                 value = _git_object(root, manifest.source_commit, locator, blockers)
                 if value is None:
@@ -397,6 +422,40 @@ def _inspect_semantic_bindings(
             "candidate_generation_claim_inconsistent",
             "verified candidate generation is not enabled by the bound workflow",
         )
+    corpus_status = manifest.requirements[NativePathRequirement.MATCHED_PLACEBO_CORPORA].status
+    if corpus_status is ReadinessStatus.VERIFIED:
+        attestation_ref = manifest.corpus_pair.pair_attestation_ref
+        if attestation_ref is None or attestation_ref not in objects:
+            _add(
+                blockers,
+                "corpus_pair_attestation_missing",
+                "verified corpus parity has no available Git-bound attestation",
+            )
+            return
+        try:
+            attestation = _yaml_mapping(objects[attestation_ref], "corpus pair attestation")
+        except ValueError as exc:
+            _add(blockers, "corpus_pair_attestation_invalid", str(exc))
+            return
+        parity = attestation.get("parity_status")
+        attested = (
+            attestation.get("qualified") is True
+            and attestation.get("no_external_action_performed") is True
+            and attestation.get("authorizes_execution") is False
+            and attestation.get("matched_corpus_sha256")
+            == manifest.corpus_pair.matched_corpus_sha256
+            and attestation.get("placebo_corpus_sha256")
+            == manifest.corpus_pair.placebo_corpus_sha256
+            and isinstance(parity, dict)
+            and set(parity) == {item.value for item in CorpusParityDimension}
+            and set(parity.values()) == {ReadinessStatus.VERIFIED.value}
+        )
+        if not attested:
+            _add(
+                blockers,
+                "corpus_pair_attestation_invalid",
+                "corpus pair attestation does not prove closed parity and contamination gates",
+            )
 
 
 def _relative_locator(parent: PurePosixPath, value: object) -> str | None:

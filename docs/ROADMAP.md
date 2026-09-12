@@ -1043,3 +1043,9 @@ independent status rehash, while its unavailable API cost and ceiling-bound
 Live taste calibration is also opt-in. Until credentials are provided, scripted
 and replay backends support all implementation, regression, and integration work;
 they must not be described as a real-model taste profile.
+
+The native causal lane now has a production-retrieval corpus-pair qualifier for
+all seven declared matched/placebo dimensions and source-contamination gates. No
+formal corpus is fabricated from the integration seed: task-specific source
+acquisition, dual-human abstraction, and a bound qualification report remain
+prerequisites.

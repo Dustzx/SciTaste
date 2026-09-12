@@ -23,7 +23,7 @@ from scitaste.taste.critics import (
     TasteCriticDimension,
     TasteCriticFinding,
 )
-from scitaste.taste.retriever import TasteDomainRelation
+from scitaste.taste.retriever import TasteDomainRelation, retrieve_taste_cases
 from scitaste.taste.utility import UtilityPolicy
 
 __all__ = [
@@ -47,4 +47,5 @@ __all__ = [
     "build_native_condition_runtime",
     "concretize_candidate_actions",
     "load_native_condition_matrix",
+    "retrieve_taste_cases",
 ]

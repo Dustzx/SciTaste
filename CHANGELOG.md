@@ -7,6 +7,10 @@ semantic versioning.
 
 ### Added
 
+- A no-run matched/mismatched Scientific Taste corpus qualifier now binds
+  source bytes and provenance, exercises production retrieval, checks all seven
+  parity dimensions, and fails closed on held-out or cross-corpus contamination.
+
 - The native Scientific Taste path now performs model-backed candidate
   concretization before fixed-candidate selection. The shared backend receives
   the condition-sensitive state, utility, Taste, and critic context but must

@@ -2068,3 +2068,18 @@ This closes the software candidate-generation gap while preserving the causal
 condition boundary. It does not qualify paired Taste corpora, attest a remote
 checkpoint, authorize GPU use, or show that generated candidates improve research
 outcomes.
+
+### ADR-067: Native Taste placebo evidence requires a separately qualified corpus pair
+
+Status: accepted for offline integration; formal task-specific corpora remain
+unacquired.
+
+The matched and mismatched arms are separate, content-bound corpus files. A
+local-only pair contract invokes production retrieval and verifies stage/role,
+eligible count, retrieved count, context budget, provenance tier, curation tier,
+and outcome-information parity. It also rejects held-out source reuse and any
+source-group, content-hash, or locator overlap between arms.
+
+The native path preflight accepts a verified corpus claim only when its Git-bound
+qualification report proves all seven dimensions and repeats both corpus hashes.
+This tooling does not authorize source acquisition or experimental execution.

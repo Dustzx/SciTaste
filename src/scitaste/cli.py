@@ -87,6 +87,7 @@ from scitaste.evaluation import (
     inspect_prelaunch_manifest,
     inspect_task_package,
     inspect_task_selection,
+    inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_dataset_acquisition_request,
@@ -101,6 +102,7 @@ from scitaste.evaluation import (
     load_prelaunch_manifest,
     load_task_package_manifest,
     load_task_selection_manifest,
+    load_taste_corpus_pair_manifest,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
     prepare_project_evaluation,
@@ -118,6 +120,7 @@ from scitaste.evaluation import (
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
+    save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
@@ -1272,6 +1275,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(native_condition_preflight)
     native_condition_preflight.set_defaults(handler=_handle_evaluation_native_condition_preflight)
+    taste_corpus_pair = evaluation_commands.add_parser(
+        "taste-corpus-pair",
+        help="Qualify matched and mismatched Taste corpora without external actions",
+    )
+    taste_corpus_pair.add_argument("--manifest", type=Path, required=True)
+    taste_corpus_pair.add_argument("--evidence-root", type=Path, default=Path("."))
+    taste_corpus_pair.add_argument("--output", type=Path, default=None)
+    taste_corpus_pair.add_argument(
+        "--require-qualified",
+        action="store_true",
+        help="return nonzero until bindings, parity, retrieval, and contamination gates pass",
+    )
+    _add_log_level_option(taste_corpus_pair)
+    taste_corpus_pair.set_defaults(handler=_handle_evaluation_taste_corpus_pair)
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -4124,6 +4141,22 @@ def _handle_evaluation_native_condition_preflight(args: argparse.Namespace) -> i
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_experiment_ready and not report.ready_for_experiment:
+        return 1
+    return 0
+
+
+def _handle_evaluation_taste_corpus_pair(args: argparse.Namespace) -> int:
+    inspection = load_taste_corpus_pair_manifest(args.manifest)
+    report = inspect_taste_corpus_pair(inspection, evidence_root=args.evidence_root)
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report"] = str(save_taste_corpus_pair_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_qualified and not report.qualified:
         return 1
     return 0
 
