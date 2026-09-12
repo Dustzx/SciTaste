@@ -1,0 +1,119 @@
+schema_version: "1.0"
+protocol_id: scitastebench-v3-h1h2-human-protocol-v1
+project_id: scitaste-self-development
+status: design-frozen-recruitment-not-authorized
+scientific_scope: [H1_taste_abstraction, H2_taste_specificity]
+primary_outcome_source: condition-blinded-independent-humans
+automated_judge_role: secondary-calibrated-measure-only
+role_separation:
+  source_fidelity_review:
+    purpose: verify that a proposed Taste abstraction is supported, bounded, transferable, and provenance preserving
+    reviewers_per_candidate: 2
+    adjudication: only-on-split-admission-vote
+    may_supply_primary_h1_h2_outcome: false
+  case_reference_labeling:
+    purpose: verify action feasibility and retain an expert reference distribution for diagnostic accuracy
+    reviewers_per_case: 2
+    adjudication: only-on-tied-reference-action-when-a-reference-is-required
+    observed_action_is_gold: false
+    may_supply_primary_h1_h2_outcome: false
+  condition_outcome_review:
+    purpose: compare fixed-condition decisions for scientific quality and calibration
+    reviewers_per_case_contrast: 2
+    adjudication: false
+    disagreement_retained: true
+    supplies_primary_h1_h2_outcome: true
+independence:
+  author_self_review_forbidden: true
+  source_curator_cannot_review_same_source_group: true
+  case_author_cannot_review_same_case: true
+  condition_outcome_reviewer_cannot_see_condition_identity: true
+  reviewer_conflicts_screened_per_source_group: true
+  source_groups_disjoint_across_precedent_and_held_out_case: true
+blinding:
+  condition_labels: [X, Y]
+  candidate_order_randomized_per_case_and_reviewer: true
+  model_provider_and_system_identity_hidden: true
+  formatting_and_context_budget_matched: true
+  source_attribution_visible_only_when_required_for_rights_or_fidelity: true
+  blind_key_opened_after_all_primary_reviews_are_locked: true
+primary_endpoints:
+  H1_taste_abstraction:
+    contrast: matched-abstracted-taste minus same-source-raw-rag
+    response: ordinal-preference-X-tie-Y
+    nonresponse: cannot-assess-retained-as-missingness
+    target: scientific-decision-quality-and-claim-calibration
+  H2_taste_specificity:
+    contrast: matched-abstracted-taste minus source-disjoint-mismatched-taste
+    response: ordinal-preference-X-tie-Y
+    nonresponse: cannot-assess-retained-as-missingness
+    target: scientific-decision-quality
+analysis:
+  independent_unit: held-out-source-group
+  reviewer_is_crossed_measurement_factor: true
+  repeated_candidate_order_is_not_an_independent_unit: true
+  reviewer_disagreement_is_not_erased: true
+  source_group_clustered_inference: true
+  joint_title_gate: both-H1-and-H2-must-pass
+  multiplicity: Holm-correction-over-H1-and-H2
+  interval: 95-percent-confidence-interval
+  model: preregister-after-pilot-before-formal-outcomes
+pilot:
+  excluded_from_formal_test: true
+  source_fidelity_population: sixteen-AAAR-rights-pilot-records-if-content-audit-passes
+  source_fidelity_model_generations_per_source: 1
+  semantic_retry_allowed: false
+  transport_retry_after-recorded-response: false
+  formal_case_count: null
+  formal_reviewer_count: null
+  purpose:
+    - estimate-review-time-and-disagreement
+    - detect-rubric-and-blinding-failures
+    - estimate-source-group-and-reviewer-variance-for-power-simulation
+  stop_without_formal_launch_if:
+    - critical-source-fidelity-error-remains-after-rubric-revision
+    - condition-identity-can-be-reliably-inferred-from-presentation-artifacts
+    - reviewer-pool-cannot-satisfy-domain-and-conflict-coverage
+    - powered-design-exceeds-approved-human-or-model-budget
+reviewer_qualification:
+  minimum_profile: active-researcher-or-advanced-research-trainee-in-the-relevant-domain
+  qualification_evidence_retained_pseudonymously: true
+  calibration_required_before_primary_review: true
+  calibration_items_excluded_from_analysis: true
+  qualification_cannot_depend_on_agreement_with_scitaste_authors: true
+ethics_and_compensation:
+  informed_consent_required: true
+  compensation_rate_frozen_before_recruitment: true
+  compensation_independent_of_label_or_agreement: true
+  personal_identifiers_excluded_from_research_artifacts: true
+  withdrawal_and_retention_terms_disclosed: true
+quality_controls:
+  rubric_and_interface_content_addressed: true
+  review_submitted_before_blind_key_open: true
+  review_duration_recorded_as-diagnostic-only: true
+  rationale_required_but-never-used-as-a-hidden-third-vote: true
+  missing-or-invalid-review-retained-as-missingness: true
+  no-post-outcome-reviewer-replacement-for-preferred-result: true
+implementation:
+  module: scitaste.evaluation.human_outcomes
+  cli: scitaste evaluation human-outcome-audit
+  outcome_rubric: configs/evaluation/human_review/scitastebench_v3_outcome_rubric_v1.yaml
+  reviewer_interface_contract: configs/evaluation/human_review/scitastebench_v3_reviewer_interface_v1.yaml
+  reviewer_visible_manifest_excludes_blind_key: true
+  private_key_committed_before-primary-review: true
+  opening_binds-complete-locked-review-set: true
+readiness:
+  rubric: design-frozen
+  interface: interaction-contract-frozen-ui-implementation-pending
+  locking-and-unblinding-audit: implemented
+  recruitment: pending-owner-approval
+  domain-coverage: pending
+  conflict-roster: pending
+  pilot-power-analysis: pending
+authority:
+  authorizes_human_recruitment: false
+  authorizes_source_disclosure: false
+  authorizes_model_calls: false
+  authorizes_api_spend: false
+  authorizes_gpu_work: false
+  authorizes_formal_experiment: false

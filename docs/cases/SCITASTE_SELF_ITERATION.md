@@ -1092,3 +1092,37 @@ candidate toward real high-quality content without allowing available resources
 to define the formal experiment. It creates no benchmark case and makes no
 effectiveness claim. No source body was downloaded, no API or GPU was used, and
 no human was recruited in this iteration.
+
+## Making the human Taste endpoint tamper-evident before recruitment (2026-09-12)
+
+The H1/H2 plan previously stated that two condition-blinded humans would review
+each comparison, but it did not make the timing and information boundary
+executable. An operator could still have assembled condition-labelled files,
+changed the X/Y map after seeing a review, replaced a disagreement, or shown
+different output pairs to the two reviewers while claiming one comparison.
+
+SciTaste now separates the public reviewer manifest, locked review set, private
+blind key, and post-lock opening. The public assignment contains only exact
+output bytes, presentation budgets, case/source-group identities, reviewer
+pseudonyms, and a commitment to the private key. Every case must expose both H1
+and H2 to two distinct reviewers. On opening, the inspector verifies that the
+key predates the first review, opening follows the complete review-set lock, and
+each case has one byte-identical matched-Taste output shared across three
+distinct matched/raw/mismatched arms. A changed key or partial assignment cannot
+produce an analysis-ready report.
+
+Outcome disagreements are not adjudicated. `cannot-assess` and close-time
+nonresponse remain missingness records attached to their original assignments,
+so an inconvenient reviewer cannot be replaced after outcomes are visible. The
+rubric makes scientific decision quality, evidence fit, claim calibration,
+tradeoff awareness, and informative value diagnostic guides to one holistic
+preference rather than five post-hoc weighted endpoints.
+
+The download-to-abstraction path was frozen at the same time. Even after the
+AAAR transaction is approved, content parsing, field projection, GLM-5.3-Flash
+use, and human fidelity review each remain distinct gates. ARIES public object
+metadata was inventoried without downloading object bodies; its first slice
+still requires same-connection ETag, Last-Modified, Content-Length, and S3
+version verification. This iteration ran no source-content download, API call,
+model, GPU job, human recruitment, or experiment, and makes no H1/H2 effect
+claim.

@@ -31,6 +31,18 @@ cannot authorize ingestion, abstraction, labeling, model calls, or GPU work.
 After approval and receipt verification, the next gate is content/schema audit
 followed by a separately approved real abstraction and human-fidelity pilot.
 
+Phase 8.2 now has an executable human-outcome integrity boundary. Reviewer-
+visible manifests contain randomized X/Y outputs and a private-key commitment,
+not condition, model, provider, system, or retrieval identities. Exactly two
+distinct reviewers are assigned to every H1/H2 case contrast; their responses
+and missingness lock before the precommitted key can be opened. The audit then
+requires the same matched-Taste output across each case's raw-RAG and mismatched-
+Taste comparisons and retains disagreement without outcome adjudication. The
+rubric and interaction contract are frozen, while UI implementation, reviewer
+recruitment, the excluded pilot, power analysis, and formal outcomes remain
+open. The AAAR receipt-to-pilot transition is also ordered explicitly, so a
+download cannot silently become model context or a benchmark case.
+
 The native decision path now includes a shared model-backed candidate
 concretization protocol before fixed-candidate selection. Every feasible
 controller-owned template must survive exactly once; deterministic admission

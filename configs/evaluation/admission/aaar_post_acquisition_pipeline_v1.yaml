@@ -1,0 +1,109 @@
+schema_version: "1.0"
+pipeline_id: aaar-post-acquisition-pipeline-v1
+project_id: scitaste-self-development
+status: contract-frozen-inputs-and-authorizations-pending
+input_contract:
+  acquisition_request: configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml
+  request_sha256: 32c95222c62788ae94693f30333757a5969efb40fdbb87ed1579257663d0736c
+  receipt: null
+  receipt_required_before_content_access: true
+  approved_content_audit_request: null
+  content_access_authorized: false
+stages:
+  - id: receipt-integrity
+    kind: deterministic
+    reads_source_body: false
+    requirements:
+      - receipt-self-hash-valid
+      - request-and-receipt-identities-match
+      - exact-sixteen-item-inventory
+      - all-local-file-size-and-sha256-values-match
+      - no-unregistered-file-or-symlink
+    output: receipt-integrity-report
+    external_action: false
+  - id: bounded-json-audit
+    kind: deterministic
+    reads_source_body: true
+    requires_separate_owner_approval: true
+    requirements:
+      - utf8-json-object-per-file
+      - maximum-depth-and-string-length-enforced
+      - no-network-or-linked-asset-resolution
+      - top-level-and-nested-field-inventory-preserved
+      - path-arxiv-id-matches-embedded-paper-identity
+      - raw-bytes-remain-quarantined-and-immutable
+    output: content-structure-and-identity-report
+    external_action: false
+  - id: rights-quality-and-isolation-admission
+    kind: deterministic-plus-human-source-verification
+    requirements:
+      - paper-and-dataset-attribution-preserved
+      - paper-license-still-matches-the-pre-body-screen
+      - publication-or-other-quality-evidence-bound-separately
+      - no-overlap-with-held-out-case-source-groups
+      - no-overlap-with-self-development-effectiveness-evidence
+      - observed-paper-action-not-treated-as-gold
+    output: admitted-and-rejected-source-ledger
+    rejection_is_retained: true
+  - id: projection-freeze
+    kind: deterministic
+    requirements:
+      - exact-json-pointer-allowlist-per-observed-schema
+      - excluded-field-and-outcome-information-policy
+      - normalized-projection-bytes-and-sha256-per-source
+      - actual-token-count-under-proposed-model-tokenizer
+      - no-condition-or-held-out-case-identity-in-model-input
+    output: source-projection-manifest
+  - id: abstraction-resource-decision
+    kind: owner-approved-resource-proposal
+    model_preference: GLM-5.3-Flash
+    model_identity_requirement: authenticated-provider-catalog-and-sentinel-window
+    silent_model_substitution: forbidden
+    requirements:
+      - exact-provider-model-identity
+      - prompt-and-response-schema-sha256
+      - one-recorded-response-per-admitted-source
+      - maximum-input-output-and-total-token-ceilings
+      - maximum-currency-and-transport-retry-ceilings
+      - task-excluded-conformance-result
+    output: separately-approved-abstraction-run
+  - id: source-fidelity-review
+    kind: dual-independent-human
+    protocol: configs/evaluation/human_review/scitastebench_v3_h1h2_human_protocol_v1.yaml
+    reviewers_per-abstraction: 2
+    semantic-regeneration-after-recorded-response: false
+    split-admission-vote-adjudication: one-independent-adjudicator
+    requirements:
+      - source-fidelity
+      - action-grounding
+      - bounded-generalization
+      - scientific-value
+      - outcome-handling
+    output: taste-abstraction-curation-package
+  - id: pilot-corpus-disposition
+    kind: deterministic
+    possible_outputs:
+      - rejected-pilot-with-full-audit-trail
+      - dual-human-verified-pilot-corpus-candidate
+    formal-effect-estimate-authorized: false
+    benchmark-training-use-authorized: false
+stopping_rules:
+  - stop-if-receipt-or-local-byte-integrity-fails
+  - stop-if-any-record-identity-or-rights-boundary-cannot-be-established
+  - stop-before-model-use-if-projection-schema-or-token-count-is-unfrozen
+  - stop-before-provider-use-if-GLM-5.3-Flash-identity-cannot-be-authenticated
+  - stop-after-one-recorded-model-response-per-admitted-source
+  - stop-without-formal-launch-if-source-fidelity-instrument-remains-unstable
+authority:
+  authorizes_download: false
+  authorizes_content_access: false
+  authorizes_ingestion: false
+  authorizes_model_calls: false
+  authorizes_api_spend: false
+  authorizes_gpu_work: false
+  authorizes_human_recruitment: false
+  authorizes_experiment: false
+claim_boundary: >-
+  This contract fixes the transition from quarantined AAAR bytes to a reviewed
+  pilot Taste corpus. It contains no receipt, source body, model output, human
+  judgment, benchmark label, effectiveness estimate, or execution permission.

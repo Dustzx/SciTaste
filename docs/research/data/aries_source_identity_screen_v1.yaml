@@ -1,0 +1,150 @@
+schema_version: "1.0"
+screen_id: aries-source-identity-screen-v1
+project_id: scitaste-self-development
+scientific_role: writing-review-taste-source-screen
+status: metadata-screen-complete-acquisition-request-not-ready
+observed_at: 2026-09-12
+source:
+  repository_url: https://github.com/allenai/aries
+  repository_commit: 5691bae71a101225ed345d0ffc42e47609f03bbb
+  code_license: Apache-2.0
+  dataset_bucket: s3://ai2-s2-research-public/aries/
+  public_https_prefix: https://ai2-s2-research-public.s3.amazonaws.com/aries/
+  dataset_license_claim: ODC-BY-1.0
+  license_boundary: >-
+    ODC-BY covers the released database but does not automatically license the
+    copyright in every paper, review, reply, or other underlying content.
+bucket_observation:
+  key_count: 14
+  observed_total_bytes: 342852220
+  anonymous_latest_object_head: available
+  anonymous_version_specific_head: unavailable-403
+  object_versioning_visible_in_public-listing: true
+  identity_requirement: >-
+    A download must verify ETag, Last-Modified, Content-Length, and
+    x-amz-version-id on the same response connection before publishing bytes.
+objects:
+  - key: aries/LICENSE
+    version_id: gTCQB0ZZW0uRLdV9EzvqSTnelOF1tla.
+    etag: 9dd6529fc4138a7799bb7c0aac21d9ab
+    size_bytes: 19977
+    last_modified: 2023-06-19T17:30:30Z
+    role: license-evidence
+  - key: aries/alignment_human_eval.jsonl
+    version_id: VGEyse09smdljwA7gIt5Pk1ucvM.zDIP
+    etag: 0c5c202cefd860e45976d87a0d337e8c
+    size_bytes: 52624
+    last_modified: 2023-06-19T17:23:56Z
+    role: released-human-alignment-annotation
+  - key: aries/edit_labels_dev.jsonl
+    version_id: F5uFKX.fJ66t4X84.rUW_2KurgTbQ7OI
+    etag: 2533d46aef51358cfa02033735a582fa
+    size_bytes: 71421
+    last_modified: 2023-06-19T17:23:56Z
+    role: edit-label-metadata
+  - key: aries/edit_labels_dummy.jsonl
+    version_id: VecTAJiYeWUfqxgjpoeF9jzac8qyjMV5
+    etag: 158f8bd1818e435015f5629d66d15273
+    size_bytes: 132
+    last_modified: 2023-06-19T17:23:56Z
+    role: dummy-record-excluded
+  - key: aries/edit_labels_test.jsonl
+    version_id: kUq5Bbrc_G8OBZsFq6j4JFSOu1RmFPcR
+    etag: fb44ff1d192458907f0d7e5183b24487
+    size_bytes: 130783
+    last_modified: 2023-06-19T17:23:56Z
+    role: edit-label-metadata
+  - key: aries/edit_labels_train.jsonl
+    version_id: qtNRX0boD5P.NLfwQI0RaZbKB5XZnNuk
+    etag: 846ae07c5213c817997c9e1fbdd406fc
+    size_bytes: 447768
+    last_modified: 2023-06-19T17:23:56Z
+    role: edit-label-metadata
+  - key: aries/generated_edits.jsonl
+    version_id: zIw7G3wYB5Tm_Q6SxKExCfCst18Mv4NW
+    etag: ded9ee943689132efafecb286f0e1d85
+    size_bytes: 330670
+    last_modified: 2023-06-19T17:23:56Z
+    role: model-generated-content-excluded
+  - key: aries/gpt3_cache.sqlite
+    version_id: l8uwWjPiS7pJF7tj84M4JMlED1uu3J3s
+    etag: da1bd12ad6e1bcea08fcbeedd332f49e-5
+    size_bytes: 34189312
+    last_modified: 2023-07-05T18:03:30Z
+    role: historical-provider-cache-excluded
+  - key: aries/paper_edits.jsonl
+    version_id: KFXqqeLdt0k.bXT.Ob6B.91TQl_dAoQy
+    etag: 9c3bf0687f337aada697027d70aa69d0-2
+    size_bytes: 12881188
+    last_modified: 2023-06-19T17:23:56Z
+    role: candidate-edit-content-later-rights-screen
+  - key: aries/raw_split_ids.json
+    version_id: XSJIc.gG2.qfjjclKxbKYZahiRwOtCsR
+    etag: 3c447f42a203cc782651e0da988172ba
+    size_bytes: 573306
+    last_modified: 2023-06-19T17:23:56Z
+    role: source-group-and-split-metadata
+  - key: aries/review_comments.jsonl
+    version_id: 69mrGMhHqkfQHikqPETZ5wvuDeovPO9b
+    etag: 807380a1259f84f76efcefafa827689c
+    size_bytes: 1395177
+    last_modified: 2023-06-19T17:23:56Z
+    role: candidate-review-content-later-note-license-screen
+  - key: aries/review_replies.jsonl
+    version_id: _D3CI_iDILk9ja0KDbLNgzQGvEQJBmsJ
+    etag: 434ef2211b816b8a8836500e635a1671-24
+    size_bytes: 198981013
+    last_modified: 2023-06-19T17:23:56Z
+    role: large-reply-content-excluded-from-first-slice
+  - key: aries/s2orc.tar.gz
+    version_id: HgbMOECtsHdQkoapyoudxHX_psAgAioP
+    etag: 12eb92d33021536f4cbdf0b5fdb92072-12
+    size_bytes: 93627656
+    last_modified: 2023-06-19T17:27:13Z
+    role: full-paper-content-excluded-from-first-slice
+  - key: aries/split_ids.json
+    version_id: OhmXG2I1A0ZrBnl5qElqftLCkX17B112
+    etag: d601f289aaa5f2361007567bbdecb744
+    size_bytes: 151193
+    last_modified: 2023-06-19T17:24:46Z
+    role: released-split-metadata
+proposed_first_slice:
+  purpose: discover exact source-group and annotation identities before requesting review or edit content
+  keys:
+    - aries/LICENSE
+    - aries/alignment_human_eval.jsonl
+    - aries/edit_labels_dev.jsonl
+    - aries/edit_labels_test.jsonl
+    - aries/edit_labels_train.jsonl
+    - aries/raw_split_ids.json
+    - aries/split_ids.json
+  observed_bytes: 1447072
+  maximum_bytes: 2097152
+  authorizes_content_ingestion: false
+  authorizes_model_calls: false
+  authorizes_human_review: false
+  authorizes_experiment: false
+openreview_followup:
+  required_note_fields:
+    - note-id
+    - forum-id
+    - invitation
+    - readers
+    - license
+    - creation-time
+    - modification-time
+  admission_rule: >-
+    Use only public notes whose exact metadata and content hash are frozen, strip
+    reviewer/user identifiers from model-visible projections, and separately
+    admit every paper work needed to interpret an edit.
+  observed-edit-is-gold: false
+blockers:
+  - implement-same-connection-http-object-identity-verification-or-obtain-a-content-addressed-mirror
+  - owner-approve-the-exact-first-slice-and-byte-ceiling
+  - inspect-first-slice-before-requesting-review-comments-or-paper-edits
+  - verify-each-openreview-note-license-and-public-reader-scope
+  - verify-each-paper-work-license-before-paper-text-or-edit-ingestion
+claim_boundary: >-
+  This screen records public object metadata only. No ARIES object body,
+  OpenReview note, paper, review, reply, edit, model output, Taste precedent,
+  label, or effectiveness result was acquired or created.

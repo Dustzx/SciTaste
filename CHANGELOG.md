@@ -5,6 +5,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+- H1/H2 human endpoint collection now has an executable, non-authorizing
+  boundary rather than only a prose protocol. Public reviewer packages exclude
+  condition/model/provider identity, bind a precommitted private blind key, and
+  require two distinct reviewers per case contrast. Reviews lock before
+  unblinding; disagreements and cannot-assess missingness remain individual
+  observations, and changed keys, incomplete assignments, mismatched output
+  triplets, or premature opening fail closed. A focused CLI exposes readiness
+  to unblind separately from readiness for preregistered analysis.
+- The AAAR post-acquisition path is now frozen from receipt verification through
+  bounded JSON audit, rights/quality/isolation admission, exact model projection,
+  one-response abstraction, and dual-human source-fidelity review. It explicitly
+  keeps content access separate from download approval and forbids silently
+  substituting another model for GLM-5.3-Flash. A parallel ARIES metadata screen
+  inventories exact public S3 object identities and isolates the same-connection
+  identity-verification gap before any object body is requested.
 - The first core Scientific Taste source acquisition is now an exact,
   approval-ready request rather than a dataset name. It selects sixteen
   metadata-first AAAR experiment-design records whose original papers declare

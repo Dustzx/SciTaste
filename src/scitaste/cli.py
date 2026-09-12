@@ -86,6 +86,7 @@ from scitaste.evaluation import (
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
+    inspect_human_outcome_study,
     inspect_native_condition_preflight,
     inspect_prelaunch_manifest,
     inspect_task_package,
@@ -104,6 +105,9 @@ from scitaste.evaluation import (
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
+    load_human_blind_opening,
+    load_human_outcome_study,
+    load_locked_human_reviews,
     load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
     load_task_package_manifest,
@@ -128,6 +132,7 @@ from scitaste.evaluation import (
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
+    save_human_outcome_study_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
@@ -1488,6 +1493,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    human_outcome = evaluation_commands.add_parser(
+        "human-outcome-audit",
+        help="Audit locked H1/H2 human outcomes and optional post-lock unblinding",
+    )
+    human_outcome.add_argument("--study", type=Path, required=True)
+    human_outcome.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_outcome.add_argument("--reviews", type=Path, default=None)
+    human_outcome.add_argument("--opening", type=Path, default=None)
+    human_outcome.add_argument("--output", type=Path, default=None)
+    human_outcome.add_argument(
+        "--require-ready-to-open",
+        action="store_true",
+        help="return nonzero until every reviewer-visible byte and primary review is locked",
+    )
+    human_outcome.add_argument(
+        "--require-analysis-ready",
+        action="store_true",
+        help="return nonzero until the committed blind key is validly opened after review lock",
+    )
+    _add_log_level_option(human_outcome)
+    human_outcome.set_defaults(handler=_handle_evaluation_human_outcome)
     taste_abstraction_candidate = evaluation_commands.add_parser(
         "taste-abstraction-candidate",
         help="Compile one accepted Taste abstraction ledger entry for human review",
@@ -4704,6 +4730,27 @@ def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
         payload["materialization"] = receipt.model_dump(mode="json")
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_ready and not report.ready_to_materialize:
+        return 1
+    return 0
+
+
+def _handle_evaluation_human_outcome(args: argparse.Namespace) -> int:
+    study = load_human_outcome_study(args.study)
+    reviews = load_locked_human_reviews(args.reviews) if args.reviews is not None else None
+    opening = load_human_blind_opening(args.opening) if args.opening is not None else None
+    report = inspect_human_outcome_study(
+        study,
+        evidence_root=args.evidence_root,
+        reviews=reviews,
+        opening=opening,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(save_human_outcome_study_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_ready_to_open and not report.ready_to_open_blind_key:
+        return 1
+    if args.require_analysis_ready and not report.ready_for_primary_analysis:
         return 1
     return 0
 

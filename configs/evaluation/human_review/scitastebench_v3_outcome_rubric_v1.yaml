@@ -1,0 +1,59 @@
+schema_version: "1.0"
+rubric_id: scitastebench-v3-outcome-rubric-v1
+project_id: scitaste-self-development
+status: design-frozen-not-yet-used-with-humans
+primary_question: >-
+  Given the same scientific decision case, which response would better guide a
+  competent researcher toward a defensible next action?
+response:
+  allowed: [X, tie, Y, cannot-assess]
+  X: X is substantively stronger than Y.
+  tie: Neither response is substantively stronger at the resolution of this case.
+  Y: Y is substantively stronger than X.
+  cannot-assess: Domain knowledge or visible evidence is insufficient for a defensible judgment.
+  forced_choice_forbidden: true
+decision_standard:
+  - id: action-appropriateness
+    question: Is the recommended action feasible and appropriate for the stated research state?
+  - id: evidence-fit
+    question: Does the rationale use the visible evidence without inventing support?
+  - id: claim-calibration
+    question: Are confidence, scope, and causal claims proportionate to the evidence?
+  - id: tradeoff-awareness
+    question: Does the response expose consequential risks, alternatives, and stopping conditions?
+  - id: scientific-value
+    question: Is the decision likely to produce informative progress rather than merely more activity?
+aggregation_boundary: >-
+  The five standards guide one holistic X/tie/Y judgment. They are diagnostics,
+  not separately weighted votes and cannot be post-hoc combined into the primary endpoint.
+tie_rule: >-
+  Use tie when differences are cosmetic, stylistic, or too small to justify a
+  scientific preference. Do not break a tie because one response is longer,
+  more fluent, more confident, or uses more citations.
+cannot_assess_rule: >-
+  Use cannot-assess only when the domain or evidence prevents a defensible
+  comparison; retain it as missingness and never replace it with a preferred result.
+prohibited_cues:
+  - prose-style-or-length-as-a-proxy-for-scientific-quality
+  - provider-or-model-reputation
+  - condition-or-system-identity
+  - agreement-with-the-observed-paper-action-as-automatic-correctness
+  - citation-count-without-source-relevance-or-support
+  - preference-for-scitaste-authors-or-project-goals
+rationale:
+  required: true
+  maximum_characters: 4000
+  role: audit-and-error-analysis-only
+  never_a_hidden_additional_vote: true
+adjudication:
+  outcome_disagreement: forbidden
+  original_votes_retained: true
+automated_judge:
+  primary_outcome_allowed: false
+  secondary_use_requires_held_out_human_calibration: true
+authority:
+  authorizes_human_recruitment: false
+  authorizes_model_calls: false
+  authorizes_api_spend: false
+  authorizes_gpu_work: false
+  authorizes_experiment: false

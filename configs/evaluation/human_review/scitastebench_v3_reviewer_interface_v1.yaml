@@ -1,0 +1,71 @@
+schema_version: "1.0"
+interface_id: scitastebench-v3-reviewer-interface-v1
+project_id: scitaste-self-development
+status: interaction-contract-frozen-ui-implementation-pending
+layout:
+  case_context: fixed-width-shared-header
+  candidate_outputs: side-by-side-X-and-Y
+  response_controls: persistent-below-pair
+  rationale_editor: below-response-controls
+  progress: completed-count-only
+  other_reviewers_progress_visible: false
+candidate_order:
+  randomized_per_case_and_reviewer: true
+  generated_before_first-primary-review: true
+  committed_by_private-blind-key-hash: true
+reviewer_visible_fields:
+  - case-context
+  - task-question
+  - output-X
+  - output-Y
+  - response-options
+  - rubric
+  - own-rationale
+reviewer_hidden_fields:
+  - experimental-condition
+  - model-name
+  - provider-name
+  - system-name
+  - retrieval-mode
+  - generation-trace
+  - file-path
+  - other-reviewer-identity
+  - other-reviewer-response
+  - aggregate-outcome
+controls:
+  response_options: [X, tie, Y, cannot-assess]
+  rationale_required_before-lock: true
+  cannot_assess_reason_required: true
+  lock_requires_explicit-confirmation: true
+  edit_after_lock: false
+  replacement_after-lock: false
+  skip_without-record: false
+missingness:
+  close-time-nonresponse-recorded: true
+  missingness-reason-required: true
+  post-outcome-reviewer-replacement: false
+presentation_parity:
+  same-renderer: true
+  same-font-and-width: true
+  same-context-budget: true
+  same-maximum-output-budget: true
+  provider-specific-markup-stripped: true
+  hidden-html-metadata-forbidden: true
+accessibility:
+  keyboard-selection: required
+  screen-reader-labels: required
+  color-not-sole-condition-cue: true
+  responsive-stacking-below-narrow-width: true
+audit:
+  study-sha256-visible: true
+  comparison-id-visible: true
+  reviewer-pseudonym-visible: true
+  lock-time-recorded-with-timezone: true
+  duration-recorded-as-diagnostic-only: true
+  blind-key-opening-not-available-in-reviewer-session: true
+authority:
+  authorizes_human_recruitment: false
+  authorizes_model_calls: false
+  authorizes_api_spend: false
+  authorizes_gpu_work: false
+  authorizes_experiment: false
