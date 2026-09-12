@@ -151,10 +151,6 @@ class SourceCandidateManifest(BaseModel):
 
     @model_validator(mode="after")
     def population_and_roles_are_closed(self) -> SourceCandidateManifest:
-        if self.schema_version == "1.0" and any(
-            source.bounded_rights_pilot is not None for source in self.sources
-        ):
-            raise ValueError("source candidate manifest v1.1 is required for rights pilots")
         if set(self.required_decision_families) != set(TasteTask):
             raise ValueError("source screen must require every Taste decision family")
         if len(self.required_decision_families) != len(set(self.required_decision_families)):

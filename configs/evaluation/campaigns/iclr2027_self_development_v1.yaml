@@ -35,7 +35,7 @@ artifacts:
     sha256: acb381b92941007ab4b67105366d92d6a394d9bff8f7d6fb13abab562561559e
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
-    sha256: 3b0a39d24baee98472f1878551a24493beec7ae79f7149a83f8bf1104084268d
+    sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
   - artifact_id: mechanism-governance
     path: docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md
     sha256: ffa2349bfa00e172b793e3e468dac44375fa6d821118a519daba03bb86cf8217

@@ -295,8 +295,17 @@ def inspect_evidence_review_package(
             requested_items = request_report.item_count
             requested_bytes = request_report.maximum_total_bytes
             unresolved.extend(item.code for item in request_report.authorization_blockers)
-            unresolved.extend(item.code for item in request_report.blockers)
-            ready = ready and request_report.ready_for_owner_approval
+            scope_blockers = tuple(
+                item
+                for item in request_report.blockers
+                if not (item.code.startswith("destination:") and item.code.endswith(":exists"))
+            )
+            unresolved.extend(item.code for item in scope_blockers)
+            # A review package evaluates the frozen acquisition scope, not whether
+            # its one-shot destination is still empty.  Once an approved download
+            # has materialized the exact destination, the original proposal remains
+            # reviewable even though it must never become executable a second time.
+            ready = ready and not scope_blockers
             if request_report.download_authorized:
                 _add(
                     findings,
