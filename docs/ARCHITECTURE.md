@@ -2399,3 +2399,28 @@ quality, and source-isolation admission proposal. The report performs and
 authorizes no projection, ingestion, model call, human review, or experiment.
 This prevents possession of data from silently becoming permission to expose it
 to a model or to promote an observed paper action as Scientific Taste.
+
+### ADR-080: High-quality source admission is a three-argument frozen ledger
+
+Status: accepted for the audit-to-abstraction boundary; no real AAAR source has
+been admitted.
+
+Structural validity is not scientific quality. A valid JSON record may have
+unclear reuse rights, weak or untraceable scientific reasoning, or overlap with
+the held-out decision whose outcome SciTaste later evaluates. A single quality
+score would obscure these distinct failure modes and encourage replacing failed
+sources after seeing downstream results.
+
+SciTaste therefore freezes the complete content-audited population and compiles
+three independent arguments per source: rights and attribution, high-quality
+scientific decision evidence, and isolation from held-out case groups and the
+self-development effectiveness study. The quality argument requires exactly two
+distinct, conflict-cleared human reviewers who are blind to each other and to
+downstream outcomes; the curator cannot review the source. Every review binds the
+exact source-content and quality-evidence hashes.
+
+The resulting ledger includes both admitted and rejected sources. Reaching the
+predeclared minimum only makes a separate projection proposal possible. The
+compiler never reads source bodies, recruits reviewers, projects fields, calls a
+model, or authorizes execution. This preserves source selection as a scientific
+design decision rather than a retrieval heuristic optimized on later outcomes.

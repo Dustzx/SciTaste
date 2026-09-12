@@ -91,6 +91,7 @@ from scitaste.evaluation import (
     inspect_human_outcome_study,
     inspect_native_condition_preflight,
     inspect_prelaunch_manifest,
+    inspect_source_admission,
     inspect_task_package,
     inspect_task_selection,
     inspect_taste_corpus_curation,
@@ -114,6 +115,7 @@ from scitaste.evaluation import (
     load_locked_human_reviews,
     load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
+    load_source_admission_proposal,
     load_task_package_manifest,
     load_task_selection_manifest,
     load_taste_corpus_curation_package,
@@ -139,6 +141,7 @@ from scitaste.evaluation import (
     save_human_outcome_study_report,
     save_json_content_audit_approval,
     save_json_content_audit_report,
+    save_source_admission_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
@@ -1743,6 +1746,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(content_audit)
     content_audit.set_defaults(handler=_handle_evaluation_content_audit)
+    source_admission = evaluation_commands.add_parser(
+        "source-admission",
+        help="Compile audited sources through rights, quality, and isolation gates",
+    )
+    source_admission.add_argument("--proposal", type=Path, required=True)
+    source_admission.add_argument("--evidence-root", type=Path, default=Path("."))
+    source_admission.add_argument("--output", type=Path, default=None)
+    source_admission.add_argument(
+        "--require-projection-proposal-ready",
+        action="store_true",
+        help="return nonzero until enough sources pass every admission argument",
+    )
+    _add_log_level_option(source_admission)
+    source_admission.set_defaults(handler=_handle_evaluation_source_admission)
     acquired_cohort = evaluation_commands.add_parser(
         "acquired-task-cohort",
         help="Classify acquired benchmark briefs without treating them as executable tasks",
@@ -5102,6 +5119,22 @@ def _handle_evaluation_content_audit(args: argparse.Namespace) -> int:
         )
     )
     if args.require_source_admission_ready and not report.ready_for_source_admission_proposal:
+        return 1
+    return 0
+
+
+def _handle_evaluation_source_admission(args: argparse.Namespace) -> int:
+    inspection = load_source_admission_proposal(args.proposal)
+    report = inspect_source_admission(inspection, evidence_root=args.evidence_root)
+    payload = {
+        "proposal_path": str(inspection.path),
+        "proposal_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report_path"] = str(save_source_admission_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_projection_proposal_ready and not report.ready_for_projection_proposal:
         return 1
     return 0
 

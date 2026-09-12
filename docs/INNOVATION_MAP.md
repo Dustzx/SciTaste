@@ -26,7 +26,11 @@ applies one declared Knowledge/Taste/critic policy consistently from Discovery
 through Evidence, Writing, and Figure generation while leaving evidence-integrity,
 writing-integrity, visual, budget, and sandbox gates enabled in every condition.
 High-quality references enter Taste through a separate source-abstraction path:
-source content and quality evidence are both hash-bound, abstraction candidates
+the complete audited population is frozen before outcomes, and rights,
+scientific-source quality, and held-out/self-evidence isolation are evaluated as
+three separate arguments. Each admitted source needs two independent quality
+reviews while every rejection stays visible. Source content and quality evidence
+are hash-bound; abstraction candidates
 can be produced by a relation-blind, proposal-only model node whose exact source,
 prompt, response, model identity, usage, and output remain in a verified
 project-owned ledger. Candidates remain untrusted, and two independent humans

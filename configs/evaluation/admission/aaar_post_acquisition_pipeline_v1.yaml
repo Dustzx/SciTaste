@@ -52,6 +52,14 @@ stages:
       - observed-paper-action-not-treated-as-gold
     output: admitted-and-rejected-source-ledger
     rejection_is_retained: true
+    implementation:
+      module: scitaste.evaluation.source_admission
+      inspection_cli: scitaste evaluation source-admission
+      requires_complete_audited_population: true
+      quality_reviewers_per_source: 2
+      performs_source_body_read: false
+      authorizes_projection: false
+      authorizes_execution: false
   - id: projection-freeze
     kind: deterministic
     requirements:

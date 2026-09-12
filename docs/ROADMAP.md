@@ -36,6 +36,15 @@ auditor can rehash and structurally inventory exact JSON without resolving links
 or creating model-visible projections. Real execution still awaits the AAAR
 download decision and the later content-access decision.
 
+The next source-quality gate is also executable. It consumes only the self-
+hashed audit report and separate evidence files, retains every audited item, and
+admits a source only when rights, high-quality scientific decision content, two
+independent human quality judgments, and held-out/self-development isolation all
+pass. Rejections remain in the ledger and the admitted minimum is frozen before
+abstraction. This closes the audit-to-curation control gap, but does not itself
+read source bodies or authorize field projection, model use, reviewer recruitment,
+or an experiment.
+
 Phase 8.2 now has an executable human-outcome integrity boundary. Reviewer-
 visible manifests contain randomized X/Y outputs and a private-key commitment,
 not condition, model, provider, system, or retrieval identities. Exactly two

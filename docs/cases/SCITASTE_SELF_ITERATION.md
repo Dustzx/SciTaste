@@ -1150,3 +1150,27 @@ still requires same-connection ETag, Last-Modified, Content-Length, and S3
 version verification. This iteration ran no source-content download, API call,
 model, GPU job, human recruitment, or experiment, and makes no H1/H2 effect
 claim.
+
+## Separating high-quality source admission from retrieval (2026-09-12)
+
+The acquired-content auditor could establish byte integrity and observed schema,
+while the Taste curation package assumed that its sources were already high
+quality. That left the central research idea vulnerable to an informal step:
+someone could choose convenient records, call them good precedents, and silently
+drop failures after seeing later abstractions or outcomes.
+
+SciTaste now compiles a frozen admission population before abstraction. Every
+audited item remains in the ledger. An admitted source must independently pass
+rights and attribution, scientific-source quality, and isolation from held-out
+cases and SciTaste's own effectiveness evidence. The quality argument is bound to
+the exact source bytes and evidence and must be accepted by two distinct human
+reviewers who are independent of the curator, blind to each other, and blind to
+downstream outcomes. Failed items remain explicit rejections; reaching the
+predeclared minimum does not erase them.
+
+This makes retrieval a downstream efficiency mechanism: it can search only among
+already admitted abstractions and cannot define quality by relevance score. The
+new compiler reads only the audit report and evidence files, not source bodies,
+and authorizes neither projection nor model, human-recruitment, or experiment
+work. Two focused synthetic checks covered mixed admission/rejection and blocked
+post-audit cherry-picking; no external resource was used.

@@ -62,6 +62,28 @@ group isolation from held-out decisions and the SciTaste self-development
 effectiveness evidence. Failure is recorded as rejection, not repaired by a
 model or replaced after inspecting downstream results.
 
+That admission boundary is executable in `scitaste.evaluation.source_admission`.
+The proposal must retain every item in the content-audit report, bind the audit's
+self hash, and freeze the population before abstraction or downstream outcomes.
+Each admitted item requires a content-bound rights argument, a separate quality
+argument accepted by exactly two independent reviewers, and a content-bound
+isolation check against both held-out cases and self-development effectiveness
+evidence. Curators cannot review their own source. Rejected items remain in the
+report, so a failed source cannot disappear through post-audit cherry-picking.
+
+```bash
+.venv/bin/scitaste evaluation source-admission \
+  --proposal outputs/projects/<project>/runs/<run>/source_admission/PROPOSAL.yaml \
+  --evidence-root . \
+  --output outputs/projects/<project>/runs/<run>/source_admission/REPORT.json \
+  --require-projection-proposal-ready
+```
+
+Passing the command means only that the predeclared minimum number of sources
+may enter a separately approved projection proposal. The inspector never opens
+source bodies, recruits reviewers, projects fields, calls a model, or authorizes
+execution.
+
 Only admitted fields can enter a content-addressed model projection. The exact
 JSON pointers, excluded outcome information, normalized bytes, hashes, and real
 token counts are frozen before a resource request is prepared. The preferred

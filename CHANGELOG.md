@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- High-quality-source admission is now a machine-enforced bridge between the
+  acquired-JSON audit and Taste abstraction. A frozen proposal must retain the
+  complete audited population and bind independent rights, source-quality, and
+  held-out/self-evidence isolation arguments. Exactly two conflict-cleared human
+  quality reviews are required for each admitted source, curator self-review is
+  forbidden, and rejected sources remain visible. Passing only opens a later
+  projection proposal; no source body, model, recruitment, or experiment is
+  touched or authorized.
 - H1/H2 human endpoint collection now has an executable, non-authorizing
   boundary rather than only a prose protocol. Public reviewer packages exclude
   condition/model/provider identity, bind a precommitted private blind key, and
