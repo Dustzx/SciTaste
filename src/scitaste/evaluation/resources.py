@@ -205,8 +205,7 @@ class ExternalResourceCorpusOverlay(FrozenModel):
             item.code_license is not None for item in self.resource_overrides
         ):
             raise ValueError(
-                "evaluation resource v2.5 is required for license corrections "
-                "(or a later schema)"
+                "evaluation resource v2.5 is required for license corrections (or a later schema)"
             )
         if not self.resources_additions and not self.resource_overrides:
             raise ValueError("evaluation resource overlay must contain a revision")

@@ -313,11 +313,14 @@ def test_v26_adds_method_and_benchmark_without_claiming_execution_readiness() ->
     assert resources["innovator-bench"].datasets[0].revision == (
         "5b349af1c988a5128a0d5d6b902e70f16906d373"
     )
-    assert evaluate_resource_feasibility(
-        after,
-        "deep-scientist",
-        ResourceUse.COMPARISON_SYSTEM,
-    ).eligible is False
+    assert (
+        evaluate_resource_feasibility(
+            after,
+            "deep-scientist",
+            ResourceUse.COMPARISON_SYSTEM,
+        ).eligible
+        is False
+    )
     innovator = evaluate_resource_feasibility(
         after,
         "innovator-bench",
