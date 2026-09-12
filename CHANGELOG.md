@@ -14,6 +14,15 @@ semantic versioning.
   treats formula-like values as inert data, and records that outcomes, models,
   and compute were not consulted; it cannot select tasks or authorize downstream
   execution.
+- Added complete-population benchmark eligibility screening. Pre-content
+  InnovatorBench and EXP-Bench rulebooks now cover every frozen scope exclusion,
+  and a content-addressed decision package must contain exactly one decision for
+  every projected record and every scientific eligibility rule. Missing evidence
+  remains an exclusion or unresolved blocker, while capacity limits are confined
+  to a later seeded allocation over eligible records. Screening cannot inspect
+  outcomes or current model/compute inventory, select tasks, allocate resources,
+  or authorize execution; Generation-as-Content exposes the resulting ledger and
+  its next allocation gate without presenting a convenient subset as a benchmark.
 
 - Corrected the current DeepSeek resource generation against the live official
   model table: catalog v5 and identity protocol v2 bind `deepseek-flash` /

@@ -16,6 +16,9 @@ from scitaste.evaluation import (
     AcquiredTaskQualification,
     AcquiredTaskUse,
     BenchmarkMetadataPopulation,
+    BenchmarkMetadataScreeningReport,
+    BenchmarkMetadataScreenItemReport,
+    BenchmarkRecordScreenDisposition,
     DatasetAcquisitionReceipt,
     ProjectedBenchmarkMetadataRecord,
     ProjectedMetadataField,
@@ -187,6 +190,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "acquisition_receipts": 0,
         "metadata_audit_plans": 0,
         "benchmark_metadata_populations": 0,
+        "benchmark_metadata_screenings": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -245,6 +249,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "acquisition_receipts": 0,
         "metadata_audit_plans": 0,
         "benchmark_metadata_populations": 0,
+        "benchmark_metadata_screenings": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -597,6 +602,77 @@ def test_progress_surfaces_complete_metadata_population_before_task_selection(
         item
         for item in data["next_step_candidates"]
         if item["kind"] == "review_metadata_population"
+    )
+    assert candidate["target_ids"] == ["benchmark-task-universe-v1"]
+
+
+def test_progress_replaces_population_with_complete_screening_ledger(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    run_id = "benchmark-metadata-screening-run"
+    artifact = f"runs/{run_id}/benchmark_metadata_screening/REPORT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=run_id,
+        status="complete",
+        stage_path="benchmark_metadata_screening",
+        artifact=artifact,
+    )
+    report = BenchmarkMetadataScreeningReport(
+        project_id="progress-project",
+        scope_id="benchmark-task-universe-v1",
+        population_locator="outputs/projects/progress-project/projections/POPULATION.json",
+        population_file_sha256="1" * 64,
+        population_sha256="2" * 64,
+        rulebook_locator="configs/evaluation/screening/rulebook.json",
+        rulebook_file_sha256="3" * 64,
+        rulebook_sha256="4" * 64,
+        decision_package_locator="outputs/projects/progress-project/screen/DECISIONS.json",
+        decision_package_file_sha256="5" * 64,
+        decision_package_sha256="6" * 64,
+        screening_implementation_sha256="7" * 64,
+        screened_at=datetime(2026, 9, 13, 4, tzinfo=UTC),
+        record_count=1,
+        eligibility_rule_count=2,
+        allocation_rule_codes=(),
+        eligible_record_ids=("metadata-row-000001",),
+        excluded_record_ids=(),
+        blocked_record_ids=(),
+        items=(
+            BenchmarkMetadataScreenItemReport(
+                record_id="metadata-row-000001",
+                disposition=BenchmarkRecordScreenDisposition.ELIGIBLE,
+                exclusion_codes=(),
+                unresolved_codes=(),
+            ),
+        ),
+        ready_for_allocation_proposal=True,
+        bound_assessment_evidence_read=False,
+    )
+
+    def inspect_screening(project_root, workspace_root, run):
+        del project_root, workspace_root
+        if run.run_id != run_id:
+            return None
+        return report, "8" * 64, True
+
+    monkeypatch.setattr(
+        workspace_module,
+        "_benchmark_metadata_screening_for_run",
+        inspect_screening,
+    )
+
+    _, data = _progress(runtime)
+
+    assert data["counts"]["benchmark_metadata_screenings"] == 1
+    assert data["counts"]["benchmark_metadata_populations"] == 0
+    assert data["benchmark_metadata_screenings"][0]["eligible_record_count"] == 1
+    assert data["benchmark_metadata_screenings"][0]["next_gate"] == ("propose_powered_allocation")
+    candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "review_metadata_screening"
     )
     assert candidate["target_ids"] == ["benchmark-task-universe-v1"]
 

@@ -93,6 +93,8 @@ from scitaste.evaluation import (
     inspect_acquired_task_cohort,
     inspect_adapter_contract,
     inspect_adapter_preflight,
+    inspect_benchmark_metadata_population_chain,
+    inspect_benchmark_metadata_screen_rulebook,
     inspect_dataset_acquisition_request,
     inspect_dataset_license_policy,
     inspect_dataset_package_archives,
@@ -115,6 +117,8 @@ from scitaste.evaluation import (
     load_benchmark_metadata_projection_approval,
     load_benchmark_metadata_projection_plan,
     load_benchmark_metadata_scope,
+    load_benchmark_metadata_screen_decisions,
+    load_benchmark_metadata_screen_rulebook,
     load_clustered_power_request,
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
@@ -166,6 +170,7 @@ from scitaste.evaluation import (
     save_benchmark_metadata_population,
     save_benchmark_metadata_projection_approval,
     save_benchmark_metadata_projection_plan,
+    save_benchmark_metadata_screening_report,
     save_clustered_power_report,
     save_completed_objective_result_set,
     save_dataset_acquisition_request,
@@ -190,6 +195,7 @@ from scitaste.evaluation import (
     save_structured_metadata_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
+    screen_benchmark_metadata_population,
     summarize_evaluation_readiness,
 )
 from scitaste.evidence.workflow import EvidenceWorkflow, load_evidence_scenario
@@ -2014,6 +2020,34 @@ def build_parser() -> argparse.ArgumentParser:
     metadata_projection.add_argument("--allow-local-content-read", action="store_true")
     _add_log_level_option(metadata_projection)
     metadata_projection.set_defaults(handler=_handle_evaluation_benchmark_metadata_project)
+    metadata_screen_rulebook = evaluation_commands.add_parser(
+        "benchmark-metadata-screen-rulebook",
+        help="Verify pre-content benchmark screening rules against their frozen scope",
+    )
+    metadata_screen_rulebook.add_argument("--rulebook", type=Path, required=True)
+    metadata_screen_rulebook.add_argument("--scope", type=Path, required=True)
+    metadata_screen_rulebook.add_argument("--require-ready", action="store_true")
+    _add_log_level_option(metadata_screen_rulebook)
+    metadata_screen_rulebook.set_defaults(
+        handler=_handle_evaluation_benchmark_metadata_screen_rulebook
+    )
+    metadata_screen = evaluation_commands.add_parser(
+        "benchmark-metadata-screen",
+        help="Compile every projected record through frozen eligibility rules",
+    )
+    metadata_screen.add_argument("--population", type=Path, required=True)
+    metadata_screen.add_argument("--rulebook", type=Path, required=True)
+    metadata_screen.add_argument("--decisions", type=Path, required=True)
+    metadata_screen.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_screen.add_argument("--screened-at", required=True)
+    metadata_screen.add_argument("--output", type=Path, required=True)
+    metadata_screen.add_argument("--allow-projected-metadata-read", action="store_true")
+    metadata_screen.add_argument(
+        "--require-allocation-proposal-ready",
+        action="store_true",
+    )
+    _add_log_level_option(metadata_screen)
+    metadata_screen.set_defaults(handler=_handle_evaluation_benchmark_metadata_screen)
     source_admission = evaluation_commands.add_parser(
         "source-admission",
         help="Compile audited sources through rights, quality, and isolation gates",
@@ -5860,6 +5894,55 @@ def _handle_evaluation_benchmark_metadata_project(args: argparse.Namespace) -> i
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_screen_rulebook(args: argparse.Namespace) -> int:
+    rulebook = load_benchmark_metadata_screen_rulebook(args.rulebook)
+    scope = load_benchmark_metadata_scope(args.scope)
+    report = inspect_benchmark_metadata_screen_rulebook(rulebook, scope)
+    print(
+        json.dumps(
+            {
+                "rulebook_path": str(rulebook.path),
+                "rulebook_file_sha256": rulebook.file_sha256,
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_ready and not report.ready_for_population_screening:
+        return 1
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_screen(args: argparse.Namespace) -> int:
+    root = args.workspace_root.resolve(strict=True)
+    report = screen_benchmark_metadata_population(
+        inspect_benchmark_metadata_population_chain(
+            args.population,
+            workspace_root=root,
+        ),
+        load_benchmark_metadata_screen_rulebook(args.rulebook),
+        load_benchmark_metadata_screen_decisions(args.decisions),
+        workspace_root=root,
+        screened_at=datetime.fromisoformat(args.screened_at),
+        allow_projected_metadata_read=args.allow_projected_metadata_read,
+    )
+    output = save_benchmark_metadata_screening_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "report_path": str(output),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_allocation_proposal_ready and not report.ready_for_allocation_proposal:
+        return 1
     return 0
 
 

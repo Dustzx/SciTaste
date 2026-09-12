@@ -410,6 +410,7 @@ class BenchmarkMetadataPopulationChainInspection(BaseModel):
     population: BenchmarkMetadataPopulationInspection
     plan: BenchmarkMetadataProjectionPlanInspection
     approval: BenchmarkMetadataProjectionApprovalInspection
+    audit: StructuredMetadataAuditReportInspection
     projection_implementation_current: bool
 
 
@@ -868,6 +869,7 @@ def inspect_benchmark_metadata_population_chain(
         population=population_inspection,
         plan=plan,
         approval=approval,
+        audit=audit,
         projection_implementation_current=(
             plan.plan.projection_implementation_sha256 == _module_sha256()
         ),

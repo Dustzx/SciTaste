@@ -33,6 +33,10 @@ from scitaste.evaluation.benchmark_metadata_projection import (
     BenchmarkMetadataPopulation,
     inspect_benchmark_metadata_population_chain,
 )
+from scitaste.evaluation.benchmark_metadata_screening import (
+    BenchmarkMetadataScreeningReport,
+    inspect_benchmark_metadata_screening_chain,
+)
 from scitaste.evaluation.dataset_package import (
     DatasetPackageGateReport,
     load_dataset_package_gate_report,
@@ -782,6 +786,69 @@ class WorkspaceSurfaceFactory:
             if item["request_id"] not in projected_metadata_request_ids
         ]
 
+        benchmark_metadata_screening_by_scope: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected_screening = _benchmark_metadata_screening_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                self._runtime.outputs_root.resolve(strict=True).parent,
+                run,
+            )
+            if inspected_screening is None:
+                continue
+            screening, screening_file_sha256, implementation_current = inspected_screening
+            if screening.scope_id in benchmark_metadata_screening_by_scope:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple benchmark metadata screenings for one scope"
+                )
+            run_ref = run_refs[run.run_id]
+            benchmark_metadata_screening_by_scope[screening.scope_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "scope_id": screening.scope_id,
+                "report_file_sha256": screening_file_sha256,
+                "report_sha256": screening.report_sha256,
+                "population_sha256": screening.population_sha256,
+                "rulebook_sha256": screening.rulebook_sha256,
+                "decision_package_sha256": screening.decision_package_sha256,
+                "screening_implementation_current": implementation_current,
+                "record_count": screening.record_count,
+                "eligibility_rule_count": screening.eligibility_rule_count,
+                "allocation_rule_codes": list(screening.allocation_rule_codes),
+                "eligible_record_count": len(screening.eligible_record_ids),
+                "excluded_record_count": len(screening.excluded_record_ids),
+                "blocked_record_count": len(screening.blocked_record_ids),
+                "ready_for_allocation_proposal": screening.ready_for_allocation_proposal,
+                "complete_population_screened": screening.complete_population_screened,
+                "projected_metadata_read": screening.projected_metadata_read,
+                "raw_source_content_read": screening.raw_source_content_read,
+                "formal_outcomes_consulted": screening.formal_outcomes_consulted,
+                "model_inventory_consulted": screening.model_inventory_consulted,
+                "compute_inventory_consulted": screening.compute_inventory_consulted,
+                "current_host_inventory_consulted": (screening.current_host_inventory_consulted),
+                "model_calls_performed": screening.model_calls_performed,
+                "selection_performed": screening.selection_performed,
+                "allocation_performed": screening.allocation_performed,
+                "asset_download_performed": screening.asset_download_performed,
+                "ingestion_performed": screening.ingestion_performed,
+                "gpu_work_performed": screening.gpu_work_performed,
+                "experiment_performed": screening.experiment_performed,
+                "authorizes_allocation": screening.authorizes_allocation,
+                "authorizes_task_selection": screening.authorizes_task_selection,
+                "authorizes_execution": screening.authorizes_execution,
+                "next_gate": (
+                    "propose_powered_allocation"
+                    if screening.ready_for_allocation_proposal
+                    else "resolve_screen_evidence"
+                ),
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        benchmark_metadata_screening_rows = list(benchmark_metadata_screening_by_scope.values())
+        benchmark_metadata_population_rows = [
+            item
+            for item in benchmark_metadata_population_rows
+            if item["scope_id"] not in benchmark_metadata_screening_by_scope
+        ]
+
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -1403,6 +1470,23 @@ class WorkspaceSurfaceFactory:
                     "target_ids": [item["scope_id"] for item in benchmark_metadata_population_rows],
                 }
             )
+        if benchmark_metadata_screening_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-benchmark-metadata-screening",
+                    "kind": "review_metadata_screening",
+                    "label_code": "review-complete-metadata-screening",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in benchmark_metadata_screening_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["scope_id"] for item in benchmark_metadata_screening_rows],
+                }
+            )
         if acquisition_rows or receipt_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
@@ -1586,6 +1670,7 @@ class WorkspaceSurfaceFactory:
                     "acquisition_receipts": len(receipt_rows),
                     "metadata_audit_plans": len(metadata_audit_plan_rows),
                     "benchmark_metadata_populations": len(benchmark_metadata_population_rows),
+                    "benchmark_metadata_screenings": len(benchmark_metadata_screening_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -1627,6 +1712,7 @@ class WorkspaceSurfaceFactory:
                 "acquisition_qualifications": qualification_rows,
                 "metadata_audit_plans": metadata_audit_plan_rows,
                 "benchmark_metadata_populations": benchmark_metadata_population_rows,
+                "benchmark_metadata_screenings": benchmark_metadata_screening_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -2508,6 +2594,46 @@ def _benchmark_metadata_population_for_run(
         population,
         inspection.population.file_sha256,
         inspection.projection_implementation_current,
+    )
+
+
+def _benchmark_metadata_screening_for_run(
+    project_root: Path,
+    workspace_root: Path,
+    run: ProjectRun,
+) -> tuple[BenchmarkMetadataScreeningReport, str, bool] | None:
+    """Replay one complete screening ledger without reopening raw metadata."""
+
+    expected = f"runs/{run.run_id}/benchmark_metadata_screening/REPORT.json"
+    if run.stage_path != "benchmark_metadata_screening" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered benchmark metadata screening is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError(
+            "registered benchmark metadata screening escaped its project"
+        )
+    try:
+        inspection = inspect_benchmark_metadata_screening_chain(
+            resolved,
+            workspace_root=workspace_root,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError(
+            "registered benchmark metadata screening is invalid"
+        ) from exc
+    report = inspection.report.report
+    if report.project_id != root.name:
+        raise ProjectSurfaceChangedError(
+            "registered benchmark metadata screening belongs to another project"
+        )
+    return (
+        report,
+        inspection.report.file_sha256,
+        inspection.screening_implementation_current,
     )
 
 

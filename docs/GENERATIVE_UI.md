@@ -213,6 +213,18 @@ outcomes, installed models, and compute inventory were not consulted. The next
 action can review a frozen screening proposal but cannot silently convert the
 population into an experiment-ready subset.
 
+A completed screen appears only at the canonical
+`runs/<run-id>/benchmark_metadata_screening/REPORT.json` locator. The receiver
+replays the population, scope, projection plan and approval, rulebook, complete
+decision package, control hashes, chronology, and current screening
+implementation without reopening raw benchmark metadata or assessment evidence.
+For each scope it supersedes the projection card and renders compact eligible,
+excluded, and unresolved counts, whether the full record-by-rule population was
+screened, and the next gate. An unresolved screen points back to evidence
+resolution; a complete screen points to a powered allocation proposal. Neither
+state is shown as task selection or experiment readiness, and the inspect action
+opens the immutable evidence page rather than mutating the project.
+
 A post-download qualification appears only through the separately registered
 `runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
 rechecks the report's embedded semantic hash, exact task and byte arithmetic,

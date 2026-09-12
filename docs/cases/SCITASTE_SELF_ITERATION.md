@@ -1205,3 +1205,31 @@ preservation, inert formula-like values, missing-field rejection, and
 implementation drift. They also preserve an explicitly missing required field
 and expose its aggregate count. The real 21 downloaded files remained unopened;
 no API, GPU, external network, model, human, or experiment action occurred.
+
+## Turning a population into an auditable scientific screen (2026-09-13)
+
+Complete projection prevented records from disappearing, but it did not yet
+constrain how an operator would label the records or separate scientific
+ineligibility from an inconvenient resource budget. The older task-selection
+validator could confirm an already written short list, not prove that all
+eligible records had first received the same treatment.
+
+SciTaste now freezes source-specific rules before any projected values exist.
+InnovatorBench uses five scientific eligibility rules and one later capacity
+rule; EXP-Bench uses six scientific eligibility rules. The screening package
+must contain exactly every projected-record by eligibility-rule pair, using the
+rule's exact fields and assessment authority. Source-wide and record-level
+missingness therefore becomes an explicit exclusion or unresolved decision,
+never an invisible pass. Rights, reproducibility, overlap, and sandbox claims
+that require more than projected metadata must bind immutable external evidence.
+
+The compiler partitions and retains the entire population and opens only an
+allocation-proposal gate. Formal outcomes, current models, GPUs, APIs, host
+inventory, and expected performance cannot define eligibility; a later powered,
+seeded allocation may use only eligible records and must retain unsampled cases.
+The project interface recognizes this canonical ledger and shows its next gate
+without implying that screening selected or executed tasks. Repository
+rulebooks and synthetic compiler behavior were verified, but the real acquired
+InnovatorBench and EXP-Bench files remain unopened and no actual population or
+screening report exists. No network, provider, model, GPU, human, or experiment
+resource was used.

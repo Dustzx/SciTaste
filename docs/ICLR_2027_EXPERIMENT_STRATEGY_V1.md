@@ -324,6 +324,20 @@ not consulted. It still cannot select a subset. This prevents the future task
 manifest from being reconstructed as an unexplained hand-written list after
 resource or performance information is visible.
 
+The next scientific screen is also frozen before source content is opened.
+InnovatorBench's rulebook separates five eligibility questions—objective-signal
+reproduction, runtime-asset feasibility under approved terms, source overlap,
+rights, and sandbox safety—from one post-eligibility capacity rule. EXP-Bench's
+six eligibility questions additionally require source-paper grouping and an
+experiment-chain success signal, with no capacity exclusion. The compiler must
+evaluate every projected record against every eligibility rule and retain
+excluded and unresolved records. Current model, GPU, API, host, and expected
+outcome information cannot enter these decisions. Only after a complete screen
+with no unresolved records may clustered power and a precommitted seed propose
+an allocation over eligible records; unsampled eligible records remain in the
+ledger. The rulebooks are executable controls, but no real screen exists because
+the owner has not authorized the preceding content audit or projection.
+
 That decision still does not include the 69.7-GB InnovatorBench archive, task
 workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
 GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an

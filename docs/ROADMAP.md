@@ -384,6 +384,14 @@ excluding formal outcomes, model inventory, compute inventory, task selection,
 link resolution, and execution. No real projection exists because content-read
 approval remains open. The evidence program still reports the remaining
 experiment gates.
+The complete-population screening layer is likewise executable before any real
+source read. Frozen InnovatorBench and EXP-Bench rulebooks exactly cover their
+scope exclusions; the compiler requires every record-by-eligibility-rule
+decision, preserves excluded and unresolved records, and refuses to let current
+resources define scientific eligibility. Capacity is deferred to a powered,
+seeded allocation over eligible records. Generation-as-Content can render a
+registered screening ledger, but the real project remains at audit-plan approval:
+no benchmark content, projection, screening, selection, or experiment has run.
 Agent Laboratory and DeepScientist remain implementation-blocked; AI-Researcher
 is additionally code-use-blocked by the absent repository license. Resource
 discovery may continue broadly, but neither Qwen3.5 examples nor any other

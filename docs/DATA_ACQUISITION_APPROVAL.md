@@ -183,6 +183,44 @@ formula-like cells as inert text. The population is ready only for a subsequent
 screen-decision proposal; it grants no selection, asset acquisition, ingestion,
 model, GPU, or experiment authority.
 
+Before any real projection exists, the source-specific rules can be checked
+against the frozen scopes without reading source content:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-screen-rulebook \
+  --rulebook configs/evaluation/screening/innovatorbench_metadata_screen_rulebook_v1.json \
+  --scope docs/research/data/innovatorbench_task_metadata_scope_v1.yaml \
+  --require-ready
+
+.venv/bin/scitaste evaluation benchmark-metadata-screen-rulebook \
+  --rulebook configs/evaluation/screening/expbench_metadata_screen_rulebook_v1.json \
+  --scope docs/research/data/expbench_task_metadata_scope_v1.yaml \
+  --require-ready
+```
+
+InnovatorBench has five scientific eligibility rules and one separately
+declared capacity-allocation rule; EXP-Bench has six scientific eligibility
+rules and no capacity exclusion. Once a projection is authorized and produced,
+an outcome- and resource-blind decision package must cover every projected
+record crossed with every eligibility rule. Screening is then explicit:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-screen \
+  --population '<projected POPULATION.json>' \
+  --rulebook '<frozen rulebook>' --decisions '<complete decision package>' \
+  --workspace-root . --screened-at '<timezone-aware ISO-8601>' \
+  --output '<new benchmark_metadata_screening/REPORT.json>' \
+  --allow-projected-metadata-read --require-allocation-proposal-ready
+```
+
+The switch permits reading the already bounded projection, not the acquisition
+tree. Required external judgments must be separately hash-bound evidence; raw
+benchmark files and control artifacts are forbidden as attachments. Missing
+evidence becomes the rule's predeclared exclusion or unresolved disposition.
+The report retains the full population partition and only opens a later powered,
+seeded allocation proposal. It cannot select tasks, call a model, use compute,
+or execute an experiment.
+
 ## Admitted source projection
 
 For JSON scientific sources, passing content audit and human-governed source

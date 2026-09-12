@@ -2476,6 +2476,27 @@ structural-read approval because the latter intentionally grants no field-value
 access. Neither action chooses tasks, downloads runtime assets, ingests data,
 calls a model, allocates compute, or establishes an experimental result.
 
+Screening is now a separate complete-population compiler rather than an alias
+for task selection. Its rulebook is frozen before the structural content read, covers every
+scope exclusion code, and classifies each rule as either scientific eligibility
+or post-eligibility allocation. Only the declared capacity code may occupy the
+latter role. A valid decision package contains the Cartesian product of all
+projected record IDs and all eligibility rules; its evidence fields and
+assessment authority must exactly match the frozen rule. Missing projected or
+bound evidence cannot be silently treated as a pass. The report preserves every
+eligible, excluded, and unresolved record and becomes allocation-proposal-ready
+only when at least one record is eligible and none remains unresolved.
+
+The screening compiler reads only the already approved projection plus
+explicitly hash-bound assessment evidence. It rejects the raw acquisition tree
+and all control artifacts as evidence attachments, replays source, scope,
+rulebook, decision, implementation, and chronology bindings, and records that
+formal outcomes and current model, compute, and host inventories were not
+consulted. Even a complete passing screen performs no seeded allocation and
+grants no task-selection, asset, ingestion, API, GPU, or execution authority.
+This makes scientific eligibility invariant to the resources that happen to be
+available when the formal experiment is eventually launched.
+
 ### ADR-082: Raw RAG and Taste abstraction share one admitted source projection
 
 Status: accepted and executable; no acquired source has been projected through

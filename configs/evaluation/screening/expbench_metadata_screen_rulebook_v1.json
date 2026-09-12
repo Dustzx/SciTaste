@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "rulebook_id": "expbench-metadata-screen-v1",
+  "project_id": "scitaste-self-development",
+  "scope_id": "expbench-task-metadata-universe-v1",
+  "scope_file_sha256": "e24e8c7cfb8a22cb60e10fdcd87532cb2e40454de1bac5214fcc8e61c50982d4",
+  "frozen_at": "2026-09-13T06:00:00+08:00",
+  "rules": [
+    {
+      "exclusion_code": "incomplete-stage-signal",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "conjunctive-success-definition",
+        "experiment-chain-stage-coverage"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "evidence-bound-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when the task exposes a verifiable target in at least one declared experiment-chain stage and its success definition cannot be satisfied by fluent text alone; bind stage and success-signal evidence."
+    },
+    {
+      "exclusion_code": "missing-source-paper-group",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "source-paper-group"
+      ],
+      "evidence_mode": "projected-metadata-only",
+      "assessment_authority": "deterministic-metadata",
+      "missing_evidence_disposition": "exclude",
+      "decision_standard": "Exclude a record with no non-empty source-paper group because repeated tasks from one paper cannot otherwise be kept inside one independent sampling unit."
+    },
+    {
+      "exclusion_code": "runtime-assets-unavailable-under-approved-terms",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "environment-reproduction-status",
+        "runtime-repository-and-data-identities"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "runtime-preflight",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when the exact repository, data and environment identities have a separately feasible acquisition and reproduction path; current local availability cannot define eligibility."
+    },
+    {
+      "exclusion_code": "source-overlap",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "overlap-with-scitaste-development-and-taste-sources",
+        "source-paper-group"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "evidence-bound-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Exclude when the source paper, task content, repository lineage or evaluation evidence overlaps SciTaste development, Taste-source construction, pilots, or another held-out group; bind the comparison ledger."
+    },
+    {
+      "exclusion_code": "task-or-upstream-license-blocked",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "per-asset-license-status",
+        "runtime-repository-and-data-identities"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "rights-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when the benchmark record, upstream repository, data, checkpoints and starting assets have source-specific terms permitting the proposed use and derived research outputs."
+    },
+    {
+      "exclusion_code": "unsafe-or-unisolatable-environment",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "environment-reproduction-status",
+        "starting-question-and-code-boundary"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "sandbox-preflight",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when the declared starting boundary can be reproduced inside frozen network, filesystem, timeout and output limits without privileged or unbounded side effects; bind a no-model sandbox preflight."
+    }
+  ],
+  "allocation_policy": {
+    "population": "eligible-records-only",
+    "method": "stratified-seeded-sampling",
+    "strata_fields": [
+      "experiment-chain-stage-coverage",
+      "source-paper-group"
+    ],
+    "sample_size_source": "future-clustered-power-analysis",
+    "random_seed_source": "future-precommitted-seed",
+    "preserves_unsampled_records": true,
+    "allocation_deferred": true
+  },
+  "frozen_before_source_content_read": true,
+  "formal_outcomes_available": false,
+  "model_inventory_consulted": false,
+  "compute_inventory_consulted": false,
+  "current_host_inventory_consulted": false,
+  "model_may_decide_eligibility": false,
+  "selection_performed": false,
+  "authorizes_content_read": false,
+  "authorizes_task_selection": false,
+  "authorizes_asset_download": false,
+  "authorizes_ingestion": false,
+  "authorizes_model_calls": false,
+  "authorizes_gpu_work": false,
+  "authorizes_experiment": false
+}

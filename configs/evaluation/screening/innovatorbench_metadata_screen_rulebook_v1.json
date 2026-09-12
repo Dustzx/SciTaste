@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0",
+  "rulebook_id": "innovatorbench-metadata-screen-v1",
+  "project_id": "scitaste-self-development",
+  "scope_id": "innovatorbench-task-metadata-universe-v1",
+  "scope_file_sha256": "651c2a1109fca394de7ce13244c86c668876158df19b441a6bc3cdb835157dfd",
+  "frozen_at": "2026-09-13T06:00:00+08:00",
+  "rules": [
+    {
+      "exclusion_code": "exceeds-declared-formal-capacity-after-scientific-screen",
+      "role": "post-eligibility-allocation",
+      "evidence_fields": [
+        "benchmark-category",
+        "expected-wall-time-and-compute-envelope",
+        "source-paper-group"
+      ],
+      "evidence_mode": "projected-metadata-only",
+      "assessment_authority": "seeded-allocation",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Do not alter eligibility. After every scientific rule is resolved, use only eligible records, a future clustered-power result, the declared category/source-group strata, and a future precommitted seed; retain every unsampled eligible record in the allocation ledger."
+    },
+    {
+      "exclusion_code": "objective-signal-not-reproducible",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "objective-score-definition",
+        "starting-information-boundary"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "evidence-bound-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when an exact, task-local objective score can be recomputed from the declared starting boundary without using an automated judge as the primary endpoint; bind the reproduction evidence."
+    },
+    {
+      "exclusion_code": "runtime-assets-unavailable-under-approved-terms",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "external-dataset-and-checkpoint-identities",
+        "task-runtime-dependencies"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "runtime-preflight",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when every required dataset, checkpoint, repository and dependency has a pinned identity and a separately feasible acquisition or local-use path; current host availability cannot make an otherwise ineligible task pass."
+    },
+    {
+      "exclusion_code": "source-overlap",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "overlap-with-scitaste-development-and-taste-sources",
+        "source-paper-group"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "evidence-bound-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Exclude when the task source group, task bytes, solution lineage or evaluation evidence overlaps SciTaste development, Taste-source construction, pilots, or other held-out groups; bind the comparison ledger."
+    },
+    {
+      "exclusion_code": "task-or-upstream-license-blocked",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "external-dataset-and-checkpoint-identities",
+        "per-asset-license-status"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "rights-review",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when task code and every required dataset, checkpoint and input asset have source-specific terms that permit the proposed research use, storage and derived outputs; absence of terms is unresolved rather than implicitly permitted."
+    },
+    {
+      "exclusion_code": "unsafe-or-unisolatable-environment",
+      "role": "scientific-eligibility",
+      "evidence_fields": [
+        "task-runtime-dependencies"
+      ],
+      "evidence_mode": "projected-metadata-plus-bound-evidence",
+      "assessment_authority": "sandbox-preflight",
+      "missing_evidence_disposition": "cannot-assess",
+      "decision_standard": "Pass only when the task can run within the frozen sandbox, network, filesystem, timeout and output limits without privileged or unbounded side effects; bind a no-model sandbox preflight."
+    }
+  ],
+  "allocation_policy": {
+    "population": "eligible-records-only",
+    "method": "stratified-seeded-sampling",
+    "strata_fields": [
+      "benchmark-category",
+      "source-paper-group"
+    ],
+    "sample_size_source": "future-clustered-power-analysis",
+    "random_seed_source": "future-precommitted-seed",
+    "preserves_unsampled_records": true,
+    "allocation_deferred": true
+  },
+  "frozen_before_source_content_read": true,
+  "formal_outcomes_available": false,
+  "model_inventory_consulted": false,
+  "compute_inventory_consulted": false,
+  "current_host_inventory_consulted": false,
+  "model_may_decide_eligibility": false,
+  "selection_performed": false,
+  "authorizes_content_read": false,
+  "authorizes_task_selection": false,
+  "authorizes_asset_download": false,
+  "authorizes_ingestion": false,
+  "authorizes_model_calls": false,
+  "authorizes_gpu_work": false,
+  "authorizes_experiment": false
+}

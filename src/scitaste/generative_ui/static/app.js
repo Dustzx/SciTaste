@@ -1266,6 +1266,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.receipts"), data.counts.acquisition_receipts || 0, t("progress.metric.receipts_note")),
     progressMetric(t("progress.metric.metadata_plans"), data.counts.metadata_audit_plans || 0, t("progress.metric.metadata_plans_note")),
     progressMetric(t("progress.metric.metadata_populations"), data.counts.benchmark_metadata_populations || 0, t("progress.metric.metadata_populations_note")),
+    progressMetric(t("progress.metric.metadata_screenings"), data.counts.benchmark_metadata_screenings || 0, t("progress.metric.metadata_screenings_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1275,6 +1276,9 @@ function renderProjectProgress(data) {
   const metadataAuditPlans = renderMetadataAuditPlans(data.metadata_audit_plans || []);
   const metadataPopulations = renderBenchmarkMetadataPopulations(
     data.benchmark_metadata_populations || [],
+  );
+  const metadataScreenings = renderBenchmarkMetadataScreenings(
+    data.benchmark_metadata_screenings || [],
   );
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
@@ -1588,6 +1592,7 @@ function renderProjectProgress(data) {
     review_data_acquisition: t("progress.next.data_acquisition"),
     approve_metadata_audit: t("progress.next.metadata_audit"),
     review_metadata_population: t("progress.next.metadata_population"),
+    review_metadata_screening: t("progress.next.metadata_screening"),
     review_benchmark_qualification: t("progress.next.benchmark_qualification"),
     review_iteration: t("progress.next.review_iteration"),
   };
@@ -1601,6 +1606,7 @@ function renderProjectProgress(data) {
       kinds: [
         "approve_metadata_audit",
         "review_metadata_population",
+        "review_metadata_screening",
         "review_data_acquisition",
         "review_benchmark_qualification",
         "review_research_landscape",
@@ -1732,6 +1738,9 @@ function renderProjectProgress(data) {
   }
   if ((data.benchmark_metadata_populations || []).length > 0) {
     container.appendChild(metadataPopulations);
+  }
+  if ((data.benchmark_metadata_screenings || []).length > 0) {
+    container.appendChild(metadataScreenings);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -2214,6 +2223,116 @@ function renderBenchmarkMetadataPopulations(items) {
           "model_inventory_consulted",
           "compute_inventory_consulted",
           "authorizes_task_selection",
+          "authorizes_execution",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderBenchmarkMetadataScreenings(items) {
+  const section = progressSection(
+    t("progress.metadata_screening.title"),
+    items.length > 0
+      ? t("progress.metadata_screening.subtitle", {count: items.length})
+      : t("progress.metadata_screening.empty"),
+  );
+  if (items.length === 0) return section;
+
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.ready_for_allocation_proposal ? "candidate" : "blocked"}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.metadata_screening.ledger"));
+    const title = document.createElement("strong");
+    appendText(title, item.scope_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.ready_for_allocation_proposal ? "candidate" : "blocked",
+        t(item.ready_for_allocation_proposal
+          ? "progress.metadata_screening.status.ready"
+          : "progress.metadata_screening.status.blocked"),
+      ),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, count] of [
+      ["records", item.record_count],
+      ["rules", item.eligibility_rule_count],
+      ["eligible", item.eligible_record_count],
+      ["excluded", item.excluded_record_count],
+      ["blocked", item.blocked_record_count],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.metadata_screening.${key}`, {count}));
+      facts.appendChild(fact);
+    }
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t(`progress.metadata_screening.next.${item.next_gate}`));
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.metadata_screening.boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button acquisition-review";
+    appendText(open, t("progress.metadata_screening.inspect"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(
+      header,
+      facts,
+      next,
+      boundary,
+      open,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          report_file_sha256: item.report_file_sha256,
+          report_sha256: item.report_sha256,
+          population_sha256: item.population_sha256,
+          rulebook_sha256: item.rulebook_sha256,
+          decision_package_sha256: item.decision_package_sha256,
+          screening_implementation_current: item.screening_implementation_current,
+          allocation_rule_codes: item.allocation_rule_codes,
+          complete_population_screened: item.complete_population_screened,
+          formal_outcomes_consulted: item.formal_outcomes_consulted,
+          model_inventory_consulted: item.model_inventory_consulted,
+          compute_inventory_consulted: item.compute_inventory_consulted,
+          current_host_inventory_consulted: item.current_host_inventory_consulted,
+          selection_performed: item.selection_performed,
+          allocation_performed: item.allocation_performed,
+          authorizes_execution: item.authorizes_execution,
+        },
+        names: [
+          "report_file_sha256",
+          "report_sha256",
+          "population_sha256",
+          "rulebook_sha256",
+          "decision_package_sha256",
+          "screening_implementation_current",
+          "allocation_rule_codes",
+          "complete_population_screened",
+          "formal_outcomes_consulted",
+          "model_inventory_consulted",
+          "compute_inventory_consulted",
+          "current_host_inventory_consulted",
+          "selection_performed",
+          "allocation_performed",
           "authorizes_execution",
         ],
       }),
