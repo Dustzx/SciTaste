@@ -2372,3 +2372,30 @@ Formal GPU/API conditions remain separately content-bound because CUDA, model,
 and provider environments are measured experimental resources. Historical
 3.11 runtime inventories and receipts are not rewritten; they are evidence of
 past execution, not declarations of current repository support.
+
+### ADR-079: Download authority does not imply permission to parse source content
+
+Status: accepted for bounded acquired-JSON audit; no real source body has been
+read through this path.
+
+An acquisition receipt proves the bytes moved under a download-only decision.
+Parsing those bytes can expose copyrighted text, personal data, external
+locators, outcome information, and fields that were invisible during metadata
+selection. SciTaste therefore requires a second owner authorization before a
+local parser opens any acquired JSON source.
+
+The authorization binds the exact approved request file, self-hashed receipt,
+ordered item set, source project, auditor implementation hash, and explicit
+depth, container, node, and string ceilings. Creating it does not read the
+acquired bodies. The content auditor
+requires a separate runtime switch, revalidates that complete chain, rejects
+unregistered or symlinked files and byte drift, and parses strict UTF-8 JSON with
+duplicate-key and non-finite-number rejection. Its only semantic output is a
+content-addressed inventory of normalized field shapes, designated paper-ID
+observations, and external locators that were counted but never followed.
+
+Passing this audit means only that an exact record may enter a later rights,
+quality, and source-isolation admission proposal. The report performs and
+authorizes no projection, ingestion, model call, human review, or experiment.
+This prevents possession of data from silently becoming permission to expose it
+to a model or to promote an observed paper action as Scientific Taste.

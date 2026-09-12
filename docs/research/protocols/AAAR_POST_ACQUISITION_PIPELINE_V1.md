@@ -15,6 +15,47 @@ limits. It inventories the observed schema, checks embedded paper identity, and
 never resolves links or fetches adjacent assets. The audit cannot decide that a
 paper's observed action is correct.
 
+That boundary is now executable in `scitaste.evaluation.json_content_audit`.
+`scitaste evaluation acquisition-content-approve` creates a new immutable
+authorization bound to the approved acquisition-request file, self-hashed
+receipt, exact item order, auditor source hash, and JSON limits without reading
+source bodies.
+`scitaste evaluation acquisition-content-audit` then requires both that artifact
+and `--allow-local-content-read`. It rehashes the local inventory, rejects extra
+or symlinked files, duplicate keys, non-finite numbers, non-object roots, and
+depth/container/node/string ceilings. It records normalized JSON-pointer shapes,
+embedded arXiv identity observations, and external-locator counts while never
+opening a connection or following a locator.
+
+The resulting self-hashed report can make records eligible for a separate source
+admission proposal. It cannot project fields into model context, admit a source,
+call GLM-5.3-Flash, ask a reviewer, or run an experiment.
+
+After a real receipt exists, the operator first creates a project-owned approval:
+
+```bash
+.venv/bin/scitaste evaluation acquisition-content-approve \
+  --approved-request <approved-request.yaml> \
+  --receipt <RECEIPT.json> \
+  --confirm-request-sha256 <request-sha256> \
+  --confirm-receipt-sha256 <receipt-sha256> \
+  --approved-by <owner> --approved-at <timezone-aware-time> \
+  --output outputs/projects/<project>/runs/<run>/content_audit/APPROVAL.json
+```
+
+Only a separately invoked audit may then read the local content:
+
+```bash
+.venv/bin/scitaste evaluation acquisition-content-audit \
+  --approved-request <approved-request.yaml> \
+  --receipt <RECEIPT.json> \
+  --approval outputs/projects/<project>/runs/<run>/content_audit/APPROVAL.json \
+  --workspace-root . --audited-at <timezone-aware-time> \
+  --allow-local-content-read \
+  --output outputs/projects/<project>/runs/<run>/content_audit/REPORT.json \
+  --require-source-admission-ready
+```
+
 Every source then needs three independent admission arguments: rights and
 attribution; evidence that it is a high-quality scientific source; and source-
 group isolation from held-out decisions and the SciTaste self-development

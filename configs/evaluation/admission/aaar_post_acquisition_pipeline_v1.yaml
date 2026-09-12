@@ -1,7 +1,7 @@
 schema_version: "1.0"
 pipeline_id: aaar-post-acquisition-pipeline-v1
 project_id: scitaste-self-development
-status: contract-frozen-inputs-and-authorizations-pending
+status: audit-executor-ready-inputs-and-authorizations-pending
 input_contract:
   acquisition_request: configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml
   request_sha256: 32c95222c62788ae94693f30333757a5969efb40fdbb87ed1579257663d0736c
@@ -34,6 +34,13 @@ stages:
       - raw-bytes-remain-quarantined-and-immutable
     output: content-structure-and-identity-report
     external_action: false
+    implementation:
+      module: scitaste.evaluation.json_content_audit
+      approval_cli: scitaste evaluation acquisition-content-approve
+      audit_cli: scitaste evaluation acquisition-content-audit
+      explicit_read_switch: --allow-local-content-read
+      performs_projection: false
+      performs_ingestion: false
   - id: rights-quality-and-isolation-admission
     kind: deterministic-plus-human-source-verification
     requirements:

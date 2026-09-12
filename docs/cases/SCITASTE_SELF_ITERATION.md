@@ -1093,6 +1093,30 @@ to define the formal experiment. It creates no benchmark case and makes no
 effectiveness claim. No source body was downloaded, no API or GPU was used, and
 no human was recruited in this iteration.
 
+## Separating downloaded bytes from permission to inspect content (2026-09-12)
+
+The AAAR pipeline correctly said that download approval does not authorize
+content access, but the repository had no executable object for that distinction.
+A future operator would otherwise have needed to open the downloaded JSON with
+an ad-hoc script in order to learn its schema—the exact unrecorded transition the
+protocol was intended to prevent.
+
+SciTaste now creates a separate content-audit authorization after acquisition.
+It binds the approved request file, receipt file and semantic hash, ordered item
+set, owner and time, auditor implementation hash, designated identity fields,
+and structural ceilings without reading source bodies. The subsequent local
+auditor needs an explicit content-read switch, rehashes every receipt byte,
+closes the directory inventory, and
+rejects duplicate keys, non-finite values, non-object roots, symlinks, extra
+files, or structural limit violations.
+
+Successful inspection produces field-shape, external-locator, and embedded-
+paper-identity evidence only. It does not select fields for a prompt, decide
+source quality, admit a Taste principle, call a model, or run an experiment.
+Three focused synthetic checks exercised success, missing authority, changed
+bindings, duplicate keys, and identity failure. No AAAR body, API, GPU, SSH
+session, or human reviewer was used.
+
 ## Making the human Taste endpoint tamper-evident before recruitment (2026-09-12)
 
 The H1/H2 plan previously stated that two condition-blinded humans would review

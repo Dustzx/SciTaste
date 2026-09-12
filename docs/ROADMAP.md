@@ -30,6 +30,11 @@ and caps download-only acquisition at 3 MiB. It is not a benchmark subset and
 cannot authorize ingestion, abstraction, labeling, model calls, or GPU work.
 After approval and receipt verification, the next gate is content/schema audit
 followed by a separately approved real abstraction and human-fidelity pilot.
+The post-download software gate is now implemented: content access receives its
+own request/receipt-bound owner authorization, and a separately switched local
+auditor can rehash and structurally inventory exact JSON without resolving links
+or creating model-visible projections. Real execution still awaits the AAAR
+download decision and the later content-access decision.
 
 Phase 8.2 now has an executable human-outcome integrity boundary. Reviewer-
 visible manifests contain randomized X/Y outputs and a private-key commitment,

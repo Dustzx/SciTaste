@@ -20,6 +20,13 @@ semantic versioning.
   substituting another model for GLM-5.3-Flash. A parallel ARIES metadata screen
   inventories exact public S3 object identities and isolates the same-connection
   identity-verification gap before any object body is requested.
+- Acquired JSON is no longer inspected through an implicit local read. A new
+  owner authorization binds an approved acquisition request, self-hashed
+  receipt, exact item set, and structural ceilings without opening source files.
+  The separately switched auditor then rehashes the inventory and reports field
+  shapes, embedded paper identities, and unfollowed external locators. Duplicate
+  keys, non-finite values, byte drift, symlinks, extra files, and structural
+  limit violations fail closed; the report grants no projection or ingestion.
 - The first core Scientific Taste source acquisition is now an exact,
   approval-ready request rather than a dataset name. It selects sixteen
   metadata-first AAAR experiment-design records whose original papers declare

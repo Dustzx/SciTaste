@@ -73,7 +73,9 @@ from scitaste.evaluation import (
     align_evidence_program_to_benchmark,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
+    approve_json_content_audit,
     compile_evaluation_cell_plan,
+    inspect_acquired_json_content,
     inspect_acquired_task_cohort,
     inspect_adapter_contract,
     inspect_adapter_preflight,
@@ -95,6 +97,7 @@ from scitaste.evaluation import (
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
     load_dataset_license_policy,
     load_dataset_package_approval,
@@ -107,6 +110,7 @@ from scitaste.evaluation import (
     load_external_resource_corpus,
     load_human_blind_opening,
     load_human_outcome_study,
+    load_json_content_audit_approval,
     load_locked_human_reviews,
     load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
@@ -133,6 +137,8 @@ from scitaste.evaluation import (
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
     save_human_outcome_study_report,
+    save_json_content_audit_approval,
+    save_json_content_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
@@ -1696,6 +1702,47 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquisition_download)
     acquisition_download.set_defaults(handler=_handle_evaluation_acquisition_download)
+    content_audit_approve = evaluation_commands.add_parser(
+        "acquisition-content-approve",
+        help="Authorize bounded local JSON inspection for one completed acquisition",
+    )
+    content_audit_approve.add_argument("--approved-request", type=Path, required=True)
+    content_audit_approve.add_argument("--receipt", type=Path, required=True)
+    content_audit_approve.add_argument("--confirm-request-sha256", required=True)
+    content_audit_approve.add_argument("--confirm-receipt-sha256", required=True)
+    content_audit_approve.add_argument("--approved-by", required=True)
+    content_audit_approve.add_argument("--approved-at", required=True)
+    content_audit_approve.add_argument("--output", type=Path, required=True)
+    content_audit_approve.add_argument("--maximum-json-depth", type=int, default=32)
+    content_audit_approve.add_argument("--maximum-container-items", type=int, default=100_000)
+    content_audit_approve.add_argument("--maximum-nodes-per-item", type=int, default=500_000)
+    content_audit_approve.add_argument(
+        "--maximum-string-utf8-bytes", type=int, default=4 * 1_048_576
+    )
+    _add_log_level_option(content_audit_approve)
+    content_audit_approve.set_defaults(handler=_handle_evaluation_content_audit_approve)
+    content_audit = evaluation_commands.add_parser(
+        "acquisition-content-audit",
+        help="Inspect approved acquired JSON bytes without projection, model, or network use",
+    )
+    content_audit.add_argument("--approved-request", type=Path, required=True)
+    content_audit.add_argument("--receipt", type=Path, required=True)
+    content_audit.add_argument("--approval", type=Path, required=True)
+    content_audit.add_argument("--workspace-root", type=Path, default=Path("."))
+    content_audit.add_argument("--audited-at", required=True)
+    content_audit.add_argument("--output", type=Path, required=True)
+    content_audit.add_argument(
+        "--allow-local-content-read",
+        action="store_true",
+        help="explicitly permit only the approved local JSON read",
+    )
+    content_audit.add_argument(
+        "--require-source-admission-ready",
+        action="store_true",
+        help="return nonzero when bytes, JSON bounds, or embedded identities fail",
+    )
+    _add_log_level_option(content_audit)
+    content_audit.set_defaults(handler=_handle_evaluation_content_audit)
     acquired_cohort = evaluation_commands.add_parser(
         "acquired-task-cohort",
         help="Classify acquired benchmark briefs without treating them as executable tasks",
@@ -5001,6 +5048,61 @@ def _handle_evaluation_acquisition_download(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_content_audit_approve(args: argparse.Namespace) -> int:
+    request = load_dataset_acquisition_request(args.approved_request)
+    receipt = load_dataset_acquisition_receipt(args.receipt)
+    approval = approve_json_content_audit(
+        request,
+        receipt,
+        confirmed_request_sha256=args.confirm_request_sha256,
+        confirmed_receipt_sha256=args.confirm_receipt_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+        maximum_json_depth=args.maximum_json_depth,
+        maximum_container_items=args.maximum_container_items,
+        maximum_nodes_per_item=args.maximum_nodes_per_item,
+        maximum_string_utf8_bytes=args.maximum_string_utf8_bytes,
+    )
+    output = save_json_content_audit_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_content_audit(args: argparse.Namespace) -> int:
+    request = load_dataset_acquisition_request(args.approved_request)
+    receipt = load_dataset_acquisition_receipt(args.receipt)
+    approval = load_json_content_audit_approval(args.approval)
+    report = inspect_acquired_json_content(
+        request,
+        receipt,
+        approval,
+        workspace_root=args.workspace_root,
+        allow_local_content_read=args.allow_local_content_read,
+        audited_at=datetime.fromisoformat(args.audited_at),
+    )
+    output = save_json_content_audit_report(report, args.output)
+    print(
+        json.dumps(
+            {"report_path": str(output), **report.model_dump(mode="json")},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_source_admission_ready and not report.ready_for_source_admission_proposal:
+        return 1
     return 0
 
 
