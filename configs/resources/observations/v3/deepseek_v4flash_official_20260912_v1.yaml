@@ -6,11 +6,12 @@ observed_at: 2026-09-12T14:20:00+08:00
 method: official_catalog
 status: verified
 requested_model_id: deepseek-v4-flash
-returned_model_revision: DeepSeek-V4-Flash
+returned_model_revision: DeepSeek-V4-Flash-0731
 request_succeeded: null
 source_url: https://api-docs.deepseek.com/quick_start/pricing/
 notes:
   - The official catalog names a 1M context window, tool calls, JSON output, and up to 384K output.
+  - The registered price ceiling uses the official peak tariff; off-peak calls can cost less and do not raise the ceiling.
   - This official identity observation is not an authenticated API response and does not establish account access.
 credentials_recorded: false
 observation_only: true

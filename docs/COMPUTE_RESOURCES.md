@@ -93,12 +93,15 @@ for 4,266,653,057 bytes. The older GPU experiment proposal names
 exact old snapshot rather than silent substitution.
 
 The live official DeepSeek table was re-inspected on 2026-09-12. It currently
-names callable ID `deepseek-v4-flash`, version `DeepSeek-V4-Flash`, a 1M context
-window, tool calls, and prices of USD 0.0028/M cached input, USD 0.14/M uncached
-input, and USD 0.28/M output. The earlier `deepseek-flash` /
+names callable ID `deepseek-v4-flash`, version `DeepSeek-V4-Flash-0731`, a 1M
+context window, and tool calls. The catalog uses the current peak prices—USD
+0.014/M cached input, USD 0.44/M uncached input, and USD 1.32/M output—as
+conservative ceilings; off-peak execution can cost less. The earlier `deepseek-flash` /
 `DeepSeek-V4.1-Flash` record remains in v3 as historical provenance, not as the
 current identity. Because no DeepSeek credential is locally bound, the current
 model remains pending until a separately approved authenticated identity probe.
+The future probe must use the sentinel-bracketed temporal protocol in
+`docs/API_MODEL_IDENTITY.md`; a returned alias alone is not a frozen checkpoint.
 
 The official Zhipu page now identifies `glm-5.3-flash` as a native multimodal
 model with a 1M context window, 128K maximum output, thinking, function calling,

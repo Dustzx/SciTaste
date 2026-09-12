@@ -2269,8 +2269,9 @@ scope, adapter viability, model identity and pricing gaps, human-review status,
 and the absence of a powered sample or compute allocation.
 
 DeepSeek V4 Flash and GLM-5.3-Flash remain candidates rather than selected
-models. Both currently use rolling identities without an approved authenticated
-revision observation; GLM pricing is also unbound. Qwen checkpoints remain
+models. DeepSeek now has a public dated revision, but neither rolling alias has
+an approved authenticated temporal-window observation; GLM pricing is also
+unbound. Qwen checkpoints remain
 diagnostic assets. The primary model may be frozen only after a task-excluded
 conformance pilot, whose observations cannot enter the formal test.
 
@@ -2279,3 +2280,26 @@ files under an 8 MiB ceiling. The activation artifact records that decision as
 unapproved and unperformed. It cannot authorize downloads, repository checkout,
 API calls, GPU work, reviewer recruitment, or execution. Generation-as-Content
 may render this state and navigate to its evidence, but cannot mutate the gate.
+
+### ADR-075: Rolling API models are sentinel-bracketed temporal strata
+
+Status: accepted for ICLR 2027 experiment preparation; no live identity window
+has been opened.
+
+An API alias is neither a reproducible checkpoint nor automatically unusable.
+SciTaste separates the callable ID, the provider's public revision disclosure,
+and the exact temporal window in which calls occur. DeepSeek V4 Flash currently
+has a public dated revision; GLM-5.3-Flash currently has only a callable family
+identity. The latter can participate only as a shorter temporal-only stratum.
+
+Every pilot and formal window is bracketed by task-excluded identity sentinels,
+with additional sentinels after a bounded number of calls. The ledger retains
+the requested and returned model, endpoint, interface, provider request ID,
+timestamps, byte hashes, status, usage, and raw request/response. Missing or
+changed identity aborts the window. A later window, revision, or provider is a
+new stratum and cannot be pooled into the same confirmatory estimate.
+
+The static protocol only establishes how a future call could become admissible.
+It cannot attest a live identity, approve spend, select the primary model, or
+authorize API calls. Conformance data remains excluded from formal tests and
+candidate selection must precede formal outcomes.

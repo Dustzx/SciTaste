@@ -6,11 +6,13 @@ dossier: given the five exact studies requested by the latest review, what can
 the owner decide now, and what still prevents a valid launch?
 
 The current manifest is
-`configs/evaluation/activation/iclr2027_review_followup_v2.yaml`. It binds:
+`configs/evaluation/activation/iclr2027_review_followup_v3.yaml`. It binds:
 
 - the five-study review follow-up design through its evidence-program hash;
 - every selected task-source and accepted-method proposal;
 - the shared compute catalog and the SciTaste project resource binding;
+- the hosted-model identity protocol, including temporal strata and drift
+  handling;
 - DeepSeek V4 Flash and GLM-5.3-Flash as unselected API candidates;
 - local Qwen checkpoints as diagnostic assets, never as a paper backbone; and
 - a two-reviewer, blinded, conflict-screened, adjudicated endpoint protocol.
@@ -19,6 +21,12 @@ The compiler derives all study, source, system, model, statistics, human, and
 compute blockers. It cannot set a primary model, sample size, repetitions,
 budget, approval, or execution authority. Existing resources therefore cannot
 silently redefine the paper's scientific question.
+
+A rolling API alias is not rejected merely because it is rolling. DeepSeek has
+an official `DeepSeek-V4-Flash-0731` version behind its current callable alias,
+whereas GLM-5.3-Flash currently requires a temporal-only stratum. Both require
+approved authenticated sentinels around any later call window; drift closes the
+window and creates a non-pooled stratum. See `docs/API_MODEL_IDENTITY.md`.
 
 The first bounded owner decision is only whether to acquire 20 pinned
 InnovatorBench task-config files and one pinned EXP-Bench metadata table, under
@@ -36,9 +44,9 @@ in the named Git commit:
   --followup-design-run-id \
     2026-09-12__scitaste-native__review-followup-design-v3__seed-00 \
   --manifest \
-    configs/evaluation/activation/iclr2027_review_followup_v2.yaml \
+    configs/evaluation/activation/iclr2027_review_followup_v3.yaml \
   --workspace-root . \
-  --run-id 2026-09-12__scitaste-native__review-followup-activation-v1__seed-00 \
+  --run-id 2026-09-12__scitaste-native__review-followup-activation-v2__seed-00 \
   --source-commit "$(git rev-parse HEAD)" \
   --expected-revision "<current-project-revision>" \
   --dry-run

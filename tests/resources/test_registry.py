@@ -111,7 +111,7 @@ def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() 
 
     assert inspection.evidence_verified is True
     assert loaded.semantic_sha256 == (
-        "973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a"
+        "4b6a7d7e4b19939ac1bca683ff178bcba6dc849f543f5584f253cdd3502c35f8"
     )
     assert inspection.api_model_ids == (
         "deepseek-v4-flash",
@@ -121,9 +121,9 @@ def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() 
     )
     current_deepseek = loaded.catalog.resource("deepseek-v4-flash")
     assert current_deepseek.model_id == "deepseek-v4-flash"
-    assert current_deepseek.model_revision == "DeepSeek-V4-Flash"
+    assert current_deepseek.model_revision == "DeepSeek-V4-Flash-0731"
     assert current_deepseek.pricing is not None
-    assert current_deepseek.pricing.output_per_million == 0.28
+    assert current_deepseek.pricing.output_per_million == 1.32
     zhipu = loaded.catalog.resource("zhipu-glm53-flash")
     assert zhipu.model_id == "glm-5.3-flash"
     assert "models/vlm/glm-5.3-flash" in zhipu.identity_source_url

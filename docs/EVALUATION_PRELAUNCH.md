@@ -114,7 +114,11 @@ no silent fallback between Zhipu and DeepSeek.
 
 The current 2026-09-12 official DeepSeek catalog exposes callable ID
 `deepseek-v4-flash` and version `DeepSeek-V4-Flash`, with USD 0.0028/M
-cache-hit input, USD 0.14/M cache-miss input, and USD 0.28/M output. The earlier
+cache-hit input, USD 0.14/M cache-miss input, and USD 0.28/M output. That row is
+the immutable earlier prepilot snapshot. The current resource catalog names
+version `DeepSeek-V4-Flash-0731` and uses the official peak tariff—USD 0.014/M
+cache-hit input, USD 0.44/M cache-miss input, and USD 1.32/M output—as its
+conservative ceiling. The earlier
 `deepseek-flash` / `DeepSeek-V4.1-Flash` observation and every proposal that
 binds it are historical no-run evidence, not current launch candidates. A new
 proposal and an authenticated returned-model observation are required. See the

@@ -970,11 +970,35 @@ resource binding. It covers H1/H2/H3/E1/D1 exactly once, reports the 21-file,
 8 MiB metadata request as the only owner-decision-ready step, and preserves the
 older campaign as historical rather than launchable.
 
-The resulting diagnosis is concrete. Neither API candidate has a pinned stable
-revision or approved current identity observation, GLM pricing is unbound, none
+The initial diagnosis was concrete. Neither API candidate then had an admissible
+stable identity observation, GLM pricing was unbound, and none
 of the three accepted external systems has an experiment-ready adapter, no
 formal sample has been powered, and no independent reviewers have been
 recruited. Local Qwen checkpoints remain diagnostic assets rather than being
 promoted because they are available. This iteration performs no download,
 repository checkout, API call, SSH connection, model load, GPU job, reviewer
 recruitment, or experiment and establishes no effectiveness evidence.
+
+## Making rolling API models reproducible without pretending they are checkpoints (2026-09-12)
+
+The first activation gate classified every rolling alias as lacking a stable
+revision. That diagnosis was safe but operationally impossible: many capable
+hosted models expose only a stable callable name, and an ICLR experiment cannot
+wait for a checkpoint that the provider may never publish. Conversely, treating
+the callable name as a frozen model would hide provider drift.
+
+An official-source recheck showed that DeepSeek discloses the dated
+`DeepSeek-V4-Flash-0731` revision behind `deepseek-v4-flash`, while Zhipu
+discloses `glm-5.3-flash` but no immutable served revision. SciTaste now models
+these as revision-backed and temporal-only identity strata, respectively. A
+task-excluded sentinel must open and close each bounded window, recur after a
+fixed call count, and retain exact request/response identity and usage. Any
+missing or changed identity closes the window; data from different windows,
+revisions, or providers cannot be pooled.
+
+The revised project gate reports protocol coverage, candidates whose pricing is
+complete enough to request a pilot, and candidates with a real authenticated
+attestation as separate counts. DeepSeek's conservative peak tariff was updated
+from the current official catalog; GLM pricing remains unresolved. No sentinel,
+API call, dataset download, model load, GPU job, reviewer recruitment, or
+experiment was performed.

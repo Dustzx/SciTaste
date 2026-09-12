@@ -28,6 +28,12 @@ from scitaste.evaluation.evidence_review import (
     inspect_evidence_review_package,
     load_evidence_review_package,
 )
+from scitaste.evaluation.model_identity import (
+    ApiIdentityCandidateQualification,
+    ApiIdentityMode,
+    load_api_identity_protocol,
+    qualify_api_identity_candidate,
+)
 from scitaste.project import ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 from scitaste.resources import (
@@ -85,16 +91,18 @@ class ReviewFollowupActivationManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     evidence_review_package: ActivationFileBinding
     compute_catalog: ActivationFileBinding
     project_resource_binding: ActivationFileBinding
+    model_identity_protocol: ActivationFileBinding | None = None
     primary_api_candidate_ids: tuple[str, ...] = Field(min_length=2, max_length=10)
     diagnostic_checkpoint_ids: tuple[str, ...] = Field(default=(), max_length=10)
     primary_selection_stage: Literal["after_task_excluded_conformance_pilot"]
-    stable_model_revision_required: Literal[True] = True
+    stable_model_revision_required: Literal[True] | None = None
+    stable_model_identity_required: Literal[True] | None = None
     pilot_excluded_from_formal_test: Literal[True] = True
     automated_judge_is_secondary: Literal[True] = True
     authorizes_download: Literal[False] = False
@@ -110,6 +118,22 @@ class ReviewFollowupActivationManifest(BaseModel):
         if len(values) != len(set(values)):
             raise ValueError("activation resource candidate IDs must be unique")
         return values
+
+    @model_validator(mode="after")
+    def version_selects_one_identity_contract(self) -> ReviewFollowupActivationManifest:
+        if self.schema_version == "1.0":
+            if self.stable_model_revision_required is not True:
+                raise ValueError("activation v1.0 requires stable model revisions")
+            if self.model_identity_protocol is not None or self.stable_model_identity_required:
+                raise ValueError("activation v1.0 cannot use a temporal identity protocol")
+        else:
+            if self.stable_model_identity_required is not True:
+                raise ValueError("activation v1.1 requires stable model identity")
+            if self.model_identity_protocol is None:
+                raise ValueError("activation v1.1 requires an API identity protocol")
+            if self.stable_model_revision_required is not None:
+                raise ValueError("activation v1.1 replaces immutable-revision-only policy")
+        return self
 
 
 class ReviewFollowupActivationManifestInspection(BaseModel):
@@ -155,14 +179,39 @@ class ActivationModelCandidateStatus(BaseModel):
     availability: ObservationStatus
     rolling_alias: bool
     pricing_verified: bool
+    identity_mode: ApiIdentityMode | None = None
+    temporal_identity_protocol_defined: bool | None = None
+    authenticated_identity_attested: bool | None = None
+    pilot_proposal_ready: bool | None = None
+    formal_identity_window_open: Literal[False] | None = None
     selected: Literal[False] = False
     ready_for_conformance_pilot: bool
     blocker_codes: tuple[str, ...]
 
     @model_validator(mode="after")
     def readiness_matches_blockers(self) -> ActivationModelCandidateStatus:
-        if self.ready_for_conformance_pilot != (not self.blocker_codes):
-            raise ValueError("model-candidate readiness must match its blockers")
+        if self.identity_mode is None:
+            additions = (
+                self.temporal_identity_protocol_defined,
+                self.authenticated_identity_attested,
+                self.pilot_proposal_ready,
+                self.formal_identity_window_open,
+            )
+            if any(item is not None for item in additions):
+                raise ValueError("legacy model candidates cannot carry temporal identity state")
+            if self.ready_for_conformance_pilot != (not self.blocker_codes):
+                raise ValueError("model-candidate readiness must match its blockers")
+            return self
+        if (
+            self.temporal_identity_protocol_defined is not True
+            or self.authenticated_identity_attested is None
+            or self.pilot_proposal_ready is None
+            or self.formal_identity_window_open is not False
+        ):
+            raise ValueError("temporal model candidates require complete identity state")
+        expected_pilot = self.authenticated_identity_attested and self.pricing_verified
+        if self.ready_for_conformance_pilot != expected_pilot:
+            raise ValueError("model conformance readiness differs from identity evidence")
         return self
 
 
@@ -208,7 +257,7 @@ class ProjectReviewFollowupActivation(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     run_id: str
     source_commit: str = Field(pattern=_COMMIT)
@@ -223,6 +272,11 @@ class ProjectReviewFollowupActivation(BaseModel):
     evidence_review_report_sha256: str = Field(pattern=_SHA256)
     compute_catalog_semantic_sha256: str = Field(pattern=_SHA256)
     project_resource_binding_semantic_sha256: str = Field(pattern=_SHA256)
+    model_identity_protocol_id: str | None = Field(default=None, pattern=_ID)
+    model_identity_protocol_file_sha256: str | None = Field(default=None, pattern=_SHA256)
+    model_identity_protocol_semantic_sha256: str | None = Field(
+        default=None, pattern=_SHA256
+    )
     paper_title: str
     target_venue: Literal["ICLR 2027"]
     studies: tuple[ActivationStudyStatus, ...] = Field(min_length=1, max_length=30)
@@ -247,6 +301,7 @@ class ProjectReviewFollowupActivation(BaseModel):
     fixed_repetitions: None = None
     compute_allocated: Literal[False] = False
     ready_for_metadata_owner_decision: Literal[True] = True
+    ready_for_model_pilot_proposal: bool | None = None
     ready_for_model_conformance_pilot: bool
     ready_for_adapter_preflight: bool
     ready_for_human_recruitment: Literal[False] = False
@@ -288,11 +343,29 @@ class ProjectReviewFollowupActivation(BaseModel):
             item.ready_for_conformance_pilot for item in self.primary_model_candidates
         ):
             raise ValueError("model pilot readiness differs from candidate states")
+        identity_values = (
+            self.model_identity_protocol_id,
+            self.model_identity_protocol_file_sha256,
+            self.model_identity_protocol_semantic_sha256,
+            self.ready_for_model_pilot_proposal,
+        )
+        if self.schema_version == "1.0":
+            if any(item is not None for item in identity_values):
+                raise ValueError("activation v1.0 cannot carry temporal identity state")
+        else:
+            if any(item is None for item in identity_values):
+                raise ValueError("activation v1.1 requires temporal identity provenance")
+            expected_owner_ready = all(
+                item.pilot_proposal_ready is True
+                for item in self.primary_model_candidates
+            )
+            if self.ready_for_model_pilot_proposal != expected_owner_ready:
+                raise ValueError("model pilot-proposal readiness differs from candidates")
         if self.ready_for_adapter_preflight != all(
             item.adapter_implementation_ready for item in self.external_systems
         ):
             raise ValueError("adapter readiness differs from system states")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"activation_sha256"}))
+        expected = content_sha256(_activation_hash_payload(self))
         if self.activation_sha256 != expected:
             raise ValueError("review activation hash mismatch")
         return self
@@ -304,9 +377,7 @@ class ProjectReviewFollowupActivation(BaseModel):
         unsigned = cls.model_construct(activation_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            activation_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"activation_sha256"})
-            ),
+            activation_sha256=content_sha256(_activation_hash_payload(unsigned)),
         )
 
 
@@ -383,6 +454,23 @@ def compile_review_followup_activation(
     if not binding_inspection.valid or resource_binding.project_id != design.project_id:
         raise ValueError("review activation project-resource binding is invalid")
 
+    identity_inspection = None
+    if manifest.model_identity_protocol is not None:
+        identity_path = _verify_binding(root, manifest.model_identity_protocol)
+        identity_inspection = load_api_identity_protocol(identity_path)
+        if (
+            identity_inspection.semantic_sha256
+            != manifest.model_identity_protocol.semantic_sha256
+        ):
+            raise ValueError("review activation API identity semantic hash differs")
+        if identity_inspection.protocol.project_id != design.project_id:
+            raise ValueError("review activation API identity protocol belongs to another project")
+        identity_resource_ids = {
+            item.resource_id for item in identity_inspection.protocol.candidate_policies
+        }
+        if identity_resource_ids != set(manifest.primary_api_candidate_ids):
+            raise ValueError("review activation API identity candidates differ")
+
     selected_source_ids = {
         item.source_id
         for item in design.task_requirements
@@ -414,10 +502,21 @@ def compile_review_followup_activation(
             + ", ".join(ambiguous)
         )
     entries = {item: entries_by_resource[item][0] for item in selected_resource_ids}
-    primary_models = tuple(
-        _model_candidate(loaded_catalog.catalog.resource(resource_id), entries.get(resource_id))
-        for resource_id in manifest.primary_api_candidate_ids
-    )
+    primary_models = []
+    for resource_id in manifest.primary_api_candidate_ids:
+        resource = loaded_catalog.catalog.resource(resource_id)
+        qualification = None
+        if identity_inspection is not None:
+            if not isinstance(resource, ApiModelDefinition):
+                raise ValueError("primary model candidates must be API model resources")
+            qualification = qualify_api_identity_candidate(
+                resource,
+                identity_inspection.protocol.policy(resource_id),
+            )
+        primary_models.append(
+            _model_candidate(resource, entries.get(resource_id), qualification=qualification)
+        )
+    primary_models = tuple(primary_models)
     if len({item.provider_id for item in primary_models}) != len(primary_models):
         raise ValueError("primary and robustness API candidates must use distinct providers")
     diagnostics = tuple(
@@ -457,6 +556,11 @@ def compile_review_followup_activation(
         requested_external_action="download_metadata",
     )
     model_ready = all(item.ready_for_conformance_pilot for item in primary_models)
+    model_pilot_owner_ready = (
+        all(item.pilot_proposal_ready is True for item in primary_models)
+        if identity_inspection is not None
+        else None
+    )
     adapter_ready = all(item.adapter_implementation_ready for item in external_systems)
     blockers = tuple(
         dict.fromkeys(
@@ -479,6 +583,7 @@ def compile_review_followup_activation(
         )
     )
     return ProjectReviewFollowupActivation.create(
+        schema_version=manifest.schema_version,
         project_id=design.project_id,
         run_id=run_id,
         source_commit=source_commit,
@@ -493,6 +598,17 @@ def compile_review_followup_activation(
         evidence_review_report_sha256=content_sha256(review.model_dump(mode="json")),
         compute_catalog_semantic_sha256=loaded_catalog.semantic_sha256,
         project_resource_binding_semantic_sha256=(binding_inspection.binding_semantic_sha256),
+        model_identity_protocol_id=(
+            identity_inspection.protocol.protocol_id
+            if identity_inspection is not None
+            else None
+        ),
+        model_identity_protocol_file_sha256=(
+            identity_inspection.file_sha256 if identity_inspection is not None else None
+        ),
+        model_identity_protocol_semantic_sha256=(
+            identity_inspection.semantic_sha256 if identity_inspection is not None else None
+        ),
         paper_title=design.paper_title,
         target_venue=design.target_venue,
         studies=studies,
@@ -504,6 +620,7 @@ def compile_review_followup_activation(
         minimum_independent_reviewers=design.minimum_independent_reviewers,
         automated_judge_role=design.automated_judge_role,
         reviewer_recruitment_state=ActivationReadiness.PROTOCOL_ONLY,
+        ready_for_model_pilot_proposal=model_pilot_owner_ready,
         ready_for_model_conformance_pilot=model_ready,
         ready_for_adapter_preflight=adapter_ready,
         next_owner_decision=next_decision,
@@ -681,6 +798,8 @@ def _system_status(system_id: str, proposal: MethodProposalStatus) -> Activation
 def _model_candidate(
     resource: ComputeResourceDefinition,
     binding: ProjectResourceBindingEntry | None,
+    *,
+    qualification: ApiIdentityCandidateQualification | None = None,
 ) -> ActivationModelCandidateStatus:
     if not isinstance(resource, ApiModelDefinition):
         raise ValueError("primary model candidates must be API model resources")
@@ -689,13 +808,29 @@ def _model_candidate(
     role = binding.role
     if role not in {"primary-api-candidate", "robustness-api-candidate"}:
         raise ValueError("primary model candidates require an explicit candidate role")
-    blockers: list[str] = []
-    if resource.rolling_alias:
-        blockers.append("stable_revision_not_pinned")
-    if resource.availability is not ObservationStatus.VERIFIED:
-        blockers.append("authenticated_identity_not_verified")
-    if resource.pricing is None or resource.pricing.status is not ObservationStatus.VERIFIED:
-        blockers.append("pricing_ceiling_not_verified")
+    if qualification is None:
+        blockers: list[str] = []
+        if resource.rolling_alias:
+            blockers.append("stable_revision_not_pinned")
+        if resource.availability is not ObservationStatus.VERIFIED:
+            blockers.append("authenticated_identity_not_verified")
+        if resource.pricing is None or resource.pricing.status is not ObservationStatus.VERIFIED:
+            blockers.append("pricing_ceiling_not_verified")
+        return ActivationModelCandidateStatus(
+            resource_id=resource.resource_id,
+            role=role,
+            provider_id=resource.provider_id,
+            model_id=resource.model_id,
+            declared_revision=resource.model_revision,
+            availability=resource.availability,
+            rolling_alias=resource.rolling_alias,
+            pricing_verified=(
+                resource.pricing is not None
+                and resource.pricing.status is ObservationStatus.VERIFIED
+            ),
+            ready_for_conformance_pilot=not blockers,
+            blocker_codes=tuple(blockers),
+        )
     return ActivationModelCandidateStatus(
         resource_id=resource.resource_id,
         role=role,
@@ -704,11 +839,17 @@ def _model_candidate(
         declared_revision=resource.model_revision,
         availability=resource.availability,
         rolling_alias=resource.rolling_alias,
-        pricing_verified=(
-            resource.pricing is not None and resource.pricing.status is ObservationStatus.VERIFIED
+        pricing_verified=qualification.pricing_verified,
+        identity_mode=qualification.identity_mode,
+        temporal_identity_protocol_defined=qualification.temporal_protocol_defined,
+        authenticated_identity_attested=qualification.authenticated_identity_attested,
+        pilot_proposal_ready=qualification.pilot_proposal_ready,
+        formal_identity_window_open=qualification.formal_identity_ready,
+        ready_for_conformance_pilot=(
+            qualification.authenticated_identity_attested
+            and qualification.pricing_verified
         ),
-        ready_for_conformance_pilot=not blockers,
-        blocker_codes=tuple(blockers),
+        blocker_codes=qualification.blocker_codes,
     )
 
 
@@ -775,6 +916,30 @@ def _verify_binding(root: Path, binding: ActivationFileBinding) -> Path:
     return resolved
 
 
+def _activation_hash_payload(value: ProjectReviewFollowupActivation) -> dict[str, object]:
+    """Preserve hashes of already-published v1.0 activation records."""
+
+    payload = value.model_dump(mode="json", exclude={"activation_sha256"})
+    if value.schema_version == "1.0":
+        for field in (
+            "model_identity_protocol_id",
+            "model_identity_protocol_file_sha256",
+            "model_identity_protocol_semantic_sha256",
+            "ready_for_model_pilot_proposal",
+        ):
+            payload.pop(field, None)
+        for candidate in payload["primary_model_candidates"]:
+            for field in (
+                "identity_mode",
+                "temporal_identity_protocol_defined",
+                "authenticated_identity_attested",
+                "pilot_proposal_ready",
+                "formal_identity_window_open",
+            ):
+                candidate.pop(field, None)
+    return payload
+
+
 def _require_git_bound_inputs(
     source_commit: str,
     manifest: ReviewFollowupActivationManifestInspection,
@@ -815,9 +980,16 @@ def _require_git_bound_inputs(
             )
         ),
         root / "src/scitaste/review/activation.py",
+        root / "src/scitaste/evaluation/model_identity.py",
         *(root.joinpath(*PurePosixPath(item).parts) for item in review_children),
         *catalog_children,
     ]
+    if manifest.manifest.model_identity_protocol is not None:
+        paths.append(
+            root.joinpath(
+                *PurePosixPath(manifest.manifest.model_identity_protocol.path).parts
+            )
+        )
     for path in dict.fromkeys(paths):
         try:
             locator = path.resolve(strict=True).relative_to(root).as_posix()

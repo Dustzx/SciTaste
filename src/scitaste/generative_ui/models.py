@@ -1261,6 +1261,9 @@ class ProjectProgressReviewActivationItem(BaseModel):
     metadata_decision_ready: Literal[True]
     primary_model_candidate_count: int = Field(ge=2, le=10)
     pilot_ready_model_count: int = Field(ge=0, le=10)
+    model_identity_protocol_id: SafeIdentifier | None = None
+    identity_protocol_model_count: int = Field(default=0, ge=0, le=10)
+    pilot_proposal_ready_model_count: int = Field(default=0, ge=0, le=10)
     external_system_count: int = Field(ge=0, le=30)
     adapter_ready_system_count: int = Field(ge=0, le=30)
     minimum_reviewer_count: int = Field(ge=2)
@@ -1277,6 +1280,14 @@ class ProjectProgressReviewActivationItem(BaseModel):
             raise ValueError("review activation metadata sources must be unique")
         if self.pilot_ready_model_count > self.primary_model_candidate_count:
             raise ValueError("pilot-ready model count exceeds candidate count")
+        if self.identity_protocol_model_count > self.primary_model_candidate_count:
+            raise ValueError("identity-protocol model count exceeds candidate count")
+        if self.pilot_proposal_ready_model_count > self.primary_model_candidate_count:
+            raise ValueError("pilot-proposal model count exceeds candidate count")
+        if (self.model_identity_protocol_id is None) != (
+            self.identity_protocol_model_count == 0
+        ):
+            raise ValueError("identity protocol ID and candidate count must agree")
         if self.adapter_ready_system_count > self.external_system_count:
             raise ValueError("adapter-ready system count exceeds system count")
         return self

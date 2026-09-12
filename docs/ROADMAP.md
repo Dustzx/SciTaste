@@ -14,6 +14,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 6.1 — reviewer-driven iteration planner | done | all reports compile through a cumulative routing chain into an approval-aware research-to-verification DAG |
 | Phase 6.2 — review-to-evidence design compiler | done | every experiment concern binds exact registered estimands, task roles, endpoints, and non-duplicated studies without selecting resources or authorizing execution |
 | Phase 6.3 — review-to-experiment activation gate | done | the five-study design is cross-checked against exact data, adapter, model, human-review, and compute proposals; only a bounded metadata decision is exposed and no external action is authorized |
+| Phase 6.4 — hosted-model identity strata | done | rolling API aliases require bounded sentinel-bracketed windows, drift creates a new non-pooled stratum, and no protocol opens a call without owner approval |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
@@ -160,12 +161,21 @@ model effects confounded; the choice is an author-level scientific-design
 decision.
 
 DeepSeek's live official model catalog was rechecked again on 2026-09-12 and now
-names callable ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash`, rather
+names callable ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash-0731`, rather
 than the earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` record. V3 preserves
 both identities instead of rewriting history. Existing V4.1 proposals are now
 historical no-run artifacts and cannot launch until a new proposal binds the
 current identity and an authenticated response. The internal-review profile is
 also blocked until the missing DeepSeek credential is bound.
+
+Hosted API reproducibility now has a formal no-run contract. DeepSeek combines
+its public dated revision with a maximum 24-hour temporal stratum; Zhipu, whose
+current model page exposes a callable family but no immutable served revision,
+uses a maximum 12-hour temporal-only stratum. Identity-only sentinels bracket
+each window and recur after bounded calls. Missing or changed identity aborts
+the window, and results cannot be pooled across windows, revisions, or
+providers. The contract makes rolling aliases scientifically usable without
+pretending they are checkpoints; it performs and authorizes no API call.
 
 Shared compute ownership is no longer embedded only in project proposals. A
 secret-free `configs/resources/` catalog now names reusable API models and GPU

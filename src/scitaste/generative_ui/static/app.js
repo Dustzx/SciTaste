@@ -1835,6 +1835,14 @@ function renderReviewIterations(items) {
             "metadata",
           ],
           [`${data.pilot_ready_model_count}/${data.primary_model_candidate_count}`, "models"],
+          [
+            `${data.identity_protocol_model_count}/${data.primary_model_candidate_count}`,
+            "identity_protocol",
+          ],
+          [
+            `${data.pilot_proposal_ready_model_count}/${data.primary_model_candidate_count}`,
+            "pilot_proposal",
+          ],
           [`${data.adapter_ready_system_count}/${data.external_system_count}`, "adapters"],
           [`${data.recruited_reviewer_count}/${data.minimum_reviewer_count}`, "reviewers"],
           [t("progress.review_iteration.activation.blocked"), "experiment"],

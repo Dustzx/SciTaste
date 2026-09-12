@@ -21,7 +21,7 @@ from scitaste.review import (
 _ROOT = Path(__file__).resolve().parents[2]
 _PROGRAM = _ROOT / "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
 _MAPPING = _ROOT / "configs/evaluation/review_followups/iclr2027_v6_internal_r2.yaml"
-_ACTIVATION = _ROOT / "configs/evaluation/activation/iclr2027_review_followup_v2.yaml"
+_ACTIVATION = _ROOT / "configs/evaluation/activation/iclr2027_review_followup_v3.yaml"
 _SHA = "a" * 64
 _COMMIT = "b" * 40
 _PROJECT = "scitaste-self-development"
@@ -304,15 +304,21 @@ def test_review_activation_closes_five_studies_without_selecting_available_resou
     assert activation.ready_for_experiment is False
     assert all(not item.selected for item in activation.primary_model_candidates)
     assert all(not item.paper_backbone_selected for item in activation.diagnostic_checkpoints)
+    assert activation.schema_version == "1.1"
+    assert activation.model_identity_protocol_id == "iclr2027-api-identity-v1"
+    assert activation.ready_for_model_pilot_proposal is False
     candidates = {item.resource_id: item for item in activation.primary_model_candidates}
+    assert candidates["deepseek-v4-flash"].declared_revision == "DeepSeek-V4-Flash-0731"
+    assert candidates["deepseek-v4-flash"].pilot_proposal_ready is True
     assert candidates["deepseek-v4-flash"].blocker_codes == (
-        "stable_revision_not_pinned",
-        "authenticated_identity_not_verified",
+        "authenticated_identity_attestation_not_observed",
+        "formal_identity_window_not_open",
     )
+    assert candidates["zhipu-glm53-flash"].pilot_proposal_ready is False
     assert candidates["zhipu-glm53-flash"].blocker_codes == (
-        "stable_revision_not_pinned",
-        "authenticated_identity_not_verified",
+        "authenticated_identity_attestation_not_observed",
         "pricing_ceiling_not_verified",
+        "formal_identity_window_not_open",
     )
     assert activation.historical_campaign_superseded_for_launch is True
     assert activation.authorizes_download is False
@@ -351,7 +357,7 @@ def test_review_activation_rejects_design_and_resource_drift() -> None:
             )
         }
     )
-    with pytest.raises(ValueError, match="API model resources"):
+    with pytest.raises(ValueError, match="API identity candidates differ"):
         compile_review_followup_activation(
             design=design,
             manifest_inspection=manifest.model_copy(update={"manifest": wrong_candidates}),
