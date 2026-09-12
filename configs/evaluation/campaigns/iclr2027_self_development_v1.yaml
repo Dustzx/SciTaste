@@ -74,7 +74,7 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: 877920da438a63b9b7d8f9768c2966b34b740e7ff2724632adc9f08c95e0646b
+    sha256: 400dc8d6a2b4f030b5be888b57d96559819cd754b96883651658f209d357ff37
 tracks:
   - track_id: scientific-taste-decisions
     role: scientific_taste_mechanism
