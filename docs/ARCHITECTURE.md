@@ -2616,3 +2616,30 @@ The ICLR evidence program adds a matched H2b selector contrast against the
 unchanged lexical retriever, because the oracle-controlled H2a relevance contrast
 cannot prove autonomous selection. Real cases, applicability labels, provider
 calls, blinded decisions, and powered outcomes remain separate evidence gates.
+
+### ADR-088: Scientific Reference quality is content-grounded, not prestige-ranked
+
+Status: accepted and executable at the qualification boundary; no real quality
+effect has been measured.
+
+Venue, author, and citation metadata are useful for broad discovery but cannot
+show whether a source exposes a transferable scientific decision. Using those
+signals as final quality would confound reputation, final success, and the
+decision evidence SciTaste claims to learn from.
+
+SciTaste therefore gives a prestige-blind `reference-quality` model node one
+canonical content projection and requires exact source grounding for five
+dimensions: evidential rigor, decision traceability, alternative visibility,
+failure-boundary visibility, and transfer potential. Qualification requires
+every dimension to be strong and the union of cited evidence to contain a
+complete contrastive decision episode. Missing evidence yields a valid
+rejection; the node cannot infer prestige or grant admission.
+
+An accepted live ledger compiles into a content-free qualification receipt.
+Source-admission schema 1.1 binds that receipt and projection but still requires
+two independent human assessments of the same dimensions, blinded to prestige,
+the model assessment, other reviewers, and downstream outcomes. Rights and
+source-group isolation remain separate gates. The ICLR program registers H0
+against prestige-only source selection from the same broad pool, while H1 holds
+the admitted source set fixed to isolate abstraction. Real content access,
+model calls, reviewers, and outcomes remain independently authorized work.

@@ -26,6 +26,13 @@ from scitaste.taste.deliberation import (
     VerifiedTasteDeliberation,
     validate_taste_deliberation,
 )
+from scitaste.taste.reference_quality import (
+    REFERENCE_QUALITY_NODE,
+    ReferenceQualityInput,
+    ReferenceQualityProposal,
+    VerifiedReferenceQuality,
+    validate_reference_quality,
+)
 from scitaste.taste.semantic_models import (
     GROUNDED_TASTE_ABSTRACTION_NODE,
     TASTE_ABSTRACTION_NODE,
@@ -149,10 +156,60 @@ class TasteDeliberationNode(ModelNode[TasteDeliberationInput, TasteDeliberationP
         return sorted(set(reasons))
 
 
+class ReferenceQualityNode(ModelNode[ReferenceQualityInput, ReferenceQualityProposal]):
+    """Screen whether a prestige-blind source can teach transferable judgment."""
+
+    node_name = REFERENCE_QUALITY_NODE
+    prompt_version = "reference-quality-v1"
+    system_instruction = (
+        "Judge whether the supplied source projection can teach transferable scientific "
+        "decision quality. Assess exactly five dimensions: evidential rigor, decision "
+        "traceability, visible alternatives, visible failure boundaries, and transfer "
+        "potential. Ground every assessment in exact verbatim excerpts and field names. "
+        "Qualify only when every dimension is strong. Author identity, venue, citations, "
+        "experimental relation labels, and downstream task outcomes are hidden; do not infer "
+        "or reward prestige. A successful reported outcome alone is not evidence of decision "
+        "quality. This is an untrusted proposal only: do not admit a source, abstract Taste, "
+        "call tools, execute actions, or make effectiveness claims."
+    )
+    input_model = ReferenceQualityInput
+    output_model = ReferenceQualityProposal
+
+    def _proposal_rejections(
+        self,
+        proposal: ReferenceQualityProposal,
+        *,
+        input_data: ReferenceQualityInput,
+        context: NodeContext,
+        policy: NodePolicy,
+    ) -> list[str]:
+        del policy
+        reasons = list(validate_reference_quality(input_data, proposal))
+        if context.stage != input_data.decision_stage:
+            reasons.append("reference-quality context stage differs from the closed input")
+        if context.state_snapshot_id != input_data.source_projection_sha256:
+            reasons.append("reference-quality context projection differs from the closed input")
+        if context.evidence_ids != [input_data.source_id]:
+            reasons.append("reference-quality context source differs from the closed input")
+        if (
+            context.claim_ids
+            or context.section_ids
+            or context.candidate_actions
+            or context.metadata
+        ):
+            reasons.append("reference-quality context contains information outside the input")
+        return sorted(set(reasons))
+
+
 def taste_node_types() -> dict[str, ModelNodeRegistration]:
     """Return the Scientific Taste extension understood by the durable runtime."""
 
     return {
+        REFERENCE_QUALITY_NODE: ModelNodeRegistration(
+            ReferenceQualityNode,
+            ReferenceQualityInput,
+            ReferenceQualityProposal,
+        ),
         TASTE_ABSTRACTION_NODE: ModelNodeRegistration(
             TasteAbstractionNode,
             TasteAbstractionInput,
@@ -204,6 +261,49 @@ def taste_deliberation_from_ledger(
     if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
         raise ValueError("Taste deliberation ledger result has no accepted proposal")
     return VerifiedTasteDeliberation(
+        invocation_id=entry.intent.invocation_id,
+        backend=result.response.backend,
+        model=result.response.model,
+        ledger_locator=resolved.relative_to(Path(evidence_root).resolve(strict=True)).as_posix(),
+        ledger_sha256=hashlib.sha256(raw).hexdigest(),
+        input=input_data,
+        proposal=result.proposal,
+    )
+
+
+def reference_quality_from_ledger(
+    ledger_entry: str | Path,
+    *,
+    evidence_root: str | Path,
+) -> VerifiedReferenceQuality:
+    """Compile an accepted live, prestige-blind quality proposal from its ledger."""
+
+    from scitaste.model_nodes.models import NodeResult, NodeResultStatus
+
+    entry, resolved, raw = load_verified_taste_abstraction_ledger(
+        ledger_entry,
+        evidence_root=evidence_root,
+    )
+    if entry.intent.node_name != REFERENCE_QUALITY_NODE:
+        raise ValueError("ledger entry is not a reference-quality invocation")
+    if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
+        raise ValueError("reference-quality ledger entry is not accepted")
+    if (
+        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
+        or not entry.intent.profile.live_execution_permitted
+    ):
+        raise ValueError("reference-quality screening requires a verified live invocation")
+    input_data = ReferenceQualityInput.model_validate_json(
+        json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    result = NodeResult[ReferenceQualityProposal].model_validate_json(
+        json.dumps(entry.result, ensure_ascii=False, allow_nan=False),
+        strict=True,
+    )
+    if result.status is not NodeResultStatus.ACCEPTED or result.proposal is None:
+        raise ValueError("reference-quality ledger result has no accepted proposal")
+    return VerifiedReferenceQuality(
         invocation_id=entry.intent.invocation_id,
         backend=result.response.backend,
         model=result.response.model,
@@ -401,17 +501,23 @@ def save_taste_abstraction_candidate(candidate: Any, path: str | Path) -> Path:
 
 __all__ = [
     "GROUNDED_TASTE_ABSTRACTION_NODE",
+    "REFERENCE_QUALITY_NODE",
     "TASTE_ABSTRACTION_NODE",
     "TASTE_DELIBERATION_NODE",
     "GroundedTasteAbstractionNode",
     "GroundedTasteCaseAbstraction",
+    "ReferenceQualityInput",
+    "ReferenceQualityNode",
+    "ReferenceQualityProposal",
     "TasteAbstractionInput",
     "TasteAbstractionNode",
     "TasteCaseAbstraction",
     "TasteDeliberationInput",
     "TasteDeliberationNode",
     "TasteDeliberationProposal",
+    "VerifiedReferenceQuality",
     "load_verified_taste_abstraction_ledger",
+    "reference_quality_from_ledger",
     "save_taste_abstraction_candidate",
     "taste_abstraction_candidate_from_ledger",
     "taste_deliberation_from_ledger",

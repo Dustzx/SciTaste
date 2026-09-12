@@ -3,8 +3,8 @@ package_id: scitaste-iclr2027-evidence-review-package-v1
 project_id: scitaste-self-development
 evidence_program:
   path: configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml
-  file_sha256: 356182e888b76346aff5cc7c9553923a36c867c5dad7f99bef51d207cf4250d5
-evidence_program_sha256: 4276e51e9d1cedd369ac1399f826dfc26993a8b18ab671288db35954b03f6aea
+  file_sha256: 4aa7aadb5c07a3d65805bccfae7527939dda168bd370002e7fcdcb1df58cd71d
+evidence_program_sha256: 4f98f0addad565ead4b34e60a9eaec540f41fab60ea31e22f330b486c036a0e9
 resource_corpus:
   path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
   file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f

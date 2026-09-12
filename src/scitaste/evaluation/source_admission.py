@@ -18,6 +18,12 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 
 from scitaste.evaluation.json_content_audit import JsonContentAuditReport
 from scitaste.evaluation.taste_corpus_pair import TasteCorpusFileBinding
+from scitaste.taste.reference_quality import (
+    ReferenceQualityDimension,
+    ReferenceQualityQualification,
+    ReferenceQualityRating,
+    ReferenceQualityVerdict,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -57,6 +63,18 @@ class SourceQualityArgument(BaseModel):
     primary_scientific_record: bool = False
     decision_process_observable: bool = False
     quality_rationale: str | None = Field(default=None, max_length=4_000)
+    blind_projection: TasteCorpusFileBinding | None = None
+    reference_quality_report: TasteCorpusFileBinding | None = None
+    reference_quality_proposal_sha256: str | None = Field(default=None, pattern=_SHA256)
+
+
+class SourceQualityDimensionReview(BaseModel):
+    """One reviewer's anchored assessment of one non-prestige quality dimension."""
+
+    model_config = _CONFIG
+
+    dimension: ReferenceQualityDimension
+    rating: ReferenceQualityRating
 
 
 class SourceIsolationArgument(BaseModel):
@@ -99,6 +117,13 @@ class SourceQualityReview(BaseModel):
     conflict_cleared: Literal[True] = True
     blinded_to_other_reviews: Literal[True] = True
     blinded_to_downstream_outcomes: Literal[True] = True
+    dimension_reviews: tuple[SourceQualityDimensionReview, ...] = Field(
+        default_factory=tuple,
+        max_length=5,
+    )
+    reviewer_visible_projection_sha256: str | None = Field(default=None, pattern=_SHA256)
+    blinded_to_prestige_signals: bool | None = None
+    blinded_to_model_assessment: bool | None = None
 
     @model_validator(mode="after")
     def verdict_matches_quality_checks(self) -> SourceQualityReview:
@@ -111,6 +136,21 @@ class SourceQualityReview(BaseModel):
             raise ValueError("an admitting source-quality review requires every criterion")
         if self.verdict is SourceAdmissionVerdict.REJECT and all(checks):
             raise ValueError("a rejecting source-quality review must name a failed criterion")
+        if self.dimension_reviews:
+            dimensions = [item.dimension for item in self.dimension_reviews]
+            if len(dimensions) != len(set(dimensions)):
+                raise ValueError("source-quality review dimensions must be unique")
+            if set(dimensions) != set(ReferenceQualityDimension):
+                raise ValueError("source-quality review must assess every anchored dimension")
+            dimensions_strong = all(
+                item.rating is ReferenceQualityRating.STRONG for item in self.dimension_reviews
+            )
+            if self.verdict is SourceAdmissionVerdict.ADMIT and not dimensions_strong:
+                raise ValueError(
+                    "an admitting review requires every anchored dimension to be strong"
+                )
+            if self.verdict is SourceAdmissionVerdict.REJECT and dimensions_strong:
+                raise ValueError("a rejecting review must contain a non-strong anchored dimension")
         return self
 
 
@@ -135,7 +175,7 @@ class SourceAdmissionProposal(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     proposal_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     request_id: str = Field(pattern=_ID)
@@ -184,6 +224,28 @@ class SourceAdmissionProposal(BaseModel):
         known_items = {entry.item_id for entry in self.entries}
         if any(review.item_id not in known_items for review in self.quality_reviews):
             raise ValueError("source-quality review references an unknown item")
+        if self.schema_version == "1.1":
+            for entry in self.entries:
+                if (
+                    entry.quality.blind_projection is None
+                    or entry.quality.reference_quality_report is None
+                    or entry.quality.reference_quality_proposal_sha256 is None
+                ):
+                    raise ValueError(
+                        "source admission v1.1 requires a blind projection and "
+                        "reference-quality qualification"
+                    )
+            for review in self.quality_reviews:
+                if (
+                    len(review.dimension_reviews) != len(ReferenceQualityDimension)
+                    or review.reviewer_visible_projection_sha256 is None
+                    or review.blinded_to_prestige_signals is not True
+                    or review.blinded_to_model_assessment is not True
+                ):
+                    raise ValueError(
+                        "source admission v1.1 requires prestige- and model-blind "
+                        "anchored human reviews"
+                    )
         return self
 
     @computed_field
@@ -218,6 +280,7 @@ class SourceAdmissionItemReport(BaseModel):
     rights_evidence_verified: bool
     rights_supported: bool
     quality_evidence_verified: bool
+    reference_quality_screen_verified: bool | None = None
     dual_independent_quality_review_verified: bool
     source_isolation_evidence_verified: bool
     source_isolation_supported: bool
@@ -230,7 +293,7 @@ class SourceAdmissionReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     proposal_id: str
     proposal_sha256: str = Field(pattern=_SHA256)
     project_id: str
@@ -245,7 +308,9 @@ class SourceAdmissionReport(BaseModel):
     ready_for_projection_proposal: bool
     items: tuple[SourceAdmissionItemReport, ...]
     blockers: tuple[SourceAdmissionFinding, ...]
-    no_source_content_read: Literal[True] = True
+    no_source_content_read: bool = True
+    no_raw_source_body_read: Literal[True] = True
+    derived_quality_projection_read: bool = False
     no_external_action_performed: Literal[True] = True
     projection_performed: Literal[False] = False
     ingestion_performed: Literal[False] = False
@@ -254,6 +319,15 @@ class SourceAdmissionReport(BaseModel):
     experiment_performed: Literal[False] = False
     authorizes_projection: Literal[False] = False
     authorizes_execution: Literal[False] = False
+
+    @model_validator(mode="after")
+    def content_read_semantics_match_schema(self) -> SourceAdmissionReport:
+        expected_projection_read = self.schema_version == "1.1"
+        if self.derived_quality_projection_read != expected_projection_read:
+            raise ValueError("source-admission content-read semantics differ from schema")
+        if self.no_source_content_read == expected_projection_read:
+            raise ValueError("source-admission source-content flag differs from schema")
+        return self
 
     @computed_field
     @property
@@ -338,6 +412,17 @@ def inspect_source_admission(
         reviews = reviews_by_item[entry.item_id]
         reviewer_ids = {review.reviewer_id for review in reviews}
         expected_quality_sha = entry.quality.evidence.sha256 if entry.quality.evidence else None
+        quality_screen_verified = (
+            _reference_quality_screen_verified(entry, root)
+            if proposal.schema_version == "1.1"
+            else None
+        )
+        if quality_screen_verified is False:
+            _add(
+                findings,
+                "reference_quality_screen_failed",
+                "prestige-blind reference-quality qualification is unavailable or mismatched",
+            )
         review_verified = bool(
             quality_evidence
             and len(reviews) == 2
@@ -347,6 +432,20 @@ def inspect_source_admission(
                 review.verdict is SourceAdmissionVerdict.ADMIT
                 and review.source_content_sha256 == entry.source_content_sha256
                 and review.quality_evidence_sha256 == expected_quality_sha
+                and (
+                    proposal.schema_version == "1.0"
+                    or (
+                        review.reviewer_visible_projection_sha256
+                        == entry.quality.blind_projection.sha256
+                        and review.blinded_to_prestige_signals is True
+                        and review.blinded_to_model_assessment is True
+                        and len(review.dimension_reviews) == len(ReferenceQualityDimension)
+                        and all(
+                            item.rating is ReferenceQualityRating.STRONG
+                            for item in review.dimension_reviews
+                        )
+                    )
+                )
                 for review in reviews
             )
             and entry.quality.quality_tier
@@ -378,7 +477,13 @@ def inspect_source_admission(
             )
         disposition = (
             SourceAdmissionVerdict.ADMIT
-            if audit_verified and rights_supported and review_verified and isolation_supported
+            if (
+                audit_verified
+                and rights_supported
+                and review_verified
+                and isolation_supported
+                and quality_screen_verified is not False
+            )
             else SourceAdmissionVerdict.REJECT
         )
         item_reports.append(
@@ -391,6 +496,7 @@ def inspect_source_admission(
                 rights_evidence_verified=rights_evidence,
                 rights_supported=rights_supported,
                 quality_evidence_verified=quality_evidence,
+                reference_quality_screen_verified=quality_screen_verified,
                 dual_independent_quality_review_verified=review_verified,
                 source_isolation_evidence_verified=isolation_evidence,
                 source_isolation_supported=isolation_supported,
@@ -407,6 +513,7 @@ def inspect_source_admission(
     )
     ready = not global_findings and len(admitted) >= proposal.minimum_admitted_sources
     return SourceAdmissionReport(
+        schema_version=proposal.schema_version,
         proposal_id=proposal.proposal_id,
         proposal_sha256=proposal.proposal_sha256,
         project_id=proposal.project_id,
@@ -421,6 +528,8 @@ def inspect_source_admission(
         ready_for_projection_proposal=ready,
         items=tuple(item_reports),
         blockers=tuple(global_findings),
+        no_source_content_read=proposal.schema_version == "1.0",
+        derived_quality_projection_read=proposal.schema_version == "1.1",
     )
 
 
@@ -473,6 +582,42 @@ def _load_bound_audit(
 
 def _binding_verified(binding: TasteCorpusFileBinding | None, root: Path) -> bool:
     return binding is not None and _resolve_binding(binding, root) is not None
+
+
+def _reference_quality_screen_verified(entry: SourceAdmissionEntry, root: Path) -> bool:
+    quality = entry.quality
+    report_path = (
+        _resolve_binding(quality.reference_quality_report, root)
+        if quality.reference_quality_report is not None
+        else None
+    )
+    projection_verified = _binding_verified(quality.blind_projection, root)
+    if report_path is None or not projection_verified:
+        return False
+    try:
+        payload = json.loads(report_path.read_bytes())
+        if not isinstance(payload, dict):
+            return False
+        recorded_hash = payload.pop("report_sha256", None)
+        report = ReferenceQualityQualification.model_validate(payload)
+    except (OSError, json.JSONDecodeError, ValueError):
+        return False
+    return bool(
+        recorded_hash == report.report_sha256
+        and _binding_verified(
+            TasteCorpusFileBinding(
+                path=report.ledger_locator,
+                sha256=report.ledger_sha256,
+            ),
+            root,
+        )
+        and report.source_id == entry.source_id
+        and report.source_content_sha256 == entry.source_content_sha256
+        and report.source_projection_sha256 == quality.blind_projection.sha256
+        and report.proposal_sha256 == quality.reference_quality_proposal_sha256
+        and report.verdict is ReferenceQualityVerdict.QUALIFY
+        and report.qualified_for_human_review
+    )
 
 
 def _resolve_binding(binding: TasteCorpusFileBinding, root: Path) -> Path | None:
@@ -561,6 +706,7 @@ __all__ = [
     "SourceAdmissionVerdict",
     "SourceIsolationArgument",
     "SourceQualityArgument",
+    "SourceQualityDimensionReview",
     "SourceQualityReview",
     "SourceRightsArgument",
     "inspect_source_admission",

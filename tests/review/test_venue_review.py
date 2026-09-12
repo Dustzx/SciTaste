@@ -424,6 +424,7 @@ def test_registered_review_routes_to_open_project_obligations(
                         "objective": "title_effectiveness",
                         "treatment_kind": "registered_study_bundle",
                         "study_ids": [
+                            "reference-quality-mechanism",
                             "taste-abstraction-mechanism",
                             "taste-specificity-mechanism",
                             "taste-selection-mechanism",
@@ -508,6 +509,7 @@ def test_registered_review_routes_to_open_project_obligations(
     assert iteration_row["authorizes_execution"] is False
     assert iteration_row["followup_design"]["run_id"] == "review-followup-design-v1"
     assert iteration_row["followup_design"]["hypothesis_ids"] == [
+        "H0_reference_quality",
         "H1_taste_abstraction",
         "H2_taste_specificity",
         "H2b_taste_selection",
@@ -520,6 +522,7 @@ def test_registered_review_routes_to_open_project_obligations(
         if item["step_id"] == "design-experiment-routing-evidence"
     )
     assert design_step["study_ids"] == [
+        "reference-quality-mechanism",
         "taste-abstraction-mechanism",
         "taste-specificity-mechanism",
         "taste-selection-mechanism",

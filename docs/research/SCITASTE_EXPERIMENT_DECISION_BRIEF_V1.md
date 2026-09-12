@@ -2,7 +2,7 @@
 
 Status: **historical feasibility brief; superseded for launch planning**. The
 Qwen3-VL-2B choice, 120-case floor, and 100-trajectory API matrix below predate
-the resource-independent H1/H2a/H2b/H3/E1/D1 evidence program and must not
+the resource-independent H0/H1/H2a/H2b/H3/E1/D1 evidence program and must not
 authorize or size a current experiment. Current scientific authority belongs to
 `configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml`; current
 resource joining belongs to

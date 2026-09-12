@@ -74,7 +74,36 @@ def test_scientific_identity_does_not_change_with_resource_snapshot() -> None:
 def test_h1_without_raw_source_rag_is_scientifically_incoherent(tmp_path: Path) -> None:
     program = _program()
     studies = list(program.studies)
-    studies[0] = studies[0].model_copy(update={"condition_ids": ("matched-abstracted-taste",)})
+    index = next(
+        index
+        for index, study in enumerate(studies)
+        if study.hypothesis is EvidenceHypothesis.TASTE_ABSTRACTION
+    )
+    studies[index] = studies[index].model_copy(
+        update={"condition_ids": ("matched-abstracted-taste",)}
+    )
+    invalid = program.model_copy(update={"study_layers": tuple(studies)})
+
+    loaded = load_evidence_program(_write_program(tmp_path, invalid))
+    report = inspect_evidence_program(loaded.program, load_external_resource_corpus(CORPUS).corpus)
+
+    assert report.scientifically_coherent is False
+    assert "missing_required_contrast" in {item.code for item in report.scientific_blockers}
+
+
+def test_h0_requires_content_grounded_quality_against_prestige_only_selection(
+    tmp_path: Path,
+) -> None:
+    program = _program()
+    studies = list(program.studies)
+    index = next(
+        index
+        for index, study in enumerate(studies)
+        if study.hypothesis is EvidenceHypothesis.REFERENCE_QUALITY
+    )
+    studies[index] = studies[index].model_copy(
+        update={"condition_ids": ("quality-grounded-reference-admission",)}
+    )
     invalid = program.model_copy(update={"study_layers": tuple(studies)})
 
     loaded = load_evidence_program(_write_program(tmp_path, invalid))

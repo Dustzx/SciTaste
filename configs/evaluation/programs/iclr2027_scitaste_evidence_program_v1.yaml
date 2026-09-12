@@ -6,6 +6,14 @@ design_authority: scientific_question_not_available_inventory
 resource_corpus_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
 
 claims:
+  - claim_id: reference-quality-is-content-grounded
+    statement: >-
+      From the same broad source pool, prestige-blind qualification of evidential
+      rigor, decision traceability, visible alternatives, failure boundaries,
+      and transfer potential produces more useful scientific precedents than
+      venue- or citation-led source selection.
+    title_critical: true
+    study_ids: [reference-quality-mechanism]
   - claim_id: taste-abstraction-improves-decisions
     statement: >-
       Under identical high-quality sources, model, context, tools, and budget,
@@ -36,6 +44,18 @@ claims:
     study_ids: [native-objective-progress]
 
 conditions:
+  - condition_id: quality-grounded-reference-admission
+    kind: quality_grounded_reference_admission
+    intervention: >-
+      Admit only prestige-blind, source-grounded references whose five decision-
+      quality dimensions pass deterministic checks and independent review.
+    keeps_fixed: [candidate source pool, source count, abstraction model, abstraction prompt, context budget, downstream model, tools]
+  - condition_id: prestige-only-reference-selection
+    kind: prestige_only_reference_selection
+    intervention: >-
+      Select the same number of references from the identical pool using only
+      venue and citation metadata, without content-grounded decision-quality screening.
+    keeps_fixed: [candidate source pool, source count, abstraction model, abstraction prompt, context budget, downstream model, tools]
   - condition_id: full-scitaste
     kind: full_scitaste
     intervention: Enable native Taste, Knowledge, critics, evidence gates, and execution control.
@@ -170,6 +190,25 @@ system_candidates:
       task mapping remain unverified.
 
 study_layers:
+  - study_id: reference-quality-mechanism
+    hypothesis: H0_reference_quality
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [reference-quality-is-content-grounded]
+    condition_ids: [quality-grounded-reference-admission, prestige-only-reference-selection]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: >-
+      Paired condition-blinded expert preference on the downstream scientific
+      action and claim calibration induced by the selected source set.
+    estimand: >-
+      Effect of content-grounded quality admission versus prestige-only source
+      selection from the same frozen pool at equal source, abstraction, and context budgets.
+    experimental_unit: held-out source-group-disjoint decision case with one frozen source pool
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
   - study_id: taste-abstraction-mechanism
     hypothesis: H1_taste_abstraction
     layer: decision_mechanism

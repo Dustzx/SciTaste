@@ -5,9 +5,10 @@ or formal-cell execution is authorized by this document**.
 
 The resource-independent title strategy is now
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
-It adds raw-source RAG versus abstracted Taste and decision-grounded versus
-lexical same-pool selection as title-critical contrasts, and requires model
-selection before outcomes. The earlier Qwen v11 and DeepSeek V4.1 proposals
+It adds content-grounded versus prestige-only source qualification, raw-source
+RAG versus abstracted Taste, and decision-grounded versus lexical same-pool
+selection as title-critical contrasts, and requires model selection before
+outcomes. The earlier Qwen v11 and DeepSeek V4.1 proposals
 below remain feasibility/history artifacts rather than the final formal design.
 
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
@@ -93,7 +94,7 @@ comparison inventory rather than a frozen census.
 
 | Track | Question | Required comparison | Role in the paper |
 |---|---|---|---|
-| A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
+| A. Decision benchmark | Do content-qualified references and Taste improve local scientific decisions? | prestige-only references, quality-qualified references, raw RAG, matched/mismatched Taste, direct LM, experts | source-quality, abstraction, selection, and scalable mechanism evidence |
 | B. External end-to-end systems | How does independent SciTaste Native compare with real accepted systems? | direct agent where applicable, accepted qualified systems, and SciTaste Native; preprint systems only in sensitivity analysis | ecological external validity under best-native models; external superiority only under a separately admissible matched design |
 | C. SciTaste native causal intervention | Does the complete Taste bundle and matched Taste context change executable research outcomes, and what mechanisms do component-only arms suggest? | Native Base, Knowledge-only, Taste-only, critics-only, Full SciTaste, plus a mismatched-Taste placebo | title-supporting bundle/context attribution plus separately labelled mechanism diagnostics on held-out tasks |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |

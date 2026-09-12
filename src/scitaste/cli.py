@@ -268,7 +268,12 @@ from scitaste.taste.memory import (
     save_taste_memory_admission_report,
     taste_case_sha256,
 )
+from scitaste.taste.reference_quality import (
+    compile_reference_quality_qualification,
+    save_reference_quality_qualification,
+)
 from scitaste.taste.semantic import (
+    reference_quality_from_ledger,
     save_taste_abstraction_candidate,
     taste_abstraction_candidate_from_ledger,
 )
@@ -1593,6 +1598,17 @@ def build_parser() -> argparse.ArgumentParser:
     taste_abstraction_candidate.add_argument("--output", type=Path, required=True)
     _add_log_level_option(taste_abstraction_candidate)
     taste_abstraction_candidate.set_defaults(handler=_handle_evaluation_taste_abstraction_candidate)
+    reference_quality_qualification = evaluation_commands.add_parser(
+        "reference-quality-qualification",
+        help="Compile an accepted prestige-blind quality ledger into a content-free receipt",
+    )
+    reference_quality_qualification.add_argument("--ledger-entry", type=Path, required=True)
+    reference_quality_qualification.add_argument("--evidence-root", type=Path, default=Path("."))
+    reference_quality_qualification.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(reference_quality_qualification)
+    reference_quality_qualification.set_defaults(
+        handler=_handle_evaluation_reference_quality_qualification
+    )
     taste_corpus_pair = evaluation_commands.add_parser(
         "taste-corpus-pair",
         help="Qualify matched and mismatched Taste corpora without external actions",
@@ -5085,6 +5101,27 @@ def _handle_evaluation_taste_abstraction_candidate(args: argparse.Namespace) -> 
                 "retrieval_eligible": False,
                 "human_review_required": True,
                 "authorizes_execution": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_reference_quality_qualification(args: argparse.Namespace) -> int:
+    verified = reference_quality_from_ledger(
+        args.ledger_entry,
+        evidence_root=args.evidence_root,
+    )
+    report = compile_reference_quality_qualification(verified)
+    output = save_reference_quality_qualification(report, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "reference-quality-qualification-created",
+                **report.model_dump(mode="json"),
+                "output": str(output),
             },
             indent=2,
             ensure_ascii=False,

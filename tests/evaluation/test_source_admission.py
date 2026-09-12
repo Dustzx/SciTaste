@@ -17,12 +17,20 @@ from scitaste.evaluation.source_admission import (
     SourceAdmissionVerdict,
     SourceIsolationArgument,
     SourceQualityArgument,
+    SourceQualityDimensionReview,
     SourceQualityReview,
     SourceRightsArgument,
     inspect_source_admission,
     load_source_admission_proposal,
 )
 from scitaste.evaluation.taste_corpus_pair import TasteCorpusFileBinding
+from scitaste.taste.reference_quality import (
+    ReferenceQualityDimension,
+    ReferenceQualityQualification,
+    ReferenceQualityRating,
+    ReferenceQualityVerdict,
+    save_reference_quality_qualification,
+)
 
 
 def _sha(content: bytes) -> str:
@@ -215,3 +223,104 @@ def test_source_admission_rejects_post_audit_population_cherry_picking(tmp_path:
 
     assert report.ready_for_projection_proposal is False
     assert [finding.code for finding in report.blockers] == ["audited_population_mismatch"]
+
+
+def test_v11_requires_prestige_blind_quality_trace_and_anchored_human_reviews(
+    tmp_path: Path,
+) -> None:
+    inspection = _inspection(tmp_path)
+    entries = []
+    reviews = []
+    for entry in inspection.proposal.entries:
+        admitted = entry.isolation.source_group_id != "held-out-group"
+        projection = _binding(
+            tmp_path,
+            f"quality/{entry.item_id}-blind-projection.json",
+            b'{"prestige":"hidden"}',
+        )
+        ledger = _binding(
+            tmp_path,
+            f"projects/quality/runs/{entry.item_id}/model_nodes/ledger/00000000.json",
+            b'{"fixture":"bound-ledger"}',
+        )
+        proposal_sha = _sha(f"proposal-{entry.item_id}".encode())
+        qualification = ReferenceQualityQualification(
+            screening_id=f"screen-{entry.item_id.replace('.', '-')}",
+            source_id=entry.source_id,
+            source_content_sha256=entry.source_content_sha256,
+            source_projection_sha256=projection.sha256,
+            proposal_sha256=proposal_sha,
+            verdict=(
+                ReferenceQualityVerdict.QUALIFY if admitted else ReferenceQualityVerdict.REJECT
+            ),
+            qualified_for_human_review=admitted,
+            invocation_id=f"quality-{entry.item_id.replace('.', '-')}",
+            backend="fixture-provider",
+            model="fixture-model",
+            ledger_locator=ledger.path,
+            ledger_sha256=ledger.sha256,
+        )
+        report_path = tmp_path / f"quality/{entry.item_id}-qualification.json"
+        save_reference_quality_qualification(qualification, report_path)
+        report_binding = TasteCorpusFileBinding(
+            path=report_path.relative_to(tmp_path).as_posix(),
+            sha256=_sha(report_path.read_bytes()),
+        )
+        entries.append(
+            entry.model_copy(
+                update={
+                    "quality": entry.quality.model_copy(
+                        update={
+                            "blind_projection": projection,
+                            "reference_quality_report": report_binding,
+                            "reference_quality_proposal_sha256": proposal_sha,
+                        }
+                    )
+                }
+            )
+        )
+        rating = ReferenceQualityRating.STRONG if admitted else ReferenceQualityRating.INSUFFICIENT
+        for review in (
+            item for item in inspection.proposal.quality_reviews if item.item_id == entry.item_id
+        ):
+            reviews.append(
+                review.model_copy(
+                    update={
+                        "dimension_reviews": tuple(
+                            SourceQualityDimensionReview(dimension=dimension, rating=rating)
+                            for dimension in ReferenceQualityDimension
+                        ),
+                        "reviewer_visible_projection_sha256": projection.sha256,
+                        "blinded_to_prestige_signals": True,
+                        "blinded_to_model_assessment": True,
+                    }
+                )
+            )
+    proposal = SourceAdmissionProposal.model_validate(
+        inspection.proposal.model_dump(mode="json", exclude={"proposal_sha256"})
+        | {
+            "schema_version": "1.1",
+            "entries": [item.model_dump(mode="json") for item in entries],
+            "quality_reviews": [item.model_dump(mode="json") for item in reviews],
+        }
+    )
+
+    report = inspect_source_admission(
+        SourceAdmissionInspection(
+            path=tmp_path / "v11-proposal.json",
+            file_sha256="f" * 64,
+            proposal=proposal,
+        ),
+        evidence_root=tmp_path,
+    )
+
+    assert report.schema_version == "1.1"
+    assert report.no_source_content_read is False
+    assert report.no_raw_source_body_read is True
+    assert report.derived_quality_projection_read is True
+    assert report.admitted_source_ids == ("source-2401-00001",)
+    assert report.items[0].reference_quality_screen_verified is True
+    assert report.items[1].reference_quality_screen_verified is False
+    assert "reference_quality_screen_failed" in {
+        finding.code for finding in report.items[1].blockers
+    }

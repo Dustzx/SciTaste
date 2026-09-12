@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added content-grounded Scientific Reference qualification before Taste
+  abstraction. A prestige-blind proposal-only node evaluates evidential rigor,
+  decision traceability, visible alternatives, failure boundaries, and transfer
+  potential using exact source excerpts; every dimension must be strong. An
+  accepted ledger compiles into a content-free receipt, while source-admission
+  schema 1.1 separately requires two prestige- and model-blind human reviews.
+  The ICLR program adds H0 against prestige-only selection from the same source
+  pool, keeping H1 focused on abstraction at fixed admitted sources.
+
 - Replaced direct top-ranked Taste use with an optional decision-grounded
   deliberation path. Broad lexical retrieval now freezes only a candidate pool;
   a proposal-only selector must ground applicability and failure judgments in

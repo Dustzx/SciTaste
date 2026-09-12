@@ -9,7 +9,8 @@ central_question: >-
   evidence-valid idea-to-paper trajectories?
 claim_boundary: >-
   The title-level claim requires a complete positive held-out native Taste
-  intervention with abstracted-Taste--raw-RAG, matched--mismatched-Taste,
+  intervention with content-grounded--prestige-only reference selection,
+  abstracted-Taste--raw-RAG, matched--mismatched-Taste,
   decision-grounded--lexical selection, and Full--Base confirmation, plus
   complete separately interpreted component-only diagnostics. The current
   prepilots do not contain that complete design.
@@ -18,25 +19,34 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 94db71c2e580d45d6d4bc654c5b8c4536dd8215cedc7684a6cdf973cdd35ffe6
+    sha256: a92ec2652d0ddaf509cd78ac8a797d23625852aee1764cf99f950d085f70019a
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 0c93473779da39f611764b5faa8b24f091e5a7378e227dddabd142f835cd5eb6
+    sha256: 69fe8eb16ec4febd77c40b084f2f0662273bc92fb1bdaebb3e37292682912afd
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
   - artifact_id: iclr-evidence-program
     path: configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml
-    sha256: 356182e888b76346aff5cc7c9553923a36c867c5dad7f99bef51d207cf4250d5
+    sha256: 4aa7aadb5c07a3d65805bccfae7527939dda168bd370002e7fcdcb1df58cd71d
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 9473603f4c9a8ae7380712a17c0572d79acbf6f979a8a86a8dadd78216decb94
+    sha256: aa947c4525a4a68742d5bc9712c2963d1490fb3f8aed41075af1ecba5d0001d4
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: ed3c68028c08888678ee8b0703cd25fe36a8bef7665904df1269174bb1b35f98
+    sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
+  - artifact_id: scientific-reference-quality
+    path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
+    sha256: 25f89fdbf3b43a89f43212b4f64fa097728d37a434c5be3aaa4055f5b008d8af
+  - artifact_id: reference-quality-profiles
+    path: configs/model_nodes/runtime_profiles.reference_quality_v1.yaml
+    sha256: 51570f7ef746eff5655b7c7ec731b9c2654e8755058e772fafc1a8a638e13332
+  - artifact_id: reference-quality-pipeline
+    path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v2.yaml
+    sha256: 0f5756d64876796b3dccf300891b2f823ad5399688e92de02ae54b6ecc4e6ff6
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -93,16 +103,18 @@ tracks:
     role: scientific_taste_mechanism
     state: design_only
     scientific_question: >-
-      Under identical high-quality sources and context budgets, does reviewed
-      Taste abstraction improve scientific decisions beyond same-source raw RAG,
+      From a fixed broad pool, does content-grounded quality admission improve
+      decisions over prestige-only selection; under fixed admitted sources and
+      context budgets, does reviewed Taste abstraction improve decisions beyond same-source raw RAG,
       is domain match rather than generic context causal, and can SciTaste select
       applicable source-disjoint precedents without oracle relation labels?
     primary_endpoint: >-
       Condition-blinded independent-expert preference on decision quality and
-      claim calibration for registered H1, H2a, and H2b contrasts. Agreement with
+      claim calibration for registered H0, H1, H2a, and H2b contrasts. Agreement with
       pre-collected action labels is diagnostic only.
     comparison_design: >-
-      Resource-independent SciTasteBench v3 design: Base plus same-source raw
+      Resource-independent SciTasteBench v3 design: content-grounded versus
+      prestige-only reference selection from one pool, then Base plus same-source raw
       RAG, same-source abstracted Taste, and source-disjoint mismatched Taste;
       a separate paired same-pool selector contrast compares decision-grounded
       deliberation with lexical retrieval. Full SciTaste is optional supporting
@@ -124,6 +136,8 @@ tracks:
       acquisition_approved: false
     matrix:
       system_ids:
+        - quality-grounded-reference-admission
+        - prestige-only-reference-selection
         - native-base
         - raw-source-rag
         - matched-abstracted-taste
@@ -144,13 +158,16 @@ tracks:
       compute_unallocated: true
     claim_allowed: >-
       After a powered formal split and bound blind reviews, this track may support
-      causal H1/H2 claims under one frozen capable-model setting.
+      causal H0/H1/H2 claims under one frozen capable-model setting.
     claim_forbidden: >-
       It cannot establish idea-to-paper improvement, frontier-model robustness,
       or an executable-cell count before natural cases and labels are frozen.
     evidence_artifact_ids:
       - iclr-evaluation-contract
       - iclr-evidence-program
+      - scientific-reference-quality
+      - reference-quality-profiles
+      - reference-quality-pipeline
       - dual-estimand-addendum
       - experiment-decision-brief
       - mechanism-source-screen
@@ -159,6 +176,8 @@ tracks:
       - gpu-host-inventory
     blocker_codes:
       - natural-case-bytes:not-acquired
+      - prestige-blind-quality-projections:not-materialized
+      - quality-screen-model-traces:not-collected
       - expert-labels:not-collected
       - held-out-split:not-verified
       - exact-cell-plan:not-compilable-before-curation

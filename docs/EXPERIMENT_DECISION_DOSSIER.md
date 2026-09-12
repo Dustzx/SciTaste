@@ -29,8 +29,9 @@ inspection report. This still performs no external action.
 
 The decision-level Track A design is intentionally marked `design_only`. Schema
 1.2 records its model as `unselected` and its compute budget as unallocated.
-Its minimum mechanism matrix is Base, same-source raw RAG, same-source abstracted
-Taste, and source-disjoint mismatched Taste over a 120-case natural-data floor
+Its minimum mechanism design first compares prestige-only and content-qualified
+references from one frozen pool, then compares Base, same-source raw RAG,
+same-source abstracted Taste, and source-disjoint mismatched Taste over a 120-case natural-data floor
 and two action-order arms. A separate paired H2b contrast gives the identical
 outcome-hidden hard-negative pool to decision-grounded deliberation and the
 recorded lexical retriever; only their selected, token-matched contexts reach the
@@ -58,8 +59,9 @@ an active quota.
 
 The current title-level scientific strategy is narrowed in
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md):
-abstracted Taste versus raw-source RAG, matched versus mismatched Taste, and
-decision-grounded versus lexical same-pool selection, and Full versus Native
+content-grounded versus prestige-only source selection, abstracted Taste versus
+raw-source RAG, matched versus mismatched Taste, decision-grounded versus
+lexical same-pool selection, and Full versus Native
 Base are separate confirmation obligations. The earlier
 dual-estimand architecture remains documented in
 [`ICLR_2027_EVALUATION_ADDENDUM_V2.md`](ICLR_2027_EVALUATION_ADDENDUM_V2.md).

@@ -11,7 +11,7 @@ inspected against the additive
 snapshot. The current deterministic report is scientifically coherent but not
 acquisition-ready, experiment-ready, or execution-authorized. In particular,
 the program fixes claims and roles before choosing a model: changes in local or
-remote inventory update feasibility evidence, not H1--H3.
+remote inventory update feasibility evidence, not H0--H3.
 
 The separate
 [`iclr2027_evidence_review_package_v1.yaml`](../configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml)
@@ -24,23 +24,42 @@ false.
 
 The paper is a method paper about explicit Scientific Taste, not a benchmark
 paper and not a report on how much infrastructure SciTaste contains. Its central
-claim has five separable parts:
+claim has six separable parts:
 
-1. high-quality references can be transformed into transferable decision
-   experience rather than copied as retrieved text;
-2. the system can select applicable experience from hard negatives using the
+1. the system can identify decision-bearing high-quality references from their
+   content rather than equating venue or citation prestige with quality;
+2. those references can be transformed into transferable decision experience
+   rather than copied as retrieved text;
+3. the system can select applicable experience from hard negatives using the
    current scientific decision, rather than an oracle relation label;
-3. the resulting experience changes scientific decisions for the right reason,
+4. the resulting experience changes scientific decisions for the right reason,
    rather than because the model received more tokens or generally good prose;
-4. those decisions improve held-out executable research outcomes under matched
+5. those decisions improve held-out executable research outcomes under matched
    model, task, tool, and budget conditions;
-5. the complete SciTaste system remains competitive with real autonomous-
+6. the complete SciTaste system remains competitive with real autonomous-
    research systems under their usable configurations.
 
-The first four are title-critical. The fifth establishes ecological relevance
+The first five are title-critical. The sixth establishes ecological relevance
 but cannot identify a causal Taste effect when systems use different models.
 
 ## Confirmatory hypotheses
+
+### H0: decision-bearing quality beyond prestige
+
+Given the same frozen broad source pool, select the same number of references
+either by the five content-grounded quality dimensions or by venue/citation
+metadata alone. Keep the abstraction model, abstraction prompt, downstream
+model, tools, and context budget fixed.
+
+Primary contrast: `quality-grounded-reference-admission` versus
+`prestige-only-reference-selection`.
+
+The five dimensions are evidential rigor, decision traceability, visible
+alternatives, visible failure boundaries, and transfer potential. Each strong
+rating requires exact source support; author, venue, citations, experimental
+relation, and downstream task identity are hidden from the quality assessor.
+This tests source selection rather than assuming that an accepted paper is a
+usable scientific precedent.
 
 ### H1: abstraction beyond retrieval
 
@@ -89,8 +108,8 @@ SciTaste improves task-normalized held-out objective progress over Native Base.
 Primary contrast: `full-scitaste` versus `native-base`. Every valid failed run
 remains an intention-to-run outcome at the preregistered task floor.
 
-No title claim is admitted unless H1, H2a, H2b, and H3 have complete evidence.
-H1, H2a, and H2b are primarily powered at the decision level; H3 is powered over
+No title claim is admitted unless H0, H1, H2a, H2b, and H3 have complete evidence.
+H0, H1, H2a, and H2b are primarily powered at the decision level; H3 is powered over
 independent tasks rather than inflated by many seeds on a few tasks.
 
 ## Minimal evidence stack
@@ -111,10 +130,12 @@ conditional adjudication.
 Conditions:
 
 1. no-reference direct model;
-2. raw-source RAG;
-3. abstracted matched Taste;
-4. abstracted mismatched Taste;
-5. Full SciTaste with critics and persistent state.
+2. prestige-only selected Taste;
+3. quality-grounded selected Taste;
+4. raw-source RAG;
+5. abstracted matched Taste;
+6. abstracted mismatched Taste;
+7. Full SciTaste with critics and persistent state.
 
 All reference-bearing conditions use matched context budgets. Automated judges
 are diagnostics; expert action preference and calibration are primary.
@@ -143,6 +164,12 @@ permitted difference; H2a compares matched against mismatched abstractions with
 source-domain relation as the only permitted difference. The benchmark runner
 reports these contrasts by ID rather than deriving them from Base deltas.
 
+H0 is a source-selection contrast over the same broad source pool. It shares
+held-out decisions and compatible downstream outputs with H1--H2b, but changes
+only the source-selection rule at equal source count. H1 then holds the
+quality-admitted source set fixed, preventing source quality and representation
+effects from being conflated.
+
 H2b is a separate paired selector contrast, not another reinterpretation of the
 three-arm context. Both selector conditions receive the same frozen broad pool.
 The deliberative arm uses the fact-grounded applicability node and deterministic
@@ -158,7 +185,7 @@ software matrix from inflating the powered experiment without answering H1/H2a.
 
 Runner accuracy measures agreement with a previously collected expert action
 label. It is a useful diagnostic, but it is not the frozen confirmatory endpoint.
-For H1/H2a/H2b, the primary endpoint remains condition-blinded independent expert
+For H0/H1/H2a/H2b, the primary endpoint remains condition-blinded independent expert
 preference over the produced decision and claim calibration. Consequently a v3
 runner report leaves the confirmatory result incomplete until a separately
 content-bound blind-review artifact is attached. The local alignment command is:

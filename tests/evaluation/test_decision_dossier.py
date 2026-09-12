@@ -48,6 +48,8 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     assert mechanism.data.population_floor == 120
     assert mechanism.matrix.planned_cells is None
     assert mechanism.matrix.system_ids == (
+        "quality-grounded-reference-admission",
+        "prestige-only-reference-selection",
         "native-base",
         "raw-source-rag",
         "matched-abstracted-taste",

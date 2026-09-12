@@ -28,6 +28,7 @@ _MAX_PROGRAM_BYTES = 1_048_576
 
 
 class EvidenceHypothesis(StrEnum):
+    REFERENCE_QUALITY = "H0_reference_quality"
     TASTE_ABSTRACTION = "H1_taste_abstraction"
     TASTE_SPECIFICITY = "H2_taste_specificity"
     TASTE_SELECTION = "H2b_taste_selection"
@@ -53,6 +54,8 @@ class InferenceRole(StrEnum):
 
 
 class ProgramConditionKind(StrEnum):
+    QUALITY_GROUNDED_REFERENCE_ADMISSION = "quality_grounded_reference_admission"
+    PRESTIGE_ONLY_REFERENCE_SELECTION = "prestige_only_reference_selection"
     FULL_SCITASTE = "full_scitaste"
     MATCHED_TASTE = "matched_abstracted_taste"
     RAW_SOURCE_RAG = "raw_source_rag"
@@ -517,6 +520,10 @@ def _scientific_findings(
     sources = {item.source_id: item for item in program.task_sources}
     resources = {item.resource_id: item for item in corpus.resources}
     required = {
+        EvidenceHypothesis.REFERENCE_QUALITY: {
+            ProgramConditionKind.QUALITY_GROUNDED_REFERENCE_ADMISSION,
+            ProgramConditionKind.PRESTIGE_ONLY_REFERENCE_SELECTION,
+        },
         EvidenceHypothesis.TASTE_ABSTRACTION: {
             ProgramConditionKind.MATCHED_TASTE,
             ProgramConditionKind.RAW_SOURCE_RAG,
@@ -535,6 +542,7 @@ def _scientific_findings(
         },
     }
     expected_layers = {
+        EvidenceHypothesis.REFERENCE_QUALITY: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_ABSTRACTION: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_SPECIFICITY: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_SELECTION: EvidenceLayer.DECISION_MECHANISM,

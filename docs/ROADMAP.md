@@ -23,6 +23,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts with conservative dispersion, joint-family power, explicit ceilings, and no seed-based sample inflation |
 | Phase 8.4 — grounded contrastive Taste distillation | done | formal abstractions bind every decision element to exact source excerpts, expose transfer/failure boundaries, and cannot enter SciTasteBench v3 under a legacy curation tier |
 | Phase 8.5 — decision-grounded Taste selection | done | broad retrieval loses final authority; a closed-world deliberation trace proves applicability, excludes failure boundaries and duplicate sources, and preserves available action tension before controller use |
+| Phase 8.6 — content-grounded reference quality | done | prestige-blind five-dimensional screening, content-free qualification receipts, and dual-human schema-1.1 source admission define which records can teach transferable judgment |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -64,6 +65,16 @@ the selector trace into the final decision. The evidence program adds H2b
 against the unchanged lexical retriever on identical hard-negative pools,
 because oracle-matched H2a alone cannot show autonomous selection competence.
 No real selection call or H2b outcome has yet been collected.
+
+The source-quality method no longer equates accepted venue metadata with a
+usable scientific precedent. A proposal-only `reference-quality` node sees a
+prestige-blind projection and must ground evidential rigor, decision
+traceability, alternatives, failure boundaries, and transfer potential in exact
+source excerpts. All five dimensions must be strong. A verified live ledger is
+reduced to a content-free receipt before schema-1.1 source admission requires
+two independent, prestige- and model-blind human reviews. H0 compares this gate
+with prestige-only selection from the same pool at equal source and downstream
+budgets. Real source projections, calls, reviews, and H0 outcomes remain open.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and
