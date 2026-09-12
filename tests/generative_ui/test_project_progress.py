@@ -561,6 +561,8 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
             "approval_blocker_codes": [item.code for item in report.approval_blockers],
             "pending_qualification_codes": [item.code for item in report.pending_qualifications],
             "authorization_blocker_codes": [item.code for item in report.authorization_blockers],
+            "post_approval_streaming_available": True,
+            "archive_safety_check_available": True,
             "authorizes_network_preflight": False,
             "authorizes_download": False,
             "authorizes_ingestion": False,

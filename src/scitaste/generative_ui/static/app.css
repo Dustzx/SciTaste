@@ -1246,6 +1246,27 @@ fieldset {
   margin: 0;
 }
 
+.dataset-package-control-path {
+  align-items: baseline;
+  background: #f4f7f0;
+  border: 1px solid #d5dfcf;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  padding: 0.48rem 0.58rem;
+}
+
+.dataset-package-control-path strong {
+  color: var(--forest);
+  font-size: 0.7rem;
+}
+
+.dataset-package-control-path span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
 .benchmark-funnel {
   align-items: center;
   display: grid;

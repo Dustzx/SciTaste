@@ -209,8 +209,13 @@ contract is internally complete, but download approval remains blocked by the
 Perception Test/MLRC derivative-license discrepancy, heterogeneous Meta-Album
 obligations, and an unspecified AWA Creative Commons variant. Every first-copy
 content hash and archive-safety check also remains pending by construction.
-This narrows the next work to rights closure and a streaming atomic downloader,
-not GPU or API execution.
+The post-approval software path is now complete: exact-hash approval, streaming
+same-connection source revalidation, free-space enforcement, atomic publication,
+per-archive SHA-256 receipts, and no-extraction ZIP safety qualification all
+have deterministic offline coverage. The real request remains blocked exactly
+where it should: rights closure must precede owner approval, and no MLRC byte has
+been downloaded. The next external step is therefore authoritative license
+resolution, not GPU or API execution.
 
 The central estimand is correspondingly narrowed: randomized, matched-model
 SciTaste Native ablations supply the causal Taste effect; accepted external

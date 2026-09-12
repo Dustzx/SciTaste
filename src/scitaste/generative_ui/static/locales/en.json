@@ -248,6 +248,8 @@
   "progress.dataset_package.license.verified": "License identity verified",
   "progress.dataset_package.license.review_required": "License review required",
   "progress.dataset_package.license.blocked": "License identity blocked",
+  "progress.dataset_package.control_path": "Post-approval controls implemented",
+  "progress.dataset_package.control_steps": "Streaming atomic transfer → hash receipt → no-extraction safety check; this request is not approved.",
   "progress.dataset_package.boundary": "{hashes} content hashes remain pending. This card authorizes neither network preflight, download, ingestion, API use, GPU work, nor execution.",
   "progress.dataset_package.review": "Generate dataset-package review",
   "progress.evaluations.title": "Experiment readiness",

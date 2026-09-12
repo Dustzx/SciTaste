@@ -90,18 +90,24 @@ The current report has:
 license issues would permit an owner to review an exact transfer request; it
 would not by itself approve the request or make either task executable.
 
+The corresponding post-approval software path is now implemented and tested
+without source access. It uses exact-hash approval, same-connection streaming
+identity checks, atomic staging, incremental SHA-256 receipts, and a separate
+no-extraction ZIP safety report. Its commands are documented in
+[`DATASET_PACKAGE_ACQUISITION.md`](../DATASET_PACKAGE_ACQUISITION.md). This
+implementation does not change the current gate result and did not acquire a
+dataset byte.
+
 ## Required next evidence
 
 1. Resolve the Perception Test/MLRC derivative-data license discrepancy with an
    authoritative clarification or a rights-preserving acquisition route.
 2. Resolve the exact AWA license variant and freeze a 30-dataset attribution and
    obligation manifest.
-3. Implement and test a bounded streaming downloader that rechecks file ID,
-   filename, length, last-modified value or ETag immediately before transfer;
-   it must not hold multi-gigabyte content in memory.
-4. After explicit hash-bound owner approval, acquire atomically and record the
+3. After explicit hash-bound owner approval, use the now-tested streaming
+   transaction to acquire atomically and record the
    SHA-256 of every archive. Then inspect ZIP paths and expanded-byte ceilings
    before extraction.
-5. Only after package qualification, reproduce the pinned baseline and held-out
+4. Only after package qualification, reproduce the pinned baseline and held-out
    scorer without API or agent intervention. An experiment proposal remains a
    later, separately approved object.

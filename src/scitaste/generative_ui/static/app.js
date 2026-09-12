@@ -2020,6 +2020,14 @@ function renderDatasetPackages(items) {
       blockers.appendChild(blocker);
     }
 
+    const controlPath = document.createElement("div");
+    controlPath.className = "dataset-package-control-path";
+    const controlLabel = document.createElement("strong");
+    appendText(controlLabel, t("progress.dataset_package.control_path"));
+    const controlSteps = document.createElement("span");
+    appendText(controlSteps, t("progress.dataset_package.control_steps"));
+    controlPath.append(controlLabel, controlSteps);
+
     const boundary = document.createElement("p");
     boundary.className = "acquisition-boundary";
     appendText(boundary, t("progress.dataset_package.boundary", {
@@ -2037,6 +2045,7 @@ function renderDatasetPackages(items) {
       flow,
       taskGrid,
       blockers,
+      controlPath,
       boundary,
       review,
       evidenceDisclosure(item.support_ref_ids, {

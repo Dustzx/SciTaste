@@ -1804,3 +1804,29 @@ download, ingestion, API, GPU, or execution authority.
 Generation as Content may show the bounded task/size/license decision and link
 to the content-addressed report. It does not inline 39 object records on the
 project landing page and cannot mutate the request or approve a transfer.
+
+### ADR-059: Large-package transfer is a hash-confirmed streaming transaction
+
+Status: accepted for the acquisition control path; the real MLRC package is not
+approved or acquired.
+
+Multi-gigabyte benchmark packages cannot reuse the small-evidence downloader's
+in-memory byte contract. SciTaste therefore binds owner approval to the exact
+proposal, request file, inventory, and no-network gate report. Approval permits
+only source preflight and download. A separate command must reconfirm both the
+proposal and approval hashes and carry an explicit network switch.
+
+The transfer validates response identity on the same connection that produces
+the body, rejects redirects and content encoding, streams bounded chunks to
+exclusive staging files, computes SHA-256 incrementally, and publishes only one
+complete request directory. Exact per-object and aggregate lengths are required;
+a failed object removes the complete staging transaction. Free-space checks use
+the approved unpack envelope rather than only compressed download size.
+
+The acquisition receipt is still not an extraction permit. A separate reader
+rehashes every archive and inspects ZIP central directories without extraction.
+Path escapes, symbolic links, encrypted or duplicate members, suspicious
+compression, member-count excess, and task-level expanded-byte excess fail
+closed. Even a safe report grants no ingestion, provider, GPU, or experiment
+authority. This separation lets software readiness advance while the current
+license gate remains truthfully unresolved.

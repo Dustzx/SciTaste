@@ -248,6 +248,8 @@
   "progress.dataset_package.license.verified": "许可证身份已验证",
   "progress.dataset_package.license.review_required": "需要许可证审阅",
   "progress.dataset_package.license.blocked": "许可证身份受阻",
+  "progress.dataset_package.control_path": "获批后控制链路已实现",
+  "progress.dataset_package.control_steps": "流式原子获取 → 哈希回执 → 无解包安全检查；不代表本申请已获批准。",
   "progress.dataset_package.boundary": "仍有 {hashes} 个内容哈希待获取后固定。本卡片不授权网络预检、下载、摄取、API、GPU 或实验执行。",
   "progress.dataset_package.review": "生成数据包审阅",
   "progress.evaluations.title": "实验就绪度",

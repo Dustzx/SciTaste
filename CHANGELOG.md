@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- Large benchmark packages now have a separate post-approval streaming path.
+  Owner authority binds the exact proposal, request, inventory, and no-network
+  gate hashes; download additionally requires confirmed proposal/approval
+  hashes and an explicit switch. The transport revalidates source identity on
+  the body connection, enforces exact per-file and aggregate bytes, hashes while
+  writing to atomic staging, and never overwrites a transaction. A subsequent
+  no-extraction ZIP qualifier rehashes receipt bytes and rejects path escapes,
+  symbolic links, encryption, duplicate members, suspicious compression, and
+  expanded-byte excess. The current MLRC request remains license-blocked, and
+  implementation/testing performed no source, API, SSH, GPU, or model action.
+
 - Shared resources now have a redacted local-access inspection boundary. A
   mode-`0600`, Git-ignored credential file can bind the catalog's DeepSeek,
   Zhipu, Bailian, and remote-GPU environment names, while `resource

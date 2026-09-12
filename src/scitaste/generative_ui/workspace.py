@@ -512,6 +512,8 @@ class WorkspaceSurfaceFactory:
                 "authorization_blocker_codes": [
                     item.code for item in report.authorization_blockers
                 ],
+                "post_approval_streaming_available": True,
+                "archive_safety_check_available": True,
                 "authorizes_network_preflight": report.authorizes_network_preflight,
                 "authorizes_download": report.authorizes_download,
                 "authorizes_ingestion": report.authorizes_ingestion,

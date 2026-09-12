@@ -71,11 +71,13 @@ from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_c
 from scitaste.evaluation import (
     EvaluationCriticSuite,
     approve_dataset_acquisition_request,
+    approve_dataset_package_request,
     compile_evaluation_cell_plan,
     inspect_acquired_task_cohort,
     inspect_adapter_contract,
     inspect_adapter_preflight,
     inspect_dataset_acquisition_request,
+    inspect_dataset_package_archives,
     inspect_dataset_package_request,
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
@@ -86,6 +88,8 @@ from scitaste.evaluation import (
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_dataset_acquisition_request,
+    load_dataset_package_approval,
+    load_dataset_package_receipt,
     load_dataset_package_request,
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
@@ -94,6 +98,7 @@ from scitaste.evaluation import (
     load_task_package_manifest,
     load_task_selection_manifest,
     materialize_dataset_acquisition,
+    materialize_dataset_package_acquisition,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     publish_project_evaluation,
@@ -102,6 +107,8 @@ from scitaste.evaluation import (
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
     save_dataset_acquisition_request,
+    save_dataset_archive_qualification_report,
+    save_dataset_package_approval,
     save_dataset_package_gate_report,
     save_evaluation_cell_plan,
     save_executable_candidate_report,
@@ -1304,6 +1311,55 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(dataset_package_request)
     dataset_package_request.set_defaults(handler=_handle_evaluation_dataset_package_request)
+    dataset_package_approve = evaluation_commands.add_parser(
+        "dataset-package-approve",
+        help="Bind owner approval to one exact, review-ready large package without downloading",
+    )
+    dataset_package_approve.add_argument("--manifest", type=Path, required=True)
+    dataset_package_approve.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_package_approve.add_argument("--confirm-proposal-sha256", required=True)
+    dataset_package_approve.add_argument("--confirm-gate-report-sha256", required=True)
+    dataset_package_approve.add_argument("--approved-by", required=True)
+    dataset_package_approve.add_argument(
+        "--approved-at",
+        required=True,
+        help="timezone-aware ISO-8601 owner approval timestamp",
+    )
+    dataset_package_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(dataset_package_approve)
+    dataset_package_approve.set_defaults(handler=_handle_evaluation_dataset_package_approve)
+    dataset_package_download = evaluation_commands.add_parser(
+        "dataset-package-download",
+        help="Stream and atomically publish one exactly approved large package",
+    )
+    dataset_package_download.add_argument("--manifest", type=Path, required=True)
+    dataset_package_download.add_argument("--approval", type=Path, required=True)
+    dataset_package_download.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_package_download.add_argument("--confirm-proposal-sha256", required=True)
+    dataset_package_download.add_argument("--confirm-approval-sha256", required=True)
+    dataset_package_download.add_argument(
+        "--allow-network-download",
+        action="store_true",
+        help="explicitly permit only this hash-bound streaming transaction",
+    )
+    _add_log_level_option(dataset_package_download)
+    dataset_package_download.set_defaults(handler=_handle_evaluation_dataset_package_download)
+    dataset_package_qualify = evaluation_commands.add_parser(
+        "dataset-package-qualify",
+        help="Rehash acquired ZIP files and inspect their central directories without extraction",
+    )
+    dataset_package_qualify.add_argument("--manifest", type=Path, required=True)
+    dataset_package_qualify.add_argument("--approval", type=Path, required=True)
+    dataset_package_qualify.add_argument("--receipt", type=Path, required=True)
+    dataset_package_qualify.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_package_qualify.add_argument("--output", type=Path, default=None)
+    dataset_package_qualify.add_argument(
+        "--require-safe",
+        action="store_true",
+        help="return nonzero unless every receipt byte and ZIP safety gate passes",
+    )
+    _add_log_level_option(dataset_package_qualify)
+    dataset_package_qualify.set_defaults(handler=_handle_evaluation_dataset_package_qualify)
     acquisition_approve = evaluation_commands.add_parser(
         "acquisition-approve",
         help="Bind owner approval to an exact review-ready download request without downloading",
@@ -4007,6 +4063,86 @@ def _handle_evaluation_dataset_package_request(args: argparse.Namespace) -> int:
     if args.require_metadata_review_ready and not report.metadata_review_ready:
         return 1
     if args.require_owner_approval_ready and not report.ready_for_owner_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_dataset_package_approve(args: argparse.Namespace) -> int:
+    inspection = load_dataset_package_request(args.manifest)
+    gate = inspect_dataset_package_request(inspection, workspace_root=args.workspace_root)
+    approval = approve_dataset_package_request(
+        inspection,
+        gate,
+        confirmed_proposal_sha256=args.confirm_proposal_sha256,
+        confirmed_gate_report_sha256=args.confirm_gate_report_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_dataset_package_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "manifest_path": str(inspection.path),
+                "request_file_sha256": inspection.file_sha256,
+                "gate_report_sha256": gate.report_sha256,
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "download_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_dataset_package_download(args: argparse.Namespace) -> int:
+    inspection = load_dataset_package_request(args.manifest)
+    gate = inspect_dataset_package_request(inspection, workspace_root=args.workspace_root)
+    approval_inspection = load_dataset_package_approval(args.approval)
+    receipt = materialize_dataset_package_acquisition(
+        inspection,
+        gate,
+        approval_inspection.approval,
+        workspace_root=args.workspace_root,
+        confirmed_proposal_sha256=args.confirm_proposal_sha256,
+        confirmed_approval_sha256=args.confirm_approval_sha256,
+        allow_network_download=args.allow_network_download,
+    )
+    transaction_root = (
+        args.workspace_root / Path(inspection.request.destination_root).parent
+    ).resolve()
+    print(
+        json.dumps(
+            {
+                "manifest_path": str(inspection.path),
+                "approval_path": str(approval_inspection.path),
+                "approval_file_sha256": approval_inspection.file_sha256,
+                "receipt_path": str(transaction_root / "RECEIPT.json"),
+                **receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_dataset_package_qualify(args: argparse.Namespace) -> int:
+    inspection = load_dataset_package_request(args.manifest)
+    approval = load_dataset_package_approval(args.approval).approval
+    receipt = load_dataset_package_receipt(args.receipt).receipt
+    report = inspect_dataset_package_archives(
+        inspection,
+        approval,
+        receipt,
+        workspace_root=args.workspace_root,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(save_dataset_archive_qualification_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_safe and not report.archive_safety_qualified:
         return 1
     return 0
 

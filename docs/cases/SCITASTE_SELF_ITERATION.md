@@ -689,3 +689,24 @@ host remains owner-reported even though their credentials are present. This
 distinction prevents “a key exists” from being promoted into availability or
 experiment authority. The inspection made no API request, SSH login, GPU
 probe, model load, reservation, or experiment.
+
+## Separating implementation readiness from data authority (2026-09-12)
+
+The exact MLRC inventory exposed a second tempting shortcut: because the real
+package is license-blocked, its downloader could have remained a prose-only
+future task—or a generic downloader could have been treated as sufficient.
+Instead, SciTaste used the blocked request to specify the post-approval control
+path without changing the scientific or legal decision.
+
+The resulting implementation binds approval to exact request/inventory/gate
+hashes, streams rather than buffering multi-gigabyte objects, validates source
+identity on the transfer connection, publishes atomically, and separates byte
+receipt from no-extraction archive qualification. Synthetic ZIP tests exercise
+success and adversarial rollback without contacting a source. The real
+Perception Test and Meta-Album blockers remain unchanged, so no owner approval,
+dataset byte, API call, SSH session, GPU use, or experiment occurred.
+
+This is a self-iteration example of Scientific Taste as boundary selection: the
+useful next action was to remove an implementation risk while preserving the
+rights gate, not to force experimental progress or label software completeness
+as empirical evidence.

@@ -1,0 +1,106 @@
+# Large dataset package acquisition
+
+SciTaste treats large benchmark data as four different states:
+
+1. exact source metadata is reviewable;
+2. the exact proposal is legally and operationally ready for owner approval;
+3. an explicitly approved transfer has produced content hashes atomically;
+4. the downloaded archives have passed no-extraction safety qualification.
+
+None of these states authorizes ingestion, benchmark execution, API calls, GPU
+work, or scientific claims. The current MLRC first-preflight request is only in
+state 1 because both selected tasks still have license blockers.
+
+## Approval boundary
+
+`dataset-package-approve` reruns the no-network package gate and refuses an
+approval unless every integrity and license gate passes. The owner must confirm
+both the proposal hash and the derived gate-report hash. The resulting immutable
+JSON binds:
+
+- the request, inventory, and gate-report hashes;
+- the exact tasks, hosts, destinations, byte count, unpack ceiling, and free-space
+  floor;
+- the approving identity and timezone-aware timestamp;
+- authority for network preflight and download only.
+
+For a future review-ready request:
+
+```bash
+scitaste evaluation dataset-package-approve \
+  --manifest path/to/request.yaml \
+  --workspace-root . \
+  --confirm-proposal-sha256 <proposal-sha256> \
+  --confirm-gate-report-sha256 <gate-report-sha256> \
+  --approved-by <owner> \
+  --approved-at <timezone-aware-iso-8601> \
+  --output path/to/APPROVAL.json
+```
+
+Running this command against
+`configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml` currently
+fails closed. Do not construct an approval manually to bypass the unresolved
+Perception Test and Meta-Album license decisions.
+
+## Streaming transaction
+
+`dataset-package-download` requires the approval artifact, reconfirms the
+proposal and approval hashes, reruns the complete package gate, reloads the
+content-bound inventory, verifies the free-space floor, and requires an explicit
+`--allow-network-download` switch. Its default HTTPS transport:
+
+- accepts only the exact credential-free HTTPS URL and never follows redirects;
+- requests identity encoding and requires HTTP 200;
+- compares Content-Length and Last-Modified on the body-producing connection;
+- compares Google Drive's returned filename or OpenML's ETag as applicable;
+- streams one MiB chunks into exclusive mode-`0600` staging files while hashing;
+- rejects short, long, or aggregate-byte drift;
+- publishes the entire request directory and a self-hashed receipt only after
+  every file succeeds.
+
+Any failure deletes staging. Existing transaction destinations are never
+overwritten. A successful receipt still says `authorizes_extraction=false` and
+`authorizes_execution=false`.
+
+```bash
+scitaste evaluation dataset-package-download \
+  --manifest path/to/request.yaml \
+  --approval path/to/APPROVAL.json \
+  --workspace-root . \
+  --confirm-proposal-sha256 <proposal-sha256> \
+  --confirm-approval-sha256 <approval-sha256> \
+  --allow-network-download
+```
+
+This command is intentionally not a downloader for arbitrary URLs. It can move
+only objects frozen in the approved inventory.
+
+## Archive qualification
+
+After a successful transfer, `dataset-package-qualify` rehashes every local
+file against the receipt and reads ZIP central directories without extracting
+members. It rejects missing or changed files, invalid ZIPs, absolute or
+traversing paths, backslashes and control characters, duplicate normalized
+names, encrypted members, symbolic links, excessive member counts, zero-byte
+compressed members, suspicious compression ratios, and per-task expanded-byte
+ceiling violations.
+
+```bash
+scitaste evaluation dataset-package-qualify \
+  --manifest path/to/request.yaml \
+  --approval path/to/APPROVAL.json \
+  --receipt path/to/RECEIPT.json \
+  --workspace-root . \
+  --output path/to/ARCHIVE_QUALIFICATION.json \
+  --require-safe
+```
+
+A safe report is evidence for a later extraction proposal; it is not extraction
+authority. Extraction, task-layout checks, environment reproduction, baseline
+execution, and formal experiments remain later gates.
+
+## Test boundary
+
+Automated tests use generated tiny ZIP files and an injected streaming
+transport. They never contact Google Drive or OpenML and do not use API keys,
+SSH, GPUs, or the registered Qwen checkpoint.

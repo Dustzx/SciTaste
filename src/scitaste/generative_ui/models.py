@@ -1057,6 +1057,8 @@ class ProjectProgressDatasetPackageItem(BaseModel):
     approval_blocker_codes: tuple[SafeText, ...] = ()
     pending_qualification_codes: tuple[SafeText, ...] = ()
     authorization_blocker_codes: tuple[SafeText, ...] = ()
+    post_approval_streaming_available: Literal[True] = True
+    archive_safety_check_available: Literal[True] = True
     authorizes_network_preflight: Literal[False] = False
     authorizes_download: Literal[False] = False
     authorizes_ingestion: Literal[False] = False
