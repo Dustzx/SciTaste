@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from scitaste.cli import main
 from scitaste.evaluation import (
     CampaignArtifactBinding,
+    CampaignResourceKind,
     CampaignStageState,
     CampaignTrackState,
     ExperimentDecisionDossier,
@@ -41,12 +42,20 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     )
     assert artifacts["taste-corpus-curation-guide"].path.endswith("TASTE_CORPUS_CURATION.md")
     assert mechanism.state is CampaignTrackState.DESIGN_ONLY
-    assert mechanism.model.model_id == "Qwen3-VL-2B-Instruct"
-    assert mechanism.model.device_count == 8
+    assert mechanism.model.kind is CampaignResourceKind.UNSELECTED
+    assert mechanism.model.model_id is None
+    assert mechanism.model.device_count is None
     assert mechanism.data.population_floor == 120
     assert mechanism.matrix.planned_cells is None
-    assert mechanism.matrix.planned_model_calls == 1_440
-    assert mechanism.budget.allocated_gpu_hours == 16.0
+    assert mechanism.matrix.system_ids == (
+        "native-base",
+        "raw-source-rag",
+        "matched-abstracted-taste",
+        "mismatched-taste",
+    )
+    assert mechanism.matrix.planned_model_calls is None
+    assert mechanism.budget.allocated_gpu_hours is None
+    assert mechanism.budget.compute_unallocated is True
     assert native.state is CampaignTrackState.BLOCKED
     assert native.model.model_id == "Qwen3-VL-2B-Instruct"
     assert native.model.checkpoint_sha256.startswith("47f9c0e0")
@@ -144,6 +153,15 @@ def test_dossier_v11_cannot_smuggle_per_system_api_identities() -> None:
         ExperimentDecisionDossier.model_validate(payload)
 
 
+def test_dossier_v12_is_required_for_resource_independent_model_selection() -> None:
+    dossier = load_experiment_decision_dossier(DOSSIER_PATH).dossier
+    payload = dossier.model_dump(mode="json", exclude={"dossier_sha256"})
+    payload["schema_version"] = "1.1"
+
+    with pytest.raises(ValidationError, match=r"v1\.2 is required"):
+        ExperimentDecisionDossier.model_validate(payload)
+
+
 def test_decision_dossier_cli_is_read_only_and_can_save_a_report(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -174,7 +192,8 @@ def test_decision_dossier_cli_is_read_only_and_can_save_a_report(
     assert payload["exact_cell_count"] == 18
     assert payload["report"] == str(output)
     assert saved["artifact_bindings_verified"] is True
-    assert saved["tracks"][0]["model"]["model_id"] == "Qwen3-VL-2B-Instruct"
+    assert saved["tracks"][0]["model"]["kind"] == "unselected"
+    assert saved["tracks"][0]["budget"]["compute_unallocated"] is True
     assert saved["tracks"][1]["matrix"]["planned_cells"] == 12
     assert saved["tracks"][2]["matrix"]["planned_cells"] == 6
     assert len(saved["tracks"][2]["model"]["system_api_models"]) == 3

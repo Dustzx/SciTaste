@@ -1272,6 +1272,7 @@ function renderProjectProgress(data) {
     data.benchmark_qualifications || [],
   );
   const datasetPackages = renderDatasetPackages(data.dataset_packages || []);
+  const reviewIterations = renderReviewIterations(data.review_iterations || []);
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
 
@@ -1578,11 +1579,12 @@ function renderProjectProgress(data) {
     review_research_landscape: t("progress.next.research_landscape"),
     review_data_acquisition: t("progress.next.data_acquisition"),
     review_benchmark_qualification: t("progress.next.benchmark_qualification"),
+    review_iteration: t("progress.next.review_iteration"),
   };
   const lensDefinitions = [
     {
       key: "progress",
-      kinds: ["review_progress", "review_next_gate"],
+      kinds: ["review_iteration", "review_progress", "review_next_gate"],
     },
     {
       key: "experiment",
@@ -1595,7 +1597,7 @@ function renderProjectProgress(data) {
     },
     {
       key: "paper",
-      kinds: ["review_paper_evidence"],
+      kinds: ["review_iteration", "review_paper_evidence"],
     },
     {
       key: "risk",
@@ -1713,8 +1715,154 @@ function renderProjectProgress(data) {
   if ((data.dataset_packages || []).length > 0) {
     container.appendChild(datasetPackages);
   }
+  if ((data.review_iterations || []).length > 0) {
+    container.appendChild(reviewIterations);
+  }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
+}
+
+function renderReviewIterations(items) {
+  const section = progressSection(
+    t("progress.review_iteration.title"),
+    items.length > 0
+      ? t("progress.review_iteration.subtitle", {count: items.length})
+      : t("progress.review_iteration.empty"),
+  );
+  if (items.length === 0) return section;
+
+  const grid = document.createElement("div");
+  grid.className = "review-iteration-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "review-iteration-card";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.review_iteration.review", {id: item.review_id}));
+    const title = document.createElement("strong");
+    appendText(title, item.run_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.execution_approval_required ? "candidate" : "current_work",
+        item.execution_approval_required
+          ? t("progress.review_iteration.approval_required")
+          : t("progress.review_iteration.no_approval_steps"),
+      ),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "review-iteration-facts";
+    for (const [value, key] of [
+      [item.concern_count, "concerns"],
+      [item.step_count, "steps"],
+      [item.next_step_ids.length, "ready"],
+      [item.owner_approval_step_ids.length, "approvals"],
+    ]) {
+      const fact = document.createElement("span");
+      const number = document.createElement("strong");
+      appendText(number, value);
+      const caption = document.createElement("small");
+      appendText(caption, t(`progress.review_iteration.${key}`));
+      fact.append(number, caption);
+      facts.appendChild(fact);
+    }
+
+    const stepById = new Map(item.steps.map((step) => [step.step_id, step]));
+    const lanes = document.createElement("div");
+    lanes.className = "review-iteration-lanes";
+    for (const lane of item.lanes) {
+      const laneCard = document.createElement("details");
+      laneCard.className = `review-iteration-lane lane-${lane.stage}`;
+      laneCard.open = lane.ready_count > 0;
+      const summary = document.createElement("summary");
+      const laneName = document.createElement("strong");
+      appendText(laneName, t(`progress.review_iteration.stage.${lane.stage}`));
+      const laneCount = document.createElement("small");
+      appendText(laneCount, t("progress.review_iteration.lane_meta", {
+        steps: lane.step_ids.length,
+        ready: lane.ready_count,
+        approvals: lane.approval_count,
+      }));
+      summary.append(laneName, laneCount);
+      const laneSteps = document.createElement("div");
+      laneSteps.className = "review-iteration-lane-steps";
+      for (const stepId of lane.step_ids) {
+        const step = stepById.get(stepId);
+        if (!step) continue;
+        const node = document.createElement("article");
+        node.className = `review-iteration-node state-${step.state}`;
+        const nodeTitle = document.createElement("strong");
+        appendText(nodeTitle, readableCode(step.kind));
+        const objective = document.createElement("p");
+        appendText(objective, step.objective);
+        const nodeMeta = document.createElement("small");
+        appendText(nodeMeta, step.requires_owner_approval
+          ? t("progress.review_iteration.node_approval")
+          : step.depends_on.length > 0
+            ? t("progress.review_iteration.node_dependencies", {count: step.depends_on.length})
+            : t("progress.review_iteration.node_ready"));
+        node.append(nodeTitle, objective, nodeMeta);
+        laneSteps.appendChild(node);
+      }
+      laneCard.append(summary, laneSteps);
+      lanes.appendChild(laneCard);
+    }
+
+    const flow = document.createElement("div");
+    flow.className = "review-iteration-flow";
+    for (const edge of item.lane_edges) {
+      const relation = document.createElement("span");
+      appendText(relation, t("progress.review_iteration.edge", {
+        source: t(`progress.review_iteration.stage.${edge.source_stage}`),
+        target: t(`progress.review_iteration.stage.${edge.target_stage}`),
+        count: edge.dependency_count,
+      }));
+      flow.appendChild(relation);
+    }
+
+    const boundary = document.createElement("p");
+    boundary.className = "review-iteration-boundary";
+    appendText(boundary, t("progress.review_iteration.boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button";
+    appendText(open, t("progress.review_iteration.open_plan"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(
+      header,
+      facts,
+      lanes,
+      flow,
+      boundary,
+      open,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          plan_sha256: item.plan_sha256,
+          terminal_step_id: item.terminal_step_id,
+          authorizes_execution: item.authorizes_execution,
+          no_execution_performed: item.no_execution_performed,
+        },
+        names: [
+          "plan_sha256",
+          "terminal_step_id",
+          "authorizes_execution",
+          "no_execution_performed",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
 }
 
 function renderAcquisitionRequests(items) {

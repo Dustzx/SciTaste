@@ -4,14 +4,25 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from scitaste.benchmark import (
     BenchmarkAnnotationRole,
     BenchmarkCondition,
     BenchmarkEvidenceTier,
     CandidateOrder,
+    ContrastDifference,
+    ContrastPrimaryEndpoint,
     CuratedDecisionCase,
     ExpertDecisionAnnotation,
+    MechanismContextBundle,
+    ReferenceDomainRelation,
+    ReferenceRepresentation,
+    ReferenceSourceArtifact,
+    ReferenceTreatmentArm,
+    ReferenceTreatmentContext,
+    RegisteredBenchmarkContrast,
+    RunnerMetricRole,
     SciTasteBenchCurationPackage,
     compile_curated_suite,
     inspect_curation_package,
@@ -91,6 +102,75 @@ def _annotation(
     )
 
 
+def _reference_context(
+    arm: ReferenceTreatmentArm,
+    representation: ReferenceRepresentation,
+    relation: ReferenceDomainRelation,
+    text: str,
+    source_group: str,
+    source_hash: str,
+) -> ReferenceTreatmentContext:
+    return ReferenceTreatmentContext(
+        arm=arm,
+        representation=representation,
+        domain_relation=relation,
+        rendered_context=text,
+        rendered_context_sha256=hashlib.sha256(text.encode()).hexdigest(),
+        sources=(
+            ReferenceSourceArtifact(
+                artifact_id=f"artifact-{source_group}",
+                source_group_id=source_group,
+                source_locator=f"sources/{source_group}.json",
+                source_content_sha256=source_hash,
+            ),
+        ),
+        tokenizer_id="fixture-tokenizer",
+        tokenizer_revision="fixture-revision",
+        tokenizer_artifact_sha256="a" * 64,
+        retrieval_query_sha256="b" * 64,
+        render_template_sha256="c" * 64,
+        construction_receipt_sha256=hashlib.sha256(arm.value.encode()).hexdigest(),
+        context_token_budget=256,
+        observed_token_count=32,
+        truncation_policy="source-balanced",
+        provenance_tier="peer-reviewed",
+        curation_tier="dual-human",
+        outcome_information_availability="withheld",
+    )
+
+
+def _mechanism(case: CuratedDecisionCase) -> MechanismContextBundle:
+    return MechanismContextBundle(
+        bundle_id=f"bundle-{case.case_id}",
+        raw_source_rag=_reference_context(
+            ReferenceTreatmentArm.RAW_SOURCE_RAG,
+            ReferenceRepresentation.RAW_SOURCE,
+            ReferenceDomainRelation.MATCHED,
+            "Evidence excerpt with neutral formatting.",
+            "precedent-paper-001",
+            "3" * 64,
+        ),
+        matched_abstracted_taste=_reference_context(
+            ReferenceTreatmentArm.MATCHED_ABSTRACTED_TASTE,
+            ReferenceRepresentation.ABSTRACTED_TASTE,
+            ReferenceDomainRelation.MATCHED,
+            "Abstracted principle with neutral formatting.",
+            "precedent-paper-001",
+            "3" * 64,
+        ),
+        mismatched_taste=_reference_context(
+            ReferenceTreatmentArm.MISMATCHED_TASTE,
+            ReferenceRepresentation.ABSTRACTED_TASTE,
+            ReferenceDomainRelation.MISMATCHED,
+            "Unrelated principle with neutral formatting.",
+            "precedent-paper-999",
+            "4" * 64,
+        ),
+        held_out_source_group_id=case.source_group_id,
+        held_out_source_content_sha256=case.source_sha256,
+    )
+
+
 def _package(root: Path, *, disagree: bool = False) -> SciTasteBenchCurationPackage:
     rubric_ref, rubric_sha = _artifact(root, "protocol/rubric.md")
     precedent_ref, precedent_sha = _artifact(root, "corpora/taste.json")
@@ -101,7 +181,14 @@ def _package(root: Path, *, disagree: bool = False) -> SciTasteBenchCurationPack
         suite_id="scitastebench-v2-pilot",
         evidence_tier=BenchmarkEvidenceTier.NATURAL_PILOT,
         description="Natural-source pilot for the v2 curation and labeling boundary.",
-        conditions=tuple(BenchmarkCondition),
+        conditions=(
+            BenchmarkCondition.BASE,
+            BenchmarkCondition.KNOWLEDGE_RAG,
+            BenchmarkCondition.TASTE_LIBRARY,
+            BenchmarkCondition.TASTE_CRITICS,
+            BenchmarkCondition.FULL_SCITASTE,
+            BenchmarkCondition.TASTE_PLACEBO,
+        ),
         annotation_rubric_version="scientific-taste-v2",
         annotation_rubric_ref=rubric_ref,
         annotation_rubric_sha256=rubric_sha,
@@ -188,6 +275,99 @@ def test_placebo_and_candidate_order_are_distinct_content_bound_arms(tmp_path: P
     ]
     assert matched.fingerprint != reversed_request.fingerprint
     assert reversed_request.request_id.endswith("::reversed")
+
+
+def test_v3_curation_binds_mechanism_manifest_and_registered_endpoints(
+    tmp_path: Path,
+) -> None:
+    package = _package(tmp_path)
+    treatment_ref, treatment_sha = _artifact(tmp_path, "protocol/mechanism-v3.yaml")
+    case = package.cases[0]
+    mechanism = _mechanism(case)
+    mechanism_conditions = (
+        BenchmarkCondition.RAW_SOURCE_RAG,
+        BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+        BenchmarkCondition.MISMATCHED_TASTE,
+    )
+    contrasts = (
+        RegisteredBenchmarkContrast(
+            contrast_id="h1-abstraction-vs-raw",
+            hypothesis_id="H1",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.RAW_SOURCE_RAG,
+            only_permitted_difference=ContrastDifference.REPRESENTATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+        RegisteredBenchmarkContrast(
+            contrast_id="h2-matched-vs-mismatched",
+            hypothesis_id="H2",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.MISMATCHED_TASTE,
+            only_permitted_difference=ContrastDifference.SOURCE_DOMAIN_RELATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+    )
+    payload = package.model_dump(mode="json")
+    payload.update(
+        {
+            "schema_version": "2.0",
+            "suite_version": "3.0",
+            "conditions": [
+                BenchmarkCondition.BASE.value,
+                *(item.value for item in mechanism_conditions),
+            ],
+            "precedent_corpus_ref": None,
+            "precedent_corpus_sha256": None,
+            "precedent_source_group_ids": [],
+            "reference_treatment_manifest_ref": treatment_ref,
+            "reference_treatment_manifest_sha256": treatment_sha,
+            "registered_contrasts": [item.model_dump(mode="json") for item in contrasts],
+            "cases": [
+                {
+                    **payload["cases"][0],
+                    "knowledge_context": "",
+                    "knowledge_evidence_ids": [],
+                    "taste_principle": "",
+                    "taste_precedent_ids": [],
+                    "taste_precedent_source_group_ids": [],
+                    "placebo_taste_principle": "",
+                    "placebo_precedent_ids": [],
+                    "placebo_precedent_source_group_ids": [],
+                    "critic_feedback": "",
+                    "controller_context": "",
+                    "mechanism_context": mechanism.model_dump(mode="json"),
+                }
+            ],
+        }
+    )
+    v3 = SciTasteBenchCurationPackage.model_validate(payload)
+
+    report = inspect_curation_package(v3, evidence_root=tmp_path)
+    suite = compile_curated_suite(v3, evidence_root=tmp_path)
+
+    assert report.ready_to_compile is True
+    assert suite.version == "3.0"
+    assert suite.reference_treatment_manifest_sha256 == treatment_sha
+    assert suite.cases[0].prompt_version == "scitastebench-v3"
+    assert suite.cases[0].mechanism_context == mechanism
+    assert BenchmarkCondition.FULL_SCITASTE not in suite.conditions
+    assert {item.contrast_id for item in suite.registered_contrasts} == {
+        "h1-abstraction-vs-raw",
+        "h2-matched-vs-mismatched",
+    }
+
+
+def test_v2_curation_cannot_relabel_legacy_contexts_as_mechanism_arms(
+    tmp_path: Path,
+) -> None:
+    package = _package(tmp_path)
+    payload = package.model_dump(mode="json")
+    payload["conditions"].append(BenchmarkCondition.RAW_SOURCE_RAG.value)
+
+    with pytest.raises(ValidationError, match="v2 cannot claim"):
+        SciTasteBenchCurationPackage.model_validate(payload)
 
 
 def test_formal_package_reports_population_and_family_gates_before_compilation(

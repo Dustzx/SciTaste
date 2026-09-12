@@ -33,6 +33,7 @@ class CampaignTrackState(StrEnum):
 
 
 class CampaignResourceKind(StrEnum):
+    UNSELECTED = "unselected"
     API = "api"
     GPU = "gpu"
 
@@ -130,7 +131,7 @@ class CampaignModelResource(BaseModel):
                 system_ids = [item.system_id for item in self.system_api_models]
                 if len(system_ids) != len(set(system_ids)):
                     raise ValueError("per-system API identities must use unique system IDs")
-        elif (
+        elif self.kind is CampaignResourceKind.GPU and (
             not all(gpu_values)
             or self.model_id is None
             or self.model_revision is None
@@ -139,6 +140,12 @@ class CampaignModelResource(BaseModel):
             or self.system_api_models is not None
         ):
             raise ValueError("GPU campaign resources require only checkpoint and device identity")
+        elif self.kind is CampaignResourceKind.UNSELECTED and (
+            any(api_values)
+            or any(value is not None for value in gpu_values)
+            or self.system_api_models is not None
+        ):
+            raise ValueError("unselected campaign resources cannot carry a model identity")
         return self
 
 
@@ -151,13 +158,17 @@ class CampaignBudget(BaseModel):
     allocated_gpu_hours: float | None = Field(default=None, gt=0)
     output_storage_bytes: int = Field(gt=0)
     human_hours: float | None = Field(default=None, gt=0)
+    compute_unallocated: bool = False
 
     @model_validator(mode="after")
     def has_one_compute_budget(self) -> CampaignBudget:
         api = (self.api_requests, self.total_tokens, self.api_cost_usd)
         if any(value is not None for value in api) and not all(value is not None for value in api):
             raise ValueError("API request, token, and cost ceilings must be declared together")
-        if not all(value is not None for value in api) and self.allocated_gpu_hours is None:
+        if self.compute_unallocated:
+            if any(value is not None for value in api) or self.allocated_gpu_hours is not None:
+                raise ValueError("unallocated compute cannot carry API or GPU ceilings")
+        elif not all(value is not None for value in api) and self.allocated_gpu_hours is None:
             raise ValueError("campaign budget requires an API or allocated-GPU ceiling")
         if all(value is not None for value in api) and self.allocated_gpu_hours is not None:
             raise ValueError("API and controlled-GPU compute require separate campaign tracks")
@@ -248,8 +259,14 @@ class ExperimentCampaignTrack(BaseModel):
                 item.system_id for item in self.model.system_api_models
             } != set(self.matrix.system_ids):
                 raise ValueError("per-system API identities must cover the campaign matrix")
-        elif self.budget.allocated_gpu_hours is None:
+        elif (
+            self.model.kind is CampaignResourceKind.GPU and self.budget.allocated_gpu_hours is None
+        ):
             raise ValueError("GPU tracks require allocated-GPU ceilings")
+        elif self.model.kind is CampaignResourceKind.UNSELECTED and (
+            self.state is not CampaignTrackState.DESIGN_ONLY or not self.budget.compute_unallocated
+        ):
+            raise ValueError("unselected models are allowed only in compute-unallocated designs")
         if self.matrix.task_ids and set(self.matrix.task_ids) != set(self.data.item_ids):
             raise ValueError("campaign matrix task IDs must match the data item IDs")
         return self
@@ -295,7 +312,7 @@ class ExperimentDecisionDossier(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     dossier_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     paper_title: str = Field(min_length=1, max_length=1_000)
@@ -316,6 +333,10 @@ class ExperimentDecisionDossier(BaseModel):
             track.model.system_api_models is not None for track in self.tracks
         ):
             raise ValueError("decision dossier v1.1 is required for per-system API identities")
+        if self.schema_version != "1.2" and any(
+            track.model.kind is CampaignResourceKind.UNSELECTED for track in self.tracks
+        ):
+            raise ValueError("decision dossier v1.2 is required for unselected model resources")
         artifact_ids = [item.artifact_id for item in self.artifacts]
         track_ids = [item.track_id for item in self.tracks]
         stage_ids = [item.stage_id for item in self.stages]

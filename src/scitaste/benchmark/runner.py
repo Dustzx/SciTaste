@@ -21,6 +21,8 @@ from scitaste.benchmark.models import (
     CandidateOrder,
     ConditionComparison,
     ConditionReport,
+    RegisteredBenchmarkContrast,
+    RegisteredContrastReport,
     TransferAxis,
 )
 from scitaste.taste.intrinsic import BackendProtocolError, TasteTask
@@ -54,6 +56,16 @@ class SciTasteBenchRunner:
             raise ValueError(f"conditions are not declared by suite: {sorted(unknown)}")
         if BenchmarkCondition.BASE not in selected_conditions:
             raise ValueError("base condition is required for controlled comparisons")
+        selected_set = set(selected_conditions)
+        missing_registered = [
+            item.contrast_id
+            for item in suite.registered_contrasts
+            if item.treatment not in selected_set or item.comparator not in selected_set
+        ]
+        if suite.evidence_tier.value == "formal" and missing_registered:
+            raise ValueError(
+                "formal evaluation omitted registered contrasts: " + ", ".join(missing_registered)
+            )
 
         condition_reports = {
             condition: self._evaluate_condition(suite, condition)
@@ -70,6 +82,16 @@ class SciTasteBenchRunner:
             for condition, report in condition_reports.items()
             if condition != BenchmarkCondition.BASE
         }
+        registered_comparisons = {
+            contrast.contrast_id: _compare_registered(
+                contrast,
+                condition_reports[contrast.comparator],
+                condition_reports[contrast.treatment],
+                suite,
+            )
+            for contrast in suite.registered_contrasts
+            if contrast.comparator in condition_reports and contrast.treatment in condition_reports
+        }
         excluded_headline_case_ids = [
             case.case_id for case in suite.cases if not case.headline_eligible
         ]
@@ -83,6 +105,7 @@ class SciTasteBenchRunner:
             candidate_order=self.candidate_order,
             conditions=condition_reports,
             comparisons_to_base=comparisons,
+            registered_comparisons=registered_comparisons,
             excluded_headline_case_ids=excluded_headline_case_ids,
             unavailable_metrics={
                 "ranking_correlation": (
@@ -318,6 +341,36 @@ def _compare(
         paired_improvements=improvements,
         paired_regressions=regressions,
         paired_unchanged=len(shared) - improvements - regressions,
+    )
+
+
+def _compare_registered(
+    contrast: RegisteredBenchmarkContrast,
+    comparator: ConditionReport,
+    treatment: ConditionReport,
+    suite: BenchmarkSuite,
+) -> RegisteredContrastReport:
+    comparison = _compare(comparator, treatment, suite)
+    return RegisteredContrastReport(
+        contrast_id=contrast.contrast_id,
+        hypothesis_id=contrast.hypothesis_id,
+        treatment=contrast.treatment,
+        comparator=contrast.comparator,
+        only_permitted_difference=contrast.only_permitted_difference,
+        primary_endpoint=contrast.primary_endpoint,
+        runner_metric=contrast.runner_metric,
+        runner_metric_role=contrast.runner_metric_role,
+        confirmatory_endpoint_complete=(contrast.runner_metric_role.value == "primary"),
+        confirmatory_result=(
+            comparison.accuracy_delta if contrast.runner_metric_role.value == "primary" else None
+        ),
+        eligible_case_count=comparison.eligible_case_count,
+        accuracy_delta=comparison.accuracy_delta,
+        expert_agreement_delta=comparison.expert_agreement_delta,
+        wrong_level_rate_delta=comparison.wrong_level_rate_delta,
+        paired_improvements=comparison.paired_improvements,
+        paired_regressions=comparison.paired_regressions,
+        paired_unchanged=comparison.paired_unchanged,
     )
 
 

@@ -8,6 +8,11 @@ import pytest
 from pydantic import ValidationError
 
 from scitaste.cli import main
+from scitaste.generative_ui import (
+    ProjectProgressQuery,
+    TrustedComponent,
+    WorkspaceSurfaceFactory,
+)
 from scitaste.project import PaperManifest, ProjectManifest, ProjectRun, ProjectRuntime
 from scitaste.review import (
     ProjectReviewRoutingBundle,
@@ -18,9 +23,12 @@ from scitaste.review import (
     VenueReviewReport,
     VenueReviewResponse,
     import_venue_review_report,
+    inspect_project_review_iteration,
     inspect_project_review_routing,
+    prepare_project_review_iteration,
     prepare_project_review_routing,
     prepare_venue_review,
+    publish_project_review_iteration,
     publish_project_review_routing,
     route_venue_review_to_state,
     submit_venue_review_response,
@@ -337,6 +345,84 @@ def test_registered_review_routes_to_open_project_obligations(
     registered = next(item for item in published.manifest.runs if item.run_id == bundle.run_id)
     assert registered.status == "complete-review-routed"
     assert registered.model_calls == 0
+
+    assert (
+        main(
+            [
+                "project",
+                "paper",
+                "review",
+                "plan-iteration",
+                "--project-id",
+                "review-project",
+                "--review-id",
+                "routing-round",
+                "--routing-run-id",
+                "review-obligations-v1",
+                "--run-id",
+                "review-iteration-v1",
+                "--source-commit",
+                "a" * 40,
+                "--expected-revision",
+                str(published.revision),
+                "--outputs-root",
+                str(runtime.outputs_root),
+                "--dry-run",
+            ]
+        )
+        == 0
+    )
+    iteration_dry_run = json.loads(capsys.readouterr().out)
+    assert iteration_dry_run["authorizes_execution"] is False
+    assert iteration_dry_run["plan"]["owner_approval_step_ids"] == [
+        "execute-experiment-routing-evidence"
+    ]
+    prepared_iteration = prepare_project_review_iteration(
+        runtime,
+        project_id="review-project",
+        review_id="routing-round",
+        routing_run_ids=("review-obligations-v1",),
+        run_id="review-iteration-v1",
+        source_commit="a" * 40,
+        expected_revision=published.revision,
+    )
+    published, iteration = publish_project_review_iteration(
+        runtime,
+        prepared=prepared_iteration,
+        expected_revision=published.revision,
+    )
+    assert published.revision == snapshot.revision + 4
+    assert iteration.next_step_ids == ("design-experiment-routing-evidence",)
+    assert iteration.authorizes_execution is False
+    assert (
+        inspect_project_review_iteration(runtime, "review-project", "review-iteration-v1")
+        == iteration
+    )
+    planned_run = next(
+        item for item in published.manifest.runs if item.run_id == "review-iteration-v1"
+    )
+    assert planned_run.status == "complete-review-iteration-planned"
+    assert planned_run.model_calls == 0
+    progress = WorkspaceSurfaceFactory(runtime).build(
+        ProjectProgressQuery(project_id="review-project")
+    )
+    progress_board = next(
+        item
+        for item in progress.renderer.components
+        if item.renderer == TrustedComponent.PROJECT_PROGRESS_BOARD
+    )
+    iteration_row = progress_board.data["review_iterations"][0]
+    assert iteration_row["run_id"] == "review-iteration-v1"
+    assert iteration_row["next_step_ids"] == ["design-experiment-routing-evidence"]
+    assert iteration_row["authorizes_execution"] is False
+    assert {item["stage"] for item in iteration_row["lanes"]} == {
+        "evidence",
+        "writing",
+        "review",
+    }
+    assert "review_iteration" in {
+        item["kind"] for item in progress_board.data["next_step_candidates"]
+    }
 
     routed_path = (
         runtime.projects_root

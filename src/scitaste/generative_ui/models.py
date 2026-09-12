@@ -1168,6 +1168,147 @@ class ProjectProgressBenchmarkQualificationItem(BaseModel):
         return self
 
 
+class ProjectProgressReviewIterationStepItem(BaseModel):
+    """One compact node from a project-owned reviewer iteration plan."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    step_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    kind: Literal[
+        "prose_revision",
+        "claim_revision",
+        "evidence_analysis",
+        "experiment_design",
+        "experiment_execution",
+        "method_revision_proposal",
+        "method_validation",
+        "revision_input",
+        "paper_revision",
+        "author_response",
+        "reviewer_verification",
+    ]
+    stage: Literal["research", "evidence", "method", "writing", "review"]
+    objective: SafeText
+    depends_on: tuple[
+        Annotated[str, Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = ()
+    state: Literal[
+        "ready",
+        "blocked_by_dependency",
+        "owner_approval_required",
+        "independent_review_required",
+    ]
+    requires_owner_approval: bool
+    project_interface: SafeText
+
+
+class ProjectProgressReviewIterationLaneItem(BaseModel):
+    """Aggregated lane used to render a large review DAG without a long page."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    stage: Literal["research", "method", "evidence", "writing", "review"]
+    step_ids: tuple[
+        Annotated[str, Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = Field(min_length=1, max_length=1_000)
+    ready_count: int = Field(ge=0)
+    approval_count: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def counts_fit_lane(self) -> ProjectProgressReviewIterationLaneItem:
+        if len(self.step_ids) != len(set(self.step_ids)):
+            raise ValueError("review iteration lane step IDs must be unique")
+        if self.ready_count > len(self.step_ids) or self.approval_count > len(self.step_ids):
+            raise ValueError("review iteration lane counts exceed its step inventory")
+        return self
+
+
+class ProjectProgressReviewIterationEdgeItem(BaseModel):
+    model_config = _DATA_MODEL_CONFIG
+
+    source_stage: Literal["research", "method", "evidence", "writing", "review"]
+    target_stage: Literal["research", "method", "evidence", "writing", "review"]
+    dependency_count: int = Field(gt=0)
+
+
+class ProjectProgressReviewIterationItem(BaseModel):
+    """Condensed, evidence-bound review-to-research workflow for the project home."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    review_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    plan_sha256: Sha256
+    concern_count: int = Field(gt=0)
+    obligation_count: int = Field(gt=0)
+    step_count: int = Field(ge=5)
+    next_step_ids: tuple[
+        Annotated[str, Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = Field(min_length=1, max_length=320)
+    owner_approval_step_ids: tuple[
+        Annotated[str, Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")],
+        ...,
+    ] = Field(max_length=320)
+    terminal_step_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    steps: tuple[ProjectProgressReviewIterationStepItem, ...] = Field(
+        min_length=5, max_length=1_000
+    )
+    lanes: tuple[ProjectProgressReviewIterationLaneItem, ...] = Field(min_length=1, max_length=5)
+    lane_edges: tuple[ProjectProgressReviewIterationEdgeItem, ...] = Field(max_length=25)
+    execution_approval_required: bool
+    authorizes_execution: Literal[False] = False
+    no_execution_performed: Literal[True] = True
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def graph_summary_is_closed(self) -> ProjectProgressReviewIterationItem:
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("review iteration must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("review iteration evidence references must be unique")
+        step_ids = [item.step_id for item in self.steps]
+        if len(step_ids) != self.step_count or len(step_ids) != len(set(step_ids)):
+            raise ValueError("review iteration step count differs from its unique inventory")
+        known: set[str] = set()
+        for item in self.steps:
+            if any(dependency not in known for dependency in item.depends_on):
+                raise ValueError("review iteration UI steps must remain topologically ordered")
+            known.add(item.step_id)
+        roots = tuple(item.step_id for item in self.steps if not item.depends_on)
+        if roots != self.next_step_ids:
+            raise ValueError("review iteration UI roots differ from next steps")
+        approvals = tuple(item.step_id for item in self.steps if item.requires_owner_approval)
+        if approvals != self.owner_approval_step_ids:
+            raise ValueError("review iteration UI approval steps differ")
+        if self.execution_approval_required != bool(approvals):
+            raise ValueError("review iteration UI approval summary differs")
+        if self.terminal_step_id not in known:
+            raise ValueError("review iteration UI terminal step is missing")
+        lane_steps = [step_id for lane in self.lanes for step_id in lane.step_ids]
+        if len(lane_steps) != len(set(lane_steps)) or set(lane_steps) != set(step_ids):
+            raise ValueError("review iteration lanes must partition every step")
+        stage_by_id = {item.step_id: item.stage for item in self.steps}
+        expected_edges: dict[tuple[str, str], int] = {}
+        for item in self.steps:
+            for dependency in item.depends_on:
+                edge = (stage_by_id[dependency], item.stage)
+                if edge[0] != edge[1]:
+                    expected_edges[edge] = expected_edges.get(edge, 0) + 1
+        observed_edges = {
+            (item.source_stage, item.target_stage): item.dependency_count
+            for item in self.lane_edges
+        }
+        if len(observed_edges) != len(self.lane_edges):
+            raise ValueError("review iteration lane edges must be unique")
+        if observed_edges != expected_edges:
+            raise ValueError("review iteration lane edges differ from its dependency graph")
+        return self
+
+
 class ProjectProgressCandidateItem(BaseModel):
     model_config = _DATA_MODEL_CONFIG
 
@@ -1181,6 +1322,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_research_landscape",
         "review_data_acquisition",
         "review_benchmark_qualification",
+        "review_iteration",
     ]
     label_code: SafeIdentifier
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -1334,6 +1476,7 @@ class ProjectProgressBoardData(BaseModel):
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
+    review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
     milestones: tuple[ProjectProgressMilestoneItem, ...] = ()
     attention: tuple[ProjectProgressAttentionItem, ...] = ()
     next_step_candidates: tuple[ProjectProgressCandidateItem, ...] = Field(min_length=1)
@@ -1391,6 +1534,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.acquisition_qualifications,
             *self.dataset_packages,
             *self.benchmark_qualifications,
+            *self.review_iterations,
             *self.milestones,
             *self.attention,
             *self.next_step_candidates,

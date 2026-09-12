@@ -1,4 +1,4 @@
-schema_version: "1.1"
+schema_version: "1.2"
 dossier_id: iclr2027-scitaste-self-development-v1
 project_id: scitaste-self-development
 paper_title: "SciTaste: Improving Autonomous Research through Scientific Taste"
@@ -20,13 +20,16 @@ artifacts:
     sha256: 192a06481ccaf6bb66688ec12bc747d19a7ef63d220832c7c820e8f8c2bbfc24
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 43288679c1e5c06fca7699df305beb34cdaeab1f0754277d0bcd017a607ef662
+    sha256: 4fb6d9bff2e6379cfbc46d364c6161eeeee49fc594752fd500b6fa4fe1a1bce8
+  - artifact_id: iclr-evidence-program
+    path: configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml
+    sha256: 2f69cf433db2cd3030e9c5e7702017695b80c0aff4a1c3ba0200b8b42e50b4cc
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: e7771fa58bab593527d38dc44fceb5d16387712dfb17aae96c6a80ea188f1fa1
+    sha256: 67f30876737fd25ca66dcc670dcb9d77aaa9aa2695eb10d3913adbceec8963c1
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3
@@ -71,32 +74,31 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: cee694712afcd1c3bf89fd16c2a63a9556ac01fd1075b08a9ffe8effc556d89a
+    sha256: 877920da438a63b9b7d8f9768c2966b34b740e7ff2724632adc9f08c95e0646b
 tracks:
   - track_id: scientific-taste-decisions
     role: scientific_taste_mechanism
     state: design_only
     scientific_question: >-
-      Does matched, abstracted scientific Taste improve expert-aligned choices
-      beyond Base, factual Knowledge, critics, and mismatched Taste?
+      Under identical high-quality sources and context budgets, does reviewed
+      Taste abstraction improve scientific decisions beyond same-source raw RAG,
+      and is domain match rather than generic context the causal mechanism?
     primary_endpoint: >-
-      Paired expert-aligned action selection for Full SciTaste versus Base,
-      clustered by source group; calibration and wrong-level decisions are secondary.
+      Condition-blinded independent-expert preference on decision quality and
+      claim calibration for registered H1 and H2 contrasts. Agreement with
+      pre-collected action labels is diagnostic only.
     comparison_design: >-
-      Six-condition within-case mechanism ablation with declared and reversed
-      action order; matched Taste versus source-disjoint mismatched Taste is the
-      negative control.
+      Resource-independent SciTasteBench v3 design: Base plus same-source raw
+      RAG, same-source abstracted Taste, and source-disjoint mismatched Taste.
+      Full SciTaste is optional supporting evidence; legacy component cells are
+      not required by H1 or H2.
     model:
-      kind: gpu
-      usage_scope: Fixed local controller for every decision condition and order arm.
-      model_id: Qwen3-VL-2B-Instruct
-      model_revision: local-tree-47f9c0e0
-      checkpoint_source_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
-      checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
-      device_count: 8
-      device_name: NVIDIA GeForce RTX 3090
+      kind: unselected
+      usage_scope: >-
+        One capable model identity will be frozen across all conditions only
+        after a task-excluded conformance pilot; inventory cannot select it.
     data:
-      dataset_id: scitastebench-v2
+      dataset_id: scitastebench-v3
       role: >-
         At least 120 natural, source-group-disjoint research decisions across
         at least three domains and all six SciTaste decision families.
@@ -108,32 +110,32 @@ tracks:
     matrix:
       system_ids:
         - native-base
-        - native-knowledge
-        - native-taste
-        - native-critics
-        - full-scitaste
-        - mismatched-taste-placebo
+        - raw-source-rag
+        - matched-abstracted-taste
+        - mismatched-taste
       task_ids: []
       seeds: []
       repetitions: 1
       order_arms: 2
       planned_cells: null
-      planned_model_calls: 1440
+      planned_model_calls: null
     budget:
       api_requests: null
       total_tokens: null
       api_cost_usd: null
-      allocated_gpu_hours: 16.0
+      allocated_gpu_hours: null
       output_storage_bytes: 107374182400
       human_hours: null
+      compute_unallocated: true
     claim_allowed: >-
-      After a powered formal split, this track may support a causal claim about
-      expert-aligned scientific decisions under the fixed small-model setting.
+      After a powered formal split and bound blind reviews, this track may support
+      causal H1/H2 claims under one frozen capable-model setting.
     claim_forbidden: >-
       It cannot establish idea-to-paper improvement, frontier-model robustness,
       or an executable-cell count before natural cases and labels are frozen.
     evidence_artifact_ids:
       - iclr-evaluation-contract
+      - iclr-evidence-program
       - dual-estimand-addendum
       - experiment-decision-brief
       - mechanism-source-screen
@@ -145,7 +147,8 @@ tracks:
       - expert-labels:not-collected
       - held-out-split:not-verified
       - exact-cell-plan:not-compilable-before-curation
-      - remote-checkpoint:not-attested
+      - primary-model:not-selected-before-outcomes
+      - blinded-endpoint-reviews:not-collected
 
   - track_id: native-taste-causal-prepilot
     role: native_taste_causal

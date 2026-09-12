@@ -2164,3 +2164,58 @@ Every package and report fixes download, repository checkout, API, GPU, human,
 and execution authorization to false. Owner approval of a child acquisition
 request must occur through that request's separate hash-bound transaction; a
 review package can never act as a launch manifest.
+
+### ADR-071: Title-level Taste evidence uses an explicit three-arm mechanism contract
+
+Status: accepted for offline protocol integration; formal corpus and blind
+reviews remain uncollected.
+
+The historical `knowledge_rag`, `taste_library`, and `taste_placebo` conditions
+do not establish the ICLR H1/H2 estimands. Knowledge RAG does not prove that its
+raw evidence came from the Taste sources, and loose placebo text does not prove
+source disjointness or token parity. Those conditions retain their old meaning
+and hashes.
+
+SciTasteBench v3 introduces `raw_source_rag`,
+`matched_abstracted_taste`, and `mismatched_taste`. Each held-out decision binds
+all three rendered contexts and their source groups, locators, content hashes,
+retrieval-query and rendering-template hashes, frozen tokenizer identity and
+artifact, observed token count, common ceiling and truncation policy, treatment
+construction receipt, evidence tiers, and outcome-information status. Raw and
+matched Taste arms use
+the exact same sources; matched and mismatched arms are fully source-disjoint;
+held-out task sources cannot enter any arm. The request uses a neutral context
+header so the treatment name is not shown to the decision model.
+
+H1 and H2 are directional registered contrasts with representation and
+source-domain relation, respectively, as their only permitted differences. The
+runner emits them by contrast identity instead of treating every effect as a
+Base delta. Agreement with pre-existing expert action labels is retained as a
+diagnostic. It cannot complete a protocol whose primary endpoint is independent
+condition-blinded expert preference over the produced decision and claim
+calibration. Evidence-program alignment therefore reports formal collection
+readiness separately and always leaves confirmatory evidence incomplete until a
+later blind-review artifact is attached. None of these checks authorizes data,
+model, GPU, reviewer, or experiment activity.
+
+### ADR-072: Reviewer feedback compiles into an approval-aware project DAG
+
+Status: accepted for native offline orchestration; real follow-up work and
+independent verification remain unperformed.
+
+Routing concerns into obligations is necessary but insufficient for autonomous
+research iteration: a flat set does not state which concerns need prose, new
+analysis, method change, or experiments, nor when the paper may be revised.
+SciTaste therefore compiles every concern-bearing report in one review round
+through a cumulative content-hash-linked routing chain. The resulting immutable
+plan separates no-run experiment design from owner-approved execution, method
+proposal from validation, and evidence production from obligation closure. All
+branches must close before paper revision; response and original-reviewer
+verification are explicit downstream dependencies.
+
+The plan is a coordination artifact, not evidence of completion. It binds the
+round, reports, routed states, source commit, completion artifact types, and
+project interfaces while retaining `authorizes_execution=false` and
+`scientific_evidence_established=false`. Generation-as-Content may visualize the
+same verified DAG and offer navigation, but it cannot skip dependencies or turn
+an approval marker into an API/GPU/tool authorization.

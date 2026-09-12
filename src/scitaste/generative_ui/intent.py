@@ -660,6 +660,7 @@ _CANDIDATE_GOALS = {
     "review_research_landscape": IntentGoal.RESEARCH_LANDSCAPE_REVIEW,
     "review_data_acquisition": IntentGoal.NEXT_STEP_REVIEW,
     "review_benchmark_qualification": IntentGoal.NEXT_STEP_REVIEW,
+    "review_iteration": IntentGoal.NEXT_STEP_REVIEW,
 }
 
 _QUICK_LABELS = {
@@ -671,6 +672,7 @@ _QUICK_LABELS = {
     "review_research_landscape": "Map how accepted AutoResearch work is evaluated",
     "review_data_acquisition": "Review the current data acquisition decision",
     "review_benchmark_qualification": "Review the executable benchmark qualification",
+    "review_iteration": "Review the reviewer-driven research iteration plan",
 }
 
 _GOAL_TERMS = (

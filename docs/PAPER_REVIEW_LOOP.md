@@ -8,7 +8,10 @@ registered paper revision
 → anonymous venue packet
 → structured reviewer reports
 → research-action obligations
+→ project-owned iteration dependency graph
+→ evidence / method / claim / prose work
 → registered revised paper
+→ typed author response
 → original-reviewer verification
 → internal closure or independent pre-submission closure
 ```
@@ -72,6 +75,43 @@ Review concerns can also be projected through the existing action router. That
 projection creates research obligations for evidence, method, claim, or
 communication work; it does not directly mutate canonical state or close a
 concern with prose alone.
+
+After every concern-bearing report has been routed cumulatively, compile the
+complete reviewer-driven project iteration without starting external work:
+
+```bash
+.venv/bin/scitaste project paper review plan-iteration \
+  --project-id <project-id> --review-id <review-id> \
+  --routing-run-id <first-routing-run> \
+  --routing-run-id <next-routing-run> \
+  --run-id <iteration-plan-run> --source-commit <40-character-commit> \
+  --expected-revision <revision> --outputs-root outputs --dry-run
+```
+
+Routing run order is semantic. Each later input-state hash must equal the prior
+output-state hash, and the chain must cover every concern-bearing report in the
+round. The compiler then creates a topologically ordered graph rather than a
+flat checklist. Text-only concerns route to prose or claim revision; new
+analysis routes to registered evidence; baseline and validity concerns split
+into a no-run experiment-design node and a separately owner-approved execution
+node; method concerns split proposal from validation. Every branch converges on
+obligation proofs, a registered Markdown/TeX/PDF revision, a typed response, and
+original-reviewer verification.
+
+The plan records the exact round, reports, routing bundles, terminal
+`ResearchState`, Git commit, dependencies, completion artifacts, and project
+interfaces. It fixes `authorizes_execution=false` and
+`no_execution_performed=true`; in particular, planning an experiment neither
+selects resources nor grants API, GPU, download, external-system, or human-review
+authority. Removing `--dry-run` only publishes the immutable plan as a project
+run. `iteration-status` rehashes the plan and all upstream review/routing
+bindings.
+
+Generation-as-Content consumes the same registered plan on the project home. It
+renders a horizontally scrollable method/evidence/writing/review dependency
+map, highlights no-run roots and owner-approval gates, and links to the exact run
+artifact. Large rounds remain collapsed within bounded lane panels instead of
+expanding into one long text page.
 
 The additive `evidence-paper-revision` node enforces the same boundary at the
 long-form manuscript layer. It may revise text-only concerns and integrate new

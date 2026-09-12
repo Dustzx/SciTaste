@@ -51,6 +51,11 @@ from scitaste.evaluation.adapter_preflight import (
     inspect_adapter_preflight,
     load_adapter_preflight_manifest,
 )
+from scitaste.evaluation.benchmark_alignment import (
+    EvidenceBenchmarkAlignmentFinding,
+    EvidenceBenchmarkAlignmentReport,
+    align_evidence_program_to_benchmark,
+)
 from scitaste.evaluation.cell_plan import (
     EvaluationCellPlan,
     EvaluationCellResource,
@@ -548,6 +553,8 @@ __all__ = [
     "EvaluationResultSet",
     "EvaluationTask",
     "EvaluationTrack",
+    "EvidenceBenchmarkAlignmentFinding",
+    "EvidenceBenchmarkAlignmentReport",
     "EvidenceHypothesis",
     "EvidenceLayer",
     "EvidenceProgramFinding",
@@ -685,6 +692,7 @@ __all__ = [
     "TasteCorpusRelation",
     "TasteCorpusRetrievalObservation",
     "TasteSourceRecord",
+    "align_evidence_program_to_benchmark",
     "approve_dataset_acquisition_request",
     "approve_dataset_package_request",
     "attribute_failure",

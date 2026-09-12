@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -9,6 +10,18 @@ from scitaste.backends.base import PreferenceResponse
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.benchmark import (
     BenchmarkCondition,
+    BenchmarkEvidenceTier,
+    BenchmarkSuite,
+    ContrastDifference,
+    ContrastPrimaryEndpoint,
+    MechanismContextBundle,
+    ReferenceDomainRelation,
+    ReferenceRepresentation,
+    ReferenceSourceArtifact,
+    ReferenceTreatmentArm,
+    ReferenceTreatmentContext,
+    RegisteredBenchmarkContrast,
+    RunnerMetricRole,
     SciTasteBenchRunner,
     TransferAxis,
     compare_model_boundaries,
@@ -20,6 +33,80 @@ from scitaste.taste.intrinsic import BackendProtocolError, TasteTask
 
 SUITE_PATH = "configs/benchmark/scitastebench_v1.yaml"
 V1_SEMANTIC_SHA256 = "bbf4811a70a8625d8012c3e6cb6c7a0c99e9a7ead570f2504906e33377e291bf"
+
+
+def _treatment_context(
+    arm: ReferenceTreatmentArm,
+    representation: ReferenceRepresentation,
+    relation: ReferenceDomainRelation,
+    text: str,
+    source_group: str,
+    source_hash: str,
+) -> ReferenceTreatmentContext:
+    return ReferenceTreatmentContext(
+        arm=arm,
+        representation=representation,
+        domain_relation=relation,
+        rendered_context=text,
+        rendered_context_sha256=hashlib.sha256(text.encode()).hexdigest(),
+        sources=(
+            ReferenceSourceArtifact(
+                artifact_id=f"artifact-{source_group}",
+                source_group_id=source_group,
+                source_locator=f"sources/{source_group}.json",
+                source_content_sha256=source_hash,
+            ),
+        ),
+        tokenizer_id="fixture-tokenizer",
+        tokenizer_revision="fixture-revision",
+        tokenizer_artifact_sha256="a" * 64,
+        retrieval_query_sha256="b" * 64,
+        render_template_sha256="c" * 64,
+        construction_receipt_sha256=hashlib.sha256(arm.value.encode()).hexdigest(),
+        context_token_budget=256,
+        observed_token_count=32,
+        truncation_policy="source-balanced",
+        provenance_tier="peer-reviewed",
+        curation_tier="dual-human",
+        outcome_information_availability="withheld",
+    )
+
+
+def _mechanism_context(case_id: str) -> MechanismContextBundle:
+    matched_group = f"matched-{case_id}"
+    mismatch_group = f"mismatch-{case_id}"
+    matched_hash = hashlib.sha256(matched_group.encode()).hexdigest()
+    mismatch_hash = hashlib.sha256(mismatch_group.encode()).hexdigest()
+    held_out_hash = hashlib.sha256(f"heldout-{case_id}".encode()).hexdigest()
+    return MechanismContextBundle(
+        bundle_id=f"bundle-{case_id}",
+        raw_source_rag=_treatment_context(
+            ReferenceTreatmentArm.RAW_SOURCE_RAG,
+            ReferenceRepresentation.RAW_SOURCE,
+            ReferenceDomainRelation.MATCHED,
+            "Evidence excerpt with neutral formatting.",
+            matched_group,
+            matched_hash,
+        ),
+        matched_abstracted_taste=_treatment_context(
+            ReferenceTreatmentArm.MATCHED_ABSTRACTED_TASTE,
+            ReferenceRepresentation.ABSTRACTED_TASTE,
+            ReferenceDomainRelation.MATCHED,
+            "Abstracted principle with neutral formatting.",
+            matched_group,
+            matched_hash,
+        ),
+        mismatched_taste=_treatment_context(
+            ReferenceTreatmentArm.MISMATCHED_TASTE,
+            ReferenceRepresentation.ABSTRACTED_TASTE,
+            ReferenceDomainRelation.MISMATCHED,
+            "Unrelated principle with neutral formatting.",
+            mismatch_group,
+            mismatch_hash,
+        ),
+        held_out_source_group_id=f"heldout-{case_id}",
+        held_out_source_content_sha256=held_out_hash,
+    )
 
 
 def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
@@ -48,6 +135,204 @@ def test_suite_covers_six_tasks_and_isolates_condition_context() -> None:
     assert case.knowledge_context not in taste.decision_context
     assert case.critic_feedback in critics.decision_context
     assert case.controller_context not in critics.decision_context
+
+
+def test_mechanism_arms_are_source_bound_token_matched_and_blinded() -> None:
+    case = load_benchmark_suite(SUITE_PATH).cases[0]
+    mechanism = _mechanism_context(case.case_id)
+    case = case.model_copy(
+        update={
+            "source_group_id": mechanism.held_out_source_group_id,
+            "source_sha256": mechanism.held_out_source_content_sha256,
+            "mechanism_context": mechanism,
+        }
+    )
+
+    raw = case.to_request(BenchmarkCondition.RAW_SOURCE_RAG, seed=7)
+    matched = case.to_request(BenchmarkCondition.MATCHED_ABSTRACTED_TASTE, seed=7)
+    mismatched = case.to_request(BenchmarkCondition.MISMATCHED_TASTE, seed=7)
+
+    assert "Reference context:" in raw.decision_context
+    assert "Reference context:" in matched.decision_context
+    assert "Reference context:" in mismatched.decision_context
+    assert "raw source" not in raw.decision_context.casefold()
+    assert "abstracted taste" not in matched.decision_context.casefold()
+    assert raw.fingerprint != matched.fingerprint != mismatched.fingerprint
+    counts = {
+        context.observed_token_count
+        for context in (
+            mechanism.raw_source_rag,
+            mechanism.matched_abstracted_taste,
+            mechanism.mismatched_taste,
+        )
+    }
+    assert counts == {32}
+
+
+def test_mechanism_context_rejects_false_same_source_or_token_parity() -> None:
+    mechanism = _mechanism_context("case-001")
+    mismatched_source = mechanism.matched_abstracted_taste.model_copy(
+        update={
+            "sources": mechanism.mismatched_taste.sources,
+        }
+    )
+    with pytest.raises(ValidationError, match="identical sources"):
+        MechanismContextBundle.model_validate(
+            {
+                **mechanism.model_dump(mode="json"),
+                "matched_abstracted_taste": mismatched_source.model_dump(mode="json"),
+            }
+        )
+
+    mismatched_tokens = mechanism.mismatched_taste.model_copy(update={"observed_token_count": 31})
+    with pytest.raises(ValidationError, match="token"):
+        MechanismContextBundle.model_validate(
+            {
+                **mechanism.model_dump(mode="json"),
+                "mismatched_taste": mismatched_tokens.model_dump(mode="json"),
+            }
+        )
+
+
+def test_runner_emits_registered_h1_h2_comparisons() -> None:
+    original = load_benchmark_suite(SUITE_PATH)
+    mechanism_conditions = [
+        BenchmarkCondition.RAW_SOURCE_RAG,
+        BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+        BenchmarkCondition.MISMATCHED_TASTE,
+    ]
+    cases = []
+    for case in original.cases:
+        mechanism = _mechanism_context(case.case_id)
+        selections = {
+            **case.scripted_selections,
+            BenchmarkCondition.RAW_SOURCE_RAG: case.candidate_actions[1].action_id,
+            BenchmarkCondition.MATCHED_ABSTRACTED_TASTE: case.preferred_action_id,
+            BenchmarkCondition.MISMATCHED_TASTE: case.candidate_actions[1].action_id,
+        }
+        cases.append(
+            case.model_copy(
+                update={
+                    "source_group_id": mechanism.held_out_source_group_id,
+                    "source_sha256": mechanism.held_out_source_content_sha256,
+                    "mechanism_context": mechanism,
+                    "scripted_selections": selections,
+                }
+            )
+        )
+    contrasts = (
+        RegisteredBenchmarkContrast(
+            contrast_id="h1-abstraction-vs-raw",
+            hypothesis_id="H1",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.RAW_SOURCE_RAG,
+            only_permitted_difference=ContrastDifference.REPRESENTATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+        RegisteredBenchmarkContrast(
+            contrast_id="h2-matched-vs-mismatched",
+            hypothesis_id="H2",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.MISMATCHED_TASTE,
+            only_permitted_difference=ContrastDifference.SOURCE_DOMAIN_RELATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+    )
+    suite = original.model_copy(
+        update={
+            "conditions": [*original.conditions, *mechanism_conditions],
+            "registered_contrasts": contrasts,
+            "cases": cases,
+        }
+    )
+    selected = [BenchmarkCondition.BASE, *mechanism_conditions]
+    report = SciTasteBenchRunner(
+        ScriptedPreferenceBackend(scripted_selections(suite, selected)),
+        seed=7,
+    ).evaluate(suite, conditions=selected)
+
+    assert set(report.registered_comparisons) == {
+        "h1-abstraction-vs-raw",
+        "h2-matched-vs-mismatched",
+    }
+    h1 = report.registered_comparisons["h1-abstraction-vs-raw"]
+    assert h1.treatment is BenchmarkCondition.MATCHED_ABSTRACTED_TASTE
+    assert h1.comparator is BenchmarkCondition.RAW_SOURCE_RAG
+    assert h1.accuracy_delta > 0
+    assert h1.runner_metric_role is RunnerMetricRole.DIAGNOSTIC
+    assert h1.confirmatory_endpoint_complete is False
+    assert h1.confirmatory_result is None
+
+
+def test_formal_v3_requires_only_the_powered_mechanism_matrix() -> None:
+    original = load_benchmark_suite(SUITE_PATH)
+    annotation_sha = "c" * 64
+    cases = []
+    for index in range(120):
+        source = original.cases[index % len(original.cases)]
+        case_id = f"formal-v3-{index:03d}"
+        mechanism = _mechanism_context(case_id)
+        cases.append(
+            {
+                **source.model_dump(mode="json"),
+                "case_id": case_id,
+                "domain": f"domain-{index % 3}",
+                "source_group_id": mechanism.held_out_source_group_id,
+                "source_ref": f"sources/{case_id}.json",
+                "source_sha256": mechanism.held_out_source_content_sha256,
+                "primary_label_count": 2,
+                "primary_label_agreement": 1.0,
+                "annotation_manifest_sha256": annotation_sha,
+                "prompt_version": "scitastebench-v3",
+                "mechanism_context": mechanism.model_dump(mode="json"),
+                "scripted_selections": {},
+            }
+        )
+    contrasts = [
+        RegisteredBenchmarkContrast(
+            contrast_id="h1-abstraction-vs-raw",
+            hypothesis_id="H1_taste_abstraction",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.RAW_SOURCE_RAG,
+            only_permitted_difference=ContrastDifference.REPRESENTATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+        RegisteredBenchmarkContrast(
+            contrast_id="h2-matched-vs-mismatched",
+            hypothesis_id="H2_taste_specificity",
+            treatment=BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            comparator=BenchmarkCondition.MISMATCHED_TASTE,
+            only_permitted_difference=ContrastDifference.SOURCE_DOMAIN_RELATION,
+            primary_endpoint=ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE,
+            runner_metric_role=RunnerMetricRole.DIAGNOSTIC,
+        ),
+    ]
+    suite = BenchmarkSuite.model_validate(
+        {
+            "suite_id": "scitastebench-v3-formal-fixture",
+            "version": "3.0",
+            "description": "Formal mechanism matrix without unregistered diagnostic arms.",
+            "evidence_tier": BenchmarkEvidenceTier.FORMAL,
+            "annotation_manifest_sha256": annotation_sha,
+            "reference_treatment_manifest_sha256": "d" * 64,
+            "registered_contrasts": [item.model_dump(mode="json") for item in contrasts],
+            "conditions": [
+                BenchmarkCondition.BASE,
+                BenchmarkCondition.RAW_SOURCE_RAG,
+                BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+                BenchmarkCondition.MISMATCHED_TASTE,
+            ],
+            "cases": cases,
+        }
+    )
+
+    assert suite.evidence_tier is BenchmarkEvidenceTier.FORMAL
+    assert BenchmarkCondition.FULL_SCITASTE not in suite.conditions
+    assert BenchmarkCondition.KNOWLEDGE_RAG not in suite.conditions
+    assert len(suite.cases) == 120
 
 
 def test_suite_hash_canonicalizes_unordered_transfer_axes() -> None:

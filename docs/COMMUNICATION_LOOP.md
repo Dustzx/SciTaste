@@ -13,9 +13,12 @@ Evidence
 → Deterministic and optional semantic Writing Taste review
 → Structured reviewer concerns
 → Research obligations
+→ Review iteration dependency graph
 → Evidence / method / claim / communication action
 → Obligation closure
 → Paper revision
+→ Author response
+→ Original-reviewer verification
 ```
 
 ## Invariants
@@ -70,6 +73,15 @@ opens one obligation per concern but records no new evidence, performs no model
 call, and cannot close the review. Evidence-requiring concerns that omit an
 evidence type receive fail-closed category defaults for comparative
 effectiveness, matched external baselines, or multi-task validity.
+
+`project paper review plan-iteration` joins all concern-bearing reports through
+an ordered cumulative routing chain and materializes the missing coordination
+layer. Its DAG distinguishes safe no-run design/revision work from
+owner-approval-gated experiment or method validation, then makes paper revision
+depend on proof-backed obligation closure and makes response verification depend
+on the exact registered revision. A plan can guide both the controller and the
+generated project interface, but it never supplies execution authority or
+pretends that its planned artifacts already exist.
 
 After execution, `project paper review admit-evaluation-evidence` accepts only
 the project's selected result when the registered assessment is formal,

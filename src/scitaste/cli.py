@@ -70,6 +70,7 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    align_evidence_program_to_benchmark,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     compile_evaluation_cell_plan,
@@ -179,13 +180,16 @@ from scitaste.review import (
     import_venue_review_report,
     import_venue_review_verification,
     inspect_project_evaluation_evidence,
+    inspect_project_review_iteration,
     inspect_project_review_routing,
     inspect_venue_review,
     load_venue_review_packet,
     prepare_project_evaluation_evidence,
+    prepare_project_review_iteration,
     prepare_project_review_routing,
     prepare_venue_review,
     publish_project_evaluation_evidence,
+    publish_project_review_iteration,
     publish_project_review_routing,
     submit_venue_review_response,
 )
@@ -945,6 +949,34 @@ def build_parser() -> argparse.ArgumentParser:
     _add_log_level_option(review_routing_status)
     review_routing_status.set_defaults(handler=_handle_project_paper_review_routing_status)
 
+    review_plan_iteration = project_paper_review_commands.add_parser(
+        "plan-iteration",
+        help="Compile review concerns into a no-run research-to-response dependency graph",
+    )
+    review_plan_iteration.add_argument("--project-id", required=True)
+    review_plan_iteration.add_argument("--review-id", required=True)
+    review_plan_iteration.add_argument(
+        "--routing-run-id",
+        action="append",
+        required=True,
+        help="Ordered review-routing run; repeat once per concern-bearing report",
+    )
+    review_plan_iteration.add_argument("--run-id", required=True)
+    review_plan_iteration.add_argument("--source-commit", required=True)
+    review_plan_iteration.add_argument("--expected-revision", type=int, required=True)
+    _add_project_options(review_plan_iteration)
+    review_plan_iteration.set_defaults(handler=_handle_project_paper_review_plan_iteration)
+
+    review_iteration_status = project_paper_review_commands.add_parser(
+        "iteration-status",
+        help="Rehash one project-owned reviewer-driven iteration plan",
+    )
+    review_iteration_status.add_argument("--project-id", required=True)
+    review_iteration_status.add_argument("--run-id", required=True)
+    review_iteration_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(review_iteration_status)
+    review_iteration_status.set_defaults(handler=_handle_project_paper_review_iteration_status)
+
     review_admit_evidence = project_paper_review_commands.add_parser(
         "admit-evaluation-evidence",
         help="Admit a selected formal result into routed review obligations",
@@ -1302,6 +1334,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(evidence_review)
     evidence_review.set_defaults(handler=_handle_evaluation_evidence_review)
+    benchmark_alignment = evaluation_commands.add_parser(
+        "benchmark-alignment",
+        help="Check exact H1/H2 alignment between an evidence program and SciTasteBench",
+    )
+    benchmark_alignment.add_argument("--program", type=Path, required=True)
+    benchmark_alignment.add_argument("--suite", type=Path, required=True)
+    benchmark_alignment.add_argument(
+        "--require-design-aligned",
+        action="store_true",
+        help="Return non-zero until all mechanism conditions and contrasts align",
+    )
+    benchmark_alignment.add_argument(
+        "--require-confirmatory-collection-ready",
+        action="store_true",
+        help="Return non-zero until an aligned formal population is bound",
+    )
+    _add_log_level_option(benchmark_alignment)
+    benchmark_alignment.set_defaults(handler=_handle_evaluation_benchmark_alignment)
     native_condition_preflight = evaluation_commands.add_parser(
         "native-condition-preflight",
         help="Inspect the Git-pinned native Taste path and corpus parity without execution",
@@ -3092,6 +3142,60 @@ def _handle_project_paper_review_routing_status(args: argparse.Namespace) -> int
     return 0
 
 
+def _handle_project_paper_review_plan_iteration(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    prepared = prepare_project_review_iteration(
+        runtime,
+        project_id=args.project_id,
+        review_id=args.review_id,
+        routing_run_ids=tuple(args.routing_run_id),
+        run_id=args.run_id,
+        source_commit=args.source_commit,
+        expected_revision=args.expected_revision,
+    )
+    if args.dry_run:
+        print(
+            json.dumps(
+                {
+                    "status": "planned",
+                    "project_id": args.project_id,
+                    "current_revision": args.expected_revision,
+                    "expected_published_revision": args.expected_revision + 2,
+                    "plan": prepared.plan.model_dump(mode="json"),
+                    "authorizes_execution": False,
+                    "no_execution_performed": True,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+    snapshot, plan = publish_project_review_iteration(
+        runtime,
+        prepared=prepared,
+        expected_revision=args.expected_revision,
+    )
+    print(
+        json.dumps(
+            {
+                "project": snapshot.model_dump(mode="json"),
+                "review_iteration": plan.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_project_paper_review_iteration_status(args: argparse.Namespace) -> int:
+    plan = inspect_project_review_iteration(
+        ProjectRuntime(args.outputs_root), args.project_id, args.run_id
+    )
+    print(plan.model_dump_json(indent=2))
+    return 0
+
+
 def _handle_project_paper_review_admit_evaluation_evidence(
     args: argparse.Namespace,
 ) -> int:
@@ -4082,6 +4186,10 @@ def _handle_benchmark_run(args: argparse.Namespace) -> int:
                     condition.value: comparison.model_dump(mode="json")
                     for condition, comparison in report.comparisons_to_base.items()
                 },
+                "registered_comparisons": {
+                    contrast_id: comparison.model_dump(mode="json")
+                    for contrast_id, comparison in report.registered_comparisons.items()
+                },
                 "report": manifest["report"],
                 "manifest": manifest["manifest"],
             },
@@ -4230,6 +4338,24 @@ def _handle_evaluation_evidence_review(args: argparse.Namespace) -> int:
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_owner_review_ready and not report.ready_for_owner_review:
+        return 1
+    return 0
+
+
+def _handle_evaluation_benchmark_alignment(args: argparse.Namespace) -> int:
+    program = load_evidence_program(args.program)
+    suite = load_benchmark_suite(args.suite)
+    report = align_evidence_program_to_benchmark(program.program, suite)
+    payload = {
+        "program_path": str(program.path),
+        "program_file_sha256": program.file_sha256,
+        "suite_path": str(Path(args.suite).resolve(strict=True)),
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_design_aligned and not report.mechanism_design_aligned:
+        return 1
+    if args.require_confirmatory_collection_ready and not report.ready_for_confirmatory_collection:
         return 1
     return 0
 

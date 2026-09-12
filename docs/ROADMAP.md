@@ -11,10 +11,12 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 4 — discovery loop | done | adaptive Hypothesis–Probe–Reformulate scenarios pass both integration cases |
 | Phase 5 — evidence loop | done | claims update from evidence; gaps and contradictory-evidence pivots work |
 | Phase 6 — communication loop | done | narrative/contracts/review obligations route to evidence and back to revision |
+| Phase 6.1 — reviewer-driven iteration planner | done | all reports compile through a cumulative routing chain into an approval-aware research-to-verification DAG |
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
 | Phase 8.1 — SciTasteBench v2 | in progress | 120+ source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced local/API results |
+| Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 The native decision path now includes a shared model-backed candidate
@@ -41,6 +43,16 @@ admitted report, deterministic actions, and still-open obligations. It creates
 neither evidence nor closure. Broad paper-level effectiveness, baseline, and
 validity concerns receive distinct required evidence types when the reviewer did
 not name one, so later unrelated evidence cannot close them accidentally.
+
+The missing orchestration layer between routing and evidence is now native.
+Every concern-bearing report in one round must form a cumulative state-hash
+chain before SciTaste can register an iteration DAG. Text and claim revisions,
+analysis, experiment design/execution, method proposal/validation, obligation
+proofs, paper materialization, author response, and original-reviewer
+verification remain distinct dependencies. Experiment and method-validation
+execution nodes require owner approval, while the plan itself is zero-call,
+zero-run, and non-authorizing. The same verified artifact appears as a compact
+horizontal dependency map on the Generation-as-Content project home.
 
 The complementary result-to-state transition is now implemented. It can admit
 only a selected, complete formal result whose preregistered primary comparisons

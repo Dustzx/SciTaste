@@ -7,6 +7,25 @@ semantic versioning.
 
 ### Added
 
+- Reviewer feedback can now compile into a project-owned, self-hashed research
+  iteration DAG spanning prose/claim work, evidence analysis, experiment design
+  and approval-gated execution, method proposal and validation, obligation
+  closure, paper revision, author response, and original-reviewer verification.
+  Multi-report rounds require one cumulative hash-linked routing chain. The
+  Generation-as-Content project home renders the admitted plan as compact
+  horizontal lanes with interactive detail while preserving zero execution
+  authority.
+
+- SciTasteBench now has a backward-compatible v3 mechanism path with explicit
+  same-source raw RAG, same-source abstracted Taste, and source-disjoint
+  mismatched Taste arms. Per-case contracts bind source identity, held-out
+  separation, frozen tokenizer evidence, exact token parity, provenance,
+  curation, and outcome-information status. Registered H1/H2 comparisons are
+  emitted directly; automatic expert-label agreement remains diagnostic when
+  the preregistered endpoint requires a separate condition-blinded human review.
+  An evidence-program alignment command fails closed on legacy-arm relabelling
+  and grants no execution authority.
+
 - An exact ICLR evidence-review package now binds every selected task-source and
   accepted-method proposal without granting external-action authority. Its first
   review covers 20 pinned InnovatorBench configuration files and one EXP-Bench

@@ -126,6 +126,17 @@ paper state, blocked/failed run attention, exact no-run API/GPU proposal
 resources, canonical no-network data-acquisition decisions, and
 evidence-supported next-step candidates.
 
+A registered `review-driven-research-iteration-plan` run adds one compact
+review-iteration map to this home. The receiver independently rehashes the exact
+review round, every report and cumulative routing bundle, the terminal routed
+state, and the plan before admitting it. It aggregates the potentially large DAG
+into horizontal research/method/evidence/writing/review lanes, keeps each lane's
+nodes collapsed with bounded internal scrolling, exposes cross-lane dependency
+counts, and distinguishes immediately available no-run work, dependency-blocked
+work, owner-approval gates, and independent reviewer verification. The plan
+remains inspectable as its exact run artifact and explicitly carries
+`authorizes_execution=false`.
+
 The browser renders this baseline as a layered decision brief rather than a
 serialized field inspector. Its always-visible layer contains one categorical
 status statement followed by four canonical research-room launchers: project
@@ -292,7 +303,8 @@ decisions. They can offer progress review, blocker diagnosis, comparison of the
 latest two registered runs, paper-evidence review, review of a declared next
 gate, a registered acquisition decision or qualification, a registered
 dataset-package review, an executable-benchmark qualification, or a registered
-evaluation landscape only when their required project records exist. They
+evaluation landscape or reviewer-driven iteration only when their required
+project records exist. They
 contain no command or execution authority.
 
 ### Research synthesis as generated visual content

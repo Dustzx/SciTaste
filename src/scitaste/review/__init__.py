@@ -1,6 +1,16 @@
 """Structured reviewer concerns, obligations, routing, and closure."""
 
 from scitaste.review.closure import close_satisfied_obligations
+from scitaste.review.iteration_plan import (
+    PreparedProjectReviewIteration,
+    ProjectReviewIterationPlan,
+    ReviewIterationStep,
+    ReviewIterationWorkKind,
+    compile_review_iteration_plan,
+    inspect_project_review_iteration,
+    prepare_project_review_iteration,
+    publish_project_review_iteration,
+)
 from scitaste.review.obligations import create_obligation
 from scitaste.review.parser import ReviewFeedback, parse_feedback
 from scitaste.review.project_evidence import (
@@ -46,14 +56,18 @@ from scitaste.review.venue import (
 __all__ = [
     "ModelReviewInvocationProvenance",
     "PreparedProjectEvaluationEvidence",
+    "PreparedProjectReviewIteration",
     "PreparedProjectReviewRouting",
     "ProjectEvaluationEvidenceBinding",
     "ProjectEvaluationEvidenceBundle",
+    "ProjectReviewIterationPlan",
     "ProjectReviewRoutingBundle",
     "ReviewActionRouter",
     "ReviewConcernResolution",
     "ReviewConcernVerification",
     "ReviewFeedback",
+    "ReviewIterationStep",
+    "ReviewIterationWorkKind",
     "ReviewRoutingRecord",
     "ReviewerIdentity",
     "VenueCriterionAssessment",
@@ -65,19 +79,23 @@ __all__ = [
     "build_project_evaluation_closure_proofs",
     "build_venue_review_packet",
     "close_satisfied_obligations",
+    "compile_review_iteration_plan",
     "create_obligation",
     "import_venue_review_report",
     "import_venue_review_verification",
     "inspect_project_evaluation_evidence",
+    "inspect_project_review_iteration",
     "inspect_project_review_routing",
     "inspect_venue_review",
     "load_venue_review_packet",
     "load_venue_review_reports",
     "parse_feedback",
     "prepare_project_evaluation_evidence",
+    "prepare_project_review_iteration",
     "prepare_project_review_routing",
     "prepare_venue_review",
     "publish_project_evaluation_evidence",
+    "publish_project_review_iteration",
     "publish_project_review_routing",
     "route_venue_review_to_state",
     "submit_venue_review_response",

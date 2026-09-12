@@ -58,6 +58,25 @@ parity dimensions. A report can be bound by the native condition preflight only
 when `qualified=true`, every parity status is `verified`, and the report's two
 corpus hashes equal the preflight hashes.
 
+## SciTasteBench v3 treatment triplet
+
+Matched/mismatched corpus qualification is necessary for H2, but it does not by
+itself construct H1. SciTasteBench v3 therefore adds a per-decision mechanism
+context containing three blinded renderings:
+
+- raw excerpts and reviewed Taste abstractions from exactly the same sources;
+- reviewed Taste abstractions from source-disjoint mismatched sources; and
+- a frozen-tokenizer receipt represented by tokenizer identity, revision,
+  artifact hash, observed token count, common ceiling, and truncation policy.
+
+The schema rejects same-source drift in H1, any group/hash/locator overlap in
+H2, held-out-source leakage, or unequal source count, token count, provenance,
+curation, and outcome-information status. Retrieval-query, rendering-template,
+and construction-receipt hashes are also bound. A curation package may claim
+these conditions only as schema 2.0 / suite 3.0 and must bind the aggregate
+treatment manifest hash. Historical suite 2.0 packages cannot relabel their
+loose knowledge, Taste-library, or placebo text as this stronger evidence.
+
 ## Claim boundary
 
 A qualified pair proves corpus construction, retrieval parity, and the declared

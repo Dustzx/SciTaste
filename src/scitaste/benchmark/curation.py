@@ -17,6 +17,11 @@ from scitaste.benchmark.models import (
     BenchmarkCondition,
     BenchmarkEvidenceTier,
     BenchmarkSuite,
+    ContrastDifference,
+    ContrastPrimaryEndpoint,
+    MechanismContextBundle,
+    RegisteredBenchmarkContrast,
+    RunnerMetricRole,
     TransferAxis,
 )
 from scitaste.schema.actions import ResearchAction
@@ -65,16 +70,17 @@ class CuratedDecisionCase(BaseModel):
     transfer_axes: frozenset[TransferAxis] = frozenset()
     style_group: str | None = Field(default=None, max_length=200)
     paraphrase_group: str | None = Field(default=None, max_length=200)
-    knowledge_context: str = Field(min_length=1, max_length=20_000)
-    knowledge_evidence_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    taste_principle: str = Field(min_length=1, max_length=10_000)
-    taste_precedent_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    taste_precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    placebo_taste_principle: str = Field(min_length=1, max_length=10_000)
-    placebo_precedent_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    placebo_precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
-    critic_feedback: str = Field(min_length=1, max_length=10_000)
-    controller_context: str = Field(min_length=1, max_length=10_000)
+    knowledge_context: str = Field(default="", max_length=20_000)
+    knowledge_evidence_ids: tuple[str, ...] = Field(default=(), max_length=20)
+    taste_principle: str = Field(default="", max_length=10_000)
+    taste_precedent_ids: tuple[str, ...] = Field(default=(), max_length=20)
+    taste_precedent_source_group_ids: tuple[str, ...] = Field(default=(), max_length=20)
+    placebo_taste_principle: str = Field(default="", max_length=10_000)
+    placebo_precedent_ids: tuple[str, ...] = Field(default=(), max_length=20)
+    placebo_precedent_source_group_ids: tuple[str, ...] = Field(default=(), max_length=20)
+    critic_feedback: str = Field(default="", max_length=10_000)
+    controller_context: str = Field(default="", max_length=10_000)
+    mechanism_context: MechanismContextBundle | None = None
 
     @model_validator(mode="after")
     def candidates_and_precedents_are_closed(self) -> CuratedDecisionCase:
@@ -128,10 +134,10 @@ class SciTasteBenchCurationPackage(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "1.0"
     package_id: str = Field(pattern=_ID)
     suite_id: str = Field(pattern=_ID)
-    suite_version: Literal["2.0"] = "2.0"
+    suite_version: Literal["2.0", "3.0"] = "2.0"
     evidence_tier: Literal[
         BenchmarkEvidenceTier.NATURAL_PILOT,
         BenchmarkEvidenceTier.FORMAL,
@@ -141,9 +147,12 @@ class SciTasteBenchCurationPackage(BaseModel):
     annotation_rubric_version: str = Field(min_length=1, max_length=100)
     annotation_rubric_ref: str = Field(min_length=1, max_length=1_000)
     annotation_rubric_sha256: str = Field(pattern=_SHA256)
-    precedent_corpus_ref: str = Field(min_length=1, max_length=1_000)
-    precedent_corpus_sha256: str = Field(pattern=_SHA256)
-    precedent_source_group_ids: tuple[str, ...] = Field(min_length=1, max_length=10_000)
+    precedent_corpus_ref: str | None = Field(default=None, max_length=1_000)
+    precedent_corpus_sha256: str | None = Field(default=None, pattern=_SHA256)
+    precedent_source_group_ids: tuple[str, ...] = Field(default=(), max_length=10_000)
+    reference_treatment_manifest_ref: str | None = Field(default=None, max_length=1_000)
+    reference_treatment_manifest_sha256: str | None = Field(default=None, pattern=_SHA256)
+    registered_contrasts: tuple[RegisteredBenchmarkContrast, ...] = ()
     cases: tuple[CuratedDecisionCase, ...] = Field(min_length=1, max_length=10_000)
     annotations: tuple[ExpertDecisionAnnotation, ...] = Field(min_length=1, max_length=100_000)
 
@@ -151,10 +160,18 @@ class SciTasteBenchCurationPackage(BaseModel):
     def identities_are_unique_and_referenced(self) -> SciTasteBenchCurationPackage:
         if len(self.conditions) != len(set(self.conditions)):
             raise ValueError("curation conditions must be unique")
-        if not {BenchmarkCondition.BASE, BenchmarkCondition.FULL_SCITASTE}.issubset(
-            self.conditions
-        ):
-            raise ValueError("curation requires Base and Full SciTaste")
+        required = (
+            {
+                BenchmarkCondition.BASE,
+                BenchmarkCondition.RAW_SOURCE_RAG,
+                BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+                BenchmarkCondition.MISMATCHED_TASTE,
+            }
+            if self.suite_version == "3.0"
+            else {BenchmarkCondition.BASE, BenchmarkCondition.FULL_SCITASTE}
+        )
+        if not required.issubset(self.conditions):
+            raise ValueError("curation package lacks its version-required conditions")
         case_ids = [item.case_id for item in self.cases]
         annotation_ids = [item.annotation_id for item in self.annotations]
         if len(case_ids) != len(set(case_ids)):
@@ -178,6 +195,77 @@ class SciTasteBenchCurationPackage(BaseModel):
             for item in self.cases
         ):
             raise ValueError("case precedent source groups must exist in the bound corpus")
+        mechanism_conditions = {
+            BenchmarkCondition.RAW_SOURCE_RAG,
+            BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+            BenchmarkCondition.MISMATCHED_TASTE,
+        }
+        if self.suite_version == "2.0" and mechanism_conditions & set(self.conditions):
+            raise ValueError("SciTasteBench v2 cannot claim v3 mechanism conditions")
+        if self.suite_version == "2.0":
+            if self.precedent_corpus_ref is None or self.precedent_corpus_sha256 is None:
+                raise ValueError("SciTasteBench v2 requires a bound precedent corpus")
+            if not self.precedent_source_group_ids:
+                raise ValueError("SciTasteBench v2 requires precedent source groups")
+            if any(
+                not item.knowledge_context
+                or not item.knowledge_evidence_ids
+                or not item.taste_principle
+                or not item.taste_precedent_ids
+                or not item.taste_precedent_source_group_ids
+                or not item.placebo_taste_principle
+                or not item.placebo_precedent_ids
+                or not item.placebo_precedent_source_group_ids
+                or not item.critic_feedback
+                or not item.controller_context
+                for item in self.cases
+            ):
+                raise ValueError("SciTasteBench v2 requires all legacy condition contexts")
+        if self.suite_version == "3.0":
+            if self.schema_version != "2.0":
+                raise ValueError("SciTasteBench v3 requires curation schema 2.0")
+            if (
+                self.reference_treatment_manifest_ref is None
+                or self.reference_treatment_manifest_sha256 is None
+            ):
+                raise ValueError("SciTasteBench v3 requires a bound treatment manifest")
+            if not mechanism_conditions.issubset(self.conditions):
+                raise ValueError("SciTasteBench v3 requires all mechanism conditions")
+            if any(item.mechanism_context is None for item in self.cases):
+                raise ValueError("SciTasteBench v3 requires a mechanism context per case")
+            if BenchmarkCondition.FULL_SCITASTE in self.conditions and any(
+                not item.knowledge_context
+                or not item.taste_principle
+                or not item.critic_feedback
+                or not item.controller_context
+                for item in self.cases
+            ):
+                raise ValueError("a v3 Full SciTaste arm requires all controller contexts")
+            expected = {
+                (
+                    BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+                    BenchmarkCondition.RAW_SOURCE_RAG,
+                    ContrastDifference.REPRESENTATION,
+                ),
+                (
+                    BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+                    BenchmarkCondition.MISMATCHED_TASTE,
+                    ContrastDifference.SOURCE_DOMAIN_RELATION,
+                ),
+            }
+            observed = {
+                (item.treatment, item.comparator, item.only_permitted_difference)
+                for item in self.registered_contrasts
+            }
+            if not expected.issubset(observed):
+                raise ValueError("SciTasteBench v3 requires exact H1/H2 contrasts")
+            if any(
+                item.primary_endpoint is not ContrastPrimaryEndpoint.BLINDED_EXPERT_PREFERENCE
+                or item.runner_metric_role is not RunnerMetricRole.DIAGNOSTIC
+                for item in self.registered_contrasts
+                if (item.treatment, item.comparator, item.only_permitted_difference) in expected
+            ):
+                raise ValueError("SciTasteBench v3 H1/H2 requires blinded expert endpoints")
         return self
 
     @property
@@ -186,6 +274,15 @@ class SciTasteBenchCurationPackage(BaseModel):
         for case in payload["cases"]:
             observed = set(case["transfer_axes"])
             case["transfer_axes"] = [axis.value for axis in TransferAxis if axis.value in observed]
+        if self.schema_version == "1.0":
+            for field in (
+                "reference_treatment_manifest_ref",
+                "reference_treatment_manifest_sha256",
+                "registered_contrasts",
+            ):
+                payload.pop(field, None)
+            for case in payload["cases"]:
+                case.pop("mechanism_context", None)
         canonical = json.dumps(
             payload,
             ensure_ascii=False,
@@ -249,15 +346,39 @@ def inspect_curation_package(
     evidence_root: str | Path | None,
 ) -> CurationReadinessReport:
     blockers: list[str] = []
-    if not _FORMAL_CONDITIONS.issubset(package.conditions):
+    required_conditions = (
+        frozenset(
+            {
+                BenchmarkCondition.BASE,
+                BenchmarkCondition.RAW_SOURCE_RAG,
+                BenchmarkCondition.MATCHED_ABSTRACTED_TASTE,
+                BenchmarkCondition.MISMATCHED_TASTE,
+            }
+        )
+        if package.suite_version == "3.0"
+        else _FORMAL_CONDITIONS
+    )
+    if not required_conditions.issubset(package.conditions):
         blockers.append("conditions:missing_formal_ablation_or_placebo")
-    for locator, digest, label in (
-        (package.annotation_rubric_ref, package.annotation_rubric_sha256, "rubric"),
-        (package.precedent_corpus_ref, package.precedent_corpus_sha256, "precedent"),
-    ):
+    bindings = [(package.annotation_rubric_ref, package.annotation_rubric_sha256, "rubric")]
+    if package.precedent_corpus_ref is not None and package.precedent_corpus_sha256 is not None:
+        bindings.append(
+            (package.precedent_corpus_ref, package.precedent_corpus_sha256, "precedent")
+        )
+    for locator, digest, label in bindings:
         problem = _bound_artifact_problem(evidence_root, locator, digest)
         if problem is not None:
             blockers.append(f"{label}:{problem}")
+    if package.suite_version == "3.0":
+        assert package.reference_treatment_manifest_ref is not None
+        assert package.reference_treatment_manifest_sha256 is not None
+        problem = _bound_artifact_problem(
+            evidence_root,
+            package.reference_treatment_manifest_ref,
+            package.reference_treatment_manifest_sha256,
+        )
+        if problem is not None:
+            blockers.append(f"reference_treatment:{problem}")
 
     for case in package.cases:
         problem = _bound_artifact_problem(
@@ -379,10 +500,13 @@ def compile_curated_suite(
                 placebo_precedent_source_group_ids=(case.placebo_precedent_source_group_ids),
                 critic_feedback=case.critic_feedback,
                 controller_context=case.controller_context,
+                mechanism_context=case.mechanism_context,
                 primary_label_count=len(primary),
                 primary_label_agreement=top / len(primary),
                 annotation_manifest_sha256=package.sha256,
-                prompt_version="scitastebench-v2",
+                prompt_version=(
+                    "scitastebench-v3" if package.suite_version == "3.0" else "scitastebench-v2"
+                ),
             )
         )
     return BenchmarkSuite(
@@ -393,6 +517,8 @@ def compile_curated_suite(
         annotation_manifest_sha256=package.sha256,
         precedent_corpus_sha256=package.precedent_corpus_sha256,
         precedent_source_group_ids=package.precedent_source_group_ids,
+        reference_treatment_manifest_sha256=(package.reference_treatment_manifest_sha256),
+        registered_contrasts=package.registered_contrasts,
         conditions=list(package.conditions),
         cases=compiled,
     )

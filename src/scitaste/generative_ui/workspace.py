@@ -81,6 +81,7 @@ from scitaste.project.models import (
     validate_entry_id,
     validate_project_id,
 )
+from scitaste.review import inspect_project_review_iteration
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -88,6 +89,20 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+
+_REVIEW_ITERATION_OBJECTIVES = {
+    "prose_revision": "Prepare a bounded prose treatment without adding evidence.",
+    "claim_revision": "Prepare an explicit claim narrowing, correction, or limitation.",
+    "evidence_analysis": "Produce the registered analysis required by the concern.",
+    "experiment_design": "Design the smallest discriminative follow-up experiment.",
+    "experiment_execution": "Execute only an approved experiment and admit its result.",
+    "method_revision_proposal": "Prepare a bounded method-change proposal.",
+    "method_validation": "Validate an admitted method change with approved evidence.",
+    "revision_input": "Compile prose treatments and proof-backed evidence for revision.",
+    "paper_revision": "Materialize the evidence-bounded paper revision.",
+    "author_response": "Bind every concern disposition to the exact revision.",
+    "reviewer_verification": "Obtain verification from the original reviewer.",
+}
 
 
 class WorkspaceView(StrEnum):
@@ -621,6 +636,98 @@ class WorkspaceSurfaceFactory:
             }
         benchmark_qualification_rows = list(benchmark_qualification_by_candidate.values())
 
+        review_iteration_rows: list[dict[str, object]] = []
+        review_stage_order = ("research", "method", "evidence", "writing", "review")
+        for run in snapshot.manifest.runs:
+            if run.condition != "review-driven-research-iteration-plan":
+                continue
+            plan = inspect_project_review_iteration(
+                self._runtime,
+                snapshot.project_id,
+                run.run_id,
+            )
+            run_ref = run_refs[run.run_id]
+            step_rows: list[dict[str, object]] = []
+            stage_steps: dict[str, list[dict[str, object]]] = {
+                stage: [] for stage in review_stage_order
+            }
+            stage_by_step: dict[str, str] = {}
+            for step in plan.steps:
+                if step.kind.value == "reviewer_verification":
+                    state = "independent_review_required"
+                elif step.requires_owner_approval:
+                    state = "owner_approval_required"
+                elif not step.depends_on:
+                    state = "ready"
+                else:
+                    state = "blocked_by_dependency"
+                row = {
+                    "step_id": step.step_id,
+                    "kind": step.kind.value,
+                    "stage": step.stage,
+                    "objective": _REVIEW_ITERATION_OBJECTIVES[step.kind.value],
+                    "depends_on": list(step.depends_on),
+                    "state": state,
+                    "requires_owner_approval": step.requires_owner_approval,
+                    "project_interface": step.project_interface,
+                }
+                step_rows.append(row)
+                stage_steps[step.stage].append(row)
+                stage_by_step[step.step_id] = step.stage
+            lanes = [
+                {
+                    "stage": stage,
+                    "step_ids": [str(item["step_id"]) for item in stage_steps[stage]],
+                    "ready_count": sum(item["state"] == "ready" for item in stage_steps[stage]),
+                    "approval_count": sum(
+                        bool(item["requires_owner_approval"]) for item in stage_steps[stage]
+                    ),
+                }
+                for stage in review_stage_order
+                if stage_steps[stage]
+            ]
+            edge_counts: dict[tuple[str, str], int] = {}
+            for step in plan.steps:
+                for dependency in step.depends_on:
+                    edge = (stage_by_step[dependency], step.stage)
+                    if edge[0] != edge[1]:
+                        edge_counts[edge] = edge_counts.get(edge, 0) + 1
+            lane_edges = [
+                {
+                    "source_stage": source,
+                    "target_stage": target,
+                    "dependency_count": count,
+                }
+                for (source, target), count in sorted(
+                    edge_counts.items(),
+                    key=lambda item: (
+                        review_stage_order.index(item[0][0]),
+                        review_stage_order.index(item[0][1]),
+                    ),
+                )
+            ]
+            review_iteration_rows.append(
+                {
+                    "run_ref_id": run_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "review_id": plan.review_id,
+                    "plan_sha256": plan.plan_sha256,
+                    "concern_count": len(plan.concern_ids),
+                    "obligation_count": len(plan.obligation_ids),
+                    "step_count": len(plan.steps),
+                    "next_step_ids": list(plan.next_step_ids),
+                    "owner_approval_step_ids": list(plan.owner_approval_step_ids),
+                    "terminal_step_id": plan.terminal_step_id,
+                    "steps": step_rows,
+                    "lanes": lanes,
+                    "lane_edges": lane_edges,
+                    "execution_approval_required": plan.execution_approval_required,
+                    "authorizes_execution": plan.authorizes_execution,
+                    "no_execution_performed": plan.no_execution_performed,
+                    "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+                }
+            )
+
         recent_activity = []
         for run in reversed(snapshot.manifest.runs[-10:]):
             run_ref = run_refs[run.run_id]
@@ -867,6 +974,19 @@ class WorkspaceSurfaceFactory:
                     "target_ids": [item["candidate_id"] for item in benchmark_qualification_rows],
                 }
             )
+        if review_iteration_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-iteration-plan",
+                    "kind": "review_iteration",
+                    "label_code": "review-review-driven-iteration-plan",
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        *(item["run_ref_id"] for item in review_iteration_rows),
+                    ],
+                    "target_ids": [item["run_id"] for item in review_iteration_rows],
+                }
+            )
         if attention_rows:
             next_step_candidates.append(
                 {
@@ -1032,6 +1152,7 @@ class WorkspaceSurfaceFactory:
                 "acquisition_qualifications": qualification_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
+                "review_iterations": review_iteration_rows,
                 "milestones": milestone_rows,
                 "attention": attention_rows,
                 "next_step_candidates": next_step_candidates,

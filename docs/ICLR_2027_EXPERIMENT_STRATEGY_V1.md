@@ -100,6 +100,52 @@ Conditions:
 All reference-bearing conditions use matched context budgets. Automated judges
 are diagnostics; expert action preference and calibration are primary.
 
+#### Executable H1/H2 boundary
+
+SciTasteBench v3 names three new conditions rather than reinterpreting historical
+ones: `raw_source_rag`, `matched_abstracted_taste`, and `mismatched_taste`.
+`knowledge_rag`, `taste_library`, and `taste_placebo` remain legacy diagnostic
+arms and cannot be cited as the confirmatory H1/H2 comparisons.
+
+Every v3 decision binds a three-arm mechanism context. The raw and abstracted
+matched arms must have exactly the same source groups, locators, content hashes,
+and source count. The mismatched arm must be disjoint on all three source
+identities. All arms bind the same retrieval-query and rendering-template
+hashes, one tokenizer identity and artifact hash, an observed token count, one
+token ceiling and truncation policy, provenance and curation tiers, and the same
+outcome-information policy. Each rendered treatment also binds its construction
+receipt. Held-out decision sources are forbidden from every reference arm. The
+model sees the neutral label `Reference context`; treatment names remain
+evaluation metadata.
+
+Two directional contrasts are preregistered: H1 compares matched abstraction
+against same-source raw RAG with representation as the only permitted
+difference; H2 compares matched against mismatched abstractions with source-domain
+relation as the only permitted difference. The benchmark runner reports these
+contrasts by ID rather than deriving them from Base deltas.
+
+The v3 mechanism package requires only Base plus these three reference arms.
+Full SciTaste may be added as a supporting condition, but v2 Knowledge-only,
+Critics-only, and legacy-placebo cells are not mandatory. This prevents an old
+software matrix from inflating the powered experiment without answering H1/H2.
+
+Runner accuracy measures agreement with a previously collected expert action
+label. It is a useful diagnostic, but it is not the frozen confirmatory endpoint.
+For H1/H2, the primary endpoint remains condition-blinded independent expert
+preference over the produced decision and claim calibration. Consequently a v3
+runner report leaves the confirmatory result incomplete until a separately
+content-bound blind-review artifact is attached. The local alignment command is:
+
+```bash
+scitaste evaluation benchmark-alignment \
+  --program configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml \
+  --suite <scitastebench-v3.yaml> \
+  --require-design-aligned
+```
+
+This check performs no download, model call, GPU work, human review, or
+experiment, and it grants no execution authority.
+
 ### 2. Native end-to-end causal study
 
 Use independent executable tasks with objective progress signals. The

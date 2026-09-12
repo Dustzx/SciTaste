@@ -7,7 +7,8 @@ that determine whether the result can support a paper claim.
 
 The current ICLR 2027 dossier is
 `configs/evaluation/campaigns/iclr2027_self_development_v1.yaml`. It binds the
-exact paper title, scientific questions, model and checkpoint identities, data
+exact paper title, scientific questions, model-selection state and identities
+where selected, data
 scope, comparison systems, matrix arithmetic, resource ceilings, claim
 boundaries, dependency stages, and source documents. The dossier itself is
 strictly no-run: it cannot authorize downloads, remote-host access, provider
@@ -26,12 +27,15 @@ inspection report. This still performs no external action.
 
 ## Current decision
 
-The local Track A design is intentionally marked `design_only`. It identifies
-Qwen3-VL-2B-Instruct, eight RTX 3090 devices, the six mechanism conditions, a
-120-case natural-data floor, two order arms, 1,440 minimum model decisions, a
-16 allocated-GPU-hour ceiling, and a 100-GiB storage ceiling. It does **not**
-claim an executable cell matrix because the natural cases, human labels,
-source-disjoint split, and remote checkpoint attestation do not yet exist.
+The decision-level Track A design is intentionally marked `design_only`. Schema
+1.2 records its model as `unselected` and its compute budget as unallocated.
+Its minimum mechanism matrix is Base, same-source raw RAG, same-source abstracted
+Taste, and source-disjoint mismatched Taste over a 120-case natural-data floor
+and two action-order arms. It does **not** claim an exact model-call or cell
+count because the natural cases, human labels, source-disjoint split, blinded
+review protocol, model-conformance result, and power analysis do not yet exist.
+The local and remote Qwen checkpoints remain feasibility assets rather than
+scientific design inputs.
 The older Qwen/MLR-Bench objective-progress proposal remains historical. The
 new 12-trajectory Qwen proposal instead names two MLRC objective-task
 candidates, a separate claim contract, and explicit unresolved asset gates.
@@ -70,7 +74,7 @@ but blocks acquisition, experiment, and authorization. The Qwen and provider
 identities below therefore cannot select or revise the experiment design.
 
 That choice is now materialized in schema-1.3 prelaunch proposals and a
-schema-1.1 campaign dossier. Source acquisition, runtime preflight, pilot
+schema-1.2 campaign dossier. Source acquisition, runtime preflight, pilot
 execution, formal scale-out, paper revision, internal model critique, two
 independent expert reviews, and original-reviewer closure remain separate stages
 and require their own exact evidence or approval.
