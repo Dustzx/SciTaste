@@ -1174,3 +1174,34 @@ new compiler reads only the audit report and evidence files, not source bodies,
 and authorizes neither projection nor model, human-recruitment, or experiment
 work. Two focused synthetic checks covered mixed admission/rejection and blocked
 post-audit cherry-picking; no external resource was used.
+
+## Preventing resource-aware benchmark cherry-picking (2026-09-13)
+
+The ICLR evidence program had frozen InnovatorBench and EXP-Bench scientific
+roles before inspecting their task metadata, and the structured auditor could
+prove byte and schema integrity. The next existing abstraction was nevertheless
+an operator-written task-selection manifest. It could validate pins and stated
+licenses, but it could not prove that the list came from the full audited
+population or that inconvenient cases were not removed after checking available
+models, GPUs, or expected performance.
+
+SciTaste now inserts a complete-population projection before screening. A
+no-read plan binds the approved request, receipt, structural audit, original
+scope bytes, every required semantic field, its observed YAML path or CSV
+column, explicit whole-source missingness declarations, the projector
+implementation, and output ceilings. An observed mapping must occur somewhere
+in the audited population; source-wide absence is declared rather than
+fabricated, and per-record absence is retained as missingness rather than used
+to drop a task. A separate exact approval and runtime switch are required before
+reopening source bytes.
+
+Materialization rehashes the full acquired inventory and emits one record per
+InnovatorBench configuration or EXP-Bench CSV row. It cannot omit a record,
+evaluate spreadsheet-like text, follow a URL, select a task, or consult formal
+outcomes, model inventory, or compute inventory. The resulting population only
+opens a later source-overlap, license, signal, environment, reproducibility, and
+safety screen. Four focused synthetic checks exercised YAML and CSV population
+preservation, inert formula-like values, missing-field rejection, and
+implementation drift. They also preserve an explicitly missing required field
+and expose its aggregate count. The real 21 downloaded files remained unopened;
+no API, GPU, external network, model, human, or experiment action occurred.

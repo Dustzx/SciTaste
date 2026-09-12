@@ -377,7 +377,13 @@ bounded owner-approved acquisition of 20 pinned InnovatorBench task configs and
 one pinned EXP-Bench metadata table completed below the 8 MiB ceiling, with
 receipts retained beside the project; the acquired content has not been read.
 The next gate is approval for the two precomputed, no-extraction metadata audit
-plans. The evidence program still reports the remaining experiment gates.
+plans. The audit-to-screen bridge is now executable: after a passing audit it
+can project the complete source population through only scope-required,
+structurally observed fields or explicit field-gap records while mechanically
+excluding formal outcomes, model inventory, compute inventory, task selection,
+link resolution, and execution. No real projection exists because content-read
+approval remains open. The evidence program still reports the remaining
+experiment gates.
 Agent Laboratory and DeepScientist remain implementation-blocked; AI-Researcher
 is additionally code-use-blocked by the absent repository license. Resource
 discovery may continue broadly, but neither Qwen3.5 examples nor any other

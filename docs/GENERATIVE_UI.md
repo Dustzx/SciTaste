@@ -201,6 +201,18 @@ distinguishes bytes already acquired from content still unopened. Navigation to
 the frozen evidence is not approval, and the bundle cannot inspect content,
 project fields, ingest data, follow links, call a model, or start an experiment.
 
+After an independently approved projection, a registered
+`runs/<run-id>/benchmark_metadata_projection/POPULATION.json` supersedes the
+corresponding audit-plan card. The receiver replays its plan, approval, scope,
+request, receipt, and audit hashes without reopening raw metadata. The compact
+population card shows only the complete record count, format, screen-field
+count, retained source-field-gap count, and next scientific decision; projected
+field values remain in the inspectable artifact rather than expanding the
+project home. It explicitly states that no task was selected and that formal
+outcomes, installed models, and compute inventory were not consulted. The next
+action can review a frozen screening proposal but cannot silently convert the
+population into an experiment-ready subset.
+
 A post-download qualification appears only through the separately registered
 `runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
 rechecks the report's embedded semantic hash, exact task and byte arithmetic,

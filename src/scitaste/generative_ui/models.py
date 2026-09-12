@@ -622,6 +622,7 @@ class ProjectProgressCounts(BaseModel):
     acquisition_requests: int = Field(default=0, ge=0)
     acquisition_receipts: int = Field(default=0, ge=0)
     metadata_audit_plans: int = Field(default=0, ge=0)
+    benchmark_metadata_populations: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1103,6 +1104,56 @@ class ProjectProgressMetadataAuditPlanItem(BaseModel):
         return self
 
 
+class ProjectProgressBenchmarkMetadataPopulationItem(BaseModel):
+    """One complete, result/model/compute-blind population before task screening."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_id: SafeIdentifier
+    scope_id: SafeIdentifier
+    population_file_sha256: Sha256
+    population_sha256: Sha256
+    plan_sha256: Sha256
+    approval_sha256: Sha256
+    audit_report_sha256: Sha256
+    projection_implementation_current: bool
+    media_type: Literal["application/x-yaml", "text/csv"]
+    record_unit: Literal["one-record-per-acquired-item", "one-record-per-csv-row"]
+    record_count: int = Field(gt=0)
+    required_screen_fields: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=50)
+    missing_source_field_observation_count: int = Field(ge=0)
+    complete_population_projected: Literal[True]
+    ready_for_screen_decision_proposal: Literal[True]
+    selection_performed: Literal[False]
+    formal_outcomes_consulted: Literal[False]
+    model_inventory_consulted: Literal[False]
+    compute_inventory_consulted: Literal[False]
+    source_content_read: Literal[True]
+    network_access_performed: Literal[False]
+    linked_assets_resolved: Literal[False]
+    ingestion_performed: Literal[False]
+    model_calls_performed: Literal[False]
+    gpu_work_performed: Literal[False]
+    experiment_performed: Literal[False]
+    authorizes_task_selection: Literal[False]
+    authorizes_ingestion: Literal[False]
+    authorizes_execution: Literal[False]
+    next_gate: Literal["review_complete_population_and_freeze_screen_decisions"]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def population_state_is_closed(self) -> ProjectProgressBenchmarkMetadataPopulationItem:
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("benchmark metadata population must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("benchmark metadata population evidence references must be unique")
+        if tuple(sorted(set(self.required_screen_fields))) != self.required_screen_fields:
+            raise ValueError("benchmark metadata population fields must be sorted and unique")
+        return self
+
+
 class ProjectProgressDatasetPackageTaskItem(BaseModel):
     """One task-level large-asset acquisition qualification."""
 
@@ -1543,6 +1594,7 @@ class ProjectProgressCandidateItem(BaseModel):
         "review_research_landscape",
         "review_data_acquisition",
         "approve_metadata_audit",
+        "review_metadata_population",
         "review_benchmark_qualification",
         "review_iteration",
     ]
@@ -1698,6 +1750,7 @@ class ProjectProgressBoardData(BaseModel):
     acquisition_receipts: tuple[ProjectProgressAcquisitionReceiptItem, ...] = ()
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
     metadata_audit_plans: tuple[ProjectProgressMetadataAuditPlanItem, ...] = ()
+    benchmark_metadata_populations: tuple[ProjectProgressBenchmarkMetadataPopulationItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -1758,6 +1811,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.acquisition_receipts,
             *self.acquisition_qualifications,
             *self.metadata_audit_plans,
+            *self.benchmark_metadata_populations,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -1799,6 +1853,12 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress metadata audit request IDs must be unique")
         if self.counts.metadata_audit_plans != len(self.metadata_audit_plans):
             raise ValueError("project progress metadata audit count must match its rows")
+
+        population_ids = [item.scope_id for item in self.benchmark_metadata_populations]
+        if len(population_ids) != len(set(population_ids)):
+            raise ValueError("project progress benchmark metadata scope IDs must be unique")
+        if self.counts.benchmark_metadata_populations != len(self.benchmark_metadata_populations):
+            raise ValueError("project progress benchmark metadata count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

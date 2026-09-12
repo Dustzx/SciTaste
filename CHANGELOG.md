@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the executable audit-to-screen bridge for benchmark metadata. A no-read
+  plan binds the exact approved request, receipt, passing structure audit,
+  pre-inspection scientific scope, exact source revisions and upstream paths,
+  observed field allowlist, implementation, and output limits. Approved
+  materialization retains the complete YAML-item or CSV-row population,
+  preserves source-wide and per-record field gaps instead of dropping cases,
+  treats formula-like values as inert data, and records that outcomes, models,
+  and compute were not consulted; it cannot select tasks or authorize downstream
+  execution.
+
 - Corrected the current DeepSeek resource generation against the live official
   model table: catalog v5 and identity protocol v2 bind `deepseek-flash` /
   `DeepSeek-V4.1-Flash` and current peak pricing while retaining v4 as immutable

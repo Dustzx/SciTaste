@@ -132,6 +132,57 @@ performs bounded YAML/CSV structural checks only. The report may enable a later
 metadata-screen proposal; it cannot project task values, resolve URLs, ingest a
 dataset, execute code, or start an experiment.
 
+When that report passes, SciTaste still does not jump to a hand-written task
+list. A second no-read plan binds the frozen scientific scope, the complete
+audit population, and an allowlist mapping every required screen field to an
+observed YAML path or CSV column:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-projection-plan \
+  --approved-request '<approved request>' --receipt '<receipt>' \
+  --audit-report '<structural audit report>' --scope '<frozen metadata scope>' \
+  --workspace-root . --projection-output-root '<new relative output root>' \
+  --field 'source-paper-group=<observed path or column>' \
+  --field 'benchmark-category=<observed path or column>' \
+  --absent-field '<required concept absent from the audited source>' \
+  --output '<new projection plan>'
+```
+
+An observed mapping must occur somewhere in the audited YAML population (or in
+each audited CSV header) and terminate at scalar fields. Evidence absent from
+the entire source must be declared explicitly with `--absent-field`; this is an
+owner-visible missingness declaration, not a fabricated mapping. If an observed
+YAML path is absent from an individual record, projection retains that record
+and marks the field missing. The plan also requires every source URL, pinned
+revision, and upstream task path—or the single CSV table identity—to match the
+pre-inspection scope exactly; equal file counts cannot substitute a different
+population. The command consults neither projected values,
+formal outcomes, installed models, nor compute inventory, and it cannot select
+a task. The plan fixes the exact source-byte total and refuses metadata
+populations above 64 MiB. Projection requires a separate exact approval and
+explicit read switch:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-projection-approve \
+  --plan '<projection plan>' --confirm-plan-sha256 '<exact plan hash>' \
+  --approved-by '<owner>' --approved-at '<timezone-aware ISO-8601>' \
+  --output '<new projection approval>'
+
+.venv/bin/scitaste evaluation benchmark-metadata-project \
+  --approved-request '<approved request>' --receipt '<receipt>' \
+  --audit-report '<structural audit report>' --scope '<frozen metadata scope>' \
+  --plan '<projection plan>' --approval '<projection approval>' \
+  --workspace-root . --projected-at '<timezone-aware ISO-8601>' \
+  --output '<planned output root>/POPULATION.json' \
+  --allow-local-content-read
+```
+
+Materialization rehashes every source file and reproduces the complete audited
+population through only those fields. It follows no locator and preserves CSV
+formula-like cells as inert text. The population is ready only for a subsequent
+screen-decision proposal; it grants no selection, asset acquisition, ingestion,
+model, GPU, or experiment authority.
+
 ## Admitted source projection
 
 For JSON scientific sources, passing content audit and human-governed source

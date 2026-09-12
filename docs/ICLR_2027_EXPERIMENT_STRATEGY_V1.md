@@ -315,6 +315,15 @@ inspection. The next external decision is therefore whether SciTaste may read
 those 21 acquired files under the already generated, no-extraction audit plans
 to recover task fields and source-paper groups for subset design.
 
+The post-audit implementation is now fixed before that decision. A passing
+structural report can bind observed fields from the corresponding frozen scope
+or preserve an explicitly declared source-field gap; it cannot invent missing
+evidence. Materialization must retain the complete 20-task or 461-row population
+and record that formal outcomes, installed models, and compute inventory were
+not consulted. It still cannot select a subset. This prevents the future task
+manifest from being reconstructed as an unexplained hand-written list after
+resource or performance information is visible.
+
 That decision still does not include the 69.7-GB InnovatorBench archive, task
 workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
 GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an

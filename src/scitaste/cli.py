@@ -11,7 +11,7 @@ import re
 import shutil
 import tempfile
 from datetime import date, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -71,11 +71,13 @@ from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_c
 from scitaste.evaluation import (
     EvaluationCriticSuite,
     EvaluationResultSet,
+    MetadataFieldBinding,
     OutcomeInformationAvailability,
     ProjectionSemanticRole,
     SourceProjectionField,
     align_evidence_program_to_benchmark,
     analyze_human_preferences,
+    approve_benchmark_metadata_projection,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     approve_json_content_audit,
@@ -110,6 +112,9 @@ from scitaste.evaluation import (
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_benchmark_metadata_projection_approval,
+    load_benchmark_metadata_projection_plan,
+    load_benchmark_metadata_scope,
     load_clustered_power_request,
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
@@ -137,6 +142,7 @@ from scitaste.evaluation import (
     load_source_projection_plan,
     load_structured_metadata_audit_approval,
     load_structured_metadata_audit_plan,
+    load_structured_metadata_audit_report,
     load_task_package_manifest,
     load_task_selection_manifest,
     load_taste_corpus_curation_package,
@@ -146,15 +152,20 @@ from scitaste.evaluation import (
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
+    plan_benchmark_metadata_projection,
     plan_clustered_power,
     plan_structured_metadata_audit,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
+    project_benchmark_metadata_population,
     publish_project_evaluation,
     publish_project_evaluation_result,
     run_live_direct_agent,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
+    save_benchmark_metadata_population,
+    save_benchmark_metadata_projection_approval,
+    save_benchmark_metadata_projection_plan,
     save_clustered_power_report,
     save_completed_objective_result_set,
     save_dataset_acquisition_request,
@@ -1939,6 +1950,70 @@ def build_parser() -> argparse.ArgumentParser:
     metadata_audit.add_argument("--require-metadata-screen-ready", action="store_true")
     _add_log_level_option(metadata_audit)
     metadata_audit.set_defaults(handler=_handle_evaluation_metadata_audit)
+    metadata_projection_plan = evaluation_commands.add_parser(
+        "benchmark-metadata-projection-plan",
+        help="Bind complete audited benchmark metadata to result/model/compute-blind fields",
+    )
+    metadata_projection_plan.add_argument("--approved-request", type=Path, required=True)
+    metadata_projection_plan.add_argument("--receipt", type=Path, required=True)
+    metadata_projection_plan.add_argument("--audit-report", type=Path, required=True)
+    metadata_projection_plan.add_argument("--scope", type=Path, required=True)
+    metadata_projection_plan.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_projection_plan.add_argument("--projection-output-root", required=True)
+    metadata_projection_plan.add_argument(
+        "--field",
+        action="append",
+        default=[],
+        metavar="SEMANTIC_FIELD=SOURCE_FIELD",
+        help="repeat a semantic field to declare alternative observed paths or columns",
+    )
+    metadata_projection_plan.add_argument(
+        "--absent-field",
+        action="append",
+        default=[],
+        metavar="SEMANTIC_FIELD",
+        help="declare required evidence absent from the entire audited source population",
+    )
+    metadata_projection_plan.add_argument(
+        "--maximum-projected-value-bytes", type=int, default=65_536
+    )
+    metadata_projection_plan.add_argument(
+        "--maximum-projection-bytes", type=int, default=32 * 1_048_576
+    )
+    metadata_projection_plan.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(metadata_projection_plan)
+    metadata_projection_plan.set_defaults(
+        handler=_handle_evaluation_benchmark_metadata_projection_plan
+    )
+    metadata_projection_approve = evaluation_commands.add_parser(
+        "benchmark-metadata-projection-approve",
+        help="Authorize only one exact complete-population metadata projection",
+    )
+    metadata_projection_approve.add_argument("--plan", type=Path, required=True)
+    metadata_projection_approve.add_argument("--confirm-plan-sha256", required=True)
+    metadata_projection_approve.add_argument("--approved-by", required=True)
+    metadata_projection_approve.add_argument("--approved-at", required=True)
+    metadata_projection_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(metadata_projection_approve)
+    metadata_projection_approve.set_defaults(
+        handler=_handle_evaluation_benchmark_metadata_projection_approve
+    )
+    metadata_projection = evaluation_commands.add_parser(
+        "benchmark-metadata-project",
+        help="Project every audited record through exact approved fields without selecting tasks",
+    )
+    metadata_projection.add_argument("--approved-request", type=Path, required=True)
+    metadata_projection.add_argument("--receipt", type=Path, required=True)
+    metadata_projection.add_argument("--audit-report", type=Path, required=True)
+    metadata_projection.add_argument("--scope", type=Path, required=True)
+    metadata_projection.add_argument("--plan", type=Path, required=True)
+    metadata_projection.add_argument("--approval", type=Path, required=True)
+    metadata_projection.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_projection.add_argument("--projected-at", required=True)
+    metadata_projection.add_argument("--output", type=Path, required=True)
+    metadata_projection.add_argument("--allow-local-content-read", action="store_true")
+    _add_log_level_option(metadata_projection)
+    metadata_projection.set_defaults(handler=_handle_evaluation_benchmark_metadata_project)
     source_admission = evaluation_commands.add_parser(
         "source-admission",
         help="Compile audited sources through rights, quality, and isolation gates",
@@ -5665,6 +5740,126 @@ def _handle_evaluation_metadata_audit(args: argparse.Namespace) -> int:
     )
     if args.require_metadata_screen_ready and not report.ready_for_metadata_screen_proposal:
         return 1
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_projection_plan(args: argparse.Namespace) -> int:
+    if not args.field and not args.absent_field:
+        raise ValueError("benchmark metadata projection requires --field or --absent-field")
+    source_fields: dict[str, list[str]] = {}
+    for raw in args.field:
+        try:
+            semantic_field, source_field = raw.split("=", 1)
+        except ValueError as exc:
+            raise ValueError(
+                "benchmark metadata field must use SEMANTIC_FIELD=SOURCE_FIELD"
+            ) from exc
+        if not semantic_field or not source_field:
+            raise ValueError("benchmark metadata field names cannot be empty")
+        source_fields.setdefault(semantic_field, []).append(source_field)
+    bindings = tuple(
+        sorted(
+            (
+                *(
+                    MetadataFieldBinding(
+                        semantic_field=semantic_field,
+                        source_fields=tuple(sorted(fields)),
+                    )
+                    for semantic_field, fields in source_fields.items()
+                ),
+                *(
+                    MetadataFieldBinding(
+                        semantic_field=semantic_field,
+                        availability="absent-from-audited-source",
+                    )
+                    for semantic_field in args.absent_field
+                ),
+            ),
+            key=lambda item: item.semantic_field,
+        )
+    )
+    plan = plan_benchmark_metadata_projection(
+        load_dataset_acquisition_request(args.approved_request),
+        load_dataset_acquisition_receipt(args.receipt),
+        load_structured_metadata_audit_report(args.audit_report),
+        load_benchmark_metadata_scope(args.scope),
+        workspace_root=args.workspace_root,
+        field_bindings=bindings,
+        projection_output_root=args.projection_output_root,
+        maximum_projected_value_bytes=args.maximum_projected_value_bytes,
+        maximum_projection_bytes=args.maximum_projection_bytes,
+    )
+    output = save_benchmark_metadata_projection_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "plan_path": str(output),
+                **plan.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_projection_approve(
+    args: argparse.Namespace,
+) -> int:
+    plan = load_benchmark_metadata_projection_plan(args.plan)
+    approval = approve_benchmark_metadata_projection(
+        plan,
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_benchmark_metadata_projection_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "content_access_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_project(args: argparse.Namespace) -> int:
+    plan = load_benchmark_metadata_projection_plan(args.plan)
+    root = args.workspace_root.resolve(strict=True)
+    expected_output = root.joinpath(
+        *PurePosixPath(plan.plan.projection_output_root).parts,
+        "POPULATION.json",
+    )
+    if args.output.resolve(strict=False) != expected_output:
+        raise ValueError("benchmark metadata output differs from the planned locator")
+    population = project_benchmark_metadata_population(
+        load_dataset_acquisition_request(args.approved_request),
+        load_dataset_acquisition_receipt(args.receipt),
+        load_structured_metadata_audit_report(args.audit_report),
+        load_benchmark_metadata_scope(args.scope),
+        plan,
+        load_benchmark_metadata_projection_approval(args.approval),
+        workspace_root=root,
+        allow_local_content_read=args.allow_local_content_read,
+        projected_at=datetime.fromisoformat(args.projected_at),
+    )
+    output = save_benchmark_metadata_population(population, expected_output)
+    print(
+        json.dumps(
+            {
+                "population_path": str(output),
+                **population.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

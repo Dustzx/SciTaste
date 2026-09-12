@@ -2452,9 +2452,29 @@ paths first rehash the complete acquired inventory and emit only schema paths,
 headers, counts, and safety facts—not task text or projected values.
 
 Passing this audit means that a separate, source-specific metadata-screen
-proposal may be written. It does not choose tasks, resolve repositories,
-download runtime assets, ingest data, call a model, allocate compute, or establish
-an experimental result.
+proposal may be written. SciTaste first binds every required screen concept to
+paths or columns observed by the audit, while the source values remain closed.
+A same-sized replacement population is insufficient: every request source URL,
+pinned revision, and upstream task path (or the single CSV table identity) must
+exactly replay the pre-inspection scope.
+A concept with no source mapping must instead be declared as absent and remain
+an explicit later-screen blocker; a path missing from one YAML record is kept as
+record-level missingness. The approved projector then rehashes the same source
+inventory and emits every record through only those fields. It reports the
+aggregate missing-source-field count, binds the exact audited byte total, and
+refuses a source population above 64 MiB. It cannot drop a record, inspect
+formal outcomes, consult installed models or compute, evaluate formula-like CSV
+cells, or follow a locator. This complete-population artifact is the input to a
+later source-overlap, license, signal, environment, reproducibility, and safety
+screen—not a selected subset.
+
+This closes an otherwise consequential provenance gap in the older
+`task_selection` contract: a structurally valid hand-written task list could not
+prove that inconvenient tasks had not been removed after observing available
+resources or expected performance. Projection approval remains distinct from
+structural-read approval because the latter intentionally grants no field-value
+access. Neither action chooses tasks, downloads runtime assets, ingests data,
+calls a model, allocates compute, or establishes an experimental result.
 
 ### ADR-082: Raw RAG and Taste abstraction share one admitted source projection
 
