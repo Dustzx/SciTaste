@@ -53,7 +53,12 @@ class AcquisitionItem(BaseModel):
     source_revision: str = Field(pattern=_COMMIT)
     destination: str = Field(min_length=1, max_length=1_000)
     maximum_bytes: int = Field(gt=0, le=16 * 1024 * 1024)
-    media_type: Literal["text/markdown", "application/json", "application/x-yaml"]
+    media_type: Literal[
+        "text/markdown",
+        "text/csv",
+        "application/json",
+        "application/x-yaml",
+    ]
     license_identifier: str = Field(min_length=1, max_length=200)
     license_scope: str = Field(min_length=1, max_length=1_000)
     license_status: ReadinessStatus
@@ -662,6 +667,7 @@ def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -
         observed_media_type = declared_media_type.partition(";")[0].strip().lower()
         accepted_media_types = {
             "text/markdown": {"text/markdown", "text/plain"},
+            "text/csv": {"text/csv", "text/plain", "application/octet-stream"},
             "application/json": {"application/json"},
             "application/x-yaml": {
                 "application/x-yaml",

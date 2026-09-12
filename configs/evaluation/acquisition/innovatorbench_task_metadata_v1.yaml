@@ -1,0 +1,260 @@
+schema_version: "1.0"
+request_id: innovatorbench-task-metadata-v1
+project_id: scitaste-self-development
+track_id: objective-progress-metadata-screen
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire only the twenty pinned InnovatorBench task configuration YAML files
+  needed to design a source-disjoint, license-audited objective-progress pilot.
+  The 69.7 GB dataset archive and every runtime asset remain out of scope.
+claim_boundary: >-
+  Task-configuration acquisition establishes neither dataset-license clearance,
+  executable-task readiness, model suitability, task selection, scientific
+  effectiveness, nor permission to acquire the benchmark archive or run a task.
+selection_id: innovatorbench-task-metadata-universe-v1
+selection_proposal_sha256: 651c2a1109fca394de7ce13244c86c668876158df19b441a6bc3cdb835157dfd
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/innovatorbench-task-metadata-v1/raw
+allowed_hosts: [raw.githubusercontent.com]
+items:
+  - item_id: task_1
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_1.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_1.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_2
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_2.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_2.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_3
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_3.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_3.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_4
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_4.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_4.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_5
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_5.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_5.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_6
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_6.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_6.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_7
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_7.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_7.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_8
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_8.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_8.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_9
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_9.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_9.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_10
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_10.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_10.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_11
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_11.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_11.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_12
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_12.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_12.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_13
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_13.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_13.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_14
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_14.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_14.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_15
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_15.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_15.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_16
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_16.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_16.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_17
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_17.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_17.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_18
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_18.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_18.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_19
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_19.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_19.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: task_20
+    source_url: https://raw.githubusercontent.com/GAIR-NLP/InnovatorBench/934ead34675a0fc610618094dabeaf7bdcb44818/research_gym/configs/tasks/task_20.yaml
+    source_revision: 934ead34675a0fc610618094dabeaf7bdcb44818
+    destination: task_20.yaml
+    maximum_bytes: 262144
+    media_type: application/x-yaml
+    license_identifier: Apache-2.0
+    license_scope: Pinned repository task-configuration metadata only; no benchmark archive or runtime asset is included.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+maximum_total_bytes: 5242880
+evidence:
+  - evidence_id: metadata-scope
+    path: docs/research/data/innovatorbench_task_metadata_scope_v1.yaml
+    sha256: 651c2a1109fca394de7ce13244c86c668876158df19b441a6bc3cdb835157dfd
+  - evidence_id: resource-corpus
+    path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+    sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+  - evidence_id: accepted-evaluation-audit
+    path: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+approval:
+  approved: false
+  request_sha256: null
+  approved_by: null
+  approved_at: null
+  scope: null
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

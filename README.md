@@ -138,7 +138,7 @@ the repository tests; study dependencies are installed separately with
 | Area | Current boundary |
 |---|---|
 | System | Core offline paths are implemented and tested; engineering correctness is not a scientific effectiveness result. |
-| Evaluation | The ICLR evidence program is scientifically coherent and resource-independent; data, adapters, model choice, power, human review, and formal runs remain gated. |
+| Evaluation | The resource-independent ICLR program is scientifically coherent. Its exact source/method proposal bundle is ready for owner review, while downloads, adapters, model choice, power, human review, and formal runs remain gated. |
 | Paper | The tracked ICLR 2027 manuscript is a working research draft, not a publication-ready or accepted paper. |
 | Review | Typed model and reviewer-obligation loops exist; independent expert review of the current manuscript remains incomplete. |
 
@@ -148,6 +148,7 @@ any pilot, read the [ICLR 2027 evaluation plan](docs/ICLR_2027_EVALUATION_PLAN.m
 and [core experiment strategy](docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md), then
 inspect the
 [machine-checkable evidence program](configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml)
+and its [no-run review package](configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml),
 and [experiment decision dossier](docs/EXPERIMENT_DECISION_DOSSIER.md).
 
 ## Models and integrations

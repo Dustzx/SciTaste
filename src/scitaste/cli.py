@@ -81,6 +81,7 @@ from scitaste.evaluation import (
     inspect_dataset_package_archives,
     inspect_dataset_package_request,
     inspect_evidence_program,
+    inspect_evidence_review_package,
     inspect_executable_candidate,
     inspect_experiment_decision_dossier,
     inspect_git_source,
@@ -98,6 +99,7 @@ from scitaste.evaluation import (
     load_dataset_package_receipt,
     load_dataset_package_request,
     load_evidence_program,
+    load_evidence_review_package,
     load_executable_candidate_manifest,
     load_experiment_decision_dossier,
     load_external_resource_corpus,
@@ -1287,6 +1289,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(evidence_program)
     evidence_program.set_defaults(handler=_handle_evaluation_evidence_program)
+    evidence_review = evaluation_commands.add_parser(
+        "evidence-review",
+        help="Verify the exact no-run source and method proposals for owner review",
+    )
+    evidence_review.add_argument("--manifest", type=Path, required=True)
+    evidence_review.add_argument("--workspace-root", type=Path, default=Path("."))
+    evidence_review.add_argument(
+        "--require-owner-review-ready",
+        action="store_true",
+        help="Return non-zero unless every selected proposal is exact and review-ready",
+    )
+    _add_log_level_option(evidence_review)
+    evidence_review.set_defaults(handler=_handle_evaluation_evidence_review)
     native_condition_preflight = evaluation_commands.add_parser(
         "native-condition-preflight",
         help="Inspect the Git-pinned native Taste path and corpus parity without execution",
@@ -4198,6 +4213,23 @@ def _handle_evaluation_evidence_program(args: argparse.Namespace) -> int:
     if args.require_scientifically_coherent and not report.scientifically_coherent:
         return 1
     if args.require_experiment_ready and not report.ready_for_experiment:
+        return 1
+    return 0
+
+
+def _handle_evaluation_evidence_review(args: argparse.Namespace) -> int:
+    inspection = load_evidence_review_package(args.manifest)
+    report = inspect_evidence_review_package(
+        inspection,
+        workspace_root=args.workspace_root,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_owner_review_ready and not report.ready_for_owner_review:
         return 1
     return 0
 

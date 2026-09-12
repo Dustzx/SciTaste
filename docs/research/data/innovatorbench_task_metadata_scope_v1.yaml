@@ -1,0 +1,62 @@
+schema_version: "1.0"
+scope_id: innovatorbench-task-metadata-universe-v1
+project_id: scitaste-self-development
+scientific_role: objective-progress-task-universe-screen
+benchmark_resource_id: innovator-bench
+repository_commit: 934ead34675a0fc610618094dabeaf7bdcb44818
+dataset_id: innovator-bench-hf-archive
+dataset_revision: 5b349af1c988a5128a0d5d6b902e70f16906d373
+selection_state: metadata-acquisition-proposed-subset-not-selected
+selection_rule: >-
+  Inspect all twenty pinned task configuration files, then exclude tasks only by
+  preregistered license, source-overlap, objective-signal, environment,
+  reproducibility, or safety criteria. Stratify the remaining candidate universe
+  by the six benchmark categories before the no-formal-data pilot. Do not select
+  tasks because their checkpoints happen to be present on a SciTaste host.
+task_config_paths:
+  - research_gym/configs/tasks/task_1.yaml
+  - research_gym/configs/tasks/task_2.yaml
+  - research_gym/configs/tasks/task_3.yaml
+  - research_gym/configs/tasks/task_4.yaml
+  - research_gym/configs/tasks/task_5.yaml
+  - research_gym/configs/tasks/task_6.yaml
+  - research_gym/configs/tasks/task_7.yaml
+  - research_gym/configs/tasks/task_8.yaml
+  - research_gym/configs/tasks/task_9.yaml
+  - research_gym/configs/tasks/task_10.yaml
+  - research_gym/configs/tasks/task_11.yaml
+  - research_gym/configs/tasks/task_12.yaml
+  - research_gym/configs/tasks/task_13.yaml
+  - research_gym/configs/tasks/task_14.yaml
+  - research_gym/configs/tasks/task_15.yaml
+  - research_gym/configs/tasks/task_16.yaml
+  - research_gym/configs/tasks/task_17.yaml
+  - research_gym/configs/tasks/task_18.yaml
+  - research_gym/configs/tasks/task_19.yaml
+  - research_gym/configs/tasks/task_20.yaml
+required_screen_fields:
+  - benchmark-category
+  - source-paper-group
+  - starting-information-boundary
+  - objective-score-definition
+  - task-runtime-dependencies
+  - external-dataset-and-checkpoint-identities
+  - per-asset-license-status
+  - expected-wall-time-and-compute-envelope
+  - overlap-with-scitaste-development-and-taste-sources
+exclusion_codes:
+  - source-overlap
+  - objective-signal-not-reproducible
+  - task-or-upstream-license-blocked
+  - runtime-assets-unavailable-under-approved-terms
+  - unsafe-or-unisolatable-environment
+  - exceeds-declared-formal-capacity-after-scientific-screen
+forbidden_shortcuts:
+  - do-not-download-the-69.7gb-archive-under-this-request
+  - do-not-treat-task-config-presence-as-runtime-readiness
+  - do-not-freeze-a-formal-subset-before-held-out-and-license-review
+  - do-not-choose-tasks-from-current-model-or-gpu-inventory
+authorizes_dataset_archive_download: false
+authorizes_runtime_asset_download: false
+authorizes_ingestion: false
+authorizes_execution: false

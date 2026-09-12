@@ -94,13 +94,21 @@ def test_v4_tiny_scientist_license_conflict_remains_a_real_blocker(
         "tiny-scientist",
         ResourceUse.REFERENCE,
     )
+    code_audit = evaluate_resource_feasibility(
+        v4_corpus,
+        "tiny-scientist",
+        ResourceUse.CODE_AUDIT,
+    )
     comparison = evaluate_resource_feasibility(
         v4_corpus,
         "tiny-scientist",
         ResourceUse.COMPARISON_SYSTEM,
     )
 
-    assert "blocked_gate:code_license" in reference.blocker_codes
+    assert reference.eligible is True
+    assert reference.blocker_codes == ()
+    assert code_audit.eligible is False
+    assert "blocked_gate:code_license" in code_audit.blocker_codes
     assert "blocked_gate:license_acceptance" in comparison.blocker_codes
 
 
@@ -112,14 +120,21 @@ def test_missing_license_is_a_blocker_not_a_pseudo_license(
         "ai-researcher",
         ResourceUse.REFERENCE,
     )
+    code_audit = evaluate_resource_feasibility(
+        v3_corpus,
+        "ai-researcher",
+        ResourceUse.CODE_AUDIT,
+    )
     comparison = evaluate_resource_feasibility(
         v3_corpus,
         "ai-researcher",
         ResourceUse.COMPARISON_SYSTEM,
     )
 
-    assert reference.eligible is False
-    assert "blocked_gate:code_license" in reference.blocker_codes
+    assert reference.eligible is True
+    assert reference.blocker_codes == ()
+    assert code_audit.eligible is False
+    assert "blocked_gate:code_license" in code_audit.blocker_codes
     assert comparison.eligible is False
     assert "blocked_gate:license_acceptance" in comparison.blocker_codes
 
@@ -424,7 +439,8 @@ def test_every_resource_is_reference_and_code_audit_eligible(
     assert reference.eligible is True
     assert code_audit.eligible is True
     assert reference.blocker_codes == ()
-    assert len(reference.results) == 4
+    assert len(reference.results) == 3
+    assert len(code_audit.results) == 4
 
 
 @pytest.mark.parametrize("resource_id", ["mlr-bench", "exp-bench"])

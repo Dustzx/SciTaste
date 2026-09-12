@@ -1,0 +1,43 @@
+schema_version: "1.0"
+scope_id: expbench-task-metadata-universe-v1
+project_id: scitaste-self-development
+scientific_role: experiment-chain-diagnostic-task-universe-screen
+benchmark_resource_id: exp-bench
+repository_commit: db1b1f56159b591515f77e03c55bf473d5c1c201
+dataset_id: exp-bench-dataset
+dataset_revision: 5b35c4c717a9f7ddd6a255b94a462f8ca51b0668
+metadata_file: exp_bench_dataset.csv
+reported_population:
+  task_count: 461
+  source_paper_count: 51
+selection_state: metadata-acquisition-proposed-subset-not-selected
+selection_rule: >-
+  Inspect the complete pinned metadata table, group every task by source paper,
+  and select pilot candidates by preregistered scientific coverage of hypothesis,
+  design, implementation, execution, and conclusion stages. Formal task count is
+  set only after a no-formal-data pilot and power analysis over independent
+  source-paper groups; current compute inventory is not a selection criterion.
+required_screen_fields:
+  - source-paper-group
+  - experiment-chain-stage-coverage
+  - starting-question-and-code-boundary
+  - conjunctive-success-definition
+  - runtime-repository-and-data-identities
+  - per-asset-license-status
+  - environment-reproduction-status
+  - overlap-with-scitaste-development-and-taste-sources
+exclusion_codes:
+  - source-overlap
+  - missing-source-paper-group
+  - incomplete-stage-signal
+  - task-or-upstream-license-blocked
+  - runtime-assets-unavailable-under-approved-terms
+  - unsafe-or-unisolatable-environment
+forbidden_shortcuts:
+  - do-not-call-expbench-a-full-idea-to-paper-comparison
+  - do-not-treat-metadata-acquisition-as-runtime-task-acquisition
+  - do-not-count-repeated-runs-as-independent-source-paper-units
+  - do-not-choose-tasks-from-current-model-or-gpu-inventory
+authorizes_runtime_asset_download: false
+authorizes_ingestion: false
+authorizes_execution: false

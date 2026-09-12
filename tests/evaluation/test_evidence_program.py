@@ -43,8 +43,8 @@ def test_tracked_program_is_coherent_but_does_not_authorize_external_work() -> N
     assert {item.code for item in report.acquisition_blockers} >= {
         "task_source_not_resource_bound",
         "task_source_dataset_license_blocked",
-        "system_reference_blocked",
     }
+    assert "system_reference_blocked" not in {item.code for item in report.acquisition_blockers}
     assert {item.code for item in report.experiment_blockers} >= {
         "primary_model_not_frozen",
         "power_not_frozen",

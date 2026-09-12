@@ -20,7 +20,7 @@ artifacts:
     sha256: 192a06481ccaf6bb66688ec12bc747d19a7ef63d220832c7c820e8f8c2bbfc24
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: a6badcdf4b942f36c79e3423925d746901d820e2c269a9aebd4dbaa5db64b8d2
+    sha256: 43288679c1e5c06fca7699df305beb34cdaeab1f0754277d0bcd017a607ef662
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760

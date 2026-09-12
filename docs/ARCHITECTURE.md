@@ -2139,3 +2139,28 @@ provider, but no inventory entry can rewrite H1--H3. Formal sample size and
 replication remain unset until an excluded pilot supports a power analysis, and
 the self-development case remains process evidence outside every headline
 population estimate.
+
+### ADR-070: Proposal review is exact, complete, and non-authorizing
+
+Status: accepted for the first ICLR 2027 source/method review package.
+
+Scientific coherence alone does not specify what an owner is being asked to
+approve. SciTaste therefore binds one evidence program and resource corpus to
+exactly every selected task-source proposal and accepted-method adapter proposal.
+Missing, additional, drifted, semantically mismatched, or already-authorized
+children fail the package closed. The report separately exposes proposal-review
+readiness, code-use viability, adapter-implementation readiness, and experiment
+readiness; none implies another.
+
+The first package requests 20 pinned InnovatorBench task configs and one pinned
+EXP-Bench metadata table under an 8 MiB aggregate ceiling. It neither requests
+the InnovatorBench archive nor repeats the acquired MLR-Bench briefs. Reference
+admission uses publication identity and immutable source identity, while code
+audit additionally requires a code license. Consequently AI-Researcher remains
+a valid accepted-method reference but cannot be checked out or adapted until its
+code-use rights are clarified.
+
+Every package and report fixes download, repository checkout, API, GPU, human,
+and execution authorization to false. Owner approval of a child acquisition
+request must occur through that request's separate hash-bound transaction; a
+review package can never act as a launch manifest.

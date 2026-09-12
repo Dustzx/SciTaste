@@ -17,6 +17,8 @@ from scitaste.evaluation.prelaunch import ReadinessStatus
 from scitaste.evaluation.resources import (
     EvaluationResourceKind,
     ExternalResourceCorpus,
+    ResourceUse,
+    evaluate_resource_feasibility,
 )
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -196,6 +198,8 @@ class AdapterContractReport(BaseModel):
     contract_id: str
     proposal_sha256: str = Field(pattern=_SHA256)
     resource_corpus_sha256: str = Field(pattern=_SHA256)
+    ready_for_proposal_review: bool
+    proposal_viable: bool
     ready_for_adapter_implementation: bool
     ready_for_upstream_preflight: bool
     ready_for_matched_adapter: Literal[False] = False
@@ -204,6 +208,7 @@ class AdapterContractReport(BaseModel):
     blocked_requirements: tuple[AdapterRequirement, ...]
     pending_requirements: tuple[AdapterRequirement, ...]
     verified_requirements: tuple[AdapterRequirement, ...]
+    resource_gate_blockers: tuple[str, ...]
     no_external_download: Literal[True] = True
     no_execution_performed: Literal[True] = True
 
@@ -237,22 +242,45 @@ def inspect_adapter_contract(
 ) -> AdapterContractReport:
     """Verify static compatibility claims without acquiring or importing upstream code."""
 
-    blockers: list[AdapterContractFinding] = []
+    structural_blockers: list[AdapterContractFinding] = []
+    requirement_blockers: list[AdapterContractFinding] = []
     resources = {resource.resource_id: resource for resource in resource_corpus.resources}
     resource = resources.get(manifest.external_resource_id)
     if resource is None:
-        _add(blockers, "unknown_external_resource", "external system is absent from corpus")
+        _add(
+            structural_blockers,
+            "unknown_external_resource",
+            "external system is absent from corpus",
+        )
+        resource_gate_blockers = ("unknown_external_resource",)
     else:
         if resource.resource_kind is not EvaluationResourceKind.SYSTEM:
-            _add(blockers, "wrong_resource_kind", "adapter contract requires a system resource")
+            _add(
+                structural_blockers,
+                "wrong_resource_kind",
+                "adapter contract requires a system resource",
+            )
         if resource.repository_commit != manifest.expected_upstream_commit:
-            _add(blockers, "upstream_pin_mismatch", "manifest and corpus commits differ")
+            _add(
+                structural_blockers,
+                "upstream_pin_mismatch",
+                "manifest and corpus commits differ",
+            )
+        resource_gate_blockers = evaluate_resource_feasibility(
+            resource_corpus,
+            manifest.external_resource_id,
+            ResourceUse.CODE_AUDIT,
+        ).blocker_codes
 
     try:
         root = Path(source_root).resolve(strict=True)
     except (OSError, ValueError):
         root = None
-        _add(blockers, "source_root_unavailable", "source root could not be resolved")
+        _add(
+            structural_blockers,
+            "source_root_unavailable",
+            "source root could not be resolved",
+        )
 
     blocked: list[AdapterRequirement] = []
     pending: list[AdapterRequirement] = []
@@ -263,13 +291,13 @@ def inspect_adapter_contract(
             manifest.expected_upstream_commit in url for url in evidence.official_source_urls
         ):
             _add(
-                blockers,
+                structural_blockers,
                 f"source_unpinned:{requirement.value}",
                 f"{requirement.value} evidence lacks the expected commit",
             )
         if root is not None:
             _verify_file(
-                blockers,
+                structural_blockers,
                 root,
                 evidence.evidence_ref,
                 evidence.evidence_sha256,
@@ -278,7 +306,7 @@ def inspect_adapter_contract(
         if evidence.status is ReadinessStatus.BLOCKED:
             blocked.append(requirement)
             _add(
-                blockers,
+                requirement_blockers,
                 f"requirement_blocked:{requirement.value}",
                 evidence.summary,
             )
@@ -292,22 +320,27 @@ def inspect_adapter_contract(
         != manifest.model_translation.requested_model_id
     ):
         _add(
-            blockers,
+            structural_blockers,
             "model_identity_mismatch",
             "an exact model mapping must preserve the requested callable model ID",
         )
 
-    ready = not blockers and not blocked
+    proposal_review_ready = not structural_blockers
+    proposal_viable = proposal_review_ready and not resource_gate_blockers
+    ready = proposal_viable and not blocked
     return AdapterContractReport(
         contract_id=manifest.contract_id,
         proposal_sha256=manifest.proposal_sha256,
         resource_corpus_sha256=resource_corpus.semantic_sha256,
+        ready_for_proposal_review=proposal_review_ready,
+        proposal_viable=proposal_viable,
         ready_for_adapter_implementation=ready,
         ready_for_upstream_preflight=ready and not pending,
-        blockers=tuple(blockers),
+        blockers=tuple((*structural_blockers, *requirement_blockers)),
         blocked_requirements=tuple(blocked),
         pending_requirements=tuple(pending),
         verified_requirements=tuple(verified),
+        resource_gate_blockers=resource_gate_blockers,
     )
 
 

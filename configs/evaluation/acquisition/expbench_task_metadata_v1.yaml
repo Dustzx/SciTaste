@@ -1,0 +1,51 @@
+schema_version: "1.0"
+request_id: expbench-task-metadata-v1
+project_id: scitaste-self-development
+track_id: experiment-integrity-metadata-screen
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire only the pinned 2.02 MB EXP-Bench metadata table needed to form
+  source-paper groups and screen a scientifically stratified experiment-chain
+  diagnostic subset before any runtime task asset is requested.
+claim_boundary: >-
+  Metadata-table acquisition establishes neither upstream asset licensing,
+  executable-task readiness, a powered subset, comparative effectiveness, nor
+  permission to acquire task workspaces, start containers, or call a model.
+selection_id: expbench-task-metadata-universe-v1
+selection_proposal_sha256: e24e8c7cfb8a22cb60e10fdcd87532cb2e40454de1bac5214fcc8e61c50982d4
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/expbench-task-metadata-v1/raw
+allowed_hosts: [huggingface.co]
+items:
+  - item_id: exp_bench_dataset
+    source_url: https://huggingface.co/datasets/Just-Curieous/EXP-Bench/raw/5b35c4c717a9f7ddd6a255b94a462f8ca51b0668/exp_bench_dataset.csv
+    source_revision: 5b35c4c717a9f7ddd6a255b94a462f8ca51b0668
+    destination: exp_bench_dataset.csv
+    maximum_bytes: 3145728
+    media_type: text/csv
+    license_identifier: CC-BY-4.0
+    license_scope: Pinned packaged benchmark metadata table only; upstream task repositories, data, models, and workspaces retain separate terms.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+maximum_total_bytes: 3145728
+evidence:
+  - evidence_id: metadata-scope
+    path: docs/research/data/expbench_task_metadata_scope_v1.yaml
+    sha256: e24e8c7cfb8a22cb60e10fdcd87532cb2e40454de1bac5214fcc8e61c50982d4
+  - evidence_id: resource-corpus
+    path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+    sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+  - evidence_id: accepted-evaluation-audit
+    path: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+approval:
+  approved: false
+  request_sha256: null
+  approved_by: null
+  approved_at: null
+  scope: null
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

@@ -7,6 +7,14 @@ semantic versioning.
 
 ### Added
 
+- An exact ICLR evidence-review package now binds every selected task-source and
+  accepted-method proposal without granting external-action authority. Its first
+  review covers 20 pinned InnovatorBench configuration files and one EXP-Bench
+  metadata table under an 8 MiB ceiling, reuses the already acquired MLR-Bench
+  inventory, and distinguishes proposal review, code-use viability, adapter
+  implementation, and experiment readiness. AI-Researcher remains citable but
+  code-use-blocked by the absent repository license.
+
 - A machine-checkable ICLR 2027 evidence program now separates three
   title-critical hypotheses from mutable compute availability. It requires
   abstracted Taste versus same-source raw RAG, matched versus source-disjoint

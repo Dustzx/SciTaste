@@ -254,6 +254,17 @@ scientific coherence while blocking acquisition, experiment, and execution on
 the still-unresolved source, license, adapter, model, power, and human-review
 gates. No Qwen, API, or GPU resource selects this architecture.
 
+Its first complete operational review bundle is now machine-checkable without
+performing an external action. The bundle exactly covers the four selected
+source roles and three accepted-method candidates, requests only 20 pinned
+InnovatorBench task configs plus one pinned EXP-Bench metadata table (8 MiB
+combined ceiling), and reuses the already acquired MLR-Bench brief inventory.
+The result is ready for owner review but still reports all 14 experiment gates.
+Agent Laboratory and DeepScientist remain implementation-blocked; AI-Researcher
+is additionally code-use-blocked by the absent repository license. Resource
+discovery may continue broadly, but neither Qwen3.5 examples nor any other
+installed asset can alter this scientifically selected evidence architecture.
+
 The native condition names are now backed by executable first-party policies
 rather than metadata. A closed six-profile matrix controls utility, Knowledge,
 matched/mismatched Taste retrieval, and stage-specific Taste critics through all

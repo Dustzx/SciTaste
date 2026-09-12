@@ -74,6 +74,24 @@ historical feasibility evidence until a new prelaunch manifest is derived from
 the approved task, adapter, conformance, power, and human-review decisions. A
 newly discovered Qwen checkpoint cannot promote an old lane.
 
+The exact bridge from scientific design to owner decisions is now separately
+content-bound:
+
+```bash
+.venv/bin/scitaste evaluation evidence-review \
+  --manifest configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml \
+  --workspace-root . \
+  --require-owner-review-ready
+```
+
+The command verifies complete coverage of the four selected source proposals
+and three accepted-method adapter proposals. Its current 21-file, 8-MiB metadata
+request is review-ready but unapproved. It requests only 20 InnovatorBench task
+configs and one EXP-Bench CSV; the 69.7-GB archive, runtime assets, repositories,
+models, API calls, GPUs, and reviewers remain outside the scope. AI-Researcher
+is reference-eligible but code-use-blocked because no applicable repository
+license is identified.
+
 ## Resource lanes
 
 Each provider alternative has a separate protocol and proposal hash. There is

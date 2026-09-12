@@ -1,0 +1,51 @@
+schema_version: "1.0"
+package_id: scitaste-iclr2027-evidence-review-package-v1
+project_id: scitaste-self-development
+evidence_program:
+  path: configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml
+  file_sha256: 2f69cf433db2cd3030e9c5e7702017695b80c0aff4a1c3ba0200b8b42e50b4cc
+evidence_program_sha256: c507fa52908885f1d702ffd916b92c19cc789926a920776ee3da78970cb7b588
+resource_corpus:
+  path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+  file_sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+resource_corpus_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+source_proposals:
+  - source_id: scitastebench-decision-cases
+    kind: construction_screen
+    path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
+    file_sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198
+    proposal_sha256: null
+  - source_id: innovatorbench-objective-tasks
+    kind: acquisition_request
+    path: configs/evaluation/acquisition/innovatorbench_task_metadata_v1.yaml
+    file_sha256: dd954010fbe07f3302fcf5caf63fd22e56607f84f9b841f8bb0a928505b3f6c3
+    proposal_sha256: c544025a4b0866fdc14c66cc4bd42083b3b551a7ae009b8eb3b829d1b11c213f
+  - source_id: mlrbench-full-lifecycle
+    kind: acquired_metadata_inventory
+    path: docs/research/data/mlr_bench_ten_brief_acquisition_inventory_v1.yaml
+    file_sha256: 08875949686119cdbff351ef1538cf4c55df8d92cc970d2384dc0e29309cf278
+    proposal_sha256: null
+  - source_id: expbench-integrity
+    kind: acquisition_request
+    path: configs/evaluation/acquisition/expbench_task_metadata_v1.yaml
+    file_sha256: de1ae48d001f81d223bba9cd05c2642ff4e1e2b2697defa32d721a19399e5c84
+    proposal_sha256: 0f6a0dbf5ec77723ad1309ac2e5cf9a94b77735871a4882cda6bd93f8b715b70
+method_proposals:
+  - system_id: agent-laboratory
+    path: configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml
+    file_sha256: 13f3e4a968b1cb8fd7bafd0e95cde34d7405c80277f1c5f803aff76518eabaff
+    proposal_sha256: acd3e23b72ce7c35299941abf1e7c42187a92425e8fce11ae7b3c73588763c51
+  - system_id: ai-researcher
+    path: configs/evaluation/adapters/ai_researcher_best_native_contract_v1.yaml
+    file_sha256: 0967749fcc2d01023b1d187e0726c28da89bceece0522c8d18c074699fb5e60d
+    proposal_sha256: 65aeba591c518a357d2d50a6417cb542651d6affdadc559291ad7b35fcbb3371
+  - system_id: deep-scientist
+    path: configs/evaluation/adapters/deep_scientist_best_native_contract_v1.yaml
+    file_sha256: e556de0d9ec8db8d5d9b7d62c932d199ef8b11b848c54dc439fbb0e61063bdb2
+    proposal_sha256: fa108c046908be50af657eae154bbae8e7df2281b9a04ace1483d0abf5dcb767
+authorizes_download: false
+authorizes_repository_checkout: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false
+authorizes_execution: false

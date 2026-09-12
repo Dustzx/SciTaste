@@ -25,6 +25,8 @@ from scitaste.evaluation import (
 )
 
 REQUEST_PATH = Path("configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml")
+INNOVATOR_REQUEST_PATH = Path("configs/evaluation/acquisition/innovatorbench_task_metadata_v1.yaml")
+EXP_REQUEST_PATH = Path("configs/evaluation/acquisition/expbench_task_metadata_v1.yaml")
 
 
 def _isolated_request(tmp_path: Path) -> DatasetAcquisitionRequest:
@@ -78,6 +80,34 @@ def test_repository_request_is_exact_review_ready_and_unapproved(tmp_path: Path)
     assert report.blockers == ()
     assert [item.code for item in report.authorization_blockers] == ["owner-approval-required"]
     assert all(item.runtime_assets_included is False for item in report.items)
+    assert report.no_network_access_performed is True
+    assert report.no_download_performed is True
+
+
+@pytest.mark.parametrize(
+    ("path", "item_count", "maximum_bytes", "host"),
+    [
+        (INNOVATOR_REQUEST_PATH, 20, 5 * 1024 * 1024, "raw.githubusercontent.com"),
+        (EXP_REQUEST_PATH, 1, 3 * 1024 * 1024, "huggingface.co"),
+    ],
+)
+def test_iclr_metadata_requests_are_exact_no_run_owner_proposals(
+    path: Path,
+    item_count: int,
+    maximum_bytes: int,
+    host: str,
+) -> None:
+    request = load_dataset_acquisition_request(path).request
+
+    report = inspect_dataset_acquisition_request(request, workspace_root=Path("."))
+
+    assert report.item_count == item_count
+    assert report.maximum_total_bytes == maximum_bytes
+    assert report.source_hosts == (host,)
+    assert report.ready_for_owner_approval is True
+    assert report.download_authorized is False
+    assert report.authorizes_ingestion is False
+    assert report.authorizes_execution is False
     assert report.no_network_access_performed is True
     assert report.no_download_performed is True
 
@@ -321,12 +351,13 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
             final_url: str,
             declared_length: int,
             content_encoding: str | None = None,
+            content_type: str = "text/plain; charset=utf-8",
         ) -> None:
             self._stream = io.BytesIO(body)
             self._final_url = final_url
             self.headers = {
                 "Content-Length": str(declared_length),
-                "Content-Type": "text/plain; charset=utf-8",
+                "Content-Type": content_type,
             }
             if content_encoding is not None:
                 self.headers["Content-Encoding"] = content_encoding
@@ -360,6 +391,21 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
         lambda _handler: Opener(Response(body, final_url=source_url, declared_length=len(body))),
     )
     assert acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown") == body
+
+    csv_body = b"task_id,paper_id\n1,1\n"
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(
+                csv_body,
+                final_url=source_url,
+                declared_length=len(csv_body),
+                content_type="text/csv; charset=utf-8",
+            )
+        ),
+    )
+    assert acquisition_module._fetch_https_bytes(source_url, 1024, "text/csv") == csv_body
 
     monkeypatch.setattr(
         acquisition_module,

@@ -13,6 +13,13 @@ acquisition-ready, experiment-ready, or execution-authorized. In particular,
 the program fixes claims and roles before choosing a model: changes in local or
 remote inventory update feasibility evidence, not H1--H3.
 
+The separate
+[`iclr2027_evidence_review_package_v1.yaml`](../configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml)
+binds the exact next source and method proposals. It is ready for owner review,
+not for experiment execution: all four selected task-source roles and all three
+accepted-method candidates are covered, while every external-action flag remains
+false.
+
 ## What the paper must establish
 
 The paper is a method paper about explicit Scientific Taste, not a benchmark
@@ -190,6 +197,40 @@ The following are not prerequisites for the first scientific pilot: additional
 generic unit-test coverage beyond the current stable level, more UI polish,
 full hashing of every discovered model, a general multi-project scheduler, or a
 camera-ready paper layout. Work on those areas must not delay the evidence path.
+
+## Exact next external decisions
+
+The next review is deliberately smaller than a dataset or model launch:
+
+1. acquire the 20 pinned InnovatorBench task-configuration YAML files, with a
+   combined ceiling of 5 MiB, to screen the objective-progress task universe;
+2. acquire the pinned EXP-Bench metadata CSV, with a 3 MiB ceiling, to recover
+   source-paper groups before proposing a diagnostic subset.
+
+This review does not include the 69.7-GB InnovatorBench archive, task workspaces,
+runtime assets, repository checkout, API calls, checkpoint loading, GPUs, or
+human recruitment. The ten MLR-Bench starting briefs already have an immutable
+local acquisition inventory and are not requested again. SciTasteBench remains a
+construction-and-review track rather than a public-file download.
+
+The method side is likewise proposal-only. Agent Laboratory and DeepScientist
+have code-use-feasible static contracts but unresolved task, sandbox, telemetry,
+artifact, or resume requirements. AI-Researcher is a valid accepted-paper
+reference and ecological comparator candidate, but its missing repository code
+license blocks code checkout/adaptation. It cannot be replaced with a mock.
+
+Inspect the combined decision without network, API, model, GPU, or repository
+access:
+
+```bash
+.venv/bin/scitaste evaluation evidence-review \
+  --manifest configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml \
+  --workspace-root . \
+  --require-owner-review-ready
+```
+
+The current report covers 21 metadata files with an 8 MiB aggregate ceiling,
+reports 14 later experiment blockers, and grants no external-action authority.
 
 ## Resource-independent launch sequence
 

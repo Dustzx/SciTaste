@@ -1,0 +1,80 @@
+schema_version: "1.0"
+contract_id: ai-researcher-best-native-contract-v1
+authorization_scope: static-translation-only
+external_resource_id: ai-researcher
+expected_upstream_commit: f9a6f8480860c193afff600eeffe3defcee8a978
+invocation:
+  upstream_entrypoint: research_agent/run_infer_idea.py
+  argv_template:
+    - "{python}"
+    - "{upstream_root}/research_agent/run_infer_idea.py"
+    - --model
+    - "{model_id}"
+  environment_allowlist: []
+  shell: false
+task_translation:
+  selected_task_form: research-topic-config
+  upstream_input_name: Scientist-Bench paper context and stage-specific research-agent inputs
+  one_task_per_process: false
+  preserves_exact_starting_bytes: false
+  runtime_acquisition_policy_injectable: false
+model_translation:
+  provider_id: upstream-multi-provider
+  requested_model_id: best-native-unfrozen
+  requested_model_revision: unresolved-at-static-audit
+  upstream_model_id: null
+  all_model_roles_matched: false
+  unmatched_roles:
+    - literature-review
+    - hypothesis-generation
+    - implementation
+    - experiment-validation
+    - manuscript-generation
+requirements:
+  task_mapping:
+    status: blocked
+    summary: Scientist-Bench inputs do not yet have a loss-audited mapping from the exact MLR-Bench research-package task bytes.
+    official_source_urls: &ai_sources
+      - https://raw.githubusercontent.com/HKUDS/AI-Researcher/f9a6f8480860c193afff600eeffe3defcee8a978/research_agent/run_infer_idea.py
+      - https://raw.githubusercontent.com/HKUDS/AI-Researcher/f9a6f8480860c193afff600eeffe3defcee8a978/research_agent/run_infer_plan.py
+      - https://raw.githubusercontent.com/HKUDS/AI-Researcher/f9a6f8480860c193afff600eeffe3defcee8a978/README.md
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  model_mapping:
+    status: blocked
+    summary: Multiple model-bearing stages and providers are exposed; no best-native identity or matched-backbone translation has been frozen.
+    official_source_urls: *ai_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  sandbox:
+    status: blocked
+    summary: Browser, Docker, generated code, provider network, filesystems, and task GPU access have not passed the common isolation policy.
+    official_source_urls: *ai_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  telemetry:
+    status: blocked
+    summary: Calls, token classes, cost, retries, experiments, failures, interventions, allocated compute, and active compute have no closed projection.
+    official_source_urls: *ai_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  artifact_mapping:
+    status: blocked
+    summary: Ideas, plans, code, results, manuscript, and review artifacts do not yet map into one failure-inclusive immutable SciTaste package.
+    official_source_urls: *ai_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  failure_resume:
+    status: pending
+    summary: Exact-task timeout, retry, partial-stage retention, and content-addressed resume semantics require an isolated upstream audit.
+    official_source_urls: *ai_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+forbidden_changes:
+  - Do not use or adapt the public source until the authors identify applicable code-license terms.
+  - Do not collapse Scientist-Bench context into a different MLR-Bench task while calling the mapping exact.
+  - Do not replace the upstream multi-model policy with a single model and label the result unchanged-core.
+  - Do not omit failed stages or human intervention from the common artifact projection.
+requires_separate_upstream_preflight: true
+no_external_download: true
+no_execution_performed: true

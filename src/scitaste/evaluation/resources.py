@@ -247,18 +247,22 @@ class ResourceFeasibilityReport(FrozenModel):
         return hashlib.sha256(canonical.encode()).hexdigest()
 
 
-_REFERENCE_GATES = (
+_CITATION_GATES = (
     ResourceGateName.OFFICIAL_IDENTITY,
     ResourceGateName.REPOSITORY_PIN,
     ResourceGateName.PUBLICATION_IDENTITY,
+)
+
+_CODE_USE_GATES = (
+    *_CITATION_GATES,
     ResourceGateName.CODE_LICENSE,
 )
 
 _REQUIRED_GATES: dict[ResourceUse, tuple[ResourceGateName, ...]] = {
-    ResourceUse.REFERENCE: _REFERENCE_GATES,
-    ResourceUse.CODE_AUDIT: _REFERENCE_GATES,
+    ResourceUse.REFERENCE: _CITATION_GATES,
+    ResourceUse.CODE_AUDIT: _CODE_USE_GATES,
     ResourceUse.TASK_SOURCE: (
-        *_REFERENCE_GATES,
+        *_CODE_USE_GATES,
         ResourceGateName.DATASET_PIN,
         ResourceGateName.DATASET_LICENSE,
         ResourceGateName.SOURCE_GROUPS,
@@ -268,7 +272,7 @@ _REQUIRED_GATES: dict[ResourceUse, tuple[ResourceGateName, ...]] = {
         ResourceGateName.EXECUTABLE_SIGNAL,
     ),
     ResourceUse.COMPARISON_SYSTEM: (
-        *_REFERENCE_GATES,
+        *_CODE_USE_GATES,
         ResourceGateName.LICENSE_ACCEPTANCE,
         ResourceGateName.CORE_UNMODIFIED,
         ResourceGateName.TASK_MAPPING,

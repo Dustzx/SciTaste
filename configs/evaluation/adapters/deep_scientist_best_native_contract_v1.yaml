@@ -1,0 +1,86 @@
+schema_version: "1.0"
+contract_id: deep-scientist-best-native-contract-v1
+authorization_scope: static-translation-only
+external_resource_id: deep-scientist
+expected_upstream_commit: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+invocation:
+  upstream_entrypoint: src/deepscientist/cli.py
+  argv_template:
+    - "{python}"
+    - -m
+    - deepscientist.cli
+    - run
+    - research
+    - --quest-id
+    - "{task_root}"
+    - --message
+    - "{config_path}"
+    - --model
+    - "{model_id}"
+  environment_allowlist: []
+  shell: false
+task_translation:
+  selected_task_form: research-topic-config
+  upstream_input_name: quest goal, skill, message, runner, and quest-owned workspace
+  one_task_per_process: false
+  preserves_exact_starting_bytes: false
+  runtime_acquisition_policy_injectable: false
+model_translation:
+  provider_id: runner-native
+  requested_model_id: best-native-unfrozen
+  requested_model_revision: unresolved-at-static-audit
+  upstream_model_id: null
+  all_model_roles_matched: false
+  unmatched_roles:
+    - codex-runner
+    - claude-code-runner
+    - kimi-runner
+    - opencode-runner
+requirements:
+  task_mapping:
+    status: blocked
+    summary: Quest goal/message/workspace semantics have no loss-audited translation from an exact MLR-Bench research-package task.
+    official_source_urls: &deep_sources
+      - https://raw.githubusercontent.com/ResearAI/DeepScientist/b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/deepscientist/cli.py
+      - https://raw.githubusercontent.com/ResearAI/DeepScientist/b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/deepscientist/quest/service.py
+      - https://raw.githubusercontent.com/ResearAI/DeepScientist/b36624417f0c6b8238ec02db37b94d6db2faa5b0/pyproject.toml
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  model_mapping:
+    status: blocked
+    summary: Runner-specific models and policies have not been frozen as either matched-frontier or disclosed best-native estimands.
+    official_source_urls: *deep_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  sandbox:
+    status: blocked
+    summary: Runner commands, installation, network, writable paths, runtime tools, and generated artifacts have not passed SciTaste isolation.
+    official_source_urls: *deep_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  telemetry:
+    status: blocked
+    summary: Runner calls, token classes, cost, commands, retries, wall time, intervention, and compute have no common closed receipt.
+    official_source_urls: *deep_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  artifact_mapping:
+    status: pending
+    summary: Quest, branches, experiments, results, papers, graph, and logs need an immutable failure-inclusive SciTaste projection.
+    official_source_urls: *deep_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+  failure_resume:
+    status: blocked
+    summary: Pause, resume, branch, timeout, retry, and over-budget behavior have not passed exact-task content-addressed acceptance.
+    official_source_urls: *deep_sources
+    evidence_ref: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    evidence_sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
+forbidden_changes:
+  - Do not claim equivalence between the current v1.6 product and the ICLR-evaluated system without release evidence.
+  - Do not patch research policy inside the upstream core while labelling the comparison unchanged-core.
+  - Do not convert a quest message into privileged hidden task context unavailable to SciTaste.
+  - Do not omit failed branches, runner retries, commands, or human interventions from the common artifact projection.
+requires_separate_upstream_preflight: true
+no_external_download: true
+no_execution_performed: true
