@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -9,9 +11,11 @@ from pydantic import ValidationError
 
 from scitaste.evaluation import (
     AcquiredCohortFinding,
+    AcquiredItemReceipt,
     AcquiredTaskCohortReport,
     AcquiredTaskQualification,
     AcquiredTaskUse,
+    DatasetAcquisitionReceipt,
     ReadinessStatus,
     TaskSignalKind,
     inspect_dataset_acquisition_request,
@@ -170,6 +174,7 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "evaluations_registered": 0,
         "evaluation_results_registered": 0,
         "acquisition_requests": 0,
+        "acquisition_receipts": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -225,6 +230,7 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "evaluations_registered": 0,
         "evaluation_results_registered": 0,
         "acquisition_requests": 0,
+        "acquisition_receipts": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -382,6 +388,167 @@ def test_progress_surfaces_a_bounded_project_acquisition_decision(tmp_path: Path
         _progress(runtime)
 
 
+def test_progress_replaces_acquisition_gate_with_download_only_receipt(tmp_path: Path) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    gate_run_id = "acquisition-run"
+    gate_artifact = f"runs/{gate_run_id}/acquisition/REPORT.json"
+    snapshot = _begin_run(
+        runtime,
+        snapshot,
+        run_id=gate_run_id,
+        status="complete",
+        stage_path="acquisition",
+        artifact=gate_artifact,
+    )
+    request = load_dataset_acquisition_request(
+        "configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml"
+    ).request
+    for binding in request.evidence:
+        destination = tmp_path / binding.path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(binding.path, destination)
+    report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
+    gate_path = runtime.projects_root / "progress-project" / gate_artifact
+    gate_path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+
+    receipt_run_id = "receipt-run"
+    receipt_artifact = f"runs/{receipt_run_id}/acquisition_receipt/RESULT.json"
+    _begin_run(
+        runtime,
+        snapshot,
+        run_id=receipt_run_id,
+        status="complete",
+        stage_path="acquisition_receipt",
+        artifact=receipt_artifact,
+    )
+    acquired_at = datetime(2026, 9, 12, 12, tzinfo=UTC)
+    receipts = tuple(
+        AcquiredItemReceipt(
+            item_id=item.item_id,
+            source_url=item.source_url,
+            source_revision=item.source_revision,
+            destination=item.destination,
+            size_bytes=1,
+            sha256="1" * 64,
+            expected_sha256=item.expected_sha256,
+        )
+        for item in report.items
+    )
+    receipt = DatasetAcquisitionReceipt.create(
+        request_id=report.request_id,
+        request_sha256=report.request_sha256,
+        approved_by="project-owner-10gb-policy",
+        approved_at=acquired_at,
+        acquired_at=acquired_at,
+        approval_scope="download-only-no-ingestion",
+        destination_root=(
+            f"outputs/projects/progress-project/evaluations/acquisitions/{report.request_id}/raw"
+        ),
+        items=receipts,
+        item_count=len(receipts),
+        total_bytes=len(receipts),
+        maximum_total_bytes=report.maximum_total_bytes,
+        source_hosts=report.source_hosts,
+    )
+    receipt_locator = f"evaluations/acquisitions/{report.request_id}/RECEIPT.json"
+    receipt_path = runtime.projects_root / "progress-project" / receipt_locator
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_rendered = receipt.model_dump_json(indent=2) + "\n"
+    receipt_path.write_text(receipt_rendered, encoding="utf-8")
+    receipt_file_sha256 = hashlib.sha256(receipt_rendered.encode()).hexdigest()
+    bundle = {
+        "schema_version": "1.0",
+        "measurement_kind": "real-source-acquisition",
+        "project_id": "progress-project",
+        "run_id": receipt_run_id,
+        "source_commit": "1" * 40,
+        "status": "complete-download-only",
+        "owner_policy": {
+            "policy": "configs/evaluation/acquisition/standing-owner-policy.yaml",
+            "policy_file_sha256": "2" * 64,
+            "maximum_transaction_bytes": 10_000_000_000,
+            "byte_unit": "decimal",
+            "approval_identity": "project-owner-10gb-policy",
+        },
+        "transactions": [
+            {
+                "request_id": report.request_id,
+                "manifest": "configs/evaluation/acquisition/request.yaml",
+                "manifest_file_sha256": "3" * 64,
+                "request_sha256": report.request_sha256,
+                "receipt": receipt_locator,
+                "receipt_file_sha256": receipt_file_sha256,
+                "receipt_sha256": receipt.receipt_sha256,
+                "item_count": receipt.item_count,
+                "total_bytes": receipt.total_bytes,
+                "maximum_total_bytes": receipt.maximum_total_bytes,
+            }
+        ],
+        "aggregate": {
+            "transaction_count": 1,
+            "item_count": receipt.item_count,
+            "total_bytes": receipt.total_bytes,
+            "maximum_total_bytes": receipt.maximum_total_bytes,
+            "receipt_and_raw_hash_verification": "passed",
+            "redirects_followed": False,
+            "existing_files_overwritten": False,
+        },
+        "authority_boundary": {
+            "content_access_performed": False,
+            "content_parsing_performed": False,
+            "dataset_ingestion_performed": False,
+            "archive_extraction_performed": False,
+            "code_execution_performed": False,
+            "api_model_calls": 0,
+            "gpu_workloads": 0,
+            "human_evaluation_performed": False,
+            "authorizes_next_stage": False,
+        },
+        "scientific_effectiveness_established": False,
+        "next_gate": "approve bounded format-aware content inspection",
+    }
+    bundle_path = runtime.projects_root / "progress-project" / receipt_artifact
+    bundle_rendered = json.dumps(bundle, indent=2) + "\n"
+    bundle_path.write_text(bundle_rendered, encoding="utf-8")
+    bundle_file_sha256 = hashlib.sha256(bundle_rendered.encode()).hexdigest()
+
+    _, data = _progress(runtime)
+
+    assert data["counts"]["acquisition_requests"] == 0
+    assert data["counts"]["acquisition_receipts"] == 1
+    assert data["acquisitions"] == []
+    assert data["acquisition_receipts"] == [
+        {
+            "run_ref_id": data["acquisition_receipts"][0]["run_ref_id"],
+            "run_id": receipt_run_id,
+            "request_id": report.request_id,
+            "request_sha256": report.request_sha256,
+            "bundle_file_sha256": bundle_file_sha256,
+            "receipt_sha256": receipt.receipt_sha256,
+            "receipt_file_sha256": receipt_file_sha256,
+            "status": "acquired_download_only",
+            "purpose": report.purpose,
+            "claim_boundary": report.claim_boundary,
+            "item_count": receipt.item_count,
+            "total_bytes": receipt.total_bytes,
+            "maximum_total_bytes": receipt.maximum_total_bytes,
+            "source_hosts": list(receipt.source_hosts),
+            "acquired_at": acquired_at.isoformat(),
+            "acquisition_complete": True,
+            "content_access_performed": False,
+            "content_audit_required": True,
+            "authorizes_ingestion": False,
+            "authorizes_execution": False,
+            "next_gate": bundle["next_gate"],
+            "support_ref_ids": data["acquisition_receipts"][0]["support_ref_ids"],
+        }
+    ]
+    candidate = next(
+        item for item in data["next_step_candidates"] if item["kind"] == "review_data_acquisition"
+    )
+    assert candidate["target_ids"] == [report.request_id]
+
+
 def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path) -> None:
     runtime, snapshot = _create_runtime(tmp_path)
     acquisition_run_id = "superseded-acquisition-run"
@@ -402,9 +569,7 @@ def test_progress_surfaces_post_download_scientific_qualification(tmp_path: Path
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(binding.path, destination)
     acquisition_report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
-    acquisition_report_path = (
-        runtime.projects_root / "progress-project" / acquisition_artifact
-    )
+    acquisition_report_path = runtime.projects_root / "progress-project" / acquisition_artifact
     acquisition_report_path.write_text(
         acquisition_report.model_dump_json(indent=2),
         encoding="utf-8",

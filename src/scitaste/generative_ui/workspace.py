@@ -24,7 +24,11 @@ from scitaste.evaluation.acquired_cohort import (
     AcquiredTaskCohortReport,
     load_acquired_task_cohort_report,
 )
-from scitaste.evaluation.acquisition import AcquisitionGateReport
+from scitaste.evaluation.acquisition import (
+    AcquisitionGateReport,
+    DatasetAcquisitionReceipt,
+    load_dataset_acquisition_receipt,
+)
 from scitaste.evaluation.dataset_package import (
     DatasetPackageGateReport,
     load_dataset_package_gate_report,
@@ -93,6 +97,106 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
+
+
+class _AcquisitionReceiptOwnerPolicy(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    policy: SafeLocator
+    policy_file_sha256: Sha256
+    maximum_transaction_bytes: int = Field(gt=0)
+    byte_unit: Literal["decimal"]
+    approval_identity: SafeText
+
+
+class _AcquisitionReceiptBundleTransaction(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    manifest: SafeLocator
+    manifest_file_sha256: Sha256
+    request_sha256: Sha256
+    receipt: SafeLocator
+    receipt_file_sha256: Sha256
+    receipt_sha256: Sha256
+    item_count: int = Field(gt=0)
+    total_bytes: int = Field(gt=0)
+    maximum_total_bytes: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def transaction_respects_ceiling(self) -> _AcquisitionReceiptBundleTransaction:
+        if self.total_bytes > self.maximum_total_bytes:
+            raise ValueError("acquisition receipt transaction exceeds its ceiling")
+        return self
+
+
+class _AcquisitionReceiptBundleAggregate(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    transaction_count: int = Field(gt=0)
+    item_count: int = Field(gt=0)
+    total_bytes: int = Field(gt=0)
+    maximum_total_bytes: int = Field(gt=0)
+    receipt_and_raw_hash_verification: Literal["passed"]
+    redirects_followed: Literal[False]
+    existing_files_overwritten: Literal[False]
+
+
+class _AcquisitionReceiptAuthorityBoundary(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    content_access_performed: Literal[False]
+    content_parsing_performed: Literal[False]
+    dataset_ingestion_performed: Literal[False]
+    archive_extraction_performed: Literal[False]
+    code_execution_performed: Literal[False]
+    api_model_calls: Literal[0]
+    gpu_workloads: Literal[0]
+    human_evaluation_performed: Literal[False]
+    authorizes_next_stage: Literal[False]
+
+
+class _AcquisitionReceiptBundle(BaseModel):
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"]
+    measurement_kind: Literal["real-source-acquisition"]
+    project_id: ProjectIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    source_commit: str = Field(pattern=r"^[0-9a-f]{40}$")
+    status: Literal["complete-download-only"]
+    owner_policy: _AcquisitionReceiptOwnerPolicy
+    transactions: tuple[_AcquisitionReceiptBundleTransaction, ...] = Field(
+        min_length=1,
+        max_length=128,
+    )
+    aggregate: _AcquisitionReceiptBundleAggregate
+    authority_boundary: _AcquisitionReceiptAuthorityBoundary
+    scientific_effectiveness_established: Literal[False]
+    next_gate: SafeText
+
+    @model_validator(mode="after")
+    def bundle_totals_are_bound(self) -> _AcquisitionReceiptBundle:
+        request_ids = [item.request_id for item in self.transactions]
+        if len(request_ids) != len(set(request_ids)):
+            raise ValueError("acquisition receipt bundle request IDs must be unique")
+        if self.aggregate.transaction_count != len(self.transactions):
+            raise ValueError("acquisition receipt bundle transaction count differs")
+        if self.aggregate.item_count != sum(item.item_count for item in self.transactions):
+            raise ValueError("acquisition receipt bundle item count differs")
+        if self.aggregate.total_bytes != sum(item.total_bytes for item in self.transactions):
+            raise ValueError("acquisition receipt bundle byte count differs")
+        if self.aggregate.maximum_total_bytes != sum(
+            item.maximum_total_bytes for item in self.transactions
+        ):
+            raise ValueError("acquisition receipt bundle ceiling differs")
+        if any(
+            item.maximum_total_bytes > self.owner_policy.maximum_transaction_bytes
+            for item in self.transactions
+        ):
+            raise ValueError("acquisition receipt bundle exceeds its owner policy")
+        return self
+
 
 _REVIEW_ITERATION_OBJECTIVES = {
     "prose_revision": "Prepare a bounded prose treatment without adding evidence.",
@@ -492,6 +596,66 @@ class WorkspaceSurfaceFactory:
                 "no_dataset_file_created": report.no_dataset_file_created,
                 "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
             }
+
+        receipt_by_request: dict[str, dict[str, object]] = {}
+        acquired_request_sha256: set[str] = set()
+        for run in snapshot.manifest.runs:
+            inspected_bundle = _acquisition_receipt_bundle_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_bundle is None:
+                continue
+            bundle, inspected_receipts, bundle_file_sha256 = inspected_bundle
+            receipt_run_ref = run_refs[run.run_id]
+            for transaction, receipt in inspected_receipts:
+                gate = acquisition_by_request.get(transaction.request_id)
+                if gate is None or gate["request_sha256"] != transaction.request_sha256:
+                    raise ProjectSurfaceChangedError(
+                        "registered acquisition receipt lacks its exact project gate"
+                    )
+                if (
+                    gate["item_count"] != receipt.item_count
+                    or gate["maximum_total_bytes"] != receipt.maximum_total_bytes
+                    or tuple(gate["source_hosts"]) != receipt.source_hosts
+                ):
+                    raise ProjectSurfaceChangedError(
+                        "registered acquisition receipt differs from its project gate"
+                    )
+                if transaction.request_id in receipt_by_request:
+                    raise ProjectSurfaceChangedError(
+                        "project registers multiple acquisition receipts for one request"
+                    )
+                acquired_request_sha256.add(transaction.request_sha256)
+                receipt_by_request[transaction.request_id] = {
+                    "run_ref_id": receipt_run_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "request_id": transaction.request_id,
+                    "request_sha256": transaction.request_sha256,
+                    "bundle_file_sha256": bundle_file_sha256,
+                    "receipt_sha256": transaction.receipt_sha256,
+                    "receipt_file_sha256": transaction.receipt_file_sha256,
+                    "status": "acquired_download_only",
+                    "purpose": gate["purpose"],
+                    "claim_boundary": gate["claim_boundary"],
+                    "item_count": receipt.item_count,
+                    "total_bytes": receipt.total_bytes,
+                    "maximum_total_bytes": receipt.maximum_total_bytes,
+                    "source_hosts": list(receipt.source_hosts),
+                    "acquired_at": receipt.acquired_at.isoformat(),
+                    "acquisition_complete": receipt.acquisition_complete,
+                    "content_access_performed": False,
+                    "content_audit_required": True,
+                    "authorizes_ingestion": receipt.authorizes_ingestion,
+                    "authorizes_execution": receipt.authorizes_execution,
+                    "next_gate": bundle.next_gate,
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        receipt_run_ref.evidence_id,
+                        str(gate["run_ref_id"]),
+                    ],
+                }
+        receipt_rows = list(receipt_by_request.values())
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -594,6 +758,7 @@ class WorkspaceSurfaceFactory:
             item
             for item in acquisition_by_request.values()
             if item["request_sha256"] not in qualified_request_sha256
+            and item["request_sha256"] not in acquired_request_sha256
         ]
 
         benchmark_qualification_by_candidate: dict[str, dict[str, object]] = {}
@@ -1075,7 +1240,7 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
-        if acquisition_rows or qualification_rows or dataset_package_rows:
+        if acquisition_rows or receipt_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
                     "candidate_id": "review-data-acquisition-request",
@@ -1086,6 +1251,7 @@ class WorkspaceSurfaceFactory:
                             [
                                 project_ref.evidence_id,
                                 *(item["run_ref_id"] for item in acquisition_rows),
+                                *(item["run_ref_id"] for item in receipt_rows),
                                 *(item["run_ref_id"] for item in qualification_rows),
                                 *(item["run_ref_id"] for item in dataset_package_rows),
                             ]
@@ -1093,6 +1259,7 @@ class WorkspaceSurfaceFactory:
                     ),
                     "target_ids": [
                         *(item["request_id"] for item in acquisition_rows),
+                        *(item["request_id"] for item in receipt_rows),
                         *(item["selection_id"] for item in qualification_rows),
                         *(item["request_id"] for item in dataset_package_rows),
                     ],
@@ -1253,6 +1420,7 @@ class WorkspaceSurfaceFactory:
                     "evaluations_registered": len(evaluation_rows),
                     "evaluation_results_registered": len(evaluation_result_rows),
                     "acquisition_requests": len(acquisition_rows),
+                    "acquisition_receipts": len(receipt_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -1290,6 +1458,7 @@ class WorkspaceSurfaceFactory:
                 "evaluations": evaluation_rows,
                 "evaluation_results": evaluation_result_rows,
                 "acquisitions": acquisition_rows,
+                "acquisition_receipts": receipt_rows,
                 "acquisition_qualifications": qualification_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
@@ -2014,6 +2183,68 @@ def _acquisition_report_for_run(
     except ValidationError as exc:
         raise ProjectSurfaceChangedError("registered acquisition report is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
+
+
+def _acquisition_receipt_bundle_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> (
+    tuple[
+        _AcquisitionReceiptBundle,
+        tuple[tuple[_AcquisitionReceiptBundleTransaction, DatasetAcquisitionReceipt], ...],
+        str,
+    ]
+    | None
+):
+    """Load a download-only bundle and revalidate each referenced canonical receipt."""
+
+    expected = f"runs/{run.run_id}/acquisition_receipt/RESULT.json"
+    if run.stage_path != "acquisition_receipt" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered acquisition receipt bundle is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError(
+            "registered acquisition receipt bundle escaped its project"
+        )
+    try:
+        raw = resolved.read_bytes()
+        bundle = _AcquisitionReceiptBundle.model_validate_json(raw)
+    except (OSError, ValidationError) as exc:
+        raise ProjectSurfaceChangedError(
+            "registered acquisition receipt bundle is invalid"
+        ) from exc
+    if bundle.project_id != root.name or bundle.run_id != run.run_id:
+        raise ProjectSurfaceChangedError("registered acquisition receipt bundle identity differs")
+
+    inspected: list[tuple[_AcquisitionReceiptBundleTransaction, DatasetAcquisitionReceipt]] = []
+    for transaction in bundle.transactions:
+        receipt_path = root.joinpath(*PurePosixPath(transaction.receipt).parts)
+        if receipt_path.is_symlink() or not receipt_path.is_file():
+            raise ProjectSurfaceChangedError("registered acquisition receipt is unavailable")
+        receipt_resolved = receipt_path.resolve(strict=True)
+        if not receipt_resolved.is_relative_to(root):
+            raise ProjectSurfaceChangedError("registered acquisition receipt escaped its project")
+        try:
+            inspection = load_dataset_acquisition_receipt(receipt_resolved)
+        except (OSError, ValidationError, ValueError) as exc:
+            raise ProjectSurfaceChangedError("registered acquisition receipt is invalid") from exc
+        receipt = inspection.receipt
+        if (
+            inspection.file_sha256 != transaction.receipt_file_sha256
+            or receipt.request_id != transaction.request_id
+            or receipt.request_sha256 != transaction.request_sha256
+            or receipt.receipt_sha256 != transaction.receipt_sha256
+            or receipt.item_count != transaction.item_count
+            or receipt.total_bytes != transaction.total_bytes
+            or receipt.maximum_total_bytes != transaction.maximum_total_bytes
+        ):
+            raise ProjectSurfaceChangedError("registered acquisition receipt binding differs")
+        inspected.append((transaction, receipt))
+    return bundle, tuple(inspected), hashlib.sha256(raw).hexdigest()
 
 
 def _acquired_cohort_report_for_run(

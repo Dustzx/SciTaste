@@ -620,6 +620,7 @@ class ProjectProgressCounts(BaseModel):
     evaluations_registered: int = Field(ge=0)
     evaluation_results_registered: int = Field(ge=0)
     acquisition_requests: int = Field(default=0, ge=0)
+    acquisition_receipts: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1002,6 +1003,45 @@ class ProjectProgressAcquisitionQualificationItem(BaseModel):
             raise ValueError("project acquisition qualification must cite its registered run")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("project acquisition qualification references must be unique")
+        return self
+
+
+class ProjectProgressAcquisitionReceiptItem(BaseModel):
+    """One acquired byte set that still grants no content or execution authority."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    request_sha256: Sha256
+    bundle_file_sha256: Sha256
+    receipt_sha256: Sha256
+    receipt_file_sha256: Sha256
+    status: Literal["acquired_download_only"]
+    purpose: SafeText
+    claim_boundary: SafeText
+    item_count: int = Field(gt=0)
+    total_bytes: int = Field(gt=0)
+    maximum_total_bytes: int = Field(gt=0)
+    source_hosts: tuple[SafeText, ...] = Field(min_length=1, max_length=20)
+    acquired_at: SafeText
+    acquisition_complete: Literal[True]
+    content_access_performed: Literal[False]
+    content_audit_required: Literal[True]
+    authorizes_ingestion: Literal[False]
+    authorizes_execution: Literal[False]
+    next_gate: SafeText
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
+
+    @model_validator(mode="after")
+    def receipt_state_is_closed(self) -> ProjectProgressAcquisitionReceiptItem:
+        if self.total_bytes > self.maximum_total_bytes:
+            raise ValueError("project acquisition receipt exceeds its approved ceiling")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("project acquisition receipt must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("project acquisition receipt references must be unique")
         return self
 
 
@@ -1596,6 +1636,7 @@ class ProjectProgressBoardData(BaseModel):
     evaluations: tuple[ProjectProgressEvaluationItem, ...] = ()
     evaluation_results: tuple[ProjectProgressEvaluationResultItem, ...] = ()
     acquisitions: tuple[ProjectProgressAcquisitionItem, ...] = ()
+    acquisition_receipts: tuple[ProjectProgressAcquisitionReceiptItem, ...] = ()
     acquisition_qualifications: tuple[ProjectProgressAcquisitionQualificationItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
@@ -1654,6 +1695,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.evaluations,
             *self.evaluation_results,
             *self.acquisitions,
+            *self.acquisition_receipts,
             *self.acquisition_qualifications,
             *self.dataset_packages,
             *self.benchmark_qualifications,
@@ -1683,6 +1725,11 @@ class ProjectProgressBoardData(BaseModel):
         acquisition_ids = [item.request_id for item in self.acquisitions]
         if len(acquisition_ids) != len(set(acquisition_ids)):
             raise ValueError("project progress acquisition request IDs must be unique")
+        receipt_ids = [item.request_id for item in self.acquisition_receipts]
+        if len(receipt_ids) != len(set(receipt_ids)):
+            raise ValueError("project progress acquisition receipt IDs must be unique")
+        if self.counts.acquisition_receipts != len(self.acquisition_receipts):
+            raise ValueError("project progress acquisition receipt count must match its rows")
         if self.counts.acquisition_requests != len(self.acquisitions):
             raise ValueError("project progress acquisition count must match its rows")
 

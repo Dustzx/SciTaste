@@ -1263,8 +1263,10 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.evaluations"), data.counts.evaluations_registered, t("progress.metric.evaluations_note")),
     progressMetric(t("progress.metric.results"), data.counts.evaluation_results_registered, t("progress.metric.results_note")),
     progressMetric(t("progress.metric.acquisitions"), data.counts.acquisition_requests || 0, t("progress.metric.acquisitions_note")),
+    progressMetric(t("progress.metric.receipts"), data.counts.acquisition_receipts || 0, t("progress.metric.receipts_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
+  const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
   const acquisitionQualifications = renderAcquisitionQualifications(
     data.acquisition_qualifications || [],
   );
@@ -1701,6 +1703,7 @@ function renderProjectProgress(data) {
     benchmarkQualifications,
     datasetPackages,
     acquisitions,
+    acquisitionReceipts,
     acquisitionQualifications,
     metrics,
     distribution,
@@ -2091,6 +2094,102 @@ function renderAcquisitionRequests(items) {
           "authorizes_ingestion",
           "authorizes_execution",
           "no_dataset_file_created",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderAcquisitionReceipts(items) {
+  const section = progressSection(
+    t("progress.receipt.title"),
+    items.length > 0
+      ? t("progress.receipt.subtitle", {count: items.length})
+      : t("progress.receipt.empty"),
+  );
+  if (items.length === 0) {
+    return section;
+  }
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card status-acquired";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.receipt.record"));
+    const title = document.createElement("strong");
+    appendText(title, item.request_id);
+    identity.append(label, title);
+    header.append(identity, progressPill("observed_completed", t("progress.receipt.status")));
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const value of [
+      t("progress.receipt.items", {count: item.item_count}),
+      t("progress.receipt.bytes", {size: formatByteCeiling(item.total_bytes)}),
+      t("progress.receipt.ceiling", {size: formatByteCeiling(item.maximum_total_bytes)}),
+      t("progress.receipt.hosts", {hosts: item.source_hosts.join(", ")}),
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, value);
+      facts.appendChild(fact);
+    }
+
+    const purpose = document.createElement("p");
+    purpose.className = "acquisition-purpose";
+    appendText(purpose, item.purpose);
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.receipt.boundary"));
+    const nextGate = document.createElement("p");
+    nextGate.className = "acquisition-boundary";
+    appendText(nextGate, t("progress.receipt.next_gate"));
+
+    const review = document.createElement("button");
+    review.type = "button";
+    review.className = "secondary-button acquisition-review";
+    appendText(review, t("progress.receipt.review"));
+    review.addEventListener("click", () => requestCandidateWorkspace(
+      "review-data-acquisition-request",
+    ));
+    card.append(
+      header,
+      facts,
+      purpose,
+      boundary,
+      nextGate,
+      review,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          request_sha256: item.request_sha256,
+          bundle_file_sha256: item.bundle_file_sha256,
+          receipt_sha256: item.receipt_sha256,
+          receipt_file_sha256: item.receipt_file_sha256,
+          acquired_at: item.acquired_at,
+          claim_boundary: item.claim_boundary,
+          content_access_performed: item.content_access_performed,
+          authorizes_ingestion: item.authorizes_ingestion,
+          authorizes_execution: item.authorizes_execution,
+          next_gate: item.next_gate,
+        },
+        names: [
+          "request_sha256",
+          "bundle_file_sha256",
+          "receipt_sha256",
+          "receipt_file_sha256",
+          "acquired_at",
+          "claim_boundary",
+          "content_access_performed",
+          "authorizes_ingestion",
+          "authorizes_execution",
+          "next_gate",
         ],
       }),
     );

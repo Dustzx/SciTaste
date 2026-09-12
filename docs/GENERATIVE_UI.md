@@ -179,6 +179,16 @@ control. If immutable history contains several reports for the same request ID,
 the latest manifest entry supplies the current card while every earlier run
 remains visible in project activity.
 
+A completed download appears through a registered
+`runs/<run-id>/acquisition_receipt/RESULT.json` bundle. The server validates the
+bundle totals and no-authority boundary, reopens every referenced canonical
+receipt, verifies its file and semantic hashes, and requires an exact matching
+project acquisition gate. The resulting card shows observed bytes and source
+hosts as `acquired · content unopened`; it exposes content inspection as the
+next gate and does not relabel the source as ingested or experiment-ready.
+Once that receipt is present, the older gate is removed from the pending list,
+so completed downloads cannot continue to appear as awaiting owner approval.
+
 A post-download qualification appears only through the separately registered
 `runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
 rechecks the report's embedded semantic hash, exact task and byte arithmetic,
