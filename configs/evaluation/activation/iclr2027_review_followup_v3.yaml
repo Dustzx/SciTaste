@@ -6,13 +6,13 @@ evidence_review_package:
   file_sha256: d056d262c8028c8c761c1115b1b89277b7d3b48a8868739f9a7095dc6ce1a7c4
   semantic_sha256: 7141c531819b5bb74bc9a83265607c3559544a29885a1df754fb280b3f1a8e6d
 compute_catalog:
-  path: configs/resources/compute_catalog_v3.yaml
-  file_sha256: 41f5e730fe4aaa947358a55d6f1f9109b9938ba980ad657c31959eecd748be21
-  semantic_sha256: 4b6a7d7e4b19939ac1bca683ff178bcba6dc849f543f5584f253cdd3502c35f8
+  path: configs/resources/compute_catalog_v4.yaml
+  file_sha256: a2c1c7571a632a9181288dc7de29f7963622a2c5268125c9e35f9af13cf0b40f
+  semantic_sha256: b47694ae5c414733e22d771b64e0d9cf99c20cdcaa4fa32931b1fda037812b89
 project_resource_binding:
-  path: configs/resources/projects/scitaste_self_development_v3.yaml
-  file_sha256: 21bcb61ea6722f6972830b0728ac92c69fc6ed45034bd9b760d3c7be64197328
-  semantic_sha256: c810db94e29bc399d13c6eab4b72d1e1a455aad8df551370a75f4cda08ff2361
+  path: configs/resources/projects/scitaste_self_development_v4.yaml
+  file_sha256: 42837c38c37f38915821f33fe5b4c9d4b2efb2d3a2f5be14e389f788baeaa739
+  semantic_sha256: 786e1873b4762bf53c1cea8ab840089aa2e798f3775b2eb4fc6fdab626889788
 model_identity_protocol:
   path: configs/evaluation/model_identity/iclr2027_api_identity_v1.yaml
   file_sha256: 0dccb00463ddde64d1a99a882f96b481a2b398ba2ec885932aab7e1aebab6683

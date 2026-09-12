@@ -218,7 +218,7 @@ catalog without acquiring data or launching a task:
 .venv/bin/scitaste evaluation executable-candidate \
   --manifest configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v7.yaml \
-  --compute-catalog configs/resources/compute_catalog_v3.yaml \
+  --compute-catalog configs/resources/compute_catalog_v4.yaml \
   --require-metadata-review-ready
 ```
 

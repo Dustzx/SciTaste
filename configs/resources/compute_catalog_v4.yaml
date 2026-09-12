@@ -1,10 +1,10 @@
 schema_version: "1.1"
-catalog_id: scitaste-shared-compute-v3
+catalog_id: scitaste-shared-compute-v4
 resource_refs:
   - resource_id: deepseek-v4-flash
     kind: api_model
-    locator: api/deepseek_v4_flash.yaml
-    sha256: e4902211ec42ae84ae839e67dfb84a14d10af6e53f9aa3d6a0137f5902b26806
+    locator: api/deepseek_v4_flash_v2.yaml
+    sha256: 129d8a3e5fa72c74be6bd1e5b69d4e517aeccb82d090771971dec76bbcebbb5c
   - resource_id: deepseek-v41-flash
     kind: api_model
     locator: api/deepseek_v41_flash.yaml

@@ -21,7 +21,7 @@ from scitaste.resources import load_compute_resource_catalog
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PROTOCOL = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v1.yaml"
-_CATALOG = _ROOT / "configs/resources/compute_catalog_v3.yaml"
+_CATALOG = _ROOT / "configs/resources/compute_catalog_v4.yaml"
 _SHA = "a" * 64
 
 

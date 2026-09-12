@@ -1,8 +1,8 @@
 schema_version: "1.0"
-binding_set_id: scitaste-self-development-resources-v3
+binding_set_id: scitaste-self-development-resources-v4
 project_id: scitaste-self-development
-catalog_id: scitaste-shared-compute-v3
-catalog_semantic_sha256: 973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a
+catalog_id: scitaste-shared-compute-v4
+catalog_semantic_sha256: b47694ae5c414733e22d771b64e0d9cf99c20cdcaa4fa32931b1fda037812b89
 bindings:
   - binding_id: primary-api-deepseek-v4
     resource_id: deepseek-v4-flash

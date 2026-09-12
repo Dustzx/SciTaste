@@ -162,8 +162,8 @@ decision.
 
 DeepSeek's live official model catalog was rechecked again on 2026-09-12 and now
 names callable ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash-0731`, rather
-than the earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` record. V3 preserves
-both identities instead of rewriting history. Existing V4.1 proposals are now
+than the earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` record. V4 preserves
+the updated identity while v3 remains immutable history. Existing V4.1 proposals are now
 historical no-run artifacts and cannot launch until a new proposal binds the
 current identity and an authenticated response. The internal-review profile is
 also blocked until the missing DeepSeek credential is bound.

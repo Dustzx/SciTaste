@@ -1,15 +1,16 @@
 # Resource catalog layout
 
-`compute_catalog_v3.yaml` is the current project-superordinate resource index.
+`compute_catalog_v4.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v3.yaml
+├── compute_catalog_v4.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
-│   ├── deepseek_v4_flash.yaml
+│   ├── deepseek_v4_flash.yaml          # immutable v3 identity
+│   ├── deepseek_v4_flash_v2.yaml       # current v4 identity
 │   ├── deepseek_v41_flash.yaml        # retained historical identity
 │   ├── zhipu_glm53_flash_v2.yaml
 │   └── bailian_qwen38_max.yaml
@@ -22,11 +23,12 @@ configs/resources/
 │       ├── qwen3_5_4b_local.yaml
 │       └── qwen3_5_4b_remote.yaml
 ├── projects/
-│   └── scitaste_self_development_v3.yaml
+│   └── scitaste_self_development_v4.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
-    └── v3/                    # current official/API and remote-host facts
+    ├── v3/                    # immutable v3 observations
+    └── v4/                    # current official/API facts
 ```
 
 API manifests store endpoints, model identities, public pricing state, and
@@ -42,11 +44,12 @@ presence. Host-scoped checkpoints name their owning GPU resource, so a remote
 path is never probed as though it were a local directory. Project bindings state
 why and at what evidence status each project can use a shared resource.
 
-`compute_catalog_v1.yaml` and `compute_catalog_v2.yaml` remain immutable history.
-V3 adds the current official DeepSeek V4 Flash identity, the refreshed
+`compute_catalog_v1.yaml` through `compute_catalog_v3.yaml` remain immutable
+history. V3 added the then-current DeepSeek V4 Flash identity, the refreshed
 GLM-5.3-Flash identity, a verified remote-host snapshot, and content-identical
-local and remote Qwen3.5-4B replicas. New work uses v3; historical API records
-stay addressable instead of being relabeled.
+local and remote Qwen3.5-4B replicas. V4 records the subsequently verified
+DeepSeek revision and price ceiling in a new component manifest. New work uses
+v4; historical API records stay addressable instead of being relabeled.
 
 `assets/model_asset_catalog_v1.yaml` indexes bounded local and remote discovery
 inventories. Discovery records what already exists, not what the ICLR experiment

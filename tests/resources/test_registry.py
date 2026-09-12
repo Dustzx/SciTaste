@@ -28,9 +28,11 @@ from scitaste.resources import (
 CATALOG = Path("configs/resources/compute_catalog_v1.yaml")
 CATALOG_V2 = Path("configs/resources/compute_catalog_v2.yaml")
 CATALOG_V3 = Path("configs/resources/compute_catalog_v3.yaml")
+CATALOG_V4 = Path("configs/resources/compute_catalog_v4.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
 PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
+PROJECT_BINDING_V4 = Path("configs/resources/projects/scitaste_self_development_v4.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
 REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
 LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
@@ -111,7 +113,7 @@ def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() 
 
     assert inspection.evidence_verified is True
     assert loaded.semantic_sha256 == (
-        "4b6a7d7e4b19939ac1bca683ff178bcba6dc849f543f5584f253cdd3502c35f8"
+        "973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a"
     )
     assert inspection.api_model_ids == (
         "deepseek-v4-flash",
@@ -121,9 +123,9 @@ def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() 
     )
     current_deepseek = loaded.catalog.resource("deepseek-v4-flash")
     assert current_deepseek.model_id == "deepseek-v4-flash"
-    assert current_deepseek.model_revision == "DeepSeek-V4-Flash-0731"
+    assert current_deepseek.model_revision == "DeepSeek-V4-Flash"
     assert current_deepseek.pricing is not None
-    assert current_deepseek.pricing.output_per_million == 1.32
+    assert current_deepseek.pricing.output_per_million == 0.28
     zhipu = loaded.catalog.resource("zhipu-glm53-flash")
     assert zhipu.model_id == "glm-5.3-flash"
     assert "models/vlm/glm-5.3-flash" in zhipu.identity_source_url
@@ -141,6 +143,26 @@ def test_v3_catalog_separates_current_api_identity_from_discovered_gpu_assets() 
     assert local_copy.storage_gpu_resource_id is None
     assert remote_copy.storage_scope == "gpu_host"
     assert remote_copy.storage_gpu_resource_id == "gpu-host-3090-2"
+
+
+def test_v4_catalog_updates_current_api_identity_without_mutating_v3() -> None:
+    inspection = inspect_compute_resource_catalog(CATALOG_V4)
+    loaded = load_compute_resource_catalog(CATALOG_V4)
+
+    assert inspection.evidence_verified is True
+    assert loaded.semantic_sha256 == (
+        "b47694ae5c414733e22d771b64e0d9cf99c20cdcaa4fa32931b1fda037812b89"
+    )
+    current_deepseek = loaded.catalog.resource("deepseek-v4-flash")
+    assert current_deepseek.model_revision == "DeepSeek-V4-Flash-0731"
+    assert current_deepseek.pricing is not None
+    assert current_deepseek.pricing.output_per_million == 1.32
+
+    historical = load_compute_resource_catalog(CATALOG_V3)
+    assert historical.semantic_sha256 == (
+        "973932e71fb9148c8ca86f2fff5cf478fad712c23d5dcbf0f53d80ad7f8f1b8a"
+    )
+    assert historical.catalog.resource("deepseek-v4-flash").model_revision == ("DeepSeek-V4-Flash")
 
 
 def test_discovered_asset_catalog_keeps_inventory_distinct_from_selection() -> None:
@@ -195,6 +217,14 @@ def test_v3_project_binding_registers_assets_without_preselecting_an_experiment(
     binding = yaml.safe_load(PROJECT_BINDING_V3.read_text(encoding="utf-8"))
     discovered = [item for item in binding["bindings"] if "qwen35" in item["binding_id"]]
     assert all(item["required_for"] == ["asset-inventory"] for item in discovered)
+
+
+def test_v4_project_binding_tracks_the_v4_catalog_generation() -> None:
+    inspection = inspect_project_resource_binding(CATALOG_V4, PROJECT_BINDING_V4)
+
+    assert inspection.valid is True
+    assert inspection.issues == ()
+    assert inspection.catalog_id == "scitaste-shared-compute-v4"
 
 
 def test_resource_access_explicitly_partitions_local_bindings_without_exposing_values(

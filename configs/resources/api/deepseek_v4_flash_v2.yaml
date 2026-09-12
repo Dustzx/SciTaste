@@ -6,7 +6,7 @@ resource:
   endpoint: https://api.deepseek.com/chat/completions
   interface: openai-chat-completions
   model_id: deepseek-v4-flash
-  model_revision: DeepSeek-V4-Flash
+  model_revision: DeepSeek-V4-Flash-0731
   rolling_alias: true
   identity_source_url: https://api-docs.deepseek.com/quick_start/pricing/
   identity_verified_on: 2026-09-12
@@ -16,8 +16,8 @@ resource:
   pricing:
     currency: USD
     as_of: 2026-09-12
-    input_cache_hit_per_million: 0.0028
-    input_cache_miss_per_million: 0.14
-    output_per_million: 0.28
+    input_cache_hit_per_million: 0.014
+    input_cache_miss_per_million: 0.44
+    output_per_million: 1.32
     source_url: https://api-docs.deepseek.com/quick_start/pricing/
     status: verified

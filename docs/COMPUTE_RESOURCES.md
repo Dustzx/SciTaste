@@ -6,10 +6,10 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v3.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v4.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
-  `configs/resources/gpu/`; v1 and v2 remain readable history.
+  `configs/resources/gpu/`; v1 through v3 remain immutable, readable history.
 - `outputs/resources/` is the machine-local runtime registry, alongside rather
   than inside `outputs/projects/`. It stores content-bound observations of
   changing availability, catalog predecessors, and exact per-project resource
@@ -52,7 +52,7 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v3.yaml` explicitly binds
+`configs/resources/projects/scitaste_self_development_v4.yaml` explicitly binds
 all nine current and historical resources to the self-development project. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. The registered copy
@@ -119,7 +119,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
   --evidence-root .
 ```
 
@@ -128,26 +128,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v3.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v4.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v3.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v4.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v3.yaml \
+  --catalog configs/resources/compute_catalog_v4.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```
