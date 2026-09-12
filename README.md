@@ -99,19 +99,15 @@ See the [architecture](docs/ARCHITECTURE.md) for component boundaries and the
 
 ## Quick start
 
-Python 3.12 is required. The supported interpreter range is intentionally fixed
-to the 3.12 minor series so local development, CI, and formal runtime preparation
-share one language environment. The default path is deterministic and offline;
-it needs no API key, model download, GPU, or external research framework.
+Python 3.12 is required so development, CI, and runtime preparation share one
+language environment. The default path is offline and needs no API key, model
+download, GPU, or external research framework.
 
 ```bash
 git clone https://github.com/Dustzx/SciTaste.git
 cd SciTaste
 python3.12 -m venv .venv
-.venv/bin/pip install \
-  -c requirements/python312-dev-study.lock \
-  -e '.[dev,study]'
-
+.venv/bin/pip install -c requirements/python312-dev-study.lock -e '.[dev,study]'
 .venv/bin/scitaste run demo --output outputs/demo --seed 7
 ```
 
@@ -133,11 +129,9 @@ Open <http://127.0.0.1:8765>. Loopback access establishes its protected browser
 session automatically; the main page has no credential field.
 
 For the complete offline Discovery → Evidence → Communication → Figure path, use
-the [full-workflow guide](docs/FULL_WORKFLOW.md). The checked-in constraints file
-defines the canonical Linux Python 3.12 development and study environment. GPU
-workloads retain experiment-specific immutable runtime profiles because CUDA and
-model dependencies are part of the measured condition rather than the repository
-control environment.
+the [full-workflow guide](docs/FULL_WORKFLOW.md). The constraints file defines the
+Linux Python 3.12 development/study environment; GPU workloads keep immutable
+profiles because CUDA and model dependencies are measured resources.
 
 ## Research status
 

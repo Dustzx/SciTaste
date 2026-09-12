@@ -32,7 +32,7 @@ artifacts:
     sha256: 67f30876737fd25ca66dcc670dcb9d77aaa9aa2695eb10d3913adbceec8963c1
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: 75cfed073586431e7bc24e3c27f9048d544d62536a6b7362e9e7cdd25a12e9c3
+    sha256: e521959b9e80924ed2094a44562c6d9253a2e4c3e03779dc1640b6f36b86ea18
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198
@@ -53,7 +53,7 @@ artifacts:
     sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
   - artifact_id: taste-corpus-curation-guide
     path: docs/TASTE_CORPUS_CURATION.md
-    sha256: 89333d64236ddf82e597a2208ddf208ddf12667543a5169ed0a07d385d9e2dd6
+    sha256: 5c3f0457a44ca0f3814c8b257ae461e7c2ffa5c53fcd5eb6ac53b5afce532162
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
