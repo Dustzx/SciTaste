@@ -133,6 +133,14 @@ feasibility prepilots; formal task and seed counts require a new pilot-informed
 power analysis. No data download, provider call, SSH session, GPU work, or
 reviewer recruitment was performed to create them.
 
+The missing corpus-construction path is now implemented separately from the
+formal evidence. `taste-corpus-curation` binds each source and its independent
+quality evidence, preserves human- or model-assisted abstraction provenance,
+requires two condition-blinded human verifications with conditional third-party
+adjudication, and materializes a pair only if the production retriever passes all
+parity and contamination checks. This is protocol and product readiness, not a
+claim that the v10 task-specific sources or reviews have been collected.
+
 ## Track A: decision-level scientific taste
 
 SciTasteBench v2 must use held-out, source-disjoint cases derived from real

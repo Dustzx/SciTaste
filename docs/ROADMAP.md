@@ -253,11 +253,11 @@ matched/placebo corpus. A schema-v1.4 prelaunch proposal binds all six real
 implementation references at commit `5bbf716...`, retains Full--Base and
 Full--mismatched as the two confirmation obligations, and classifies the three
 component-only contrasts as mandatory mechanism diagnostics. A local-only
-production-retrieval qualifier now enforces all seven corpus parity dimensions,
-but task-specific matched/placebo corpus acquisition and dual-human abstraction
-remain open. Model execution is still pending; assets, remote checkpoint,
-reviewers, and owner approval remain
-unresolved, so no execution is authorized.
+production-retrieval qualifier and its source/quality-bound dual-human
+abstraction compiler now enforce the construction path, but task-specific source
+bytes and actual review records remain open. Model execution is still pending;
+assets, remote checkpoint, reviewers, and owner approval remain unresolved, so
+no execution is authorized.
 
 That distinction is now executable policy rather than an addendum alone.
 Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
@@ -1045,8 +1045,10 @@ Live taste calibration is also opt-in. Until credentials are provided, scripted
 and replay backends support all implementation, regression, and integration work;
 they must not be described as a real-model taste profile.
 
-The native causal lane now has a production-retrieval corpus-pair qualifier for
-all seven declared matched/placebo dimensions and source-contamination gates. No
-formal corpus is fabricated from the integration seed: task-specific source
-acquisition, dual-human abstraction, and a bound qualification report remain
-prerequisites.
+The native causal lane now has both a production-retrieval corpus-pair qualifier
+and its upstream human-governed abstraction compiler. The compiler binds source
+bytes and separate quality evidence, requires two independent reviews plus
+conditional adjudication, assigns retrieval trust only after acceptance, and
+rolls back a pair that fails real retrieval qualification. No formal corpus is
+fabricated from the integration seed: task-specific source acquisition, actual
+human review, and a bound qualification report remain prerequisites.

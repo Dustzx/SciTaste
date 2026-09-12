@@ -162,6 +162,7 @@ variables and are not stored in source, YAML, or output receipts.
 | [Full workflow](docs/FULL_WORKFLOW.md) | [Generation as Content](docs/GENERATIVE_UI.md) |
 | [Output layout](docs/OUTPUT_LAYOUT.md) | [Native execution](docs/NATIVE_EXECUTION.md) |
 | [Roadmap](docs/ROADMAP.md) | [Evaluation prelaunch gates](docs/EVALUATION_PRELAUNCH.md) |
+| [Taste corpus curation](docs/TASTE_CORPUS_CURATION.md) | [Matched/placebo qualification](docs/TASTE_CORPUS_PAIRING.md) |
 
 ## Development
 

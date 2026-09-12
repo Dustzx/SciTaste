@@ -87,6 +87,7 @@ from scitaste.evaluation import (
     inspect_prelaunch_manifest,
     inspect_task_package,
     inspect_task_selection,
+    inspect_taste_corpus_curation,
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
@@ -102,9 +103,11 @@ from scitaste.evaluation import (
     load_prelaunch_manifest,
     load_task_package_manifest,
     load_task_selection_manifest,
+    load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
+    materialize_taste_corpus_pair,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     publish_project_evaluation,
@@ -120,6 +123,7 @@ from scitaste.evaluation import (
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
+    save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     summarize_evaluation_readiness,
 )
@@ -1275,6 +1279,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(native_condition_preflight)
     native_condition_preflight.set_defaults(handler=_handle_evaluation_native_condition_preflight)
+    taste_corpus_curation = evaluation_commands.add_parser(
+        "taste-corpus-curation",
+        help="Inspect or materialize dual-human-verified paired Taste corpora",
+    )
+    taste_corpus_curation.add_argument("--package", type=Path, required=True)
+    taste_corpus_curation.add_argument("--evidence-root", type=Path, default=Path("."))
+    taste_corpus_curation.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="optional immutable output directory; materialization requires every gate",
+    )
+    taste_corpus_curation.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="optional local-only curation inspection report",
+    )
+    taste_corpus_curation.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="return nonzero until source, pairing, and dual-human review gates pass",
+    )
+    _add_log_level_option(taste_corpus_curation)
+    taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
     taste_corpus_pair = evaluation_commands.add_parser(
         "taste-corpus-pair",
         help="Qualify matched and mismatched Taste corpora without external actions",
@@ -4157,6 +4186,29 @@ def _handle_evaluation_taste_corpus_pair(args: argparse.Namespace) -> int:
         payload["report"] = str(save_taste_corpus_pair_report(report, args.output))
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_qualified and not report.qualified:
+        return 1
+    return 0
+
+
+def _handle_evaluation_taste_corpus_curation(args: argparse.Namespace) -> int:
+    inspection = load_taste_corpus_curation_package(args.package)
+    report = inspect_taste_corpus_curation(inspection, evidence_root=args.evidence_root)
+    payload: dict[str, Any] = {
+        "package_path": str(inspection.path),
+        "package_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.report is not None:
+        payload["report"] = str(save_taste_corpus_curation_report(report, args.report))
+    if args.output_dir is not None:
+        receipt = materialize_taste_corpus_pair(
+            inspection,
+            evidence_root=args.evidence_root,
+            output_dir=args.output_dir,
+        )
+        payload["materialization"] = receipt.model_dump(mode="json")
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_ready and not report.ready_to_materialize:
         return 1
     return 0
 

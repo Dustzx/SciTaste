@@ -4,6 +4,13 @@ SciTaste's native causal comparison changes the relation of Scientific Taste
 precedents to the held-out task while holding the rest of the decision path
 fixed. A generic seed library is not admissible evidence for this comparison.
 
+The upstream curation runtime is documented in
+[`TASTE_CORPUS_CURATION.md`](TASTE_CORPUS_CURATION.md). It requires separately
+bound source-quality evidence, an exact abstraction candidate, two independent
+human reviews, and conditional adjudication before it can assign retrieval
+eligibility. The pair qualifier below verifies the resulting corpora; it does not
+construct or retroactively trust them.
+
 The local-only qualifier is:
 
 ```bash

@@ -2083,3 +2083,30 @@ source-group, content-hash, or locator overlap between arms.
 The native path preflight accepts a verified corpus claim only when its Git-bound
 qualification report proves all seven dimensions and repeats both corpus hashes.
 This tooling does not authorize source acquisition or experimental execution.
+
+### ADR-068: Taste experience is reviewed abstraction, not retrieved content
+
+Status: accepted for offline integration; formal source acquisition and human
+curation remain pending.
+
+Retrieval solves transport and ranking, not scientific judgment. A source becomes
+Scientific Taste only through a content-bound transformation that states the
+decision context, considered actions, preferred action, principle, justification,
+and observed outcome boundary. SciTaste stores the source artifact and separate
+quality evidence, rather than accepting a self-declared venue or a search score as
+proof of source quality.
+
+An abstraction candidate is untrusted regardless of whether a human or model
+authored it. Model assistance requires a bound trace. Exactly two independent,
+conflict-cleared humans inspect the exact candidate hash for source fidelity,
+action grounding, generalization, scientific value, and outcome handling. The
+candidate author cannot review it; agreement needs no adjudicator, a split needs
+exactly one, and rejection cannot be hidden by dropping the source after review.
+
+Only the curation compiler can set `human_verified` and `retrieval_eligible`. It
+then invokes the production retriever and the ADR-067 paired-corpus gate before
+publishing immutable corpus artifacts. Failed publication removes the whole
+attempt, and every output remains no-run with `authorizes_execution=false`. This
+closes the software route from high-quality references to auditable Taste
+experience without claiming that the presently missing human corpus exists or
+that the resulting Taste is effective.
