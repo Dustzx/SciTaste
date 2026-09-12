@@ -133,9 +133,7 @@ class ReferenceSearchExecutionConfig(BaseModel):
                 set(normalized_terms)
             ):
                 raise ValueError("reference-search domain anchors must be nonempty and unique")
-        if set(self.metadata_domain_min_anchor_matches) != set(
-            self.metadata_domain_anchor_terms
-        ):
+        if set(self.metadata_domain_min_anchor_matches) != set(self.metadata_domain_anchor_terms):
             raise ValueError("reference-search domain anchor floors must match their facets")
         for facet, minimum in self.metadata_domain_min_anchor_matches.items():
             if not 1 <= minimum <= len(self.metadata_domain_anchor_terms[facet]):
@@ -700,8 +698,7 @@ def load_reference_search_receipt(
     report_payload.pop("report_sha256", None)
     report = ReferenceMiningReport.model_validate(report_payload)
     identities_match = (
-        run.run_sha256 == receipt.run_sha256
-        and report.report_sha256 == receipt.report_sha256
+        run.run_sha256 == receipt.run_sha256 and report.report_sha256 == receipt.report_sha256
     )
     derivation_matches = (
         receipt.schema_version == "1.0" or compile_reference_mining_report(run) == report

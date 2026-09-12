@@ -99,18 +99,10 @@ def _config() -> ReferenceSearchExecutionConfig:
     return ReferenceSearchExecutionConfig(
         execution_id="reference-search-one",
         batches=(
-            ReferenceSearchBatchSpec(
-                provider="openalex", page=1, minimum_interval_seconds=0
-            ),
-            ReferenceSearchBatchSpec(
-                provider="crossref", page=1, minimum_interval_seconds=0
-            ),
-            ReferenceSearchBatchSpec(
-                provider="openalex", page=2, minimum_interval_seconds=0
-            ),
-            ReferenceSearchBatchSpec(
-                provider="crossref", page=2, minimum_interval_seconds=0
-            ),
+            ReferenceSearchBatchSpec(provider="openalex", page=1, minimum_interval_seconds=0),
+            ReferenceSearchBatchSpec(provider="crossref", page=1, minimum_interval_seconds=0),
+            ReferenceSearchBatchSpec(provider="openalex", page=2, minimum_interval_seconds=0),
+            ReferenceSearchBatchSpec(provider="crossref", page=2, minimum_interval_seconds=0),
         ),
         per_query_results=2,
         max_requests=24,
@@ -144,11 +136,7 @@ class _MetadataTransport:
             item = {
                 "id": f"https://openalex.org/W{page}",
                 "doi": "https://doi.org/10.1000/shared" if page == 1 else "10.1000/open-two",
-                "title": (
-                    "Shared decision study"
-                    if page == 1
-                    else "OpenAlex decision study two"
-                ),
+                "title": ("Shared decision study" if page == 1 else "OpenAlex decision study two"),
                 "publication_year": 2025,
                 "primary_location": {"source": {"display_name": "Journal A"}},
                 "cited_by_count": 12,

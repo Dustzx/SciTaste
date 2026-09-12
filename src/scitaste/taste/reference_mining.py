@@ -584,9 +584,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
     eligible_groups: set[str] = set()
     eligible_candidates: list[ReferenceCandidateMetadata] = []
     query_families = {query.query_id: query.family for query in run.proposal.queries}
-    required_families = (
-        set(ReferenceQueryFamily) if run.need.schema_version == "1.1" else set()
-    )
+    required_families = set(ReferenceQueryFamily) if run.need.schema_version == "1.1" else set()
     progress: list[ReferenceMiningBatchProgress] = []
     saturation_streak = 0
     terminal_batch: int | None = None
@@ -606,9 +604,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
                 set(candidate.hypothesized_decision_patterns) & required_patterns
             )
             available_roles.update(set(candidate.hypothesized_evidence_roles) & required_roles)
-            available_domains.update(
-                _candidate_domain_facets(candidate, run) & required_domains
-            )
+            available_domains.update(_candidate_domain_facets(candidate, run) & required_domains)
             available_families.update(
                 query_families[query_id]
                 for query_id in candidate.discovery_query_ids
@@ -628,11 +624,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
             len(old_groups) < run.need.min_distinct_source_groups
         )
         adds_coverage = bool(
-            adds_required_group_coverage
-            or new_patterns
-            or new_roles
-            or new_domains
-            or new_families
+            adds_required_group_coverage or new_patterns or new_roles or new_domains or new_families
         )
         saturation_streak = 0 if adds_coverage else saturation_streak + 1
         progress.append(
@@ -679,9 +671,7 @@ def compile_reference_mining_report(run: ReferenceMiningRun) -> ReferenceMiningR
         item for candidate in selected for item in candidate.hypothesized_evidence_roles
     } & required_roles
     covered_domains = {
-        item
-        for candidate in selected
-        for item in _candidate_domain_facets(candidate, run)
+        item for candidate in selected for item in _candidate_domain_facets(candidate, run)
     } & required_domains
     selected_groups = {candidate.source_group_id for candidate in selected}
     covered_families = {
@@ -826,8 +816,7 @@ def _select_coverage_cohort(
                         if use_grounded_domains
                         else set(candidate.domain_facets)
                     )
-                    & required_domains
-                    - domains
+                    & required_domains - domains
                 )
             )
             new_group = int(candidate.source_group_id not in group_counts)
