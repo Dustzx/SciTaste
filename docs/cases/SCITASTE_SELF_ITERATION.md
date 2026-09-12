@@ -1062,3 +1062,33 @@ The task-specific high-quality sources have not been acquired, no real
 abstraction API call or human review was performed, and H1/H2 remain unmeasured.
 The next resource-bearing step must name those sources, the conformance model,
 call ceiling, review plan, and stopping rule before execution.
+
+## Turning the first core Taste source into an exact decision (2026-09-12)
+
+The source-candidate screen named AAAR, ARIES, and OpenReview, but naming a
+dataset was not enough to spend resources safely. AAAR's dataset card declares
+MIT while its records contain material derived from papers with their own
+licenses. Treating the package license as permission for every embedded work
+would make the central Scientific Taste treatment difficult to defend.
+
+SciTaste therefore inspected only repository, dataset-tree, HTTP-header, and
+arXiv OAI metadata. Of the 100 pinned AAAR experiment-design records, 44 papers
+declare CC-BY-4.0 or CC0, eight use other Creative Commons variants, and 48 use
+the arXiv nonexclusive-distribution license. Before reading any source body, all
+nine eligible non-`cs.CL` records were retained and seven `cs.CL` records were
+selected by a published SHA-256 key. The resulting sixteen CC-BY-4.0 records
+span five primary-category strata and have a 3 MiB aggregate download ceiling.
+
+The exact request is download-only. It excludes archives, PDFs, figures, images,
+model outputs, linked assets, ingestion, API/GPU work, and human labeling. Its
+offline inspector reports no readiness blocker; only exact owner approval is
+missing. If approved, the bytes remain quarantined until a new content/schema
+audit establishes identity, attribution, field boundaries, and source-group
+isolation. A later proposal—not this request—must authorize a real model
+abstraction and two-person source-fidelity review.
+
+This is the first self-iteration step that moves H1/H2 from a generic resource
+candidate toward real high-quality content without allowing available resources
+to define the formal experiment. It creates no benchmark case and makes no
+effectiveness claim. No source body was downloaded, no API or GPU was used, and
+no human was recruited in this iteration.

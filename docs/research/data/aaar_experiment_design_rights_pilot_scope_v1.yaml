@@ -1,0 +1,242 @@
+schema_version: "1.0"
+scope_id: aaar-experiment-design-rights-pilot-v1
+project_id: scitaste-self-development
+scientific_role: preformal-taste-curation-and-instrument-calibration
+status: exact-download-request-ready-owner-approval-required
+observed_at: 2026-09-12
+formal_benchmark_case_eligibility: false
+formal_effect_estimate_eligibility: false
+source:
+  dataset_id: Reza8848/AAAR-1.0
+  dataset_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+  dataset_card_license: MIT
+  dataset_metadata_url: >-
+    https://huggingface.co/api/datasets/Reza8848/AAAR-1.0/revision/26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+  paper_metadata_protocol: arXiv OAI-PMH arXivRaw GetRecord
+  paper_metadata_url_template: >-
+    https://export.arxiv.org/oai2?verb=GetRecord&identifier=oai:arXiv.org:{arxiv_id}&metadataPrefix=arXivRaw
+  repository_url: https://github.com/RenzeLou/AAAR-1.0
+  repository_commit: 5e56192452d809e61dedd435622567d55515f527
+population:
+  packaged_experiment_design_records: 100
+  paper_license_counts:
+    cc_by_4_0_or_cc0: 44
+    other_creative_commons: 8
+    arxiv_nonexclusive_distribution: 48
+  eligible_license_urls:
+    - http://creativecommons.org/licenses/by/4.0/
+    - http://creativecommons.org/publicdomain/zero/1.0/
+  excluded_license_classes:
+    - creative-commons-noncommercial
+    - creative-commons-no-derivatives
+    - creative-commons-sharealike-for-this-pilot
+    - arxiv-nonexclusive-distribution
+  eligibility_boundary: >-
+    Both the AAAR packaged-dataset license and the original paper-content license
+    must admit the selected bytes. A dataset-card license never overrides the
+    license of paper text or figures embedded in a record.
+selection:
+  selected_count: 16
+  selection_performed_before_source_body_inspection: true
+  source_group_unit: arxiv-paper
+  primary_category_rule: first category in the pinned arXivRaw metadata record
+  diversity_rule: >-
+    Select every eligible non-cs.CL record from the four observed minority
+    primary-category strata (cs.AI, cs.CV, cs.IR, cs.LG), then select seven
+    cs.CL records by the deterministic key below. This is a diversity-enriched
+    instrument pilot and cannot estimate source-population prevalence.
+  deterministic_key: sha256("scitastebench-v2-aaar-rights-pilot-v1\\0" + arxiv_id)
+  cs_cl_take: 7
+  selected_primary_category_counts:
+    cs.CL: 7
+    cs.AI: 5
+    cs.CV: 1
+    cs.IR: 1
+    cs.LG: 2
+download_scope:
+  file_kind: Experiment_Design/{arxiv_id}/data_text.json
+  selected_files: 16
+  observed_total_content_bytes: 2636951
+  maximum_total_bytes: 3145728
+  excluded:
+    - source-archives
+    - pdfs
+    - figures
+    - rendered-images
+    - equation-inference-files
+    - paper-weakness-files
+    - model-outputs
+  redirects_allowed: false
+  ingestion_authorized: false
+  model_calls_authorized: false
+  gpu_execution_authorized: false
+  human_labeling_authorized: false
+selected_records:
+  - arxiv_id: "2305.01937"
+    title: Can Large Language Models Be an Alternative to Human Evaluations?
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 0c42c8f075f81af46fe53b7891b046890f58c3a467e2a8a5cc8eafdcd674bc02
+    dataset_path: Experiment_Design/2305.01937/data_text.json
+    observed_content_bytes: 137341
+    maximum_bytes: 196608
+    git_etag: 3cc016a7430ff5e2fa3a85b72bddaa3e0d85fcb6
+  - arxiv_id: "2305.19472"
+    title: "PlaSma: Making Small Language Models Better Procedural Knowledge Models for (Counterfactual) Planning"
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 0e6aa3a7f5828c00300ad41957e75ef860725511833a3534b31aabcbf36c2b30
+    dataset_path: Experiment_Design/2305.19472/data_text.json
+    observed_content_bytes: 143697
+    maximum_bytes: 196608
+    git_etag: c3948ec0dcc177fa736d318e9815326118630a73
+  - arxiv_id: "2204.07705"
+    title: "Super-NaturalInstructions: Generalization via Declarative Instructions on 1600+ NLP Tasks"
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 142282c2bd247d169dccc4be61c4572867edccd9c6a720ae5fe1bcea85116970
+    dataset_path: Experiment_Design/2204.07705/data_text.json
+    observed_content_bytes: 191206
+    maximum_bytes: 196608
+    git_etag: 97731fee5d5d63697466cb62dff0064c4d30d021
+  - arxiv_id: "2204.13346"
+    title: "UniTE: Unified Translation Evaluation"
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 1af5d11e0a5de162e8de3076793e8caa3bd5ae3e0bfd94db4d952f8a1aea2dee
+    dataset_path: Experiment_Design/2204.13346/data_text.json
+    observed_content_bytes: 137811
+    maximum_bytes: 196608
+    git_etag: 17a0f16c086eecc59fc4fe5a5addd9b295beb8ae
+  - arxiv_id: "2211.00053"
+    title: Generating Sequences by Learning to Self-Correct
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 2cee2b8f5e63d8595d112fe4fa97e0c817ac401f3180102d2d15669ccfd9587a
+    dataset_path: Experiment_Design/2211.00053/data_text.json
+    observed_content_bytes: 144100
+    maximum_bytes: 196608
+    git_etag: a5aeb287def413afd82ca993ca8942669a3296d2
+  - arxiv_id: "2201.11903"
+    title: Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 321607e593182c9be2744e6d079eddb49ca32aba3eda69debe89365645b9f16b
+    dataset_path: Experiment_Design/2201.11903/data_text.json
+    observed_content_bytes: 273590
+    maximum_bytes: 327680
+    git_etag: 30a902fc05e925ec30915e6c694d2deca36579f0
+  - arxiv_id: "2310.11511"
+    title: "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection"
+    primary_category: cs.CL
+    source_license: CC-BY-4.0
+    selection_key: 3469d9ff470008230f6dbc9ada4f2eff01349aa1162e1beec658f6a6718bdc4f
+    dataset_path: Experiment_Design/2310.11511/data_text.json
+    observed_content_bytes: 191319
+    maximum_bytes: 196608
+    git_etag: c2ec027bb1d459f52ad81ad0daf15e118a7b4947
+  - arxiv_id: "2212.13894"
+    title: "LAMBADA: Backward Chaining for Automated Reasoning in Natural Language"
+    primary_category: cs.AI
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2212.13894/data_text.json
+    observed_content_bytes: 110773
+    maximum_bytes: 131072
+    git_etag: d550fc088c5e7964592f4ab694ddc4607eeecf3a
+  - arxiv_id: "2301.13688"
+    title: "The Flan Collection: Designing Data and Methods for Effective Instruction Tuning"
+    primary_category: cs.AI
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2301.13688/data_text.json
+    observed_content_bytes: 172114
+    maximum_bytes: 196608
+    git_etag: 806d07f8cbb3854d584cfe23df04ec56e9ca231d
+  - arxiv_id: "2303.11366"
+    title: "Reflexion: Language Agents with Verbal Reinforcement Learning"
+    primary_category: cs.AI
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2303.11366/data_text.json
+    observed_content_bytes: 113921
+    maximum_bytes: 131072
+    git_etag: 1215252bebbf66cdf2f71e3fb4c5fe213c3ee624
+  - arxiv_id: "2303.17760"
+    title: "CAMEL: Communicative Agents for Mind Exploration of Large Language Model Society"
+    primary_category: cs.AI
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2303.17760/data_text.json
+    observed_content_bytes: 317065
+    maximum_bytes: 327680
+    git_etag: ef526a7c1da1c135672652a72e6394f3722ab3ed
+  - arxiv_id: "2308.00436"
+    title: "SelfCheck: Using LLMs to Zero-Shot Check Their Own Step-by-Step Reasoning"
+    primary_category: cs.AI
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2308.00436/data_text.json
+    observed_content_bytes: 163148
+    maximum_bytes: 196608
+    git_etag: 0cdf46a33cbba52f00ae2e8daebca63e42af53ed
+  - arxiv_id: "2304.08485"
+    title: Visual Instruction Tuning
+    primary_category: cs.CV
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2304.08485/data_text.json
+    observed_content_bytes: 152858
+    maximum_bytes: 196608
+    git_etag: 7b4659090f072a2f19d6d3674315712654537a04
+  - arxiv_id: "2401.08206"
+    title: Generative Multi-Modal Knowledge Retrieval with Large Language Models
+    primary_category: cs.IR
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2401.08206/data_text.json
+    observed_content_bytes: 97521
+    maximum_bytes: 131072
+    git_etag: cfb565b29bab01947012352b6e030ab48dab6823
+  - arxiv_id: "2308.10144"
+    title: ExpeL - LLM Agents Are Experiential Learners
+    primary_category: cs.LG
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2308.10144/data_text.json
+    observed_content_bytes: 119825
+    maximum_bytes: 131072
+    git_etag: d2a2028a5dbdcf053a9189e8d89f2a4a07317721
+  - arxiv_id: "2401.08567"
+    title: "Connect, Collapse, Corrupt: Learning Cross-Modal Tasks with Uni-Modal Data"
+    primary_category: cs.LG
+    source_license: CC-BY-4.0
+    selection_key: minority-stratum-census
+    dataset_path: Experiment_Design/2401.08567/data_text.json
+    observed_content_bytes: 170662
+    maximum_bytes: 196608
+    git_etag: 642507ffc68e7eb458b2200e424288485a7479b8
+post_acquisition_gate:
+  required_checks:
+    - every-file-hash-and-byte-count-match-the-acquisition-receipt
+    - every-record-parses-as-bounded-json
+    - embedded-paper-identity-matches-the-path-arxiv-id
+    - no-image-pdf-source-archive-or-model-output-was-transitively-fetched
+    - attribution-and-license-fields-are-preserved-in-every-derived-record
+    - record-fields-are-classified-before-any-model-visible-projection
+    - no-source-group-overlaps-a-held-out-case-or-self-development-evidence
+  next_decision: >-
+    Either reject the acquired pilot without model use, or publish a new
+    content-addressed ingestion-and-human-curation proposal. Download approval
+    cannot authorize that later decision.
+stopping_rules:
+  - stop-the-entire-download-transaction-on-any-redirect-or-host-change
+  - stop-before-writing-any-item-that-exceeds-its-per-file-ceiling
+  - stop-if-any-destination-exists-or-any-evidence-hash-drifts
+  - stop-after-the-sixteen-allowlisted-json-files
+  - never-expand-the-scope-by-following-record-links
+claim_boundary: >-
+  This scope proves only a metadata-first, rights-filtered, diversity-enriched
+  acquisition proposal. It contains no source body, Taste principle, human
+  label, model output, benchmark case, effectiveness estimate, or permission to
+  ingest or execute the downloaded records.

@@ -1,0 +1,216 @@
+schema_version: "1.0"
+request_id: aaar-experiment-design-rights-pilot-v1
+project_id: scitaste-self-development
+track_id: taste-source-rights-pilot
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire exactly sixteen rights-filtered, diversity-enriched AAAR-1.0
+  experiment-design JSON records to inspect the real source-to-Taste curation
+  boundary before any model abstraction, human labeling, or formal benchmark.
+claim_boundary: >-
+  Download and receipt verification establish only possession of the pinned
+  source bytes. They establish neither record admission, a correct Taste
+  abstraction, human agreement, benchmark validity, nor SciTaste effectiveness.
+selection_id: aaar-experiment-design-rights-pilot-v1
+selection_proposal_sha256: e7234c2475d3a73b70ef85d30ef3613b026eb373f5f65ef8cb375a6ee27c11ec
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/aaar-experiment-design-rights-pilot-v1/raw
+allowed_hosts: [huggingface.co]
+items:
+  - item_id: "2305.01937"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2305.01937/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2305.01937/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2305.19472"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2305.19472/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2305.19472/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2204.07705"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2204.07705/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2204.07705/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2204.13346"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2204.13346/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2204.13346/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2211.00053"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2211.00053/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2211.00053/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2201.11903"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2201.11903/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2201.11903/data_text.json
+    maximum_bytes: 327680
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2310.11511"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2310.11511/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2310.11511/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2212.13894"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2212.13894/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2212.13894/data_text.json
+    maximum_bytes: 131072
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2301.13688"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2301.13688/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2301.13688/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2303.11366"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2303.11366/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2303.11366/data_text.json
+    maximum_bytes: 131072
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2303.17760"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2303.17760/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2303.17760/data_text.json
+    maximum_bytes: 327680
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2308.00436"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2308.00436/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2308.00436/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2304.08485"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2304.08485/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2304.08485/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2401.08206"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2401.08206/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2401.08206/data_text.json
+    maximum_bytes: 131072
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2308.10144"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2308.10144/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2308.10144/data_text.json
+    maximum_bytes: 131072
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: "2401.08567"
+    source_url: https://huggingface.co/datasets/Reza8848/AAAR-1.0/raw/26738cfa644dd038ad6cc3a847682c0ca8e07d1d/Experiment_Design/2401.08567/data_text.json
+    source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+    destination: 2401.08567/data_text.json
+    maximum_bytes: 196608
+    media_type: application/json
+    license_identifier: CC-BY-4.0
+    license_scope: AAAR packaged JSON under the dataset MIT declaration and embedded paper content under the paper's pinned arXiv CC-BY-4.0 record; attribution must be preserved.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+maximum_total_bytes: 3145728
+evidence:
+  - evidence_id: selection-and-rights-scope
+    path: docs/research/data/aaar_experiment_design_rights_pilot_scope_v1.yaml
+    sha256: e7234c2475d3a73b70ef85d30ef3613b026eb373f5f65ef8cb375a6ee27c11ec
+  - evidence_id: pilot-governance
+    path: docs/research/protocols/AAAR_EXPERIMENT_DESIGN_RIGHTS_PILOT_V1.md
+    sha256: fda34fbef8f57218955493168b1beecd522ce807177de0836e2dfe79b2222a5b
+  - evidence_id: source-candidate-screen
+    path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
+    sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
+approval:
+  approved: false
+  request_sha256: null
+  approved_by: null
+  approved_at: null
+  scope: null
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

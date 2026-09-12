@@ -29,12 +29,19 @@ provider inference with local accelerator use.
 | Ceiling | 16 allocated GPU-hours, 100 GiB output/storage ceiling |
 | Primary metric | paired expert-aligned action selection, Full SciTaste versus Base |
 | Negative control | matched Taste versus source-disjoint mismatched Taste |
-| Current status | blocked: the candidate source list exists, but no source bytes, natural cases, or human labels have been acquired |
+| Current status | the first 16-record, 3 MiB AAAR rights pilot is exact and approval-ready; no source bytes, natural cases, abstractions, or human labels have been acquired |
 
 The curation/compiler contract is
 [`protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md`](protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md).
 The metadata-only source screen is
 [`data/scitastebench_v2_source_candidates_v1.yaml`](data/scitastebench_v2_source_candidates_v1.yaml).
+The first core-source transaction is
+`configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml`.
+It selects sixteen source-body-unseen experiment-design JSON records from five
+arXiv primary categories after a paper-level CC-BY-4.0 screen. Its 3 MiB
+download-only scope advances treatment construction, not formal case sampling or
+effectiveness estimation; ingestion and every model, human, API, and GPU action
+remain separately gated.
 
 ## API block — Track B end-to-end external systems
 
@@ -63,16 +70,21 @@ by alias.
 
 ## Launch order
 
-1. Approve only a bounded metadata/source acquisition slice; do not start a
-   model or GPU.
-2. Curate and human-label a source-disjoint natural pilot, then freeze its power
+1. Decide the exact AAAR sixteen-file rights-pilot request; approval permits only
+   one receipt-bearing 3 MiB download and does not start ingestion, a model, a
+   human task, or a GPU.
+2. Audit the acquired schema/content and publish a separate source-projection,
+   real-abstraction, and human-fidelity pilot before any benchmark case is
+   admitted.
+3. Curate and human-label a source-disjoint natural pilot, then freeze its power
    analysis before opening the formal Track A split.
-3. Run the local Qwen block after checkpoint attestation on the remote host.
-4. In parallel, finish at least two accepted external-system adapters and the
+4. Run the selected local/API mechanism block only after model conformance and
+   checkpoint/identity attestation.
+5. In parallel, finish at least two accepted external-system adapters and the
    ten-task asset/license audit.
-5. Run exactly one API end-to-end pilot block after a new clean-commit proposal
+6. Run exactly one API end-to-end pilot block after a new clean-commit proposal
    and exact hash approval.
-6. Admit only verified results, bind them into the paper, run internal model
+7. Admit only verified results, bind them into the paper, run internal model
    critique, then obtain independent expert review and reviewer-verified closure.
 
 Failure at any gate is retained as evidence; it is not replaced by a mock

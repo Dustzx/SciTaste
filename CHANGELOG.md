@@ -5,6 +5,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+- The first core Scientific Taste source acquisition is now an exact,
+  approval-ready request rather than a dataset name. It selects sixteen
+  metadata-first AAAR experiment-design records whose original papers declare
+  CC-BY-4.0, enriches five arXiv primary categories before inspecting source
+  bodies, pins every URL to one dataset revision, caps the transaction at 3 MiB,
+  and grants neither ingestion nor model, human, GPU, or experiment authority.
 - The supported development and CI environment is now one CPython 3.12 line,
   with 3.12.14 selected by `.python-version` and CI and a checked-in Linux
   development/study constraints lock. The former duplicate 3.11 CI job and the

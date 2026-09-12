@@ -32,7 +32,7 @@ artifacts:
     sha256: 67f30876737fd25ca66dcc670dcb9d77aaa9aa2695eb10d3913adbceec8963c1
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: e521959b9e80924ed2094a44562c6d9253a2e4c3e03779dc1640b6f36b86ea18
+    sha256: acb381b92941007ab4b67105366d92d6a394d9bff8f7d6fb13abab562561559e
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198

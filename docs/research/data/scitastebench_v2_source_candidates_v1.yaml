@@ -38,8 +38,18 @@ sources:
     candidate_families: [experiment, evidence, review, visual]
     use_boundary: evaluation-and-human-curation-only-not-taste-training
     acquisition_status: not-acquired
+    bounded_rights_pilot:
+      request_id: aaar-experiment-design-rights-pilot-v1
+      request_path: configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml
+      scope_path: docs/research/data/aaar_experiment_design_rights_pilot_scope_v1.yaml
+      status: exact-download-request-ready-owner-approval-required
+      selected_records: 16
+      maximum_total_bytes: 3145728
+      selected_paper_license: CC-BY-4.0
+      authorizes_ingestion: false
+      authorizes_model_or_gpu_use: false
     blockers:
-      - verify-license-scope-for-each-bundled-paper-source-and-image
+      - verify-license-scope-for-every-formal-source-beyond-the-sixteen-file-rights-pilot
       - freeze-source-groups-and-deduplicate-across-taste-precedents
       - convert-open-ended-outputs-to-fixed-pair-decisions-before-labeling
       - obtain-independent-human-labels-under-the-frozen-rubric

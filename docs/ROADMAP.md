@@ -22,6 +22,15 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
+Phase 8.1 now has its first core-source transaction ready for an owner decision.
+The AAAR rights pilot fixes sixteen `Experiment_Design/data_text.json` records at
+one dataset revision, retains only original papers with explicit CC-BY-4.0
+metadata, enriches five arXiv primary categories before source-body inspection,
+and caps download-only acquisition at 3 MiB. It is not a benchmark subset and
+cannot authorize ingestion, abstraction, labeling, model calls, or GPU work.
+After approval and receipt verification, the next gate is content/schema audit
+followed by a separately approved real abstraction and human-fidelity pilot.
+
 The native decision path now includes a shared model-backed candidate
 concretization protocol before fixed-candidate selection. Every feasible
 controller-owned template must survive exactly once; deterministic admission
