@@ -668,11 +668,16 @@ def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -
         accepted_media_types = {
             "text/markdown": {"text/markdown", "text/plain"},
             "text/csv": {"text/csv", "text/plain", "application/octet-stream"},
-            "application/json": {"application/json"},
+            # Pinned ``raw`` endpoints on Hugging Face and GitHub serve typed
+            # text artifacts as ``text/plain``.  The request still binds the
+            # intended semantic type and the later, separately authorized
+            # content audit validates the bytes before ingestion.
+            "application/json": {"application/json", "text/plain"},
             "application/x-yaml": {
                 "application/x-yaml",
                 "application/yaml",
                 "text/yaml",
+                "text/plain",
             },
         }
         if observed_media_type not in accepted_media_types.get(expected_media_type, set()):

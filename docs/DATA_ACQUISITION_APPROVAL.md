@@ -65,6 +65,28 @@ only after the entire transaction succeeds. Any transfer or hash failure
 removes the staging transaction. The receipt records observed content hashes
 but grants neither ingestion nor experiment-execution authority.
 
+## Standing download policy
+
+On 2026-09-12 the project owner granted standing automatic approval for each
+already frozen acquisition transaction whose aggregate ceiling is no greater
+than 10,000,000,000 bytes (decimal 10 GB). The machine-readable policy is
+`configs/evaluation/acquisition/standing_owner_download_policy_v1.yaml`.
+
+The policy removes a conversational round trip; it does not weaken the request
+gate. Each transaction still needs an exact semantic hash, scientific purpose
+and claim boundary, verified acquisition licenses, pinned HTTPS sources, an
+allowlisted host, bounded items, and an empty workspace-contained destination.
+The executor still creates an immutable approved derivative and invokes the
+atomic downloader as separate operations.
+
+Automatic approval ends when the receipt is written. It grants no permission
+to parse or inspect the content, extract an archive, ingest data, run downloaded
+code, load a model, call an API, use a GPU or SSH host, involve human reviewers,
+admit a benchmark, or make a scientific claim. Those actions retain their own
+review and execution gates. A transaction above decimal 10 GB requires a new
+explicit owner decision, and the policy never creates or expands an unfrozen
+request.
+
 This request is valid under either future external comparison design because it
 only acquires starting briefs. It does not resolve whether the experiment uses
 a common backbone or best-native system configurations.

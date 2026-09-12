@@ -1,0 +1,32 @@
+schema_version: "1.0"
+policy_id: project-owner-download-under-10gb-v1
+project_id: scitaste-self-development
+granted_at: "2026-09-12T22:23:00+08:00"
+authority: project-owner
+decision: standing-automatic-approval
+maximum_transaction_bytes: 10000000000
+byte_unit: decimal
+scope: download-only-no-ingestion
+requires:
+  - an exact immutable acquisition request and semantic request SHA-256
+  - a declared scientific purpose and claim boundary
+  - verified acquisition license status for every item
+  - pinned source revisions and an HTTPS host allowlist
+  - bounded per-item and aggregate byte ceilings
+  - a workspace-contained empty destination
+  - redirects, overwrites, secret material, ingestion, and execution disabled
+authorizes:
+  - creation of an exact-hash approved request derivative
+  - the separately switched atomic download transaction
+  - byte-count, transport, and SHA-256 receipt verification
+does_not_authorize:
+  - content parsing or semantic inspection
+  - ingestion, extraction, or transformation
+  - code or container execution
+  - model loading, API calls, GPU jobs, or SSH workloads
+  - human-subject activity or human evaluation
+  - benchmark admission, experiment selection, or scientific claims
+notes:
+  - The ceiling applies independently to each already frozen transaction.
+  - The policy does not create a request or make an unreviewed source eligible.
+  - Transactions above the ceiling require a new explicit owner decision.

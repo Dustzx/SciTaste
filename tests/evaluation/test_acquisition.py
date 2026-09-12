@@ -407,6 +407,39 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
     )
     assert acquisition_module._fetch_https_bytes(source_url, 1024, "text/csv") == csv_body
 
+    json_body = b'{"task_id": 1}\n'
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(
+                json_body,
+                final_url=source_url,
+                declared_length=len(json_body),
+                content_type="text/plain; charset=utf-8",
+            )
+        ),
+    )
+    assert acquisition_module._fetch_https_bytes(source_url, 1024, "application/json") == json_body
+
+    yaml_body = b"task_id: 1\n"
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(
+                yaml_body,
+                final_url=source_url,
+                declared_length=len(yaml_body),
+                content_type="text/plain; charset=utf-8",
+            )
+        ),
+    )
+    assert (
+        acquisition_module._fetch_https_bytes(source_url, 1024, "application/x-yaml")
+        == yaml_body
+    )
+
     monkeypatch.setattr(
         acquisition_module,
         "build_opener",
@@ -428,7 +461,14 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
     monkeypatch.setattr(
         acquisition_module,
         "build_opener",
-        lambda _handler: Opener(Response(body, final_url=source_url, declared_length=len(body))),
+        lambda _handler: Opener(
+            Response(
+                body,
+                final_url=source_url,
+                declared_length=len(body),
+                content_type="text/html; charset=utf-8",
+            )
+        ),
     )
     with pytest.raises(ValueError, match="approved media type"):
         acquisition_module._fetch_https_bytes(source_url, 1024, "application/json")
