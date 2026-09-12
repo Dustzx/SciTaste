@@ -426,6 +426,7 @@ def test_registered_review_routes_to_open_project_obligations(
                         "study_ids": [
                             "taste-abstraction-mechanism",
                             "taste-specificity-mechanism",
+                            "taste-selection-mechanism",
                             "native-objective-progress",
                         ],
                         "rationale": ("Bind the concern to every registered title-critical study."),
@@ -509,6 +510,7 @@ def test_registered_review_routes_to_open_project_obligations(
     assert iteration_row["followup_design"]["hypothesis_ids"] == [
         "H1_taste_abstraction",
         "H2_taste_specificity",
+        "H2b_taste_selection",
         "H3_native_effect",
     ]
     assert iteration_row["followup_design"]["primary_model_state"] == "unselected"
@@ -520,6 +522,7 @@ def test_registered_review_routes_to_open_project_obligations(
     assert design_step["study_ids"] == [
         "taste-abstraction-mechanism",
         "taste-specificity-mechanism",
+        "taste-selection-mechanism",
         "native-objective-progress",
     ]
     assert {item["stage"] for item in iteration_row["lanes"]} == {
