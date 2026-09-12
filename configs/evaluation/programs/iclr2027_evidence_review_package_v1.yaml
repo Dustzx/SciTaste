@@ -13,7 +13,7 @@ source_proposals:
   - source_id: scitastebench-decision-cases
     kind: construction_screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
-    file_sha256: baf80383bbfa92cae3e69cf0ae680ad63ee555a64734c639b327623c03432198
+    file_sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
     proposal_sha256: null
   - source_id: innovatorbench-objective-tasks
     kind: acquisition_request
