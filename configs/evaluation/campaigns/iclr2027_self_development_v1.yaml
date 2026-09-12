@@ -19,10 +19,10 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 5545fa21906711d95ae56f4fea3106447209379259ae474b88efa7dacaf6eb4e
+    sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 076d9b95effe4c7d819fe1836b15ba9d2321faac6d2ad87ae3cc516474651afe
+    sha256: e44ea26a0c01dd28812574f683c504c73718e85270af7b133640c1c046f6b669
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -109,7 +109,7 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: 193635919ae53deb695fbf684e67baeab26ea8be2b470a9bd5db886c499ec2f5
+    sha256: 27cc6f9802b81c033501a8113f6cd921f5ba087f74c9dd3b9df311c13f5cae04
 tracks:
   - track_id: scientific-taste-decisions
     role: scientific_taste_mechanism

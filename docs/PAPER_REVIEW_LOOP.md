@@ -306,8 +306,9 @@ should not be used for new project evidence.
 
 The historical DeepSeek V4.1 Flash review profile and inert backend example
 reserve a 32,768-token output ceiling for that whole-paper node. The current
-2026-09-12 official catalog instead names `deepseek-v4-flash` /
-`DeepSeek-V4-Flash-0731`; therefore the old profile is not launchable. A new
+2026-09-13 official catalog names `deepseek-flash` /
+`DeepSeek-V4.1-Flash`; the existing profile remains non-launchable because it
+is not bound to the current catalog, identity protocol, and approval bytes. A new
 review call requires a sentinel-bracketed temporal stratum rather than pretending
 the rolling callable alias is an immutable checkpoint. The normal double gate
 and an authenticated returned identity remain mandatory. Older profile, proposal, and

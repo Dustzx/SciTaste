@@ -22,6 +22,8 @@ from scitaste.resources import load_compute_resource_catalog
 _ROOT = Path(__file__).resolve().parents[2]
 _PROTOCOL = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v1.yaml"
 _CATALOG = _ROOT / "configs/resources/compute_catalog_v4.yaml"
+_PROTOCOL_V2 = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v2.yaml"
+_CATALOG_V5 = _ROOT / "configs/resources/compute_catalog_v5.yaml"
 _SHA = "a" * 64
 
 
@@ -119,6 +121,25 @@ def test_temporal_identity_protocol_separates_revision_backed_and_window_only_mo
     assert protocol.cross_provider_pooling is False
     assert protocol.sentinel.task_or_benchmark_content_allowed is False
     assert inspection.external_action_performed is False
+
+
+def test_current_protocol_uses_official_deepseek_v41_identity() -> None:
+    inspection = load_api_identity_protocol(_PROTOCOL_V2)
+    catalog = load_compute_resource_catalog(_CATALOG_V5).catalog
+    deepseek = qualify_api_identity_candidate(
+        catalog.resource("deepseek-v41-flash"),
+        inspection.protocol.policy("deepseek-v41-flash"),
+    )
+
+    assert inspection.protocol.protocol_id == "iclr2027-api-identity-v2"
+    assert deepseek.identity_mode is ApiIdentityMode.OFFICIAL_REVISION_PLUS_TEMPORAL_WINDOW
+    assert deepseek.official_revision == "DeepSeek-V4.1-Flash"
+    assert deepseek.pilot_proposal_ready is True
+    assert deepseek.formal_identity_ready is False
+    assert inspection.protocol.policy("deepseek-v41-flash").allowed_returned_model_ids == (
+        "deepseek-flash",
+        "DeepSeek-V4.1-Flash",
+    )
 
 
 def test_identity_protocol_rejects_missing_provenance_capture() -> None:

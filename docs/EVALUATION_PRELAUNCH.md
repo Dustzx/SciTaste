@@ -101,7 +101,7 @@ no silent fallback between Zhipu and DeepSeek.
 |---|---|---|---:|---|
 | `native-taste-causal-prepilot-v11` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.4 no-run proposal; six structural implementations bind commit `eca58df...`, while v3 preflight qualifies bounded candidate generation, fixed-candidate selection, and the source/quality-bound human curation runtime; Full--Base and Full--mismatched are the two confirmation obligations, while three component-only analyses are mandatory diagnostics; actual paired corpora, assets, remote checkpoint, reviewers, and approval remain blocked |
 | `external-best-native-prepilot-v7` | model-confounded ecological system feasibility | SciTaste/DeepSeek V4.1 Flash, Agent Laboratory/o3-mini, TinyScientist/GPT-4o-2024-08-06 | 3 real systems × 2 MLRC task candidates × 1 seed = 6 trajectories | current schema-v1.3 no-run proposal; model mapping is statically bound, but task/sandbox/telemetry/artifact/failure adapters, task assets, credentials, reviewers, and approval remain blocked; it can never establish the causal Taste/title claim |
-| `formal-v6-package-prepilot` | historical API idea-to-paper package-preference feasibility | historical DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | superseded no-run identity snapshot; current official V4 Flash requires a new proposal, and the 100 units remain only a historical ceiling |
+| `formal-v6-package-prepilot` | historical API idea-to-paper package-preference feasibility | historical DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run proposal under an older resource/protocol generation; current V4.1 still requires a new proposal, and the 100 units remain only a historical ceiling |
 | `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; the legacy alias is now routed to V4.1, so this record must not be relabeled or launched |
 | `formal-v4-package-prepilot` | historical package-preference proposal | `deepseek-flash` / `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable history with a superseded identity and older source/resource/governance contract; do not launch |
 | `formal-v4-accepted-method-prepilot` | historical API scope with an invalid endpoint/task binding | DeepSeek API `deepseek-flash`, documented version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 cells | immutable history; v3 incorrectly treated the MLR-Bench open-ended package rubric as objective task progress and must not be approved or launched |
@@ -112,15 +112,12 @@ no silent fallback between Zhipu and DeepSeek.
 | `robustness-v2-multitask-prepilot` | historical local small-model scope with an invalid endpoint/task binding | Qwen3-VL-2B-Instruct, tree SHA-256 `8e95e5f6d2ce9219e40be475c077700c51495889166d38cf99c17acd6513b7a1`, 4,266,653,057 bytes; 8 × RTX 3090 requested | 6 ablations × 2 tasks × 2 seeds = 24 cells | immutable no-run history; rebuild against qualified objective-score tasks or an explicit package-review endpoint before any GPU approval |
 | `robustness-v1-prepilot` | historical local scope proposal | the same local Qwen checkpoint candidate | 6 ablation × task × seed cells | immutable one-task/one-seed history |
 
-The current 2026-09-12 official DeepSeek catalog exposes callable ID
-`deepseek-v4-flash` and version `DeepSeek-V4-Flash`, with USD 0.0028/M
-cache-hit input, USD 0.14/M cache-miss input, and USD 0.28/M output. That row is
-the immutable earlier prepilot snapshot. The current resource catalog names
-version `DeepSeek-V4-Flash-0731` and uses the official peak tariff—USD 0.014/M
-cache-hit input, USD 0.44/M cache-miss input, and USD 1.32/M output—as its
-conservative ceiling. The earlier
-`deepseek-flash` / `DeepSeek-V4.1-Flash` observation and every proposal that
-binds it are historical no-run evidence, not current launch candidates. A new
+The current 2026-09-13 official DeepSeek catalog exposes callable ID
+`deepseek-flash` and version `DeepSeek-V4.1-Flash`. Resource catalog v5 uses the
+official peak tariff—USD 0.006/M cache-hit input, USD 0.30/M cache-miss input,
+and USD 1.20/M output—as its conservative ceiling. The v3 and v4 identity
+snapshots and every proposal that binds them remain historical no-run evidence,
+not current launch candidates. A new
 proposal and an authenticated returned-model observation are required. See the
 official [model and pricing table](https://api-docs.deepseek.com/quick_start/pricing/).
 
@@ -218,7 +215,7 @@ catalog without acquiring data or launching a task:
 .venv/bin/scitaste evaluation executable-candidate \
   --manifest configs/evaluation/candidates/mlrc_3090_objective_progress_v1.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v7.yaml \
-  --compute-catalog configs/resources/compute_catalog_v4.yaml \
+  --compute-catalog configs/resources/compute_catalog_v5.yaml \
   --require-metadata-review-ready
 ```
 

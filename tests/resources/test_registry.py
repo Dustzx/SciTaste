@@ -29,10 +29,12 @@ CATALOG = Path("configs/resources/compute_catalog_v1.yaml")
 CATALOG_V2 = Path("configs/resources/compute_catalog_v2.yaml")
 CATALOG_V3 = Path("configs/resources/compute_catalog_v3.yaml")
 CATALOG_V4 = Path("configs/resources/compute_catalog_v4.yaml")
+CATALOG_V5 = Path("configs/resources/compute_catalog_v5.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
 PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
 PROJECT_BINDING_V4 = Path("configs/resources/projects/scitaste_self_development_v4.yaml")
+PROJECT_BINDING_V5 = Path("configs/resources/projects/scitaste_self_development_v5.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
 REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
 LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
@@ -165,6 +167,34 @@ def test_v4_catalog_updates_current_api_identity_without_mutating_v3() -> None:
     assert historical.catalog.resource("deepseek-v4-flash").model_revision == ("DeepSeek-V4-Flash")
 
 
+def test_v5_catalog_tracks_current_deepseek_v41_without_rewriting_v4() -> None:
+    inspection = inspect_compute_resource_catalog(CATALOG_V5)
+    loaded = load_compute_resource_catalog(CATALOG_V5)
+
+    assert inspection.evidence_verified is True
+    assert loaded.semantic_sha256 == (
+        "0295152ecd065124a65f57260f65e6bc98ba2715df1e67d2f324fe6912da6b8d"
+    )
+    assert inspection.api_model_ids == (
+        "deepseek-v41-flash",
+        "deepseek-v4-flash",
+        "zhipu-glm53-flash",
+        "bailian-qwen38-max",
+    )
+    deepseek = loaded.catalog.resource("deepseek-v41-flash")
+    assert deepseek.model_id == "deepseek-flash"
+    assert deepseek.model_revision == "DeepSeek-V4.1-Flash"
+    assert deepseek.pricing is not None
+    assert deepseek.pricing.input_cache_hit_per_million == 0.006
+    assert deepseek.pricing.input_cache_miss_per_million == 0.30
+    assert deepseek.pricing.output_per_million == 1.20
+
+    historical = load_compute_resource_catalog(CATALOG_V4)
+    assert historical.catalog.resource("deepseek-v4-flash").model_revision == (
+        "DeepSeek-V4-Flash-0731"
+    )
+
+
 def test_discovered_asset_catalog_keeps_inventory_distinct_from_selection() -> None:
     catalog_path = Path("configs/resources/assets/model_asset_catalog_v1.yaml")
     catalog = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
@@ -225,6 +255,19 @@ def test_v4_project_binding_tracks_the_v4_catalog_generation() -> None:
     assert inspection.valid is True
     assert inspection.issues == ()
     assert inspection.catalog_id == "scitaste-shared-compute-v4"
+
+
+def test_v5_project_binding_tracks_only_current_deepseek_identity() -> None:
+    inspection = inspect_project_resource_binding(CATALOG_V5, PROJECT_BINDING_V5)
+
+    assert inspection.valid is True
+    assert inspection.issues == ()
+    assert inspection.catalog_id == "scitaste-shared-compute-v5"
+    assert inspection.api_resource_ids == (
+        "deepseek-v41-flash",
+        "zhipu-glm53-flash",
+        "bailian-qwen38-max",
+    )
 
 
 def test_resource_access_explicitly_partitions_local_bindings_without_exposing_values(

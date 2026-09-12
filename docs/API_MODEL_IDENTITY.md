@@ -7,7 +7,7 @@ rolling alias would make realistic API evaluation impossible; silently calling
 the alias an immutable checkpoint would make the evidence irreproducible.
 
 The current no-run protocol is
-`configs/evaluation/model_identity/iclr2027_api_identity_v1.yaml`. It requires:
+`configs/evaluation/model_identity/iclr2027_api_identity_v2.yaml`. It requires:
 
 - an identity-only, task-excluded sentinel before and after every window;
 - another sentinel after a bounded number of calls;
@@ -20,10 +20,10 @@ The current no-run protocol is
 
 DeepSeek and Zhipu currently have different evidence:
 
-- DeepSeek's official catalog names callable ID `deepseek-v4-flash` and public
-  version `DeepSeek-V4-Flash-0731`. The catalog entry records the current peak
-  tariff as the conservative price ceiling. A formal window still needs an
-  explicitly approved authenticated start/end attestation.
+- DeepSeek's official catalog names callable ID `deepseek-flash` and public
+  version `DeepSeek-V4.1-Flash`. Catalog v5 records the current peak tariff as
+  the conservative price ceiling. A formal window still needs an explicitly
+  approved authenticated start/end attestation.
 - Zhipu's official page names callable ID `glm-5.3-flash`, but does not disclose
   an immutable served revision or an exact machine-readable API tariff on that
   page. It therefore uses a shorter temporal-only stratum and remains ineligible

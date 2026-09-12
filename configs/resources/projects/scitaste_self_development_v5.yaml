@@ -1,0 +1,81 @@
+schema_version: "1.0"
+binding_set_id: scitaste-self-development-resources-v5
+project_id: scitaste-self-development
+catalog_id: scitaste-shared-compute-v5
+catalog_semantic_sha256: 0295152ecd065124a65f57260f65e6bc98ba2715df1e67d2f324fe6912da6b8d
+bindings:
+  - binding_id: primary-api-deepseek-v41
+    resource_id: deepseek-v41-flash
+    expected_kind: api_model
+    role: primary-api-candidate
+    priority: 1
+    status: reported
+    purpose: Current official DeepSeek V4.1 Flash candidate; an exact locally authenticated conformance window must precede experimental selection.
+    required_for:
+      - api-causal-pilot-candidate
+      - api-system-comparison-candidate
+  - binding_id: robustness-api-zhipu
+    resource_id: zhipu-glm53-flash
+    expected_kind: api_model
+    role: robustness-api-candidate
+    priority: 1
+    status: pending
+    purpose: Current official GLM-5.3-Flash candidate; a bound key is not a live call or experimental selection.
+    required_for:
+      - cross-provider-robustness-candidate
+      - multimodal-system-pilot-candidate
+  - binding_id: historical-api-bailian
+    resource_id: bailian-qwen38-max
+    expected_kind: api_model
+    role: historical-api
+    priority: 2
+    status: blocked
+    purpose: Preserve historical Qwen3.8-Max provenance; a refreshed local key does not override the last arrearage observation.
+    required_for:
+      - historical-replay
+  - binding_id: development-gpu-local
+    resource_id: gpu-host-local-3090
+    expected_kind: gpu_host
+    role: development-gpu
+    priority: 1
+    status: verified
+    purpose: One-card local static verification and bounded preflight after a scientifically selected model is approved.
+    required_for:
+      - local-model-preflight
+  - binding_id: scaleout-gpu-remote
+    resource_id: gpu-host-3090-2
+    expected_kind: gpu_host
+    role: scaleout-gpu
+    priority: 1
+    status: verified
+    purpose: Eight-card remote capacity, currently inventoried only; availability does not determine the ICLR experiment backbone.
+    required_for:
+      - selected-gpu-pilot
+      - powered-gpu-formal
+  - binding_id: verified-local-qwen3vl2b
+    resource_id: qwen3-vl-2b-local-47f9c0e0
+    expected_kind: model_checkpoint
+    role: verified-checkpoint
+    priority: 1
+    status: verified
+    purpose: Existing content-verified Qwen3-VL-2B snapshot retained for reproducibility and bounded development, not preselected for the paper.
+    required_for:
+      - asset-inventory
+  - binding_id: discovered-local-qwen35-4b
+    resource_id: qwen3-5-4b-local-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 1
+    status: verified
+    purpose: Local replica of one discovered Qwen3.5-4B content tree; selection and loadability remain independent gates.
+    required_for:
+      - asset-inventory
+  - binding_id: discovered-remote-qwen35-4b
+    resource_id: qwen3-5-4b-remote-b4e05070
+    expected_kind: model_checkpoint
+    role: replicated-checkpoint
+    priority: 2
+    status: verified
+    purpose: Remote replica of the same discovered Qwen3.5-4B content tree; it carries no main-experiment role.
+    required_for:
+      - asset-inventory

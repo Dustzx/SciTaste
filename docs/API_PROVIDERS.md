@@ -98,14 +98,14 @@ candidate was also syntactically invalid. This is retained negative engineering
 evidence, not a reason to invent a zero price, silently repair code, or bypass
 admission.
 
-DeepSeek's live official catalog was rechecked on 2026-09-12. The current
-canonical callable ID is `deepseek-v4-flash` and the displayed version is
-`DeepSeek-V4-Flash-0731`. The earlier `deepseek-flash` /
-`DeepSeek-V4.1-Flash` observation remains immutable history but no longer
-qualifies a new run. Catalog v4 records both identities without modifying the
-historical v3 snapshot; every future call must
-bind the current one and retain the provider-returned identifier. No local
-DeepSeek credential or current authenticated response is registered.
+DeepSeek's live official catalog was rechecked on 2026-09-13. The current
+canonical callable ID is `deepseek-flash` and the displayed version is
+`DeepSeek-V4.1-Flash`. The previously observed `deepseek-v4-flash` /
+`DeepSeek-V4-Flash-0731` entry is immutable history; the provider now documents
+the retired aliases as being served by V4.1. Catalog v5 binds the current
+identity without modifying v4; every future call must retain the provider-
+returned identifier. No local DeepSeek credential or current authenticated
+response is registered.
 Any later call must also be bracketed by the no-task-data identity protocol and
 must open a new non-pooled stratum if the provider identity changes.
 

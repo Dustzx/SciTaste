@@ -256,13 +256,13 @@ genuinely common backbone or disclose a best-native-system comparison with
 model effects confounded; the choice is an author-level scientific-design
 decision.
 
-DeepSeek's live official model catalog was rechecked again on 2026-09-12 and now
-names callable ID `deepseek-v4-flash` with version `DeepSeek-V4-Flash-0731`, rather
-than the earlier `deepseek-flash` / `DeepSeek-V4.1-Flash` record. V4 preserves
-the updated identity while v3 remains immutable history. Existing V4.1 proposals are now
-historical no-run artifacts and cannot launch until a new proposal binds the
-current identity and an authenticated response. The internal-review profile is
-also blocked until the missing DeepSeek credential is bound.
+DeepSeek's live official model catalog was rechecked again on 2026-09-13. It now
+names callable ID `deepseek-flash` with version `DeepSeek-V4.1-Flash`, and says
+that the retired `deepseek-v4-flash` aliases are served by V4.1. V5 preserves
+this current identity while v4 remains immutable history. Existing proposals
+remain historical no-run artifacts and cannot launch until a new proposal binds
+the current identity and an authenticated response. The internal-review profile
+is also blocked until the missing DeepSeek credential is bound.
 
 Hosted API reproducibility now has a formal no-run contract. DeepSeek combines
 its public dated revision with a maximum 24-hour temporal stratum; Zhipu, whose
@@ -283,9 +283,9 @@ latter remains `reported` until an automated host refresh verifies exact bytes.
 This inventory layer neither reserves capacity nor authorizes work; concurrent
 allocation and usage roll-up remain the next scheduler boundary.
 
-The resource layer now has an explicit hash-indexed v3 topology. Four API
-entries distinguish current DeepSeek V4 Flash, historical DeepSeek V4.1,
-current GLM-5.3-Flash, and unavailable-but-preserved Bailian history. Two GPU
+The resource layer now has an explicit hash-indexed v5 topology. Three API
+entries distinguish current DeepSeek V4.1 Flash, current GLM-5.3-Flash, and
+unavailable-but-preserved Bailian history. Two GPU
 hosts distinguish the verified local 1×3090 from a fresh read-only verification
 of the remote 8×3090 pool. Three checkpoint entries bind Qwen3-VL-2B and the
 content-identical local/remote Qwen3.5-4B replicas. A separate discovered-asset
@@ -372,12 +372,12 @@ scientific coherence while blocking acquisition, experiment, and execution on
 the still-unresolved source, license, adapter, model, power, and human-review
 gates. No Qwen, API, or GPU resource selects this architecture.
 
-Its first complete operational review bundle is now machine-checkable without
-performing an external action. The bundle exactly covers the four selected
-source roles and three accepted-method candidates, requests only 20 pinned
-InnovatorBench task configs plus one pinned EXP-Bench metadata table (8 MiB
-combined ceiling), and reuses the already acquired MLR-Bench brief inventory.
-The result is ready for owner review but still reports all 14 experiment gates.
+Its first complete operational review bundle is now machine-checkable. The
+bounded owner-approved acquisition of 20 pinned InnovatorBench task configs and
+one pinned EXP-Bench metadata table completed below the 8 MiB ceiling, with
+receipts retained beside the project; the acquired content has not been read.
+The next gate is approval for the two precomputed, no-extraction metadata audit
+plans. The evidence program still reports the remaining experiment gates.
 Agent Laboratory and DeepScientist remain implementation-blocked; AI-Researcher
 is additionally code-use-blocked by the absent repository license. Resource
 discovery may continue broadly, but neither Qwen3.5 examples nor any other

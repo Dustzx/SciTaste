@@ -265,7 +265,7 @@ only protocol conformance:
 - retry and schema-failure rates are acceptable on non-study fixtures;
 - cost and rate limits permit the powered design.
 
-The current candidates are [DeepSeek V4 Flash](https://api-docs.deepseek.com/quick_start/pricing/)
+The current candidates are [DeepSeek V4.1 Flash](https://api-docs.deepseek.com/quick_start/pricing/)
 and [GLM-5.3-Flash](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash).
 Official documentation describes both as 1M-context, tool-capable frontier
 agent models; GLM-5.3-Flash is additionally native multimodal. This makes either plausible
@@ -308,18 +308,19 @@ camera-ready paper layout. Work on those areas must not delay the evidence path.
 
 ## Exact next external decisions
 
-The next review is deliberately smaller than a dataset or model launch:
+The owner-approved bounded acquisition is complete: all 20 pinned InnovatorBench
+task-configuration YAML files and the pinned EXP-Bench metadata CSV have exact
+receipts below the 8 MiB combined ceiling. Download did not authorize content
+inspection. The next external decision is therefore whether SciTaste may read
+those 21 acquired files under the already generated, no-extraction audit plans
+to recover task fields and source-paper groups for subset design.
 
-1. acquire the 20 pinned InnovatorBench task-configuration YAML files, with a
-   combined ceiling of 5 MiB, to screen the objective-progress task universe;
-2. acquire the pinned EXP-Bench metadata CSV, with a 3 MiB ceiling, to recover
-   source-paper groups before proposing a diagnostic subset.
-
-This review does not include the 69.7-GB InnovatorBench archive, task workspaces,
-runtime assets, repository checkout, API calls, checkpoint loading, GPUs, or
-human recruitment. The ten MLR-Bench starting briefs already have an immutable
-local acquisition inventory and are not requested again. SciTasteBench remains a
-construction-and-review track rather than a public-file download.
+That decision still does not include the 69.7-GB InnovatorBench archive, task
+workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
+GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an
+immutable local acquisition inventory and are not requested again.
+SciTasteBench remains a construction-and-review track rather than a public-file
+download.
 
 The method side is likewise proposal-only. Agent Laboratory and DeepScientist
 have code-use-feasible static contracts but unresolved task, sandbox, telemetry,

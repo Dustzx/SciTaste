@@ -1,5 +1,15 @@
 # Changelog
 
+- Corrected the current DeepSeek resource generation against the live official
+  model table: catalog v5 and identity protocol v2 bind `deepseek-flash` /
+  `DeepSeek-V4.1-Flash` and current peak pricing while retaining v4 as immutable
+  history. The review activation remains non-authorizing and requires a fresh
+  sentinel-bracketed conformance window before any experimental selection.
+- Reconciled the already completed, owner-approved InnovatorBench and EXP-Bench
+  acquisitions with the project ledger. Exact receipts cover 20 task YAML files
+  and one metadata CSV; separate no-read audit plans now stop at explicit
+  content-read approval instead of pretending the downloads are still pending.
+
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning.
 

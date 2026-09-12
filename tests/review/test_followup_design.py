@@ -22,6 +22,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 _PROGRAM = _ROOT / "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
 _MAPPING = _ROOT / "configs/evaluation/review_followups/iclr2027_v6_internal_r2.yaml"
 _ACTIVATION = _ROOT / "configs/evaluation/activation/iclr2027_review_followup_v3.yaml"
+_ACTIVATION_V4 = _ROOT / "configs/evaluation/activation/iclr2027_review_followup_v4.yaml"
 _SHA = "a" * 64
 _COMMIT = "b" * 40
 _PROJECT = "scitaste-self-development"
@@ -331,6 +332,34 @@ def test_review_activation_closes_seven_studies_without_selecting_available_reso
     assert activation.authorizes_human_recruitment is False
     assert activation.authorizes_execution is False
     assert activation.no_external_action_performed is True
+
+
+def test_current_review_activation_binds_deepseek_v41_without_authority() -> None:
+    design = compile_review_followup_design(
+        project_id=_PROJECT,
+        run_id="followup-design-v1",
+        source_commit=_COMMIT,
+        review_iteration=_iteration(),
+        mapping=load_review_followup_mapping(_MAPPING),
+        evidence_program=load_evidence_program(_PROGRAM),
+    )
+    activation = compile_review_followup_activation(
+        design=design,
+        manifest_inspection=load_review_followup_activation_manifest(_ACTIVATION_V4),
+        workspace_root=_ROOT,
+        run_id="followup-activation-v4",
+        source_commit=_COMMIT,
+    )
+
+    candidates = {item.resource_id: item for item in activation.primary_model_candidates}
+    assert activation.model_identity_protocol_id == "iclr2027-api-identity-v2"
+    assert set(candidates) == {"deepseek-v41-flash", "zhipu-glm53-flash"}
+    assert candidates["deepseek-v41-flash"].model_id == "deepseek-flash"
+    assert candidates["deepseek-v41-flash"].declared_revision == "DeepSeek-V4.1-Flash"
+    assert candidates["deepseek-v41-flash"].pilot_proposal_ready is True
+    assert activation.primary_model_id is None
+    assert activation.authorizes_api_calls is False
+    assert activation.authorizes_execution is False
 
 
 def test_review_activation_rejects_design_and_resource_drift() -> None:
