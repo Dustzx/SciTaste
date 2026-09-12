@@ -17,7 +17,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 38b3e0886ef905271918facbd6aec8c79f510675cd8afa51c7bc6ce4492e6a3c
+    sha256: 2cde176e310aff374e94f000de380305e4d14e3bf83177276a629380f3892841
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
     sha256: 4fb6d9bff2e6379cfbc46d364c6161eeeee49fc594752fd500b6fa4fe1a1bce8
@@ -35,7 +35,7 @@ artifacts:
     sha256: acb381b92941007ab4b67105366d92d6a394d9bff8f7d6fb13abab562561559e
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
-    sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
+    sha256: 3b0a39d24baee98472f1878551a24493beec7ae79f7149a83f8bf1104084268d
   - artifact_id: mechanism-governance
     path: docs/research/protocols/SCITASTEBENCH_V2_CURATION_GOVERNANCE_V1.md
     sha256: ffa2349bfa00e172b793e3e468dac44375fa6d821118a519daba03bb86cf8217
@@ -53,7 +53,7 @@ artifacts:
     sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
   - artifact_id: taste-corpus-curation-guide
     path: docs/TASTE_CORPUS_CURATION.md
-    sha256: 5c3f0457a44ca0f3814c8b257ae461e7c2ffa5c53fcd5eb6ac53b5afce532162
+    sha256: 7cbd992b983c9a54a796b6b84fd43db00e059913db9511fc493cdf929b631aec
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd

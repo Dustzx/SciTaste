@@ -6,11 +6,11 @@ import hashlib
 import json
 from datetime import date
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_serializer, model_validator
 
 from scitaste.taste.intrinsic import TasteTask
 
@@ -24,6 +24,38 @@ class CandidateSourceRole(StrEnum):
     NATURAL_CASE_ONLY = "natural-case-candidate-only"
     NATURAL_CASE_AND_PRECEDENT = "natural-case-and-precedent-candidate"
     TRACK_B_END_TO_END_TASK = "track-b-end-to-end-task-source"
+
+
+class BoundedRightsPilot(BaseModel):
+    """Download-only rights pilot that grants no ingestion or execution authority."""
+
+    model_config = _CONFIG
+
+    request_id: str = Field(pattern=_ID)
+    request_path: str = Field(min_length=1, max_length=1_000)
+    scope_path: str = Field(min_length=1, max_length=1_000)
+    status: Literal["exact-download-request-ready-owner-approval-required"]
+    selected_records: int = Field(gt=0, le=10_000)
+    maximum_total_bytes: int = Field(gt=0, le=10_000_000_000)
+    selected_paper_license: str = Field(min_length=1, max_length=200)
+    authorizes_ingestion: Literal[False] = False
+    authorizes_model_or_gpu_use: Literal[False] = False
+
+    @model_validator(mode="after")
+    def paths_are_normalized_and_distinct(self) -> BoundedRightsPilot:
+        paths = (self.request_path, self.scope_path)
+        for value in paths:
+            parsed = PurePosixPath(value)
+            if (
+                "\\" in value
+                or parsed.is_absolute()
+                or not parsed.parts
+                or any(part in {"", ".", ".."} for part in parsed.parts)
+            ):
+                raise ValueError("bounded rights-pilot paths must be normalized and relative")
+        if self.request_path == self.scope_path:
+            raise ValueError("rights-pilot request and scientific scope must be distinct")
+        return self
 
 
 class CandidateSource(BaseModel):
@@ -45,6 +77,7 @@ class CandidateSource(BaseModel):
     candidate_families: tuple[TasteTask, ...]
     use_boundary: str = Field(min_length=1, max_length=1_000)
     acquisition_status: Literal["not-acquired"]
+    bounded_rights_pilot: BoundedRightsPilot | None = None
     blockers: tuple[str, ...] = Field(min_length=1, max_length=30)
 
     @model_validator(mode="after")
@@ -62,6 +95,13 @@ class CandidateSource(BaseModel):
         if self.role is CandidateSourceRole.TRACK_B_END_TO_END_TASK and self.candidate_families:
             raise ValueError("Track B task sources cannot be presented as Track A labels")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_rights_pilot(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        if self.bounded_rights_pilot is None:
+            payload.pop("bounded_rights_pilot", None)
+        return payload
 
 
 class CandidateAdmissionDecision(BaseModel):
@@ -93,7 +133,7 @@ class CandidateAdmissionDecision(BaseModel):
 class SourceCandidateManifest(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     observed_at: date
     status: Literal["metadata-only-candidate-screen"]
@@ -111,6 +151,10 @@ class SourceCandidateManifest(BaseModel):
 
     @model_validator(mode="after")
     def population_and_roles_are_closed(self) -> SourceCandidateManifest:
+        if self.schema_version == "1.0" and any(
+            source.bounded_rights_pilot is not None for source in self.sources
+        ):
+            raise ValueError("source candidate manifest v1.1 is required for rights pilots")
         if set(self.required_decision_families) != set(TasteTask):
             raise ValueError("source screen must require every Taste decision family")
         if len(self.required_decision_families) != len(set(self.required_decision_families)):
@@ -217,6 +261,7 @@ def source_candidate_status(manifest: SourceCandidateManifest) -> SourceCandidat
 
 
 __all__ = [
+    "BoundedRightsPilot",
     "CandidateAdmissionDecision",
     "CandidateSource",
     "CandidateSourceRole",

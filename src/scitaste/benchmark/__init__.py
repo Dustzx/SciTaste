@@ -46,6 +46,7 @@ from scitaste.benchmark.runner import (
     scripted_selections,
 )
 from scitaste.benchmark.source_candidates import (
+    BoundedRightsPilot,
     CandidateAdmissionDecision,
     CandidateSource,
     CandidateSourceRole,
@@ -99,6 +100,7 @@ __all__ = [
     "BenchmarkEvidenceTier",
     "BenchmarkReport",
     "BenchmarkSuite",
+    "BoundedRightsPilot",
     "CandidateAdmissionDecision",
     "CandidateOrder",
     "CandidateSource",

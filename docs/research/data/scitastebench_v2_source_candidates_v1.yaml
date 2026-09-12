@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 manifest_id: scitastebench-v2-source-candidates-v1
 observed_at: 2026-09-11
 status: metadata-only-candidate-screen
