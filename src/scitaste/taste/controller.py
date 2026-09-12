@@ -11,6 +11,7 @@ from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.persistence import snapshot_id
 from scitaste.state.research_state import ResearchState, ResourceBudget
 from scitaste.state.resources import remaining_budget
+from scitaste.taste.critics import StageTasteCriticSuite, TasteCriticFinding
 from scitaste.taste.retriever import TasteQuery, TasteRetrievalPolicy, TasteRetriever
 from scitaste.taste.utility import UtilityPolicy
 
@@ -36,6 +37,9 @@ class TasteController:
         retriever: TasteRetriever | None = None,
         retrieval_limit: int = 3,
         precedent_weight: float = 0.25,
+        utility_enabled: bool = True,
+        critics_enabled: bool = True,
+        critic_suite: StageTasteCriticSuite | None = None,
     ) -> None:
         self.policy = policy or UtilityPolicy()
         self.seed = seed
@@ -43,8 +47,13 @@ class TasteController:
         self.retriever = retriever
         self.retrieval_limit = retrieval_limit
         self.precedent_weight = precedent_weight
+        self.utility_enabled = utility_enabled
+        self.critics_enabled = critics_enabled
+        self.critic_suite = critic_suite or StageTasteCriticSuite()
         if mode == TasteMode.AUGMENTED and retriever is None:
             raise ValueError("augmented taste mode requires a TasteRetriever")
+        if not critics_enabled and critic_suite is not None:
+            raise ValueError("a custom critic suite requires critics_enabled")
 
     def decide(
         self,
@@ -67,6 +76,10 @@ class TasteController:
             raise NoViableActionError(f"all candidate actions exceed budget: {details}")
 
         retrieved = self._retrieve(state, actions)
+        critic_findings = self.critic_suite.review(state, actions) if self.critics_enabled else ()
+        critic_adjustments = {action.action_id: 0.0 for action in actions}
+        for finding in critic_findings:
+            critic_adjustments[finding.action_id] += finding.score_adjustment
         precedent_bonus = {action.action_id: 0.0 for action in actions}
         for result in retrieved:
             for action in actions:
@@ -75,7 +88,11 @@ class TasteController:
                         self.precedent_weight * result.score * result.case.confidence
                     )
         adjusted_scores = {
-            item.action_id: item.score + precedent_bonus[item.action_id]
+            item.action_id: (
+                (item.score if self.utility_enabled else 0.0)
+                + precedent_bonus[item.action_id]
+                + critic_adjustments[item.action_id]
+            )
             for item in assessments
             if item.feasible
         }
@@ -99,11 +116,18 @@ class TasteController:
             if retrieved
             else ""
         )
+        critic_text = _critic_rationale(critic_findings)
+        utility_text = (
+            "configurable scientific-value and resource-cost weights"
+            if self.utility_enabled
+            else "a utility-neutral control policy"
+        )
         rationale = (
-            f"Selected {selected.type.value} using configurable scientific-value and "
-            f"resource-cost weights. Candidate scores: {score_text}. "
+            f"Selected {selected.type.value} using {utility_text}. "
+            f"Candidate scores: {score_text}. "
             + "; ".join(selected_assessment.reasons)
             + precedent_text
+            + critic_text
         )
         return ResearchDecision(
             stage=state.current_stage.value,
@@ -146,3 +170,16 @@ class TasteController:
         margin = ranked_scores[0] - ranked_scores[1]
         scale = max(abs(ranked_scores[0]), abs(ranked_scores[1]), 1.0)
         return round(min(0.99, 0.5 + 0.49 * max(0.0, margin) / scale), 4)
+
+
+def _critic_rationale(findings: tuple[TasteCriticFinding, ...]) -> str:
+    if not findings:
+        return ""
+    rendered = ", ".join(
+        f"{item.action_id}[{item.critic_id}:{item.code}={item.score_adjustment:.2f}]"
+        for item in sorted(
+            findings,
+            key=lambda item: (item.action_id, item.critic_id, item.code),
+        )
+    )
+    return f" Taste critics: {rendered}."

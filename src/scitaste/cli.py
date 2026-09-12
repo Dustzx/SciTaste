@@ -183,6 +183,7 @@ from scitaste.review.model_report import (
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.state.research_state import ResearchState
+from scitaste.taste.conditions import NativeTasteRetrievalMode, load_native_condition_matrix
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
@@ -3490,6 +3491,28 @@ def _handle_full(args: argparse.Namespace) -> int:
         config = type(config).model_validate(payload)
     run_id = args.run_id or f"offline-full-seed-{args.seed:02d}"
     if args.dry_run:
+        condition_inspection = (
+            load_native_condition_matrix(config.native_condition_config)
+            if config.native_condition_config is not None
+            else None
+        )
+        condition_profile = (
+            condition_inspection.matrix.profile(config.condition)
+            if condition_inspection is not None
+            else None
+        )
+        if (
+            condition_profile is not None
+            and (
+                condition_profile.components.knowledge_retrieval_enabled
+                or condition_profile.components.taste_retrieval
+                is not NativeTasteRetrievalMode.DISABLED
+            )
+            and config.native_knowledge_config is None
+        ):
+            raise ValueError(
+                f"native condition {config.condition} requires native_knowledge_config"
+            )
         execution_profile = (
             inspect_native_execution_profile(config.native_execution_profile)
             if config.native_execution_profile is not None
@@ -3582,6 +3605,19 @@ def _handle_full(args: argparse.Namespace) -> int:
                     ),
                     "native_execution": {
                         "project_owned_records": config.execution_backend == "scitaste-native",
+                        "condition": (
+                            None
+                            if condition_profile is None or condition_inspection is None
+                            else {
+                                "matrix_id": condition_inspection.matrix.matrix_id,
+                                "matrix_file_sha256": condition_inspection.file_sha256,
+                                "matrix_fingerprint": condition_inspection.matrix.fingerprint,
+                                "condition_id": condition_profile.condition_id.value,
+                                "role": condition_profile.role.value,
+                                "components": condition_profile.components.model_dump(mode="json"),
+                                "integrity_gates_invariant": True,
+                            }
+                        ),
                         "knowledge_configured": config.native_knowledge_config is not None,
                         "knowledge_config": (
                             str(config.native_knowledge_config)

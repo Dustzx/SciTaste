@@ -16,7 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 from scitaste.benchmark.manuscript import materialize_manuscript
-from scitaste.data.store import KnowledgeLibrary, build_libraries
+from scitaste.data.store import KnowledgeLibrary, TasteLibrary, build_libraries
 from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_discovery_scenario
 from scitaste.evidence.workflow import (
     EvidenceWorkflow,
@@ -83,6 +83,13 @@ from scitaste.project import (
 )
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 from scitaste.state.research_state import ResearchState
+from scitaste.taste.conditions import (
+    NativeConditionMatrixInspection,
+    NativeConditionRuntime,
+    NativeTasteRetrievalMode,
+    build_native_condition_runtime,
+    load_native_condition_matrix,
+)
 from scitaste.visual.workflow import FigureScenario, FigureWorkflow, load_figure_scenario
 from scitaste.workflow_intake import (
     LoadedScenarioBundleCatalog,
@@ -129,6 +136,7 @@ class FullWorkflowConfig(BaseModel):
     figure_scenario: Path | None = None
     scenario_catalog: Path | None = None
     native_knowledge_config: Path | None = None
+    native_condition_config: Path | None = None
     native_execution_profile: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
@@ -196,6 +204,8 @@ class FullWorkflowConfig(BaseModel):
             raise ValueError(
                 "a native execution profile requires a configured scitaste-native experiment"
             )
+        if self.native_condition_config is not None and self.execution_backend != "scitaste-native":
+            raise ValueError("native condition control requires the scitaste-native executor")
         return self
 
 
@@ -385,6 +395,22 @@ class FullWorkflow:
             if config.native_execution_profile is not None
             else None
         )
+        condition_inspection = (
+            load_native_condition_matrix(config.native_condition_config)
+            if config.native_condition_config is not None
+            else None
+        )
+        if condition_inspection is not None:
+            profile = condition_inspection.matrix.profile(config.condition)
+            components = profile.components
+            needs_library_source = (
+                components.knowledge_retrieval_enabled
+                or components.taste_retrieval is not NativeTasteRetrievalMode.DISABLED
+            )
+            if needs_library_source and config.native_knowledge_config is None:
+                raise ValueError(
+                    f"native condition {config.condition} requires native_knowledge_config"
+                )
         workflow_config_sha256 = _workflow_config_sha256(
             config,
             model_advisory,
@@ -394,6 +420,7 @@ class FullWorkflow:
             code_generation=code_generation,
             code_repair=code_repair,
             execution_profile=execution_profile,
+            condition_inspection=condition_inspection,
         )
         intake_inspection = inspect_full_workflow_intake(
             config,
@@ -508,6 +535,21 @@ class FullWorkflow:
             )
             if repaired_code is not None:
                 code_inspection = repaired_code.inspection
+            native_libraries = (
+                _prepare_native_libraries(config, run_root=run_root)
+                if config.execution_backend == SciTasteNativeExecutor.name
+                and config.native_knowledge_config is not None
+                else None
+            )
+            condition_runtime = (
+                build_native_condition_runtime(
+                    condition_inspection.matrix.profile(config.condition),
+                    seed=self.seed,
+                    taste_library=(native_libraries[1] if native_libraries is not None else None),
+                )
+                if condition_inspection is not None
+                else None
+            )
             executor = self.executor or _build_full_workflow_executor(
                 config,
                 run_root=run_root,
@@ -521,6 +563,8 @@ class FullWorkflow:
                     if prepared_intake is not None
                     else None
                 ),
+                native_libraries=native_libraries,
+                condition_runtime=condition_runtime,
             )
             summaries, final_state, reused_stages, archived_attempts = self._run_stages(
                 config,
@@ -534,6 +578,7 @@ class FullWorkflow:
                 model_node_extensions=model_node_extensions,
                 allow_live_model_nodes=allow_live_model_nodes,
                 executor=executor,
+                condition_runtime=condition_runtime,
                 scenario_paths=(
                     prepared_intake.scenario_paths if prepared_intake is not None else None
                 ),
@@ -609,6 +654,11 @@ class FullWorkflow:
                     execution_profile=(
                         inspect_native_execution_profile(config.native_execution_profile)
                         if config.native_execution_profile is not None
+                        else None
+                    ),
+                    condition_inspection=(
+                        load_native_condition_matrix(config.native_condition_config)
+                        if config.native_condition_config is not None
                         else None
                     ),
                 )
@@ -710,6 +760,10 @@ class FullWorkflow:
                     executor,
                     run_root=run_root,
                     code_repair=code_repair,
+                ),
+                "native_condition": _native_condition_summary(
+                    condition_inspection,
+                    condition_runtime,
                 ),
                 "effectiveness_claim": False,
                 "research_intake": (
@@ -1002,6 +1056,7 @@ class FullWorkflow:
         model_node_extensions: Mapping[str, ModelNodeRegistration] | None,
         allow_live_model_nodes: bool,
         executor: ResearchExecutor,
+        condition_runtime: NativeConditionRuntime | None,
         scenario_paths: Mapping[StageName, Path] | None,
     ) -> tuple[dict[str, object], Path, list[str], list[str]]:
         stages = run_root / "stages"
@@ -1032,7 +1087,13 @@ class FullWorkflow:
             if resume and discovery_root.exists():
                 archived_attempts.append(_archive_stage(discovery_root, run_root, "discovery"))
             reuse_allowed = False
-            discovery_raw = DiscoveryLoop(seed=self.seed, executor=executor).run(
+            discovery_raw = DiscoveryLoop(
+                seed=self.seed,
+                executor=executor,
+                controller=(
+                    condition_runtime.controller if condition_runtime is not None else None
+                ),
+            ).run(
                 _discovery_for_project(config, owned_scenarios.get("discovery")),
                 output_dir=discovery_root,
             )
@@ -1202,7 +1263,13 @@ class FullWorkflow:
                 if resume and evidence_root.exists():
                     archived_attempts.append(_archive_stage(evidence_root, run_root, "evidence"))
                 reuse_allowed = False
-                evidence_raw = EvidenceWorkflow(seed=self.seed, executor=executor).run(
+                evidence_raw = EvidenceWorkflow(
+                    seed=self.seed,
+                    executor=executor,
+                    controller=(
+                        condition_runtime.controller if condition_runtime is not None else None
+                    ),
+                ).run(
                     _evidence_for_project(config, owned_scenarios.get("evidence")),
                     output_dir=evidence_root,
                     state_path=previous_state,
@@ -1319,7 +1386,21 @@ class FullWorkflow:
                     expected_claim_id=evidence_scenario.claim.claim_id,
                     expected_experiment_id=evidence_scenario.result.experiment_id,
                 )
-            communication_raw = CommunicationWorkflow(seed=self.seed, executor=executor).run(
+            communication_raw = CommunicationWorkflow(
+                seed=self.seed,
+                executor=executor,
+                controller=(
+                    condition_runtime.controller if condition_runtime is not None else None
+                ),
+                taste_retriever=(
+                    condition_runtime.taste_retriever if condition_runtime is not None else None
+                ),
+                retrieve_taste_context=(
+                    condition_runtime.taste_context_enabled
+                    if condition_runtime is not None
+                    else True
+                ),
+            ).run(
                 communication_scenario,
                 output_dir=communication_root,
                 state_path=previous_state,
@@ -1357,7 +1438,21 @@ class FullWorkflow:
         else:
             if resume and figure_root.exists():
                 archived_attempts.append(_archive_stage(figure_root, run_root, "figure"))
-            figure_raw = FigureWorkflow(seed=self.seed, executor=executor).run(
+            figure_raw = FigureWorkflow(
+                seed=self.seed,
+                executor=executor,
+                controller=(
+                    condition_runtime.controller if condition_runtime is not None else None
+                ),
+                taste_retriever=(
+                    condition_runtime.taste_retriever if condition_runtime is not None else None
+                ),
+                retrieve_taste_context=(
+                    condition_runtime.taste_context_enabled
+                    if condition_runtime is not None
+                    else True
+                ),
+            ).run(
                 _figure_for_project(config, owned_scenarios.get("figure")),
                 output_dir=figure_root,
                 state_path=previous_state,
@@ -1496,10 +1591,19 @@ def _build_full_workflow_executor(
     repaired_code: RepairedNativeCodeProposal | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
     evidence_scenario_path: Path | None = None,
+    native_libraries: tuple[KnowledgeLibrary, TasteLibrary] | None = None,
+    condition_runtime: NativeConditionRuntime | None = None,
 ) -> ResearchExecutor:
     if config.execution_backend != SciTasteNativeExecutor.name:
         return build_builtin_executor(config.execution_backend, seed=seed)
-    knowledge = _prepare_native_knowledge(config, run_root=run_root)
+    libraries = native_libraries or (
+        _prepare_native_libraries(config, run_root=run_root)
+        if config.native_knowledge_config is not None
+        else None
+    )
+    knowledge = libraries[0] if libraries is not None else None
+    if condition_runtime is not None and not condition_runtime.knowledge_retrieval_enabled:
+        knowledge = None
     experiment = _prepare_native_experiment(
         config,
         run_root=run_root,
@@ -1539,14 +1643,14 @@ def _build_full_workflow_executor(
     )
 
 
-def _prepare_native_knowledge(
+def _prepare_native_libraries(
     config: FullWorkflowConfig,
     *,
     run_root: Path,
-) -> KnowledgeLibrary | None:
+) -> tuple[KnowledgeLibrary, TasteLibrary]:
     source = config.native_knowledge_config
     if source is None:
-        return None
+        raise ValueError("native library preparation requires native_knowledge_config")
     source_sha256 = _file_sha256(source)
     context_root = run_root / "native_execution" / "context"
     receipt_path = context_root / "CONTEXT.json"
@@ -1576,9 +1680,9 @@ def _prepare_native_knowledge(
         if any(not isinstance(item, str) for item in values):
             raise ValueError("native knowledge context record is incomplete")
         knowledge_path = _verified_file(run_root, knowledge_locator, knowledge_sha256)
-        _verified_file(run_root, taste_locator, taste_sha256)
+        taste_path = _verified_file(run_root, taste_locator, taste_sha256)
         _verified_file(run_root, manifest_locator, manifest_sha256)
-        return KnowledgeLibrary(knowledge_path)
+        return KnowledgeLibrary(knowledge_path), TasteLibrary(taste_path)
     if (context_root / "libraries").exists():
         raise ValueError("incomplete native knowledge context requires manual inspection")
     libraries_root = context_root / "libraries"
@@ -1607,7 +1711,7 @@ def _prepare_native_knowledge(
         "library_manifest_sha256": _file_sha256(manifest_path),
     }
     _write_json(receipt_path, {**payload, "record_sha256": content_sha256(payload)})
-    return KnowledgeLibrary(knowledge_path)
+    return KnowledgeLibrary(knowledge_path), TasteLibrary(taste_path)
 
 
 def _prepare_native_experiment(
@@ -1680,6 +1784,25 @@ def _prepare_native_experiment(
     }
     _write_json(receipt_path, {**payload, "record_sha256": content_sha256(payload)})
     return definition.model_copy(update={"source_path": copied_source})
+
+
+def _native_condition_summary(
+    inspection: NativeConditionMatrixInspection | None,
+    runtime: NativeConditionRuntime | None,
+) -> dict[str, object] | None:
+    if inspection is None or runtime is None:
+        return None
+    return {
+        "matrix_id": inspection.matrix.matrix_id,
+        "matrix_file_sha256": inspection.file_sha256,
+        "matrix_fingerprint": inspection.matrix.fingerprint,
+        "condition_id": runtime.profile.condition_id.value,
+        "role": runtime.profile.role.value,
+        "components": runtime.profile.components.model_dump(mode="json"),
+        "knowledge_retrieval_enabled": runtime.knowledge_retrieval_enabled,
+        "taste_context_enabled": runtime.taste_context_enabled,
+        "integrity_gates_invariant": True,
+    }
 
 
 def _native_execution_summary(
@@ -1819,6 +1942,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "figure_scenario",
         "scenario_catalog",
         "native_knowledge_config",
+        "native_condition_config",
         "native_execution_profile",
         "native_experiment_config",
         "native_code_proposal_config",
@@ -2452,6 +2576,7 @@ def _workflow_config_sha256(
     code_generation: LoadedNativeCodeGeneration | None = None,
     code_repair: LoadedNativeCodeRepair | None = None,
     execution_profile: NativeExecutionProfileInspection | None = None,
+    condition_inspection: NativeConditionMatrixInspection | None = None,
 ) -> str:
     payload = config.model_dump(mode="json")
     if config.research_brief is None:
@@ -2479,6 +2604,19 @@ def _workflow_config_sha256(
     else:
         payload["native_knowledge_config"] = {
             "content_sha256": _file_sha256(config.native_knowledge_config)
+        }
+    if config.native_condition_config is None:
+        payload.pop("native_condition_config", None)
+    else:
+        condition_binding = condition_inspection or load_native_condition_matrix(
+            config.native_condition_config
+        )
+        if condition_binding.path != config.native_condition_config.absolute():
+            raise ValueError("native condition inspection belongs to another config")
+        payload["native_condition_config"] = {
+            "file_sha256": condition_binding.file_sha256,
+            "matrix_fingerprint": condition_binding.matrix.fingerprint,
+            "condition_id": condition_binding.matrix.profile(config.condition).condition_id.value,
         }
     if config.native_execution_profile is None:
         payload.pop("native_execution_profile", None)

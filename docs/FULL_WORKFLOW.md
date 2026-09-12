@@ -52,6 +52,43 @@ model-generation quality, or effectiveness.
 `--dry-run` validates the configuration and prints the planned executor and
 project/run/paper identity plus Bubblewrap availability without writing files.
 
+## Native Scientific Taste conditions
+
+`native_condition_config` turns the first-party workflow into an exact treatment
+runtime instead of treating `condition` as a reporting label. The committed
+matrix at `configs/evaluation/native_taste_condition_matrix_v1.yaml` admits only
+six profiles: Native Base, Native Knowledge, Native Taste, Native Critics, Full
+SciTaste, and a mismatched-Taste placebo. It fixes utility-policy, Knowledge,
+Taste-corpus relation, and Taste-critic switches for each profile. The same
+controller/retriever policy is then passed through Discovery, Evidence,
+Communication, and Figure rather than allowing each stage to construct a
+different implicit controller.
+
+Run the structural acceptance without contacting a provider or GPU:
+
+```bash
+.venv/bin/scitaste run full \
+  --config configs/workflows/full_offline_native_conditions_v1.yaml \
+  --project-id native-condition-check \
+  --run-id full-seed-07 --seed 7 --output outputs --dry-run
+```
+
+Dry-run reports the condition ID, role, exact component switches, matrix file
+hash, semantic fingerprint, and integrity-gate invariant without creating a
+project. A real offline acceptance materializes one content-bound Knowledge/Taste
+library and selectively exposes it according to the chosen profile. Unknown
+conditions, profile drift, missing required libraries, symlinks, oversize files,
+and mid-run matrix changes fail closed.
+
+Taste critics modify action ranking but never become hard evidence or safety
+gates. Evidence obligations, writing-integrity criticism, visual criticism,
+resource budgets, code admission, and sandbox isolation remain enabled for all
+six profiles. Component-only arms measure sufficiency, Full--Base measures the
+whole explicit Taste bundle, and Full--mismatched changes only corpus relation.
+The committed workflow uses `provider: mock` and a deterministic controller: it
+is an integration fixture, not evidence of model-backed effectiveness or a
+formal experiment launcher.
+
 ## Open-question intake
 
 The optional `research_brief` config field moves Full Workflow's entry boundary

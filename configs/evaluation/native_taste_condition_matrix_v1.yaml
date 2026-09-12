@@ -1,0 +1,52 @@
+schema_version: "1.0"
+matrix_id: scitaste-native-taste-components-v1
+component_only_effect_claims_forbidden: true
+profiles:
+  - condition_id: native-base
+    role: bundle_control
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: false
+      taste_retrieval: disabled
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: native-knowledge
+    role: component_sufficiency
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: true
+      taste_retrieval: disabled
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: native-taste
+    role: component_sufficiency
+    components:
+      utility_policy_enabled: true
+      knowledge_retrieval_enabled: false
+      taste_retrieval: matched
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: native-critics
+    role: component_sufficiency
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: false
+      taste_retrieval: disabled
+      taste_critics_enabled: true
+      integrity_gates_enabled: true
+  - condition_id: full-scitaste
+    role: full_system
+    components:
+      utility_policy_enabled: true
+      knowledge_retrieval_enabled: true
+      taste_retrieval: matched
+      taste_critics_enabled: true
+      integrity_gates_enabled: true
+  - condition_id: mismatched-taste-placebo
+    role: matched_placebo
+    components:
+      utility_policy_enabled: true
+      knowledge_retrieval_enabled: true
+      taste_retrieval: mismatched
+      taste_critics_enabled: true
+      integrity_gates_enabled: true

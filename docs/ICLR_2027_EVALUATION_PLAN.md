@@ -315,20 +315,51 @@ Secondary endpoints include:
 
 ## Track C: causal ablation
 
-The first-party ablation family is:
+The first-party condition family is:
 
-1. Native Base;
-2. Native + Knowledge;
-3. Native + Taste;
-4. Native + critics/evidence obligations;
-5. Full SciTaste;
-6. Full SciTaste with shuffled, wrong-domain, or temporally invalid Taste
-   precedents as a retrieval placebo.
+1. Native Base: the same candidate-action and executor envelope without the
+   explicit utility policy, Knowledge retrieval, Taste retrieval, or Taste
+   critics;
+2. Native Knowledge: Base plus Knowledge retrieval only;
+3. Native Taste: the utility policy plus matched Taste retrieval only;
+4. Native Critics: Base plus stage-specific Taste critics only;
+5. Full SciTaste: utility, Knowledge, matched Taste, and Taste critics;
+6. Mismatched-Taste placebo: Full SciTaste with the Taste corpus relation changed
+   from matched to source-disjoint/wrong-domain, and no other component changed.
 
-Every condition retains the same native executor and budget. This isolates
-decision-policy components from executor capability. The existing
-AutoResearchClaw/Knowledge RAG/Taste Library/Full SciTaste matrix may be retained
-as a substrate transfer study, but it cannot replace this native ablation.
+Every condition retains the same candidate set, native executor, tools, repair
+rules, task bytes, model revision, seed, and budget. Evidence-integrity,
+writing-integrity, visual, resource, and sandbox gates are invariants rather than
+ablatable treatment components; turning one off would change validity, not Taste.
+This separates the complete decision-policy bundle from executor capability and
+gives one single-factor negative control for matched Taste context.
+
+The confirmatory interpretations are deliberately narrower than the six labels.
+Full versus Base estimates the effect of the complete explicit Scientific Taste
+bundle. Full versus the mismatched placebo isolates the effect of matched rather
+than irrelevant Taste context, conditional on the rest of Full. The three
+component-only conditions are mechanism/sufficiency diagnostics: Full-minus-one
+of them changes multiple components and cannot identify an individual marginal
+component effect. Any claim that Knowledge, retrieval, or critics independently
+caused a gain requires a separately preregistered leave-one-out or factorial
+study. The existing AutoResearchClaw/Knowledge RAG/Taste Library/Full SciTaste
+matrix may be retained as a substrate transfer study, but it cannot replace this
+native comparison.
+
+For Full--mismatched to remain a single-factor contrast, matched and placebo
+corpora must be paired before launch on stage/decision role, number of eligible
+cases, retrieved-case count, context-token budget, provenance/curation tier, and
+outcome-information availability. They differ only in source-group/domain
+relation to the target. A missing or zero-result retrieval, unequal context
+budget, or systematically lower-quality placebo blocks the formal cell rather
+than becoming a favorable treatment result.
+
+`native_taste_condition_matrix_v1.yaml` and the Full Workflow condition runtime
+now enforce this exact structural contract offline. That acceptance path uses a
+deterministic controller and a seed library, so it proves treatment isolation and
+gate invariance only. It does not establish Qwen-backed executability, corpus
+quality, or an outcome effect; the formal launcher must bind a model-backed Base
+policy and frozen task-specific matched/placebo corpora at a later fixed commit.
 
 At least one budget-scaling slice and one second-model slice are required to test
 whether the result is a fixed-budget or single-model artifact. The local 2B
@@ -432,9 +463,11 @@ An ICLR submission is scientifically defensible only if, by manuscript freeze:
   external systems for any broad external-validity claim; best-native outcomes
   remain explicitly model-confounded, and preprint sensitivity systems do not
   satisfy this count;
-- Track C has source-disjoint executable tasks and separates Knowledge, Taste,
-  critics, executor, and mismatched-extra-context effects under one fixed
-  backbone; this, rather than Track B, owns the title-level causal gate;
+- Track C has source-disjoint executable tasks and enforces the declared
+  Knowledge/Taste/critic conditions under one fixed backbone and executor;
+  Full--Base owns the bundle effect, Full--mismatched owns the matched-context
+  effect, and any marginal component claim has its own valid design; this,
+  rather than Track B, owns the title-level causal gate;
 - the primary endpoint, task unit, power analysis, failure policy, and statistics
   were frozen before formal results were inspected;
 - the main paper contains the principal quantitative tables/plots and failure

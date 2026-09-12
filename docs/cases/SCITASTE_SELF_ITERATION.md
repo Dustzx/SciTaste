@@ -778,3 +778,28 @@ the native Taste bundle is the selected title-critical proposal at project
 revision 311. Registration copied the exact resource corpus, gate report, critic
 report, and expanded cell plan. Both records remain `blocked`,
 `execution_authorized=false`, and `no_execution_performed=true`.
+
+## Making the Taste treatment real before spending compute (2026-09-12)
+
+The selected native proposal exposed a recursive failure in SciTaste itself:
+`native-base`, `native-taste`, and the other condition names described intended
+contrasts, but most had no executable first-party mechanism. Running them would
+have produced apparently comparative artifacts whose labels were stronger than
+their implementation differences.
+
+The next action was therefore implementation rather than experiment launch. A
+closed six-profile matrix now controls utility, Knowledge retrieval, matched or
+mismatched Taste retrieval, and four stage-specific Taste critics through the
+same Discovery, Evidence, Writing, and Figure path. Evidence-integrity, writing,
+visual, budget, code-admission, and sandbox gates stay enabled in every profile.
+Offline runs of all six conditions verify state continuity and isolation, and
+unknown conditions or missing libraries fail before project mutation.
+
+This pass also narrowed the intended evidence claim. Full versus Base estimates
+the whole explicit Taste bundle; Full versus mismatched Taste changes one corpus
+relation. The component-only arms are sufficiency diagnostics, not marginal
+ablations. The fixture still uses a deterministic controller and seed library,
+so it cannot validate Qwen-backed behavior or scientific effectiveness. Recording
+that limitation before updating the formal proposal is itself a Scientific Taste
+decision: prevent treatment-label leakage now, then build and freeze the real
+model-backed adapter before asking the owner to spend GPU or API resources.

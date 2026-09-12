@@ -1913,3 +1913,43 @@ advisory, while the same deficiency blocks a formal design. Remote inventory is
 checked for host capacity before checkpoint transfer; checkpoint identity is
 compared only after the proposal claims that remote checkpoint is verified.
 These refinements remove false blockers without weakening any launch gate.
+
+### ADR-062: Native Taste conditions are executable policies, not run labels
+
+Status: accepted for offline structural acceptance; formal model-backed execution
+remains pending.
+
+A condition name in a manifest does not prove that two research trajectories
+executed different mechanisms. SciTaste therefore defines one hash-bound,
+closed six-profile matrix over four decision components: explicit utility,
+Knowledge retrieval, Taste retrieval relation, and stage-specific Taste critics.
+The Full Workflow loads the selected profile before project mutation, constructs
+one condition runtime, and carries that controller and retriever consistently
+through Discovery, Evidence, Communication, and Figure. The workflow hash binds
+both matrix bytes and semantic fingerprint, and mid-run drift fails closed.
+
+The critics penalize wrong-level commitment, missing prerequisites, premature
+commitment under unresolved uncertainty, and communication over unsupported
+claims. They are advisory score adjustments, not truth or safety authorities.
+Hard budget feasibility, evidence integrity, writing integrity, visual validity,
+code admission, and sandbox isolation remain active in every profile. Disabling
+one of those gates would confound scientific validity with the Taste treatment
+and is therefore rejected by the matrix schema.
+
+The matrix also narrows causal interpretation. Full versus Base estimates the
+complete explicit Scientific Taste bundle. Full versus the mismatched placebo is
+the only v1 single-factor contrast: matched versus source-disjoint Taste context
+with every other component fixed. Knowledge-only, Taste-only, and critic-only
+arms diagnose sufficiency and mechanism; they do not identify marginal effects
+from Full. A marginal claim requires a new leave-one-out or factorial contract.
+The formal paired corpora must additionally match stage/role, case count,
+retrieved-token budget, provenance tier, and outcome-information availability;
+zero retrieval or unequal context exposure invalidates rather than favors a
+cell.
+
+The committed acceptance uses a deterministic controller and seed corpus. It
+proves condition isolation, state continuity, and integrity-gate invariance, not
+model quality or scientific effectiveness. A formal proposal must additionally
+bind a model-backed Base decision policy, task-specific source-disjoint corpora,
+candidate-set parity, and the fixed implementation commit before execution can
+be considered.

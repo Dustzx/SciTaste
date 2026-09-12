@@ -15,7 +15,7 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: 5974a76d0beaf23b3ecfefa78faaefcd10a8342a69552f4fad22e409beba57ff
+    sha256: 09217f25c139aafccac8369f5eb039d02192bec65ac6ae777494427989d716bd
   - artifact_id: dual-estimand-addendum
     path: docs/ICLR_2027_EVALUATION_ADDENDUM_V2.md
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760

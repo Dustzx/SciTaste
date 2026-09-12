@@ -54,10 +54,16 @@ class FigureWorkflow:
         self,
         *,
         controller: TasteController | None = None,
+        taste_retriever: TasteRetriever | None = None,
+        retrieve_taste_context: bool = True,
         executor: ResearchExecutor | None = None,
         seed: int = 0,
     ) -> None:
         self.controller = controller
+        self.taste_retriever = taste_retriever
+        self.retrieve_taste_context = retrieve_taste_context
+        if not retrieve_taste_context and taste_retriever is not None:
+            raise ValueError("disabled visual Taste context cannot accept a retriever")
         self.executor = executor or MockExecutor(seed=seed)
         self.seed = seed
 
@@ -73,13 +79,19 @@ class FigureWorkflow:
         if logger.path.exists():
             raise FileExistsError(f"refusing to append to existing figure log: {logger.path}")
         store = StateStore(root)
-        taste_root = root / "taste_context"
-        build_libraries("configs/taste/library_seed_v1.yaml", taste_root)
-        retriever = TasteRetriever(TasteLibrary(taste_root / "taste" / "records.jsonl"))
-        controller = self.controller or TasteController(
-            seed=self.seed,
-            mode=TasteMode.AUGMENTED,
-            retriever=retriever,
+        retriever = self.taste_retriever
+        if self.retrieve_taste_context and retriever is None:
+            taste_root = root / "taste_context"
+            build_libraries("configs/taste/library_seed_v1.yaml", taste_root)
+            retriever = TasteRetriever(TasteLibrary(taste_root / "taste" / "records.jsonl"))
+        controller = self.controller or (
+            TasteController(
+                seed=self.seed,
+                mode=TasteMode.AUGMENTED,
+                retriever=retriever,
+            )
+            if retriever is not None
+            else TasteController(seed=self.seed)
         )
         if state_path is None:
             state = ResearchState(
@@ -105,16 +117,20 @@ class FigureWorkflow:
         need = FigureNeedDetector().assess(scenario.source_text, contract)
         if not need.needed:
             raise ValueError(need.reason)
-        references = retriever.retrieve(
-            TasteQuery(
-                text=f"{scenario.source_text} {contract.purpose}",
-                policy=TasteRetrievalPolicy.VISUAL_ROLE,
-                stage="COMMUNICATION",
-                domain_tags=[scenario.target_domain],
-                venue=scenario.target_venue,
-                figure_role=scenario.figure_role,
-            ),
-            limit=3,
+        references = (
+            retriever.retrieve(
+                TasteQuery(
+                    text=f"{scenario.source_text} {contract.purpose}",
+                    policy=TasteRetrievalPolicy.VISUAL_ROLE,
+                    stage="COMMUNICATION",
+                    domain_tags=[scenario.target_domain],
+                    venue=scenario.target_venue,
+                    figure_role=scenario.figure_role,
+                ),
+                limit=3,
+            )
+            if retriever is not None
+            else []
         )
         reference_ids = [item.case.case_id for item in references]
         contract.reference_figure_ids = list(

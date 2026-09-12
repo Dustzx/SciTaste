@@ -7,6 +7,15 @@ semantic versioning.
 
 ### Added
 
+- Native Scientific Taste conditions are now executable across the complete
+  first-party workflow instead of existing only as prelaunch labels. A closed,
+  hash-bound six-profile matrix isolates utility, Knowledge, matched/mismatched
+  Taste retrieval, and stage-specific Taste critics while retaining evidence,
+  writing, visual, budget, code-admission, and sandbox gates in every arm. All
+  profiles have deterministic offline structural coverage; this fixture is not
+  model-backed effectiveness evidence, and component-only arms cannot support
+  marginal causal claims.
+
 - Evaluation claims now cross a versioned, estimand-specific admission gate.
   Prelaunch schema 1.3 distinguishes native Taste causality, matched external
   superiority, and model-confounded best-native description; it binds the exact

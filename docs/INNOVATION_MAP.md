@@ -17,9 +17,14 @@ a verified Taste Case.
 
 This turns taste from an implicit model style into an inspectable research-control
 policy. Current implementation covers deterministic ranking, stage-aware Taste
-retrieval, intrinsic/augmented modes, budget feasibility, and decision replay.
-Formal evidence that it improves scientific outcomes remains a matched-system
-evaluation question, not an assumption of the architecture.
+retrieval, intrinsic/augmented modes, budget feasibility, decision replay, and
+four stage-sensitive critics for wrong-level action, readiness, diagnosticity,
+and claim discipline. A hash-bound six-condition runtime now applies one declared
+Knowledge/Taste/critic policy consistently from Discovery through Evidence,
+Writing, and Figure generation while leaving evidence-integrity, writing-integrity,
+visual, budget, and sandbox gates enabled in every condition. Formal evidence that
+it improves scientific outcomes remains a matched-system evaluation question,
+not an assumption of the architecture.
 
 ### 2. Generation as Content — interaction intelligence
 
@@ -91,7 +96,7 @@ designs:
 
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
-| Scientific Taste control | Implemented and offline-tested | Formal independent matched-system effectiveness evidence |
+| Scientific Taste control | Stage-specific critics and a six-condition native isolation runtime are implemented and offline-tested | Model-backed candidate generation/selection, frozen task-specific Taste corpora, and formal independent matched-system effectiveness evidence |
 | Generation as Content workspace | Trusted-shell, evidence-bound surfaces, typed intents, structural/latency evaluator, and responsive browser probe implemented | Counterbalanced human study, bounded disclosure, and richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, and a deterministic Full Workflow evidence-hotspot trigger implemented; one registered live study is a narrow preliminary signal | Independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |

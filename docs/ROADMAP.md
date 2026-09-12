@@ -225,6 +225,18 @@ systems use a separately disclosed best-native, model-confounded lane for
 ecological validity. An executable EXP-Bench/MLRC-Bench-style population remains
 the next data gate before any title-level evidence-validity claim.
 
+The native condition names are now backed by executable first-party policies
+rather than metadata. A closed six-profile matrix controls utility, Knowledge,
+matched/mismatched Taste retrieval, and stage-specific Taste critics through all
+four Full Workflow stages, while integrity and sandbox gates remain invariant.
+All six profiles complete deterministic offline structural acceptance and fail
+closed on config or library drift. This closes treatment-isolation software, not
+the empirical gate: the committed fixture does not yet use Qwen for open-ended
+candidate generation/selection, and the seed library is not a frozen formal
+matched/placebo corpus. The next implementation gate is the model-backed native
+condition adapter; only after it is fixed can a new prelaunch proposal bind real
+implementation references.
+
 That distinction is now executable policy rather than an addendum alone.
 Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
 family, direction, minimum effect, minimum task population, and

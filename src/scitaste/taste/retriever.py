@@ -22,6 +22,14 @@ class TasteRetrievalPolicy(StrEnum):
     VISUAL_ROLE = "visual_role"
 
 
+class TasteDomainRelation(StrEnum):
+    """Experimental corpus partition applied before any retrieval scoring."""
+
+    ANY = "any"
+    MATCHED = "matched"
+    MISMATCHED = "mismatched"
+
+
 class TasteQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -49,11 +57,18 @@ class RetrievedTasteCase(BaseModel):
 
 
 class TasteRetriever:
-    def __init__(self, library: TasteLibrary) -> None:
+    def __init__(
+        self,
+        library: TasteLibrary,
+        *,
+        domain_relation: TasteDomainRelation = TasteDomainRelation.ANY,
+    ) -> None:
         self.library = library
+        self.domain_relation = domain_relation
 
     def retrieve(self, query: TasteQuery, *, limit: int = 5) -> list[RetrievedTasteCase]:
         cases = [case for case in self.library.all() if case.retrieval_eligible]
+        cases = self._filter_domain_relation(cases, query)
         if query.policy == TasteRetrievalPolicy.RHETORICAL_ROLE and query.rhetorical_role:
             cases = [
                 case
@@ -72,6 +87,28 @@ class TasteRetriever:
         results = [self._score(case, query) for case in cases]
         positive = [result for result in results if result.score > 0]
         return sorted(positive, key=lambda result: (-result.score, result.case.case_id))[:limit]
+
+    def _filter_domain_relation(
+        self,
+        cases: list[TasteCase],
+        query: TasteQuery,
+    ) -> list[TasteCase]:
+        if self.domain_relation is TasteDomainRelation.ANY:
+            return cases
+        requested = {item.casefold() for item in query.domain_tags if item.strip()}
+        if not requested:
+            raise ValueError("matched or mismatched Taste retrieval requires query domains")
+        selected: list[TasteCase] = []
+        for case in cases:
+            observed = {item.casefold() for item in case.domain_tags if item.strip()}
+            if not observed:
+                continue
+            overlaps = bool(requested & observed)
+            if (self.domain_relation is TasteDomainRelation.MATCHED and overlaps) or (
+                self.domain_relation is TasteDomainRelation.MISMATCHED and not overlaps
+            ):
+                selected.append(case)
+        return selected
 
     def _score(self, case: TasteCase, query: TasteQuery) -> RetrievedTasteCase:
         matched: list[str] = []
