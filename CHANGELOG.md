@@ -32,10 +32,11 @@ semantic versioning.
   confirmatory, while Knowledge-only, Taste-only, and critics-only contrasts
   are mandatory mechanism diagnostics. Result assessment requires all five
   analyses but determines title eligibility from the two confirmation
-  obligations only and reports both populations separately. The new no-run v8
-  proposal binds every native condition to the exact `7b82eb5...` executable
-  implementation and condition-matrix hash; model-backed parity, paired corpora,
-  task assets, remote checkpoint, reviewers, and owner approval remain blocked.
+  obligations only and reports both populations separately. The current no-run
+  v9 proposal binds every native condition to the exact `3cd9d75...` executable
+  implementation and Git-qualified model-selection preflight; model candidate
+  generation, paired corpora, task assets, remote checkpoint, reviewers, and
+  owner approval remain blocked.
 
 - Native Scientific Taste conditions are now executable across the complete
   first-party workflow instead of existing only as prelaunch labels. A closed,

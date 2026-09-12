@@ -34,7 +34,10 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     mechanism, native, external = dossier.tracks
     artifacts = {item.artifact_id: item for item in dossier.artifacts}
     assert artifacts["native-taste-causal-proposal"].path.endswith(
-        "qwen3vl2b_native_taste_causal_prepilot_v8.yaml"
+        "qwen3vl2b_native_taste_causal_prepilot_v9.yaml"
+    )
+    assert artifacts["native-condition-path-preflight"].path.endswith(
+        "qwen3vl2b_native_condition_path_v1.yaml"
     )
     assert mechanism.state is CampaignTrackState.DESIGN_ONLY
     assert mechanism.model.model_id == "Qwen3-VL-2B-Instruct"
@@ -48,7 +51,7 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     assert native.model.checkpoint_sha256.startswith("47f9c0e0")
     assert native.matrix.planned_cells == 12
     assert "two confirmatory" in native.primary_endpoint
-    assert "native-controls:model-backed-parity-not-attested" in native.blocker_codes
+    assert "native-controls:model-candidate-generation-not-attested" in native.blocker_codes
     assert "taste-corpora:paired-qualification-not-complete" in native.blocker_codes
     assert native.budget.allocated_gpu_hours == 5.0
     assert external.state is CampaignTrackState.BLOCKED

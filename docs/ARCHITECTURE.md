@@ -1877,7 +1877,7 @@ execution.
 ### ADR-061: Claim admission is estimand-specific and failure-inclusive
 
 Status: accepted through schema-1.4 prelaunch and schema-1.2 result assessment;
-the current native v8 and external v7 proposals remain blocked and unapproved.
+the current native v9 and external v7 proposals remain blocked and unapproved.
 
 A comparison lane, cell count, or positive aggregate does not identify the
 scientific claim it may support. SciTaste therefore binds one claim-admission

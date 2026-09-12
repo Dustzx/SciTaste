@@ -64,7 +64,7 @@ no silent fallback between Zhipu and DeepSeek.
 
 | Proposal | Scientific role | Exact model/resource named in its immutable bytes | Declared matrix | Current state |
 |---|---|---|---:|---|
-| `native-taste-causal-prepilot-v8` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.4 no-run proposal; six structural implementations bind commit `7b82eb5...` and the exact condition matrix; Full--Base and Full--mismatched are the two confirmation obligations, while three component-only analyses are mandatory diagnostics; model-backed parity, paired corpora, assets, remote checkpoint, reviewers, and approval remain blocked |
+| `native-taste-causal-prepilot-v9` | within-SciTaste causal feasibility | one content-bound Qwen3-VL-2B tree (`47f9c0e0...`) and one remote 8×RTX 3090 lane shared by all six conditions | 6 native conditions × 2 MLRC task candidates × 1 seed = 12 trajectories | current schema-v1.4 no-run proposal; six structural implementations bind commit `3cd9d75...` and the Git-qualified fixed-candidate model-selection path; Full--Base and Full--mismatched are the two confirmation obligations, while three component-only analyses are mandatory diagnostics; model candidate generation, paired corpora, assets, remote checkpoint, reviewers, and approval remain blocked |
 | `external-best-native-prepilot-v7` | model-confounded ecological system feasibility | SciTaste/DeepSeek V4.1 Flash, Agent Laboratory/o3-mini, TinyScientist/GPT-4o-2024-08-06 | 3 real systems × 2 MLRC task candidates × 1 seed = 6 trajectories | current schema-v1.3 no-run proposal; model mapping is statically bound, but task/sandbox/telemetry/artifact/failure adapters, task assets, credentials, reviewers, and approval remain blocked; it can never establish the causal Taste/title claim |
 | `formal-v6-package-prepilot` | API idea-to-paper package-preference feasibility | DeepSeek API `deepseek-flash`, served version `DeepSeek-V4.1-Flash` | 5 systems × 10 official tasks × 2 seeds = 100 execution units | current schema-v1.1 no-run proposal; its 100 units are a ceiling pending pilot power analysis; task bytes, adapters, reviewers, clean executable binding, authenticated served identity, and approval remain blocked |
 | `formal-v5-package-prepilot` | superseded provider-identity snapshot | historical `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731` assumption | 5 systems × 10 official tasks × 2 seeds = 100 execution units | immutable no-run history; the legacy alias is now routed to V4.1, so this record must not be relabeled or launched |
@@ -161,7 +161,7 @@ Inspect any proposal without provider or GPU access:
 
 ```bash
 .venv/bin/scitaste evaluation prelaunch \
-  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml \
+  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v9.yaml \
   --resource-corpus docs/research/data/autoresearch_evaluation_resources_v8.yaml \
   --source-root /path/to/exact-clean-executable-checkout \
   --evidence-root /path/to/proposal-and-protocol-checkout
@@ -328,7 +328,7 @@ without preparing or executing a launcher:
 
 ```bash
 .venv/bin/scitaste evaluation cell-plan \
-  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v8.yaml \
+  --manifest configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v9.yaml \
   --output /tmp/native-taste-causal-cell-plan.json
 ```
 
@@ -336,7 +336,7 @@ The compiler generates opaque cell and review-blind IDs, preserves declared
 matrix order, binds every cell to the proposal, task-asset, adapter-preflight,
 and API/checkpoint resource hashes, and reports cell-local plus protocol-wide
 blockers. Its output fixes `authorizes_execution=false` and records that no
-provider call, GPU work, or task download occurred. The current native v8 and
+provider call, GPU work, or task download occurred. The current native v9 and
 external v7 proposals produce 12 matched native GPU trajectories and six
 per-system best-native API trajectories respectively; all are blocked. This
 makes the gap between a YAML matrix count and an executable experiment explicit
@@ -425,7 +425,7 @@ protocol.
    runtime policy. Do not promote these broad prompts to empirical tasks. After
    an approved MLRC acquisition and package qualification, reproduce each
    baseline and held-out path before a formal objective-progress proposal.
-2. The dual-estimand architecture is materialized as native v8 and external v7
+2. The dual-estimand architecture is materialized as native v9 and external v7
    immutable proposals. The six native structural policies are real and
    hash-bound; the shared model-backed fixed-candidate action path is now
    Git-object-qualified at `ddcd3f8...`. Next implement and attest the shared
