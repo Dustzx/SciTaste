@@ -15,6 +15,12 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
+from scitaste.backends.base import PreferenceBackend
+from scitaste.backends.local_transformers import (
+    LocalTransformersBackend,
+    LocalTransformersConfig,
+    load_local_transformers_config,
+)
 from scitaste.benchmark.manuscript import materialize_manuscript
 from scitaste.data.store import KnowledgeLibrary, TasteLibrary, build_libraries
 from scitaste.discovery.loop import DiscoveryLoop, DiscoveryScenario, load_discovery_scenario
@@ -126,7 +132,7 @@ class FullWorkflowConfig(BaseModel):
     target_venue: str | None = None
     condition: str = "full_scitaste"
     execution_backend: Literal["scitaste-native", "mock"] = "scitaste-native"
-    provider: Literal["mock"] = "mock"
+    provider: str = Field(default="mock", min_length=1)
     model: str = "deterministic-controller"
     evidence_scope: str = "offline-integration-only"
     research_brief: Path | None = None
@@ -137,6 +143,7 @@ class FullWorkflowConfig(BaseModel):
     scenario_catalog: Path | None = None
     native_knowledge_config: Path | None = None
     native_condition_config: Path | None = None
+    native_preference_backend_config: Path | None = None
     native_execution_profile: Path | None = None
     native_experiment_config: Path | None = None
     native_code_proposal_config: Path | None = None
@@ -206,6 +213,11 @@ class FullWorkflowConfig(BaseModel):
             )
         if self.native_condition_config is not None and self.execution_backend != "scitaste-native":
             raise ValueError("native condition control requires the scitaste-native executor")
+        if self.native_preference_backend_config is not None:
+            if self.execution_backend != "scitaste-native":
+                raise ValueError("native preference control requires the scitaste-native executor")
+            if self.native_condition_config is None:
+                raise ValueError("native preference control requires a native condition matrix")
         return self
 
 
@@ -315,9 +327,11 @@ class FullWorkflow:
         *,
         seed: int = 0,
         executor: ResearchExecutor | None = None,
+        preference_backend: PreferenceBackend | None = None,
     ) -> None:
         self.seed = seed
         self.executor = executor
+        self.preference_backend = preference_backend
 
     def run(
         self,
@@ -330,6 +344,24 @@ class FullWorkflow:
     ) -> dict[str, object]:
         validate_entry_id(run_id, field_name="run_id")
         runtime = ProjectRuntime(outputs_root)
+        preference_config = (
+            load_local_transformers_config(config.native_preference_backend_config)
+            if config.native_preference_backend_config is not None
+            else None
+        )
+        if preference_config is not None:
+            validate_native_preference_identity(config, preference_config)
+            if not allow_live_model_nodes:
+                raise ValueError(
+                    "model-backed native decisions require --allow-live-model-nodes"
+                )
+        elif self.preference_backend is not None:
+            raise ValueError("an injected preference backend requires a bound backend config")
+        preference_backend = self.preference_backend or (
+            LocalTransformersBackend(preference_config)
+            if preference_config is not None
+            else None
+        )
         model_advisory = (
             load_full_workflow_model_advisory(config.model_node_advisory)
             if config.model_node_advisory is not None
@@ -546,6 +578,13 @@ class FullWorkflow:
                     condition_inspection.matrix.profile(config.condition),
                     seed=self.seed,
                     taste_library=(native_libraries[1] if native_libraries is not None else None),
+                    preference_backend=preference_backend,
+                    expected_preference_backend=(
+                        preference_config.provider if preference_config is not None else None
+                    ),
+                    expected_preference_model=(
+                        config.model if preference_config is not None else None
+                    ),
                 )
                 if condition_inspection is not None
                 else None
@@ -1801,6 +1840,7 @@ def _native_condition_summary(
         "components": runtime.profile.components.model_dump(mode="json"),
         "knowledge_retrieval_enabled": runtime.knowledge_retrieval_enabled,
         "taste_context_enabled": runtime.taste_context_enabled,
+        "model_backed_action_selection": runtime.model_backed,
         "integrity_gates_invariant": True,
     }
 
@@ -1931,6 +1971,19 @@ def _native_execution_summary(
     return payload
 
 
+def validate_native_preference_identity(
+    workflow: FullWorkflowConfig,
+    backend: LocalTransformersConfig,
+) -> None:
+    expected_model = f"{backend.model_id}@{backend.model_revision}"
+    if workflow.provider != backend.provider:
+        raise ValueError("workflow provider differs from native preference backend")
+    if workflow.model != expected_model:
+        raise ValueError("workflow model differs from native preference backend")
+    if backend.checkpoint_sha256 is None:
+        raise ValueError("native preference backend requires a checkpoint SHA-256")
+
+
 def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
     config_path = Path(path).resolve()
     payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
@@ -1943,6 +1996,7 @@ def load_full_workflow_config(path: str | Path) -> FullWorkflowConfig:
         "scenario_catalog",
         "native_knowledge_config",
         "native_condition_config",
+        "native_preference_backend_config",
         "native_execution_profile",
         "native_experiment_config",
         "native_code_proposal_config",
@@ -2617,6 +2671,15 @@ def _workflow_config_sha256(
             "file_sha256": condition_binding.file_sha256,
             "matrix_fingerprint": condition_binding.matrix.fingerprint,
             "condition_id": condition_binding.matrix.profile(config.condition).condition_id.value,
+        }
+    if config.native_preference_backend_config is None:
+        payload.pop("native_preference_backend_config", None)
+    else:
+        preference = load_local_transformers_config(config.native_preference_backend_config)
+        validate_native_preference_identity(config, preference)
+        payload["native_preference_backend_config"] = {
+            "content_sha256": _file_sha256(config.native_preference_backend_config),
+            "binding": preference.model_dump(mode="json"),
         }
     if config.native_execution_profile is None:
         payload.pop("native_execution_profile", None)

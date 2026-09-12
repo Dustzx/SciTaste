@@ -1985,3 +1985,34 @@ publish required, valid, and supported confirmatory counts alongside required
 and valid diagnostic counts, preventing prose from hiding either population.
 Legacy schema-1.3 serialization omits the absent extension, preserving proposal,
 claim, and analysis fingerprints and the validity of existing evidence.
+
+### ADR-064: Model preference is bounded selection, not controller authority
+
+Status: accepted for offline integration; real checkpoint execution and causal
+evidence remain pending.
+
+The base language model is part of the training-free Scientific Taste design, but
+a provider call must not inherit the controller's authority. SciTaste therefore
+admits a model only after deterministic budget checks have removed infeasible
+actions. The backend sees a fixed candidate set and a canonical state projection.
+Depending on the selected native condition, that projection may additionally
+contain explicit utility assessments, matched or source-disjoint Taste precedents,
+and stage-critic findings. The model returns one existing action; an unknown
+action, request-identity drift, or fingerprint mismatch fails the run rather than
+falling back to an apparently successful deterministic choice.
+
+Every non-trivial model selection is durable evidence. `ResearchDecision` records
+the request and context hashes, ordered candidate IDs and candidate-set hash,
+prompt version, returned provider/model identity, selected action, response hash,
+latency, semantic attempts, cache status, and usage. It deliberately does not turn
+the model's prose into an execution command. Single feasible-action steps require
+no preference call and remain explicit deterministic transitions.
+
+The Full Workflow can bind one exact local-Transformers configuration to all four
+stages. Workflow provider/model metadata must match that backend, the checkpoint
+must be hash-pinned, configuration bytes and expanded semantics enter the workflow
+fingerprint, and execution requires the existing explicit live-model switch before
+project mutation. The dry run reports whether a checkpoint would load while
+remaining mutation-free. This proves the software route and telemetry contract;
+it does not prove checkpoint availability, model quality, candidate-generation
+parity, matched/placebo corpus parity, or experimental effectiveness.

@@ -3,16 +3,56 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from scitaste.schema.actions import ResearchAction
 
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+class ModelDecisionUsage(BaseModel):
+    """Bounded provider usage copied into the durable decision record."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cost_usd: float | None = Field(default=None, ge=0)
+
+
+class ModelDecisionTrace(BaseModel):
+    """Content identity for one model-backed fixed-candidate selection."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(min_length=1)
+    request_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    prompt_version: str = Field(min_length=1)
+    decision_context_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    candidate_action_ids: tuple[str, ...] = Field(min_length=1)
+    candidate_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    backend: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    selected_action_id: str = Field(min_length=1)
+    response_raw_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    latency_ms: float | None = Field(default=None, ge=0)
+    semantic_attempts: int = Field(default=1, ge=1)
+    usage: ModelDecisionUsage = Field(default_factory=ModelDecisionUsage)
+    cached: bool = False
+
+    @model_validator(mode="after")
+    def selection_belongs_to_closed_candidates(self) -> ModelDecisionTrace:
+        if len(set(self.candidate_action_ids)) != len(self.candidate_action_ids):
+            raise ValueError("model decision candidate action IDs must be unique")
+        if self.selected_action_id not in self.candidate_action_ids:
+            raise ValueError("model decision selected action must be a candidate")
+        return self
 
 
 class ResearchDecision(BaseModel):
@@ -32,12 +72,25 @@ class ResearchDecision(BaseModel):
     expected_cost: dict[str, float] = Field(default_factory=dict)
     expected_value: dict[str, float] = Field(default_factory=dict)
     candidate_scores: dict[str, float | None] = Field(default_factory=dict)
+    model_decision: ModelDecisionTrace | None = None
     executor_result_id: str | None = None
     actual_outcome: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_model_trace(self, handler: Any) -> dict[str, Any]:
+        payload: dict[str, Any] = handler(self)
+        if self.model_decision is None:
+            payload.pop("model_decision", None)
+        return payload
 
     @model_validator(mode="after")
     def selected_action_was_a_candidate(self) -> ResearchDecision:
         candidate_ids = {action.action_id for action in self.candidate_actions}
         if self.selected_action.action_id not in candidate_ids:
             raise ValueError("selected_action must belong to candidate_actions")
+        if (
+            self.model_decision is not None
+            and self.model_decision.selected_action_id != self.selected_action.action_id
+        ):
+            raise ValueError("model decision and selected action must agree")
         return self

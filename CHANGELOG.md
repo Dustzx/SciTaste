@@ -7,6 +7,17 @@ semantic versioning.
 
 ### Added
 
+- The native Scientific Taste controller now has an opt-in model-backed action
+  policy for every non-trivial fixed-candidate decision. One pinned local
+  Transformers backend is reused across the complete Full Workflow; hard budget
+  feasibility closes the candidate set before the model call, while the declared
+  utility assessments, matched or mismatched Taste precedents, and stage critics
+  form condition-sensitive context. Durable decisions bind request/context and
+  candidate-set hashes, returned model identity, response hash, attempts, latency,
+  cache state, and token/cost telemetry. A Qwen3-VL-2B config and mutation-free dry
+  run are available, but no checkpoint was loaded and no GPU/model experiment was
+  executed; open-ended candidate generation and formal corpus parity remain open.
+
 - Prelaunch schema 1.4 now separates contrast reporting from headline
   inference. Native Full--Base and Full--mismatched-Taste contrasts are
   confirmatory, while Knowledge-only, Taste-only, and critics-only contrasts

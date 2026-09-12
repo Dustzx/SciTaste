@@ -139,6 +139,7 @@ from scitaste.full_workflow import (
     FullWorkflow,
     inspect_full_workflow_intake,
     load_full_workflow_config,
+    validate_native_preference_identity,
 )
 from scitaste.generative_ui import ProjectSurfaceFactory
 from scitaste.generative_ui.serve_cli import add_ui_commands
@@ -3501,6 +3502,13 @@ def _handle_full(args: argparse.Namespace) -> int:
             if condition_inspection is not None
             else None
         )
+        preference_config = (
+            load_local_transformers_config(config.native_preference_backend_config)
+            if config.native_preference_backend_config is not None
+            else None
+        )
+        if preference_config is not None:
+            validate_native_preference_identity(config, preference_config)
         if (
             condition_profile is not None
             and (
@@ -3615,6 +3623,9 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "condition_id": condition_profile.condition_id.value,
                                 "role": condition_profile.role.value,
                                 "components": condition_profile.components.model_dump(mode="json"),
+                                "model_backed_action_selection": (
+                                    preference_config is not None
+                                ),
                                 "integrity_gates_invariant": True,
                             }
                         ),
@@ -3623,6 +3634,25 @@ def _handle_full(args: argparse.Namespace) -> int:
                             str(config.native_knowledge_config)
                             if config.native_knowledge_config is not None
                             else None
+                        ),
+                        "preference_backend": (
+                            None
+                            if preference_config is None
+                            else {
+                                "provider": preference_config.provider,
+                                "model": (
+                                    f"{preference_config.model_id}@"
+                                    f"{preference_config.model_revision}"
+                                ),
+                                "checkpoint_sha256": preference_config.checkpoint_sha256,
+                                "device": preference_config.device,
+                                "max_new_tokens": preference_config.max_new_tokens,
+                                "max_context_tokens": preference_config.max_context_tokens,
+                                "model_backed_action_selection": True,
+                                "caller_authorized": args.allow_live_model_nodes,
+                                "would_load_checkpoint": args.allow_live_model_nodes,
+                                "would_contact_network": False,
+                            }
                         ),
                         "resource_profile": (
                             {

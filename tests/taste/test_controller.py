@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
+from scitaste.backends.base import PreferenceRequest, PreferenceResponse
 from scitaste.data.models import ProvenanceRecord, TasteCase
 from scitaste.data.store import TasteLibrary
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -9,6 +12,26 @@ from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.controller import NoViableActionError, TasteController, TasteMode
 from scitaste.taste.retriever import TasteRetriever
+
+
+class _CapturingPreferenceBackend:
+    name = "capturing-model"
+
+    def __init__(self, selected_action_id: str) -> None:
+        self.selected_action_id = selected_action_id
+        self.requests: list[PreferenceRequest] = []
+
+    def rank(self, request: PreferenceRequest) -> PreferenceResponse:
+        self.requests.append(request)
+        return PreferenceResponse(
+            request_id=request.request_id,
+            request_fingerprint=request.fingerprint,
+            selected_action_id=self.selected_action_id,
+            rationale="The fixed candidate better targets the remaining uncertainty.",
+            confidence=0.82,
+            backend=self.name,
+            model="fixture-model@pinned",
+        )
 
 
 def test_controller_prefers_information_value_and_logs_all_candidates(
@@ -38,6 +61,7 @@ def test_controller_prefers_information_value_and_logs_all_candidates(
     assert set(decision.candidate_scores) == {"probe", "implement"}
     assert decision.retrieved_taste_cases == []
     assert decision.state_snapshot_id.startswith("state-")
+    assert "model_decision" not in decision.model_dump(mode="json")
 
 
 def test_controller_rejects_actions_over_hard_budget(research_state: ResearchState) -> None:
@@ -74,6 +98,115 @@ def test_infeasible_alternative_remains_json_auditable(research_state: ResearchS
 
     assert restored.candidate_scores["impossible"] is None
     assert restored.selected_action == feasible
+
+
+def test_model_backed_controller_selects_only_from_feasible_fixed_candidates(
+    research_state: ResearchState,
+) -> None:
+    backend = _CapturingPreferenceBackend("probe")
+    actions = [
+        ResearchAction(
+            action_id="implement",
+            type=MetaAction.EXPERIMENT,
+            description="High deterministic utility but premature implementation",
+            expected_value={"information_gain": 10.0},
+        ),
+        ResearchAction(
+            action_id="probe",
+            type=MetaAction.PROBE,
+            description="Low-cost diagnostic",
+        ),
+        ResearchAction(
+            action_id="over-budget",
+            type=MetaAction.EXPERIMENT,
+            description="Infeasible experiment",
+            expected_cost={"gpu_hours": 20.0},
+        ),
+    ]
+
+    decision = TasteController(seed=7, preference_backend=backend).decide(
+        state=research_state,
+        candidate_actions=actions,
+    )
+
+    assert decision.selected_action.action_id == "probe"
+    assert [item.action_id for item in backend.requests[0].candidate_actions] == [
+        "implement",
+        "probe",
+    ]
+    assert set(decision.candidate_scores.values()) == {None}
+    assert decision.model_decision is not None
+    assert decision.model_decision.candidate_action_ids == ("implement", "probe")
+    assert decision.model_decision.selected_action_id == "probe"
+    assert decision.model_decision.backend == "capturing-model"
+    assert decision.model_decision.model == "fixture-model@pinned"
+    assert decision.model_decision.request_fingerprint == backend.requests[0].fingerprint
+    assert decision.confidence == 0.82
+    restored = ResearchDecision.model_validate_json(decision.model_dump_json())
+    assert restored.model_decision == decision.model_decision
+
+
+def test_model_decision_context_exposes_declared_components_without_condition_label(
+    tmp_path,
+    research_state: ResearchState,
+) -> None:
+    library = TasteLibrary(tmp_path / "taste.jsonl")
+    library.add(
+        TasteCase(
+            case_id="precedent-probe",
+            stage="DISCOVERY",
+            context_summary="Test uncertainty before implementation",
+            candidate_actions=["PROBE", "EXPERIMENT"],
+            preferred_action="PROBE",
+            rejected_actions=["EXPERIMENT"],
+            decision_principle="Probe before commitment.",
+            why_preferred="The probe discriminates the main explanations.",
+            outcome_summary="The probe avoided an unsupported implementation.",
+            provenance=[ProvenanceRecord(source_type="test", locator="fixture://probe")],
+            confidence=1.0,
+            retrieval_eligible=True,
+            domain_tags=["testing"],
+        )
+    )
+    backend = _CapturingPreferenceBackend("probe")
+    actions = [
+        ResearchAction(action_id="probe", type=MetaAction.PROBE, description="Probe uncertainty"),
+        ResearchAction(
+            action_id="implement",
+            type=MetaAction.EXPERIMENT,
+            description="Implement now",
+        ),
+    ]
+
+    TasteController(
+        mode=TasteMode.AUGMENTED,
+        retriever=TasteRetriever(library),
+        preference_backend=backend,
+    ).decide(state=research_state, candidate_actions=actions)
+    context = json.loads(backend.requests[0].decision_context)
+
+    assert context["explicit_utility"]["enabled"] is True
+    assert context["taste_precedents"]["cases"][0]["case_id"] == "precedent-probe"
+    assert context["taste_critics"]["enabled"] is True
+    assert "condition" not in backend.requests[0].decision_context.casefold()
+
+
+def test_model_backed_controller_rejects_returned_identity_drift(
+    research_state: ResearchState,
+) -> None:
+    backend = _CapturingPreferenceBackend("probe")
+    actions = [
+        ResearchAction(action_id="probe", type=MetaAction.PROBE, description="Probe"),
+        ResearchAction(action_id="search", type=MetaAction.SEARCH, description="Search"),
+    ]
+    controller = TasteController(
+        preference_backend=backend,
+        expected_preference_backend="capturing-model",
+        expected_preference_model="different-model@pinned",
+    )
+
+    with pytest.raises(ValueError, match="model identity mismatch"):
+        controller.decide(state=research_state, candidate_actions=actions)
 
 
 def test_fixed_seed_breaks_ties_deterministically(research_state: ResearchState) -> None:
