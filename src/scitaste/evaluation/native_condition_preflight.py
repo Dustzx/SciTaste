@@ -74,6 +74,9 @@ class NativeCorpusPairContract(BaseModel):
     placebo_corpus_sha256: str | None = Field(default=None, pattern=_SHA256)
     pair_attestation_ref: str | None = Field(default=None, max_length=1_000)
     pair_attestation_sha256: str | None = Field(default=None, pattern=_SHA256)
+    curation_runtime_status: ReadinessStatus = ReadinessStatus.PENDING
+    curation_runtime_ref: str | None = Field(default=None, max_length=1_000)
+    curation_runtime_sha256: str | None = Field(default=None, pattern=_SHA256)
     zero_retrieval_invalidates_cell: Literal[True] = True
 
     @model_validator(mode="after")
@@ -84,14 +87,21 @@ class NativeCorpusPairContract(BaseModel):
             (self.matched_corpus_ref, self.matched_corpus_sha256),
             (self.placebo_corpus_ref, self.placebo_corpus_sha256),
             (self.pair_attestation_ref, self.pair_attestation_sha256),
+            (self.curation_runtime_ref, self.curation_runtime_sha256),
         )
         if any((ref is None) != (digest is None) for ref, digest in pairs):
             raise ValueError("native corpus references and SHA-256 values must be paired")
         any_verified = any(
             status is ReadinessStatus.VERIFIED for status in self.dimensions.values()
         )
-        if any_verified and not all(ref is not None for pair in pairs for ref in pair):
+        corpus_pairs = pairs[:3]
+        if any_verified and not all(ref is not None for pair in corpus_pairs for ref in pair):
             raise ValueError("verified corpus parity requires both corpora and pair attestation")
+        if (
+            self.curation_runtime_status is ReadinessStatus.VERIFIED
+            and self.curation_runtime_ref is None
+        ):
+            raise ValueError("verified corpus curation runtime requires Git-pinned evidence")
         return self
 
 
@@ -160,6 +170,7 @@ class NativeConditionPreflightReport(BaseModel):
     source_commit_is_ancestor: bool
     static_action_path_verified: bool
     model_candidate_generation_verified: bool
+    corpus_curation_runtime_verified: bool
     corpus_pair_verified: bool
     checkpoint_execution_verified: bool
     ready_for_experiment: bool
@@ -255,6 +266,10 @@ def inspect_native_condition_preflight(
                     manifest.corpus_pair.pair_attestation_ref,
                     manifest.corpus_pair.pair_attestation_sha256,
                 ),
+                (
+                    manifest.corpus_pair.curation_runtime_ref,
+                    manifest.corpus_pair.curation_runtime_sha256,
+                ),
             )
             for locator, expected_sha256 in corpus_evidence:
                 if locator is None or expected_sha256 is None:
@@ -307,6 +322,15 @@ def inspect_native_condition_preflight(
         manifest.requirements[NativePathRequirement.MODEL_CANDIDATE_GENERATION].status
         is ReadinessStatus.VERIFIED
     )
+    curation_ref = manifest.corpus_pair.curation_runtime_ref
+    curation_sha256 = manifest.corpus_pair.curation_runtime_sha256
+    curation_runtime_verified = bool(
+        manifest.corpus_pair.curation_runtime_status is ReadinessStatus.VERIFIED
+        and curation_ref is not None
+        and curation_sha256 is not None
+        and curation_ref in objects
+        and hashlib.sha256(objects[curation_ref]).hexdigest() == curation_sha256
+    )
     corpus_verified = manifest.requirements[
         NativePathRequirement.MATCHED_PLACEBO_CORPORA
     ].status is ReadinessStatus.VERIFIED and all(
@@ -346,6 +370,7 @@ def inspect_native_condition_preflight(
         source_commit_is_ancestor=source_is_ancestor,
         static_action_path_verified=static_action,
         model_candidate_generation_verified=candidate_generation,
+        corpus_curation_runtime_verified=curation_runtime_verified,
         corpus_pair_verified=corpus_verified,
         checkpoint_execution_verified=checkpoint_verified,
         ready_for_experiment=ready,
