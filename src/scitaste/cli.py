@@ -76,7 +76,9 @@ from scitaste.evaluation import (
     ProjectionSemanticRole,
     SourceProjectionField,
     align_evidence_program_to_benchmark,
+    allocate_benchmark_metadata_population,
     analyze_human_preferences,
+    approve_benchmark_metadata_allocation,
     approve_benchmark_metadata_projection,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
@@ -95,6 +97,7 @@ from scitaste.evaluation import (
     inspect_adapter_preflight,
     inspect_benchmark_metadata_population_chain,
     inspect_benchmark_metadata_screen_rulebook,
+    inspect_benchmark_metadata_screening_chain,
     inspect_dataset_acquisition_request,
     inspect_dataset_license_policy,
     inspect_dataset_package_archives,
@@ -114,11 +117,14 @@ from scitaste.evaluation import (
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_benchmark_metadata_allocation_approval,
+    load_benchmark_metadata_allocation_plan,
     load_benchmark_metadata_projection_approval,
     load_benchmark_metadata_projection_plan,
     load_benchmark_metadata_scope,
     load_benchmark_metadata_screen_decisions,
     load_benchmark_metadata_screen_rulebook,
+    load_clustered_power_report,
     load_clustered_power_request,
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
@@ -156,6 +162,7 @@ from scitaste.evaluation import (
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
+    plan_benchmark_metadata_allocation,
     plan_benchmark_metadata_projection,
     plan_clustered_power,
     plan_structured_metadata_audit,
@@ -167,6 +174,9 @@ from scitaste.evaluation import (
     run_live_direct_agent,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
+    save_benchmark_metadata_allocation_approval,
+    save_benchmark_metadata_allocation_plan,
+    save_benchmark_metadata_allocation_report,
     save_benchmark_metadata_population,
     save_benchmark_metadata_projection_approval,
     save_benchmark_metadata_projection_plan,
@@ -2048,6 +2058,54 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(metadata_screen)
     metadata_screen.set_defaults(handler=_handle_evaluation_benchmark_metadata_screen)
+    metadata_allocation_plan = evaluation_commands.add_parser(
+        "benchmark-metadata-allocation-plan",
+        help="Bind a complete screen and pilot-powered sample size before selecting tasks",
+    )
+    metadata_allocation_plan.add_argument("--screening-report", type=Path, required=True)
+    metadata_allocation_plan.add_argument("--power-report", type=Path, required=True)
+    metadata_allocation_plan.add_argument("--power-request", type=Path, required=True)
+    metadata_allocation_plan.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_allocation_plan.add_argument("--plan-id", required=True)
+    metadata_allocation_plan.add_argument("--random-seed", type=int, required=True)
+    metadata_allocation_plan.add_argument("--cluster-field", default="source-paper-group")
+    metadata_allocation_plan.add_argument("--allocation-output", required=True)
+    metadata_allocation_plan.add_argument("--created-at", required=True)
+    metadata_allocation_plan.add_argument("--output", type=Path, required=True)
+    metadata_allocation_plan.add_argument("--allow-projected-metadata-read", action="store_true")
+    metadata_allocation_plan.add_argument("--require-ready", action="store_true")
+    _add_log_level_option(metadata_allocation_plan)
+    metadata_allocation_plan.set_defaults(
+        handler=_handle_evaluation_benchmark_metadata_allocation_plan
+    )
+    metadata_allocation_approve = evaluation_commands.add_parser(
+        "benchmark-metadata-allocation-approve",
+        help="Authorize one exact powered and seeded benchmark allocation",
+    )
+    metadata_allocation_approve.add_argument("--plan", type=Path, required=True)
+    metadata_allocation_approve.add_argument("--confirm-plan-sha256", required=True)
+    metadata_allocation_approve.add_argument("--approved-by", required=True)
+    metadata_allocation_approve.add_argument("--approved-at", required=True)
+    metadata_allocation_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(metadata_allocation_approve)
+    metadata_allocation_approve.set_defaults(
+        handler=_handle_evaluation_benchmark_metadata_allocation_approve
+    )
+    metadata_allocate = evaluation_commands.add_parser(
+        "benchmark-metadata-allocate",
+        help="Freeze a powered source-group-distinct task set without executing it",
+    )
+    metadata_allocate.add_argument("--screening-report", type=Path, required=True)
+    metadata_allocate.add_argument("--power-report", type=Path, required=True)
+    metadata_allocate.add_argument("--power-request", type=Path, required=True)
+    metadata_allocate.add_argument("--plan", type=Path, required=True)
+    metadata_allocate.add_argument("--approval", type=Path, required=True)
+    metadata_allocate.add_argument("--workspace-root", type=Path, default=Path("."))
+    metadata_allocate.add_argument("--allocated-at", required=True)
+    metadata_allocate.add_argument("--output", type=Path, required=True)
+    metadata_allocate.add_argument("--allow-projected-metadata-read", action="store_true")
+    _add_log_level_option(metadata_allocate)
+    metadata_allocate.set_defaults(handler=_handle_evaluation_benchmark_metadata_allocate)
     source_admission = evaluation_commands.add_parser(
         "source-admission",
         help="Compile audited sources through rights, quality, and isolation gates",
@@ -5943,6 +6001,97 @@ def _handle_evaluation_benchmark_metadata_screen(args: argparse.Namespace) -> in
     )
     if args.require_allocation_proposal_ready and not report.ready_for_allocation_proposal:
         return 1
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_allocation_plan(args: argparse.Namespace) -> int:
+    root = args.workspace_root.resolve(strict=True)
+    if not args.output.resolve(strict=False).is_relative_to(root):
+        raise ValueError("benchmark allocation plan output must remain inside the workspace")
+    plan = plan_benchmark_metadata_allocation(
+        inspect_benchmark_metadata_screening_chain(
+            args.screening_report,
+            workspace_root=root,
+        ),
+        load_clustered_power_report(args.power_report),
+        load_clustered_power_request(args.power_request),
+        workspace_root=root,
+        plan_id=args.plan_id,
+        random_seed=args.random_seed,
+        cluster_field=args.cluster_field,
+        allocation_output_locator=args.allocation_output,
+        created_at=datetime.fromisoformat(args.created_at),
+        allow_projected_metadata_read=args.allow_projected_metadata_read,
+    )
+    output = save_benchmark_metadata_allocation_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "plan_path": str(output),
+                **plan.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_ready and not plan.ready_for_owner_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_allocation_approve(
+    args: argparse.Namespace,
+) -> int:
+    approval = approve_benchmark_metadata_allocation(
+        load_benchmark_metadata_allocation_plan(args.plan),
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_benchmark_metadata_allocation_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_benchmark_metadata_allocate(args: argparse.Namespace) -> int:
+    root = args.workspace_root.resolve(strict=True)
+    plan = load_benchmark_metadata_allocation_plan(args.plan)
+    expected_output = root.joinpath(*PurePosixPath(plan.plan.allocation_output_locator).parts)
+    if args.output.resolve(strict=False) != expected_output:
+        raise ValueError("benchmark allocation output differs from the approved locator")
+    report = allocate_benchmark_metadata_population(
+        inspect_benchmark_metadata_screening_chain(
+            args.screening_report,
+            workspace_root=root,
+        ),
+        load_clustered_power_report(args.power_report),
+        load_clustered_power_request(args.power_request),
+        plan,
+        load_benchmark_metadata_allocation_approval(args.approval),
+        workspace_root=root,
+        allocated_at=datetime.fromisoformat(args.allocated_at),
+        allow_projected_metadata_read=args.allow_projected_metadata_read,
+    )
+    output = save_benchmark_metadata_allocation_report(report, expected_output)
+    print(
+        json.dumps(
+            {
+                "report_path": str(output),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

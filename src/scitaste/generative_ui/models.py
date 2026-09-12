@@ -624,6 +624,8 @@ class ProjectProgressCounts(BaseModel):
     metadata_audit_plans: int = Field(default=0, ge=0)
     benchmark_metadata_populations: int = Field(default=0, ge=0)
     benchmark_metadata_screenings: int = Field(default=0, ge=0)
+    benchmark_metadata_allocation_plans: int = Field(default=0, ge=0)
+    benchmark_metadata_allocations: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1217,6 +1219,148 @@ class ProjectProgressBenchmarkMetadataScreeningItem(BaseModel):
         return self
 
 
+class ProjectProgressBenchmarkMetadataAllocationPlanItem(BaseModel):
+    """One powered, outcome-blind allocation awaiting an exact owner decision."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    plan_id: SafeIdentifier
+    scope_id: SafeIdentifier
+    formal_study_id: SafeIdentifier
+    plan_file_sha256: Sha256
+    plan_sha256: Sha256
+    screening_report_sha256: Sha256
+    population_sha256: Sha256
+    power_report_sha256: Sha256
+    allocation_implementation_current: bool
+    eligible_record_count: int = Field(ge=0)
+    allocatable_record_count: int = Field(ge=0)
+    excluded_record_count: int = Field(ge=0)
+    blocked_record_count: int = Field(ge=0)
+    available_independent_units: int = Field(ge=0)
+    powered_independent_units: int = Field(gt=0)
+    stratum_count: int = Field(ge=0)
+    blocker_codes: tuple[SafeIdentifier, ...] = ()
+    scientific_controls_ready: bool
+    ready_for_owner_approval: bool
+    status: Literal["blocked", "implementation_drift", "awaiting_owner_approval"]
+    next_gate: Literal[
+        "resolve_allocation_controls",
+        "regenerate_allocation_plan",
+        "approve_exact_powered_allocation",
+    ]
+    selected_identity_count: Literal[0] = 0
+    allocation_performed: Literal[False]
+    task_selection_performed: Literal[False]
+    authorizes_allocation: Literal[False]
+    authorizes_execution: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def allocation_plan_state_is_closed(
+        self,
+    ) -> ProjectProgressBenchmarkMetadataAllocationPlanItem:
+        expected_ready = self.scientific_controls_ready and self.allocation_implementation_current
+        if self.ready_for_owner_approval != expected_ready:
+            raise ValueError("allocation plan owner readiness differs from its controls")
+        expected_status = (
+            "implementation_drift"
+            if not self.allocation_implementation_current
+            else "awaiting_owner_approval"
+            if self.scientific_controls_ready
+            else "blocked"
+        )
+        if self.status != expected_status:
+            raise ValueError("allocation plan status differs from its controls")
+        expected_gate = {
+            "implementation_drift": "regenerate_allocation_plan",
+            "awaiting_owner_approval": "approve_exact_powered_allocation",
+            "blocked": "resolve_allocation_controls",
+        }[self.status]
+        if self.next_gate != expected_gate:
+            raise ValueError("allocation plan next gate differs from its status")
+        if self.allocatable_record_count > self.eligible_record_count:
+            raise ValueError("allocation plan usable records exceed eligibility")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("allocation plan must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("allocation plan evidence references must be unique")
+        return self
+
+
+class ProjectProgressBenchmarkMetadataAllocationItem(BaseModel):
+    """One approved, powered task-set freeze that still grants no execution authority."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    plan_id: SafeIdentifier
+    scope_id: SafeIdentifier
+    formal_study_id: SafeIdentifier
+    report_file_sha256: Sha256
+    report_sha256: Sha256
+    plan_sha256: Sha256
+    approval_sha256: Sha256
+    screening_report_sha256: Sha256
+    population_sha256: Sha256
+    power_report_sha256: Sha256
+    formal_task_set_sha256: Sha256
+    allocation_implementation_current: bool
+    screened_record_count: int = Field(gt=0)
+    available_independent_units: int = Field(gt=0)
+    powered_independent_units: int = Field(gt=0)
+    selected_record_count: int = Field(gt=0)
+    unsampled_eligible_record_count: int = Field(ge=0)
+    excluded_record_count: int = Field(ge=0)
+    blocked_record_count: int = Field(ge=0)
+    stratum_count: int = Field(gt=0)
+    status: Literal["task_set_frozen", "implementation_drift"]
+    next_gate: Literal[
+        "qualify_assets_and_freeze_prelaunch",
+        "replay_allocation_against_current_implementation",
+    ]
+    owner_approval_recorded: Literal[True]
+    source_groups_unique: Literal[True]
+    powered_sample_size_satisfied: Literal[True]
+    task_selection_frozen: Literal[True]
+    experiment_performed: Literal[False]
+    authorizes_execution: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def allocation_state_is_closed(self) -> ProjectProgressBenchmarkMetadataAllocationItem:
+        expected_status = (
+            "task_set_frozen" if self.allocation_implementation_current else "implementation_drift"
+        )
+        if self.status != expected_status:
+            raise ValueError("benchmark allocation status differs from implementation")
+        expected_gate = (
+            "qualify_assets_and_freeze_prelaunch"
+            if self.allocation_implementation_current
+            else "replay_allocation_against_current_implementation"
+        )
+        if self.next_gate != expected_gate:
+            raise ValueError("benchmark allocation next gate differs from implementation")
+        if self.selected_record_count != self.powered_independent_units:
+            raise ValueError("benchmark allocation selected count differs from power")
+        if (
+            self.selected_record_count
+            + self.unsampled_eligible_record_count
+            + self.excluded_record_count
+            + self.blocked_record_count
+            != self.screened_record_count
+        ):
+            raise ValueError("benchmark allocation counts do not preserve its screen")
+        if self.run_ref_id not in self.support_ref_ids:
+            raise ValueError("benchmark allocation must cite its registered run")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("benchmark allocation evidence references must be unique")
+        return self
+
+
 class ProjectProgressDatasetPackageTaskItem(BaseModel):
     """One task-level large-asset acquisition qualification."""
 
@@ -1659,6 +1803,8 @@ class ProjectProgressCandidateItem(BaseModel):
         "approve_metadata_audit",
         "review_metadata_population",
         "review_metadata_screening",
+        "approve_metadata_allocation",
+        "review_metadata_allocation",
         "review_benchmark_qualification",
         "review_iteration",
     ]
@@ -1816,6 +1962,10 @@ class ProjectProgressBoardData(BaseModel):
     metadata_audit_plans: tuple[ProjectProgressMetadataAuditPlanItem, ...] = ()
     benchmark_metadata_populations: tuple[ProjectProgressBenchmarkMetadataPopulationItem, ...] = ()
     benchmark_metadata_screenings: tuple[ProjectProgressBenchmarkMetadataScreeningItem, ...] = ()
+    benchmark_metadata_allocation_plans: tuple[
+        ProjectProgressBenchmarkMetadataAllocationPlanItem, ...
+    ] = ()
+    benchmark_metadata_allocations: tuple[ProjectProgressBenchmarkMetadataAllocationItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -1878,6 +2028,8 @@ class ProjectProgressBoardData(BaseModel):
             *self.metadata_audit_plans,
             *self.benchmark_metadata_populations,
             *self.benchmark_metadata_screenings,
+            *self.benchmark_metadata_allocation_plans,
+            *self.benchmark_metadata_allocations,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -1931,6 +2083,20 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress benchmark screening scope IDs must be unique")
         if self.counts.benchmark_metadata_screenings != len(self.benchmark_metadata_screenings):
             raise ValueError("project progress benchmark screening count must match its rows")
+
+        allocation_plan_ids = [item.scope_id for item in self.benchmark_metadata_allocation_plans]
+        if len(allocation_plan_ids) != len(set(allocation_plan_ids)):
+            raise ValueError("project progress allocation-plan scope IDs must be unique")
+        if self.counts.benchmark_metadata_allocation_plans != len(
+            self.benchmark_metadata_allocation_plans
+        ):
+            raise ValueError("project progress allocation-plan count must match its rows")
+
+        allocation_ids = [item.scope_id for item in self.benchmark_metadata_allocations]
+        if len(allocation_ids) != len(set(allocation_ids)):
+            raise ValueError("project progress allocation scope IDs must be unique")
+        if self.counts.benchmark_metadata_allocations != len(self.benchmark_metadata_allocations):
+            raise ValueError("project progress allocation count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

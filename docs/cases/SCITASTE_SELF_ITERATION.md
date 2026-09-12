@@ -1233,3 +1233,32 @@ rulebooks and synthetic compiler behavior were verified, but the real acquired
 InnovatorBench and EXP-Bench files remain unopened and no actual population or
 screening report exists. No network, provider, model, GPU, human, or experiment
 resource was used.
+
+## Closing screening-to-formal allocation without running a study (2026-09-13)
+
+The self-iteration exposed another gap after complete-population screening:
+the older shortlist validator could verify a list supplied by an operator, but
+could not prove that the formal tasks were derived from the complete eligible
+population using the pilot-powered independent-unit count. This matters for the
+paper's recursive claim because a convenient task subset could make both the
+system and its self-evaluation look stronger.
+
+SciTaste now creates an identity-free allocation plan from the exact screening
+chain and an independently replayed objective-H3 clustered-power chain. It
+precommits the formal study, output, deterministic algorithm, random seed,
+source-group field, and balance strata; blocks insufficient or cross-stratum
+source groups; and requires every non-empty stratum to be represented. Only a
+separate exact owner approval reveals the deterministic task selection. The
+result retains selected, unsampled eligible, excluded, and blocked records and
+still cannot launch an experiment.
+
+The project interface recognizes both canonical stages and replaces earlier
+cards for the same scope with the strongest evidence state, keeping the home
+concise while exposing approval or prelaunch qualification as the next
+interaction. Four focused allocation checks plus the affected interface tests
+verified replay, source-group uniqueness, stratum coverage, missing-evidence
+blocking, complete population retention, and no-execution boundaries. No real
+project allocation was fabricated: the acquired benchmark metadata is still
+unopened, so the self-development project correctly remains at the earlier
+content-read approval gate. No provider, model, GPU, human, or experiment
+resource was used.

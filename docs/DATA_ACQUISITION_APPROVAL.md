@@ -221,6 +221,49 @@ The report retains the full population partition and only opens a later powered,
 seeded allocation proposal. It cannot select tasks, call a model, use compute,
 or execute an experiment.
 
+Once the complete screen and a real objective-H3 clustered-power analysis both
+exist, the allocation plan is still identity-free and non-authorizing:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-allocation-plan \
+  --screening-report '<complete screening REPORT.json>' \
+  --power-request '<clustered-power REQUEST.json>' \
+  --power-report '<clustered-power REPORT.json>' --workspace-root . \
+  --plan-id '<new plan id>' --random-seed '<precommitted integer>' \
+  --cluster-field source-paper-group \
+  --allocation-output '<project-relative benchmark_metadata_allocation/REPORT.json>' \
+  --created-at '<timezone-aware ISO-8601>' \
+  --output '<new benchmark_metadata_allocation_planning/PLAN.json>' \
+  --allow-projected-metadata-read --require-ready
+```
+
+The plan replays the pilot evidence behind the power report and verifies that
+distinct source groups can meet the powered sample size while covering every
+non-empty declared stratum. It records only counts. No task identity is chosen
+until the owner approves the exact plan hash:
+
+```bash
+.venv/bin/scitaste evaluation benchmark-metadata-allocation-approve \
+  --plan '<allocation PLAN.json>' --confirm-plan-sha256 '<exact plan hash>' \
+  --approved-by '<owner>' --approved-at '<timezone-aware ISO-8601>' \
+  --output '<new allocation APPROVAL.json>'
+
+.venv/bin/scitaste evaluation benchmark-metadata-allocate \
+  --screening-report '<complete screening REPORT.json>' \
+  --power-request '<clustered-power REQUEST.json>' \
+  --power-report '<clustered-power REPORT.json>' \
+  --plan '<allocation PLAN.json>' --approval '<allocation APPROVAL.json>' \
+  --workspace-root . --allocated-at '<timezone-aware ISO-8601>' \
+  --output '<the exact output bound by the plan>' \
+  --allow-projected-metadata-read
+```
+
+The deterministic report chooses at most one task per source group, preserves
+the selected, unsampled-eligible, excluded, and blocked partitions, and binds a
+formal task-set hash. It does not inspect raw source content, download linked
+assets, choose a model, allocate resources, call an API, use a GPU, or authorize
+an experiment.
+
 ## Admitted source projection
 
 For JSON scientific sources, passing content audit and human-governed source

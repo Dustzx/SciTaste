@@ -392,6 +392,16 @@ resources define scientific eligibility. Capacity is deferred to a powered,
 seeded allocation over eligible records. Generation-as-Content can render a
 registered screening ledger, but the real project remains at audit-plan approval:
 no benchmark content, projection, screening, selection, or experiment has run.
+The downstream allocation compiler is now executable as well: it combines a
+complete screen with an independently replayed objective-H3 clustered-power
+result, verifies source-group-distinct capacity and stratum coverage, and keeps
+all task identities out of the plan until an exact owner approval. Its frozen
+report preserves unsampled eligible records and grants no execution authority.
+Generation-as-Content renders only the strongest state for each scope, so a
+plan or frozen task set replaces its earlier population/screen card instead of
+lengthening the project home. The self-development project has no real
+allocation artifact because the preceding benchmark content-read gate remains
+closed.
 Agent Laboratory and DeepScientist remain implementation-blocked; AI-Researcher
 is additionally code-use-blocked by the absent repository license. Resource
 discovery may continue broadly, but neither Qwen3.5 examples nor any other

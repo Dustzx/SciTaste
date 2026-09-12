@@ -23,6 +23,16 @@ semantic versioning.
   outcomes or current model/compute inventory, select tasks, allocate resources,
   or authorize execution; Generation-as-Content exposes the resulting ledger and
   its next allocation gate without presenting a convenient subset as a benchmark.
+- Added the powered allocation bridge from a complete eligibility ledger to an
+  immutable formal task set. A count-only plan replays the exact screen and
+  objective-H3 clustered-power evidence, precommits a seed and output, proves
+  distinct source-group capacity across every non-empty stratum, and reveals no
+  selected task identity. Only a separate exact approval can deterministically
+  freeze the task set; the report preserves selected, unsampled-eligible,
+  excluded, and blocked populations and still grants no asset, API, GPU, or
+  experiment authority. Generation-as-Content collapses each scope to its
+  strongest allocation state and exposes approval or prelaunch qualification as
+  the next user decision.
 
 - Corrected the current DeepSeek resource generation against the live official
   model table: catalog v5 and identity protocol v2 bind `deepseek-flash` /

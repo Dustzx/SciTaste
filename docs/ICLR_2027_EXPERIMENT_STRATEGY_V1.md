@@ -338,6 +338,18 @@ an allocation over eligible records; unsampled eligible records remain in the
 ledger. The rulebooks are executable controls, but no real screen exists because
 the owner has not authorized the preceding content audit or projection.
 
+The powered allocation implementation now closes the next design gap without
+pretending that a study has started. It requires a complete eligibility ledger
+and an independently replayed objective-H3 clustered-power report, counts held-out
+source groups rather than repeated trajectories as independent units, guarantees
+coverage of every non-empty declared stratum, and precommits its seed before any
+task identity is selected. Exact owner approval then freezes one immutable task
+set while retaining every unsampled eligible and excluded record. This supports
+an ICLR-grade selection audit, but it is not empirical evidence: the real
+InnovatorBench/EXP-Bench allocation cannot exist until the owner authorizes the
+preceding content audit and projection and a diagnostic pilot supplies the
+source-group-level power inputs.
+
 That decision still does not include the 69.7-GB InnovatorBench archive, task
 workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
 GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an

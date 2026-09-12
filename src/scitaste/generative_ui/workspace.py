@@ -29,6 +29,12 @@ from scitaste.evaluation.acquisition import (
     DatasetAcquisitionReceipt,
     load_dataset_acquisition_receipt,
 )
+from scitaste.evaluation.benchmark_metadata_allocation import (
+    BenchmarkMetadataAllocationPlan,
+    BenchmarkMetadataAllocationReport,
+    inspect_benchmark_metadata_allocation_chain,
+    inspect_benchmark_metadata_allocation_plan_chain,
+)
 from scitaste.evaluation.benchmark_metadata_projection import (
     BenchmarkMetadataPopulation,
     inspect_benchmark_metadata_population_chain,
@@ -849,6 +855,144 @@ class WorkspaceSurfaceFactory:
             if item["scope_id"] not in benchmark_metadata_screening_by_scope
         ]
 
+        benchmark_metadata_allocation_plan_by_scope: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected_allocation_plan = _benchmark_metadata_allocation_plan_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                self._runtime.outputs_root.resolve(strict=True).parent,
+                run,
+            )
+            if inspected_allocation_plan is None:
+                continue
+            allocation_plan, plan_file_sha256, implementation_current = inspected_allocation_plan
+            if allocation_plan.scope_id in benchmark_metadata_allocation_plan_by_scope:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple benchmark allocation plans for one scope"
+                )
+            run_ref = run_refs[run.run_id]
+            scientific_controls_ready = allocation_plan.ready_for_owner_approval
+            ready_for_owner_approval = scientific_controls_ready and implementation_current
+            status = (
+                "implementation_drift"
+                if not implementation_current
+                else "awaiting_owner_approval"
+                if scientific_controls_ready
+                else "blocked"
+            )
+            next_gate = {
+                "implementation_drift": "regenerate_allocation_plan",
+                "awaiting_owner_approval": "approve_exact_powered_allocation",
+                "blocked": "resolve_allocation_controls",
+            }[status]
+            benchmark_metadata_allocation_plan_by_scope[allocation_plan.scope_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "plan_id": allocation_plan.plan_id,
+                "scope_id": allocation_plan.scope_id,
+                "formal_study_id": allocation_plan.formal_study_id,
+                "plan_file_sha256": plan_file_sha256,
+                "plan_sha256": allocation_plan.plan_sha256,
+                "screening_report_sha256": allocation_plan.screening_report_sha256,
+                "population_sha256": allocation_plan.population_sha256,
+                "power_report_sha256": allocation_plan.power_report_sha256,
+                "allocation_implementation_current": implementation_current,
+                "eligible_record_count": allocation_plan.eligible_record_count,
+                "allocatable_record_count": allocation_plan.allocatable_record_count,
+                "excluded_record_count": allocation_plan.excluded_record_count,
+                "blocked_record_count": allocation_plan.blocked_record_count,
+                "available_independent_units": allocation_plan.available_independent_units,
+                "powered_independent_units": allocation_plan.powered_independent_units,
+                "stratum_count": len(allocation_plan.strata),
+                "blocker_codes": list(allocation_plan.blocker_codes),
+                "scientific_controls_ready": scientific_controls_ready,
+                "ready_for_owner_approval": ready_for_owner_approval,
+                "status": status,
+                "next_gate": next_gate,
+                "selected_identity_count": 0,
+                "allocation_performed": allocation_plan.allocation_performed,
+                "task_selection_performed": allocation_plan.task_selection_performed,
+                "authorizes_allocation": allocation_plan.authorizes_allocation,
+                "authorizes_execution": allocation_plan.authorizes_experiment,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+
+        benchmark_metadata_allocation_by_scope: dict[str, dict[str, object]] = {}
+        for run in snapshot.manifest.runs:
+            inspected_allocation = _benchmark_metadata_allocation_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                self._runtime.outputs_root.resolve(strict=True).parent,
+                run,
+            )
+            if inspected_allocation is None:
+                continue
+            allocation, allocation_plan, report_file_sha256, implementation_current = (
+                inspected_allocation
+            )
+            if allocation.scope_id in benchmark_metadata_allocation_by_scope:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple benchmark allocations for one scope"
+                )
+            run_ref = run_refs[run.run_id]
+            status = "task_set_frozen" if implementation_current else "implementation_drift"
+            next_gate = (
+                "qualify_assets_and_freeze_prelaunch"
+                if implementation_current
+                else "replay_allocation_against_current_implementation"
+            )
+            benchmark_metadata_allocation_by_scope[allocation.scope_id] = {
+                "run_ref_id": run_ref.evidence_id,
+                "run_id": run.run_id,
+                "plan_id": allocation_plan.plan_id,
+                "scope_id": allocation.scope_id,
+                "formal_study_id": allocation_plan.formal_study_id,
+                "report_file_sha256": report_file_sha256,
+                "report_sha256": allocation.report_sha256,
+                "plan_sha256": allocation.plan_sha256,
+                "approval_sha256": allocation.approval_sha256,
+                "screening_report_sha256": allocation.screening_report_sha256,
+                "population_sha256": allocation.population_sha256,
+                "power_report_sha256": allocation.power_report_sha256,
+                "formal_task_set_sha256": allocation.formal_task_set_sha256,
+                "allocation_implementation_current": implementation_current,
+                "screened_record_count": allocation.screened_record_count,
+                "available_independent_units": allocation.available_independent_units,
+                "powered_independent_units": allocation.powered_independent_units,
+                "selected_record_count": len(allocation.selected_records),
+                "unsampled_eligible_record_count": len(allocation.unsampled_eligible_record_ids),
+                "excluded_record_count": len(allocation.excluded_record_ids),
+                "blocked_record_count": len(allocation.blocked_record_ids),
+                "stratum_count": len(allocation.strata),
+                "status": status,
+                "next_gate": next_gate,
+                "owner_approval_recorded": True,
+                "source_groups_unique": allocation.source_groups_unique,
+                "powered_sample_size_satisfied": allocation.powered_sample_size_satisfied,
+                "task_selection_frozen": allocation.task_selection_frozen,
+                "experiment_performed": allocation.experiment_performed,
+                "authorizes_execution": allocation.authorizes_execution,
+                "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
+            }
+        benchmark_metadata_allocation_rows = list(benchmark_metadata_allocation_by_scope.values())
+        benchmark_metadata_allocation_plan_rows = [
+            item
+            for item in benchmark_metadata_allocation_plan_by_scope.values()
+            if item["scope_id"] not in benchmark_metadata_allocation_by_scope
+        ]
+        advanced_allocation_scopes = {
+            *benchmark_metadata_allocation_plan_by_scope,
+            *benchmark_metadata_allocation_by_scope,
+        }
+        benchmark_metadata_screening_rows = [
+            item
+            for item in benchmark_metadata_screening_rows
+            if item["scope_id"] not in advanced_allocation_scopes
+        ]
+        benchmark_metadata_population_rows = [
+            item
+            for item in benchmark_metadata_population_rows
+            if item["scope_id"] not in advanced_allocation_scopes
+        ]
+
         dataset_package_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
             inspected = _dataset_package_report_for_run(
@@ -1487,6 +1631,53 @@ class WorkspaceSurfaceFactory:
                     "target_ids": [item["scope_id"] for item in benchmark_metadata_screening_rows],
                 }
             )
+        ready_allocation_plan_rows = [
+            item
+            for item in benchmark_metadata_allocation_plan_rows
+            if item["ready_for_owner_approval"]
+        ]
+        if ready_allocation_plan_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "approve-benchmark-metadata-allocation",
+                    "kind": "approve_metadata_allocation",
+                    "label_code": "approve-exact-powered-metadata-allocation",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in ready_allocation_plan_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["plan_id"] for item in ready_allocation_plan_rows],
+                }
+            )
+        review_allocation_rows = [
+            *(
+                item
+                for item in benchmark_metadata_allocation_plan_rows
+                if not item["ready_for_owner_approval"]
+            ),
+            *benchmark_metadata_allocation_rows,
+        ]
+        if review_allocation_rows:
+            next_step_candidates.append(
+                {
+                    "candidate_id": "review-benchmark-metadata-allocation",
+                    "kind": "review_metadata_allocation",
+                    "label_code": "review-powered-metadata-allocation",
+                    "support_ref_ids": list(
+                        dict.fromkeys(
+                            [
+                                project_ref.evidence_id,
+                                *(item["run_ref_id"] for item in review_allocation_rows),
+                            ]
+                        )
+                    ),
+                    "target_ids": [item["scope_id"] for item in review_allocation_rows],
+                }
+            )
         if acquisition_rows or receipt_rows or qualification_rows or dataset_package_rows:
             next_step_candidates.append(
                 {
@@ -1671,6 +1862,10 @@ class WorkspaceSurfaceFactory:
                     "metadata_audit_plans": len(metadata_audit_plan_rows),
                     "benchmark_metadata_populations": len(benchmark_metadata_population_rows),
                     "benchmark_metadata_screenings": len(benchmark_metadata_screening_rows),
+                    "benchmark_metadata_allocation_plans": len(
+                        benchmark_metadata_allocation_plan_rows
+                    ),
+                    "benchmark_metadata_allocations": len(benchmark_metadata_allocation_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -1713,6 +1908,8 @@ class WorkspaceSurfaceFactory:
                 "metadata_audit_plans": metadata_audit_plan_rows,
                 "benchmark_metadata_populations": benchmark_metadata_population_rows,
                 "benchmark_metadata_screenings": benchmark_metadata_screening_rows,
+                "benchmark_metadata_allocation_plans": (benchmark_metadata_allocation_plan_rows),
+                "benchmark_metadata_allocations": benchmark_metadata_allocation_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -2634,6 +2831,80 @@ def _benchmark_metadata_screening_for_run(
         report,
         inspection.report.file_sha256,
         inspection.screening_implementation_current,
+    )
+
+
+def _benchmark_metadata_allocation_plan_for_run(
+    project_root: Path,
+    workspace_root: Path,
+    run: ProjectRun,
+) -> tuple[BenchmarkMetadataAllocationPlan, str, bool] | None:
+    """Replay one powered allocation plan without exposing selected identities."""
+
+    expected = f"runs/{run.run_id}/benchmark_metadata_allocation_planning/PLAN.json"
+    if run.stage_path != "benchmark_metadata_allocation_planning" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered benchmark allocation plan is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError("registered benchmark allocation plan escaped its project")
+    try:
+        inspection = inspect_benchmark_metadata_allocation_plan_chain(
+            resolved,
+            workspace_root=workspace_root,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered benchmark allocation plan is invalid") from exc
+    plan = inspection.plan.plan
+    if plan.project_id != root.name:
+        raise ProjectSurfaceChangedError(
+            "registered benchmark allocation plan belongs to another project"
+        )
+    return (
+        plan,
+        inspection.plan.file_sha256,
+        inspection.allocation_implementation_current,
+    )
+
+
+def _benchmark_metadata_allocation_for_run(
+    project_root: Path,
+    workspace_root: Path,
+    run: ProjectRun,
+) -> tuple[BenchmarkMetadataAllocationReport, BenchmarkMetadataAllocationPlan, str, bool] | None:
+    """Replay one approved powered allocation while keeping execution unauthorized."""
+
+    expected = f"runs/{run.run_id}/benchmark_metadata_allocation/REPORT.json"
+    if run.stage_path != "benchmark_metadata_allocation" or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered benchmark allocation is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError("registered benchmark allocation escaped its project")
+    try:
+        inspection = inspect_benchmark_metadata_allocation_chain(
+            resolved,
+            workspace_root=workspace_root,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered benchmark allocation is invalid") from exc
+    report = inspection.report.report
+    plan = inspection.plan.plan
+    if report.project_id != root.name or plan.project_id != root.name:
+        raise ProjectSurfaceChangedError(
+            "registered benchmark allocation belongs to another project"
+        )
+    return (
+        report,
+        plan,
+        inspection.report.file_sha256,
+        inspection.allocation_implementation_current,
     )
 
 

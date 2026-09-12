@@ -2427,8 +2427,9 @@ design decision rather than a retrieval heuristic optimized on later outcomes.
 
 ### ADR-081: Benchmark metadata needs a format-aware read gate before task screening
 
-Status: executable through project-level plan bundling; real acquired metadata
-remains unopened until the exact plans receive owner approval.
+Status: executable from project-level audit-plan bundling through deterministic
+powered allocation; real acquired metadata remains unopened until the exact
+audit plans receive owner approval.
 
 Experiment-task configuration files and benchmark tables cannot use the AAAR
 paper-record identity assumptions. SciTaste therefore separates their first
@@ -2496,6 +2497,29 @@ consulted. Even a complete passing screen performs no seeded allocation and
 grants no task-selection, asset, ingestion, API, GPU, or execution authority.
 This makes scientific eligibility invariant to the resources that happen to be
 available when the formal experiment is eventually launched.
+
+Allocation is a separate, exactly approved compiler rather than a capacity rule
+hidden inside screening. Its no-selection plan binds the complete screening
+report, population, rulebook and decision hashes; an independently replayed
+objective-H3 clustered-power request and report; the formal study identity;
+the deterministic algorithm version; the destination; and an owner-reviewed
+random seed. The plan contains per-stratum counts but no selected record or
+source-group identity. It blocks when the screen is incomplete, implementation
+identity has drifted, the power result is not formal-freeze-ready, required
+allocation fields are absent, a source group spans balance strata, distinct
+source groups cannot satisfy power, or the powered sample cannot cover every
+non-empty stratum.
+
+Only an approval bound to the exact plan file and semantic hashes permits the
+allocation compiler to choose one representative per source group without
+replacement. The frozen algorithm gives every non-empty stratum one unit, then
+uses proportional residual capacity with deterministic largest-remainder ties.
+Its report retains the complete partition: selected tasks, unsampled eligible
+records, scientific exclusions, and unresolved records. It records the formal
+task-set hash and can be replayed through screening and pilot-power evidence,
+but it cannot download or ingest task assets, select a model, allocate API/GPU
+resources, launch a study, or establish a result. Repetitions within a task
+remain trajectories, not independent sample-size units.
 
 ### ADR-082: Raw RAG and Taste abstraction share one admitted source projection
 

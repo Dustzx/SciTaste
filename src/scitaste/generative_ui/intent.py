@@ -659,6 +659,11 @@ _CANDIDATE_GOALS = {
     "review_next_gate": IntentGoal.NEXT_STEP_REVIEW,
     "review_research_landscape": IntentGoal.RESEARCH_LANDSCAPE_REVIEW,
     "review_data_acquisition": IntentGoal.NEXT_STEP_REVIEW,
+    "approve_metadata_audit": IntentGoal.NEXT_STEP_REVIEW,
+    "review_metadata_population": IntentGoal.NEXT_STEP_REVIEW,
+    "review_metadata_screening": IntentGoal.NEXT_STEP_REVIEW,
+    "approve_metadata_allocation": IntentGoal.NEXT_STEP_REVIEW,
+    "review_metadata_allocation": IntentGoal.NEXT_STEP_REVIEW,
     "review_benchmark_qualification": IntentGoal.NEXT_STEP_REVIEW,
     "review_iteration": IntentGoal.NEXT_STEP_REVIEW,
 }
@@ -671,6 +676,11 @@ _QUICK_LABELS = {
     "review_next_gate": "Review the declared next gate",
     "review_research_landscape": "Map how accepted AutoResearch work is evaluated",
     "review_data_acquisition": "Review the current data acquisition decision",
+    "approve_metadata_audit": "Decide the bounded metadata read",
+    "review_metadata_population": "Review the complete benchmark metadata population",
+    "review_metadata_screening": "Review the complete benchmark eligibility screen",
+    "approve_metadata_allocation": "Decide the exact powered benchmark allocation",
+    "review_metadata_allocation": "Review the powered benchmark task-set gate",
     "review_benchmark_qualification": "Review the executable benchmark qualification",
     "review_iteration": "Review the reviewer-driven research iteration plan",
 }

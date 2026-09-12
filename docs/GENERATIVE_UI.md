@@ -225,6 +225,26 @@ resolution; a complete screen points to a powered allocation proposal. Neither
 state is shown as task selection or experiment readiness, and the inspect action
 opens the immutable evidence page rather than mutating the project.
 
+A powered allocation plan is recognized only at
+`runs/<run-id>/benchmark_metadata_allocation_planning/PLAN.json`. The receiver
+replays its complete screening chain and objective-H3 clustered-power evidence,
+then shows eligible records, distinct source groups, powered units, strata, and
+blockers without displaying a selected identity. An implementation-current,
+scientifically ready plan exposes exact approval as the next interaction; a
+blocked or drifted plan exposes repair instead. The card cannot itself allocate
+tasks, and its navigation button only opens immutable run evidence.
+
+After exact approval, a canonical
+`runs/<run-id>/benchmark_metadata_allocation/REPORT.json` supersedes the plan,
+screening, and population cards for that scope. The receiver replays the plan,
+approval, screen, population, rulebook, decisions, power request, pilot evidence,
+and deterministic allocation. Its compact card shows powered/selected counts,
+covered strata, retained unsampled eligibility, and the formal task-set hash;
+individual identities remain in the evidence page. The next interaction is
+asset qualification and prelaunch review, not execution. This strongest-state
+projection keeps the project home short while preserving the earlier records in
+run history and the evidence graph.
+
 A post-download qualification appears only through the separately registered
 `runs/<run-id>/acquisition_qualification/REPORT.json` artifact. The receiver
 rechecks the report's embedded semantic hash, exact task and byte arithmetic,

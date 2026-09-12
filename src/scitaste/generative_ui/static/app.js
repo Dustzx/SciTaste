@@ -1267,6 +1267,8 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.metadata_plans"), data.counts.metadata_audit_plans || 0, t("progress.metric.metadata_plans_note")),
     progressMetric(t("progress.metric.metadata_populations"), data.counts.benchmark_metadata_populations || 0, t("progress.metric.metadata_populations_note")),
     progressMetric(t("progress.metric.metadata_screenings"), data.counts.benchmark_metadata_screenings || 0, t("progress.metric.metadata_screenings_note")),
+    progressMetric(t("progress.metric.metadata_allocation_plans"), data.counts.benchmark_metadata_allocation_plans || 0, t("progress.metric.metadata_allocation_plans_note")),
+    progressMetric(t("progress.metric.metadata_allocations"), data.counts.benchmark_metadata_allocations || 0, t("progress.metric.metadata_allocations_note")),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1279,6 +1281,10 @@ function renderProjectProgress(data) {
   );
   const metadataScreenings = renderBenchmarkMetadataScreenings(
     data.benchmark_metadata_screenings || [],
+  );
+  const metadataAllocations = renderBenchmarkMetadataAllocations(
+    data.benchmark_metadata_allocation_plans || [],
+    data.benchmark_metadata_allocations || [],
   );
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
@@ -1593,6 +1599,8 @@ function renderProjectProgress(data) {
     approve_metadata_audit: t("progress.next.metadata_audit"),
     review_metadata_population: t("progress.next.metadata_population"),
     review_metadata_screening: t("progress.next.metadata_screening"),
+    approve_metadata_allocation: t("progress.next.metadata_allocation_approval"),
+    review_metadata_allocation: t("progress.next.metadata_allocation_review"),
     review_benchmark_qualification: t("progress.next.benchmark_qualification"),
     review_iteration: t("progress.next.review_iteration"),
   };
@@ -1607,6 +1615,8 @@ function renderProjectProgress(data) {
         "approve_metadata_audit",
         "review_metadata_population",
         "review_metadata_screening",
+        "approve_metadata_allocation",
+        "review_metadata_allocation",
         "review_data_acquisition",
         "review_benchmark_qualification",
         "review_research_landscape",
@@ -1741,6 +1751,12 @@ function renderProjectProgress(data) {
   }
   if ((data.benchmark_metadata_screenings || []).length > 0) {
     container.appendChild(metadataScreenings);
+  }
+  if (
+    (data.benchmark_metadata_allocation_plans || []).length > 0
+    || (data.benchmark_metadata_allocations || []).length > 0
+  ) {
+    container.appendChild(metadataAllocations);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -2337,6 +2353,174 @@ function renderBenchmarkMetadataScreenings(items) {
         ],
       }),
     );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderBenchmarkMetadataAllocations(plans, allocations) {
+  const count = plans.length + allocations.length;
+  const section = progressSection(
+    t("progress.metadata_allocation.title"),
+    count > 0
+      ? t("progress.metadata_allocation.subtitle", {count})
+      : t("progress.metadata_allocation.empty"),
+  );
+  if (count === 0) return section;
+
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of plans) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.status}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.metadata_allocation.plan"));
+    const title = document.createElement("strong");
+    appendText(title, item.scope_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.ready_for_owner_approval ? "candidate" : "blocked",
+        t(`progress.metadata_allocation.status.${item.status}`),
+      ),
+    );
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, value] of [
+      ["eligible", item.eligible_record_count],
+      ["powered", item.powered_independent_units],
+      ["available", item.available_independent_units],
+      ["strata", item.stratum_count],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.metadata_allocation.${key}`, {count: value}));
+      facts.appendChild(fact);
+    }
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t(`progress.metadata_allocation.next.${item.next_gate}`));
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.metadata_allocation.plan_boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button acquisition-review";
+    appendText(open, t("progress.metadata_allocation.inspect_plan"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(header, facts, next, boundary, open, evidenceDisclosure(item.support_ref_ids, {
+      data: {
+        plan_file_sha256: item.plan_file_sha256,
+        plan_sha256: item.plan_sha256,
+        screening_report_sha256: item.screening_report_sha256,
+        population_sha256: item.population_sha256,
+        power_report_sha256: item.power_report_sha256,
+        formal_study_id: item.formal_study_id,
+        allocation_implementation_current: item.allocation_implementation_current,
+        blocker_codes: item.blocker_codes,
+        selected_identity_count: item.selected_identity_count,
+        allocation_performed: item.allocation_performed,
+        authorizes_execution: item.authorizes_execution,
+      },
+      names: [
+        "plan_file_sha256",
+        "plan_sha256",
+        "screening_report_sha256",
+        "population_sha256",
+        "power_report_sha256",
+        "formal_study_id",
+        "allocation_implementation_current",
+        "blocker_codes",
+        "selected_identity_count",
+        "allocation_performed",
+        "authorizes_execution",
+      ],
+    }));
+    grid.appendChild(card);
+  }
+  for (const item of allocations) {
+    const card = document.createElement("article");
+    card.className = `acquisition-card status-${item.status}`;
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.metadata_allocation.task_set"));
+    const title = document.createElement("strong");
+    appendText(title, item.scope_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill(
+        item.allocation_implementation_current ? "observed_completed" : "blocked",
+        t(`progress.metadata_allocation.status.${item.status}`),
+      ),
+    );
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, value] of [
+      ["selected", item.selected_record_count],
+      ["powered", item.powered_independent_units],
+      ["unsampled", item.unsampled_eligible_record_count],
+      ["strata", item.stratum_count],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.metadata_allocation.${key}`, {count: value}));
+      facts.appendChild(fact);
+    }
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t(`progress.metadata_allocation.next.${item.next_gate}`));
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.metadata_allocation.report_boundary"));
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "secondary-button acquisition-review";
+    appendText(open, t("progress.metadata_allocation.inspect_report"));
+    open.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    card.append(header, facts, next, boundary, open, evidenceDisclosure(item.support_ref_ids, {
+      data: {
+        report_file_sha256: item.report_file_sha256,
+        report_sha256: item.report_sha256,
+        plan_sha256: item.plan_sha256,
+        approval_sha256: item.approval_sha256,
+        formal_task_set_sha256: item.formal_task_set_sha256,
+        formal_study_id: item.formal_study_id,
+        allocation_implementation_current: item.allocation_implementation_current,
+        source_groups_unique: item.source_groups_unique,
+        powered_sample_size_satisfied: item.powered_sample_size_satisfied,
+        experiment_performed: item.experiment_performed,
+        authorizes_execution: item.authorizes_execution,
+      },
+      names: [
+        "report_file_sha256",
+        "report_sha256",
+        "plan_sha256",
+        "approval_sha256",
+        "formal_task_set_sha256",
+        "formal_study_id",
+        "allocation_implementation_current",
+        "source_groups_unique",
+        "powered_sample_size_satisfied",
+        "experiment_performed",
+        "authorizes_execution",
+      ],
+    }));
     grid.appendChild(card);
   }
   section.appendChild(grid);
