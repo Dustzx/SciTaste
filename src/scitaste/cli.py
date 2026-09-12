@@ -60,7 +60,7 @@ from scitaste.benchmark import (
 from scitaste.benchmark.manuscript import materialize_venue_manuscript
 from scitaste.data.curation import CurationFormat, curate_snapshot
 from scitaste.data.ingestion import audit_corpus_manifest, ingest_corpus
-from scitaste.data.store import build_libraries
+from scitaste.data.store import TasteLibrary, build_libraries
 from scitaste.demo import run_nonlinear_demo
 from scitaste.discovery.commands import DiscoveryCommand, DiscoveryCommandRunner
 from scitaste.discovery.knowledge import load_discovery_knowledge_binding
@@ -206,12 +206,20 @@ from scitaste.review.model_report import (
     build_venue_paper_review_runtime_config,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
+from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.conditions import NativeTasteRetrievalMode, load_native_condition_matrix
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
     save_calibration_report,
+)
+from scitaste.taste.memory import (
+    TasteMemory,
+    inspect_taste_memory_admission,
+    load_taste_memory_admission,
+    save_taste_memory_admission_report,
+    taste_case_sha256,
 )
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
 from scitaste.writing.argument import (
@@ -1138,6 +1146,32 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("configs/taste/intrinsic_calibration_v1.yaml"),
     )
     calibrate.set_defaults(handler=_handle_taste_calibrate)
+    memory_reflect = taste_commands.add_parser(
+        "memory-reflect",
+        help="Quarantine an executed decision as a candidate Taste memory",
+    )
+    memory_reflect.add_argument("--decision", type=Path, required=True)
+    memory_reflect.add_argument("--library", type=Path, required=True)
+    memory_reflect.add_argument("--outcome-summary", required=True)
+    memory_reflect.add_argument("--decision-principle", required=True)
+    memory_reflect.add_argument("--author-id", required=True)
+    memory_reflect.add_argument("--outcome-horizon", default="immediate")
+    memory_reflect.add_argument("--domain-tag", action="append", default=[])
+    memory_reflect.add_argument("--venue-tag", action="append", default=[])
+    _add_log_level_option(memory_reflect)
+    memory_reflect.set_defaults(handler=_handle_taste_memory_reflect)
+    memory_admission = taste_commands.add_parser(
+        "memory-admission",
+        help="Inspect or apply outcome- and human-gated Taste memory admission",
+    )
+    memory_admission.add_argument("--manifest", type=Path, required=True)
+    memory_admission.add_argument("--library", type=Path, required=True)
+    memory_admission.add_argument("--evidence-root", type=Path, default=Path("."))
+    memory_admission.add_argument("--report", type=Path, default=None)
+    memory_admission.add_argument("--admit", action="store_true")
+    memory_admission.add_argument("--require-ready", action="store_true")
+    _add_log_level_option(memory_admission)
+    memory_admission.set_defaults(handler=_handle_taste_memory_admission)
 
     library = commands.add_parser("library", help="Knowledge and taste libraries")
     library_commands = library.add_subparsers(dest="library_command", required=True)
@@ -3715,6 +3749,71 @@ def _handle_taste_calibrate(args: argparse.Namespace) -> int:
             indent=2,
         )
     )
+    return 0
+
+
+def _handle_taste_memory_reflect(args: argparse.Namespace) -> int:
+    decision_path = args.decision
+    if decision_path.is_symlink():
+        raise ValueError("Taste memory decision input must not be a symlink")
+    resolved = decision_path.resolve(strict=True)
+    if not resolved.is_file() or resolved.stat().st_size > 16 * 1_048_576:
+        raise ValueError("Taste memory decision input must be a bounded regular file")
+    decision = ResearchDecision.model_validate_json(resolved.read_text(encoding="utf-8"))
+    library = TasteLibrary(args.library)
+    case = TasteMemory(library).reflect(
+        decision,
+        outcome_summary=args.outcome_summary,
+        decision_principle=args.decision_principle,
+        reflection_author_id=args.author_id,
+        outcome_horizon=args.outcome_horizon,
+        domain_tags=args.domain_tag,
+        venue_tags=args.venue_tag,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "taste-memory-reflection-quarantined",
+                "library": str(library.path),
+                "case": case.model_dump(mode="json"),
+                "case_sha256": taste_case_sha256(case),
+                "retrieval_eligible": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_memory_admission(args: argparse.Namespace) -> int:
+    admission = load_taste_memory_admission(args.manifest)
+    library = TasteLibrary(args.library)
+    report = inspect_taste_memory_admission(
+        admission,
+        library=library,
+        evidence_root=args.evidence_root,
+    )
+    payload: dict[str, Any] = {
+        "status": (
+            "taste-memory-admission-ready"
+            if report.ready_for_retrieval_admission
+            else "taste-memory-admission-blocked"
+        ),
+        "manifest": str(args.manifest),
+        "library": str(library.path),
+        **report.model_dump(mode="json"),
+    }
+    if args.report is not None:
+        payload["report"] = str(save_taste_memory_admission_report(report, args.report))
+    if args.admit:
+        admitted = TasteMemory(library).admit(admission, evidence_root=args.evidence_root)
+        payload["status"] = "taste-memory-admitted"
+        payload["admitted_case_sha256"] = taste_case_sha256(admitted)
+        payload["retrieval_eligible"] = admitted.retrieval_eligible
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_ready and not report.ready_for_retrieval_admission:
+        return 1
     return 0
 
 

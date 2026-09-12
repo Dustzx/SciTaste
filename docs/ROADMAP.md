@@ -1064,6 +1064,20 @@ citation/resource screen and exact adapters/licenses remain open.
   reference-derived Writing Taste principles against accepted non-award and
   negative controls before promoting any of them to quality gates.
 
+## Outcome-gated continual Taste
+
+- Executed project decisions no longer enter reusable Taste memory directly.
+  Reflection creates a content-addressed, retrieval-ineligible quarantine record
+  whose exact decision, executor result, actual outcome, author, horizon, and
+  proposed principle remain inspectable.
+- Promotion requires a bound outcome record, two distinct conflict-cleared human
+  reviews over causal and transfer criteria, and conditional adjudication. The
+  retriever excludes the case until the complete gate succeeds.
+- This closes the unsafe self-reinforcement path at implementation level. The
+  remaining research milestone is a preregistered longitudinal evaluation with
+  real outcome artifacts and reviewers, measuring whether admitted experience
+  improves later held-out decisions without degrading calibration or diversity.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

@@ -2303,3 +2303,31 @@ The static protocol only establishes how a future call could become admissible.
 It cannot attest a live identity, approve spend, select the primary model, or
 authorize API calls. Conformance data remains excluded from formal tests and
 candidate selection must precede formal outcomes.
+
+### ADR-076: Self-reflection is quarantined until outcome and independent review
+
+Status: accepted for training-free continual Taste learning; real longitudinal
+review and effectiveness evidence remain absent.
+
+An executed action is not automatically a good precedent. Its outcome may be
+delayed, confounded, incorrectly attributed, or local to one research state.
+Immediately retrieving a self-authored explanation would create recursive
+confirmation bias: one mistaken interpretation could influence later actions and
+then cite those actions as corroboration.
+
+`TasteMemory.reflect` therefore records an exact executed-decision hash and
+actual-outcome hash as a quarantined `TasteCase`. The case is neither human
+verified nor retrieval eligible. Promotion requires bounded content-bound
+decision and outcome records with observation identities, exactly two distinct
+primary human reviews of the decision trace, outcome trace, alternatives,
+principle, and
+transfer scope, and one distinct adjudicator only when the primaries split. The
+reflection author cannot review the case, reviews cannot predate the outcome,
+and every review binds the exact case and outcome bytes.
+
+Admission updates only the local memory record. It does not train a model,
+authorize execution, or establish effectiveness. A negative outcome can still
+produce useful Taste when the resulting principle and transfer scope are sound;
+success alone is insufficient. Formal human identity and recruitment evidence
+remain project-owned study artifacts rather than claims inferred from a typed
+manifest.

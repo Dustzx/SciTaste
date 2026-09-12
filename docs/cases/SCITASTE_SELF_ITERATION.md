@@ -1002,3 +1002,31 @@ attestation as separate counts. DeepSeek's conservative peak tariff was updated
 from the current official catalog; GLM pricing remains unresolved. No sentinel,
 API call, dataset download, model load, GPU job, reviewer recruitment, or
 experiment was performed.
+
+## Preventing self-iteration from teaching itself an error (2026-09-12)
+
+Using SciTaste's own development as a case exposed a contradiction in the core
+Taste loop. External reference abstractions already remained untrusted until
+source/quality evidence and independent review were complete, but the older
+`TasteMemory.reflect` path immediately marked every project reflection as
+retrieval eligible. An executed action and a plausible explanation could
+therefore become policy before its outcome attribution or transfer scope was
+checked. Repeated retrieval could amplify that mistake.
+
+The continual-learning path now begins in quarantine. Reflection requires an
+executed decision, preserves its concrete candidate identities, and freezes the
+complete decision and actual-outcome hashes, author, outcome horizon, and
+proposed principle. A separate admission binds the exact decision and outcome
+files and requires two distinct conflict-cleared human reviews over decision
+trace, outcome trace, alternatives, principle, and transfer scope. Split reviews
+require a third adjudicator; unanimous reviews cannot be overridden. Tampered
+bytes, author self-review, review before outcome observation, and a retry that
+would overwrite an already admitted memory all fail closed.
+
+This iteration establishes the safety and provenance mechanism only. Test
+reviewers are fixtures, no real reflection has yet passed the new human gate,
+and no continual-learning effectiveness claim is made. A future longitudinal
+study must measure whether outcome-admitted memory improves later held-out
+decisions without reducing calibration or diversity. No API call, dataset
+download, SSH session, model load, GPU job, human recruitment, or experiment was
+performed.
