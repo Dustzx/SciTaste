@@ -73,6 +73,13 @@ class TaskSignalKind(StrEnum):
     MIXED = "mixed"
 
 
+class TaskFreezeSemantics(StrEnum):
+    """Meaning of the integrity contract's task-freeze artifact."""
+
+    POLICY_DOCUMENT = "policy_document"
+    BENCHMARK_METADATA_ALLOCATION = "benchmark_metadata_allocation"
+
+
 class AutomatedJudgeRole(StrEnum):
     NONE = "none"
     SECONDARY_DIAGNOSTIC = "secondary_diagnostic"
@@ -198,6 +205,7 @@ class PrelaunchTask(BaseModel):
     asset_status: ReadinessStatus
     held_out: bool
     source_group_disjoint: bool
+    source_group: str | None = Field(default=None, min_length=1, max_length=200)
     signal_kind: TaskSignalKind | None = None
 
     @model_validator(mode="after")
@@ -465,6 +473,8 @@ class IntegrityContract(BaseModel):
     preregistration_sha256: str = Field(pattern=_SHA256)
     task_freeze_ref: str = Field(min_length=1, max_length=1_000)
     task_freeze_sha256: str = Field(pattern=_SHA256)
+    task_freeze_semantics: TaskFreezeSemantics = TaskFreezeSemantics.POLICY_DOCUMENT
+    formal_task_set_sha256: str | None = Field(default=None, pattern=_SHA256)
     failure_policy_ref: str = Field(min_length=1, max_length=1_000)
     failure_policy_sha256: str = Field(pattern=_SHA256)
     repair_policy_ref: str = Field(min_length=1, max_length=1_000)
@@ -478,7 +488,22 @@ class IntegrityContract(BaseModel):
     def optional_judge_protocol_is_content_bound(self) -> IntegrityContract:
         if (self.judge_protocol_ref is None) != (self.judge_protocol_sha256 is None):
             raise ValueError("judge-protocol reference and SHA-256 must be supplied together")
+        if self.task_freeze_semantics is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION:
+            if self.formal_task_set_sha256 is None:
+                raise ValueError("benchmark allocation freeze requires its formal task-set hash")
+        elif self.formal_task_set_sha256 is not None:
+            raise ValueError("policy-document task freeze cannot declare a formal task-set hash")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_task_freeze_semantics(self, handler):  # type: ignore[no-untyped-def]
+        """Keep task-freeze fields created before v1.5 byte-compatible."""
+
+        payload = handler(self)
+        if self.task_freeze_semantics is TaskFreezeSemantics.POLICY_DOCUMENT:
+            payload.pop("task_freeze_semantics", None)
+            payload.pop("formal_task_set_sha256", None)
+        return payload
 
 
 class PrelaunchApproval(BaseModel):
@@ -504,7 +529,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -594,11 +619,31 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "automated judges cannot replace the primary blinded human preference"
                 )
-        if self.schema_version in {"1.2", "1.3", "1.4"}:
+        if self.schema_version in {"1.2", "1.3", "1.4", "1.5"}:
             api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
             if any(lane.comparison_regime is None for lane in api_lanes):
                 raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
-        if self.schema_version not in {"1.3", "1.4"}:
+        task_freeze_semantics = self.integrity.task_freeze_semantics
+        if task_freeze_semantics is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION:
+            if self.schema_version != "1.5":
+                raise ValueError("prelaunch v1.5 is required for benchmark allocation binding")
+            if (
+                self.study_scope != "formal"
+                or self.primary_endpoint is not ScientificEndpointKind.OBJECTIVE_PROGRESS
+            ):
+                raise ValueError(
+                    "benchmark allocation binding is only valid for formal objective progress"
+                )
+            if any(task.source_group is None for task in self.tasks):
+                raise ValueError("benchmark allocation binding requires every task source group")
+        if (
+            self.schema_version == "1.5"
+            and self.study_scope == "formal"
+            and self.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
+            and task_freeze_semantics is not TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+        ):
+            raise ValueError("formal objective prelaunch v1.5 requires benchmark allocation")
+        if self.schema_version not in {"1.3", "1.4", "1.5"}:
             if self.analysis.claim_admission is not None:
                 raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
             return self
@@ -609,13 +654,13 @@ class ExperimentPrelaunchManifest(BaseModel):
         )
         if self.schema_version == "1.3" and any(role is not None for role in inference_roles):
             raise ValueError("prelaunch v1.4 is required for contrast-inference semantics")
-        if self.schema_version == "1.4" and any(role is None for role in inference_roles):
+        if self.schema_version in {"1.4", "1.5"} and any(role is None for role in inference_roles):
             raise ValueError("prelaunch v1.4 requires every contrast inference role")
         self._validate_claim_admission(
             self.analysis.claim_admission,
             systems={item.system_id: item for item in self.systems},
             lanes={item.lane_id: item for item in self.lanes},
-            explicit_inference=self.schema_version == "1.4",
+            explicit_inference=self.schema_version in {"1.4", "1.5"},
         )
         return self
 
@@ -714,6 +759,9 @@ class ExperimentPrelaunchManifest(BaseModel):
     @property
     def proposal_sha256(self) -> str:
         payload = self.model_dump(mode="json", exclude={"approval"})
+        if self.schema_version != "1.5":
+            for task in payload["tasks"]:
+                task.pop("source_group", None)
         if self.schema_version in {"1.0", "1.1"}:
             for lane in payload["lanes"]:
                 for key in (
@@ -815,6 +863,20 @@ def inspect_prelaunch_manifest(
         _block(blockers, "source_tree_dirty", "the executable Git tree is not clean")
     if manifest.resource_corpus_sha256 != resource_corpus.semantic_sha256:
         _block(blockers, "resource_corpus_drift", "resource corpus hash differs from the manifest")
+    if (
+        manifest.study_scope == "formal"
+        and manifest.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
+        and (
+            manifest.integrity is None
+            or manifest.integrity.task_freeze_semantics
+            is not TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+        )
+    ):
+        _block(
+            blockers,
+            "formal_task_allocation_unbound",
+            "formal objective progress requires a powered benchmark allocation freeze",
+        )
 
     for system in manifest.systems:
         if system.availability is not ReadinessStatus.VERIFIED:
@@ -1013,6 +1075,7 @@ __all__ = [
     "ScientificLaneRole",
     "SystemApiModelResource",
     "SystemRole",
+    "TaskFreezeSemantics",
     "TaskSignalKind",
     "inspect_git_source",
     "inspect_prelaunch_manifest",

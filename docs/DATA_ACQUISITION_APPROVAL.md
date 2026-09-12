@@ -264,6 +264,19 @@ formal task-set hash. It does not inspect raw source content, download linked
 assets, choose a model, allocate resources, call an API, use a GPU, or authorize
 an experiment.
 
+For formal objective-progress work, that report is no longer allowed to stop at
+an advisory ledger. The subsequent prelaunch manifest must use schema 1.5, set
+`integrity.task_freeze_semantics` to `benchmark_metadata_allocation`, bind both
+the allocation report's file SHA-256 and `formal_task_set_sha256`, and list its
+selected task and source-group identities in exact report order. Every execution
+lane must use that same complete task population. The experiment critic replays
+the allocation chain from the declared evidence root and rejects plan,
+approval, power, screening, implementation, identity, source-group, or lane
+drift. Cell-plan schema 1.3 then carries both task-set bindings into result
+admission. A generic task policy document therefore cannot be relabelled as the
+formal task freeze, and a hand-written convenient subset cannot replace the
+powered allocation.
+
 ## Admitted source projection
 
 For JSON scientific sources, passing content audit and human-governed source

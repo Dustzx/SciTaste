@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the formal objective-task identity gap between powered benchmark
+  allocation and result admission. Prelaunch schema 1.5 requires the replayed
+  allocation report and semantic task-set hash, exact ordered task/source-group
+  identities, and identical lane populations; cell-plan schema 1.3 carries both
+  bindings into its own hash. Formal objective proposals backed only by a policy
+  document, allocation implementation drift, and task/source/lane substitutions
+  now fail before launch, while legacy pilot proposal hashes remain stable.
 - Added the executable audit-to-screen bridge for benchmark metadata. A no-read
   plan binds the exact approved request, receipt, passing structure audit,
   pre-inspection scientific scope, exact source revisions and upstream paths,

@@ -400,6 +400,23 @@ def test_v11_machine_checks_objective_and_research_package_endpoints() -> None:
         ExperimentPrelaunchManifest.model_validate(payload)
 
 
+def test_formal_objective_progress_requires_powered_allocation_freeze() -> None:
+    payload = _v11_manifest(endpoint=ScientificEndpointKind.OBJECTIVE_PROGRESS).model_dump(
+        mode="json"
+    )
+    payload["study_scope"] = "formal"
+    manifest = ExperimentPrelaunchManifest.model_validate(payload)
+
+    report = inspect_prelaunch_manifest(
+        manifest,
+        _admitted_corpus(),
+        observed_source_commit=manifest.source_commit,
+        source_tree_clean=True,
+    )
+
+    assert "formal_task_allocation_unbound" in {item.code for item in report.blockers}
+
+
 def test_v11_blinded_package_endpoint_requires_humans_as_primary_judges() -> None:
     manifest = _v11_manifest(endpoint=ScientificEndpointKind.BLINDED_PACKAGE_PREFERENCE)
     payload = manifest.model_dump(mode="json")

@@ -20,7 +20,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
 | Phase 8.1 — SciTasteBench v2 | in progress | powered source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced matched-model results |
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
-| Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts with conservative dispersion, joint-family power, explicit ceilings, and no seed-based sample inflation |
+| Phase 8.3 — pilot-to-formal power control | done | exact pilot reports determine fixed task/source-group counts; formal objective prelaunch, cells, and results preserve the replayed allocation identity without hand-written substitution |
 | Phase 8.4 — grounded contrastive Taste distillation | done | formal abstractions bind every decision element to exact source excerpts, expose transfer/failure boundaries, and cannot enter SciTasteBench v3 under a legacy curation tier |
 | Phase 8.5 — decision-grounded Taste selection | done | broad retrieval loses final authority; a closed-world deliberation trace proves applicability, excludes failure boundaries and duplicate sources, and preserves available action tension before controller use |
 | Phase 8.6 — content-grounded reference quality | done | prestige-blind five-dimensional screening, content-free qualification receipts, and dual-human schema-1.1 source admission define which records can teach transferable judgment |
@@ -397,6 +397,11 @@ complete screen with an independently replayed objective-H3 clustered-power
 result, verifies source-group-distinct capacity and stratum coverage, and keeps
 all task identities out of the plan until an exact owner approval. Its frozen
 report preserves unsampled eligible records and grants no execution authority.
+Formal objective prelaunch can no longer replace that report with a policy
+document or a convenient task list: schema 1.5 replays the allocation chain and
+matches exact task/source-group/lane populations, while cell-plan schema 1.3
+carries the allocation file and semantic task-set hashes through result
+admission.
 Generation-as-Content renders only the strongest state for each scope, so a
 plan or frozen task set replaces its earlier population/screen card instead of
 lengthening the project home. The self-development project has no real
@@ -1218,6 +1223,11 @@ citation/resource screen and exact adapters/licenses remain open.
 
 ## H3 objective-analysis closure
 
+- Done: a formal objective proposal must bind and replay the powered benchmark
+  allocation rather than merely hash a task-policy file; exact task order,
+  source groups, lane populations, implementation, study ID, allocation bytes,
+  and semantic task-set identity persist through cell planning and result
+  admission.
 - Done: the formal outcome schema can bind a task-specific scorer, score range,
   normalization anchors, failure floor, and unique held-out source group before
   outcomes exist.

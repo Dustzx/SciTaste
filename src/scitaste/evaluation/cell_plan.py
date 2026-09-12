@@ -23,6 +23,7 @@ from scitaste.evaluation.prelaunch import (
     ReadinessStatus,
     ScientificLaneRole,
     SystemRole,
+    TaskFreezeSemantics,
 )
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
@@ -173,7 +174,7 @@ class EvaluationCellPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
     manifest_id: str
     protocol_id: str
     protocol_version: str
@@ -187,6 +188,8 @@ class EvaluationCellPlan(BaseModel):
     claim_estimand_kind: ConfirmatoryEstimandKind | None = None
     claim_lane_id: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$")
     claim_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
+    formal_task_set_sha256: str | None = Field(default=None, pattern=_SHA256)
+    task_freeze_file_sha256: str | None = Field(default=None, pattern=_SHA256)
     authorizes_execution: Literal[False] = False
     no_provider_call_performed: Literal[True] = True
     no_gpu_work_performed: Literal[True] = True
@@ -211,13 +214,22 @@ class EvaluationCellPlan(BaseModel):
             self.claim_lane_id,
             self.claim_contract_sha256,
         )
-        if self.schema_version == "1.2":
+        if self.schema_version in {"1.2", "1.3"}:
             if any(value is None for value in claim_values):
                 raise ValueError("cell plan v1.2 requires a complete claim binding")
             if self.claim_lane_id not in {lane.lane_id for lane in self.lanes}:
                 raise ValueError("cell plan claim lane is not registered")
         elif any(value is not None for value in claim_values):
             raise ValueError("cell plan v1.2 is required for claim bindings")
+        task_freeze_values = (
+            self.formal_task_set_sha256,
+            self.task_freeze_file_sha256,
+        )
+        if self.schema_version == "1.3":
+            if any(value is None for value in task_freeze_values):
+                raise ValueError("cell plan v1.3 requires a complete formal task-set binding")
+        elif any(value is not None for value in task_freeze_values):
+            raise ValueError("cell plan v1.3 is required for formal task-set bindings")
         return self
 
     @computed_field
@@ -240,6 +252,9 @@ class EvaluationCellPlan(BaseModel):
             payload.pop("claim_estimand_kind", None)
             payload.pop("claim_lane_id", None)
             payload.pop("claim_contract_sha256", None)
+        if self.schema_version != "1.3":
+            payload.pop("formal_task_set_sha256", None)
+            payload.pop("task_freeze_file_sha256", None)
         return _canonical_sha256(payload)
 
 
@@ -336,7 +351,11 @@ def compile_evaluation_cell_plan(
     claim = manifest.analysis.claim_admission if manifest.analysis is not None else None
     return EvaluationCellPlan(
         schema_version=(
-            "1.2"
+            "1.3"
+            if manifest.integrity is not None
+            and manifest.integrity.task_freeze_semantics
+            is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+            else "1.2"
             if claim is not None
             else "1.1"
             if any(
@@ -358,6 +377,20 @@ def compile_evaluation_cell_plan(
         claim_lane_id=claim.lane_id if claim is not None else None,
         claim_contract_sha256=(
             _canonical_sha256(claim.model_dump(mode="json")) if claim is not None else None
+        ),
+        formal_task_set_sha256=(
+            manifest.integrity.formal_task_set_sha256
+            if manifest.integrity is not None
+            and manifest.integrity.task_freeze_semantics
+            is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+            else None
+        ),
+        task_freeze_file_sha256=(
+            manifest.integrity.task_freeze_sha256
+            if manifest.integrity is not None
+            and manifest.integrity.task_freeze_semantics
+            is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+            else None
         ),
     )
 

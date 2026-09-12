@@ -350,6 +350,16 @@ InnovatorBench/EXP-Bench allocation cannot exist until the owner authorizes the
 preceding content audit and projection and a diagnostic pilot supplies the
 source-group-level power inputs.
 
+The frozen set is now an executable identity boundary rather than an artifact
+that a later hand-written manifest may summarize. Formal objective-progress
+prelaunch uses schema 1.5 and must bind the allocation report's exact file hash,
+semantic task-set hash, selected task order, source groups, formal study ID, and
+identical per-lane task populations. The critic independently replays the full
+screen--power--plan--approval--allocation chain and rejects implementation or
+population drift. Cell-plan schema 1.3 propagates both hashes into result
+admission. Thus a formal H3 result cannot enter the paper from a convenient
+subset that differs from the outcome-blind powered allocation.
+
 That decision still does not include the 69.7-GB InnovatorBench archive, task
 workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
 GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an

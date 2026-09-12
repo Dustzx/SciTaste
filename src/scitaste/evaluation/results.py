@@ -19,6 +19,7 @@ from scitaste.evaluation.prelaunch import (
     ExperimentPrelaunchManifest,
     ScientificLaneRole,
     SystemRole,
+    TaskFreezeSemantics,
 )
 from scitaste.project.models import content_sha256, validate_relative_locator
 
@@ -663,8 +664,25 @@ def inspect_evaluation_results(
             plan.claim_lane_id,
             plan.claim_contract_sha256,
         )
-        if plan.schema_version != "1.2" or observed_claim_binding != expected_claim_binding:
+        if plan.schema_version not in {"1.2", "1.3"} or (
+            observed_claim_binding != expected_claim_binding
+        ):
             raise ValueError("evaluation plan differs from its claim-admission contract")
+    if (
+        manifest.integrity is not None
+        and manifest.integrity.task_freeze_semantics
+        is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+    ):
+        expected_task_binding = (
+            manifest.integrity.formal_task_set_sha256,
+            manifest.integrity.task_freeze_sha256,
+        )
+        observed_task_binding = (
+            plan.formal_task_set_sha256,
+            plan.task_freeze_file_sha256,
+        )
+        if plan.schema_version != "1.3" or observed_task_binding != expected_task_binding:
+            raise ValueError("evaluation plan differs from its formal task-set allocation")
     claim_cell_ids = {
         cell.cell_id for cell in plan.cells if claim is not None and cell.lane_id == claim.lane_id
     }

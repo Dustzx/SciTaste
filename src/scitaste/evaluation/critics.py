@@ -10,6 +10,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from scitaste.evaluation.benchmark_metadata_allocation import (
+    inspect_benchmark_metadata_allocation_chain,
+)
 from scitaste.evaluation.gpu_inventory import (
     compare_gpu_inventory,
     load_gpu_host_inventory,
@@ -20,8 +23,10 @@ from scitaste.evaluation.prelaunch import (
     ExperimentPrelaunchManifest,
     PrelaunchGateReport,
     ReadinessStatus,
+    ScientificEndpointKind,
     ScientificLaneRole,
     SystemRole,
+    TaskFreezeSemantics,
 )
 from scitaste.evaluation.resources import (
     ExternalResourceCorpus,
@@ -416,6 +421,17 @@ class EvaluationCriticSuite:
                     ),
                 )
             )
+            if (
+                manifest.study_scope == "formal"
+                and manifest.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
+            ):
+                if (
+                    manifest.integrity.task_freeze_semantics
+                    is not TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
+                ):
+                    problems.append("formal_task_allocation_unbound")
+                else:
+                    problems.extend(_benchmark_allocation_freeze_problems(manifest, evidence_root))
         if gate_report.observed_source_commit != manifest.source_commit:
             problems.append("executable_commit_unmatched")
         if gate_report.source_tree_clean is not True:
@@ -639,6 +655,55 @@ def _artifact_problems(
             continue
         if hashlib.sha256(resolved.read_bytes()).hexdigest() != expected:
             problems.append(f"artifact_hash_mismatch:{locator}")
+    return problems
+
+
+def _benchmark_allocation_freeze_problems(
+    manifest: ExperimentPrelaunchManifest,
+    evidence_root: str | Path | None,
+) -> list[str]:
+    """Require one replayed allocation to be the exact formal prelaunch task set."""
+
+    integrity = manifest.integrity
+    if integrity is None or evidence_root is None:
+        return ["benchmark_allocation_chain_unobserved"]
+    try:
+        root = Path(evidence_root).resolve(strict=True)
+        pure = PurePosixPath(integrity.task_freeze_ref)
+        if pure.is_absolute() or any(part in {"", ".", ".."} for part in pure.parts):
+            return ["benchmark_allocation_path_unsafe"]
+        candidate = root.joinpath(*pure.parts)
+        inspection = inspect_benchmark_metadata_allocation_chain(
+            candidate,
+            workspace_root=root,
+        )
+    except (OSError, ValueError):
+        return ["benchmark_allocation_chain_invalid"]
+
+    problems: list[str] = []
+    allocation = inspection.report.report
+    plan = inspection.plan.plan
+    if inspection.report.file_sha256 != integrity.task_freeze_sha256:
+        problems.append("benchmark_allocation_file_hash_mismatch")
+    if allocation.formal_task_set_sha256 != integrity.formal_task_set_sha256:
+        problems.append("benchmark_allocation_task_set_hash_mismatch")
+    if plan.formal_study_id != manifest.protocol_id:
+        problems.append("benchmark_allocation_formal_study_mismatch")
+    if not inspection.allocation_implementation_current:
+        problems.append("benchmark_allocation_implementation_drift")
+
+    allocated_records = tuple(allocation.selected_records)
+    allocated_task_ids = tuple(item.record_id for item in allocated_records)
+    manifest_task_ids = tuple(item.task_id for item in manifest.tasks)
+    if manifest_task_ids != allocated_task_ids:
+        problems.append("benchmark_allocation_task_identity_mismatch")
+    allocated_source_groups = {item.record_id: item.source_group for item in allocated_records}
+    if any(
+        task.source_group != allocated_source_groups.get(task.task_id) for task in manifest.tasks
+    ):
+        problems.append("benchmark_allocation_source_group_mismatch")
+    if any(tuple(lane.task_ids) != allocated_task_ids for lane in manifest.lanes):
+        problems.append("benchmark_allocation_lane_population_mismatch")
     return problems
 
 

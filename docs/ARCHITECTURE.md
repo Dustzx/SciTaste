@@ -2774,3 +2774,28 @@ compiler close on content-bound real metadata; it does not show that selected
 sources teach good judgment. Content-grounded Reference Quality, independent
 reviewers, Taste abstraction, and matched outcome evaluation remain separate
 authorization and evidence gates.
+
+### ADR-091: Formal objective tasks inherit the powered allocation without reinterpretation
+
+Status: accepted and executable at prelaunch, cell-plan, and result-admission
+boundaries; no formal benchmark allocation or H3 outcome has been produced.
+
+A content-addressed task-policy document can state selection rules, but it does
+not prove that a later experiment used the tasks selected by the powered,
+outcome-blind allocation. Allowing prelaunch to list arbitrary task IDs after
+the allocation would reopen researcher degrees of freedom precisely where
+resource availability or pilot familiarity becomes visible.
+
+SciTaste therefore reserves prelaunch schema 1.5 for formal objective progress.
+Its integrity contract names `benchmark_metadata_allocation`, binds the exact
+allocation report file and semantic task-set hashes, and carries an explicit
+source group for every task. The evaluation critic replays the complete
+screening, clustered-power, allocation-plan, owner-approval, and allocation
+chain, then requires exact ordered equality between selected records, manifest
+tasks, source groups, and every lane population. Formal objective proposals
+using the legacy policy-document semantics fail closed.
+
+Cell-plan schema 1.3 copies both allocation bindings into its own canonical
+hash, and result admission checks them again against the prelaunch contract.
+This establishes identity continuity; it does not authorize source reading,
+asset download, model/API use, GPU work, human review, or experiment execution.

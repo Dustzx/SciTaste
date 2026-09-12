@@ -23,6 +23,10 @@ from scitaste.evaluation import (
     ClusteredPowerReport,
     ClusteredPowerRequest,
     ContrastPowerResult,
+    EvaluationCriticDomain,
+    EvaluationCriticSuite,
+    EvaluationCriticVerdict,
+    EvaluationResultSet,
     PilotAnalysisBinding,
     PowerAnalysisFamily,
     PowerContrastSpecification,
@@ -33,13 +37,18 @@ from scitaste.evaluation import (
     StructuredMetadataFormat,
     allocate_benchmark_metadata_population,
     approve_benchmark_metadata_allocation,
+    compile_evaluation_cell_plan,
     inspect_benchmark_metadata_allocation_chain,
     inspect_benchmark_metadata_allocation_plan_chain,
+    inspect_evaluation_results,
+    inspect_prelaunch_manifest,
     load_benchmark_metadata_allocation_approval,
     load_benchmark_metadata_allocation_plan,
     load_benchmark_metadata_allocation_report,
     load_clustered_power_report,
     load_clustered_power_request,
+    load_external_resource_corpus,
+    load_prelaunch_manifest,
     plan_benchmark_metadata_allocation,
     save_benchmark_metadata_allocation_approval,
     save_benchmark_metadata_allocation_plan,
@@ -49,6 +58,10 @@ from scitaste.evaluation import benchmark_metadata_allocation as allocation_modu
 
 _AT = datetime(2026, 9, 13, tzinfo=UTC)
 _SHA = "a" * 64
+_NATIVE_PREPILOT = Path(
+    "configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v11.yaml"
+)
+_RESOURCE_CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v8.yaml")
 
 
 def _projected_field(name: str, value: str) -> ProjectedMetadataField:
@@ -339,6 +352,137 @@ def test_powered_allocation_is_stratified_and_preserves_every_screened_record(
     assert load_benchmark_metadata_allocation_report(output).report == allocated
     replay = inspect_benchmark_metadata_allocation_chain(output, workspace_root=root)
     assert replay.report.report.formal_task_set_sha256 == allocated.formal_task_set_sha256
+
+    source = load_prelaunch_manifest(_NATIVE_PREPILOT).manifest
+    payload = source.model_dump(mode="json")
+    allocated_task_ids = [item.record_id for item in allocated.selected_records]
+    allocation_file_sha256 = hashlib.sha256(output.read_bytes()).hexdigest()
+    payload.update(
+        {
+            "schema_version": "1.5",
+            "protocol_id": request.request.formal_study_id,
+            "study_scope": "formal",
+            "tasks": [
+                {
+                    **source.tasks[0].model_dump(mode="json"),
+                    "task_id": item.record_id,
+                    "source_group": item.source_group,
+                    "split": "powered-source-disjoint-formal",
+                    "selected_asset_manifest": output.relative_to(root).as_posix(),
+                    "asset_manifest_sha256": allocation_file_sha256,
+                    "license_status": "verified",
+                    "asset_status": "verified",
+                }
+                for item in allocated.selected_records
+            ],
+            "integrity": {
+                **{
+                    field: output.relative_to(root).as_posix()
+                    for field in (
+                        "preregistration_ref",
+                        "task_freeze_ref",
+                        "failure_policy_ref",
+                        "repair_policy_ref",
+                        "leakage_audit_ref",
+                        "judge_protocol_ref",
+                    )
+                },
+                **{
+                    field: allocation_file_sha256
+                    for field in (
+                        "preregistration_sha256",
+                        "task_freeze_sha256",
+                        "failure_policy_sha256",
+                        "repair_policy_sha256",
+                        "leakage_audit_sha256",
+                        "judge_protocol_sha256",
+                    )
+                },
+                "task_freeze_semantics": "benchmark_metadata_allocation",
+                "formal_task_set_sha256": allocated.formal_task_set_sha256,
+            },
+            "approval": {"approved": False},
+        }
+    )
+    payload["lanes"][0]["task_ids"] = allocated_task_ids
+    payload["lanes"][0]["planned_cells"] = len(payload["systems"]) * len(allocated_task_ids)
+    payload["analysis"]["power_analysis_ref"] = output.relative_to(root).as_posix()
+    payload["analysis"]["power_analysis_sha256"] = allocation_file_sha256
+    payload["analysis"]["claim_admission"]["minimum_distinct_tasks"] = len(allocated_task_ids)
+    formal = type(source).model_validate(payload)
+    corpus = load_external_resource_corpus(_RESOURCE_CORPUS).corpus
+    gate = inspect_prelaunch_manifest(
+        formal,
+        corpus,
+        observed_source_commit=formal.source_commit,
+        source_tree_clean=True,
+    )
+    critic = EvaluationCriticSuite().review(formal, corpus, gate, evidence_root=root)
+    integrity = next(
+        item for item in critic.findings if item.domain is EvaluationCriticDomain.INTEGRITY
+    )
+    cell_plan = compile_evaluation_cell_plan(formal)
+
+    assert "formal_task_allocation_unbound" not in {item.code for item in gate.blockers}
+    assert integrity.verdict is EvaluationCriticVerdict.PASS
+    assert cell_plan.schema_version == "1.3"
+    assert cell_plan.formal_task_set_sha256 == allocated.formal_task_set_sha256
+    assert cell_plan.task_freeze_file_sha256 == allocation_file_sha256
+
+    empty_results = EvaluationResultSet.create(
+        project_id="allocation-project",
+        evaluation_id="allocation-formal-v1",
+        proposal_sha256=formal.proposal_sha256,
+        plan_sha256=cell_plan.plan_sha256,
+    )
+    admitted = inspect_evaluation_results(
+        formal,
+        cell_plan,
+        empty_results,
+        project_root=root,
+        project_id="allocation-project",
+        evaluation_id="allocation-formal-v1",
+        execution_authorized=False,
+    )
+    assert admitted.status == "incomplete"
+
+    drifted_plan = cell_plan.model_copy(update={"formal_task_set_sha256": "f" * 64})
+    drifted_results = EvaluationResultSet.create(
+        project_id="allocation-project",
+        evaluation_id="allocation-formal-v1",
+        proposal_sha256=formal.proposal_sha256,
+        plan_sha256=drifted_plan.plan_sha256,
+    )
+    with pytest.raises(ValueError, match="formal task-set allocation"):
+        inspect_evaluation_results(
+            formal,
+            drifted_plan,
+            drifted_results,
+            project_root=root,
+            project_id="allocation-project",
+            evaluation_id="allocation-formal-v1",
+            execution_authorized=False,
+        )
+
+    payload["tasks"] = list(reversed(payload["tasks"]))
+    tampered = type(source).model_validate(payload)
+    tampered_gate = inspect_prelaunch_manifest(
+        tampered,
+        corpus,
+        observed_source_commit=tampered.source_commit,
+        source_tree_clean=True,
+    )
+    tampered_review = EvaluationCriticSuite().review(
+        tampered,
+        corpus,
+        tampered_gate,
+        evidence_root=root,
+    )
+    tampered_integrity = next(
+        item for item in tampered_review.findings if item.domain is EvaluationCriticDomain.INTEGRITY
+    )
+    assert tampered_integrity.verdict is EvaluationCriticVerdict.BLOCK
+    assert "benchmark_allocation_task_identity_mismatch" in tampered_integrity.message
 
 
 def test_allocation_plan_blocks_insufficient_distinct_source_groups(
