@@ -21,6 +21,7 @@ _MAX_DOSSIER_BYTES = 2 * 1024 * 1024
 
 class CampaignTrackRole(StrEnum):
     SCIENTIFIC_TASTE_MECHANISM = "scientific_taste_mechanism"
+    NATIVE_TASTE_CAUSAL = "native_taste_causal"
     END_TO_END_EXTERNAL_SYSTEMS = "end_to_end_external_systems"
     SMALL_MODEL_ROBUSTNESS = "small_model_robustness"
 
@@ -80,15 +81,30 @@ class CampaignArtifactBinding(BaseModel):
         return self
 
 
+class CampaignSystemApiModelResource(BaseModel):
+    """One best-native API identity attached to exactly one comparison system."""
+
+    model_config = _CONFIG
+
+    system_id: str = Field(pattern=_ID)
+    provider_id: str = Field(pattern=_ID)
+    model_id: str = Field(min_length=1, max_length=200)
+    model_revision: str = Field(min_length=1, max_length=200)
+    api_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]{2,100}$")
+
+
 class CampaignModelResource(BaseModel):
     model_config = _CONFIG
 
     kind: CampaignResourceKind
     usage_scope: str = Field(min_length=1, max_length=1_000)
     provider_id: str | None = Field(default=None, pattern=_ID)
-    model_id: str = Field(min_length=1, max_length=200)
-    model_revision: str = Field(min_length=1, max_length=200)
+    model_id: str | None = Field(default=None, min_length=1, max_length=200)
+    model_revision: str | None = Field(default=None, min_length=1, max_length=200)
     api_key_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]{2,100}$")
+    system_api_models: tuple[CampaignSystemApiModelResource, ...] | None = Field(
+        default=None, min_length=2, max_length=30
+    )
     checkpoint_source_path: str | None = Field(default=None, max_length=2_000)
     checkpoint_sha256: str | None = Field(default=None, pattern=_SHA256)
     device_count: int | None = Field(default=None, gt=0, le=64)
@@ -96,7 +112,7 @@ class CampaignModelResource(BaseModel):
 
     @model_validator(mode="after")
     def resource_identity_matches_kind(self) -> CampaignModelResource:
-        api_values = (self.provider_id, self.api_key_env)
+        api_values = (self.provider_id, self.model_id, self.model_revision, self.api_key_env)
         gpu_values = (
             self.checkpoint_source_path,
             self.checkpoint_sha256,
@@ -104,12 +120,25 @@ class CampaignModelResource(BaseModel):
             self.device_name,
         )
         if self.kind is CampaignResourceKind.API:
-            if not all(api_values) or any(value is not None for value in gpu_values):
+            common_api = all(api_values) and self.system_api_models is None
+            per_system_api = not any(api_values) and self.system_api_models is not None
+            if not (common_api or per_system_api) or any(value is not None for value in gpu_values):
                 raise ValueError(
-                    "API campaign resources require only provider and key-env identity"
+                    "API campaign resources require either one common or per-system identities"
                 )
-        elif not all(gpu_values) or any(value is not None for value in api_values):
-            raise ValueError("GPU campaign resources require checkpoint and device identity")
+            if self.system_api_models is not None:
+                system_ids = [item.system_id for item in self.system_api_models]
+                if len(system_ids) != len(set(system_ids)):
+                    raise ValueError("per-system API identities must use unique system IDs")
+        elif (
+            not all(gpu_values)
+            or self.model_id is None
+            or self.model_revision is None
+            or self.provider_id is not None
+            or self.api_key_env is not None
+            or self.system_api_models is not None
+        ):
+            raise ValueError("GPU campaign resources require only checkpoint and device identity")
         return self
 
 
@@ -215,6 +244,10 @@ class ExperimentCampaignTrack(BaseModel):
         if self.model.kind is CampaignResourceKind.API:
             if self.budget.api_requests is None:
                 raise ValueError("API tracks require API ceilings")
+            if self.model.system_api_models is not None and {
+                item.system_id for item in self.model.system_api_models
+            } != set(self.matrix.system_ids):
+                raise ValueError("per-system API identities must cover the campaign matrix")
         elif self.budget.allocated_gpu_hours is None:
             raise ValueError("GPU tracks require allocated-GPU ceilings")
         if self.matrix.task_ids and set(self.matrix.task_ids) != set(self.data.item_ids):
@@ -262,7 +295,7 @@ class ExperimentDecisionDossier(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     dossier_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     paper_title: str = Field(min_length=1, max_length=1_000)
@@ -279,6 +312,10 @@ class ExperimentDecisionDossier(BaseModel):
 
     @model_validator(mode="after")
     def campaign_graph_is_closed(self) -> ExperimentDecisionDossier:
+        if self.schema_version == "1.0" and any(
+            track.model.system_api_models is not None for track in self.tracks
+        ):
+            raise ValueError("decision dossier v1.1 is required for per-system API identities")
         artifact_ids = [item.artifact_id for item in self.artifacts]
         track_ids = [item.track_id for item in self.tracks]
         stage_ids = [item.stage_id for item in self.stages]
@@ -322,6 +359,9 @@ class ExperimentDecisionDossier(BaseModel):
     @property
     def dossier_sha256(self) -> str:
         payload = self.model_dump(mode="json", exclude={"dossier_sha256"})
+        if self.schema_version == "1.0":
+            for track in payload["tracks"]:
+                track["model"].pop("system_api_models", None)
         return _canonical_sha256(payload)
 
 
@@ -553,6 +593,7 @@ __all__ = [
     "CampaignStageKind",
     "CampaignStageReport",
     "CampaignStageState",
+    "CampaignSystemApiModelResource",
     "CampaignTrackRole",
     "CampaignTrackState",
     "ExperimentCampaignStage",

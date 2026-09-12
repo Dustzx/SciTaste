@@ -15,6 +15,7 @@ from scitaste.evaluation.gpu_inventory import (
     load_gpu_host_inventory,
 )
 from scitaste.evaluation.prelaunch import (
+    ConfirmatoryEstimandKind,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     PrelaunchGateReport,
@@ -176,6 +177,7 @@ class EvaluationCriticSuite:
         evidence_root: str | Path | None,
     ) -> tuple[EvaluationCriticFinding, ...]:
         systems = {system.system_id: system for system in manifest.systems}
+        claim = manifest.analysis.claim_admission if manifest.analysis is not None else None
         problems: list[str] = []
         for lane in manifest.lanes:
             selected = [systems[system_id] for system_id in lane.system_ids]
@@ -193,9 +195,16 @@ class EvaluationCriticSuite:
                 }
                 if counts[SystemRole.SCITASTE] < 1:
                     problems.append(f"{lane.lane_id}:missing_scitaste")
-                if counts[SystemRole.CONTROL] < 1:
-                    problems.append(f"{lane.lane_id}:missing_direct_control")
-                if counts[SystemRole.METHOD_COMPARATOR] < 2:
+                lane_claim = claim if claim is not None and claim.lane_id == lane.lane_id else None
+                if lane_claim is None:
+                    if counts[SystemRole.CONTROL] < 1:
+                        problems.append(f"{lane.lane_id}:missing_direct_control")
+                    if counts[SystemRole.METHOD_COMPARATOR] < 2:
+                        problems.append(f"{lane.lane_id}:fewer_than_two_method_comparators")
+                elif lane_claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL:
+                    if not any(item.role is SystemRole.ABLATION for item in selected):
+                        problems.append(f"{lane.lane_id}:missing_native_ablation")
+                elif counts[SystemRole.METHOD_COMPARATOR] < 2:
                     problems.append(f"{lane.lane_id}:fewer_than_two_method_comparators")
             for system in selected:
                 if (
@@ -325,16 +334,21 @@ class EvaluationCriticSuite:
             lane.lane_id for lane in manifest.lanes if len(lane.task_ids) < 2 or len(lane.seeds) < 2
         ]
         if sparse_lanes:
+            verdict = (
+                EvaluationCriticVerdict.BLOCK
+                if manifest.study_scope == "formal"
+                else EvaluationCriticVerdict.ADVISORY
+            )
             findings.append(
                 _finding(
                     EvaluationCriticDomain.STATISTICS,
                     "independent_replication",
-                    EvaluationCriticVerdict.BLOCK,
-                    "The following lanes cannot estimate task and seed variability because they "
-                    f"contain fewer than two tasks or seeds: {', '.join(sparse_lanes)}.",
+                    verdict,
+                    "The following lanes cannot estimate both task and seed variability because "
+                    f"they contain fewer than two tasks or seeds: {', '.join(sparse_lanes)}.",
                     tuple(f"manifest://lanes/{lane_id}" for lane_id in sparse_lanes),
-                    "Use the adapter smoke test only for debugging, then freeze a multi-task, "
-                    "multi-seed pilot before estimating comparative effects.",
+                    "Treat this pilot as feasibility evidence only, then freeze a multi-task, "
+                    "multi-seed formal design before estimating confirmatory effects.",
                 )
             )
         else:
@@ -515,6 +529,7 @@ def _gpu_inventory_problems(
             checkpoint_id=resource.checkpoint_id,
             checkpoint_sha256=resource.checkpoint_sha256,
             checkpoint_bytes=resource.checkpoint_bytes,
+            compare_checkpoint=(resource.remote_checkpoint_status is ReadinessStatus.VERIFIED),
         )
         problems.extend(f"{lane.lane_id}:gpu_inventory_{code}" for code in mismatches)
         if (

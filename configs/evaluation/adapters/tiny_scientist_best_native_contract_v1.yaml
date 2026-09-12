@@ -1,0 +1,80 @@
+schema_version: "1.0"
+contract_id: tiny-scientist-best-native-contract-v1
+authorization_scope: static-translation-only
+external_resource_id: tiny-scientist
+expected_upstream_commit: 9c4f1a89411e05857c748db9731c33500516e9c6
+invocation:
+  upstream_entrypoint: examples/demo.py
+  argv_template:
+    - "{python}"
+    - "{upstream_root}/examples/demo.py"
+    - --output_dir
+    - "{output_root}"
+    - --model
+    - "{model_id}"
+    - --template
+    - iclr
+  environment_allowlist:
+    - OPENAI_API_KEY
+  shell: false
+task_translation:
+  selected_task_form: research-topic-config
+  upstream_input_name: TinyScientist think intent followed by idea, code, write, and review
+  one_task_per_process: false
+  preserves_exact_starting_bytes: false
+  runtime_acquisition_policy_injectable: false
+model_translation:
+  provider_id: openai
+  requested_model_id: gpt-4o-2024-08-06
+  requested_model_revision: gpt-4o-2024-08-06
+  upstream_model_id: gpt-4o-2024-08-06
+  all_model_roles_matched: true
+  unmatched_roles: []
+requirements:
+  task_mapping:
+    status: blocked
+    summary: The pinned demo contains a fixed idea loop; no loss-audited one-task driver maps exact MLRC bytes to the native intent/idea boundary.
+    official_source_urls: &tiny_sources
+      - https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/examples/demo.py
+      - https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/scientist.py
+      - https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/utils/llm.py
+      - https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/coder.py
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+  model_mapping:
+    status: verified
+    summary: The pinned fixed registry accepts gpt-4o-2024-08-06 and the constructor propagates one model string across all model-bearing modules.
+    official_source_urls: *tiny_sources
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+  sandbox:
+    status: blocked
+    summary: Aider, literature search, Docker-to-host fallback, package installation, and generated-code execution are not isolated.
+    official_source_urls: *tiny_sources
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+  telemetry:
+    status: blocked
+    summary: Module cost tracking does not close all searches, retries, executions, token classes, interventions, and GPU use into a cell receipt.
+    official_source_urls: *tiny_sources
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+  artifact_mapping:
+    status: pending
+    summary: Idea, source, experiments, paper, review, logs, environment, and failures need an immutable projection.
+    official_source_urls: *tiny_sources
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+  failure_resume:
+    status: blocked
+    summary: Failed directories may be removed and no content-bound retry or resume boundary has been demonstrated.
+    official_source_urls: *tiny_sources
+    evidence_ref: docs/research/protocols/TINY_SCIENTIST_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: 9850c29d8f6f2da8868c7aeecb9b0d4a47fa9381d019265ef996a7c4bbaa6251
+forbidden_changes:
+  - Do not patch DeepSeek support into the core and call the result unchanged-core.
+  - Do not omit native search, coding, writing, or review stages without declaring a different system.
+  - Do not delete failed attempts in the SciTaste evidence projection.
+requires_separate_upstream_preflight: true
+no_external_download: true
+no_execution_performed: true

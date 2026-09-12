@@ -19,7 +19,7 @@ from scitaste.evaluation import (
 DOSSIER_PATH = Path("configs/evaluation/campaigns/iclr2027_self_development_v1.yaml")
 
 
-def test_repository_dossier_separates_exact_api_cells_from_design_only_gpu_data() -> None:
+def test_repository_dossier_separates_native_causality_from_best_native_data() -> None:
     inspection = load_experiment_decision_dossier(DOSSIER_PATH)
     dossier = inspection.dossier
 
@@ -27,11 +27,11 @@ def test_repository_dossier_separates_exact_api_cells_from_design_only_gpu_data(
         "SciTaste: Improving Autonomous Research through Scientific Taste"
     )
     assert {track.track_id for track in dossier.tracks} == {
-        "scientific-taste-mechanism",
-        "external-idea-to-paper",
+        "scientific-taste-decisions",
+        "native-taste-causal-prepilot",
+        "external-best-native-prepilot",
     }
-    mechanism = dossier.tracks[0]
-    external = dossier.tracks[1]
+    mechanism, native, external = dossier.tracks
     assert mechanism.state is CampaignTrackState.DESIGN_ONLY
     assert mechanism.model.model_id == "Qwen3-VL-2B-Instruct"
     assert mechanism.model.device_count == 8
@@ -39,13 +39,25 @@ def test_repository_dossier_separates_exact_api_cells_from_design_only_gpu_data(
     assert mechanism.matrix.planned_cells is None
     assert mechanism.matrix.planned_model_calls == 1_440
     assert mechanism.budget.allocated_gpu_hours == 16.0
+    assert native.state is CampaignTrackState.BLOCKED
+    assert native.model.model_id == "Qwen3-VL-2B-Instruct"
+    assert native.model.checkpoint_sha256.startswith("47f9c0e0")
+    assert native.matrix.planned_cells == 12
+    assert native.budget.allocated_gpu_hours == 5.0
     assert external.state is CampaignTrackState.BLOCKED
-    assert external.model.model_id == "deepseek-flash"
-    assert external.model.model_revision == "DeepSeek-V4.1-Flash"
-    assert external.matrix.planned_cells == 100
-    assert external.budget.api_requests == 1_500
-    assert external.budget.total_tokens == 15_000_000
-    assert external.budget.api_cost_usd == 100.0
+    assert external.model.system_api_models is not None
+    assert {
+        (item.system_id, item.provider_id, item.model_id)
+        for item in external.model.system_api_models
+    } == {
+        ("scitaste-native", "deepseek", "deepseek-flash"),
+        ("agent-laboratory", "openai", "o3-mini"),
+        ("tiny-scientist", "openai", "gpt-4o-2024-08-06"),
+    }
+    assert external.matrix.planned_cells == 6
+    assert external.budget.api_requests == 300
+    assert external.budget.total_tokens == 3_000_000
+    assert external.budget.api_cost_usd == 80.0
     assert all(
         not value
         for value in (
@@ -64,11 +76,16 @@ def test_repository_dossier_verifies_every_bound_artifact_without_external_actio
 
     assert report.artifact_bindings_verified is True
     assert report.artifact_findings == ()
-    assert report.exact_cell_count == 100
-    assert report.design_only_track_ids == ("scientific-taste-mechanism",)
-    assert report.next_stage_ids == ("freeze-headline-comparison-design",)
+    assert report.exact_cell_count == 18
+    assert report.design_only_track_ids == ("scientific-taste-decisions",)
+    assert report.next_stage_ids == (
+        "approve-exact-source-acquisition",
+        "attest-native-condition-implementations",
+        "qualify-best-native-adapters",
+    )
     assert report.stages[0].state is CampaignStageState.COMPLETE
-    assert report.stages[1].state is CampaignStageState.READY_FOR_DECISION
+    assert report.stages[1].state is CampaignStageState.COMPLETE
+    assert report.stages[2].state is CampaignStageState.READY_FOR_DECISION
     assert report.no_external_action_performed is True
     assert report.authorizes_download is False
     assert report.authorizes_api_calls is False
@@ -102,8 +119,17 @@ def test_dossier_rejects_unsafe_artifact_paths_and_false_cell_arithmetic() -> No
         ExperimentDecisionDossier.model_validate(payload)
 
     payload = dossier.model_dump(mode="json", exclude={"dossier_sha256"})
-    payload["tracks"][1]["matrix"]["planned_cells"] = 99
-    with pytest.raises(ValidationError, match=r"closed matrix \(100\)"):
+    payload["tracks"][1]["matrix"]["planned_cells"] = 11
+    with pytest.raises(ValidationError, match=r"closed matrix \(12\)"):
+        ExperimentDecisionDossier.model_validate(payload)
+
+
+def test_dossier_v10_cannot_smuggle_per_system_api_identities() -> None:
+    dossier = load_experiment_decision_dossier(DOSSIER_PATH).dossier
+    payload = dossier.model_dump(mode="json", exclude={"dossier_sha256"})
+    payload["schema_version"] = "1.0"
+
+    with pytest.raises(ValidationError, match=r"v1\.1 is required"):
         ExperimentDecisionDossier.model_validate(payload)
 
 
@@ -134,9 +160,11 @@ def test_decision_dossier_cli_is_read_only_and_can_save_a_report(
     assert payload["paper_title"] == (
         "SciTaste: Improving Autonomous Research through Scientific Taste"
     )
-    assert payload["exact_cell_count"] == 100
+    assert payload["exact_cell_count"] == 18
     assert payload["report"] == str(output)
     assert saved["artifact_bindings_verified"] is True
     assert saved["tracks"][0]["model"]["model_id"] == "Qwen3-VL-2B-Instruct"
-    assert saved["tracks"][1]["matrix"]["planned_cells"] == 100
+    assert saved["tracks"][1]["matrix"]["planned_cells"] == 12
+    assert saved["tracks"][2]["matrix"]["planned_cells"] == 6
+    assert len(saved["tracks"][2]["model"]["system_api_models"]) == 3
     assert saved["no_external_action_performed"] is True

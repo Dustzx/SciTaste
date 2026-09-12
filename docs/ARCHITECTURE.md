@@ -168,11 +168,16 @@ returns observations and artifacts but cannot select the next global action.
     appropriate evidence duties but cannot impose universal figure, table,
     experiment, or ablation quotas. Mechanical template compliance remains an
     independent deterministic contract.
-50. Self-development is process evidence only. Every headline AutoResearch
-    comparison uses held-out child projects, SciTaste plus at least two real
-    independent external systems in the same matched block, evidence-bound
+50. Self-development is process evidence only. Every broad external-system
+    superiority claim uses held-out child projects, SciTaste plus at least two
+    real independent external systems in the same matched block, evidence-bound
     papers, frozen statistics, and an approval record over the exact design
     hash. Feedback after launch creates a new protocol version.
+51. A title-level Scientific Taste claim is admitted only by a complete
+    within-SciTaste matched causal contract containing no-Taste, component, and
+    mismatched-Taste contrasts. Best-native external outcomes are always
+    descriptive and model-confounded. Valid preregistered execution failures
+    remain outcomes; missing or invalid records block the contract.
 
 ## Architecture decision records
 
@@ -1456,14 +1461,19 @@ through Generation as Content, or queried by the lifecycle. Selecting a result
 also selects its owning evaluation; selecting an incompatible evaluation clears
 the current result instead of leaving a misleading cross-protocol alias.
 
-A formal matched-backbone headline requires an authorized ready proposal, real
-successful cells, budget compliance, valid external attested blind reviews, one
-SciTaste condition, at least two independent method comparators, and every
-required preregistered contrast. Pilot, synthetic, internal-review, incomplete,
-or local-small-model robustness evidence cannot pass that gate. Even a valid
-formal project result affects a paper only when a newly materialized paper
-manifest binds the exact result and assessment hashes; independent review must
-then close against that paper before the top-venue evidence loop is complete.
+A formal claim requires an authorized ready proposal, a complete
+schema-1.3 claim-admission contract, budget compliance, real outcomes, valid
+external attested blind reviews, and every exact preregistered contrast. A valid
+failed execution remains in an `include-as-outcome` intention-to-run population;
+missing, invalid, synthetic, or unplanned records fail closure. Native Taste
+causality requires the no-Taste and mismatched-Taste controls plus every declared
+component ablation. External matched superiority requires at least two real
+independent method comparators. Best-native evidence is model-confounded and
+remains descriptive even when complete and positive. Pilot and internal-review
+evidence cannot pass any formal claim gate. Even a valid formal project result
+affects a paper only when a newly materialized paper manifest binds the exact
+result and assessment hashes; independent review must then close against that
+paper before the top-venue evidence loop is complete.
 
 The binding is a physical `SCIENTIFIC_EVIDENCE_BINDING.json`, not optional
 manifest prose. It is self-hashed and covers the exact result bundle, result
@@ -1861,3 +1871,45 @@ hash binds the policy file, so weakening its scope or obligations invalidates
 the owner decision. No policy inspection calls a network, creates dataset bytes,
 approves a transfer, or authorizes extraction, ingestion, API, GPU, or experiment
 execution.
+
+### ADR-061: Claim admission is estimand-specific and failure-inclusive
+
+Status: accepted for schema-1.3 prelaunch and schema-1.1 result assessment; both
+current v7 proposals remain blocked and unapproved.
+
+A comparison lane, cell count, or positive aggregate does not identify the
+scientific claim it may support. SciTaste therefore binds one claim-admission
+contract to an exact lane. The contract names one of three estimands—native
+Taste causality, matched external superiority, or best-native external
+description—plus the candidate, every comparator, contrast role, direction,
+minimum effect, minimum distinct-task population, and failure treatment. The
+cell plan copies the contract kind, lane, and hash so a result cannot be
+assessed against a different interpretation.
+
+Native Taste causality is within-system: every condition shares one API or GPU
+backbone and an unconfounded execution envelope; no-Taste and mismatched-Taste
+contrasts are mandatory and all other lane systems must appear in the closed
+contrast set. External claims require at least two real method comparators.
+Matched external evidence may support a separately named superiority claim;
+best-native evidence must preserve per-system model identities and
+`model_effects_confounded=true`, so it can close only a descriptive external
+assessment. It can never become title, headline, or causal evidence by a result
+serialization change.
+
+Failure handling follows the estimand rather than a success-only convenience
+sample. A planned real cell that executes and fails is a valid outcome and must
+receive the frozen task-level treatment. A missing record, invalid telemetry,
+synthetic evidence, absent external review, decision-rule drift, unplanned
+contrast, or mismatched analysis artifact blocks completion. Every primary
+contrast additionally hashes the exact candidate/comparator result records and
+their success/failure states; declaring the expected unit count without that
+input binding is insufficient. This separates a system's scientific failure
+rate from evidence-pipeline corruption and prevents successful-only reporting.
+
+The deterministic prelaunch critic understands these roles. It does not demand
+external method comparators from a native ablation or a direct-agent control
+from a best-native ecological slice. A one-seed prepilot receives a replication
+advisory, while the same deficiency blocks a formal design. Remote inventory is
+checked for host capacity before checkpoint transfer; checkpoint identity is
+compared only after the proposal claims that remote checkpoint is verified.
+These refinements remove false blockers without weakening any launch gate.

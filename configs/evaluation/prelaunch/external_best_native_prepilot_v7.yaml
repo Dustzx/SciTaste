@@ -1,0 +1,241 @@
+schema_version: "1.3"
+manifest_id: external-best-native-prepilot-v7
+protocol_id: external-best-native-prepilot-v7
+protocol_version: "7.0"
+study_scope: pilot
+scientific_question: >-
+  Under common frozen task and output budgets but each accepted system's pinned
+  native model configuration, how do complete SciTaste Native, Agent Laboratory,
+  and TinyScientist research packages compare in blinded scientific value,
+  evidence validity, failures, and resource cost?
+claim_allowed: >-
+  A complete prepilot may establish best-native adapter feasibility, ecological
+  failure modes, reviewer burden, resource variance, and whether a larger
+  external comparison is justified.
+claim_forbidden: >-
+  Model-confounded best-native evidence cannot establish the causal value of
+  Scientific Taste, a matched-backbone system effect, title-level improvement,
+  broad external superiority, or official peer review.
+primary_endpoint: blinded_package_preference
+automated_judge_role: secondary_diagnostic
+source_commit: 1c7f48227cdf945fab1305a21542f6f33ceb2a65
+require_clean_tree: true
+resource_corpus_sha256: 5d590fa7b502cfc67ae03fc0afc0ce4d084bfaeeca4ed2f1cfb297de5d63462f
+systems:
+  - system_id: scitaste-native
+    role: scitaste
+    implementation_ref: scitaste@1c7f48227cdf945fab1305a21542f6f33ceb2a65:native
+    availability: pending
+    real_implementation: true
+  - system_id: agent-laboratory
+    role: method_comparator
+    implementation_ref: agent-laboratory@d9017d90e329112d2a80b7712f37ee9094d2cd27
+    external_resource_id: agent-laboratory
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml
+    adapter_preflight_sha256: 13f3e4a968b1cb8fd7bafd0e95cde34d7405c80277f1c5f803aff76518eabaff
+  - system_id: tiny-scientist
+    role: method_comparator
+    implementation_ref: tiny-scientist@9c4f1a89411e05857c748db9731c33500516e9c6
+    external_resource_id: tiny-scientist
+    availability: pending
+    real_implementation: true
+    adapter_preflight_ref: configs/evaluation/adapters/tiny_scientist_best_native_contract_v1.yaml
+    adapter_preflight_sha256: 6a8ded504b3f6adfaf1730d69c435558e14de39fdecfe34d8cf9b52c7dc3fcde
+tasks:
+  - task_id: perception-temporal-action-loc
+    benchmark_resource_id: mlrc-bench-code
+    split: first-preflight-held-out-objective-candidate
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: verified
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: mixed
+  - task_id: meta-learning
+    benchmark_resource_id: mlrc-bench-code
+    split: first-preflight-held-out-objective-candidate
+    selected_asset_manifest: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+    asset_manifest_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+    license_status: pending
+    asset_status: pending
+    held_out: true
+    source_group_disjoint: true
+    signal_kind: mixed
+lanes:
+  - lane_id: accepted-systems-best-native-api
+    kind: api_only
+    scientific_role: best_native_system
+    comparison_regime: best_native
+    model_effects_confounded: true
+    comparison_claim_boundary: >-
+      This ecological comparison preserves each system's native model and may
+      describe package outcomes, failures, and cost only; it cannot identify a
+      causal scaffold or Scientific Taste effect.
+    system_ids:
+      - scitaste-native
+      - agent-laboratory
+      - tiny-scientist
+    task_ids:
+      - perception-temporal-action-loc
+      - meta-learning
+    seeds: [7]
+    repetitions: 1
+    planned_cells: 6
+    api_model: null
+    gpu_resource: null
+    system_api_models:
+      - system_id: scitaste-native
+        api_model:
+          provider_id: deepseek
+          endpoint: https://api.deepseek.com/chat/completions
+          interface: openai-chat-completions
+          model_id: deepseek-flash
+          model_revision: DeepSeek-V4.1-Flash
+          rolling_alias: true
+          identity_source_url: https://api-docs.deepseek.com/quick_start/pricing/
+          identity_status: verified
+          api_key_env: DEEPSEEK_API_KEY
+          max_input_tokens_per_call: 100000
+          max_output_tokens_per_call: 32768
+          max_requests: 100
+          max_total_tokens: 1000000
+          max_cost: 20.0
+          pricing:
+            currency: USD
+            as_of: 2026-09-12
+            source_url: https://api-docs.deepseek.com/quick_start/pricing/
+            input_cache_hit_per_million: 0.006
+            input_cache_miss_per_million: 0.30
+            output_per_million: 1.20
+            status: verified
+      - system_id: agent-laboratory
+        api_model:
+          provider_id: openai
+          endpoint: https://api.openai.com/v1/chat/completions
+          interface: openai-chat-completions
+          model_id: o3-mini
+          model_revision: o3-mini-2025-01-31
+          rolling_alias: true
+          identity_source_url: https://developers.openai.com/api/docs/models/o3-mini
+          identity_status: verified
+          api_key_env: OPENAI_API_KEY
+          max_input_tokens_per_call: 100000
+          max_output_tokens_per_call: 32768
+          max_requests: 100
+          max_total_tokens: 1000000
+          max_cost: 30.0
+          pricing:
+            currency: USD
+            as_of: 2026-09-12
+            source_url: https://developers.openai.com/api/docs/pricing
+            input_cache_hit_per_million: 0.55
+            input_cache_miss_per_million: 1.10
+            output_per_million: 4.40
+            status: verified
+      - system_id: tiny-scientist
+        api_model:
+          provider_id: openai
+          endpoint: https://api.openai.com/v1/chat/completions
+          interface: openai-chat-completions
+          model_id: gpt-4o-2024-08-06
+          model_revision: gpt-4o-2024-08-06
+          rolling_alias: false
+          identity_source_url: https://developers.openai.com/api/docs/models/gpt-4o
+          identity_status: verified
+          api_key_env: OPENAI_API_KEY
+          max_input_tokens_per_call: 100000
+          max_output_tokens_per_call: 16384
+          max_requests: 100
+          max_total_tokens: 1000000
+          max_cost: 30.0
+          pricing:
+            currency: USD
+            as_of: 2026-09-12
+            source_url: https://developers.openai.com/api/docs/pricing
+            input_cache_hit_per_million: 1.25
+            input_cache_miss_per_million: 2.50
+            output_per_million: 10.0
+            status: verified
+human_review:
+  required: true
+  minimum_reviewers_per_artifact: 2
+  condition_blinded: true
+  conflict_check_required: true
+  recruitment_status: pending
+  rubric_status: pending
+  adjudication_status: pending
+  maximum_reviewer_hours: 8.0
+retention:
+  output_root: outputs/projects/scitaste-self-development/evaluations/external-best-native-prepilot-v7
+  archive_root: archives/scitaste-self-development/evaluations/external-best-native-prepilot-v7
+  maximum_output_bytes: 107374182400
+  retain_raw_provider_responses: true
+  retain_failed_runs: true
+  secrets_forbidden: true
+analysis:
+  primary_outcome: >-
+    Condition-blinded independent-expert pairwise preference for scientific
+    value and evidence validity of the complete research package, retaining
+    ties and valid failed trajectories.
+  estimand: >-
+    Equal-task probability that reviewers prefer SciTaste Native to each
+    accepted comparator under each system's pinned native model configuration;
+    model and framework effects remain inseparable.
+  analysis_unit: One paired task-by-seed complete research trajectory.
+  aggregation_method: >-
+    Pair complete packages by task and seed, retain failures in the
+    intention-to-run population, report both declared contrasts, raw wins,
+    ties, losses, reviewer agreement, objective scores, and resource telemetry.
+  uncertainty_method: >-
+    This prepilot reports descriptive paired effects and reviewer dispersion
+    only; a reviewer- and task-aware interval and power analysis must be frozen
+    in a new formal ecological proposal.
+  power_analysis_ref: null
+  power_analysis_sha256: null
+  claim_admission:
+    estimand_kind: external_best_native
+    lane_id: accepted-systems-best-native-api
+    candidate_system_id: scitaste-native
+    contrasts:
+      - contrast_id: scitaste-vs-agent-laboratory
+        candidate_system_id: scitaste-native
+        comparator_system_id: agent-laboratory
+        role: external_method
+        favorable_direction: higher
+        minimum_effect: 0.05
+      - contrast_id: scitaste-vs-tiny-scientist
+        candidate_system_id: scitaste-native
+        comparator_system_id: tiny-scientist
+        role: external_method
+        favorable_direction: higher
+        minimum_effect: 0.05
+    minimum_distinct_tasks: 2
+    requires_all_planned_units: true
+    failure_handling: include-as-outcome
+integrity:
+  preregistration_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  preregistration_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  task_freeze_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  task_freeze_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  failure_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  failure_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  repair_policy_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  repair_policy_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  leakage_audit_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  leakage_audit_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+  judge_protocol_ref: docs/research/protocols/ICLR27_DUAL_ESTIMAND_PREPILOT_GOVERNANCE_V1.md
+  judge_protocol_sha256: c1cdf9fff130043bbf77c1279cdb2bb6a1645f78ae6913d4ee86234733a26812
+launch_order: [accepted-systems-best-native-api]
+stop_rules:
+  - Stop before checkout, task download, API use, or human review until both external adapters, exact task packages, credentials, and owner approval pass.
+  - Stop if an authenticated provider returns a different model identity or if o3-mini is unavailable or past its registered retirement boundary.
+  - Stop on task, tool, repair, budget, sandbox, telemetry, or output-contract asymmetry; retain every attempt and valid failure.
+  - Stop after one complete six-cell block and inspect feasibility before any larger ecological proposal.
+approval:
+  approved: false
+  approved_proposal_sha256: null
+  approved_by: null
+  approved_at: null

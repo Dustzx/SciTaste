@@ -1,0 +1,74 @@
+schema_version: "1.0"
+contract_id: agent-laboratory-best-native-contract-v1
+authorization_scope: static-translation-only
+external_resource_id: agent-laboratory
+expected_upstream_commit: d9017d90e329112d2a80b7712f37ee9094d2cd27
+invocation:
+  upstream_entrypoint: ai_lab_repo.py
+  argv_template:
+    - "{python}"
+    - "{upstream_root}/ai_lab_repo.py"
+    - --yaml-location
+    - "{config_path}"
+  environment_allowlist:
+    - OPENAI_API_KEY
+  shell: false
+task_translation:
+  selected_task_form: research-topic-config
+  upstream_input_name: research-topic and phase-specific task-notes in YAML
+  one_task_per_process: true
+  preserves_exact_starting_bytes: false
+  runtime_acquisition_policy_injectable: false
+model_translation:
+  provider_id: openai
+  requested_model_id: o3-mini
+  requested_model_revision: o3-mini-2025-01-31
+  upstream_model_id: o3-mini
+  all_model_roles_matched: true
+  unmatched_roles: []
+requirements:
+  task_mapping:
+    status: blocked
+    summary: Native topic and phase-note inputs have no loss-audited mapping from an exact MLRC task package.
+    official_source_urls: &agent_sources
+      - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
+      - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/experiment_configs/MATH_agentlab.yaml
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  model_mapping:
+    status: verified
+    summary: The pinned entrypoint documents and defaults every configured research phase to the exact o3-mini model string.
+    official_source_urls: *agent_sources
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  sandbox:
+    status: blocked
+    summary: Search, dataset access, solver execution, network, and writable paths have not passed the common isolation policy.
+    official_source_urls: *agent_sources
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  telemetry:
+    status: blocked
+    summary: Phase timing and cost prints do not close all calls, tokens, retries, experiments, failures, and interventions.
+    official_source_urls: *agent_sources
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  artifact_mapping:
+    status: pending
+    summary: Report, source, experiment, state, log, and PDF outputs need one immutable failure-inclusive projection.
+    official_source_urls: *agent_sources
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  failure_resume:
+    status: pending
+    summary: Native pickle state is not yet bound to exact task, model, policy, attempt, and cell hashes.
+    official_source_urls: *agent_sources
+    evidence_ref: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    evidence_sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+forbidden_changes:
+  - Do not rename another model or served revision as o3-mini.
+  - Do not flatten the exact research task into unreviewed privileged notes.
+  - Do not modify the upstream research policy while labelling the system unchanged-core.
+requires_separate_upstream_preflight: true
+no_external_download: true
+no_execution_performed: true

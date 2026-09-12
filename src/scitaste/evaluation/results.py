@@ -11,6 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from scitaste.benchmark.study_models import StudyOutcome
 from scitaste.evaluation.cell_plan import EvaluationCellPlan, PlannedEvaluationCell
 from scitaste.evaluation.prelaunch import (
+    ClaimAdmissionContract,
+    ConfirmatoryContrastSpec,
+    ConfirmatoryEstimandKind,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     ScientificLaneRole,
@@ -162,9 +165,11 @@ class EvaluationPrimaryComparison(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     comparison_id: str = Field(pattern=r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$")
     analysis_contract_sha256: str = Field(pattern=_SHA256)
+    analysis_input_sha256: str | None = Field(default=None, pattern=_SHA256)
+    failure_handling: Literal["include-as-outcome"] | None = None
     candidate_system_id: str
     comparator_system_id: str
     analysis_unit_count: int = Field(gt=0)
@@ -179,6 +184,11 @@ class EvaluationPrimaryComparison(BaseModel):
 
     @model_validator(mode="after")
     def conclusion_is_derived_and_self_hashed(self) -> EvaluationPrimaryComparison:
+        extensions = (self.analysis_input_sha256, self.failure_handling)
+        if self.schema_version == "1.0" and any(value is not None for value in extensions):
+            raise ValueError("primary comparison v1.1 is required for claim-analysis inputs")
+        if self.schema_version == "1.1" and any(value is None for value in extensions):
+            raise ValueError("primary comparison v1.1 requires claim-analysis inputs")
         if self.candidate_system_id == self.comparator_system_id:
             raise ValueError("primary comparison requires distinct systems")
         if not self.interval_lower <= self.effect_estimate <= self.interval_upper:
@@ -194,7 +204,7 @@ class EvaluationPrimaryComparison(BaseModel):
         )
         if self.conclusion != expected_conclusion:
             raise ValueError("primary comparison conclusion differs from its interval rule")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"comparison_sha256"}))
+        expected = content_sha256(_comparison_hash_payload(self))
         if self.comparison_sha256 != expected:
             raise ValueError("evaluation primary comparison hash mismatch")
         return self
@@ -206,9 +216,7 @@ class EvaluationPrimaryComparison(BaseModel):
         unsigned = cls.model_construct(comparison_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            comparison_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"comparison_sha256"})
-            ),
+            comparison_sha256=content_sha256(_comparison_hash_payload(unsigned)),
         )
 
 
@@ -241,7 +249,7 @@ class EvaluationResultSet(BaseModel):
             for item in self.cell_results
         ):
             raise ValueError("cell results must bind the result-set proposal and plan")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"result_set_sha256"}))
+        expected = content_sha256(_result_set_hash_payload(self))
         if self.result_set_sha256 != expected:
             raise ValueError("evaluation result-set hash mismatch")
         return self
@@ -253,10 +261,79 @@ class EvaluationResultSet(BaseModel):
         unsigned = cls.model_construct(result_set_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            result_set_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"result_set_sha256"})
-            ),
+            result_set_sha256=content_sha256(_result_set_hash_payload(unsigned)),
         )
+
+
+def _comparison_hash_payload(comparison: EvaluationPrimaryComparison) -> dict[str, object]:
+    payload = comparison.model_dump(mode="json", exclude={"comparison_sha256"})
+    if comparison.schema_version == "1.0":
+        payload.pop("analysis_input_sha256", None)
+        payload.pop("failure_handling", None)
+    return payload
+
+
+def _result_set_hash_payload(result_set: EvaluationResultSet) -> dict[str, object]:
+    payload = result_set.model_dump(mode="json", exclude={"result_set_sha256"})
+    for comparison in payload["primary_comparisons"]:
+        if comparison["schema_version"] == "1.0":
+            comparison.pop("analysis_input_sha256", None)
+            comparison.pop("failure_handling", None)
+    return payload
+
+
+def claim_analysis_input_sha256(
+    claim: ClaimAdmissionContract,
+    contrast: ConfirmatoryContrastSpec,
+    cells: list[PlannedEvaluationCell] | tuple[PlannedEvaluationCell, ...],
+    records: dict[str, EvaluationCellResult],
+) -> str:
+    """Bind one claim analysis to every exact candidate/comparator outcome record."""
+
+    if contrast not in claim.contrasts:
+        raise ValueError("claim analysis contrast is outside the admission contract")
+    system_ids = {contrast.candidate_system_id, contrast.comparator_system_id}
+    selected = [cell for cell in cells if cell.system_id in system_ids]
+    expected_units = {
+        (cell.task_id, cell.seed, cell.repetition)
+        for cell in selected
+        if cell.system_id == contrast.candidate_system_id
+    }
+    if not expected_units or len(selected) != 2 * len(expected_units):
+        raise ValueError("claim analysis cells do not form a complete paired population")
+    if {
+        (cell.task_id, cell.seed, cell.repetition)
+        for cell in selected
+        if cell.system_id == contrast.comparator_system_id
+    } != expected_units:
+        raise ValueError("claim analysis candidate and comparator units differ")
+    if any(cell.cell_id not in records for cell in selected):
+        raise ValueError("claim analysis is missing a planned result record")
+    ordered = sorted(
+        selected,
+        key=lambda item: (
+            item.task_id,
+            item.seed,
+            item.repetition,
+            item.system_id,
+            item.cell_id,
+        ),
+    )
+    return content_sha256(
+        {
+            "claim_contract_sha256": content_sha256(claim),
+            "contrast_id": contrast.contrast_id,
+            "failure_handling": claim.failure_handling,
+            "records": [
+                {
+                    "cell_id": cell.cell_id,
+                    "record_sha256": records[cell.cell_id].record_sha256,
+                    "status": records[cell.cell_id].status,
+                }
+                for cell in ordered
+            ],
+        }
+    )
 
 
 class EvaluationCellResultAudit(BaseModel):
@@ -278,7 +355,7 @@ class EvaluationOutcomeAssessment(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     evaluation_id: str
     proposal_sha256: str = Field(pattern=_SHA256)
@@ -298,6 +375,12 @@ class EvaluationOutcomeAssessment(BaseModel):
     scientific_evidence_complete: bool
     headline_eligible: bool
     scientific_effectiveness_established: bool
+    confirmatory_estimand_kind: ConfirmatoryEstimandKind | None = None
+    confirmatory_evidence_complete: bool | None = None
+    confirmatory_conclusion_supported: bool | None = None
+    title_claim_eligible: bool | None = None
+    external_superiority_eligible: bool | None = None
+    descriptive_external_complete: bool | None = None
     blocker_codes: tuple[str, ...]
     cells: tuple[EvaluationCellResultAudit, ...]
     assessment_sha256: str = Field(pattern=_SHA256)
@@ -312,11 +395,65 @@ class EvaluationOutcomeAssessment(BaseModel):
             raise ValueError("verified result counts do not close")
         if self.status == "complete" and (self.missing_cells or self.invalid_cells):
             raise ValueError("a complete result set cannot have missing or invalid cells")
-        if self.headline_eligible != self.scientific_evidence_complete:
-            raise ValueError("headline eligibility must match complete scientific evidence")
+        extensions = (
+            self.confirmatory_estimand_kind,
+            self.confirmatory_evidence_complete,
+            self.confirmatory_conclusion_supported,
+            self.title_claim_eligible,
+            self.external_superiority_eligible,
+            self.descriptive_external_complete,
+        )
+        if self.schema_version == "1.0":
+            if any(value is not None for value in extensions):
+                raise ValueError("outcome assessment v1.1 is required for claim semantics")
+            if self.headline_eligible != self.scientific_evidence_complete:
+                raise ValueError("headline eligibility must match complete scientific evidence")
+        else:
+            if any(value is None for value in extensions):
+                raise ValueError("outcome assessment v1.1 requires complete claim semantics")
+            assert self.confirmatory_estimand_kind is not None
+            assert self.confirmatory_evidence_complete is not None
+            assert self.confirmatory_conclusion_supported is not None
+            assert self.title_claim_eligible is not None
+            assert self.external_superiority_eligible is not None
+            assert self.descriptive_external_complete is not None
+            causal_complete = self.confirmatory_evidence_complete and (
+                self.confirmatory_estimand_kind is not ConfirmatoryEstimandKind.EXTERNAL_BEST_NATIVE
+            )
+            if self.scientific_evidence_complete != causal_complete:
+                raise ValueError(
+                    "scientific evidence must exclude descriptive best-native evidence"
+                )
+            if self.headline_eligible != causal_complete:
+                raise ValueError("headline eligibility must match complete causal evidence")
+            expected_title = (
+                self.confirmatory_estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                and self.confirmatory_evidence_complete
+                and self.confirmatory_conclusion_supported
+            )
+            if self.title_claim_eligible != expected_title:
+                raise ValueError("title eligibility differs from native causal evidence")
+            expected_external = (
+                self.confirmatory_estimand_kind
+                is ConfirmatoryEstimandKind.EXTERNAL_MATCHED_SUPERIORITY
+                and self.confirmatory_evidence_complete
+                and self.confirmatory_conclusion_supported
+            )
+            if self.external_superiority_eligible != expected_external:
+                raise ValueError("external superiority differs from matched external evidence")
+            expected_descriptive = (
+                self.confirmatory_estimand_kind is ConfirmatoryEstimandKind.EXTERNAL_BEST_NATIVE
+                and self.confirmatory_evidence_complete
+            )
+            if self.descriptive_external_complete != expected_descriptive:
+                raise ValueError("descriptive completion differs from best-native evidence")
         if self.scientific_effectiveness_established and not self.headline_eligible:
             raise ValueError("effectiveness requires headline-eligible evidence")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"assessment_sha256"}))
+        if self.schema_version == "1.1" and self.scientific_effectiveness_established != bool(
+            self.confirmatory_conclusion_supported and self.headline_eligible
+        ):
+            raise ValueError("effectiveness differs from complete supported causal evidence")
+        expected = content_sha256(_outcome_hash_payload(self))
         if self.assessment_sha256 != expected:
             raise ValueError("evaluation outcome assessment hash mismatch")
         return self
@@ -328,10 +465,23 @@ class EvaluationOutcomeAssessment(BaseModel):
         unsigned = cls.model_construct(assessment_sha256="0" * 64, **payload)
         return cls(
             **payload,
-            assessment_sha256=content_sha256(
-                unsigned.model_dump(mode="json", exclude={"assessment_sha256"})
-            ),
+            assessment_sha256=content_sha256(_outcome_hash_payload(unsigned)),
         )
+
+
+def _outcome_hash_payload(assessment: EvaluationOutcomeAssessment) -> dict[str, object]:
+    payload = assessment.model_dump(mode="json", exclude={"assessment_sha256"})
+    if assessment.schema_version == "1.0":
+        for field in (
+            "confirmatory_estimand_kind",
+            "confirmatory_evidence_complete",
+            "confirmatory_conclusion_supported",
+            "title_claim_eligible",
+            "external_superiority_eligible",
+            "descriptive_external_complete",
+        ):
+            payload.pop(field, None)
+    return payload
 
 
 def inspect_evaluation_results(
@@ -362,6 +512,24 @@ def inspect_evaluation_results(
     if observed != expected or plan.proposal_sha256 != manifest.proposal_sha256:
         raise ValueError("evaluation result set differs from its project proposal or plan")
 
+    claim = manifest.analysis.claim_admission if manifest.analysis is not None else None
+    if claim is not None:
+        expected_claim_binding = (
+            claim.estimand_kind,
+            claim.lane_id,
+            content_sha256(claim),
+        )
+        observed_claim_binding = (
+            plan.claim_estimand_kind,
+            plan.claim_lane_id,
+            plan.claim_contract_sha256,
+        )
+        if plan.schema_version != "1.2" or observed_claim_binding != expected_claim_binding:
+            raise ValueError("evaluation plan differs from its claim-admission contract")
+    claim_cell_ids = {
+        cell.cell_id for cell in plan.cells if claim is not None and cell.lane_id == claim.lane_id
+    }
+
     records = {item.cell_id: item for item in results.cell_results}
     reviews = {item.blind_id: item for item in results.blind_reviews}
     audits: list[EvaluationCellResultAudit] = []
@@ -386,9 +554,9 @@ def inspect_evaluation_results(
             review_valid = not review_issues
             if review_valid:
                 valid_reviews.add(cell.review_blind_id)
-        elif (
-            manifest.human_review.required
-            and cell.scientific_role is ScientificLaneRole.MATCHED_BACKBONE
+        elif manifest.human_review.required and (
+            (claim is None and cell.scientific_role is ScientificLaneRole.MATCHED_BACKBONE)
+            or cell.cell_id in claim_cell_ids
         ):
             issues.append(f"review:{cell.review_blind_id}:missing")
         audits.append(
@@ -414,55 +582,127 @@ def inspect_evaluation_results(
     matched = [
         item for item in plan.cells if item.scientific_role is ScientificLaneRole.MATCHED_BACKBONE
     ]
-    for cell in matched:
-        record = valid_records.get(cell.cell_id)
-        if record is not None and record.status == "failed":
-            blockers.add(f"headline:cell:{cell.cell_id}:execution-failed:{record.error_code}")
-        if record is not None and record.evidence_class != "real":
-            blockers.add(f"headline:cell:{cell.cell_id}:real-evidence-required")
     analysis_contract_sha256 = (
         content_sha256(manifest.analysis) if manifest.analysis is not None else None
     )
-    comparison_issues, required_pairs, valid_pairs, supported_pairs = _comparison_status(
-        root,
-        matched,
-        results.primary_comparisons,
-        analysis_contract_sha256=analysis_contract_sha256,
-    )
-    blockers.update(comparison_issues)
-    if manifest.study_scope != "formal":
-        blockers.add("headline:formal-scope-required")
-    if not execution_authorized:
-        blockers.add("headline:exact-proposal-authorization-unverified")
-    if not plan.ready_for_launch_preparation or not plan.proposal_author_approved:
-        blockers.add("headline:launch-plan-was-not-ready-and-approved")
-    if not matched:
-        blockers.add("headline:matched-backbone-lane-missing")
+    if claim is None:
+        for cell in matched:
+            record = valid_records.get(cell.cell_id)
+            if record is not None and record.status == "failed":
+                blockers.add(f"headline:cell:{cell.cell_id}:execution-failed:{record.error_code}")
+            if record is not None and record.evidence_class != "real":
+                blockers.add(f"headline:cell:{cell.cell_id}:real-evidence-required")
+        comparison_issues, required_pairs, valid_pairs, supported_pairs = _comparison_status(
+            root,
+            matched,
+            results.primary_comparisons,
+            analysis_contract_sha256=analysis_contract_sha256,
+        )
+        blockers.update(comparison_issues)
+        if manifest.study_scope != "formal":
+            blockers.add("headline:formal-scope-required")
+        if not execution_authorized:
+            blockers.add("headline:exact-proposal-authorization-unverified")
+        if not plan.ready_for_launch_preparation or not plan.proposal_author_approved:
+            blockers.add("headline:launch-plan-was-not-ready-and-approved")
+        if not matched:
+            blockers.add("headline:matched-backbone-lane-missing")
 
-    matched_ready = bool(matched) and all(
-        (record := valid_records.get(cell.cell_id)) is not None
-        and record.status == "succeeded"
-        and record.evidence_class == "real"
-        and (not manifest.human_review.required or cell.review_blind_id in valid_reviews)
-        for cell in matched
-    )
-    scientific_complete = (
-        manifest.study_scope == "formal"
-        and execution_authorized
-        and plan.ready_for_launch_preparation
-        and plan.proposal_author_approved
-        and matched_ready
-        and bool(required_pairs)
-        and required_pairs == valid_pairs
-        and not comparison_issues
-        and not unplanned_results
-        and not unplanned_reviews
-    )
-    effectiveness = scientific_complete and supported_pairs == required_pairs
+        matched_ready = bool(matched) and all(
+            (record := valid_records.get(cell.cell_id)) is not None
+            and record.status == "succeeded"
+            and record.evidence_class == "real"
+            and (not manifest.human_review.required or cell.review_blind_id in valid_reviews)
+            for cell in matched
+        )
+        scientific_complete = (
+            manifest.study_scope == "formal"
+            and execution_authorized
+            and plan.ready_for_launch_preparation
+            and plan.proposal_author_approved
+            and matched_ready
+            and bool(required_pairs)
+            and required_pairs == valid_pairs
+            and not comparison_issues
+            and not unplanned_results
+            and not unplanned_reviews
+        )
+        effectiveness = scientific_complete and supported_pairs == required_pairs
+        assessment_version = "1.0"
+        claim_fields: dict[str, object] = {}
+    else:
+        claim_cells = [cell for cell in plan.cells if cell.lane_id == claim.lane_id]
+        for cell in claim_cells:
+            record = valid_records.get(cell.cell_id)
+            if record is not None and record.evidence_class != "real":
+                blockers.add(f"claim:cell:{cell.cell_id}:real-evidence-required")
+        comparison_issues, required_specs, valid_specs, supported_specs = _claim_comparison_status(
+            root,
+            claim,
+            claim_cells,
+            valid_records,
+            results.primary_comparisons,
+            analysis_contract_sha256=analysis_contract_sha256,
+        )
+        blockers.update(comparison_issues)
+        if manifest.study_scope != "formal":
+            blockers.add("claim:formal-scope-required")
+        if not execution_authorized:
+            blockers.add("claim:exact-proposal-authorization-unverified")
+        if not plan.ready_for_launch_preparation or not plan.proposal_author_approved:
+            blockers.add("claim:launch-plan-was-not-ready-and-approved")
+        distinct_tasks = {cell.task_id for cell in claim_cells}
+        if len(distinct_tasks) < claim.minimum_distinct_tasks:
+            blockers.add("claim:minimum-distinct-tasks-not-met")
+        if not claim_cells:
+            blockers.add("claim:lane-cells-missing")
+
+        claim_cells_ready = bool(claim_cells) and all(
+            (record := valid_records.get(cell.cell_id)) is not None
+            and record.evidence_class == "real"
+            and (not manifest.human_review.required or cell.review_blind_id in valid_reviews)
+            for cell in claim_cells
+        )
+        confirmatory_complete = (
+            manifest.study_scope == "formal"
+            and execution_authorized
+            and plan.ready_for_launch_preparation
+            and plan.proposal_author_approved
+            and claim_cells_ready
+            and bool(required_specs)
+            and required_specs == valid_specs
+            and not comparison_issues
+            and not unplanned_results
+            and not unplanned_reviews
+            and len(distinct_tasks) >= claim.minimum_distinct_tasks
+        )
+        conclusion_supported = confirmatory_complete and supported_specs == required_specs
+        causal = claim.estimand_kind is not ConfirmatoryEstimandKind.EXTERNAL_BEST_NATIVE
+        scientific_complete = confirmatory_complete and causal
+        effectiveness = scientific_complete and conclusion_supported
+        assessment_version = "1.1"
+        claim_fields = {
+            "confirmatory_estimand_kind": claim.estimand_kind,
+            "confirmatory_evidence_complete": confirmatory_complete,
+            "confirmatory_conclusion_supported": conclusion_supported,
+            "title_claim_eligible": (
+                claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL
+                and conclusion_supported
+            ),
+            "external_superiority_eligible": (
+                claim.estimand_kind is ConfirmatoryEstimandKind.EXTERNAL_MATCHED_SUPERIORITY
+                and conclusion_supported
+            ),
+            "descriptive_external_complete": (
+                claim.estimand_kind is ConfirmatoryEstimandKind.EXTERNAL_BEST_NATIVE
+                and confirmatory_complete
+            ),
+        }
     missing = sum(item.status == "missing" for item in audits)
     invalid = sum(item.status == "invalid" for item in audits)
     verified = len(audits) - missing - invalid
     return EvaluationOutcomeAssessment.create(
+        schema_version=assessment_version,
         project_id=project_id,
         evaluation_id=evaluation_id,
         proposal_sha256=manifest.proposal_sha256,
@@ -477,11 +717,14 @@ def inspect_evaluation_results(
         invalid_cells=invalid,
         matched_backbone_cells=len(matched),
         valid_external_reviews=len(valid_reviews),
-        required_primary_comparisons=len(required_pairs),
-        valid_primary_comparisons=len(valid_pairs),
+        required_primary_comparisons=(
+            len(required_pairs) if claim is None else len(required_specs)
+        ),
+        valid_primary_comparisons=len(valid_pairs) if claim is None else len(valid_specs),
         scientific_evidence_complete=scientific_complete,
         headline_eligible=scientific_complete,
         scientific_effectiveness_established=effectiveness,
+        **claim_fields,
         blocker_codes=tuple(sorted(blockers)),
         cells=tuple(audits),
     )
@@ -613,6 +856,82 @@ def _comparison_status(
     return issues, required, valid, supported
 
 
+def _claim_comparison_status(
+    root: Path,
+    claim: ClaimAdmissionContract,
+    cells: list[PlannedEvaluationCell],
+    records: dict[str, EvaluationCellResult],
+    comparisons: tuple[EvaluationPrimaryComparison, ...],
+    *,
+    analysis_contract_sha256: str | None,
+) -> tuple[set[str], set[str], set[str], set[str]]:
+    """Check exact preregistered contrasts without treating failures as exclusions."""
+
+    specs = {item.contrast_id: item for item in claim.contrasts}
+    required = set(specs)
+    valid: set[str] = set()
+    supported: set[str] = set()
+    issues: set[str] = set()
+    units_by_system: dict[str, set[tuple[str, int, int]]] = {}
+    for cell in cells:
+        units_by_system.setdefault(cell.system_id, set()).add(
+            (cell.task_id, cell.seed, cell.repetition)
+        )
+
+    for spec in claim.contrasts:
+        candidate_units = units_by_system.get(spec.candidate_system_id, set())
+        comparator_units = units_by_system.get(spec.comparator_system_id, set())
+        if not candidate_units or candidate_units != comparator_units:
+            issues.add(f"analysis:{spec.contrast_id}:planned-units-not-paired")
+
+    for comparison in comparisons:
+        spec = specs.get(comparison.comparison_id)
+        if spec is None:
+            issues.add(f"analysis:{comparison.comparison_id}:unplanned-contrast")
+            continue
+        if (
+            comparison.candidate_system_id != spec.candidate_system_id
+            or comparison.comparator_system_id != spec.comparator_system_id
+        ):
+            issues.add(f"analysis:{comparison.comparison_id}:pair-mismatch")
+            continue
+        if (
+            comparison.favorable_direction != spec.favorable_direction
+            or comparison.minimum_effect != spec.minimum_effect
+        ):
+            issues.add(f"analysis:{comparison.comparison_id}:decision-rule-mismatch")
+            continue
+        expected_units = len(units_by_system.get(spec.candidate_system_id, set()))
+        if comparison.analysis_unit_count != expected_units:
+            issues.add(f"analysis:{comparison.comparison_id}:analysis-unit-count-mismatch")
+            continue
+        try:
+            expected_input = claim_analysis_input_sha256(claim, spec, cells, records)
+        except ValueError:
+            issues.add(f"analysis:{comparison.comparison_id}:analysis-input-incomplete")
+            continue
+        if (
+            comparison.schema_version != "1.1"
+            or comparison.failure_handling != claim.failure_handling
+            or comparison.analysis_input_sha256 != expected_input
+        ):
+            issues.add(f"analysis:{comparison.comparison_id}:analysis-input-mismatch")
+            continue
+        if comparison.analysis_contract_sha256 != analysis_contract_sha256:
+            issues.add(f"analysis:{comparison.comparison_id}:contract-mismatch")
+            continue
+        if not _artifact_matches(root, comparison.analysis_artifact):
+            issues.add(f"analysis:{comparison.comparison_id}:artifact-invalid")
+            continue
+        valid.add(comparison.comparison_id)
+        if comparison.conclusion == "supports_claim":
+            supported.add(comparison.comparison_id)
+
+    for contrast_id in sorted(required - valid):
+        issues.add(f"analysis:{contrast_id}:missing")
+    return issues, required, valid, supported
+
+
 def _artifact_matches(root: Path, artifact: EvaluationResultArtifact) -> bool:
     try:
         candidate = root / PurePosixPath(artifact.locator)
@@ -643,5 +962,6 @@ __all__ = [
     "EvaluationPrimaryComparison",
     "EvaluationResultArtifact",
     "EvaluationResultSet",
+    "claim_analysis_input_sha256",
     "inspect_evaluation_results",
 ]

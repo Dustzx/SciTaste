@@ -32,20 +32,19 @@ Qwen3-VL-2B-Instruct, eight RTX 3090 devices, the six mechanism conditions, a
 16 allocated-GPU-hour ceiling, and a 100-GiB storage ceiling. It does **not**
 claim an executable cell matrix because the natural cases, human labels,
 source-disjoint split, and remote checkpoint attestation do not yet exist.
-The older two-task Qwen prelaunch file remains historical and must not be used
-as though MLR-Bench package-review tasks supplied objective progress.
+The older Qwen/MLR-Bench objective-progress proposal remains historical. The
+new 12-trajectory Qwen proposal instead names two MLRC objective-task
+candidates, a separate claim contract, and explicit unresolved asset gates.
 
-The historical API Track B design has an exact 100-trajectory candidate matrix:
-SciTaste Native, Direct Agent, MLR-Agent, Agent Laboratory, and TinyScientist
-over ten MLR-Bench research briefs and two seeds. It names the current DeepSeek
-`deepseek-flash` / `DeepSeek-V4.1-Flash` identity, with ceilings of
-1,500 calls, 15 million tokens, USD 100, 100 GiB, and 30 reviewer-hours. That
-matrix is non-launchable: MLR-Agent and Agent Laboratory do not preserve the
-common backbone unchanged; TinyScientist has
-unresolved code/license gates; task qualification and held-out audit are
-absent; and independent reviewers are not secured. Its 100 trajectories are a
-ceiling, not a target that must be consumed before pilot variance and reviewer
-burden are known.
+The active dossier now records two additional exact but blocked prepilots. The
+native causal lane contains six SciTaste conditions over two MLRC objective-task
+candidates and one seed: 12 Qwen3-VL-2B trajectories under one shared GPU
+resource. The external lane contains SciTaste Native, Agent Laboratory, and
+TinyScientist over the same two candidates and one seed: six trajectories with
+DeepSeek V4.1 Flash, o3-mini, and GPT-4o-2024-08-06 explicitly bound per system.
+The latter is best-native and model-confounded. The historical 100-trajectory
+DeepSeek/MLR-Bench matrix remains evidence of an infeasible matched design, not
+an active quota.
 
 The methodological choice is now resolved in
 [`ICLR_2027_EVALUATION_ADDENDUM_V2.md`](ICLR_2027_EVALUATION_ADDENDUM_V2.md).
@@ -54,11 +53,11 @@ SciTaste Native's Taste components. Real external systems occupy a separate
 best-native lane with model effects explicitly confounded. The latter measures
 ecological package performance and failure modes, not a causal Taste effect.
 
-Before a pilot, SciTaste must materialize that choice in a new immutable dossier
-and prelaunch proposal. Source acquisition, runtime preflight, pilot execution,
-formal scale-out, paper revision, internal model critique, two independent
-expert reviews, and original-reviewer closure each remain separate stages and
-require their own exact evidence or approval.
+That choice is now materialized in schema-1.3 prelaunch proposals and a
+schema-1.1 campaign dossier. Source acquisition, runtime preflight, pilot
+execution, formal scale-out, paper revision, internal model critique, two
+independent expert reviews, and original-reviewer closure remain separate stages
+and require their own exact evidence or approval.
 
 ## Acquisition control status
 
@@ -76,9 +75,10 @@ an executable signal, objective scores, and the held-out audit are absent. See
 The prelaunch schema represents the resulting two estimands without conflating
 them. Schema `1.2` assigns a common resource to every `matched_backbone` cell,
 while a `best_native` lane must bind one provider/model resource to each system
-and declare `model_effects_confounded=true`. The compiled cell plan preserves
-those per-system identities, and best-native results cannot satisfy the
-matched-backbone headline gate.
+and declare `model_effects_confounded=true`. Schema `1.3` binds the exact claim
+kind and full contrast family. The compiled cell plan preserves those
+per-system identities and the claim hash; best-native results cannot satisfy the
+native Taste or matched-external claim gates.
 
 ## Why this is part of the product
 

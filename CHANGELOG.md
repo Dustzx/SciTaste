@@ -7,6 +7,25 @@ semantic versioning.
 
 ### Added
 
+- Evaluation claims now cross a versioned, estimand-specific admission gate.
+  Prelaunch schema 1.3 distinguishes native Taste causality, matched external
+  superiority, and model-confounded best-native description; it binds the exact
+  lane, complete contrast family, task floor, direction, minimum effect, and
+  failure-as-outcome rule into every schema-1.2 cell plan. Result assessment
+  keeps valid real failures in the intention-to-run population, blocks missing
+  or invalid evidence and analysis drift, binds each primary contrast to every
+  exact paired result-record hash and status, and prevents positive best-native
+  outcomes from becoming causal or title evidence. Current no-run plans contain
+  12 Qwen3-VL-2B native trajectories and six per-system API trajectories.
+
+- The ICLR campaign dossier now supports per-system API identities and records
+  DeepSeek V4.1 Flash, o3-mini, and GPT-4o-2024-08-06 without pretending they are
+  one matched backbone. Its current 18 exact prepilot trajectories replace the
+  historical 100-unit infeasible matrix as the active campaign view while
+  retaining a separate design-only 120-case decision benchmark. A role-aware
+  prelaunch critic removes false comparator/checkpoint blockers and treats
+  sparse pilots as advisories but sparse formal designs as blockers.
+
 - Large benchmark license decisions now use a content-bound policy instead of
   flattening layered rights into one scalar label. The first MLRC policy maps
   all 39 assets to nine obligation profiles under an explicit non-commercial

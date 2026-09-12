@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 from scitaste.evaluation.prelaunch import (
     ApiModelResource,
     ComparisonRegime,
+    ConfirmatoryEstimandKind,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
@@ -172,7 +173,7 @@ class EvaluationCellPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     manifest_id: str
     protocol_id: str
     protocol_version: str
@@ -183,6 +184,9 @@ class EvaluationCellPlan(BaseModel):
     plan_blockers: tuple[str, ...]
     ready_for_launch_preparation: bool
     proposal_author_approved: bool
+    claim_estimand_kind: ConfirmatoryEstimandKind | None = None
+    claim_lane_id: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$")
+    claim_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
     authorizes_execution: Literal[False] = False
     no_provider_call_performed: Literal[True] = True
     no_gpu_work_performed: Literal[True] = True
@@ -202,6 +206,18 @@ class EvaluationCellPlan(BaseModel):
             raise ValueError("all evaluation cells must bind the plan proposal")
         if self.ready_for_launch_preparation == bool(self.plan_blockers):
             raise ValueError("plan readiness must be exactly the absence of blockers")
+        claim_values = (
+            self.claim_estimand_kind,
+            self.claim_lane_id,
+            self.claim_contract_sha256,
+        )
+        if self.schema_version == "1.2":
+            if any(value is None for value in claim_values):
+                raise ValueError("cell plan v1.2 requires a complete claim binding")
+            if self.claim_lane_id not in {lane.lane_id for lane in self.lanes}:
+                raise ValueError("cell plan claim lane is not registered")
+        elif any(value is not None for value in claim_values):
+            raise ValueError("cell plan v1.2 is required for claim bindings")
         return self
 
     @computed_field
@@ -220,6 +236,10 @@ class EvaluationCellPlan(BaseModel):
             for cell in payload["cells"]:
                 cell.pop("comparison_regime", None)
                 cell.pop("model_effects_confounded", None)
+        if self.schema_version in {"1.0", "1.1"}:
+            payload.pop("claim_estimand_kind", None)
+            payload.pop("claim_lane_id", None)
+            payload.pop("claim_contract_sha256", None)
         return _canonical_sha256(payload)
 
 
@@ -313,9 +333,12 @@ def compile_evaluation_cell_plan(
         )
 
     plan_blockers = _plan_blockers(manifest, tuple(all_cells))
+    claim = manifest.analysis.claim_admission if manifest.analysis is not None else None
     return EvaluationCellPlan(
         schema_version=(
-            "1.1"
+            "1.2"
+            if claim is not None
+            else "1.1"
             if any(
                 lane.comparison_regime is ComparisonRegime.BEST_NATIVE for lane in manifest.lanes
             )
@@ -331,6 +354,11 @@ def compile_evaluation_cell_plan(
         plan_blockers=plan_blockers,
         ready_for_launch_preparation=not plan_blockers,
         proposal_author_approved=manifest.approval.approved,
+        claim_estimand_kind=claim.estimand_kind if claim is not None else None,
+        claim_lane_id=claim.lane_id if claim is not None else None,
+        claim_contract_sha256=(
+            _canonical_sha256(claim.model_dump(mode="json")) if claim is not None else None
+        ),
     )
 
 

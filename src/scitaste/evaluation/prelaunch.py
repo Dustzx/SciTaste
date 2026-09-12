@@ -79,6 +79,68 @@ class AutomatedJudgeRole(StrEnum):
     CALIBRATED_PRIMARY = "calibrated_primary"
 
 
+class ConfirmatoryEstimandKind(StrEnum):
+    """Scientific interpretation that one exact result contract may support."""
+
+    NATIVE_TASTE_CAUSAL = "native_taste_causal"
+    EXTERNAL_MATCHED_SUPERIORITY = "external_matched_superiority"
+    EXTERNAL_BEST_NATIVE = "external_best_native"
+
+
+class ConfirmatoryContrastRole(StrEnum):
+    """Why a preregistered contrast is required rather than merely reported."""
+
+    NO_TASTE_CONTROL = "no_taste_control"
+    MISMATCHED_TASTE_PLACEBO = "mismatched_taste_placebo"
+    COMPONENT_ABLATION = "component_ablation"
+    EXTERNAL_METHOD = "external_method"
+
+
+class ConfirmatoryContrastSpec(BaseModel):
+    """One exact, preregistered candidate/comparator conclusion."""
+
+    model_config = _CONFIG
+
+    contrast_id: str = Field(pattern=_ID)
+    candidate_system_id: str = Field(pattern=_ID)
+    comparator_system_id: str = Field(pattern=_ID)
+    role: ConfirmatoryContrastRole
+    favorable_direction: Literal["higher", "lower"]
+    minimum_effect: float = Field(ge=0)
+
+    @model_validator(mode="after")
+    def systems_are_distinct(self) -> ConfirmatoryContrastSpec:
+        if self.candidate_system_id == self.comparator_system_id:
+            raise ValueError("confirmatory contrast requires distinct systems")
+        return self
+
+
+class ClaimAdmissionContract(BaseModel):
+    """Machine-readable boundary between one experiment and a paper claim."""
+
+    model_config = _CONFIG
+
+    estimand_kind: ConfirmatoryEstimandKind
+    lane_id: str = Field(pattern=_ID)
+    candidate_system_id: str = Field(pattern=_ID)
+    contrasts: tuple[ConfirmatoryContrastSpec, ...] = Field(min_length=1, max_length=20)
+    minimum_distinct_tasks: int = Field(ge=2, le=500)
+    requires_all_planned_units: Literal[True] = True
+    failure_handling: Literal["include-as-outcome"] = "include-as-outcome"
+
+    @model_validator(mode="after")
+    def contrast_set_is_closed(self) -> ClaimAdmissionContract:
+        contrast_ids = [item.contrast_id for item in self.contrasts]
+        pairs = [(item.candidate_system_id, item.comparator_system_id) for item in self.contrasts]
+        if len(contrast_ids) != len(set(contrast_ids)):
+            raise ValueError("confirmatory contrast IDs must be unique")
+        if len(pairs) != len(set(pairs)):
+            raise ValueError("confirmatory candidate/comparator pairs must be unique")
+        if any(item.candidate_system_id != self.candidate_system_id for item in self.contrasts):
+            raise ValueError("every confirmatory contrast must use the declared candidate")
+        return self
+
+
 class PrelaunchSystem(BaseModel):
     model_config = _CONFIG
 
@@ -265,18 +327,23 @@ class ExecutionLane(BaseModel):
                     raise ValueError("API-only lanes require only api_model")
             elif self.gpu_resource is None or self.api_model is not None:
                 raise ValueError("GPU lanes require only gpu_resource")
-        elif self.kind is not ExecutionLaneKind.API_ONLY:
-            raise ValueError("comparison regimes apply only to API system-comparison lanes")
         elif self.comparison_regime is ComparisonRegime.MATCHED_BACKBONE:
-            if self.api_model is None or self.system_api_models is not None:
-                raise ValueError("matched-backbone lanes require one common API model")
-            if self.gpu_resource is not None or self.model_effects_confounded is not False:
+            if self.system_api_models is not None:
+                raise ValueError("matched-backbone lanes cannot use per-system API models")
+            if self.kind is ExecutionLaneKind.API_ONLY:
+                if self.api_model is None or self.gpu_resource is not None:
+                    raise ValueError("matched API lanes require one common API model")
+            elif self.gpu_resource is None or self.api_model is not None:
+                raise ValueError("matched GPU lanes require one common GPU model")
+            if self.model_effects_confounded is not False:
                 raise ValueError("matched-backbone lanes must declare model effects unconfounded")
             if self.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE:
                 raise ValueError("matched comparison regime requires matched-backbone role")
             if self.comparison_claim_boundary is None:
                 raise ValueError("matched-backbone lanes require a comparison claim boundary")
         else:
+            if self.kind is not ExecutionLaneKind.API_ONLY:
+                raise ValueError("best-native comparison currently requires an API lane")
             if self.api_model is not None or self.gpu_resource is not None:
                 raise ValueError("best-native lanes require per-system API models only")
             if self.system_api_models is None:
@@ -344,6 +411,7 @@ class AnalysisContract(BaseModel):
     uncertainty_method: str = Field(min_length=1, max_length=1_000)
     power_analysis_ref: str | None = Field(default=None, max_length=1_000)
     power_analysis_sha256: str | None = Field(default=None, pattern=_SHA256)
+    claim_admission: ClaimAdmissionContract | None = None
 
     @model_validator(mode="after")
     def power_analysis_is_content_bound(self) -> AnalysisContract:
@@ -400,7 +468,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -462,6 +530,8 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError("prelaunch v1.0 cannot declare v1.1 endpoint semantics")
             if any(task.signal_kind is not None for task in self.tasks):
                 raise ValueError("prelaunch v1.0 cannot declare v1.1 task signals")
+            if self.analysis is not None and self.analysis.claim_admission is not None:
+                raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
             return self
         if self.primary_endpoint is None or self.automated_judge_role is None:
             raise ValueError("prelaunch v1.1 requires explicit endpoint and judge semantics")
@@ -488,11 +558,91 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "automated judges cannot replace the primary blinded human preference"
                 )
-        if self.schema_version == "1.2":
+        if self.schema_version in {"1.2", "1.3"}:
             api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
             if any(lane.comparison_regime is None for lane in api_lanes):
                 raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
+        if self.schema_version != "1.3":
+            if self.analysis.claim_admission is not None:
+                raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
+            return self
+        if self.analysis.claim_admission is None:
+            raise ValueError("prelaunch v1.3 requires a claim-admission contract")
+        self._validate_claim_admission(
+            self.analysis.claim_admission,
+            systems={item.system_id: item for item in self.systems},
+            lanes={item.lane_id: item for item in self.lanes},
+        )
         return self
+
+    @staticmethod
+    def _validate_claim_admission(
+        claim: ClaimAdmissionContract,
+        *,
+        systems: dict[str, PrelaunchSystem],
+        lanes: dict[str, ExecutionLane],
+    ) -> None:
+        try:
+            lane = lanes[claim.lane_id]
+            candidate = systems[claim.candidate_system_id]
+        except KeyError as exc:
+            raise ValueError("claim admission references an unknown lane or candidate") from exc
+        if claim.candidate_system_id not in lane.system_ids:
+            raise ValueError("claim candidate is outside its declared lane")
+        if claim.minimum_distinct_tasks > len(lane.task_ids):
+            raise ValueError("claim minimum distinct tasks exceeds its lane task population")
+        if candidate.role is not SystemRole.SCITASTE:
+            raise ValueError("claim candidate must be the SciTaste system")
+        comparator_ids = {item.comparator_system_id for item in claim.contrasts}
+        if comparator_ids - set(lane.system_ids) or comparator_ids - set(systems):
+            raise ValueError("claim contrast references a comparator outside its lane")
+        if claim.estimand_kind is ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL:
+            if (
+                lane.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE
+                or lane.comparison_regime is not ComparisonRegime.MATCHED_BACKBONE
+                or lane.model_effects_confounded is not False
+            ):
+                raise ValueError("native Taste causality requires a matched, unconfounded lane")
+            if any(systems[item].role is not SystemRole.ABLATION for item in comparator_ids):
+                raise ValueError("native Taste causal comparators must be SciTaste ablations")
+            roles = {item.role for item in claim.contrasts}
+            required = {
+                ConfirmatoryContrastRole.NO_TASTE_CONTROL,
+                ConfirmatoryContrastRole.MISMATCHED_TASTE_PLACEBO,
+            }
+            if not required <= roles:
+                raise ValueError("native Taste causality requires no-Taste and placebo contrasts")
+            if ConfirmatoryContrastRole.EXTERNAL_METHOD in roles:
+                raise ValueError("native Taste causality cannot use external-method contrasts")
+        else:
+            if len(claim.contrasts) < 2 or any(
+                systems[item].role is not SystemRole.METHOD_COMPARATOR for item in comparator_ids
+            ):
+                raise ValueError("external claims require at least two method comparators")
+            if any(
+                item.role is not ConfirmatoryContrastRole.EXTERNAL_METHOD
+                for item in claim.contrasts
+            ):
+                raise ValueError("external claims require external-method contrast roles")
+            if claim.estimand_kind is ConfirmatoryEstimandKind.EXTERNAL_MATCHED_SUPERIORITY:
+                if (
+                    lane.scientific_role is not ScientificLaneRole.MATCHED_BACKBONE
+                    or lane.comparison_regime is not ComparisonRegime.MATCHED_BACKBONE
+                    or lane.model_effects_confounded is not False
+                ):
+                    raise ValueError(
+                        "external matched superiority requires one unconfounded backbone"
+                    )
+            elif (
+                lane.scientific_role is not ScientificLaneRole.BEST_NATIVE_SYSTEM
+                or lane.comparison_regime is not ComparisonRegime.BEST_NATIVE
+                or lane.model_effects_confounded is not True
+            ):
+                raise ValueError("external best-native evidence must retain model confounding")
+
+        lane_comparator_ids = set(lane.system_ids) - {claim.candidate_system_id}
+        if comparator_ids != lane_comparator_ids:
+            raise ValueError("claim contrasts must cover every non-candidate system in its lane")
 
     @property
     def proposal_sha256(self) -> str:
@@ -506,6 +656,8 @@ class ExperimentPrelaunchManifest(BaseModel):
                     "comparison_claim_boundary",
                 ):
                     lane.pop(key, None)
+        if self.schema_version in {"1.0", "1.1", "1.2"} and payload["analysis"] is not None:
+            payload["analysis"].pop("claim_admission", None)
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -764,7 +916,11 @@ __all__ = [
     "AnalysisContract",
     "ApiModelResource",
     "AutomatedJudgeRole",
+    "ClaimAdmissionContract",
     "ComparisonRegime",
+    "ConfirmatoryContrastRole",
+    "ConfirmatoryContrastSpec",
+    "ConfirmatoryEstimandKind",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",

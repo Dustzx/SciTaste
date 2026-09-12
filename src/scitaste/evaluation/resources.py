@@ -136,7 +136,7 @@ class ExternalEvaluationResource(FrozenModel):
 
 
 class ExternalResourceCorpus(FrozenModel):
-    schema_version: Literal["2.0", "2.1", "2.2", "2.3", "2.4"] = "2.0"
+    schema_version: Literal["2.0", "2.1", "2.2", "2.3", "2.4", "2.5"] = "2.0"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -164,12 +164,13 @@ class ExternalResourceOverride(FrozenModel):
     """Evidence-only revision that cannot silently change a resource identity."""
 
     resource_id: str = Field(pattern=_RESOURCE_ID)
+    code_license: ResourceLicense | None = None
     gates: dict[ResourceGateName, ResourceGateDecision] = Field(default_factory=dict)
     notes_append: tuple[str, ...] = Field(default=(), max_length=30)
 
     @model_validator(mode="after")
     def carries_a_bounded_revision(self) -> ExternalResourceOverride:
-        if not self.gates and not self.notes_append:
+        if self.code_license is None and not self.gates and not self.notes_append:
             raise ValueError("resource override must revise gates or append notes")
         if len(self.notes_append) != len(set(self.notes_append)):
             raise ValueError("resource override notes must be unique")
@@ -179,7 +180,7 @@ class ExternalResourceOverride(FrozenModel):
 class ExternalResourceCorpusOverlay(FrozenModel):
     """Content-addressed additive or evidence-only revision over one prior corpus."""
 
-    schema_version: Literal["2.1", "2.2", "2.3", "2.4"] = "2.1"
+    schema_version: Literal["2.1", "2.2", "2.3", "2.4", "2.5"] = "2.1"
     corpus_id: str = Field(pattern=_RESOURCE_ID)
     audited_on: date
     authorization_scope: Literal["metadata-only-no-execution"]
@@ -200,6 +201,10 @@ class ExternalResourceCorpusOverlay(FrozenModel):
             raise ValueError("new resources cannot also be overridden")
         if self.schema_version == "2.1" and self.resource_overrides:
             raise ValueError("evaluation resource v2.1 overlays are additions-only")
+        if self.schema_version != "2.5" and any(
+            item.code_license is not None for item in self.resource_overrides
+        ):
+            raise ValueError("evaluation resource v2.5 is required for license corrections")
         if not self.resources_additions and not self.resource_overrides:
             raise ValueError("evaluation resource overlay must contain a revision")
         return self
@@ -298,7 +303,10 @@ def load_external_resource_corpus(path: str | Path) -> ResourceCorpusInspection:
         raise ValueError("evaluation resource corpus must be UTF-8") from exc
     if not isinstance(payload, dict):
         raise ValueError("evaluation resource corpus must contain a YAML mapping")
-    if payload.get("schema_version") in {"2.1", "2.2", "2.3", "2.4"} and "base_source" in payload:
+    if (
+        payload.get("schema_version") in {"2.1", "2.2", "2.3", "2.4", "2.5"}
+        and "base_source" in payload
+    ):
         corpus = _compose_external_resource_overlay(resolved, payload)
     else:
         corpus = ExternalResourceCorpus.model_validate(payload)
@@ -333,6 +341,7 @@ def _compose_external_resource_overlay(
         "2.2": "2.1",
         "2.3": "2.2",
         "2.4": "2.3",
+        "2.5": "2.4",
     }[overlay.schema_version]
     if base.schema_version != expected_base:
         raise ValueError(
@@ -357,7 +366,10 @@ def _compose_external_resource_overlay(
         notes = (*resource.notes, *override.notes_append)
         if len(notes) != len(set(notes)):
             raise ValueError("evaluation resource override introduced duplicate notes")
-        revised.append(resource.model_copy(update={"gates": gates, "notes": notes}))
+        updates: dict[str, object] = {"gates": gates, "notes": notes}
+        if override.code_license is not None:
+            updates["code_license"] = override.code_license
+        revised.append(resource.model_copy(update=updates))
     return ExternalResourceCorpus(
         schema_version=overlay.schema_version,
         corpus_id=overlay.corpus_id,

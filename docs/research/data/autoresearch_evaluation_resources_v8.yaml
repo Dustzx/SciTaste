@@ -1,0 +1,83 @@
+schema_version: "2.5"
+corpus_id: accepted-autoresearch-evaluation-resources-2026-09-12-v8
+audited_on: 2026-09-12
+authorization_scope: metadata-only-no-execution
+base_source: autoresearch_evaluation_resources_v7.yaml
+base_source_sha256: d1c6c741992064e4587c5223183508ca9ea05ad8ecabbb6b14d1e122733d77b9
+
+resource_overrides:
+  - resource_id: agent-laboratory
+    gates:
+      model_mapping:
+        status: verified
+        evidence: >-
+          The pinned entrypoint documents and defaults the main and literature
+          phases to o3-mini, and OpenAI currently resolves that alias to
+          o3-mini-2025-01-31. Credential availability is a separate prelaunch
+          resource gate.
+        evidence_url: https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
+    notes_append:
+      - Best-native o3-mini mapping is distinct from the rejected matched DeepSeek V4.1 translation.
+      - The registered o3-mini snapshot is scheduled for retirement on 2026-10-23 and must be rechecked before launch.
+
+  - resource_id: tiny-scientist
+    code_license:
+      identifier: MIT
+      scope: >-
+        Source covered by the root LICENSE at pinned commit
+        9c4f1a89411e05857c748db9731c33500516e9c6; dependencies, generated
+        code, datasets, templates, and third-party assets retain separate terms.
+      official_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/LICENSE
+      sha256: 389d00652aaea7a870e1128c95df7171580f347856b3993f8a0890f1a1cf09ae
+      review_required: true
+      obligations:
+        - Preserve the root MIT copyright and permission notice.
+        - Retain the conflicting Apache package-metadata declaration as a disclosed upstream defect.
+        - Review dependencies, generated code, datasets, templates, and third-party assets separately.
+        - Do not redistribute a built package before the metadata conflict is reviewed.
+    gates:
+      code_license:
+        status: verified
+        evidence: >-
+          The pinned root LICENSE contains an explicit MIT grant and is bound by
+          SHA-256. The conflicting pyproject declaration is a packaging-metadata
+          defect and redistribution-review condition, not evidence that the root
+          source lacks a license.
+        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/LICENSE
+      license_acceptance:
+        status: verified
+        evidence: >-
+          Non-redistributive academic evaluation of the MIT-covered root source
+          is admitted with notice preservation; all non-root materials retain
+          separate terms and built-package redistribution remains out of scope.
+      model_mapping:
+        status: verified
+        evidence: >-
+          The pinned registry accepts gpt-4o-2024-08-06 and the constructor
+          propagates one model setting across every model-bearing module.
+          Credential availability is a separate prelaunch resource gate; this
+          does not make the rejected DeepSeek matched mapping valid.
+        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/utils/llm.py
+      sandbox:
+        status: blocked
+        evidence: >-
+          Aider, live search, generated-code execution, Docker-to-host fallback,
+          and optional package installation have not passed the SciTaste
+          isolation boundary.
+        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/coder.py
+      failure_resume:
+        status: blocked
+        evidence: >-
+          Failed run directories may be removed and no exact-cell,
+          content-addressed resume contract has been accepted.
+        evidence_url: https://raw.githubusercontent.com/ulab-uiuc/tiny-scientist/9c4f1a89411e05857c748db9731c33500516e9c6/tiny_scientist/coder.py
+      disclosure_acceptance:
+        status: verified
+        evidence: >-
+          A comparison must preserve the MIT notice, disclose the package
+          metadata conflict and model confounding, and exclude third-party asset
+          redistribution; these obligations are now explicit.
+    notes_append:
+      - Root MIT source use is separated from built-package redistribution and third-party material licenses.
+      - Static inspection confirms one propagated model setting, but not a currently authenticated best-native provider identity.
+      - No checkout, installation, provider call, dataset access, Docker action, or experiment occurred.

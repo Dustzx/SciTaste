@@ -22,6 +22,7 @@ from scitaste.evaluation import (
 CORPUS_PATH = Path("docs/research/data/autoresearch_evaluation_resources_v2.yaml")
 V3_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v3.yaml")
 V4_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v4.yaml")
+V8_CORPUS_PATH = CORPUS_PATH.with_name("autoresearch_evaluation_resources_v8.yaml")
 
 
 @pytest.fixture(scope="module")
@@ -266,6 +267,79 @@ def test_v22_overlay_rejects_unknown_resource_override(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ValueError, match="cannot revise unknown"):
+        load_external_resource_corpus(overlay)
+
+
+def test_v25_overlay_can_correct_content_bound_license_without_replacing_identity() -> None:
+    before = load_external_resource_corpus(
+        CORPUS_PATH.with_name("autoresearch_evaluation_resources_v7.yaml")
+    ).corpus
+    after = load_external_resource_corpus(V8_CORPUS_PATH).corpus
+    before_tiny = next(item for item in before.resources if item.resource_id == "tiny-scientist")
+    after_tiny = next(item for item in after.resources if item.resource_id == "tiny-scientist")
+
+    assert after.schema_version == "2.5"
+    assert after_tiny.repository_commit == before_tiny.repository_commit
+    assert after_tiny.official_repository == before_tiny.official_repository
+    assert after_tiny.code_license is not None
+    assert after_tiny.code_license.identifier == "MIT"
+    assert after_tiny.code_license.sha256 == (
+        "389d00652aaea7a870e1128c95df7171580f347856b3993f8a0890f1a1cf09ae"
+    )
+    assert after_tiny.gates[ResourceGateName.CODE_LICENSE].status is ResourceGateStatus.VERIFIED
+    assert (
+        after_tiny.gates[ResourceGateName.LICENSE_ACCEPTANCE].status is ResourceGateStatus.VERIFIED
+    )
+    comparison = evaluate_resource_feasibility(
+        after,
+        "tiny-scientist",
+        ResourceUse.COMPARISON_SYSTEM,
+    )
+    assert "blocked_gate:code_license" not in comparison.blocker_codes
+    assert "blocked_gate:license_acceptance" not in comparison.blocker_codes
+    assert "blocked_gate:task_mapping" in comparison.blocker_codes
+
+
+def test_old_overlay_schema_cannot_smuggle_license_correction(tmp_path: Path) -> None:
+    source_root = Path("docs/research/data")
+    for name in (
+        "autoresearch_evaluation_resources_v2.yaml",
+        "autoresearch_evaluation_resources_v3.yaml",
+        "autoresearch_evaluation_resources_v4.yaml",
+        "autoresearch_evaluation_resources_v6.yaml",
+        "autoresearch_evaluation_resources_v7.yaml",
+    ):
+        shutil.copyfile(source_root / name, tmp_path / name)
+    base = tmp_path / "autoresearch_evaluation_resources_v7.yaml"
+    overlay = tmp_path / "invalid-v8.yaml"
+    overlay.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "2.4",
+                "corpus_id": "accepted-autoresearch-evaluation-resources-invalid-v8",
+                "audited_on": "2026-09-12",
+                "authorization_scope": "metadata-only-no-execution",
+                "base_source": base.name,
+                "base_source_sha256": hashlib.sha256(base.read_bytes()).hexdigest(),
+                "resource_overrides": [
+                    {
+                        "resource_id": "tiny-scientist",
+                        "code_license": {
+                            "identifier": "MIT",
+                            "scope": "Pinned root source tree.",
+                            "official_url": "https://example.test/LICENSE",
+                            "sha256": "a" * 64,
+                            "review_required": False,
+                        },
+                    }
+                ],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError, match=r"v2\.5 is required"):
         load_external_resource_corpus(overlay)
 
 

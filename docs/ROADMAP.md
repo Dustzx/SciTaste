@@ -225,6 +225,27 @@ systems use a separately disclosed best-native, model-confounded lane for
 ecological validity. An executable EXP-Bench/MLRC-Bench-style population remains
 the next data gate before any title-level evidence-validity claim.
 
+That distinction is now executable policy rather than an addendum alone.
+Prelaunch schema 1.3 binds one exact claim kind, candidate, lane, closed contrast
+family, direction, minimum effect, minimum task population, and
+failure-as-outcome rule. The native Qwen3-VL-2B prepilot expands to 12 matched
+trajectories across six conditions and two MLRC candidates. A separate
+best-native prepilot expands to six trajectories across SciTaste Native,
+Agent Laboratory, and TinyScientist while preserving DeepSeek, o3-mini, and
+GPT-4o identities per system. The campaign dossier now reports 18 exact but
+blocked trajectories instead of treating the historical 100-unit DeepSeek
+matrix as current work.
+
+Result assessment preserves a planned real execution failure as an outcome but
+blocks on missing or invalid evidence, review, analysis-rule drift, or an
+unplanned contrast. Only positive complete native causal evidence can satisfy
+the title gate; matched external superiority and best-native description have
+separate typed conclusions. A role-aware critic no longer asks native ablations
+for external method comparators or best-native studies for a direct-agent
+control, and treats one-seed prepilots as feasibility advisories while still
+blocking one-seed formal designs. No task download, API call, SSH session, GPU
+work, or human study was used for this change.
+
 The research-landscape v6 fourth screen now separates 45 relevance-gated works
 into 16 method, 6 hybrid, and 23 benchmark/evaluation contributions without
 interpreting their counts as field prevalence. The newly recovered ICLR 2026

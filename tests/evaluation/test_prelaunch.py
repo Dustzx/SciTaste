@@ -287,6 +287,7 @@ def test_gpu_critic_revalidates_content_bound_inventory_semantics() -> None:
     )
 
     assert "gpu_inventory_device_count_mismatch" in finding.message
+    assert "gpu_inventory_checkpoint_sha256_mismatch" not in finding.message
 
 
 def test_source_identity_and_cleanliness_are_observed_not_declared() -> None:
@@ -561,9 +562,15 @@ def test_critics_expose_all_five_domains_without_authorizing_execution() -> None
     assert set(review.blocking_codes) >= {
         "baseline_applicability:real_matched_comparators",
         "statistics:content_bound_analysis",
-        "statistics:independent_replication",
         "integrity:frozen_temporal_integrity",
     }
+    replication = next(
+        finding
+        for finding in review.findings
+        if finding.domain is EvaluationCriticDomain.STATISTICS
+        and finding.criterion == "independent_replication"
+    )
+    assert replication.verdict.value == "advisory"
 
 
 def test_complete_critic_contract_is_review_ready_but_still_not_authority(

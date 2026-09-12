@@ -148,6 +148,7 @@ def compare_gpu_inventory(
     checkpoint_id: str,
     checkpoint_sha256: str,
     checkpoint_bytes: int,
+    compare_checkpoint: bool = True,
 ) -> tuple[str, ...]:
     """Return stable mismatch codes between evidence and one GPU lane."""
 
@@ -160,13 +161,14 @@ def compare_gpu_inventory(
         problems.append("device_name_mismatch")
     if any(item.memory_total_mb < minimum_memory_mb_per_device for item in inventory.devices):
         problems.append("device_memory_below_minimum")
-    checkpoint = inventory.checkpoint
-    if checkpoint.checkpoint_id != checkpoint_id:
-        problems.append("checkpoint_id_mismatch")
-    if checkpoint.expected_sha256 != checkpoint_sha256:
-        problems.append("checkpoint_sha256_mismatch")
-    if checkpoint.expected_bytes != checkpoint_bytes:
-        problems.append("checkpoint_bytes_mismatch")
+    if compare_checkpoint:
+        checkpoint = inventory.checkpoint
+        if checkpoint.checkpoint_id != checkpoint_id:
+            problems.append("checkpoint_id_mismatch")
+        if checkpoint.expected_sha256 != checkpoint_sha256:
+            problems.append("checkpoint_sha256_mismatch")
+        if checkpoint.expected_bytes != checkpoint_bytes:
+            problems.append("checkpoint_bytes_mismatch")
     return tuple(problems)
 
 

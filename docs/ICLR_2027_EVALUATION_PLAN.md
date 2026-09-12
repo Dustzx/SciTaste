@@ -26,8 +26,10 @@ The intended central claim is:
 
 This claim is not yet established. Engineering tests, successful fixtures,
 paper generation, provenance preservation, and one controlled run establish
-implementation readiness only. The paper must not claim external-system
-superiority until the formal evidence below is complete.
+implementation readiness only. The title-level effect is a held-out,
+within-SciTaste intervention over Taste—not an external framework ranking. The
+paper must not claim external-system superiority unless a separate eligible
+external estimand is complete.
 
 The preferred result-dependent title is **“SciTaste: Improving Autonomous
 Research through Scientific Taste.”** If the headline comparison is not
@@ -54,8 +56,9 @@ dogfooding:
 The self-development trajectory can establish ecological usefulness,
 traceability, and defect discovery. It cannot establish comparative
 effectiveness because the subject system, development process, and selected
-evidence are coupled. Only held-out external projects contribute to the
-headline effect estimate.
+evidence are coupled. Only source-disjoint held-out child projects contribute
+to the title-level native Taste estimate; external-system outcomes occupy a
+separate estimand.
 
 The software return path from a future formal result is now explicit. A result
 must first pass project-owned admission and selection. Only a complete positive
@@ -84,8 +87,8 @@ comparison inventory rather than a frozen census.
 | Track | Question | Required comparison | Role in the paper |
 |---|---|---|---|
 | A. Decision benchmark | Does taste improve local scientific decisions? | fixed/heuristic policy, direct LM, SciTaste variants, experts | mechanism and scalable statistical evidence |
-| B. External end-to-end systems | Does independent SciTaste Native improve final research outcomes? | direct agent, accepted MLR-Agent, AI-Researcher, Agent Laboratory, TinyScientist, and SciTaste Native; preprint systems only in sensitivity analysis | headline external-validity result |
-| C. SciTaste ablation | Which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a retrieval placebo | causal attribution |
+| B. External end-to-end systems | How does independent SciTaste Native compare with real accepted systems? | direct agent where applicable, accepted qualified systems, and SciTaste Native; preprint systems only in sensitivity analysis | ecological external validity under best-native models; external superiority only under a separately admissible matched design |
+| C. SciTaste native causal ablation | Does Taste change executable research outcomes and which components cause the gain? | Native Base, +Knowledge, +Taste, +Critics, Full SciTaste, plus a mismatched-Taste placebo | title-supporting causal attribution on held-out tasks |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
 Benchmark papers and method papers are never rows in the same role. Track B
@@ -102,6 +105,28 @@ AutoResearchClaw lifecycle for its four enabled conditions. It is an
 AutoResearchClaw-substrate augmentation/ablation study, not an independent
 comparison between AutoResearchClaw and SciTaste Native. Its results may support
 Track C or serve as a bridge study, but cannot be the Track B headline.
+
+### Current dual-estimand prepilot freeze
+
+Two schema-1.3 no-run proposals now materialize this distinction:
+
+- `qwen3vl2b-native-taste-causal-prepilot-v7` expands to 12 trajectories:
+  six native conditions × two MLRC objective-task candidates × one seed. It
+  binds the same Qwen3-VL-2B checkpoint and GPU lane to every condition, requires
+  no-Taste and mismatched-Taste contrasts, retains valid failed trajectories as
+  outcomes, and forbids title or formal-effect claims from the prepilot.
+- `external-best-native-prepilot-v7` expands to six trajectories: SciTaste
+  Native, Agent Laboratory, and TinyScientist × the same two task candidates ×
+  one seed. It pins DeepSeek V4.1 Flash, o3-mini, and GPT-4o respectively and
+  declares model effects confounded. Even a complete positive result is
+  descriptive external evidence, never a causal Taste or headline result.
+
+Both proposals are unapproved. Task bytes, native condition implementations,
+external adapters, remote checkpoint identity, credentials, and independent
+review remain explicit blockers. Their one-seed matrices are feasibility
+prepilots; formal task and seed counts require a new pilot-informed power
+analysis. No data download, provider call, SSH session, GPU work, or reviewer
+recruitment was performed to create them.
 
 ## Track A: decision-level scientific taste
 
@@ -266,14 +291,16 @@ comparison. The eight RTX 3090 GPUs may execute registered task workloads after
 approval; provider inference and experimental GPU use remain separately
 accounted resources.
 
-### Headline endpoint
+### External package endpoint
 
-The single headline endpoint is condition-blinded expert preference for the
-scientific value and evidence validity of the complete research package under a
-matched budget. Reviewers receive anonymized trajectories, executable evidence,
+The Track B endpoint is condition-blinded expert preference for the scientific
+value and evidence validity of the complete research package under a matched
+output budget. Reviewers receive anonymized trajectories, executable evidence,
 and papers with system-identifying metadata removed. Paper fluency alone is not
 the target. MLR-Judge or another model judge is secondary until calibrated
-against independent experts on the actual SciTaste comparison population.
+against independent experts on the actual SciTaste comparison population. A
+best-native version of this endpoint is ecological and model-confounded; it is
+not the title-level causal endpoint.
 
 Secondary endpoints include:
 
@@ -313,9 +340,10 @@ changing the formal primary model.
 - The experimental unit is a task-seed research trajectory, not a tool call,
   generated paragraph, experiment row, or reviewer rating.
 - Systems are paired by task, seed, starting evidence, and budget block.
-- The headline comparison uses a task- and reviewer-aware paired preference
-  model; report the effect size, 95% interval, raw wins/ties/losses, and a paired
-  bootstrap sensitivity analysis.
+- The title-confirmatory native comparison uses the preregistered objective
+  task score and independent evidence-validity review. External package
+  preference uses a separate task- and reviewer-aware paired model. Each reports
+  effect sizes, 95% intervals, raw outcomes, and paired sensitivity analyses.
 - Continuous secondary outcomes use hierarchical or task-blocked models with
   task and seed effects. Binary failures remain outcomes and are not silently
   dropped.
@@ -400,11 +428,13 @@ An ICLR submission is scientifically defensible only if, by manuscript freeze:
 
 - Track A has held-out natural cases, expert labels, negative controls, and
   uncertainty estimates;
-- Track B has SciTaste Native plus the direct agent and at least two accepted
-  archival, real, pinned external systems, or the claim is explicitly narrowed
-  before the abstract; preprint sensitivity systems do not satisfy this count;
-- Track C separates Knowledge, Taste, critics, executor, and extra-context
-  effects;
+- Track B has SciTaste Native plus at least two accepted archival, real, pinned
+  external systems for any broad external-validity claim; best-native outcomes
+  remain explicitly model-confounded, and preprint sensitivity systems do not
+  satisfy this count;
+- Track C has source-disjoint executable tasks and separates Knowledge, Taste,
+  critics, executor, and mismatched-extra-context effects under one fixed
+  backbone; this, rather than Track B, owns the title-level causal gate;
 - the primary endpoint, task unit, power analysis, failure policy, and statistics
   were frozen before formal results were inspected;
 - the main paper contains the principal quantitative tables/plots and failure

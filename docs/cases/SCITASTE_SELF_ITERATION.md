@@ -736,3 +736,45 @@ SSH session, GPU use, model load, or experiment occurred. This iteration is an
 example of Scientific Taste as problem decomposition: resolve what evidence can
 resolve, preserve irreducible uncertainty at the stage where it can actually be
 tested, and avoid both needless blockage and unsupported clearance.
+
+## Turning the paper claim into executable admission policy (2026-09-12)
+
+The next self-iteration challenged another attractive shortcut: using one
+external system table to support both “Taste causes improvement” and “SciTaste
+performs well in the ecosystem.” The accepted systems cannot all preserve one
+current model unchanged, while a best-native comparison deliberately gives them
+different models. Treating that ecological contrast as causal would attribute
+model effects to the framework.
+
+SciTaste now represents the two questions as different claim contracts. The
+native contract fixes Qwen3-VL-2B, the executor envelope, two MLRC task
+candidates, six first-party conditions, and five contrasts including no-Taste
+and mismatched-Taste controls. It expands to 12 one-seed feasibility
+trajectories. The external contract fixes SciTaste/DeepSeek V4.1 Flash, Agent
+Laboratory/o3-mini, and TinyScientist/GPT-4o-2024-08-06 independently. It
+expands to six trajectories and carries `model_effects_confounded=true` all the
+way into result assessment.
+
+The exercise exposed three product defects and fixed them before a run. The
+critic incorrectly demanded two external methods from native ablations and a
+direct control from best-native comparisons; one-seed feasibility prepilots
+were treated like underpowered formal studies; and an intentionally absent
+remote checkpoint produced a redundant hash-mismatch finding. The critic is now
+estimand- and study-scope-aware, while all genuine resource, task, adapter,
+reviewer, and approval blockers remain.
+
+Finally, result admission distinguishes scientific failure from missing
+evidence. A real preregistered failed trajectory remains in the
+intention-to-run population at its frozen task floor. A missing record, invalid
+telemetry, unplanned contrast, decision-rule drift, or missing review blocks
+completion. This self-case is evidence that explicit Taste can improve
+experimental *problem formulation and boundary management*; it is not evidence
+that the resulting scientific hypothesis is true. No download, provider call,
+SSH session, GPU work, model load, or reviewer recruitment occurred.
+
+Both no-run bundles are registered beneath the self-development project. The
+external best-native bundle is retained as a non-selected ecological proposal;
+the native Taste bundle is the selected title-critical proposal at project
+revision 311. Registration copied the exact resource corpus, gate report, critic
+report, and expanded cell plan. Both records remain `blocked`,
+`execution_authorized=false`, and `no_execution_performed=true`.
