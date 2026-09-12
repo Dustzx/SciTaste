@@ -1698,6 +1698,8 @@ function renderProjectProgress(data) {
   const detailContent = document.createElement("div");
   detailContent.className = "progress-evidence-vault-content";
   detailContent.append(
+    benchmarkQualifications,
+    datasetPackages,
     acquisitions,
     acquisitionQualifications,
     metrics,
@@ -1709,12 +1711,6 @@ function renderProjectProgress(data) {
   );
   details.append(detailsSummary, detailContent);
   container.appendChild(hero);
-  if ((data.benchmark_qualifications || []).length > 0) {
-    container.appendChild(benchmarkQualifications);
-  }
-  if ((data.dataset_packages || []).length > 0) {
-    container.appendChild(datasetPackages);
-  }
   if ((data.review_iterations || []).length > 0) {
     container.appendChild(reviewIterations);
   }
@@ -1877,7 +1873,6 @@ function renderReviewIterations(items) {
     for (const lane of item.lanes) {
       const laneCard = document.createElement("details");
       laneCard.className = `review-iteration-lane lane-${lane.stage}`;
-      laneCard.open = lane.ready_count > 0;
       const summary = document.createElement("summary");
       const laneName = document.createElement("strong");
       appendText(laneName, t(`progress.review_iteration.stage.${lane.stage}`));

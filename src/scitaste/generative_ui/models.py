@@ -1246,6 +1246,42 @@ class ProjectProgressReviewIterationEdgeItem(BaseModel):
     dependency_count: int = Field(gt=0)
 
 
+class ProjectProgressReviewActivationItem(BaseModel):
+    """Horizontal no-run launch gate projected from a project activation record."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    run_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    activation_sha256: Sha256
+    study_count: int = Field(gt=0, le=30)
+    metadata_item_count: int = Field(gt=0)
+    metadata_byte_ceiling: int = Field(gt=0)
+    metadata_source_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=30)
+    metadata_decision_ready: Literal[True]
+    primary_model_candidate_count: int = Field(ge=2, le=10)
+    pilot_ready_model_count: int = Field(ge=0, le=10)
+    external_system_count: int = Field(ge=0, le=30)
+    adapter_ready_system_count: int = Field(ge=0, le=30)
+    minimum_reviewer_count: int = Field(ge=2)
+    recruited_reviewer_count: int = Field(ge=0)
+    next_owner_decision_id: Literal["review-exact-metadata-acquisition"]
+    blocker_count: int = Field(gt=0)
+    ready_for_experiment: Literal[False]
+    authorizes_execution: Literal[False]
+    no_external_action_performed: Literal[True]
+
+    @model_validator(mode="after")
+    def counts_and_sources_are_closed(self) -> ProjectProgressReviewActivationItem:
+        if len(self.metadata_source_ids) != len(set(self.metadata_source_ids)):
+            raise ValueError("review activation metadata sources must be unique")
+        if self.pilot_ready_model_count > self.primary_model_candidate_count:
+            raise ValueError("pilot-ready model count exceeds candidate count")
+        if self.adapter_ready_system_count > self.external_system_count:
+            raise ValueError("adapter-ready system count exceeds system count")
+        return self
+
+
 class ProjectProgressReviewFollowupDesignItem(BaseModel):
     """Compact projection of the exact no-run evidence response to a review."""
 
@@ -1273,6 +1309,7 @@ class ProjectProgressReviewFollowupDesignItem(BaseModel):
     title_claim_status: Literal["submission_blocked_pending_title_critical_evidence"]
     authorizes_execution: Literal[False] = False
     no_execution_performed: Literal[True] = True
+    activation: ProjectProgressReviewActivationItem | None = None
 
     @model_validator(mode="after")
     def inventories_are_unique_and_partitioned(
@@ -1293,6 +1330,8 @@ class ProjectProgressReviewFollowupDesignItem(BaseModel):
         )
         if len(roles) != len(set(roles)) or set(roles) != set(self.study_ids):
             raise ValueError("review follow-up inference roles must partition its studies")
+        if self.activation is not None and self.activation.study_count != len(self.study_ids):
+            raise ValueError("review activation study count differs from its evidence design")
         return self
 
 
@@ -1339,6 +1378,12 @@ class ProjectProgressReviewIterationItem(BaseModel):
             and self.followup_design.run_ref_id not in self.support_ref_ids
         ):
             raise ValueError("review iteration must cite its follow-up evidence design")
+        if (
+            self.followup_design is not None
+            and self.followup_design.activation is not None
+            and self.followup_design.activation.run_ref_id not in self.support_ref_ids
+        ):
+            raise ValueError("review iteration must cite its follow-up activation dossier")
         step_ids = [item.step_id for item in self.steps]
         if len(step_ids) != self.step_count or len(step_ids) != len(set(step_ids)):
             raise ValueError("review iteration step count differs from its unique inventory")
