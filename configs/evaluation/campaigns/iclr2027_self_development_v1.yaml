@@ -19,10 +19,10 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: a92ec2652d0ddaf509cd78ac8a797d23625852aee1764cf99f950d085f70019a
+    sha256: 69d6ba247f5a31e7beb8eba812113f13d7960b38dec9fc05176af775b1861366
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 69fe8eb16ec4febd77c40b084f2f0662273bc92fb1bdaebb3e37292682912afd
+    sha256: 076d9b95effe4c7d819fe1836b15ba9d2321faac6d2ad87ae3cc516474651afe
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -40,7 +40,13 @@ artifacts:
     sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
-    sha256: 25f89fdbf3b43a89f43212b4f64fa097728d37a434c5be3aaa4055f5b008d8af
+    sha256: 1063bf126efec56b9a43c5a3de0e19663003ab9c47e099815a8da7e14d22801d
+  - artifact_id: scientific-reference-mining
+    path: docs/SCIENTIFIC_REFERENCE_MINING.md
+    sha256: 089cf75bab57c63001256665919c973d4b8300b3c4d8bfd480e8e6d2859f1212
+  - artifact_id: reference-mining-profiles
+    path: configs/model_nodes/runtime_profiles.reference_mining_v1.yaml
+    sha256: 1ec57b17dced70832331e431817fe354450a826ee88172a3f980f5377843370b
   - artifact_id: reference-quality-profiles
     path: configs/model_nodes/runtime_profiles.reference_quality_v1.yaml
     sha256: 51570f7ef746eff5655b7c7ec731b9c2654e8755058e772fafc1a8a638e13332
@@ -165,6 +171,8 @@ tracks:
     evidence_artifact_ids:
       - iclr-evaluation-contract
       - iclr-evidence-program
+      - scientific-reference-mining
+      - reference-mining-profiles
       - scientific-reference-quality
       - reference-quality-profiles
       - reference-quality-pipeline
