@@ -41,6 +41,26 @@ sections, candidate actions, metadata, tools, or action authority.
 `build_taste_abstraction_input` constructs this projection so the experiment does
 not depend on hand-copied text.
 
+That projection is now produced by an explicit pre-model gate rather than by an
+operator copying fields. `source-projection-plan` consumes the approved request,
+download receipt, content-audit report, complete source-admission proposal, and
+admitted/rejected ledger. It opens only those control artifacts. For every
+admitted source, each selected JSON pointer must already occur in the audit and
+must end in scalar data; selecting an object subtree, an unaudited field, an
+external locator, a forbidden outcome subtree, or any rejected source fails.
+The plan also fixes normalization, per-source and aggregate byte ceilings,
+held-out identities, and the destination before source bytes are read.
+
+A separate exact-hash approval and runtime switch are required to materialize
+the projection. The output intentionally omits source, source-group, relation,
+and condition identity from its model-visible payload. The same output hash is
+recorded as both the raw-RAG source representation and the input to Taste
+abstraction. This is the causal H1 invariant: downstream arms may change the
+representation, but they cannot silently change the source evidence. The
+receipt stops at `ready_for_tokenization`; an exact model-tokenizer count and a
+separate abstraction-resource decision are still required before any provider
+call.
+
 One `TasteAbstractionCandidate` converts the source into a closed decision:
 context, evidence state, candidate actions, preferred and rejected actions,
 decision principle, rationale, outcome summary, and confidence. Human-authored
@@ -116,21 +136,25 @@ experiment may begin.
 
 The machine path is therefore:
 
-1. create and quality-qualify a frozen source plus exact abstraction projection;
-2. construct `TasteAbstractionInput` and run `taste-abstraction` through the
+1. content-audit and quality-qualify the complete frozen source population;
+2. freeze and approve one common raw-RAG/abstraction source projection;
+3. tokenize the exact projection under the selected model tokenizer;
+4. construct `TasteAbstractionInput` and run `taste-abstraction` through the
    normal project-owned model-node runtime;
-3. compile the accepted ledger entry with
+5. compile the accepted ledger entry with
    `scitaste evaluation taste-abstraction-candidate`;
-4. collect two independent reviews, with adjudication only on a split; and
-5. inspect and materialize the matched/placebo pair.
+6. collect two independent reviews, with adjudication only on a split; and
+7. inspect and materialize the matched/placebo pair.
 
-Steps 1, 2, and 4 require separately approved source, model, and human resources.
-The candidate compiler and package inspector do not perform those actions.
+Source reads/projection, model use, and human review require separate exact
+approvals. The candidate compiler and package inspector do not perform those
+actions.
 
 ## Current ICLR 2027 boundary
 
-The implementation closes the missing transformation path between approved
-source acquisition and `taste-corpus-pair` qualification. It does not fabricate
-the task-specific source files or human reviews needed by the title-critical
-H1/H2 study. Those remain an empirical/human-resource gate and require an exact
-source plan plus owner approval before acquisition.
+The implementation closes the software path between approved source acquisition
+and `taste-corpus-pair` qualification. Sixteen pilot source files have been
+downloaded but remain unopened under the download-only authority. Real content
+audit, source-quality evidence, human reviews, field selection, projection,
+tokenization, abstraction, and H1/H2 outcome review are still missing empirical
+or human evidence; none is inferred from the executable contracts.

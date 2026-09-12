@@ -18,23 +18,18 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 7 — figures | done | figure contract produces editable, reviewed SVG/draw.io output |
 | Phase 7.5 — real substrate gate | done | pinned upstream Stage 1–3 run yields validated artifacts and a SciTaste transition |
 | Phase 8 — SciTasteBench v1 | done | synthetic intrinsic/augmented acceptance is controlled and reproducible |
-| Phase 8.1 — SciTasteBench v2 | in progress | 120+ source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced local/API results |
+| Phase 8.1 — SciTasteBench v2 | in progress | powered source-disjoint natural decisions, human labels, matched/placebo Taste, and order-counterbalanced matched-model results |
 | Phase 8.2 — SciTasteBench v3 mechanism study | in progress | same-source raw/Taste and source-disjoint Taste triplets, frozen-token parity, registered H1/H2 contrasts, and independent blinded endpoint reviews |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
-Phase 8.1 now has its first core-source transaction ready for an owner decision.
-The AAAR rights pilot fixes sixteen `Experiment_Design/data_text.json` records at
-one dataset revision, retains only original papers with explicit CC-BY-4.0
-metadata, enriches five arXiv primary categories before source-body inspection,
-and caps download-only acquisition at 3 MiB. It is not a benchmark subset and
-cannot authorize ingestion, abstraction, labeling, model calls, or GPU work.
-After approval and receipt verification, the next gate is content/schema audit
-followed by a separately approved real abstraction and human-fidelity pilot.
-The post-download software gate is now implemented: content access receives its
-own request/receipt-bound owner authorization, and a separately switched local
-auditor can rehash and structurally inventory exact JSON without resolving links
-or creating model-visible projections. Real execution still awaits the AAAR
-download decision and the later content-access decision.
+Phase 8.1 now has its first core-source transaction downloaded under the standing
+sub-10-GB policy. The receipt binds sixteen
+`Experiment_Design/data_text.json` records at one dataset revision, selected
+from original papers with explicit CC-BY-4.0 metadata across five arXiv primary
+categories. This is an excluded instrument pilot, not a benchmark subset. The
+bytes remain quarantined: download authority did not permit parsing, abstraction,
+labeling, model calls, or GPU work. The next real gate is the exact
+request/receipt-bound local content audit already proposed to the owner.
 
 The next source-quality gate is also executable. It consumes only the self-
 hashed audit report and separate evidence files, retains every audited item, and
@@ -44,6 +39,14 @@ pass. Rejections remain in the ledger and the admitted minimum is frozen before
 abstraction. This closes the audit-to-curation control gap, but does not itself
 read source bodies or authorize field projection, model use, reviewer recruitment,
 or an experiment.
+
+The subsequent admission-to-model boundary is now executable as well. A no-read
+source-projection plan retains every admitted source, accepts only audited
+terminal JSON pointers, freezes forbidden outcome and identity fields, and binds
+one canonical byte representation to both same-source raw RAG and Taste
+abstraction. Materialization remains a separate owner-approved local read/write;
+its receipt stops before tokenizer/model use. Real AAAR projection cannot be
+planned until content audit and the dual-human source-quality ledger exist.
 
 Phase 8.2 now has an executable human-outcome integrity boundary. Reviewer-
 visible manifests contain randomized X/Y outputs and a private-key commitment,

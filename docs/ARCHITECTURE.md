@@ -2451,3 +2451,31 @@ Passing this audit means that a separate, source-specific metadata-screen
 proposal may be written. It does not choose tasks, resolve repositories,
 download runtime assets, ingest data, call a model, allocate compute, or establish
 an experimental result.
+
+### ADR-082: Raw RAG and Taste abstraction share one admitted source projection
+
+Status: accepted and executable; no acquired source has been projected through
+this path.
+
+The H1 contrast is invalid if raw retrieval and Taste abstraction silently use
+different source fields. Source admission alone cannot prevent that error: it
+decides which sources qualify, while an operator could still copy different
+subsets into the two treatments or leak outcome and condition identity during
+prompt construction.
+
+SciTaste therefore inserts a content-addressed projection freeze between source
+admission and tokenization. A no-read plan binds the approved acquisition,
+receipt, content audit, complete admission proposal, admitted/rejected report,
+the exact audited terminal JSON pointers, forbidden subtrees and identities,
+normalization, byte ceilings, and destination. Rejected sources and fields not
+observed by the content auditor cannot enter the plan; object-subtree selection
+is forbidden because it would bypass field-level review.
+
+Materialization requires an owner approval bound to the complete plan and the
+current projector implementation plus an explicit runtime switch. It rehashes
+the full raw inventory, reparses strict JSON, applies only the allowlist, checks
+that forbidden held-out and treatment identities and external locator text are
+absent, and publishes all projections atomically. The receipt records the same
+projection hash for raw RAG and abstraction input. It grants no tokenization,
+model, reviewer, or experiment authority; model-specific token counts remain a
+separate prerequisite for an abstraction resource proposal.

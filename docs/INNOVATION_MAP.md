@@ -30,10 +30,14 @@ the complete audited population is frozen before outcomes, and rights,
 scientific-source quality, and held-out/self-evidence isolation are evaluated as
 three separate arguments. Each admitted source needs two independent quality
 reviews while every rejection stays visible. Source content and quality evidence
-are hash-bound; abstraction candidates
-can be produced by a relation-blind, proposal-only model node whose exact source,
-prompt, response, model identity, usage, and output remain in a verified
-project-owned ledger. Candidates remain untrusted, and two independent humans
+are hash-bound. Before abstraction, a separately approved projector selects only
+audited terminal fields and freezes one identical source representation for
+same-source raw RAG and Taste abstraction; rejected sources, forbidden outcomes,
+held-out identities, condition labels, and external locators cannot enter those
+bytes. Abstraction candidates can then be produced by a relation-blind,
+proposal-only model node whose exact source, prompt, response, model identity,
+usage, and output remain in a verified project-owned ledger. Candidates remain
+untrusted, and two independent humans
 plus conditional adjudication decide whether the result may become
 retrieval-eligible. Retrieval is therefore an
 efficiency mechanism downstream of Taste construction, not the definition of

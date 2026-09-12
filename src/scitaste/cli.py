@@ -70,11 +70,16 @@ from scitaste.discovery.semantic import DiscoverySemanticBinding
 from scitaste.discovery.semantic_config import load_discovery_semantic_runtime_config
 from scitaste.evaluation import (
     EvaluationCriticSuite,
+    OutcomeInformationAvailability,
+    ProjectionSemanticRole,
+    SourceProjectionField,
     align_evidence_program_to_benchmark,
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     approve_json_content_audit,
+    approve_source_projection,
     approve_structured_metadata_audit,
+    build_source_projection_plan,
     compile_evaluation_cell_plan,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
@@ -118,6 +123,8 @@ from scitaste.evaluation import (
     load_native_condition_preflight_manifest,
     load_prelaunch_manifest,
     load_source_admission_proposal,
+    load_source_projection_approval,
+    load_source_projection_plan,
     load_structured_metadata_audit_approval,
     load_structured_metadata_audit_plan,
     load_task_package_manifest,
@@ -126,6 +133,7 @@ from scitaste.evaluation import (
     load_taste_corpus_pair_manifest,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
+    materialize_source_projections,
     materialize_taste_corpus_pair,
     plan_structured_metadata_audit,
     prepare_project_evaluation,
@@ -147,6 +155,9 @@ from scitaste.evaluation import (
     save_json_content_audit_approval,
     save_json_content_audit_report,
     save_source_admission_report,
+    save_source_projection_approval,
+    save_source_projection_plan,
+    save_source_projection_receipt,
     save_structured_metadata_audit_approval,
     save_structured_metadata_audit_plan,
     save_structured_metadata_audit_report,
@@ -1815,6 +1826,85 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(source_admission)
     source_admission.set_defaults(handler=_handle_evaluation_source_admission)
+    source_projection_plan = evaluation_commands.add_parser(
+        "source-projection-plan",
+        help="Freeze admitted JSON fields for identical raw-RAG and Taste source use",
+    )
+    source_projection_plan.add_argument("--plan-id", required=True)
+    source_projection_plan.add_argument("--approved-request", type=Path, required=True)
+    source_projection_plan.add_argument("--receipt", type=Path, required=True)
+    source_projection_plan.add_argument("--content-audit-report", type=Path, required=True)
+    source_projection_plan.add_argument("--source-admission-proposal", type=Path, required=True)
+    source_projection_plan.add_argument("--source-admission-report", type=Path, required=True)
+    source_projection_plan.add_argument("--workspace-root", type=Path, default=Path("."))
+    source_projection_plan.add_argument("--projection-output-root", required=True)
+    source_projection_plan.add_argument(
+        "--field",
+        action="append",
+        required=True,
+        metavar="ROLE:OUTPUT_NAME=JSON_POINTER",
+        help="terminal field selected for the common source projection",
+    )
+    source_projection_plan.add_argument(
+        "--forbid-pointer",
+        action="append",
+        required=True,
+        help="JSON pointer or subtree that must remain outside the projection",
+    )
+    source_projection_plan.add_argument(
+        "--forbid-exact-string",
+        action="append",
+        default=[],
+        help="identity that must not occur in model-visible projection bytes",
+    )
+    source_projection_plan.add_argument(
+        "--outcome-information",
+        choices=[item.value for item in OutcomeInformationAvailability],
+        required=True,
+    )
+    source_projection_plan.add_argument("--created-at", required=True)
+    source_projection_plan.add_argument(
+        "--maximum-projection-bytes-per-item",
+        type=int,
+        default=2 * 1_048_576,
+    )
+    source_projection_plan.add_argument(
+        "--maximum-total-projection-bytes",
+        type=int,
+        default=32 * 1_048_576,
+    )
+    source_projection_plan.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(source_projection_plan)
+    source_projection_plan.set_defaults(handler=_handle_evaluation_source_projection_plan)
+    source_projection_approve = evaluation_commands.add_parser(
+        "source-projection-approve",
+        help="Authorize the exact bounded local field projection in one frozen plan",
+    )
+    source_projection_approve.add_argument("--plan", type=Path, required=True)
+    source_projection_approve.add_argument("--confirm-plan-sha256", required=True)
+    source_projection_approve.add_argument("--approved-by", required=True)
+    source_projection_approve.add_argument("--approved-at", required=True)
+    source_projection_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(source_projection_approve)
+    source_projection_approve.set_defaults(handler=_handle_evaluation_source_projection_approve)
+    source_projection_materialize = evaluation_commands.add_parser(
+        "source-projection-materialize",
+        help="Materialize approved common source bytes without model or experiment use",
+    )
+    source_projection_materialize.add_argument("--plan", type=Path, required=True)
+    source_projection_materialize.add_argument("--approval", type=Path, required=True)
+    source_projection_materialize.add_argument("--workspace-root", type=Path, default=Path("."))
+    source_projection_materialize.add_argument("--materialized-at", required=True)
+    source_projection_materialize.add_argument("--receipt-output", type=Path, required=True)
+    source_projection_materialize.add_argument(
+        "--allow-local-source-projection",
+        action="store_true",
+        help="explicitly permit only the approved local reads and projection writes",
+    )
+    _add_log_level_option(source_projection_materialize)
+    source_projection_materialize.set_defaults(
+        handler=_handle_evaluation_source_projection_materialize
+    )
     acquired_cohort = evaluation_commands.add_parser(
         "acquired-task-cohort",
         help="Classify acquired benchmark briefs without treating them as executable tasks",
@@ -5271,6 +5361,96 @@ def _handle_evaluation_source_admission(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_projection_proposal_ready and not report.ready_for_projection_proposal:
         return 1
+    return 0
+
+
+def _handle_evaluation_source_projection_plan(args: argparse.Namespace) -> int:
+    fields: list[SourceProjectionField] = []
+    for raw in args.field:
+        try:
+            role_and_name, pointer = raw.split("=", 1)
+            role, output_name = role_and_name.split(":", 1)
+        except ValueError as exc:
+            raise ValueError(
+                "source-projection field must use ROLE:OUTPUT_NAME=JSON_POINTER"
+            ) from exc
+        fields.append(
+            SourceProjectionField(
+                output_name=output_name,
+                json_pointer=pointer,
+                semantic_role=ProjectionSemanticRole(role),
+            )
+        )
+    plan = build_source_projection_plan(
+        plan_id=args.plan_id,
+        approved_request_path=args.approved_request,
+        receipt_path=args.receipt,
+        content_audit_report_path=args.content_audit_report,
+        source_admission_proposal_path=args.source_admission_proposal,
+        source_admission_report_path=args.source_admission_report,
+        workspace_root=args.workspace_root,
+        projection_output_root=args.projection_output_root,
+        fields=tuple(fields),
+        forbidden_json_pointers=tuple(args.forbid_pointer),
+        forbidden_model_visible_exact_strings=tuple(args.forbid_exact_string),
+        outcome_information_availability=OutcomeInformationAvailability(args.outcome_information),
+        created_at=datetime.fromisoformat(args.created_at),
+        maximum_projection_bytes_per_item=args.maximum_projection_bytes_per_item,
+        maximum_total_projection_bytes=args.maximum_total_projection_bytes,
+    )
+    output = save_source_projection_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "plan_path": str(output),
+                **plan.model_dump(mode="json"),
+                "ready_for_owner_approval": True,
+                "source_content_read": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_source_projection_approve(args: argparse.Namespace) -> int:
+    plan = load_source_projection_plan(args.plan)
+    approval = approve_source_projection(
+        plan,
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_source_projection_approval(approval, args.output)
+    print(
+        json.dumps(
+            {"approval_path": str(output), **approval.model_dump(mode="json")},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_source_projection_materialize(args: argparse.Namespace) -> int:
+    plan = load_source_projection_plan(args.plan)
+    approval = load_source_projection_approval(args.approval)
+    receipt = materialize_source_projections(
+        plan,
+        approval,
+        workspace_root=args.workspace_root,
+        materialized_at=datetime.fromisoformat(args.materialized_at),
+        allow_local_source_projection=args.allow_local_source_projection,
+    )
+    output = save_source_projection_receipt(receipt, args.receipt_output)
+    print(
+        json.dumps(
+            {"receipt_path": str(output), **receipt.model_dump(mode="json")},
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

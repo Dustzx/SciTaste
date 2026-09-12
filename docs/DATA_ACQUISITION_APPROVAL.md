@@ -115,6 +115,50 @@ performs bounded YAML/CSV structural checks only. The report may enable a later
 metadata-screen proposal; it cannot project task values, resolve URLs, ingest a
 dataset, execute code, or start an experiment.
 
+## Admitted source projection
+
+For JSON scientific sources, passing content audit and human-governed source
+admission still does not make the bytes model-visible. The next no-read command
+freezes an exact terminal-field allowlist and an explicit exclusion set:
+
+```bash
+.venv/bin/scitaste evaluation source-projection-plan \
+  --plan-id '<new plan id>' \
+  --approved-request '<approved request>' --receipt '<receipt>' \
+  --content-audit-report '<content audit report>' \
+  --source-admission-proposal '<admission proposal>' \
+  --source-admission-report '<admission report>' \
+  --workspace-root . --projection-output-root '<new relative output root>' \
+  --field problem_context:problem_context=/observed/problem/pointer \
+  --forbid-pointer /observed/outcome/pointer \
+  --outcome-information withheld \
+  --created-at '<timezone-aware ISO-8601>' --output '<new plan path>'
+```
+
+The plan includes every admitted source and no rejected source. It binds all
+five upstream control artifacts and proves each selected pointer is an audited
+terminal scalar field without external locator text. Creating it performs no
+source read. Materialization requires another exact owner approval followed by
+the explicit local switch:
+
+```bash
+.venv/bin/scitaste evaluation source-projection-approve \
+  --plan '<plan>' --confirm-plan-sha256 '<exact plan hash>' \
+  --approved-by '<owner>' --approved-at '<timezone-aware ISO-8601>' \
+  --output '<new approval path>'
+
+.venv/bin/scitaste evaluation source-projection-materialize \
+  --plan '<plan>' --approval '<approval>' --workspace-root . \
+  --materialized-at '<timezone-aware ISO-8601>' \
+  --receipt-output '<new receipt path>' --allow-local-source-projection
+```
+
+The projector rechecks the complete acquisition inventory and strict JSON
+bytes, then writes canonical UTF-8/NFC payloads atomically. Each receipt binds
+one identical hash for the raw-RAG representation and the Taste-abstraction
+input. It calls no tokenizer or model and authorizes no experiment; token parity
+and provider use remain later gates.
+
 This request is valid under either future external comparison design because it
 only acquires starting briefs. It does not resolve whether the experiment uses
 a common backbone or best-native system configurations.
