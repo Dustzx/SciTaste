@@ -210,8 +210,7 @@ class TasteController:
         rationale = (
             (
                 f"Selected {selected.type.value} using {utility_text}. "
-                f"Candidate scores: {score_text}. "
-                + "; ".join(selected_assessment.reasons)
+                f"Candidate scores: {score_text}. " + "; ".join(selected_assessment.reasons)
             )
             if model_response is None
             else (

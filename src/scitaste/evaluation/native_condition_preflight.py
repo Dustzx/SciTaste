@@ -282,13 +282,10 @@ def inspect_native_condition_preflight(
         manifest.requirements[NativePathRequirement.MODEL_CANDIDATE_GENERATION].status
         is ReadinessStatus.VERIFIED
     )
-    corpus_verified = (
-        manifest.requirements[NativePathRequirement.MATCHED_PLACEBO_CORPORA].status
-        is ReadinessStatus.VERIFIED
-        and all(
-            status is ReadinessStatus.VERIFIED
-            for status in manifest.corpus_pair.dimensions.values()
-        )
+    corpus_verified = manifest.requirements[
+        NativePathRequirement.MATCHED_PLACEBO_CORPORA
+    ].status is ReadinessStatus.VERIFIED and all(
+        status is ReadinessStatus.VERIFIED for status in manifest.corpus_pair.dimensions.values()
     )
     checkpoint_verified = (
         manifest.requirements[NativePathRequirement.CHECKPOINT_EXECUTION].status

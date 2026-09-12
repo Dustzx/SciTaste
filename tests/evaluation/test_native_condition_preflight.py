@@ -15,9 +15,7 @@ from scitaste.evaluation.native_condition_preflight import (
     load_native_condition_preflight_manifest,
 )
 
-MANIFEST = Path(
-    "configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml"
-)
+MANIFEST = Path("configs/evaluation/preflight/qwen3vl2b_native_condition_path_v1.yaml")
 
 
 def test_tracked_preflight_proves_static_selection_but_blocks_experiment() -> None:
@@ -49,9 +47,7 @@ def test_tracked_preflight_proves_static_selection_but_blocks_experiment() -> No
 
 def test_git_object_drift_blocks_static_action_path() -> None:
     inspection = load_native_condition_preflight_manifest(MANIFEST)
-    drifted_manifest = inspection.manifest.model_copy(
-        update={"workflow_config_sha256": "0" * 64}
-    )
+    drifted_manifest = inspection.manifest.model_copy(update={"workflow_config_sha256": "0" * 64})
     drifted = inspection.model_copy(update={"manifest": drifted_manifest})
 
     report = inspect_native_condition_preflight(drifted, source_root=".")

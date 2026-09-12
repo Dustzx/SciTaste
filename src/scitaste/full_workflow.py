@@ -352,15 +352,11 @@ class FullWorkflow:
         if preference_config is not None:
             validate_native_preference_identity(config, preference_config)
             if not allow_live_model_nodes:
-                raise ValueError(
-                    "model-backed native decisions require --allow-live-model-nodes"
-                )
+                raise ValueError("model-backed native decisions require --allow-live-model-nodes")
         elif self.preference_backend is not None:
             raise ValueError("an injected preference backend requires a bound backend config")
         preference_backend = self.preference_backend or (
-            LocalTransformersBackend(preference_config)
-            if preference_config is not None
-            else None
+            LocalTransformersBackend(preference_config) if preference_config is not None else None
         )
         model_advisory = (
             load_full_workflow_model_advisory(config.model_node_advisory)

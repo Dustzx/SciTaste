@@ -113,10 +113,7 @@ def test_model_preference_persists_one_backend_for_every_nontrivial_choice(
 
     assert result["status"] == "complete"
     assert result["native_condition"]["model_backed_action_selection"] is True
-    run_root = (
-        outputs
-        / "projects/native-model-policy-integration/runs/native-model-policy-seed-07"
-    )
+    run_root = outputs / "projects/native-model-policy-integration/runs/native-model-policy-seed-07"
     state = StateStore(run_root / "stages/figure").load()
     traced = [item for item in state.decision_history if item.model_decision is not None]
     assert traced

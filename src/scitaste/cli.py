@@ -1271,9 +1271,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="return nonzero until path, checkpoint, generation, and corpus gates all pass",
     )
     _add_log_level_option(native_condition_preflight)
-    native_condition_preflight.set_defaults(
-        handler=_handle_evaluation_native_condition_preflight
-    )
+    native_condition_preflight.set_defaults(handler=_handle_evaluation_native_condition_preflight)
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -3640,9 +3638,7 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "condition_id": condition_profile.condition_id.value,
                                 "role": condition_profile.role.value,
                                 "components": condition_profile.components.model_dump(mode="json"),
-                                "model_backed_action_selection": (
-                                    preference_config is not None
-                                ),
+                                "model_backed_action_selection": (preference_config is not None),
                                 "integrity_gates_invariant": True,
                             }
                         ),
