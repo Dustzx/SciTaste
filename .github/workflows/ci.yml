@@ -25,6 +25,9 @@ jobs:
       - name: Check out SciTaste and pinned substrate
         uses: actions/checkout@v7
         with:
+          # Native evidence preflights inspect exact ancestor bytes with `git show`.
+          # A depth-1 checkout makes those objects falsely appear unavailable.
+          fetch-depth: 0
           submodules: recursive
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v7
