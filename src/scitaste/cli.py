@@ -1000,9 +1000,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review_followup_design_status.add_argument("--project-id", required=True)
     review_followup_design_status.add_argument("--run-id", required=True)
-    review_followup_design_status.add_argument(
-        "--outputs-root", type=Path, default=Path("outputs")
-    )
+    review_followup_design_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(review_followup_design_status)
     review_followup_design_status.set_defaults(
         handler=_handle_project_paper_review_followup_design_status

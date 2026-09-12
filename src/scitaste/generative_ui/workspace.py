@@ -666,10 +666,7 @@ class WorkspaceSurfaceFactory:
             run_ref = run_refs[run.run_id]
             followup_entry = review_followup_by_iteration.get(run.run_id)
             treatment_by_step = (
-                {
-                    item.iteration_step_id: item
-                    for item in followup_entry[0].treatments
-                }
+                {item.iteration_step_id: item for item in followup_entry[0].treatments}
                 if followup_entry is not None
                 else {}
             )
@@ -774,9 +771,7 @@ class WorkspaceSurfaceFactory:
                         if item.inference_role.value == "diagnostic"
                     ],
                     "task_source_ids": [item.source_id for item in design.task_requirements],
-                    "system_candidate_ids": [
-                        item.system_id for item in design.system_requirements
-                    ],
+                    "system_candidate_ids": [item.system_id for item in design.system_requirements],
                     "primary_model_state": "unselected",
                     "task_data_state": design.task_data_acquisition.value,
                     "sample_size_state": design.sample_size_basis,

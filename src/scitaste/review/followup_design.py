@@ -73,9 +73,9 @@ class ReviewConcernEvidenceMapping(BaseModel):
     treatment_kind: ReviewFollowupTreatmentKind
     study_ids: tuple[str, ...] = Field(min_length=1, max_length=30)
     rationale: str = Field(min_length=1, max_length=4_000)
-    claim_action: Literal[
-        "retain_target_title_pending_evidence_or_narrow_before_submission"
-    ] | None = None
+    claim_action: (
+        Literal["retain_target_title_pending_evidence_or_narrow_before_submission"] | None
+    ) = None
     title_change_authorized: Literal[False] = False
 
     @field_validator("concern_id")
@@ -210,9 +210,9 @@ class ReviewConcernFollowupTreatment(BaseModel):
     hypothesis_ids: tuple[EvidenceHypothesis, ...] = Field(min_length=1)
     claim_ids: tuple[str, ...] = ()
     rationale: str
-    claim_action: Literal[
-        "retain_target_title_pending_evidence_or_narrow_before_submission"
-    ] | None = None
+    claim_action: (
+        Literal["retain_target_title_pending_evidence_or_narrow_before_submission"] | None
+    ) = None
     title_change_authorized: Literal[False] = False
     creates_additional_execution: Literal[False] = False
 
@@ -469,9 +469,7 @@ def compile_review_followup_design(
             )
         )
 
-    used_study_ids = {
-        study_id for treatment in treatments for study_id in treatment.study_ids
-    }
+    used_study_ids = {study_id for treatment in treatments for study_id in treatment.study_ids}
     studies = tuple(
         ReviewFollowupStudyBinding(
             study_id=study.study_id,
@@ -498,9 +496,7 @@ def compile_review_followup_design(
         for study in program.study_layers
         if study.study_id in used_study_ids
     )
-    used_source_ids = {
-        source_id for study in studies for source_id in study.task_source_ids
-    }
+    used_source_ids = {source_id for study in studies for source_id in study.task_source_ids}
     task_requirements = tuple(
         ReviewFollowupTaskRequirement(
             source_id=source.source_id,
@@ -514,9 +510,7 @@ def compile_review_followup_design(
         for source in program.task_sources
         if source.source_id in used_source_ids
     )
-    used_system_ids = {
-        system_id for study in studies for system_id in study.system_candidate_ids
-    }
+    used_system_ids = {system_id for study in studies for system_id in study.system_candidate_ids}
     system_requirements = tuple(
         ReviewFollowupSystemRequirement(
             system_id=system.system_id,
@@ -770,9 +764,7 @@ def _require_git_bound_inputs(
                 timeout=10,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            raise ValueError(
-                f"review follow-up source commit does not contain {locator}"
-            ) from exc
+            raise ValueError(f"review follow-up source commit does not contain {locator}") from exc
         if expected is not None and result.stdout != expected:
             raise ValueError(f"review follow-up source commit has different bytes for {locator}")
 

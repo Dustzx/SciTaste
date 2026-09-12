@@ -417,9 +417,7 @@ def test_registered_review_routes_to_open_project_obligations(
                 "project_id": "review-project",
                 "review_id": "routing-round",
                 "review_iteration_run_id": "review-iteration-v1",
-                "paper_title": (
-                    "SciTaste: Improving Autonomous Research through Scientific Taste"
-                ),
+                "paper_title": ("SciTaste: Improving Autonomous Research through Scientific Taste"),
                 "mappings": [
                     {
                         "concern_id": "routing-evidence",
@@ -430,9 +428,7 @@ def test_registered_review_routes_to_open_project_obligations(
                             "taste-specificity-mechanism",
                             "native-objective-progress",
                         ],
-                        "rationale": (
-                            "Bind the concern to every registered title-critical study."
-                        ),
+                        "rationale": ("Bind the concern to every registered title-critical study."),
                         "claim_action": None,
                         "title_change_authorized": False,
                     }
