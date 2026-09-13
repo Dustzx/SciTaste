@@ -3168,3 +3168,35 @@ multiple declared semantic roles so later quality judgments can cite exact
 action, evidence, outcome, or limitation excerpts without duplicating the full
 paper section. The resulting inputs are ready for bounded quality proposals but
 grant no admission or effectiveness claim.
+
+### ADR-105: Structured local model nodes are a separate authority plane
+
+Status: accepted and exercised through tokenizer-only AAAR calibration planning;
+no local model generation has occurred.
+
+Keeping licensed source content local cannot mean bypassing the model-node
+runtime or disguising a local generation as a provider response. SciTaste adds a
+`local-transformers` runtime mode that shares the exact structured prompt and
+deterministic proposal validator with hosted backends, but has an independent
+authority bit. Local execution requires profile permission, backend capability,
+and caller `--allow-local`; neither zero API cost nor `--allow-live` grants it.
+The backend is network-free, reports zero API cost, binds checkpoint identity,
+and preserves every malformed JSON attempt for audit before emitting an invalid
+empty object that the node rejects normally.
+
+The AAAR instrument-calibration planner closes the resource join without
+running it. It replays all sixteen projection identities, chooses the largest
+content record and a distinct maximum-redaction record, emits exact project-
+revision-bound runtime configs, and can load only the local tokenizer for true
+input counts. The current plan binds Qwen3-VL-2B snapshot `47f9c0e0...`, two
+inputs of 24,670 and 6,759 tokens, 8,192 maximum output tokens, one repair, one
+RTX 3090, and one GPU hour. Source upload, network, API calls, model loading, GPU
+generation, human review, source admission, and effectiveness claims remain
+false. A successful two-record calibration can justify inspecting or expanding
+the measurement instrument; it cannot support H0 or the paper title.
+
+The Python 3.12 environment was subsequently closed under the owner's bounded
+download policy: its resolved PyTorch 2.5.1/CUDA 12.4 transaction comprised 19
+new wheels and 3,005,789,578 bytes, below the decimal 10-GB ceiling. Import and
+device visibility are verified, but dependency readiness does not satisfy the
+independent `--allow-local` execution gate.

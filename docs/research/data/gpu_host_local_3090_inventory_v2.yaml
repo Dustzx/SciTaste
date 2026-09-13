@@ -1,0 +1,54 @@
+schema_version: "1.0"
+inventory_id: gpu-host-local-3090-20260913-v2
+host_alias: local-3090
+hostname: good-System-Product-Name
+observed_at: 2026-09-13T17:00:00+08:00
+observation_method: read-only-local-plus-full-checkpoint-hash
+devices:
+  - index: 0
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-b9e9ad0c-cdfe-4137-7875-733ac195c786
+    memory_total_mb: 24576
+    memory_free_mb: 22762
+    utilization_percent_at_capture: 28
+    driver_version: 535.183.01
+root_storage:
+  filesystem: /dev/sda
+  mount: /media/good/dxhismyson
+  total_bytes: 3936820731904
+  used_bytes: 3580791713792
+  available_bytes: 155972890624
+  percent_used: 96
+runtime:
+  project_python_version: 3.12.14
+  transformers_version: 4.57.6
+  tokenizer_preflight_available: true
+  pytorch_in_project_environment: false
+  model_generation_available: false
+  bubblewrap_path: /usr/bin/bwrap
+checkpoint:
+  checkpoint_id: qwen3-vl-2b-instruct-local-47f9c0e0
+  destination_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  regular_file_count: 12
+  regular_file_bytes: 4266648961
+  observed_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  size_measurement: sum-of-regular-file-st-size
+  previous_recorded_bytes: 4266653057
+  previous_size_delta_bytes: 4096
+  reconciliation: >-
+    Full content hashing is unchanged. The earlier byte total included one
+    4096-byte directory entry; model checkpoint size now means regular-file
+    payload bytes only.
+tokenizer_preflight:
+  calibration_plan_id: aaar-reference-quality-local-calibration-v2
+  selected_input_count: 2
+  maximum_exact_input_tokens: 24670
+  maximum_output_tokens: 8192
+  context_window_tokens: 131072
+  model_loaded: false
+  gpu_used: false
+remote_state_mutation_performed: false
+gpu_work_performed: false
+model_generation_performed: false
+dataset_download_performed: false
+credentials_recorded: false

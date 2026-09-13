@@ -203,7 +203,7 @@ def validate_grounded_abstraction_against_projection(
     ):
         findings.append("source projection outcome policy differs from the node input")
 
-    observed_roles: dict[str, str] = {}
+    observed_roles: dict[str, frozenset[str]] = {}
     observed_values: dict[str, str] = {}
     allowed_roles = {
         "problem_context",
@@ -219,11 +219,20 @@ def validate_grounded_abstraction_against_projection(
         if not isinstance(name, str) or not isinstance(record, dict):
             findings.append("source projection contains a malformed field record")
             continue
-        role = record.get("semantic_role")
-        if not isinstance(role, str) or "value" not in record:
+        singular_role = record.get("semantic_role")
+        plural_roles = record.get("semantic_roles")
+        if isinstance(singular_role, str) and plural_roles is None:
+            roles = frozenset((singular_role,))
+        elif singular_role is None and isinstance(plural_roles, list) and plural_roles:
+            roles = frozenset(role for role in plural_roles if isinstance(role, str))
+            if len(roles) != len(plural_roles):
+                roles = frozenset()
+        else:
+            roles = frozenset()
+        if not roles or "value" not in record:
             findings.append(f"source projection field {name!r} lacks role or value")
             continue
-        if role not in allowed_roles:
+        if not roles.issubset(allowed_roles):
             findings.append(f"source projection field {name!r} has an unknown semantic role")
             continue
         value = record["value"]
@@ -237,7 +246,7 @@ def validate_grounded_abstraction_against_projection(
                 sort_keys=True,
             )
         )
-        observed_roles[name] = role
+        observed_roles[name] = roles
         observed_values[name] = visible
 
     principle_roles: set[str] = set()
@@ -263,13 +272,13 @@ def validate_grounded_abstraction_against_projection(
             allowed_target_roles = target_roles.get(claim.target)
             if (
                 allowed_target_roles is not None
-                and observed_roles[support.projection_field] not in allowed_target_roles
+                and observed_roles[support.projection_field].isdisjoint(allowed_target_roles)
             ):
                 findings.append(
                     f"grounding for {claim.target.value!r} uses an incompatible semantic role"
                 )
             if claim.target is TasteGroundingTarget.DECISION_PRINCIPLE:
-                principle_roles.add(observed_roles[support.projection_field])
+                principle_roles.update(observed_roles[support.projection_field])
     if len(principle_roles) < 2:
         findings.append("decision principle does not synthesize two semantic source roles")
     if "scientific_action" not in principle_roles:

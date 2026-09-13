@@ -1,0 +1,19 @@
+schema_version: "1.0"
+resource:
+  kind: gpu_host
+  resource_id: gpu-host-local-3090
+  host_alias: local-3090
+  location: local
+  access_profile: local-process
+  connection_alias: null
+  device_count: 1
+  device_name: NVIDIA GeForce RTX 3090
+  minimum_memory_mb_per_device: 24000
+  baseline_inventory_ref: docs/research/data/gpu_host_local_3090_inventory_v2.yaml
+  baseline_inventory_sha256: e8da0bd0a913573be2fd1abd43a92322631b57b4afefe4ad92a327c809077da2
+  baseline_observed_at: 2026-09-13T17:00:00+08:00
+  availability: verified
+  availability_reason: >-
+    Read-only local inventory verified one GPU and the Python 3.12 tokenizer
+    preflight; PyTorch model generation remains unavailable in the project
+    environment until the separately reviewed runtime dependency is installed.

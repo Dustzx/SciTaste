@@ -992,10 +992,11 @@ def _inspect_model_trace(
 
     # Local imports avoid coupling the curation schema to model-node initialization.
     from scitaste.model_nodes.models import NodeResult, NodeResultStatus
-    from scitaste.model_nodes.runtime import RuntimeBackendMode, RuntimeOutcome
+    from scitaste.model_nodes.runtime import RuntimeOutcome
     from scitaste.taste.semantic import (
         GroundedTasteAbstractionNode,
         TasteAbstractionNode,
+        is_verified_model_generation_entry,
         load_verified_taste_abstraction_ledger,
     )
 
@@ -1023,11 +1024,8 @@ def _inspect_model_trace(
     )
     if entry.intent.node_name != expected_node_name:
         _add(blockers, "model_trace:wrong_node", candidate.candidate_id)
-    if (
-        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
-        or not entry.intent.profile.live_execution_permitted
-    ):
-        _add(blockers, "model_trace:not_live_model_assistance", candidate.candidate_id)
+    if not is_verified_model_generation_entry(entry):
+        _add(blockers, "model_trace:not_actual_model_assistance", candidate.candidate_id)
 
     try:
         node_input = TasteAbstractionInput.model_validate_json(

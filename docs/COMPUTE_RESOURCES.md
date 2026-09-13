@@ -6,7 +6,7 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v6.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v8.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -51,7 +51,7 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v6.yaml` explicitly binds
+`configs/resources/projects/scitaste_self_development_v8.yaml` explicitly binds
 all eight current resources to the self-development project. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. The registered copy
@@ -84,12 +84,25 @@ utilization, driver 570.211.01, Python 3.12.3, Docker, and bubblewrap. The
 no checkpoint was transferred, and no model was loaded.
 
 A new read-only local inventory verifies one RTX 3090, 24,576 MiB total VRAM,
-22,947 MiB free at capture, and 155,972,894,720 bytes free on the weights
-filesystem. Full-byte hashing of the current Qwen3-VL-2B-Instruct directory
-returned `47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34`
-for 4,266,653,057 bytes. The older GPU experiment proposal names
+22,762 MiB free at the latest capture, and 155,972,890,624 bytes free on the
+weights filesystem. A second full-byte hash of all 12 regular files in the
+current Qwen3-VL-2B-Instruct tree returned
+`47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34`
+for 4,266,648,961 regular-file bytes. The older 4,266,653,057-byte observation
+included the 4,096-byte root directory entry; the payload did not drift. The
+older GPU experiment proposal names
 `8e95e5f6...`; this mismatch remains visible and requires a new proposal or the
 exact old snapshot rather than silent substitution.
+
+The same local checkpoint is now bound to a two-source, no-upload Reference
+Quality instrument-calibration plan. Transformers 4.57.6 loaded only the local
+tokenizer and measured 24,670 and 6,759 input tokens against a 131,072-token
+context window. The repository-owned Python 3.12 environment now imports
+PyTorch 2.5.1+cu124 and Accelerate 1.15.0 and sees one RTX 3090, but the model
+was not loaded and both generated runtime requests remain blocked until the
+caller supplies the independent local-execution opt-in. The ceiling is one
+local RTX 3090, two model calls, 8,192 output tokens per call, and one GPU hour;
+this calibration cannot establish a Scientific Taste effect.
 
 The live official DeepSeek table was re-inspected on 2026-09-13 after the
 earlier same-day catalog snapshot changed. The current table names callable ID
@@ -121,7 +134,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
   --evidence-root .
 ```
 
@@ -130,26 +143,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v6.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v8.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v6.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v8.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v6.yaml \
+  --catalog configs/resources/compute_catalog_v8.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```

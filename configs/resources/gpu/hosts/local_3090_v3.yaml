@@ -1,0 +1,20 @@
+schema_version: "1.0"
+resource:
+  kind: gpu_host
+  resource_id: gpu-host-local-3090
+  host_alias: local-3090
+  location: local
+  access_profile: local-process
+  connection_alias: null
+  device_count: 1
+  device_name: NVIDIA GeForce RTX 3090
+  minimum_memory_mb_per_device: 24000
+  baseline_inventory_ref: docs/research/data/gpu_host_local_3090_inventory_v3.yaml
+  baseline_inventory_sha256: aec0c87adc77cf7b433b0aa9ed70d6da8080a1b9879714354473b780de0ab71a
+  baseline_observed_at: 2026-09-13T17:15:35+08:00
+  availability: verified
+  availability_reason: >-
+    The repository-owned Python 3.12 runtime now imports the frozen PyTorch,
+    Accelerate, and Transformers stack and sees one RTX 3090. No model load or
+    generation has occurred; the calibration still requires explicit owner
+    review and the independent local-execution switch.

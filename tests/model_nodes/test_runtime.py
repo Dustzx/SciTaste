@@ -424,6 +424,51 @@ def test_completed_live_invocation_resumes_after_project_revision_without_provid
     assert recovered.totals == first.totals
 
 
+def test_local_mode_requires_separate_opt_in_and_accepts_zero_api_budget(tmp_path: Path) -> None:
+    project, revision = _project(tmp_path)
+    base = _profile()
+    profile = base.model_copy(
+        update={
+            "local_execution_permitted": True,
+            "cumulative_project": base.cumulative_project.model_copy(
+                update={"max_api_cost_usd": 0.0}
+            ),
+            "admission": base.admission.model_copy(update={"max_response_cost_usd": 0.0}),
+        }
+    )
+    values = _values(invocation_id="local-gated", revision=revision)
+    values.update(
+        profile=profile,
+        policy=_policy(profile),
+        backend_mode=RuntimeBackendMode.LOCAL,
+    )
+    delegate = _backend(
+        "local-gated",
+        usage=Usage(input_tokens=10, output_tokens=5, cost_usd=0.0),
+    )
+
+    class LocalBackend:
+        name = delegate.name
+        model = delegate.model
+        config = SimpleNamespace(execution_enabled=True, max_output_tokens=1024)
+
+        def complete(self, request):
+            return delegate.complete(request)
+
+    planned = ModelNodeRuntime(project).plan(backend=LocalBackend(), **values)
+    assert "caller did not opt in to local execution" in planned.blockers
+    assert "cumulative API cost budget exhausted" not in planned.blockers
+
+    receipt = ModelNodeRuntime(project).execute(
+        backend=LocalBackend(),
+        allow_local=True,
+        **values,
+    )
+
+    assert receipt.outcome is RuntimeOutcome.ACCEPTED
+    assert receipt.telemetry.cost_usd == 0.0
+
+
 def test_resume_rejects_changed_profile_and_duplicate_invocation(tmp_path: Path) -> None:
     project, revision = _project(tmp_path)
 

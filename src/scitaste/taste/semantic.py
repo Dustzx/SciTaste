@@ -287,6 +287,16 @@ def taste_node_types() -> dict[str, ModelNodeRegistration]:
     }
 
 
+def is_verified_model_generation_entry(entry: RuntimeLedgerEntry) -> bool:
+    """Accept actual remote or local generation, never fixtures or replay."""
+
+    if entry.intent.backend_mode is RuntimeBackendMode.LIVE:
+        return entry.intent.profile.live_execution_permitted
+    if entry.intent.backend_mode is RuntimeBackendMode.LOCAL:
+        return entry.intent.profile.local_execution_permitted
+    return False
+
+
 def taste_deliberation_from_ledger(
     ledger_entry: str | Path,
     *,
@@ -304,11 +314,8 @@ def taste_deliberation_from_ledger(
         raise ValueError("ledger entry is not a Taste deliberation invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste deliberation ledger entry is not accepted")
-    if (
-        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
-        or not entry.intent.profile.live_execution_permitted
-    ):
-        raise ValueError("decision-aware Taste selection requires a verified live invocation")
+    if not is_verified_model_generation_entry(entry):
+        raise ValueError("decision-aware Taste selection requires a verified model invocation")
     input_data = TasteDeliberationInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -347,11 +354,8 @@ def reference_mining_from_ledger(
         raise ValueError("ledger entry is not a reference-mining invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("reference-mining ledger entry is not accepted")
-    if (
-        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
-        or not entry.intent.profile.live_execution_permitted
-    ):
-        raise ValueError("reference mining requires a verified live query proposal")
+    if not is_verified_model_generation_entry(entry):
+        raise ValueError("reference mining requires a verified model query proposal")
     input_data = ReferenceMiningNeed.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -390,11 +394,8 @@ def reference_quality_from_ledger(
         raise ValueError("ledger entry is not a reference-quality invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("reference-quality ledger entry is not accepted")
-    if (
-        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
-        or not entry.intent.profile.live_execution_permitted
-    ):
-        raise ValueError("reference-quality screening requires a verified live invocation")
+    if not is_verified_model_generation_entry(entry):
+        raise ValueError("reference-quality screening requires a verified model invocation")
     input_data = ReferenceQualityInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -443,11 +444,8 @@ def taste_abstraction_candidate_from_ledger(
         raise ValueError("ledger entry is not a Taste abstraction invocation")
     if entry.outcome is not RuntimeOutcome.ACCEPTED or entry.result is None:
         raise ValueError("Taste abstraction ledger entry is not accepted")
-    if (
-        entry.intent.backend_mode is not RuntimeBackendMode.LIVE
-        or not entry.intent.profile.live_execution_permitted
-    ):
-        raise ValueError("model-assisted Taste abstraction requires a verified live invocation")
+    if not is_verified_model_generation_entry(entry):
+        raise ValueError("model-assisted Taste abstraction requires a verified model invocation")
     node_input = TasteAbstractionInput.model_validate_json(
         json.dumps(entry.intent.node_input, ensure_ascii=False, allow_nan=False),
         strict=True,
@@ -622,6 +620,7 @@ __all__ = [
     "TasteDeliberationNode",
     "TasteDeliberationProposal",
     "VerifiedReferenceQuality",
+    "is_verified_model_generation_entry",
     "load_verified_taste_abstraction_ledger",
     "reference_mining_from_ledger",
     "reference_quality_from_ledger",

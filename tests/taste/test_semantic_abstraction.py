@@ -328,6 +328,33 @@ def test_grounded_abstraction_requires_traceable_contrast_and_transfer_boundary(
     assert taste_node_types()["grounded-taste-abstraction"].output_type is type(result.proposal)
 
 
+def test_grounded_abstraction_accepts_multi_role_observed_experiment_projection() -> None:
+    input_data = _grounded_input()
+    projection = json.loads(input_data.source_projection)
+    projection["fields"]["action"]["semantic_roles"] = [
+        "scientific_action",
+        "evidence",
+        "limitation",
+    ]
+    del projection["fields"]["action"]["semantic_role"]
+    serialized = json.dumps(
+        projection,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    input_data = input_data.model_copy(
+        update={
+            "source_projection": serialized,
+            "source_projection_sha256": hashlib.sha256(serialized.encode()).hexdigest(),
+        }
+    )
+
+    result = _grounded_run(input_data, _grounded_proposal())
+
+    assert result.status is NodeResultStatus.ACCEPTED
+
+
 def test_grounded_abstraction_rejects_a_plausible_but_unsupported_excerpt() -> None:
     proposal = _grounded_proposal()
     proposal["grounding"][0]["supports"][0]["verbatim_evidence"] = (

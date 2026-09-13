@@ -21,6 +21,7 @@ from scitaste.model_nodes.full_workflow_tool_intelligence import (
     verify_full_workflow_tool_intelligence,
     verify_full_workflow_tool_intelligence_input,
 )
+from scitaste.model_nodes.local_transformers import StructuredLocalTransformersBackend
 from scitaste.model_nodes.models import (
     CumulativeProjectBudget,
     ModelCostProvenance,
@@ -54,6 +55,7 @@ from scitaste.model_nodes.openai_compatible import (
     StructuredOpenAICompatibleConfig,
     StructuredProviderResponseError,
     load_structured_openai_compatible_config,
+    structured_model_messages,
 )
 from scitaste.model_nodes.pilot_models import (
     AcceptanceMetric,
@@ -141,6 +143,7 @@ from scitaste.model_nodes.runtime import (
 from scitaste.model_nodes.runtime_config import (
     LiveRuntimeBackend,
     LoadedModelNodeRuntimeConfig,
+    LocalRuntimeBackend,
     ModelNodeRuntimeConfig,
     RuntimeBackendBinding,
     ScriptedRuntimeBackend,
@@ -350,6 +353,7 @@ __all__ = [
     "LoadedFullWorkflowToolIntelligence",
     "LoadedModelNodeProfiles",
     "LoadedModelNodeRuntimeConfig",
+    "LocalRuntimeBackend",
     "ManualInterventionBundle",
     "ManualInterventionMeasurement",
     "ManualInterventionRequirement",
@@ -440,6 +444,7 @@ __all__ = [
     "StructuredBackendDisabledError",
     "StructuredHTTPResponse",
     "StructuredHTTPTransport",
+    "StructuredLocalTransformersBackend",
     "StructuredModelBackend",
     "StructuredModelRequest",
     "StructuredModelResponse",
@@ -524,6 +529,7 @@ __all__ = [
     "publish_full_workflow_model_advisory_input",
     "save_pilot_report",
     "score_tool_effectiveness_outcome",
+    "structured_model_messages",
     "validate_manual_interventions",
     "validate_profile_binding",
     "verify_full_workflow_model_advisory",

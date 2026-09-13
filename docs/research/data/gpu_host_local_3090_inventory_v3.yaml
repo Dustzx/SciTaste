@@ -1,0 +1,69 @@
+schema_version: "1.0"
+inventory_id: gpu-host-local-3090-20260913-v3
+host_alias: local-3090
+hostname: good-System-Product-Name
+observed_at: 2026-09-13T17:15:35+08:00
+observation_method: read-only-local-plus-python312-runtime-import
+devices:
+  - index: 0
+    name: NVIDIA GeForce RTX 3090
+    uuid: GPU-b9e9ad0c-cdfe-4137-7875-733ac195c786
+    memory_total_mb: 24576
+    memory_free_mb: 22510
+    utilization_percent_at_capture: 29
+    driver_version: 535.183.01
+root_storage:
+  filesystem: /dev/sda
+  mount: /media/good/dxhismyson
+  total_bytes: 3936820731904
+  used_bytes: 3580791713792
+  available_bytes: 155972890624
+  percent_used: 96
+runtime:
+  project_python_version: 3.12.14
+  torch_version: 2.5.1+cu124
+  torch_cuda_version: "12.4"
+  accelerate_version: 1.15.0
+  transformers_version: 4.57.6
+  safetensors_version: 0.8.0
+  cuda_available: true
+  visible_cuda_devices: 1
+  visible_device_name: NVIDIA GeForce RTX 3090
+  model_generation_dependencies_available: true
+  bubblewrap_path: /usr/bin/bwrap
+dependency_transaction:
+  package_index: https://pypi.org/simple
+  parsed_install_plan_sha256: f0045f56b42f24779dd94c701768b71f78b5a79d5db83db097a3e30810f778f0
+  planned_new_wheels: 19
+  planned_download_bytes: 3005789578
+  automatic_download_ceiling_bytes: 10000000000
+  root_packages:
+    - torch==2.5.1
+    - accelerate==1.15.0
+    - safetensors==0.8.0
+  licenses:
+    torch: BSD-3-Clause
+    accelerate: Apache-2.0
+    nvidia_cuda_runtime_dependencies: NVIDIA-Proprietary-Software
+checkpoint:
+  checkpoint_id: qwen3-vl-2b-instruct-local-47f9c0e0
+  destination_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  regular_file_count: 12
+  regular_file_bytes: 4266648961
+  observed_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  size_measurement: sum-of-regular-file-st-size
+  content_hash_reused_from_full_v2_rehash: true
+calibration_boundary:
+  calibration_plan_id: aaar-reference-quality-local-calibration-v2
+  selected_input_count: 2
+  maximum_exact_input_tokens: 24670
+  maximum_output_tokens: 8192
+  context_window_tokens: 131072
+  model_loaded: false
+  gpu_generation_performed: false
+  explicit_local_execution_opt_in_present: false
+remote_state_mutation_performed: false
+gpu_work_performed: false
+model_generation_performed: false
+dataset_download_performed: false
+credentials_recorded: false

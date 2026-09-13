@@ -43,6 +43,7 @@ def register_model_node_runtime_cli(commands: argparse._SubParsersAction) -> Non
     plan = runtime_commands.add_parser("plan", help="Validate without writing or calling a model")
     _add_invocation_options(plan)
     plan.add_argument("--allow-live", action="store_true")
+    plan.add_argument("--allow-local", action="store_true")
     _add_log_level(plan)
     plan.set_defaults(handler=_handle_plan)
 
@@ -50,6 +51,7 @@ def register_model_node_runtime_cli(commands: argparse._SubParsersAction) -> Non
     _add_invocation_options(execute)
     execute.add_argument("--resume", action="store_true")
     execute.add_argument("--allow-live", action="store_true")
+    execute.add_argument("--allow-local", action="store_true")
     execute.add_argument("--dry-run", action="store_true")
     _add_log_level(execute)
     execute.set_defaults(handler=_handle_execute)
@@ -124,6 +126,7 @@ def _handle_plan(args: argparse.Namespace) -> int:
         request,
         backend=loaded_config.config.build_backend(args.invocation_id),
         allow_live=args.allow_live,
+        allow_local=args.allow_local,
     )
     print(
         json.dumps(
@@ -140,13 +143,19 @@ def _handle_execute(args: argparse.Namespace) -> int:
     facade = ModelNodeFacade(_runtime(args.outputs_root))
     backend = loaded_config.config.build_backend(args.invocation_id)
     if args.dry_run:
-        result = facade.plan(request, backend=backend, allow_live=args.allow_live)
+        result = facade.plan(
+            request,
+            backend=backend,
+            allow_live=args.allow_live,
+            allow_local=args.allow_local,
+        )
     else:
         result = facade.execute(
             request,
             backend=backend,
             resume=args.resume,
             allow_live=args.allow_live,
+            allow_local=args.allow_local,
         )
     print(
         json.dumps(

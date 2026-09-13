@@ -37,6 +37,7 @@ class ModelNodeProfile(ProfileModel):
     model: str = Field(min_length=1)
     allowed_node_names: tuple[str, ...] = Field(min_length=1)
     live_execution_permitted: bool = False
+    local_execution_permitted: bool = False
     generation: ProviderGenerationEnvelope
     admission: NodeAdmissionBudget
     cumulative_project: CumulativeProjectBudget
@@ -51,6 +52,8 @@ class ModelNodeProfile(ProfileModel):
 
     @model_validator(mode="after")
     def ceilings_are_compatible(self) -> ModelNodeProfile:
+        if self.live_execution_permitted and self.local_execution_permitted:
+            raise ValueError("a profile cannot permit both remote-live and local execution")
         if self.admission.max_request_bytes > self.generation.max_request_bytes:
             raise ValueError("admission request limit exceeds the provider generation envelope")
         if self.admission.max_output_tokens > self.generation.max_output_tokens:
@@ -66,7 +69,12 @@ class ModelNodeProfile(ProfileModel):
     @computed_field
     @property
     def fingerprint(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
+        payload = self.model_dump(mode="json", exclude={"fingerprint"})
+        # Preserve every existing v1 profile fingerprint while making the new
+        # local-execution grant explicit and content-addressed when enabled.
+        if not self.local_execution_permitted:
+            payload.pop("local_execution_permitted")
+        return _canonical_sha256(payload)
 
 
 class ModelNodeProfileReference(ProfileModel):

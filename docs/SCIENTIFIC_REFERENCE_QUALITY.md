@@ -2,8 +2,9 @@
 
 Status: implemented at the typed proposal, deterministic verification,
 content-free qualification, human-admission, and evidence-program boundaries.
-No acquired source body, provider response, human judgment, or effectiveness
-result is reported here.
+Sixteen acquired AAAR records have real prestige-blind projections and an exact
+two-source local-model calibration plan. No model proposal, provider response,
+human judgment, source admission, or effectiveness result is reported here.
 
 ## Why venue retrieval is not Scientific Taste
 
@@ -73,6 +74,28 @@ This division supports scalable model proposals while retaining a calibrated,
 auditable human standard for the formal corpus. It does not treat model-human
 agreement as proof that the resulting Taste improves research.
 
+## Local no-upload calibration boundary
+
+Reference Quality content can now stay on the owning machine. The structured
+model runtime accepts an independently gated `local-transformers` backend in
+addition to replay and OpenAI-compatible providers. It uses the same structured
+system/user messages and deterministic verifier as the hosted path, records the
+exact local checkpoint identity, and retains every invalid JSON attempt before
+returning a rejected proposal. Local execution requires three simultaneous
+conditions: the profile permits local calls, the backend capability is enabled,
+and the caller supplies `--allow-local`. `--allow-live` cannot open this path.
+
+The first AAAR calibration plan selects two deterministic stress records from
+the complete sixteen-item projection: the largest context and the highest
+redaction count outside that record. The exact Qwen3-VL-2B checkpoint hash is
+`47f9c0e0...`, and the local tokenizer measured maximum input length 24,670
+tokens. The plan caps output at 8,192 tokens per attempt, permits one repair,
+uses no network or API, and has a one-RTX-3090/one-GPU-hour ceiling. Tokenization
+is complete and the Python 3.12 PyTorch runtime is import-verified; model
+loading, generation, and human comparison are not.
+This is instrument calibration to detect schema-following and grounding failure,
+not a two-item estimate of source quality or downstream effectiveness.
+
 ## H0 causal obligation
 
 The ICLR evidence program now distinguishes source quality from abstraction and
@@ -124,9 +147,11 @@ the prestige treatment, and a prestige selection cannot bypass safe-use gates.
 ## Remaining evidence
 
 The method contract is executable, but the claim remains open. The first
-rights-filtered AAAR pilot now contributes 16 exact prestige-blind projections
-under the standing local-read policy. Real progress still requires model
-quality proposals, two conflict-cleared reviewers, a real
+rights-filtered AAAR pilot contributes 16 exact prestige-blind projections under
+the standing local-read policy, and its two-source local calibration is planned
+with exact token and resource bounds. Real progress still requires inspecting
+the resulting model proposals, deciding whether to expand the instrument to the
+full pilot, two conflict-cleared reviewers, a real
 task-specific broad pool with observed prestige metadata, source-group-disjoint
 held-out cases, matched treatment materialization, and powered outcome analysis.
 The comparator selection and arm-to-byte continuity algorithms are now frozen in

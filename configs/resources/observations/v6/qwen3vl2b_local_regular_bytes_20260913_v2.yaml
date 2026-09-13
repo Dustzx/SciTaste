@@ -1,0 +1,16 @@
+schema_version: "1.0"
+observation_id: qwen3vl2b-local-regular-bytes-20260913-v2
+resource_id: qwen3-vl-2b-local-47f9c0e0
+resource_kind: model_checkpoint
+observed_at: 2026-09-13T17:00:00+08:00
+method: automated_probe
+status: verified
+observed_checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+observed_checkpoint_bytes: 4266648961
+destination_present: true
+notes:
+  - Full-byte hashing of all twelve regular files reproduced the previously registered content hash.
+  - The earlier total was 4096 bytes larger because it included the root directory entry; this observation standardizes size to regular-file payload bytes.
+  - Only the tokenizer was loaded for the separate AAAR calibration preflight; no model generation or GPU workload occurred.
+credentials_recorded: false
+observation_only: true

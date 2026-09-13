@@ -1,0 +1,41 @@
+schema_version: "1.1"
+catalog_id: scitaste-shared-compute-v8
+resource_refs:
+  # Retained only so registered historical observations remain content-addressable.
+  # Current project bindings and launch protocols must not select this resource.
+  - resource_id: deepseek-v41-flash
+    kind: api_model
+    locator: api/deepseek_v41_flash_v2.yaml
+    sha256: 143c2fdd837e319c355c11635251a24cb450f93bf7bda2b9ae0056b172d00cbe
+  - resource_id: deepseek-v4-flash
+    kind: api_model
+    locator: api/deepseek_v4_flash_v3.yaml
+    sha256: bf227050319c6720ec4d4eb4fe3d245f4b639bf5716b210cb415b96a64f8e349
+  - resource_id: zhipu-glm53-flash
+    kind: api_model
+    locator: api/zhipu_glm53_flash_v2.yaml
+    sha256: 37b2c17541f4df67b3dc5f3f2c2766d44fe39f10096ebe44f9452e636668c412
+  - resource_id: bailian-qwen38-max
+    kind: api_model
+    locator: api/bailian_qwen38_max.yaml
+    sha256: 3bb2757dc050eb4cf58c53e96693309e018491c57e4bf0c0c87580d24c987a37
+  - resource_id: gpu-host-local-3090
+    kind: gpu_host
+    locator: gpu/hosts/local_3090_v3.yaml
+    sha256: f4075e4eb5de45c64b69abac94808ad00d652b5161fc4d747738f3cc80f2ef23
+  - resource_id: gpu-host-3090-2
+    kind: gpu_host
+    locator: gpu/hosts/remote_3090_2_verified_20260912.yaml
+    sha256: 9ce8d2e4d97a8361c0ae7dd0471bcf772aacfc3d13877290bc154684c3d8089c
+  - resource_id: qwen3-vl-2b-local-47f9c0e0
+    kind: model_checkpoint
+    locator: gpu/checkpoints/qwen3_vl_2b_instruct_local_v3.yaml
+    sha256: 82237212401bea2f844c9055aef69b5f6456bee9cbd55e50932534fe1ce1eec6
+  - resource_id: qwen3-5-4b-local-b4e05070
+    kind: model_checkpoint
+    locator: gpu/checkpoints/qwen3_5_4b_local.yaml
+    sha256: 8814f17b95a18831586338a13c9e26a850bc19b696b6df8a1c067ceaa676ccd2
+  - resource_id: qwen3-5-4b-remote-b4e05070
+    kind: model_checkpoint
+    locator: gpu/checkpoints/qwen3_5_4b_remote.yaml
+    sha256: 6528061f2657a5fa9f3ced6418324260f9164ef604416491a22944a7ca7cb877

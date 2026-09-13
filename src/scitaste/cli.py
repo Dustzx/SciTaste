@@ -167,6 +167,7 @@ from scitaste.evaluation import (
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
     lock_human_reviewer_submissions,
+    materialize_aaar_quality_calibration_plan,
     materialize_aaar_quality_projections,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
@@ -2106,6 +2107,28 @@ def build_parser() -> argparse.ArgumentParser:
     aaar_quality_projection.add_argument("--output-directory", type=Path, required=True)
     _add_log_level_option(aaar_quality_projection)
     aaar_quality_projection.set_defaults(handler=_handle_evaluation_aaar_quality_projection)
+    aaar_quality_calibration = evaluation_commands.add_parser(
+        "aaar-quality-calibration-plan",
+        help="Materialize a two-item no-run local reference-quality calibration plan",
+    )
+    aaar_quality_calibration.add_argument("--projection-report", type=Path, required=True)
+    aaar_quality_calibration.add_argument("--backend-config", type=Path, required=True)
+    aaar_quality_calibration.add_argument("--profile-set", type=Path, required=True)
+    aaar_quality_calibration.add_argument("--profile-id", required=True)
+    aaar_quality_calibration.add_argument("--plan-id", required=True)
+    aaar_quality_calibration.add_argument("--intended-run-id", required=True)
+    aaar_quality_calibration.add_argument("--expected-project-revision", type=int, required=True)
+    aaar_quality_calibration.add_argument("--planned-at", required=True)
+    aaar_quality_calibration.add_argument("--output-directory", type=Path, required=True)
+    aaar_quality_calibration.add_argument(
+        "--tokenizer-preflight",
+        action="store_true",
+        help="load only the pinned local tokenizer to measure exact prompt tokens",
+    )
+    _add_log_level_option(aaar_quality_calibration)
+    aaar_quality_calibration.set_defaults(
+        handler=_handle_evaluation_aaar_quality_calibration_plan
+    )
     metadata_audit_plan = evaluation_commands.add_parser(
         "acquisition-metadata-audit-plan",
         help="Bind a no-read YAML/CSV structural-audit proposal to acquired bytes",
@@ -6316,6 +6339,32 @@ def _handle_evaluation_aaar_quality_projection(args: argparse.Namespace) -> int:
         output_directory=args.output_directory,
         projection_id=args.projection_id,
         materialized_at=datetime.fromisoformat(args.materialized_at),
+    )
+    print(
+        json.dumps(
+            {
+                "report_path": str(args.output_directory / "REPORT.json"),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_aaar_quality_calibration_plan(args: argparse.Namespace) -> int:
+    report = materialize_aaar_quality_calibration_plan(
+        projection_report_path=args.projection_report,
+        backend_config_path=args.backend_config,
+        profile_set_path=args.profile_set,
+        profile_id=args.profile_id,
+        output_directory=args.output_directory,
+        plan_id=args.plan_id,
+        intended_run_id=args.intended_run_id,
+        expected_project_revision=args.expected_project_revision,
+        planned_at=datetime.fromisoformat(args.planned_at),
+        perform_tokenizer_preflight=args.tokenizer_preflight,
     )
     print(
         json.dumps(

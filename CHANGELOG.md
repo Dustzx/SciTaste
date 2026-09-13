@@ -5,6 +5,23 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a no-upload structured local-model path for title-critical Scientific
+  Reference Quality. Local Transformers calls share the hosted prompt and
+  deterministic verifier but require a separate profile permission, backend
+  capability, and caller `--allow-local`; malformed JSON attempts remain in the
+  ledger and cannot become accepted proposals. The first AAAR plan binds two
+  deterministic stress records, exact tokenizer counts, the verified local
+  Qwen3-VL-2B checkpoint, and a one-RTX-3090/one-hour ceiling. Tokenization ran,
+  and the bounded Python 3.12 dependency transaction installed PyTorch
+  2.5.1+cu124 and Accelerate 1.15.0; model loading, GPU generation, APIs,
+  uploads, human reviews, source admission, and effectiveness claims remain
+  absent.
+- Reconciled the local Qwen3-VL-2B inventory without rewriting history. A full
+  second hash confirms the unchanged 12-file payload at 4,266,648,961 bytes;
+  the prior total included the 4,096-byte root directory entry. Compute catalog
+  and self-development binding v8 now carry the corrected regular-file
+  convention, import-verified local generation stack, and bounded Reference
+  Quality calibration role.
 - Replaced repeated per-file read coordination with a project-scoped standing
   local-resource read policy while preserving receipt/hash, bounds, path,
   no-execution, no-upload, and no-model-call controls. The real 16-record AAAR

@@ -156,10 +156,12 @@ class ModelNodeFacade:
         *,
         backend: StructuredModelBackend | None = None,
         allow_live: bool = False,
+        allow_local: bool = False,
     ) -> Any:
         receipt = self.runtime.plan(
             backend=backend,
             allow_live=allow_live,
+            allow_local=allow_local,
             **self._runtime_values(request),
         )
         return self._result(request.node_name, receipt)
@@ -171,11 +173,13 @@ class ModelNodeFacade:
         backend: StructuredModelBackend | None,
         resume: bool = False,
         allow_live: bool = False,
+        allow_local: bool = False,
     ) -> Any:
         receipt = self.runtime.execute(
             backend=backend,
             resume=resume,
             allow_live=allow_live,
+            allow_local=allow_local,
             **self._runtime_values(request),
         )
         return self._result(request.node_name, receipt)

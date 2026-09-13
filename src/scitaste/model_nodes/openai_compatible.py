@@ -272,41 +272,6 @@ class StructuredOpenAICompatibleBackend:
         *,
         config: StructuredOpenAICompatibleConfig,
     ) -> dict[str, JsonValue]:
-        identity = {
-            "schema_version": request.schema_version,
-            "request_id": request.request_id,
-            "request_fingerprint": request.fingerprint,
-            "node_name": request.node_name,
-            "stage": request.stage,
-            "state_snapshot_id": request.state_snapshot_id,
-            "expected_backend": request.expected_backend,
-            "expected_model": request.expected_model,
-            "policy_id": request.policy_id,
-            "policy_fingerprint": request.policy_fingerprint,
-            "prompt_version": request.prompt_version,
-            "seed": request.seed,
-        }
-        if request.profile_id is not None:
-            identity["profile_id"] = request.profile_id
-            identity["profile_fingerprint"] = request.profile_fingerprint
-            identity["generation_envelope"] = request.generation_envelope.model_dump(mode="json")
-            identity["admission_budget"] = request.admission_budget.model_dump(mode="json")
-            identity["cumulative_project_budget"] = request.cumulative_project_budget.model_dump(
-                mode="json"
-            )
-        user_content = json.dumps(
-            {
-                "response_contract": (
-                    "Return exactly one JSON object that validates against output_schema."
-                ),
-                "request_identity": identity,
-                "input_payload": request.input_payload,
-                "output_schema": request.output_schema,
-            },
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
         requested_output_tokens = (
             request.generation_envelope.max_output_tokens
             if request.generation_envelope is not None
@@ -318,10 +283,7 @@ class StructuredOpenAICompatibleBackend:
             )
         payload: dict[str, JsonValue] = {
             "model": config.model,
-            "messages": [
-                {"role": "system", "content": request.system_instruction},
-                {"role": "user", "content": user_content},
-            ],
+            "messages": structured_model_messages(request),
             "response_format": {"type": "json_object"},
             "seed": request.seed,
             "stream": False,
@@ -366,6 +328,53 @@ def load_structured_openai_compatible_config(
     if not isinstance(raw, dict):
         raise ValueError("structured model backend config root must be an object")
     return StructuredOpenAICompatibleConfig.model_validate(raw)
+
+
+def structured_model_messages(request: StructuredModelRequest) -> list[dict[str, str]]:
+    """Render one provider-neutral chat shared by API and local structured backends."""
+
+    identity: dict[str, JsonValue] = {
+        "schema_version": request.schema_version,
+        "request_id": request.request_id,
+        "request_fingerprint": request.fingerprint,
+        "node_name": request.node_name,
+        "stage": request.stage,
+        "state_snapshot_id": request.state_snapshot_id,
+        "expected_backend": request.expected_backend,
+        "expected_model": request.expected_model,
+        "policy_id": request.policy_id,
+        "policy_fingerprint": request.policy_fingerprint,
+        "prompt_version": request.prompt_version,
+        "seed": request.seed,
+    }
+    if request.profile_id is not None:
+        assert request.generation_envelope is not None
+        assert request.admission_budget is not None
+        assert request.cumulative_project_budget is not None
+        identity["profile_id"] = request.profile_id
+        identity["profile_fingerprint"] = request.profile_fingerprint
+        identity["generation_envelope"] = request.generation_envelope.model_dump(mode="json")
+        identity["admission_budget"] = request.admission_budget.model_dump(mode="json")
+        identity["cumulative_project_budget"] = request.cumulative_project_budget.model_dump(
+            mode="json"
+        )
+    user_content = json.dumps(
+        {
+            "response_contract": (
+                "Return exactly one JSON object that validates against output_schema."
+            ),
+            "request_identity": identity,
+            "input_payload": request.input_payload,
+            "output_schema": request.output_schema,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return [
+        {"role": "system", "content": request.system_instruction},
+        {"role": "user", "content": user_content},
+    ]
 
 
 def _chat_message(data: dict[str, JsonValue]) -> tuple[dict[str, JsonValue], str]:

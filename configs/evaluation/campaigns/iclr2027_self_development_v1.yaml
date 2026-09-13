@@ -40,7 +40,7 @@ artifacts:
     sha256: eed6b98a9eae316589058a3c42680ff12f18e556010b9df5d95c12beb75acb1f
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
-    sha256: 87156bae5a9fce52abfde3c5527d7defe2a5c3e1929a36a3cc09ff44a4e5f0d0
+    sha256: 1b6d01a3e76ad79ee3a0773379ea683cdf73274fcba025f3c033c608e5df1a54
   - artifact_id: scientific-reference-mining
     path: docs/SCIENTIFIC_REFERENCE_MINING.md
     sha256: a35c26b4fd8f265f4ce1ff4ff6deef18ba0acfd759296253c7dfc9cfbf1886d4
@@ -54,11 +54,11 @@ artifacts:
     path: configs/model_nodes/runtime_profiles.reference_mining_v2.yaml
     sha256: 99ea209d1bacb898e4cfa6a8587820c54f30c52cb48b15f9afac78fc443cc9bd
   - artifact_id: reference-quality-profiles
-    path: configs/model_nodes/runtime_profiles.reference_quality_v2.yaml
-    sha256: d8291726a65b45a1d4fa347d0bab4bc8bf473e576d91533b74f6f75cd274fc5c
+    path: configs/model_nodes/runtime_profiles.reference_quality_v3.yaml
+    sha256: 29ab946e34d423319913aaeea70deb5af5077eca73b324cacd1ee71ce60152cb
   - artifact_id: reference-quality-pipeline
-    path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v3.yaml
-    sha256: 7255da9790a4d9c6dce4c6f48e68e9e7503e1a1d8afe44319e5fea3bd9e78378
+    path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v4.yaml
+    sha256: 909e95aaf78af71e04ab9edd70b3e76702e6667309563e79a7ab7c98c24677e7
   - artifact_id: standing-local-read-policy
     path: configs/evaluation/acquisition/standing_owner_local_read_policy_v1.yaml
     sha256: 0f1fdbe7393a128d9b4af455ec23a0cc3831df32993e0eac01cc9ebda4041cf5
@@ -74,6 +74,9 @@ artifacts:
   - artifact_id: aaar-quality-projection
     path: docs/research/data/aaar_experiment_design_quality_projection_v1.yaml
     sha256: c541566d8cc2a218ef1cf41f692e64a504ea1bfbfc3ab35f8ad523c5350a85c7
+  - artifact_id: aaar-quality-local-calibration
+    path: docs/research/data/aaar_reference_quality_local_calibration_v2.yaml
+    sha256: ea8fbcddfb648b4e92f6d4300994bc1f9e6256286adf38b0b49755736c264551
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -111,11 +114,11 @@ artifacts:
     path: configs/model_nodes/runtime_profiles.grounded_taste_abstraction_v2.yaml
     sha256: cb11d5dcaf24d209c3f3cdf552abc475701e5a97079ae659917e8b3a1951ce8b
   - artifact_id: current-compute-catalog
-    path: configs/resources/compute_catalog_v6.yaml
-    sha256: 27725e61e560534bc85c61ff9855a5a46d373819fb27d212dcf97b3143736c12
+    path: configs/resources/compute_catalog_v8.yaml
+    sha256: d4aa55427196e182f3a1c4c1fe1df0213abf80f263cfe320dcceffec49a386b9
   - artifact_id: current-project-resource-binding
-    path: configs/resources/projects/scitaste_self_development_v6.yaml
-    sha256: ad53339250bea019d5da2c0ace53f5855009730a46bb957a7bafdf231607e6d3
+    path: configs/resources/projects/scitaste_self_development_v8.yaml
+    sha256: d5f95baf65996f20090227f7610fc01abd65c531ab64a173aa6d8d76574e08cd
   - artifact_id: current-api-identity-protocol
     path: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
     sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
@@ -178,9 +181,10 @@ tracks:
         At least 120 natural, source-group-disjoint research decisions across
         at least three domains and all six SciTaste decision families. A
         rights-filtered sixteen-record AAAR pilot is acquired and byte-verified
-        and now has sixteen bounded prestige-blind quality projections, but has
-        not received model/human quality judgments or admission into this
-        target population.
+        and now has sixteen bounded prestige-blind quality projections plus an
+        exact tokenizer-qualified two-record local calibration plan, but has not
+        received model/human quality judgments or admission into this target
+        population.
       item_ids: [aaar-1.0, aries, openreview-public-comments]
       population_floor: 120
       exact_bytes_available: false
@@ -229,6 +233,7 @@ tracks:
       - aaar-rights-pilot-acquisition
       - standing-local-read-policy
       - aaar-quality-projection
+      - aaar-quality-local-calibration
       - grounded-taste-abstraction-profiles
       - current-compute-catalog
       - current-project-resource-binding
@@ -243,6 +248,7 @@ tracks:
     blocker_codes:
       - natural-case-population:not-frozen
       - quality-screen-model-traces:not-collected
+      - quality-screen-local-calibration:not-executed
       - expert-labels:not-collected
       - held-out-split:not-verified
       - exact-cell-plan:not-compilable-before-curation
@@ -488,9 +494,10 @@ stages:
     state: blocked
     track_ids: [scientific-taste-decisions]
     depends_on: [approve-exact-source-acquisition]
-    external_actions: []
-    owner_approval_required: false
+    external_actions: [run_gpu]
+    owner_approval_required: true
     blocker_codes:
+      - reference-quality-local-calibration:not-owner-approved-or-executed
       - reference-quality-model-proposals:not-collected
       - dual-independent-human-reviews:not-collected
       - source-isolation:not-qualified
@@ -502,11 +509,13 @@ stages:
       - reference-quality-pipeline
       - standing-local-read-policy
       - aaar-quality-projection
+      - aaar-quality-local-calibration
     next_decision: >-
-      Run a bounded task-excluded reference-quality calibration over the sixteen
-      exact projections with one authenticated current provider, compile
-      content-free receipts, then obtain two independent prestige- and
-      model-blind reviews before source admission.
+      Review and explicitly authorize the two-record, no-upload local
+      Qwen3-VL-2B Reference Quality calibration bounded to one RTX 3090 and one
+      GPU hour. Inspect grounding and schema failures before deciding whether to
+      expand to all sixteen projections, compile content-free receipts, and
+      obtain two independent prestige- and model-blind reviews before admission.
 
   - stage_id: qualify-held-out-task-bytes
     kind: human_curation

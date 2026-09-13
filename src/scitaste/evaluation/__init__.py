@@ -1,5 +1,10 @@
 """Typed evaluation-design contracts for external and recursive SciTaste studies."""
 
+from scitaste.evaluation.aaar_quality_calibration import (
+    AaarQualityCalibrationItem,
+    AaarQualityCalibrationPlan,
+    materialize_aaar_quality_calibration_plan,
+)
 from scitaste.evaluation.aaar_quality_projection import (
     AaarQualityProjectionItem,
     AaarQualityProjectionReport,
@@ -753,6 +758,8 @@ from scitaste.evaluation.taste_corpus_pair import (
 )
 
 __all__ = [
+    "AaarQualityCalibrationItem",
+    "AaarQualityCalibrationPlan",
     "AaarQualityProjectionItem",
     "AaarQualityProjectionReport",
     "AcquiredCohortFinding",
@@ -1336,6 +1343,7 @@ __all__ = [
     "load_taste_corpus_curation_package",
     "load_taste_corpus_pair_manifest",
     "lock_human_reviewer_submissions",
+    "materialize_aaar_quality_calibration_plan",
     "materialize_aaar_quality_projections",
     "materialize_dataset_acquisition",
     "materialize_dataset_package_acquisition",

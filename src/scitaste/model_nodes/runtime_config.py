@@ -10,12 +10,14 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
+from scitaste.backends.local_transformers import LocalTransformersConfig
 from scitaste.model_nodes.backends import (
     ScriptedStructuredBackend,
     ScriptedStructuredReply,
     StructuredModelBackend,
 )
 from scitaste.model_nodes.facade import ImmutableStateProjection
+from scitaste.model_nodes.local_transformers import StructuredLocalTransformersBackend
 from scitaste.model_nodes.models import NodePolicy
 from scitaste.model_nodes.openai_compatible import (
     StructuredOpenAICompatibleBackend,
@@ -59,8 +61,21 @@ class LiveRuntimeBackend(RuntimeConfigModel):
         return StructuredOpenAICompatibleBackend(self.config)
 
 
+class LocalRuntimeBackend(RuntimeConfigModel):
+    kind: Literal["local-transformers"] = "local-transformers"
+    config: LocalTransformersConfig
+
+    @property
+    def mode(self) -> RuntimeBackendMode:
+        return RuntimeBackendMode.LOCAL
+
+    def build(self, request_id: str) -> StructuredLocalTransformersBackend:
+        del request_id
+        return StructuredLocalTransformersBackend(self.config)
+
+
 RuntimeBackendBinding = Annotated[
-    ScriptedRuntimeBackend | LiveRuntimeBackend,
+    ScriptedRuntimeBackend | LiveRuntimeBackend | LocalRuntimeBackend,
     Field(discriminator="kind"),
 ]
 
@@ -81,7 +96,11 @@ class ModelNodeRuntimeConfig(RuntimeConfigModel):
         identity = (
             (self.backend.provider, self.backend.model)
             if isinstance(self.backend, ScriptedRuntimeBackend)
-            else (self.backend.config.provider, self.backend.config.model)
+            else (
+                (self.backend.config.provider, self.backend.config.model)
+                if isinstance(self.backend, LiveRuntimeBackend)
+                else (self.backend.config.provider, self.backend.config.model_identity)
+            )
         )
         expected = (self.policy.expected_backend, self.policy.expected_model)
         if identity != expected:
@@ -142,6 +161,7 @@ def _reject_secret_fields(value: JsonValue) -> None:
 __all__ = [
     "LiveRuntimeBackend",
     "LoadedModelNodeRuntimeConfig",
+    "LocalRuntimeBackend",
     "ModelNodeRuntimeConfig",
     "RuntimeBackendBinding",
     "ScriptedRuntimeBackend",

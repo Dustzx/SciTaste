@@ -30,19 +30,32 @@ from scitaste.taste.reference_quality import (
 from scitaste.taste.semantic import ReferenceQualityNode, taste_node_types
 
 
-class _LiveQualityFixtureBackend:
-    name = "fixture-provider"
-    model = "fixture-model-v1"
-    config = SimpleNamespace(live_enabled=True, max_output_tokens=8_000)
-
-    def __init__(self, *, request_id: str, payload: object) -> None:
+class _ActualQualityFixtureBackend:
+    def __init__(
+        self,
+        *,
+        request_id: str,
+        payload: object,
+        mode: RuntimeBackendMode,
+    ) -> None:
+        self.name = "fixture-provider" if mode is RuntimeBackendMode.LIVE else "local-transformers"
+        self.model = "fixture-model-v1"
+        self.config = SimpleNamespace(
+            live_enabled=mode is RuntimeBackendMode.LIVE,
+            execution_enabled=mode is RuntimeBackendMode.LOCAL,
+            max_output_tokens=8_000,
+        )
         self.delegate = ScriptedStructuredBackend(
             name=self.name,
             model=self.model,
             replies={
                 request_id: ScriptedStructuredReply(
                     output_payload=payload,
-                    usage=Usage(input_tokens=300, output_tokens=200, cost_usd=0.001),
+                    usage=Usage(
+                        input_tokens=300,
+                        output_tokens=200,
+                        cost_usd=0.001 if mode is RuntimeBackendMode.LIVE else 0.0,
+                    ),
                 )
             },
         )
@@ -295,7 +308,12 @@ def test_valid_rejection_can_record_an_absent_quality_dimension() -> None:
     assert validate_reference_quality(_input(), proposal) == ()
 
 
-def test_live_quality_ledger_compiles_to_content_free_qualification(tmp_path, capsys) -> None:
+@pytest.mark.parametrize("backend_mode", [RuntimeBackendMode.LIVE, RuntimeBackendMode.LOCAL])
+def test_actual_quality_ledger_compiles_to_content_free_qualification(
+    tmp_path,
+    capsys,
+    backend_mode: RuntimeBackendMode,
+) -> None:
     outputs = tmp_path / "outputs"
     project = ProjectRuntime(outputs)
     project.create(
@@ -321,13 +339,19 @@ def test_live_quality_ledger_compiles_to_content_free_qualification(tmp_path, ca
     )
     input_data = _input()
     proposal = _proposal()
+    provider = (
+        "fixture-provider"
+        if backend_mode is RuntimeBackendMode.LIVE
+        else "local-transformers"
+    )
     profile = ModelNodeProfile(
-        profile_id="quality-live-fixture",
+        profile_id="quality-actual-fixture",
         profile_version="1.0.0",
-        provider="fixture-provider",
+        provider=provider,
         model="fixture-model-v1",
         allowed_node_names=("reference-quality",),
-        live_execution_permitted=True,
+        live_execution_permitted=backend_mode is RuntimeBackendMode.LIVE,
+        local_execution_permitted=backend_mode is RuntimeBackendMode.LOCAL,
         generation=ProviderGenerationEnvelope(
             max_request_bytes=1_000_000,
             max_output_tokens=8_000,
@@ -348,7 +372,7 @@ def test_live_quality_ledger_compiles_to_content_free_qualification(tmp_path, ca
         ),
     )
     policy = NodePolicy(
-        policy_id="quality-live-policy",
+        policy_id="quality-actual-policy",
         enabled=True,
         allowed_node_names=["reference-quality"],
         expected_backend=profile.provider,
@@ -382,12 +406,14 @@ def test_live_quality_ledger_compiles_to_content_free_qualification(tmp_path, ca
         ),
         profile=profile,
         policy=policy,
-        backend_mode=RuntimeBackendMode.LIVE,
-        backend=_LiveQualityFixtureBackend(
+        backend_mode=backend_mode,
+        backend=_ActualQualityFixtureBackend(
             request_id="quality-request-one",
             payload=proposal.model_dump(mode="json", exclude={"proposal_sha256"}),
+            mode=backend_mode,
         ),
-        allow_live=True,
+        allow_live=backend_mode is RuntimeBackendMode.LIVE,
+        allow_local=backend_mode is RuntimeBackendMode.LOCAL,
     )
     ledger = next((outputs / receipt.ledger_locator).glob("*.json"))
     report_path = tmp_path / "quality-report.json"

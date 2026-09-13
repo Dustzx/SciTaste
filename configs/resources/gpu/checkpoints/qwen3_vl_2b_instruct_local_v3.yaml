@@ -1,0 +1,22 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-vl-2b-local-47f9c0e0
+  model_id: Qwen/Qwen3-VL-2B-Instruct
+  model_revision: local-tree-47f9c0e0
+  local_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  checkpoint_bytes: 4266648961
+  format: Hugging Face safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-local-3090
+    - gpu-host-3090-2
+  evidence_ref: docs/research/data/gpu_host_local_3090_inventory_v3.yaml
+  evidence_sha256: aec0c87adc77cf7b433b0aa9ed70d6da8080a1b9879714354473b780de0ab71a
+  observed_at: 2026-09-13T17:15:35+08:00
+  availability: verified
+  availability_reason: >-
+    The unchanged twelve-file checkpoint hash and regular-file byte convention
+    remain verified. The local Python 3.12 generation stack is now importable,
+    but the checkpoint has not been loaded for the AAAR calibration.

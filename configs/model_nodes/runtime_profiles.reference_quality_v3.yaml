@@ -1,0 +1,17 @@
+# Actual local generation is separately gated by the profile, backend config,
+# and the model-node runtime --allow-local switch. Remote content upload remains
+# disabled unless a caller deliberately selects and authorizes a remote profile.
+schema_version: "1.0"
+profile_set_id: reference-quality-v3
+profile_set_version: 3.0.0
+live_enabled: true
+profiles:
+  - path: profile_local_qwen3vl2b_reference_quality_v1.yaml
+    sha256: 55d70ac11f671ea54fb0d6f11ad5d8199aa68a65f73123cdc647e832b797b6ac
+    profile_sha256: 0465897dfa79c20073e6ceb01933f97f96cefe44813fcff196b3a1b21d66dd3b
+  - path: profile_zhipu_glm53_reference_quality_v1.yaml
+    sha256: 056b074967d34275eb214cddd1d51df47f27f90c992d10c118897ea027c73cfe
+    profile_sha256: 88f32bfcd3e5abdee142a408e343cfc8a93e54ab17e907095b15d2bf3c10bda9
+  - path: profile_deepseek_v4flash_reference_quality_v1.yaml
+    sha256: c55823c86a2e674fb89ff7e7bee896eb68c1426dbfd5c71895cbdb761f0b0961
+    profile_sha256: fcfeccbe819b1ab64fee9b1db932ef2a36566cec7735f30e8de9ab8291752866

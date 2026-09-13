@@ -78,7 +78,12 @@ class RuntimeModel(BaseModel):
 class RuntimeBackendMode(StrEnum):
     SCRIPTED = "scripted"
     LIVE = "live"
+    LOCAL = "local"
     REPLAY = "replay"
+
+
+def _is_actual_generation_mode(mode: RuntimeBackendMode) -> bool:
+    return mode in {RuntimeBackendMode.LIVE, RuntimeBackendMode.LOCAL}
 
 
 class RuntimeOutcome(StrEnum):
@@ -374,6 +379,7 @@ class ModelNodeRuntime:
         request_id: str | None = None,
         seed: int = 0,
         allow_live: bool = False,
+        allow_local: bool = False,
     ) -> RuntimeInvocationReceipt:
         stage, _ = self._validate_project_run(
             project_id,
@@ -419,6 +425,7 @@ class ModelNodeRuntime:
             totals,
             stage=stage,
             allow_live=allow_live,
+            allow_local=allow_local,
             backend=backend,
         )
         if any(
@@ -444,6 +451,7 @@ class ModelNodeRuntime:
         backend: StructuredModelBackend | None,
         resume: bool = False,
         allow_live: bool = False,
+        allow_local: bool = False,
         **values: Any,
     ) -> RuntimeInvocationReceipt:
         project_id = values["project_id"]
@@ -462,6 +470,7 @@ class ModelNodeRuntime:
                 backend=backend,
                 resume=resume,
                 allow_live=allow_live,
+                allow_local=allow_local,
                 **values,
             )
 
@@ -560,6 +569,7 @@ class ModelNodeRuntime:
         backend: StructuredModelBackend | None,
         resume: bool,
         allow_live: bool,
+        allow_local: bool,
         **values: Any,
     ) -> RuntimeInvocationReceipt:
         project_id = values["project_id"]
@@ -638,7 +648,7 @@ class ModelNodeRuntime:
                     ),
                     attempt_locator=attempt_locator,
                     recovered_without_provider=(
-                        entry.intent.backend_mode is RuntimeBackendMode.LIVE
+                        _is_actual_generation_mode(entry.intent.backend_mode)
                     ),
                     entry=entry,
                 )
@@ -663,7 +673,9 @@ class ModelNodeRuntime:
                 recording_path=(
                     recording if recording is not None and recording.is_file() else None
                 ),
-                recovered_without_provider=(entry.intent.backend_mode is RuntimeBackendMode.LIVE),
+                recovered_without_provider=_is_actual_generation_mode(
+                    entry.intent.backend_mode
+                ),
                 entry=entry,
             )
         totals = self._totals(project_id, run_id, entries, stage=stage)
@@ -731,6 +743,7 @@ class ModelNodeRuntime:
                 admission_totals,
                 stage=stage,
                 allow_live=allow_live,
+                allow_local=allow_local,
                 backend=backend,
             )
         )
@@ -745,12 +758,18 @@ class ModelNodeRuntime:
             backend_config = getattr(backend, "config", None)
             if backend_config is None or not getattr(backend_config, "live_enabled", False):
                 blockers.append("live backend is not explicitly enabled")
+        if intent.backend_mode is RuntimeBackendMode.LOCAL and backend is not None:
+            backend_config = getattr(backend, "config", None)
+            if backend_config is None or not getattr(
+                backend_config, "execution_enabled", False
+            ):
+                blockers.append("local backend is not explicitly enabled")
         if blockers or (backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY):
             if backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY:
                 blockers.append("no backend is bound")
             if pending_resume is not None and pending_resume.backend is not None:
                 raise ModelNodeRuntimeError(
-                    "recoverable live response requires its original execution authorization"
+                    "recoverable model response requires its original execution authorization"
                 )
             return self._publish_without_result(
                 stage,
@@ -983,7 +1002,7 @@ class ModelNodeRuntime:
         recording = recordings / f"{invocation_id}.jsonl" if recordings is not None else None
         recovery_backend = None
         if (
-            historical.backend_mode is RuntimeBackendMode.LIVE
+            _is_actual_generation_mode(historical.backend_mode)
             and len(pending) == 1
             and (directory / "backend-started").is_file()
             and recording is not None
@@ -1068,6 +1087,7 @@ class ModelNodeRuntime:
         *,
         stage: Path,
         allow_live: bool,
+        allow_local: bool,
         backend: StructuredModelBackend | None,
     ) -> tuple[str, ...]:
         budget = intent.profile.cumulative_project
@@ -1079,13 +1099,21 @@ class ModelNodeRuntime:
                 blockers.append("cumulative invocation budget exhausted")
             if totals.total_tokens >= budget.max_total_tokens:
                 blockers.append("cumulative token budget exhausted")
-            if totals.cost_usd >= budget.max_api_cost_usd:
+            if (
+                intent.backend_mode is not RuntimeBackendMode.LOCAL
+                and totals.cost_usd >= budget.max_api_cost_usd
+            ):
                 blockers.append("cumulative API cost budget exhausted")
         if intent.backend_mode is RuntimeBackendMode.LIVE:
             if not intent.profile.live_execution_permitted:
                 blockers.append("profile does not permit live execution")
             if not allow_live:
                 blockers.append("caller did not opt in to live execution")
+        if intent.backend_mode is RuntimeBackendMode.LOCAL:
+            if not intent.profile.local_execution_permitted:
+                blockers.append("profile does not permit local execution")
+            if not allow_local:
+                blockers.append("caller did not opt in to local execution")
         backend_config = getattr(backend, "config", None) if backend is not None else None
         backend_output_limit = (
             getattr(backend_config, "max_output_tokens", None)

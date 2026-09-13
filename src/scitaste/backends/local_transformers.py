@@ -51,12 +51,25 @@ class LocalTransformersConfig(BaseModel):
     max_context_tokens: int = Field(default=16_384, ge=128, le=1_000_000)
     max_retries: int = Field(default=1, ge=0, le=3)
     require_cuda: bool = True
+    execution_enabled: bool = False
 
     @model_validator(mode="after")
     def generation_fits_context(self) -> LocalTransformersConfig:
         if self.max_new_tokens >= self.max_context_tokens:
             raise ValueError("max_new_tokens must be below max_context_tokens")
         return self
+
+    @property
+    def model_identity(self) -> str:
+        """Return the exact identity expected by model-node policies."""
+
+        return f"{self.model_id}@{self.model_revision}"
+
+    @property
+    def max_output_tokens(self) -> int:
+        """Expose the generic structured-backend output ceiling."""
+
+        return self.max_new_tokens
 
 
 @dataclass(frozen=True)

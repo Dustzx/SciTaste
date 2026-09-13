@@ -1,0 +1,22 @@
+schema_version: "1.0"
+resource:
+  kind: model_checkpoint
+  resource_id: qwen3-vl-2b-local-47f9c0e0
+  model_id: Qwen/Qwen3-VL-2B-Instruct
+  model_revision: local-tree-47f9c0e0
+  local_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  checkpoint_bytes: 4266648961
+  format: Hugging Face safetensors
+  license_identifier: Apache-2.0
+  compatible_gpu_resource_ids:
+    - gpu-host-local-3090
+    - gpu-host-3090-2
+  evidence_ref: docs/research/data/gpu_host_local_3090_inventory_v2.yaml
+  evidence_sha256: e8da0bd0a913573be2fd1abd43a92322631b57b4afefe4ad92a327c809077da2
+  observed_at: 2026-09-13T17:00:00+08:00
+  availability: verified
+  availability_reason: >-
+    All twelve regular files were rehashed in full. The content identity is
+    unchanged; checkpoint_bytes now uses the explicit regular-file payload
+    convention rather than including a directory entry.

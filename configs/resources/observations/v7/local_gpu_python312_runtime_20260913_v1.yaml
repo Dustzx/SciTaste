@@ -1,0 +1,18 @@
+schema_version: "1.0"
+observation_id: local-gpu-python312-runtime-20260913-v1
+resource_id: gpu-host-local-3090
+resource_kind: gpu_host
+observed_at: 2026-09-13T17:15:35+08:00
+method: automated_probe
+status: verified
+observed_device_count: 1
+observed_device_name: NVIDIA GeForce RTX 3090
+available_storage_bytes: 155972890624
+notes:
+  - The repository-owned Python 3.12.14 environment imports PyTorch 2.5.1+cu124, Accelerate 1.15.0, and Transformers 4.57.6.
+  - PyTorch reports CUDA 12.4, one visible device, and NVIDIA GeForce RTX 3090.
+  - The device exposed 22,510 MiB free memory at capture.
+  - The bounded package-index transaction resolved 19 new wheels totaling 3,005,789,578 bytes, below the owner's decimal 10-GB automatic ceiling.
+  - No checkpoint was rehashed or loaded and no GPU generation or model call occurred.
+credentials_recorded: false
+observation_only: true

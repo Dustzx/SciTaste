@@ -1,0 +1,107 @@
+schema_version: "1.0"
+evidence_id: aaar-reference-quality-local-calibration-v2
+project_id: scitaste-self-development
+scientific_role: reference-quality-instrument-calibration-only
+source_projection:
+  projection_id: aaar-experiment-design-quality-projection-v3
+  report_path: >-
+    outputs/projects/scitaste-self-development/evaluations/reference-quality-projections/aaar-experiment-design-quality-projection-v3/REPORT.json
+  report_file_sha256: 85d338b670b135a759af159fec6e172470a9a2b50733b16d7a3248dd3057a976
+  report_sha256: b4b71cb476f675719173cf3568394285ffefdaec35428d51927970192433bbc5
+  population_items: 16
+calibration_plan:
+  plan_id: aaar-reference-quality-local-calibration-v2
+  report_path: >-
+    outputs/projects/scitaste-self-development/evaluations/reference-quality-calibrations/aaar-reference-quality-local-calibration-v2/REPORT.json
+  report_file_sha256: e0cb89e51422cc058a4de9975045f88029f7969777746c884b177f3529ac1c14
+  report_sha256: abe8ce03d8af4fce09c3da6c27ed5201bf2a9168f41464e70169c45e02f82298
+  intended_run_id: 2026-09-13__local-transformers__aaar-reference-quality-calibration-v2__seed-00
+  expected_project_revision: 446
+  registered_project_revision: 447
+  registered_status: planned-awaiting-owner-resource-review
+  selection_policy:
+    - maximum-context-stress
+    - maximum-redaction-stress
+  selected_items:
+    - source_id: source-5dcb0cc8e9ae087335e1
+      selection_role: maximum-context-stress
+      projection_file_bytes: 78401
+      prompt_utf8_bytes: 83048
+      exact_input_tokens: 24670
+    - source_id: source-b4f292054841c80e1475
+      selection_role: maximum-redaction-stress
+      projection_file_bytes: 20198
+      prompt_utf8_bytes: 24845
+      exact_input_tokens: 6759
+  total_projection_bytes: 98599
+  maximum_prompt_utf8_bytes: 83048
+  maximum_exact_input_tokens: 24670
+model:
+  provider: local-transformers
+  model: Qwen/Qwen3-VL-2B-Instruct@local-snapshot-47f9c0e0
+  checkpoint_path: /media/good/dxhismyson/weights/Qwen3-VL-2B-Instruct
+  checkpoint_sha256: 47f9c0e0e48a54c74fb0b2b0ffa7a182fed381d5ed49a0200872038d1c286d34
+  checkpoint_regular_file_bytes: 4266648961
+  checkpoint_regular_files: 12
+  tokenizer_version: 4.57.6
+  tokenizer_loaded: true
+  model_loaded: false
+  context_tokens: 131072
+  maximum_output_tokens: 8192
+  maximum_repair_attempts: 1
+runtime_bindings:
+  profile_set:
+    path: configs/model_nodes/runtime_profiles.reference_quality_v3.yaml
+    file_sha256: 29ab946e34d423319913aaeea70deb5af5077eca73b324cacd1ee71ce60152cb
+    profile_id: local-qwen3vl2b-reference-quality
+    profile_sha256: 0465897dfa79c20073e6ceb01933f97f96cefe44813fcff196b3a1b21d66dd3b
+  backend:
+    path: configs/backends/local_transformers_qwen3vl2b_reference_quality_v1.yaml
+    file_sha256: 10bc1195a9518fbcfd96728c32a7e91fa33542c0e4cb7a85360276329fe79a80
+  compute_catalog:
+    path: configs/resources/compute_catalog_v8.yaml
+    file_sha256: d4aa55427196e182f3a1c4c1fe1df0213abf80f263cfe320dcceffec49a386b9
+    semantic_sha256: 8400c3d007bb985c0fe515dcf046c2dd78852d09eed8aa1f8438a0dcad0465ec
+  project_resource_binding:
+    path: configs/resources/projects/scitaste_self_development_v8.yaml
+    file_sha256: d5f95baf65996f20090227f7610fc01abd65c531ab64a173aa6d8d76574e08cd
+    semantic_sha256: 108c50c52c9c4842e7f8b4be7b05403df3d4cd7e44c522b5f31f9dd62dc7194a
+resource_ceiling:
+  gpu_device_count: 1
+  gpu_device_class: NVIDIA GeForce RTX 3090
+  maximum_gpu_hours: 1.0
+  api_calls: 0
+  source_upload: false
+  network_access: false
+  estimated_model_calls: 2
+environment_status:
+  python: "3.12"
+  runtime_lock:
+    path: requirements/python312-local-gpu.lock
+    file_sha256: 9bc8480366afe16b78b48b776bcf6161b355427e69faabeb0171dc53b53fbe96
+  host_inventory:
+    path: docs/research/data/gpu_host_local_3090_inventory_v3.yaml
+    file_sha256: aec0c87adc77cf7b433b0aa9ed70d6da8080a1b9879714354473b780de0ab71a
+  transformers: 4.57.6
+  jinja2: 3.1.6
+  pytorch: 2.5.1+cu124
+  accelerate: 1.15.0
+  cuda_available: true
+  model_generation_dependencies_available: true
+  current_runtime_blocker: caller-did-not-opt-in-to-local-execution
+execution_status:
+  tokenizer_preflight_performed: true
+  model_calls_performed: false
+  gpu_execution_performed: false
+  human_review_performed: false
+  experiment_performed: false
+  authorizes_execution: false
+next_gate: >-
+  Review the exact two-source calibration and resource ceiling, install the
+  Python 3.12 local GPU runtime, rehash the checkpoint, and use an explicit
+  local-execution opt-in. Any expansion to all sixteen sources or to formal H0
+  requires a separate decision after inspecting calibration validity.
+claim_boundary: >-
+  Exact local token capacity and runtime identities are verified. This document
+  contains no model quality proposal, source admission, human agreement,
+  Scientific Taste abstraction, or evidence that SciTaste improves research.
