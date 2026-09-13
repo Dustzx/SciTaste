@@ -28,6 +28,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.8 — real reference search and frozen replay | done | accepted concise queries drive bounded OpenAlex/Crossref metadata transactions; identity, record type, relevance, family, and grounded-domain gates freeze a replayable cohort before source-quality review |
 | Phase 8.9 — matched H0 source-selection freeze | done | one complete pool feeds type-separated quality and age-normalized-prestige selectors at exact source-count, pattern/role/domain-stratum, downstream-protocol, and token-budget parity; approval and replay still grant no experiment authority |
 | Phase 8.10 — H0 source-arm identity continuity | done | one predeclared representation hash and approval-gated projection bind the exact frozen quality/prestige arm union to identical canonical source bytes, preserve natural overlap once, and retain rejected-but-safe prestige sources without granting model or experiment authority |
+| Phase 8.11 — H1/H2 treatment identity continuity | done | a self-hashed, per-case and per-arm manifest replays projected source identities, matched/mismatched Taste corpus provenance, formal curation/pair status, exact token traces, and complete benchmark-context equality before v3 compilation |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -56,6 +57,16 @@ Schema-1.2 corpus curation requires two humans to attest both trace and transfer
 scope, and formal SciTasteBench v3 refuses the legacy tier. This closes the
 software definition of the Taste treatment; real content, abstractions, reviews,
 and H1/H2 outcomes remain uncollected.
+
+SciTasteBench v3 can no longer satisfy its treatment-manifest field with an
+arbitrary hash-matched placeholder. A typed manifest now closes the exact case
+population and three treatment arms, derives every construction receipt from its
+rendered bytes, ordered sources, protocol artifacts, and token-sequence identity,
+and is parsed by the curation compiler. Inspection replays the source-projection
+receipt, matched/mismatched corpus provenance, formal-ready curation and qualified
+pair reports, and arm-specific token traces before requiring byte-for-byte model
+equality with the curation package. This closes software provenance only; no real
+source was read, no treatment was rendered, and no H1/H2 judgment was collected.
 
 The runtime selection path no longer treats topical retrieval as Scientific
 Taste. A bounded broad pool is projected into an outcome-hidden

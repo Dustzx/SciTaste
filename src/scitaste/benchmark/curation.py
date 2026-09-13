@@ -24,6 +24,10 @@ from scitaste.benchmark.models import (
     RunnerMetricRole,
     TransferAxis,
 )
+from scitaste.benchmark.treatment_manifest import (
+    inspect_reference_treatment_manifest,
+    load_reference_treatment_manifest,
+)
 from scitaste.schema.actions import ResearchAction
 from scitaste.taste.intrinsic import TasteTask
 
@@ -379,6 +383,30 @@ def inspect_curation_package(
         )
         if problem is not None:
             blockers.append(f"reference_treatment:{problem}")
+        else:
+            try:
+                treatment = load_reference_treatment_manifest(
+                    _bound_artifact_path(
+                        evidence_root,
+                        package.reference_treatment_manifest_ref,
+                    )
+                )
+                expected_contexts = {
+                    case.case_id: case.mechanism_context
+                    for case in package.cases
+                    if case.mechanism_context is not None
+                }
+                treatment_report = inspect_reference_treatment_manifest(
+                    treatment,
+                    evidence_root=evidence_root,
+                    expected_contexts=expected_contexts,
+                )
+            except (OSError, ValueError) as exc:
+                blockers.append(f"reference_treatment:invalid_manifest:{type(exc).__name__}")
+            else:
+                blockers.extend(
+                    f"reference_treatment:{code}" for code in treatment_report.blocker_codes
+                )
 
     for case in package.cases:
         problem = _bound_artifact_problem(
@@ -560,6 +588,17 @@ def _bound_artifact_problem(
     except (OSError, ValueError):
         return "missing_or_escaped"
     return None
+
+
+def _bound_artifact_path(evidence_root: str | Path | None, locator: str) -> Path:
+    if evidence_root is None:
+        raise ValueError("bound artifact root is unobserved")
+    root = Path(evidence_root).resolve(strict=True)
+    pure = PurePosixPath(locator)
+    candidate = root.joinpath(*pure.parts)
+    resolved = candidate.resolve(strict=True)
+    resolved.relative_to(root)
+    return resolved
 
 
 __all__ = [

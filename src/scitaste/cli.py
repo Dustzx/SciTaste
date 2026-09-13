@@ -40,10 +40,12 @@ from scitaste.benchmark import (
     compile_curated_suite,
     discover_study_result_paths,
     inspect_curation_package,
+    inspect_reference_treatment_manifest,
     inspect_study_matrix,
     load_benchmark_report,
     load_benchmark_suite,
     load_curation_package,
+    load_reference_treatment_manifest,
     load_source_candidate_manifest,
     load_study_launch_config,
     load_study_protocol,
@@ -1461,6 +1463,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(benchmark_curate)
     benchmark_curate.set_defaults(handler=_handle_benchmark_curate)
+    benchmark_treatment = benchmark_commands.add_parser(
+        "treatment-status",
+        help="Replay a SciTasteBench v3 treatment-construction manifest",
+    )
+    benchmark_treatment.add_argument("--manifest", type=Path, required=True)
+    benchmark_treatment.add_argument("--evidence-root", type=Path, required=True)
+    _add_log_level_option(benchmark_treatment)
+    benchmark_treatment.set_defaults(handler=_handle_benchmark_treatment_status)
     benchmark_source_status = benchmark_commands.add_parser(
         "source-status",
         help="Inspect a metadata-only SciTasteBench source screen without acquisition",
@@ -5169,6 +5179,28 @@ def _handle_benchmark_curate(args: argparse.Namespace) -> int:
         payload["compiled_suite"] = save_curated_suite(suite, args.output)
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0 if report.ready_to_compile else 1
+
+
+def _handle_benchmark_treatment_status(args: argparse.Namespace) -> int:
+    inspection = load_reference_treatment_manifest(args.manifest)
+    report = inspect_reference_treatment_manifest(
+        inspection,
+        evidence_root=args.evidence_root,
+        expected_contexts={
+            item.case_id: item.mechanism_context for item in inspection.manifest.cases
+        },
+    )
+    print(
+        json.dumps(
+            {
+                "manifest_file_sha256": inspection.file_sha256,
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if report.ready_for_v3_compilation else 1
 
 
 def _handle_benchmark_source_status(args: argparse.Namespace) -> int:

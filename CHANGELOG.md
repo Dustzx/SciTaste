@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the SciTasteBench v3 treatment-manifest gap. H1/H2 curation now requires
+  a typed, self-hashed, exact-population manifest rather than any hash-matched
+  file. Per-arm construction receipts bind rendered contexts, ordered source and
+  protocol artifacts, and token sequences; inspection replays source-projection
+  identities, matched/mismatched Taste corpus provenance, formal curation and
+  pair status, and exact token traces before requiring complete context equality
+  with the curation package. The new `benchmark treatment-status` command performs
+  this local no-run qualification without authorizing content acquisition,
+  model/API/GPU use, reviewers, or experiments.
 - Closed H0 source-arm identity continuity from deterministic selection to
   model-visible source bytes. A pre-selection CLI now hashes the complete common
   representation protocol; schema-1.1 projection binds that hash, the exact

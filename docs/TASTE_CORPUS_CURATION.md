@@ -158,7 +158,10 @@ The machine path is therefore:
 5. compile the accepted ledger entry with
    `scitaste evaluation taste-abstraction-candidate`;
 6. collect two independent reviews, with adjudication only on a split; and
-7. inspect and materialize the matched/placebo pair.
+7. inspect and materialize the matched/placebo pair; and
+8. freeze and replay the per-case, per-arm
+   [SciTasteBench v3 treatment manifest](SCITASTEBENCH_V3_TREATMENT_MANIFEST.md)
+   before compiling the benchmark suite.
 
 Source reads/projection, model use, and human review require separate exact
 approvals. The candidate compiler and package inspector do not perform those

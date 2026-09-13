@@ -200,6 +200,15 @@ receipt. Held-out decision sources are forbidden from every reference arm. The
 model sees the neutral label `Reference context`; treatment names remain
 evaluation metadata.
 
+Those fields are necessary but not sufficient. Before suite compilation, a
+schema-1.0 reference-treatment manifest must bind the complete case population
+and derive each arm's construction receipt from the exact context, ordered source
+identities, support artifacts, protocol hashes, and token sequence. The compiler
+replays source-projection identities, matched/mismatched Taste corpus provenance,
+formal-ready curation and pair qualification, and arm-specific token traces, then
+requires the manifest contexts to equal the curation package exactly. An opaque
+placeholder file or supplied 64-hex receipt is not admissible evidence.
+
 Two oracle-controlled directional contrasts are preregistered: H1 compares
 matched abstraction against same-source raw RAG with representation as the only
 permitted difference; H2a compares matched against mismatched abstractions with

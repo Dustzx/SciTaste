@@ -22,7 +22,7 @@ artifacts:
     sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 61c7063ca9a02b3c88b47305e5b064145c177e7fd9a4015e1bd043b3ef364f74
+    sha256: 87d1b40165625460f90559ac7405fe0e9f2d084bab3e15012ffe7ed7df92b2ed
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -79,7 +79,7 @@ artifacts:
     sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
   - artifact_id: taste-corpus-curation-guide
     path: docs/TASTE_CORPUS_CURATION.md
-    sha256: 34c365c8ade65c7c35f501fda86e35101b4113ddad9f1ab11fa2ec6e17fd5c3d
+    sha256: d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a
   - artifact_id: grounded-taste-distillation
     path: docs/GROUNDED_TASTE_DISTILLATION.md
     sha256: ee496ec3d9a80af43aeb7b081f44df115b4d0ab6ac4023c686ede094c5f61372

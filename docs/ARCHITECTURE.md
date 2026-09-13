@@ -2868,3 +2868,30 @@ binding, and overlap rather than duplicating shared bytes. Planning reads no
 source body; materialization still requires exact approval and grants no
 tokenizer, model, API, human-review, GPU, or experiment authority. Schema 1.0
 hash semantics remain unchanged for non-H0 admitted-source projections.
+
+### ADR-094: H1/H2 contexts compile only from a replayable treatment manifest
+
+Status: accepted and executable at the local treatment-inspection and benchmark-
+compilation boundary; no real H1/H2 treatment or outcome has been produced.
+
+SciTasteBench v3 already required same-source raw/abstracted arms, a source-
+disjoint mismatched arm, common protocol hashes, matched observed token counts,
+and a construction receipt. Its curation path nevertheless treated the bound
+treatment manifest as opaque bytes. A one-line file and arbitrary receipt hashes
+could therefore pass structural validation even though no source projection,
+Taste corpus, or tokenization trace supported the contexts.
+
+The v3 compiler now accepts only a typed, self-hashed manifest containing the
+complete case population, all three mechanism contexts, and one canonical
+construction record per case and arm. Supporting files have explicit scientific
+roles and content hashes. The inspector replays the self-hashed projection
+receipt; matches source ID, group, locator, and content hash; checks matched and
+mismatched corpus provenance and evidence tiers; parses formal-ready curation and
+qualified pair reports; and validates each exact token-ID sequence against the
+rendered context and tokenizer identity. Compilation then requires exact case and
+context equality between the manifest and curation package.
+
+This is an identity and provenance gate, not evidence of treatment quality or a
+causal effect. It opens only declared local evidence files and grants no source
+acquisition, model/API/GPU use, reviewer recruitment, experiment execution, blind
+opening, or title claim.
