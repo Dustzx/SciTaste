@@ -1409,3 +1409,21 @@ and adversarial archives passed and failed at the intended boundaries while
 creating no extracted file. The real Agent Laboratory and DeepScientist member
 streams remain unopened, so this milestone advances operational readiness but
 does not yet establish unchanged-core adapter equivalence.
+
+## Correcting download authority leakage in task-archive qualification (2026-09-13)
+
+After the 3,761,168,137-byte MLRC task package completed acquisition, the
+campaign still described both task candidates as not acquired. More seriously,
+the existing archive qualifier could open all 39 ZIP central directories using
+only the earlier download approval. That contradicted the project's explicit
+rule that transfer authority ends when the receipt is written.
+
+The campaign now binds a tracked acquisition boundary and reports exact task
+bytes as available but unqualified. ZIP inspection requires a new self-hashed
+approval over the exact request, download approval, receipt files and semantic
+hashes, task IDs, asset count, aggregate bytes, and unpack ceiling. The qualifier
+also requires an explicit local-read switch and records that content metadata
+was read while extraction, ingestion, API, GPU, and execution authority remain
+false. Synthetic safe, traversal, and symlink ZIPs exercised the boundary; no
+real MLRC ZIP was opened. This removes a real provenance flaw without claiming
+that the downloaded tasks are already executable.

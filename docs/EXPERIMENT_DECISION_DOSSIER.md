@@ -42,7 +42,9 @@ The local and remote Qwen checkpoints remain feasibility assets rather than
 scientific design inputs.
 The older Qwen/MLR-Bench objective-progress proposal remains historical. The
 new 12-trajectory Qwen proposal instead names two MLRC objective-task
-candidates, a separate claim contract, and explicit unresolved asset gates.
+candidates and a separate claim contract. Their 39 assets are now acquired and
+independently rehashed; ZIP read, safety, license-ingestion, task-layout,
+baseline, and held-out gates remain explicit.
 
 The current dossier records two exact but blocked historical prepilots. The
 native v11 causal lane contains six SciTaste conditions over two MLRC
@@ -97,6 +99,13 @@ briefs. They are ready for a stagewise or brief-only package prepilot, but not
 for formal empirical end-to-end or objective-progress binding: runtime assets,
 an executable signal, objective scores, and the held-out audit are absent. See
 [`research/MLR_BENCH_TEN_BRIEF_QUALIFICATION_AUDIT_V1.md`](research/MLR_BENCH_TEN_BRIEF_QUALIFICATION_AUDIT_V1.md).
+
+The separate MLRC executable-task transaction has also completed: 39 registered
+archives, 3,761,168,137 bytes, and zero independent size/hash mismatches. This
+moves `approve-exact-source-acquisition` to complete in the dossier, but does
+not make either task executable. The next stage is a distinct receipt-bound
+approval to read ZIP central directories, followed by no-extraction safety
+qualification. No real MLRC ZIP has yet been opened.
 
 The prelaunch schema represents the resulting two estimands without conflating
 them. Schema `1.2` assigns a common resource to every `matched_backbone` cell,

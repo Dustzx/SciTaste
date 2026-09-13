@@ -1,0 +1,55 @@
+schema_version: "1.0"
+evidence_id: mlrc-first-preflight-acquisition-v1
+project_id: scitaste-self-development
+request:
+  path: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
+  file_sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+  proposal_sha256: c0b37f72588c9a89a5c4247f139c8b0595571cf639846066b7d7c538c5138ed4
+download_approval:
+  local_path: outputs/projects/scitaste-self-development/runs/2026-09-13__scitaste-native__mlrc-package-acquisition-v1__seed-00/dataset_package_acquisition/APPROVAL.json
+  file_sha256: 406c74b4253e663c1f4e13253a6d17e96fc67bf62f2c5856a517230a36e67f05
+  approval_sha256: 56a5ffcf2d4a50c326ed242beba9ce15745504a04b98abc3fb6b4eb4802ed514
+  scope: network-preflight-and-download-only-no-extract-no-ingestion
+receipt:
+  local_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+  file_sha256: 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+  receipt_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+  asset_count: 39
+  total_bytes: 3761168137
+  task_ids:
+    - perception_temporal_action_loc
+    - meta-learning
+  source_hosts:
+    - data.openml.org
+    - drive.usercontent.google.com
+  source_identity_rechecked: true
+  redirects_followed: false
+  overwrote_existing_files: false
+independent_outer_byte_verification:
+  verified_asset_count: 39
+  verified_total_bytes: 3761168137
+  size_mismatches: 0
+  sha256_mismatches: 0
+  passed: true
+current_boundary:
+  archive_central_directory_read: false
+  archive_read_authorized: false
+  archive_safety_qualified: false
+  archives_extracted: false
+  source_content_inspected: false
+  task_layout_validated: false
+  dataset_ingested: false
+  benchmark_preflight_run: false
+  api_calls: 0
+  gpu_jobs: 0
+  experiment_runs: 0
+next_gate: >-
+  A separately hash-bound owner approval may authorize reading ZIP central
+  directories and rehashing outer bytes under an explicit local switch. That
+  approval does not authorize extraction, ingestion, execution, API calls, or
+  GPU work.
+claim_boundary: >-
+  This evidence proves acquisition and independent outer-byte verification of
+  the exact 39-asset package. It does not prove archive safety, task validity,
+  baseline reproducibility, held-out status, license ingestion readiness, or
+  experimental effectiveness.

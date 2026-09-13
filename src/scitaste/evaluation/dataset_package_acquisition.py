@@ -249,6 +249,55 @@ class DatasetPackageReceiptInspection(BaseModel):
     receipt: DatasetPackageAcquisitionReceipt
 
 
+class DatasetArchiveReadApproval(BaseModel):
+    """Read-only ZIP qualification authority, separate from package download."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    request_id: str = Field(pattern=_ID)
+    proposal_sha256: str = Field(pattern=_SHA256)
+    request_file_sha256: str = Field(pattern=_SHA256)
+    download_approval_sha256: str = Field(pattern=_SHA256)
+    download_approval_file_sha256: str = Field(pattern=_SHA256)
+    receipt_sha256: str = Field(pattern=_SHA256)
+    receipt_file_sha256: str = Field(pattern=_SHA256)
+    selected_task_ids: tuple[str, ...] = Field(min_length=1, max_length=20)
+    asset_count: int = Field(gt=0, le=500)
+    archive_bytes: int = Field(gt=0, le=500 * 1024**3)
+    maximum_unpacked_bytes: int = Field(gt=0, le=1024 * 1024**3)
+    approved_by: str = Field(min_length=1, max_length=200)
+    approved_at: datetime
+    scope: Literal["zip-central-directory-read-only-no-extraction"]
+    authorizes_archive_read: Literal[True] = True
+    authorizes_extraction: Literal[False] = False
+    authorizes_ingestion: Literal[False] = False
+    authorizes_api_calls: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+
+    @model_validator(mode="after")
+    def read_approval_is_closed(self) -> DatasetArchiveReadApproval:
+        if self.approved_at.utcoffset() is None:
+            raise ValueError("dataset archive read approval time must include a timezone")
+        if len(self.selected_task_ids) != len(set(self.selected_task_ids)):
+            raise ValueError("dataset archive read approval task IDs must be unique")
+        return self
+
+    @computed_field
+    @property
+    def read_approval_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"read_approval_sha256"}))
+
+
+class DatasetArchiveReadApprovalInspection(BaseModel):
+    model_config = _CONFIG
+
+    path: Path
+    file_sha256: str = Field(pattern=_SHA256)
+    approval: DatasetArchiveReadApproval
+
+
 class DatasetArchiveFinding(BaseModel):
     model_config = _CONFIG
 
@@ -291,17 +340,19 @@ class DatasetArchiveTaskQualification(BaseModel):
 class DatasetArchiveQualificationReport(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     request_id: str = Field(pattern=_ID)
     proposal_sha256: str = Field(pattern=_SHA256)
     approval_sha256: str = Field(pattern=_SHA256)
     receipt_sha256: str = Field(pattern=_SHA256)
+    archive_read_approval_sha256: str = Field(pattern=_SHA256)
     inventory_file_sha256: str = Field(pattern=_SHA256)
     assets: tuple[DatasetArchiveAssetQualification, ...] = Field(min_length=1, max_length=500)
     tasks: tuple[DatasetArchiveTaskQualification, ...] = Field(min_length=1, max_length=20)
     blockers: tuple[DatasetArchiveFinding, ...]
     archive_safety_qualified: bool
     all_receipt_hashes_reverified: bool
+    archive_content_read: Literal[True] = True
     extraction_performed: Literal[False] = False
     authorizes_extraction: Literal[False] = False
     authorizes_ingestion: Literal[False] = False
@@ -539,39 +590,117 @@ def load_dataset_package_receipt(path: str | Path) -> DatasetPackageReceiptInspe
     )
 
 
+def approve_dataset_archive_read(
+    inspection: DatasetPackageRequestInspection,
+    download_approval: DatasetPackageApprovalInspection,
+    receipt: DatasetPackageReceiptInspection,
+    *,
+    confirmed_proposal_sha256: str,
+    confirmed_receipt_sha256: str,
+    approved_by: str,
+    approved_at: datetime,
+) -> DatasetArchiveReadApproval:
+    """Bind local ZIP metadata reads to one exact completed acquisition."""
+
+    _validate_archive_read_chain(inspection, download_approval, receipt)
+    request = inspection.request
+    acquired = receipt.receipt
+    if confirmed_proposal_sha256 != request.proposal_sha256:
+        raise ValueError("confirmed dataset archive proposal hash does not match")
+    if confirmed_receipt_sha256 != acquired.receipt_sha256:
+        raise ValueError("confirmed dataset archive receipt hash does not match")
+    if approved_at < acquired.acquired_at:
+        raise ValueError("dataset archive read approval cannot precede acquisition")
+    return DatasetArchiveReadApproval(
+        request_id=request.request_id,
+        proposal_sha256=request.proposal_sha256,
+        request_file_sha256=inspection.file_sha256,
+        download_approval_sha256=download_approval.approval.approval_sha256,
+        download_approval_file_sha256=download_approval.file_sha256,
+        receipt_sha256=acquired.receipt_sha256,
+        receipt_file_sha256=receipt.file_sha256,
+        selected_task_ids=request.selected_task_ids,
+        asset_count=acquired.asset_count,
+        archive_bytes=acquired.total_bytes,
+        maximum_unpacked_bytes=request.maximum_unpacked_bytes,
+        approved_by=approved_by,
+        approved_at=approved_at,
+        scope="zip-central-directory-read-only-no-extraction",
+    )
+
+
+def save_dataset_archive_read_approval(
+    approval: DatasetArchiveReadApproval,
+    path: str | Path,
+) -> Path:
+    return _atomic_json(path, approval.model_dump(mode="json"), require_absent=True)
+
+
+def load_dataset_archive_read_approval(
+    path: str | Path,
+) -> DatasetArchiveReadApprovalInspection:
+    resolved, raw, payload = _load_json(path, "dataset archive read approval")
+    recorded = payload.pop("read_approval_sha256", None)
+    approval = DatasetArchiveReadApproval.model_validate(payload)
+    if recorded != approval.read_approval_sha256:
+        raise ValueError("dataset archive read approval hash mismatch")
+    return DatasetArchiveReadApprovalInspection(
+        path=resolved,
+        file_sha256=hashlib.sha256(raw).hexdigest(),
+        approval=approval,
+    )
+
+
 def inspect_dataset_package_archives(
     inspection: DatasetPackageRequestInspection,
-    approval: DatasetPackageApproval,
-    receipt: DatasetPackageAcquisitionReceipt,
+    download_approval: DatasetPackageApprovalInspection,
+    receipt: DatasetPackageReceiptInspection,
+    read_approval: DatasetArchiveReadApprovalInspection,
     *,
     workspace_root: str | Path,
+    allow_local_archive_read: bool,
 ) -> DatasetArchiveQualificationReport:
     """Inspect ZIP central directories and exact local bytes without extraction."""
 
+    if not allow_local_archive_read:
+        raise ValueError("dataset archive qualification requires the explicit local-read switch")
+    _validate_archive_read_chain(inspection, download_approval, receipt)
     request = inspection.request
-    if receipt.request_id != request.request_id or approval.request_id != request.request_id:
-        raise ValueError("dataset package archive inputs target different requests")
-    if receipt.proposal_sha256 != request.proposal_sha256:
-        raise ValueError("dataset package receipt targets a different proposal")
-    if receipt.approval_sha256 != approval.approval_sha256:
-        raise ValueError("dataset package receipt targets a different approval")
-    if receipt.request_file_sha256 != inspection.file_sha256:
-        raise ValueError("dataset package receipt targets different request bytes")
+    approval = download_approval.approval
+    acquired_receipt = receipt.receipt
+    local_read = read_approval.approval
+    expected_read_binding = {
+        "request_id": request.request_id,
+        "proposal_sha256": request.proposal_sha256,
+        "request_file_sha256": inspection.file_sha256,
+        "download_approval_sha256": approval.approval_sha256,
+        "download_approval_file_sha256": download_approval.file_sha256,
+        "receipt_sha256": acquired_receipt.receipt_sha256,
+        "receipt_file_sha256": receipt.file_sha256,
+        "selected_task_ids": request.selected_task_ids,
+        "asset_count": acquired_receipt.asset_count,
+        "archive_bytes": acquired_receipt.total_bytes,
+        "maximum_unpacked_bytes": request.maximum_unpacked_bytes,
+    }
+    observed_read_binding = local_read.model_dump(mode="python")
+    for field, value in expected_read_binding.items():
+        if observed_read_binding[field] != value:
+            raise ValueError(f"dataset archive read approval differs at {field}")
     root = Path(workspace_root).resolve(strict=True)
     inventory_path = root.joinpath(*PurePosixPath(request.inventory.path).parts)
     if not inventory_path.resolve(strict=True).is_relative_to(root):
         raise ValueError("dataset package inventory escaped its workspace")
     inventory_inspection = load_dataset_package_inventory(inventory_path)
-    if inventory_inspection.file_sha256 != receipt.inventory_file_sha256:
+    if inventory_inspection.file_sha256 != acquired_receipt.inventory_file_sha256:
         raise ValueError("dataset package receipt inventory has drifted")
     inventory = inventory_inspection.inventory
     expected = _selected_assets(request.selected_task_ids, inventory)
     expected_by_id = {asset.asset_id: (task_id, asset) for task_id, asset in expected}
-    receipt_by_id = {asset.asset_id: asset for asset in receipt.assets}
+    receipt_by_id = {asset.asset_id: asset for asset in acquired_receipt.assets}
     if set(expected_by_id) != set(receipt_by_id):
         raise ValueError("dataset package receipt asset set differs from inventory")
 
-    transaction_raw = root.joinpath(*PurePosixPath(receipt.destination_root).parts)
+    transaction_raw = root.joinpath(*PurePosixPath(acquired_receipt.destination_root).parts)
     if transaction_raw.is_symlink() or not transaction_raw.is_dir():
         raise ValueError("dataset package raw directory is missing or unsafe")
     blockers: list[DatasetArchiveFinding] = []
@@ -676,7 +805,8 @@ def inspect_dataset_package_archives(
         request_id=request.request_id,
         proposal_sha256=request.proposal_sha256,
         approval_sha256=approval.approval_sha256,
-        receipt_sha256=receipt.receipt_sha256,
+        receipt_sha256=acquired_receipt.receipt_sha256,
+        archive_read_approval_sha256=local_read.read_approval_sha256,
         inventory_file_sha256=inventory_inspection.file_sha256,
         assets=tuple(asset_results),
         tasks=tuple(task_results),
@@ -684,6 +814,28 @@ def inspect_dataset_package_archives(
         archive_safety_qualified=qualified,
         all_receipt_hashes_reverified=all_hashes,
     )
+
+
+def _validate_archive_read_chain(
+    inspection: DatasetPackageRequestInspection,
+    download_approval: DatasetPackageApprovalInspection,
+    receipt: DatasetPackageReceiptInspection,
+) -> None:
+    request = inspection.request
+    approval = download_approval.approval
+    acquired = receipt.receipt
+    if acquired.request_id != request.request_id or approval.request_id != request.request_id:
+        raise ValueError("dataset package archive inputs target different requests")
+    if approval.request_file_sha256 != inspection.file_sha256:
+        raise ValueError("dataset package approval targets different request bytes")
+    if acquired.proposal_sha256 != request.proposal_sha256:
+        raise ValueError("dataset package receipt targets a different proposal")
+    if acquired.approval_sha256 != approval.approval_sha256:
+        raise ValueError("dataset package receipt targets a different approval")
+    if acquired.request_file_sha256 != inspection.file_sha256:
+        raise ValueError("dataset package receipt targets different request bytes")
+    if acquired.inventory_file_sha256 != approval.inventory_file_sha256:
+        raise ValueError("dataset package receipt targets a different inventory")
 
 
 def save_dataset_archive_qualification_report(
@@ -1166,6 +1318,8 @@ __all__ = [
     "DatasetArchiveAssetQualification",
     "DatasetArchiveFinding",
     "DatasetArchiveQualificationReport",
+    "DatasetArchiveReadApproval",
+    "DatasetArchiveReadApprovalInspection",
     "DatasetArchiveTaskQualification",
     "DatasetPackageAcquisitionReceipt",
     "DatasetPackageApproval",
@@ -1175,12 +1329,15 @@ __all__ = [
     "DatasetPackageSink",
     "DatasetPackageSourceObservation",
     "DatasetPackageStreamFetcher",
+    "approve_dataset_archive_read",
     "approve_dataset_package_request",
     "inspect_dataset_package_archives",
     "load_dataset_archive_qualification_report",
+    "load_dataset_archive_read_approval",
     "load_dataset_package_approval",
     "load_dataset_package_receipt",
     "materialize_dataset_package_acquisition",
     "save_dataset_archive_qualification_report",
+    "save_dataset_archive_read_approval",
     "save_dataset_package_approval",
 ]

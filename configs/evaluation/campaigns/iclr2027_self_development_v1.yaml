@@ -22,7 +22,7 @@ artifacts:
     sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: c097da86cd2d12314125e5c499d657c7c46757df936c2116e93f570781489c9a
+    sha256: 2cb9f7e8d5c1107447f8f71e170f999622811525e5885758029c1e272113c3db
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -34,7 +34,7 @@ artifacts:
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: aa947c4525a4a68742d5bc9712c2963d1490fb3f8aed41075af1ecba5d0001d4
+    sha256: e6d1ffe0a5aab4eded3be23011566c42d71cf92989cdca534cd7ee41ab6a5a79
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
@@ -101,6 +101,9 @@ artifacts:
   - artifact_id: mlrc-first-assets
     path: configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml
     sha256: 6f66d4e4e9f197a629d8e4be6a62efe293f1868a63d04ec4cc0518dd14c12c8a
+  - artifact_id: mlrc-first-acquisition
+    path: docs/research/data/mlrc_first_preflight_acquisition_v1.yaml
+    sha256: 9e761677a981a6e81cc102c6042b235d6ec46f68bf58bd875a1093d4043d9e5e
   - artifact_id: mlrc-license-policy
     path: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
     sha256: d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
@@ -229,9 +232,9 @@ tracks:
       role: Two qualified 16-GB objective-task candidates for feasibility only.
       item_ids: [perception-temporal-action-loc, meta-learning]
       population_floor: null
-      exact_bytes_available: false
+      exact_bytes_available: true
       held_out_verified: false
-      acquisition_approved: false
+      acquisition_approved: true
     matrix:
       system_ids:
         - full-scitaste
@@ -270,12 +273,13 @@ tracks:
       - native-condition-path-preflight
       - taste-corpus-curation-guide
       - mlrc-first-assets
+      - mlrc-first-acquisition
       - mlrc-license-policy
       - gpu-host-inventory
     blocker_codes:
       - taste-corpora:source-and-review-bytes-not-present
       - taste-corpora:paired-qualification-not-complete
-      - task-assets:not-acquired
+      - task-assets:zip-read-and-safety-qualification-not-authorized
       - held-out-audit:not-complete
       - remote-checkpoint:not-attested
       - independent-reviewers:not-secured
@@ -317,9 +321,9 @@ tracks:
       role: Two qualified 16-GB objective-task candidates for adapter feasibility only.
       item_ids: [perception-temporal-action-loc, meta-learning]
       population_floor: null
-      exact_bytes_available: false
+      exact_bytes_available: true
       held_out_verified: false
-      acquisition_approved: false
+      acquisition_approved: true
     matrix:
       system_ids: [scitaste-native, agent-laboratory, tiny-scientist]
       task_ids: [perception-temporal-action-loc, meta-learning]
@@ -350,9 +354,10 @@ tracks:
       - agent-laboratory-contract
       - tiny-scientist-contract
       - mlrc-first-assets
+      - mlrc-first-acquisition
       - mlrc-license-policy
     blocker_codes:
-      - task-assets:not-acquired
+      - task-assets:zip-read-and-safety-qualification-not-authorized
       - agent-laboratory:adapter-not-qualified
       - tiny-scientist:adapter-not-qualified
       - api-credentials:deepseek-and-openai-not-bound
@@ -403,16 +408,20 @@ stages:
 
   - stage_id: approve-exact-source-acquisition
     kind: asset_acquisition
-    state: ready_for_decision
+    state: complete
     track_ids: [native-taste-causal-prepilot, external-best-native-prepilot]
     depends_on: [freeze-dual-estimand-design]
     external_actions: [download_data]
     owner_approval_required: true
     blocker_codes: []
-    completion_artifact_ids: [mlrc-first-assets, mlrc-license-policy]
+    completion_artifact_ids:
+      - mlrc-first-assets
+      - mlrc-first-acquisition
+      - mlrc-license-policy
     next_decision: >-
-      Present the exact 39-asset, 3,761,168,137-byte request, license obligations,
-      destination, hashes, and post-transfer gates before owner approval.
+      The exact 39-asset, 3,761,168,137-byte package is acquired and independently
+      rehashed. Obtain separate read-only authority before opening ZIP central
+      directories; extraction and ingestion remain later decisions.
 
   - stage_id: qualify-held-out-task-bytes
     kind: human_curation
@@ -422,7 +431,7 @@ stages:
     external_actions: []
     owner_approval_required: false
     blocker_codes:
-      - dependency:source-acquisition-not-complete
+      - archive-read:not-owner-approved
       - archives-and-licenses:not-qualified
       - baselines-and-held-out-signal:not-reproduced
     completion_artifact_ids: []

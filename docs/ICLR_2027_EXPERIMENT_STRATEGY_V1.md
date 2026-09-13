@@ -453,11 +453,16 @@ admission. Thus a formal H3 result cannot enter the paper from a convenient
 subset that differs from the outcome-blind powered allocation.
 
 That decision still does not include the 69.7-GB InnovatorBench archive, task
-workspaces, runtime assets, repository checkout, API calls, checkpoint loading,
-GPUs, or human recruitment. The ten MLR-Bench starting briefs already have an
-immutable local acquisition inventory and are not requested again.
-SciTasteBench remains a construction-and-review track rather than a public-file
-download.
+workspaces, repository checkout, API calls, checkpoint loading, GPUs, or human
+recruitment. Separately, the two-task MLRC preflight package has now acquired
+and independently rehashed all 39 registered assets (3,761,168,137 bytes), but
+its ZIP central directories remain unopened. An exact receipt-bound owner
+approval and explicit local switch are now required for no-extraction archive
+qualification; extraction, AWA license-record coverage, task-layout validation,
+baseline reproduction, and held-out certification remain later gates. The ten
+MLR-Bench starting briefs also retain their immutable local inventory and are
+not requested again. SciTasteBench remains a construction-and-review track
+rather than a public-file download.
 
 The method source bytes have advanced one bounded step beyond proposal. Under
 the standing sub-10-GB policy, the exact Agent Laboratory and DeepScientist

@@ -101,13 +101,13 @@ def test_repository_dossier_verifies_every_bound_artifact_without_external_actio
     assert report.exact_cell_count == 18
     assert report.design_only_track_ids == ("scientific-taste-decisions",)
     assert report.next_stage_ids == (
-        "approve-exact-source-acquisition",
+        "qualify-held-out-task-bytes",
         "attest-native-condition-implementations",
         "qualify-best-native-adapters",
     )
     assert report.stages[0].state is CampaignStageState.COMPLETE
     assert report.stages[1].state is CampaignStageState.COMPLETE
-    assert report.stages[2].state is CampaignStageState.READY_FOR_DECISION
+    assert report.stages[2].state is CampaignStageState.COMPLETE
     assert report.no_external_action_performed is True
     assert report.authorizes_download is False
     assert report.authorizes_api_calls is False

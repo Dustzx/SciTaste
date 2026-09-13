@@ -3063,3 +3063,26 @@ root drift, size/expansion breaches, and license drift, and hashes every admitte
 file into a deterministic tree manifest. Even a passing report is only ready
 for a later extraction proposal; it authorizes no extraction, installation,
 import, execution, adapter claim, network/API action, or GPU work.
+
+### ADR-101: Executable-task ZIP metadata has its own post-download read authority
+
+Status: accepted and exercised with synthetic safe and adversarial ZIPs; no
+real MLRC ZIP central directory has been opened.
+
+The large-package downloader already kept extraction and ingestion false, but
+its archive qualifier accepted the same approval object used for transfer. That
+allowed an operator to open central directories after a download-only decision,
+contradicting the project-wide rule that acquisition ends at the receipt.
+
+SciTaste now requires a second self-hashed approval. It binds the exact request,
+download approval, acquisition receipt, both file and semantic hashes, selected
+tasks, all asset and aggregate byte counts, and the unpack ceiling. The approval
+cannot predate acquisition and grants only ZIP central-directory and outer-byte
+reads. Qualification replays the full chain and additionally requires an
+explicit local switch before any ZIP object is instantiated.
+
+The resulting schema-1.1 report records that archive metadata was read and that
+no extraction occurred. A safe result still grants no extraction, ingestion,
+task-layout validation, baseline execution, API/model use, GPU work, or
+experiment authority. This makes the 39-asset MLRC acquisition visible as exact
+but unqualified rather than either falsely missing or prematurely executable.

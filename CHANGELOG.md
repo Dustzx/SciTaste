@@ -5,6 +5,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Separated executable-task ZIP qualification from download authority. The
+  acquired 39-asset MLRC package is now reflected as exact-but-unqualified in
+  the campaign, and central-directory inspection requires a self-hashed
+  request/approval/receipt-bound read approval plus an explicit local switch.
+  Qualification still performs no extraction, ingestion, API/GPU work, or
+  execution; the real task ZIPs remain unopened.
 - Added a separately approved, no-extraction qualification boundary for pinned
   external-method source archives. A no-read plan replays exact acquisition and
   outer-byte identities; only a plan-hash approval plus explicit local switch

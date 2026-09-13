@@ -83,6 +83,7 @@ from scitaste.evaluation import (
     approve_benchmark_metadata_allocation,
     approve_benchmark_metadata_projection,
     approve_dataset_acquisition_request,
+    approve_dataset_archive_read,
     approve_dataset_package_request,
     approve_json_content_audit,
     approve_source_archive_read,
@@ -132,6 +133,7 @@ from scitaste.evaluation import (
     load_clustered_power_request,
     load_dataset_acquisition_receipt,
     load_dataset_acquisition_request,
+    load_dataset_archive_read_approval,
     load_dataset_license_policy,
     load_dataset_package_approval,
     load_dataset_package_receipt,
@@ -196,6 +198,7 @@ from scitaste.evaluation import (
     save_completed_objective_result_set,
     save_dataset_acquisition_request,
     save_dataset_archive_qualification_report,
+    save_dataset_archive_read_approval,
     save_dataset_license_policy_report,
     save_dataset_package_approval,
     save_dataset_package_gate_report,
@@ -1921,6 +1924,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(dataset_package_download)
     dataset_package_download.set_defaults(handler=_handle_evaluation_dataset_package_download)
+    dataset_package_archive_approve = evaluation_commands.add_parser(
+        "dataset-package-archive-read-approve",
+        help="Bind read-only ZIP qualification to one exact completed acquisition",
+    )
+    dataset_package_archive_approve.add_argument("--manifest", type=Path, required=True)
+    dataset_package_archive_approve.add_argument("--approval", type=Path, required=True)
+    dataset_package_archive_approve.add_argument("--receipt", type=Path, required=True)
+    dataset_package_archive_approve.add_argument("--confirm-proposal-sha256", required=True)
+    dataset_package_archive_approve.add_argument("--confirm-receipt-sha256", required=True)
+    dataset_package_archive_approve.add_argument("--approved-by", required=True)
+    dataset_package_archive_approve.add_argument("--approved-at", required=True)
+    dataset_package_archive_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(dataset_package_archive_approve)
+    dataset_package_archive_approve.set_defaults(
+        handler=_handle_evaluation_dataset_package_archive_approve
+    )
     dataset_package_qualify = evaluation_commands.add_parser(
         "dataset-package-qualify",
         help="Rehash acquired ZIP files and inspect their central directories without extraction",
@@ -1928,8 +1947,14 @@ def build_parser() -> argparse.ArgumentParser:
     dataset_package_qualify.add_argument("--manifest", type=Path, required=True)
     dataset_package_qualify.add_argument("--approval", type=Path, required=True)
     dataset_package_qualify.add_argument("--receipt", type=Path, required=True)
+    dataset_package_qualify.add_argument("--read-approval", type=Path, required=True)
     dataset_package_qualify.add_argument("--workspace-root", type=Path, default=Path("."))
     dataset_package_qualify.add_argument("--output", type=Path, default=None)
+    dataset_package_qualify.add_argument(
+        "--allow-local-archive-read",
+        action="store_true",
+        help="explicitly permit only the approved local ZIP qualification read",
+    )
     dataset_package_qualify.add_argument(
         "--require-safe",
         action="store_true",
@@ -5964,15 +5989,46 @@ def _handle_evaluation_dataset_package_download(args: argparse.Namespace) -> int
     return 0
 
 
+def _handle_evaluation_dataset_package_archive_approve(args: argparse.Namespace) -> int:
+    inspection = load_dataset_package_request(args.manifest)
+    download_approval = load_dataset_package_approval(args.approval)
+    receipt = load_dataset_package_receipt(args.receipt)
+    approval = approve_dataset_archive_read(
+        inspection,
+        download_approval,
+        receipt,
+        confirmed_proposal_sha256=args.confirm_proposal_sha256,
+        confirmed_receipt_sha256=args.confirm_receipt_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_dataset_archive_read_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "archive_read_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _handle_evaluation_dataset_package_qualify(args: argparse.Namespace) -> int:
     inspection = load_dataset_package_request(args.manifest)
-    approval = load_dataset_package_approval(args.approval).approval
-    receipt = load_dataset_package_receipt(args.receipt).receipt
+    approval = load_dataset_package_approval(args.approval)
+    receipt = load_dataset_package_receipt(args.receipt)
+    read_approval = load_dataset_archive_read_approval(args.read_approval)
     report = inspect_dataset_package_archives(
         inspection,
         approval,
         receipt,
+        read_approval,
         workspace_root=args.workspace_root,
+        allow_local_archive_read=args.allow_local_archive_read,
     )
     payload = report.model_dump(mode="json")
     if args.output is not None:

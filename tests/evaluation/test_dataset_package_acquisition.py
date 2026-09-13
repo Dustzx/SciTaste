@@ -25,15 +25,18 @@ from scitaste.evaluation import (
     DatasetPackageSourceObservation,
     DatasetPackageTaskInventory,
     DatasetPackageTaskQualification,
+    approve_dataset_archive_read,
     approve_dataset_package_request,
     inspect_dataset_package_archives,
     inspect_dataset_package_request,
     load_dataset_archive_qualification_report,
+    load_dataset_archive_read_approval,
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
     materialize_dataset_package_acquisition,
     save_dataset_archive_qualification_report,
+    save_dataset_archive_read_approval,
     save_dataset_package_approval,
 )
 
@@ -56,6 +59,34 @@ def _symlink_zip_bytes() -> bytes:
         info.external_attr = (stat.S_IFLNK | 0o777) << 16
         archive.writestr(info, "../../outside")
     return buffer.getvalue()
+
+
+def _archive_read_authority(root: Path, inspection, approval, receipt):
+    download_path = save_dataset_package_approval(
+        approval,
+        root / "archive-download-approval.json",
+    )
+    receipt_path = root / "outputs/acquisitions/tiny-package/RECEIPT.json"
+    download_inspection = load_dataset_package_approval(download_path)
+    receipt_inspection = load_dataset_package_receipt(receipt_path)
+    read_approval = approve_dataset_archive_read(
+        inspection,
+        download_inspection,
+        receipt_inspection,
+        confirmed_proposal_sha256=inspection.request.proposal_sha256,
+        confirmed_receipt_sha256=receipt.receipt_sha256,
+        approved_by="test-owner",
+        approved_at=OBSERVED_AT,
+    )
+    read_path = save_dataset_archive_read_approval(
+        read_approval,
+        root / "archive-read-approval.json",
+    )
+    return (
+        download_inspection,
+        receipt_inspection,
+        load_dataset_archive_read_approval(read_path),
+    )
 
 
 def _fixture(
@@ -294,14 +325,23 @@ def test_approval_streaming_receipt_and_safe_archive_are_hash_bound(tmp_path: Pa
     assert receipt.authorizes_extraction is False
     assert receipt.authorizes_execution is False
 
+    authority = _archive_read_authority(tmp_path, inspection, approval, receipt)
+    with pytest.raises(ValueError, match="explicit local-read switch"):
+        inspect_dataset_package_archives(
+            inspection,
+            *authority,
+            workspace_root=tmp_path,
+            allow_local_archive_read=False,
+        )
     report = inspect_dataset_package_archives(
         inspection,
-        approval,
-        receipt,
+        *authority,
         workspace_root=tmp_path,
+        allow_local_archive_read=True,
     )
     assert report.archive_safety_qualified is True
     assert report.all_receipt_hashes_reverified is True
+    assert report.archive_content_read is True
     assert report.extraction_performed is False
     report_path = save_dataset_archive_qualification_report(
         report,
@@ -457,7 +497,7 @@ def test_cli_qualifies_existing_receipt_without_extraction(
     payload = _zip_bytes()
     inspection, gate, approval, asset = _fixture(tmp_path, payload)
     approval_path = save_dataset_package_approval(approval, tmp_path / "APPROVAL.json")
-    materialize_dataset_package_acquisition(
+    receipt = materialize_dataset_package_acquisition(
         inspection,
         gate,
         approval,
@@ -470,7 +510,37 @@ def test_cli_qualifies_existing_receipt_without_extraction(
         acquired_at=OBSERVED_AT,
     )
     receipt_path = tmp_path / "outputs/acquisitions/tiny-package/RECEIPT.json"
+    read_approval_path = tmp_path / "ARCHIVE_READ_APPROVAL.json"
     report_path = tmp_path / "ARCHIVE_QUALIFICATION.json"
+
+    assert (
+        main(
+            [
+                "evaluation",
+                "dataset-package-archive-read-approve",
+                "--manifest",
+                str(inspection.path),
+                "--approval",
+                str(approval_path),
+                "--receipt",
+                str(receipt_path),
+                "--confirm-proposal-sha256",
+                inspection.request.proposal_sha256,
+                "--confirm-receipt-sha256",
+                receipt.receipt_sha256,
+                "--approved-by",
+                "test-owner",
+                "--approved-at",
+                OBSERVED_AT.isoformat(),
+                "--output",
+                str(read_approval_path),
+            ]
+        )
+        == 0
+    )
+    approval_output = json.loads(capsys.readouterr().out)
+    assert approval_output["authorizes_archive_read"] is True
+    assert approval_output["archive_read_performed"] is False
 
     assert (
         main(
@@ -483,10 +553,13 @@ def test_cli_qualifies_existing_receipt_without_extraction(
                 str(approval_path),
                 "--receipt",
                 str(receipt_path),
+                "--read-approval",
+                str(read_approval_path),
                 "--workspace-root",
                 str(tmp_path),
                 "--output",
                 str(report_path),
+                "--allow-local-archive-read",
                 "--require-safe",
             ]
         )
@@ -602,11 +675,12 @@ def test_archive_qualification_fails_closed_on_unsafe_members(
         acquired_at=OBSERVED_AT,
     )
 
+    authority = _archive_read_authority(tmp_path, inspection, approval, receipt)
     report = inspect_dataset_package_archives(
         inspection,
-        approval,
-        receipt,
+        *authority,
         workspace_root=tmp_path,
+        allow_local_archive_read=True,
     )
     assert report.archive_safety_qualified is False
     assert code in {item.code for item in report.blockers}

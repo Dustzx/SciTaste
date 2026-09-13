@@ -36,6 +36,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 | Phase 9.1 — external-method source freeze | done | pinned Agent Laboratory and DeepScientist archives are atomically streamed and hash-receipted under the standing sub-10-GB policy; source read, extraction, unchanged-core audit, installation, and execution remain separate gates |
 | Phase 9.2 — external-method archive qualification gate | done | exact acquisition bytes compile into a no-read plan; separate hash-bound approval and local switch can produce a no-extraction tree manifest with path, type, expansion, root, and license-file checks; real archive member reads remain unapproved |
+| Phase 9.3 — executable-task archive read gate | done | MLRC acquisition is reflected in the campaign; ZIP qualification now requires a receipt-bound read approval and explicit local switch, while extraction, ingestion, baseline reproduction, API, GPU, and experiments remain closed |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
 sub-10-GB policy. The receipt binds sixteen

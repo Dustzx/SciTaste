@@ -445,3 +445,34 @@ retains all network, download, ingestion, API, GPU, and execution authority as
 false until the owner confirms the new proposal and gate hashes. A later
 downloader must still recheck provider identity, stream atomically, compute
 every archive hash, and qualify ZIP safety before extraction.
+
+That download has now completed: 39 assets and 3,761,168,137 bytes were
+atomically published and independently rehashed, with zero size or digest
+mismatches. The tracked acquisition boundary is
+`docs/research/data/mlrc_first_preflight_acquisition_v1.yaml`. Download approval
+does not permit opening ZIP central directories.
+
+Create the distinct read-only authority only after reviewing the exact request,
+download approval, and receipt hashes:
+
+```bash
+.venv/bin/scitaste evaluation dataset-package-archive-read-approve \
+  --manifest configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml \
+  --approval '<download APPROVAL.json>' --receipt '<RECEIPT.json>' \
+  --confirm-proposal-sha256 '<exact proposal hash>' \
+  --confirm-receipt-sha256 '<exact receipt hash>' \
+  --approved-by '<owner>' --approved-at '<timezone-aware ISO-8601>' \
+  --output '<new archive-read APPROVAL.json>'
+
+.venv/bin/scitaste evaluation dataset-package-qualify \
+  --manifest configs/evaluation/acquisition/mlrc_first_preflight_assets_v1.yaml \
+  --approval '<download APPROVAL.json>' --receipt '<RECEIPT.json>' \
+  --read-approval '<archive-read APPROVAL.json>' --workspace-root . \
+  --allow-local-archive-read --require-safe --output '<new REPORT.json>'
+```
+
+The first command reads only bounded control records. The second rehashes the
+acquired files and reads ZIP metadata under the explicit authority; it never
+extracts a member. Both real task archives remain unopened pending that owner
+decision, and the later AWA coverage, extraction, task-layout, baseline,
+held-out, API/GPU, and experiment gates remain independent.
