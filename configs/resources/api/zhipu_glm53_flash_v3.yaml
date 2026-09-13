@@ -1,0 +1,16 @@
+schema_version: "1.0"
+resource:
+  kind: api_model
+  resource_id: zhipu-glm53-flash
+  provider_id: zhipu
+  endpoint: https://open.bigmodel.cn/api/paas/v4/chat/completions
+  interface: openai-chat-completions
+  model_id: glm-5.3-flash
+  model_revision: GLM-5.3-Flash
+  rolling_alias: true
+  identity_source_url: https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash
+  identity_verified_on: 2026-09-14
+  credential_env: ZAI_API_KEY
+  availability: verified
+  availability_reason: A project-owned Generation as Content generation and feedback-edit interaction received authenticated successful responses on 2026-09-14; this verifies availability only, not formal experiment selection or scientific quality.
+  pricing: null

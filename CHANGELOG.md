@@ -24,6 +24,12 @@ semantic versioning.
   and the browser labels which source supplied the focus. This prevents the
   model-generated workspace and the SciTaste controller plane from presenting
   conflicting gates.
+- Advanced the shared compute catalog and SciTaste project binding after a real
+  GLM-5.3-Flash Generation as Content generation/edit interaction. The new
+  authenticated observation binds the project conversation and provider-response
+  hashes without retaining credentials or raw responses; only the Zhipu binding
+  changes from pending to verified, and the record explicitly remains product
+  availability evidence rather than formal experimental evidence.
 - Added the first unchanged-core Agent Laboratory adapter preparation path. It
   binds a clean accepted-method Git commit, resource corpus, adapter contract,
   and one held-out MLR-Bench brief; copies only tracked regular source files;

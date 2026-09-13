@@ -1,18 +1,18 @@
 # Resource catalog layout
 
-`compute_catalog_v9.yaml` is the current project-superordinate resource index.
+`compute_catalog_v10.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v9.yaml
+├── compute_catalog_v10.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
 │   ├── deepseek_v4_flash_v3.yaml       # current V4 identity and tariff
 │   ├── deepseek_v4_flash*.yaml         # immutable earlier V4 snapshots
 │   ├── deepseek_v41_flash*.yaml        # immutable V4.1 snapshots
-│   ├── zhipu_glm53_flash_v2.yaml
+│   ├── zhipu_glm53_flash_v3.yaml
 │   └── bailian_qwen38_max.yaml
 ├── gpu/
 │   ├── hosts/
@@ -23,13 +23,14 @@ configs/resources/
 │       ├── qwen3_5_4b_local.yaml
 │       └── qwen3_5_4b_remote.yaml
 ├── projects/
-│   └── scitaste_self_development_v9.yaml
+│   └── scitaste_self_development_v10.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
     ├── v3/                    # immutable v3 observations
     ├── v4/                    # earlier official/API facts
-    └── v5/                    # current official/API facts
+    ├── v5/                    # current official/API facts
+    └── v8/                    # authenticated Generation as Content use
 ```
 
 API manifests store endpoints, model identities, public pricing state, and
@@ -60,6 +61,10 @@ explicit selection lifecycle: `current` entries may be newly attached to a
 project, `historical` entries remain visible only for provenance, and `disabled`
 entries cannot be selected for new work. New work uses v9 instead of relabeling
 prior records.
+V10 registers a current authenticated GLM-5.3-Flash Generation as Content
+generation/edit observation and advances only that project binding to verified.
+It does not change DeepSeek availability, select an experiment model, or claim
+scientific quality.
 
 Generation as Content projects both a project's attached resources and compatible
 catalog alternatives. A user-reviewed, model-authored resource directive may add
@@ -83,10 +88,10 @@ runtime copies accepted observations into `outputs/resources/observations/`, so
 their source version remains auditable without turning an observation into a
 reservation or experiment approval.
 
-The Zhipu observations separate the retained 2026-09-05 authenticated
-`glm-5.3-flash` response from the current official identity snapshot. Historical
-access evidence does not claim current reachability, while the official snapshot
-performs no provider call.
+The Zhipu observations separate the retained 2026-09-05 authenticated response,
+the official identity snapshot, and the 2026-09-14 project-owned Generation as
+Content generation/edit. The newest observation establishes current product-path
+availability only; it is not a formal experiment result.
 
 Machine-local access material belongs only in the ignored runtime plane:
 

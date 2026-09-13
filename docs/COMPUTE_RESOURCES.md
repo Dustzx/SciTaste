@@ -6,7 +6,7 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v8.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v10.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -37,7 +37,7 @@ turning a weak password hash or bearer key into a tracked artifact.
 | Class | Resource | Current role/state |
 |---|---|---|
 | API | `deepseek-v4-flash` | current `deepseek-v4-flash` / `DeepSeek-V4-Flash` candidate; official identity and pricing verified, current authenticated sentinel window absent |
-| API | `zhipu-glm53-flash` | current official multimodal candidate and locally bound key; current connectivity unprobed |
+| API | `zhipu-glm53-flash` | authenticated Generation as Content generation/edit availability verified; formal experiment selection remains separate |
 | API | `bailian-qwen38-max` | historical provenance only; blocked by the latest recorded arrearage response |
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
 | GPU | `gpu-host-3090-2` | verified remote 8×RTX 3090 host; all devices idle and 311,710,777,344 storage bytes free at the read-only observation |
@@ -51,7 +51,7 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v8.yaml` explicitly binds
+`configs/resources/projects/scitaste_self_development_v10.yaml` explicitly binds
 all eight current resources to the self-development project. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. The registered copy
@@ -118,15 +118,15 @@ identity probe.
 The future probe must use the sentinel-bracketed temporal protocol in
 `docs/API_MODEL_IDENTITY.md`; a returned alias alone is not a frozen checkpoint.
 
-The official Zhipu page now identifies `glm-5.3-flash` as a native multimodal
-model with a 1M context window, 128K maximum output, thinking, function calling,
-caching, and structured output. The retained 2026-09-05 Zhipu recording verifies one authenticated
-`glm-5.3-flash` request and response, including a provider request ID and 1,588
-reported tokens. The shared observation binds the raw response hash and the
-recording's self-reported hash without copying response content or credentials.
-This is historical access evidence, not a fresh connectivity result; the
-project binding therefore remains `pending` until a separately approved current
-preflight is performed.
+The official Zhipu page identifies `glm-5.3-flash` as a native multimodal model
+with a 1M context window, 128K maximum output, thinking, function calling,
+caching, and structured output. The retained 2026-09-05 recording remains a
+historical stratum. A separate 2026-09-14 authenticated observation binds the
+actual project conversation and accepted classification/composition response
+hashes for a Generation as Content generation and feedback edit. It records
+bounded token, latency, and cost telemetry without response bodies or credential
+values, so the project binding is now verified for interactive content use. It
+does not authorize or validate a formal experiment.
 
 ## Commands
 
@@ -134,7 +134,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
   --evidence-root .
 ```
 
@@ -143,26 +143,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v8.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v10.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v8.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v10.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v8.yaml \
+  --catalog configs/resources/compute_catalog_v10.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```

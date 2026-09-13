@@ -3396,6 +3396,14 @@ credential-value administration, observations, connectivity qualification,
 scheduling, and scientific resource selection remain independently governed
 operations.
 
+An actual provider use may advance availability only through a separately typed
+resource observation and successor project binding. The 2026-09-14
+GLM-5.3-Flash Generation as Content interaction records requested and returned
+model identity, successful authenticated use, bounded telemetry, conversation
+identity, and provider-response hashes without retaining a credential or raw
+response. It verifies that project's interactive model availability; it does not
+select a formal experiment resource or establish scientific quality.
+
 ### ADR-112: Costly experiment launch binds scientific intent and typed readiness evidence
 
 Status: accepted for prelaunch schema 1.6 and external adapter preflight schema

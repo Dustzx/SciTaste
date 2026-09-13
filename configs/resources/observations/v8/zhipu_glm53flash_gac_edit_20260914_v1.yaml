@@ -1,0 +1,17 @@
+schema_version: "1.0"
+observation_id: zhipu-glm53flash-gac-edit-20260914-v1
+resource_id: zhipu-glm53-flash
+resource_kind: api_model
+observed_at: 2026-09-14T04:20:05.613453+08:00
+method: authenticated_call
+status: verified
+requested_model_id: glm-5.3-flash
+returned_model_revision: glm-5.3-flash
+request_succeeded: true
+notes:
+  - The project-owned conversation workspace-dac16c6f6e56799e generated turn-0001 and edited it from explicit user feedback in turn-0003.
+  - The accepted turn-0003 classification and composition responses are bound by SHA-256 c309fb90fcc89536ad8cb2838c054ab2afb875c9dc184b30ddfd78e0071ce695 and 28cb153c7d9cc5017ba2ba4c189f908b28d18d03acd5d74d8024d290dbe96936.
+  - Turn-0003 recorded 11,787 input tokens, 1,393 output tokens, USD 0.0009829803551412895, and no provider-native tool call; this is product-path availability evidence, not a formal experiment.
+  - Credential values and raw provider response bodies are absent from the observation and project conversation records.
+credentials_recorded: false
+observation_only: true

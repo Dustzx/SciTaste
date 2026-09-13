@@ -33,6 +33,7 @@ CATALOG_V4 = Path("configs/resources/compute_catalog_v4.yaml")
 CATALOG_V5 = Path("configs/resources/compute_catalog_v5.yaml")
 CATALOG_V6 = Path("configs/resources/compute_catalog_v6.yaml")
 CATALOG_V9 = Path("configs/resources/compute_catalog_v9.yaml")
+CATALOG_V10 = Path("configs/resources/compute_catalog_v10.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
 PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
@@ -40,6 +41,7 @@ PROJECT_BINDING_V4 = Path("configs/resources/projects/scitaste_self_development_
 PROJECT_BINDING_V5 = Path("configs/resources/projects/scitaste_self_development_v5.yaml")
 PROJECT_BINDING_V6 = Path("configs/resources/projects/scitaste_self_development_v6.yaml")
 PROJECT_BINDING_V9 = Path("configs/resources/projects/scitaste_self_development_v9.yaml")
+PROJECT_BINDING_V10 = Path("configs/resources/projects/scitaste_self_development_v10.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
 REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
 LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
@@ -49,6 +51,9 @@ LOCAL_CHECKPOINT_OBSERVATION = Path(
 )
 ZHIPU_AUTHENTICATED_OBSERVATION = Path(
     "configs/resources/observations/zhipu_glm53flash_authenticated_20260905_v1.yaml"
+)
+ZHIPU_GAC_EDIT_OBSERVATION = Path(
+    "configs/resources/observations/v8/zhipu_glm53flash_gac_edit_20260914_v1.yaml"
 )
 
 
@@ -107,6 +112,20 @@ def test_v9_catalog_separates_resource_provenance_from_project_selection() -> No
     assert loaded.selection_status_by_id["deepseek-v4-flash"] is (ResourceSelectionStatus.CURRENT)
     assert binding.valid is True
     assert binding.catalog_id == "scitaste-shared-compute-v9"
+
+
+def test_v10_catalog_binds_authenticated_gac_availability_to_project() -> None:
+    loaded = load_compute_resource_catalog(CATALOG_V10)
+    binding = inspect_project_resource_binding(CATALOG_V10, PROJECT_BINDING_V10)
+    observation = load_resource_observation(ZHIPU_GAC_EDIT_OBSERVATION)
+
+    zhipu = loaded.catalog.resource("zhipu-glm53-flash")
+    assert zhipu.availability is ObservationStatus.VERIFIED
+    assert binding.valid is True
+    assert binding.catalog_id == "scitaste-shared-compute-v10"
+    assert observation.method.value == "authenticated_call"
+    assert observation.request_succeeded is True
+    assert observation.credentials_recorded is False
 
 
 def test_explicit_catalog_hash_binds_api_gpu_and_checkpoint_manifests() -> None:
