@@ -206,22 +206,14 @@ class SelectingBackend:
             evidence_id = candidate["evidence_ref_ids"][0]
             payload = {
                 "schema_version": "1.0",
-                "plan": {
-                    "schema_version": "1.0",
-                    "project_id": request.input_payload["project_id"],
-                    "snapshot_revision": request.input_payload["snapshot_revision"],
-                    "snapshot_sha256": request.input_payload["snapshot_sha256"],
-                    "intent_fingerprint": request.input_payload["intent_fingerprint"],
-                    "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
-                    "entries": [
-                        {
-                            "candidate_id": candidate["candidate_id"],
-                            "group": candidate["allowed_groups"][0],
-                            "emphasis": candidate["allowed_emphasis"][0],
-                            "focus_ref_ids": [],
-                        }
-                    ],
-                },
+                "entries": [
+                    {
+                        "candidate_id": candidate["candidate_id"],
+                        "group": candidate["allowed_groups"][0],
+                        "emphasis": candidate["allowed_emphasis"][0],
+                        "focus_ref_ids": [],
+                    }
+                ],
                 "brief": {
                     "schema_version": "1.0",
                     "title": "Current project evidence",
@@ -333,3 +325,36 @@ def test_followup_feedback_rewrites_the_prior_cited_brief(tmp_path: Path) -> Non
     assert edited.planning is not None and edited.planning.authored_brief is not None
     assert edited.planning.authored_brief.edited_from_turn_id == "turn-0001"
     assert edited.conversation_context_sha256 == context.fingerprint
+
+
+def test_ambiguous_known_terms_are_resolved_by_the_model_instead_of_dead_ending(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path)
+    catalog = WorkspaceGenerationService(runtime).quick_catalog("generation-project")
+    backend = SelectingBackend(catalog.intents[0].quick_intent_id)
+    service = WorkspaceGenerationService(
+        runtime,
+        planner=StructuredWorkspacePlanner(
+            backend,
+            ModelPlannerPolicy(expected_backend=backend.name, expected_model=backend.model),
+        ),
+    )
+
+    generated = service.generate(
+        WorkspaceGenerationRequest(
+            quick_catalog_fingerprint=catalog.fingerprint,
+            intent_request=FreeQuestionRequest(
+                project_id="generation-project",
+                snapshot_revision=catalog.snapshot.snapshot_revision,
+                snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                question="Compare these runs.",
+            ),
+        )
+    )
+
+    assert generated.status == "generated"
+    assert generated.reason_code == "model-surface-plan-admitted"
+    assert generated.classification is not None
+    assert generated.classification.status == "selected"
+    assert len(backend.calls) == 2

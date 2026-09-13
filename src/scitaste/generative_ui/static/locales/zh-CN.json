@@ -100,6 +100,7 @@
   "generation.brief.followups": "继续探索或编辑",
   "generation.brief.evidence_question": "重新检查证据 {evidence}，说明它支持什么、不支持什么，并在必要时修改上一版回答。",
   "generation.brief.edited_from": "本内容基于 {turn} 中的证据摘要继续编辑。",
+  "generation.brief.open_synthesis": "展开模型综合说明",
   "quick.open_project": "打开项目以加载适用的建议问题。",
   "quick.cache_dynamic": "灵活生成 · 按需调用",
   "quick.cache_fresh": "模型缓存 · 已就绪",

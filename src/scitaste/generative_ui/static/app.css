@@ -825,8 +825,20 @@ fieldset {
 .model-authored-synthesis {
   font-size: 1.02rem;
   line-height: 1.55;
-  margin: 0;
+  margin: 0.65rem 0 0;
   max-width: 78ch;
+}
+
+.model-authored-synthesis-details {
+  border-top: 1px solid #ded8c3;
+  padding-top: 0.6rem;
+}
+
+.model-authored-synthesis-details > summary {
+  color: var(--forest-dark);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
 }
 
 .model-authored-points {

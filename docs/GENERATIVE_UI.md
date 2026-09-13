@@ -529,8 +529,12 @@ question by selecting one server-issued quick-intent ID, and compose a surface
 by returning a closed `SurfacePlan` together with a cited `ModelAuthoredBrief`.
 There is deliberately no execute, mutate, transition, callback, fetch, or tool
 method. Deterministic intent recognition in
-`WorkspaceIntentResolver` remains the first path; the optional classifier is
-only useful after that path returns `long-tail-question-requires-planner`.
+`WorkspaceIntentResolver` remains the first, zero-cost path. When it cannot
+select exactly one intent—including ambiguous questions that mention several
+known concepts—the optional classifier may choose only from the current
+server-issued intent catalog. If classification is unavailable or rejected, the
+receiver preserves the deterministic resolver's clarification reason rather
+than guessing.
 
 `DeterministicWorkspacePlanner` orders trusted candidates by a versioned,
 intent-aware stable rule and works without a provider. A progress request leads
@@ -550,7 +554,10 @@ controller state.
 The model response is untrusted. Backend/model identity, request bytes,
 response bytes, token telemetry, latency, tool-call absence, exact response
 binding, closed Pydantic schema, snapshot hashes, intent hash, catalog hash, and
-final plan materialization are all checked in code. Prompt instructions are
+final plan materialization are all checked in code. The model returns only
+bounded candidate placements and cited authored content; the receiver injects
+project, snapshot, intent, and catalog identities after admission instead of
+asking the model to reproduce integrity metadata. Prompt instructions are
 defense in depth, not the trust boundary. A failed or malicious composition is
 replaced by the deterministic layout through `FallbackWorkspacePlanner`; a
 failed long-tail classification remains explicitly unavailable because guessing

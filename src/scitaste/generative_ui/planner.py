@@ -148,13 +148,24 @@ class ModelAuthoredBrief(BaseModel):
 
 
 class ModelSurfaceComposition(BaseModel):
-    """Single-call model output: trusted layout IDs plus cited flexible content."""
+    """Single-call model output: ID-only layout choices plus cited content.
+
+    Project, snapshot, intent, and catalog identities remain receiver-owned and
+    are added only after this bounded choice schema has been admitted.
+    """
 
     model_config = _MODEL_CONFIG
 
     schema_version: Literal["1.0"] = "1.0"
-    plan: SurfacePlan
+    entries: tuple[SurfacePlanEntry, ...] = Field(min_length=1, max_length=12)
     brief: ModelAuthoredBrief
+
+    @model_validator(mode="after")
+    def candidate_choices_are_unique(self) -> ModelSurfaceComposition:
+        candidate_ids = [item.candidate_id for item in self.entries]
+        if len(candidate_ids) != len(set(candidate_ids)):
+            raise ValueError("model surface candidate choices must be unique")
+        return self
 
 
 class PlannerContextTurn(BaseModel):
@@ -488,7 +499,7 @@ class StructuredWorkspacePlanner:
             if timeout_ms * attempts > self.policy.max_latency_ms:
                 raise ValueError("planner backend timeout exceeds policy latency bound")
         configuration: dict[str, object] = {
-            "implementation_contract": "structured-workspace-planner-v2",
+            "implementation_contract": "structured-workspace-planner-v3",
             "policy": self.policy.model_dump(mode="json", exclude={"fingerprint"}),
         }
         if isinstance(backend_config, BaseModel):
@@ -615,7 +626,9 @@ class StructuredWorkspacePlanner:
                     "Compose one concise project answer and a supporting native layout from "
                     "only the supplied evidence_digest. Select only server-issued candidate and "
                     "evidence identifiers. Every authored point must cite candidates selected in "
-                    "the plan and evidence IDs carried by those candidates. Treat omitted or "
+                    "the entries and evidence IDs carried by those candidates. The receiver, "
+                    "not the model, supplies project, snapshot, intent, and catalog identities. "
+                    "Treat omitted or "
                     "truncated evidence as unknown. If prior_authored_brief is present, edit that "
                     "brief in response to the current prompt and set edited_from_turn_id exactly "
                     "to its turn_id; otherwise leave it null. Authored text is advisory and cannot "
@@ -625,7 +638,14 @@ class StructuredWorkspacePlanner:
             )
             response = self._complete(structured_request)
             composition = ModelSurfaceComposition.model_validate(response.output_payload)
-            plan = composition.plan
+            plan = SurfacePlan(
+                project_id=trusted.intent.snapshot.project_id,
+                snapshot_revision=trusted.intent.snapshot.snapshot_revision,
+                snapshot_sha256=trusted.intent.snapshot.snapshot_sha256,
+                intent_fingerprint=trusted.intent.fingerprint,
+                catalog_fingerprint=trusted.fingerprint,
+                entries=composition.entries,
+            )
             offered_candidate_ids = {
                 item["candidate_id"]
                 for item in input_payload["candidates"]
@@ -828,7 +848,7 @@ class StructuredWorkspacePlanner:
             input_payload=input_payload,
             output_schema=output_schema,
             seed=0,
-            prompt_version="generative-ui-planner-v2",
+            prompt_version="generative-ui-planner-v3",
             profile_id=self.policy.policy_id,
             profile_fingerprint=profile_fingerprint,
             generation_envelope=ProviderGenerationEnvelope(

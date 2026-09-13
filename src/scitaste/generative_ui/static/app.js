@@ -4892,9 +4892,18 @@ function renderModelAuthoredBrief(brief) {
   const synthesis = document.createElement("p");
   synthesis.className = "model-authored-synthesis";
   appendText(synthesis, brief.synthesis);
+  const synthesisDetails = document.createElement("details");
+  synthesisDetails.className = "model-authored-synthesis-details";
+  const synthesisLabel = document.createElement("summary");
+  appendText(synthesisLabel, t("generation.brief.open_synthesis"));
+  synthesisDetails.append(synthesisLabel, synthesis);
   const points = document.createElement("div");
   points.className = "model-authored-points";
-  for (const point of brief.points) {
+  const pointPriority = {recommendation: 0, uncertainty: 1, finding: 2};
+  const orderedPoints = [...brief.points].sort((left, right) => (
+    pointPriority[left.kind] - pointPriority[right.kind]
+  ));
+  for (const point of orderedPoints) {
     const card = document.createElement("article");
     card.className = `model-authored-point kind-${point.kind}`;
     const kind = document.createElement("small");
@@ -4916,7 +4925,7 @@ function renderModelAuthoredBrief(brief) {
     card.append(kind, text, evidence);
     points.appendChild(card);
   }
-  section.append(header, synthesis, points);
+  section.append(header, points, synthesisDetails);
   if ((brief.suggested_questions || []).length > 0) {
     const followups = document.createElement("div");
     followups.className = "model-authored-followups";

@@ -5,6 +5,19 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Made flexible Generation as Content reachable for every unresolved free-form
+  project question, rather than only questions containing no known keywords.
+  Deterministic intent recognition remains the zero-cost fast path; ambiguous or
+  unmatched questions may now use the configured bounded classifier and retain
+  the original clarification reason if that classifier is unavailable. The
+  composition model now returns only semantic layout choices and cited content,
+  while the trusted receiver injects project, snapshot, intent, and catalog
+  identities. This removed a brittle integrity-metadata copying task without
+  weakening admission. A live GLM-5.3-Flash conversation generated a project
+  workspace and revised it from user feedback; this is engineering acceptance,
+  not scientific-effect evidence. The browser leads with compact findings and
+  recommendations and collapses the longer synthesis to avoid a vertical text
+  wall.
 - Added the first unchanged-core Agent Laboratory adapter preparation path. It
   binds a clean accepted-method Git commit, resource corpus, adapter contract,
   and one held-out MLR-Bench brief; copies only tracked regular source files;

@@ -143,22 +143,14 @@ def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
     assert isinstance(evidence_ids, list)
     return {
         "schema_version": "1.0",
-        "plan": {
-            "schema_version": "1.0",
-            "project_id": payload["project_id"],
-            "snapshot_revision": payload["snapshot_revision"],
-            "snapshot_sha256": payload["snapshot_sha256"],
-            "intent_fingerprint": payload["intent_fingerprint"],
-            "catalog_fingerprint": payload["catalog_fingerprint"],
-            "entries": [
-                {
-                    "candidate_id": first["candidate_id"],
-                    "group": allowed_groups[0],
-                    "emphasis": allowed_emphasis[0],
-                    "focus_ref_ids": [],
-                }
-            ],
-        },
+        "entries": [
+            {
+                "candidate_id": first["candidate_id"],
+                "group": allowed_groups[0],
+                "emphasis": allowed_emphasis[0],
+                "focus_ref_ids": [],
+            }
+        ],
         "brief": {
             "schema_version": "1.0",
             "title": "Evidence-bound project answer",
@@ -540,9 +532,7 @@ def test_malformed_model_plan_falls_back_to_deterministic_layout(
 
     def malicious(request: StructuredModelRequest) -> dict[str, object]:
         payload = _model_plan(request)
-        plan = payload["plan"]
-        assert isinstance(plan, dict)
-        entries = plan["entries"]
+        entries = payload["entries"]
         assert isinstance(entries, list)
         entry = entries[0]
         assert isinstance(entry, dict)

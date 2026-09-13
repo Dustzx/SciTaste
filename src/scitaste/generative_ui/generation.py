@@ -301,9 +301,11 @@ class WorkspaceGenerationService:
 
         resolution = self._resolver.resolve(intent_request)
         classification: IntentPlannerOutcome | None = None
-        if resolution.status == "provider_unavailable" and isinstance(
-            intent_request, FreeQuestionRequest
-        ):
+        # Deterministic routing is the fast path, not a dead end. A configured
+        # model may resolve any still-unresolved free question into one of the
+        # current server-issued intents, including ambiguous keyword matches.
+        model_classification_needed = resolution.intent is None
+        if model_classification_needed and isinstance(intent_request, FreeQuestionRequest):
             classification = self._planner.classify(
                 intent_request,
                 quick_catalog,
@@ -332,7 +334,11 @@ class WorkspaceGenerationService:
                 return WorkspaceGenerationOutput(
                     document=_resolution_failure(
                         resolution,
-                        reason_code=classification.reason_code,
+                        reason_code=(
+                            classification.reason_code
+                            if resolution.status == "provider_unavailable"
+                            else resolution.reason_code
+                        ),
                         classification=classification,
                         context=conversation_context,
                     )

@@ -36,22 +36,14 @@ class _PlannerBackend:
         evidence_id = selected["evidence_ref_ids"][0]
         payload = {
             "schema_version": "1.0",
-            "plan": {
-                "schema_version": "1.0",
-                "project_id": request.input_payload["project_id"],
-                "snapshot_revision": request.input_payload["snapshot_revision"],
-                "snapshot_sha256": request.input_payload["snapshot_sha256"],
-                "intent_fingerprint": request.input_payload["intent_fingerprint"],
-                "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
-                "entries": [
-                    {
-                        "candidate_id": selected["candidate_id"],
-                        "group": selected["allowed_groups"][0],
-                        "emphasis": selected["allowed_emphasis"][0],
-                        "focus_ref_ids": [],
-                    }
-                ],
-            },
+            "entries": [
+                {
+                    "candidate_id": selected["candidate_id"],
+                    "group": selected["allowed_groups"][0],
+                    "emphasis": selected["allowed_emphasis"][0],
+                    "focus_ref_ids": [],
+                }
+            ],
             "brief": {
                 "schema_version": "1.0",
                 "title": "Cached project answer",

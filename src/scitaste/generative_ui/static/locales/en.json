@@ -100,6 +100,7 @@
   "generation.brief.followups": "Explore or edit",
   "generation.brief.evidence_question": "Re-examine evidence {evidence}. Explain what it supports, what it does not support, and revise the prior answer if needed.",
   "generation.brief.edited_from": "Edited from the evidence-bound content in {turn}.",
+  "generation.brief.open_synthesis": "Open model synthesis",
   "quick.open_project": "Open a project to load applicable prompts.",
   "quick.cache_dynamic": "Flexible · generated on demand",
   "quick.cache_fresh": "Model cache · ready",

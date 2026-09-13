@@ -3455,3 +3455,32 @@ required. In particular, the current MLR-Bench brief supports an ecological
 research-package comparison but has no objective executable signal. This avoids
 conflating an operational adapter milestone with a valid ICLR effectiveness
 result.
+
+### ADR-114: Models author semantic surfaces while receivers own integrity identity
+
+Status: accepted and exercised through one live project conversation and one
+feedback revision; usability and scientific-effect claims remain unevaluated.
+
+Generation as Content must be flexible enough to answer an unforeseen project
+question, but model flexibility does not require the model to reproduce trusted
+hashes. The structured composer therefore selects only server-issued component
+IDs, placements, and cited authored content. The receiver injects the exact
+project, snapshot, intent, and catalog identities after schema admission, then
+replays the existing candidate and evidence boundaries. This narrows the model's
+task while preserving the same integrity trust boundary.
+
+Deterministic intent recognition remains the zero-cost fast path. Any unresolved
+free-form question, including one that ambiguously mentions several known
+concepts, may be passed to the optional bounded classifier. It can select only a
+current server-issued intent; it cannot create actions or authority. If the
+classifier is absent or rejected, the deterministic clarification or no-match
+reason remains visible. This prevents keyword ambiguity from making the flexible
+model path unreachable.
+
+The reading surface leads with a few recommendation, uncertainty, and finding
+cards and keeps the longer synthesis collapsed. This is a presentation decision,
+not evidence summarization by CSS: all displayed claims still come from the
+admitted model brief and retain their evidence references. The first live
+GLM-5.3-Flash exercise generated a project workspace and then edited it from
+explicit user feedback. It establishes only that the interaction path operates;
+it does not establish research quality or user benefit.
