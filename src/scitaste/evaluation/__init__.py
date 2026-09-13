@@ -542,6 +542,7 @@ from scitaste.evaluation.program_action import (
     EffectiveProgramActionRoute,
     ProgramNextActionKind,
     route_effective_program_action,
+    route_program_stage_action,
 )
 from scitaste.evaluation.program_control import (
     EffectiveExperimentProgram,
@@ -1389,6 +1390,7 @@ __all__ = [
     "qualify_source_archives",
     "reference_selection_implementation_sha256",
     "route_effective_program_action",
+    "route_program_stage_action",
     "run_live_direct_agent",
     "save_acquired_task_cohort_report",
     "save_acquisition_gate_report",

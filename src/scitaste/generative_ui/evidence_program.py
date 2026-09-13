@@ -11,7 +11,11 @@ from scitaste.evaluation.decision_dossier import (
     CampaignStageState,
     ExperimentDecisionDossierReport,
 )
-from scitaste.evaluation.program_action import route_effective_program_action
+from scitaste.evaluation.program_action import (
+    EffectiveProgramActionRoute,
+    route_effective_program_action,
+    route_program_stage_action,
+)
 from scitaste.evaluation.program_control import EffectiveExperimentProgram
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError
 from scitaste.generative_ui.models import (
@@ -201,29 +205,12 @@ def project_iclr_evidence_program(
     ]
     completed_stage_count = sum(item.state is CampaignStageState.COMPLETE for item in report.stages)
     action_route = route_effective_program_action(report, effective_program)
-    projected_action_route = ProjectProgramActionRouteData(
-        route_sha256=action_route.route_sha256,
-        effective_program_sha256=action_route.effective_program_sha256,
-        stage_id=action_route.stage_id,
-        stage_state=action_route.stage_state.value,
-        blocker_codes=action_route.blocker_codes,
-        external_actions=tuple(item.value for item in action_route.external_actions),
-        routing_basis=action_route.routing_basis,
-        next_action_kind=action_route.next_action_kind,
-        verification_route=action_route.verification.route.value,
-        verification_reason_codes=action_route.verification.reason_codes,
-        action_effects=tuple(item.value for item in action_route.verification_input.effects),
-        expected_loss_units=action_route.verification.expected_loss_units,
-        targeted_net_gain_units=action_route.verification.targeted_net_gain_units,
-        full_preflight_net_gain_units=action_route.verification.full_preflight_net_gain_units,
-        owner_approval_required=action_route.verification.owner_approval_required,
-        model_advisory_eligible=action_route.verification.model_advisory_eligible,
-        decision_source=action_route.verification.decision_source,
-        selected_by_tool_intelligence=True,
-        authorizes_external_action=False,
-        authorizes_execution=False,
-        execution_authority="none",
-        no_external_action_performed=True,
+    projected_action_route = _project_action_route(action_route)
+    next_gate_action_routes = tuple(
+        _project_action_route(
+            route_program_stage_action(report, effective_program, stage_id=stage_id)
+        )
+        for stage_id in effective_next_stage_ids
     )
     return ProjectEvidenceProgramData(
         run_id=run.run_id,
@@ -257,6 +244,7 @@ def project_iclr_evidence_program(
         current_owner_approval_required=current_stage.owner_approval_required,
         current_external_actions=tuple(action.value for action in current_stage.external_actions),
         gate_action_route=projected_action_route,
+        next_gate_action_routes=next_gate_action_routes,
         current_action_run_id=current_action_run.run_id if current_action_run else None,
         current_action_run_ref_id=current_action_run_ref_id,
         phases=phase_rows,
@@ -264,6 +252,35 @@ def project_iclr_evidence_program(
         scientific_effectiveness_established=False,
         no_external_action_performed=report.no_external_action_performed,
         support_ref_ids=support_ref_ids,
+    )
+
+
+def _project_action_route(
+    action_route: EffectiveProgramActionRoute,
+) -> ProjectProgramActionRouteData:
+    return ProjectProgramActionRouteData(
+        route_sha256=action_route.route_sha256,
+        effective_program_sha256=action_route.effective_program_sha256,
+        stage_id=action_route.stage_id,
+        stage_state=action_route.stage_state.value,
+        blocker_codes=action_route.blocker_codes,
+        external_actions=tuple(item.value for item in action_route.external_actions),
+        routing_basis=action_route.routing_basis,
+        next_action_kind=action_route.next_action_kind,
+        verification_route=action_route.verification.route.value,
+        verification_reason_codes=action_route.verification.reason_codes,
+        action_effects=tuple(item.value for item in action_route.verification_input.effects),
+        expected_loss_units=action_route.verification.expected_loss_units,
+        targeted_net_gain_units=action_route.verification.targeted_net_gain_units,
+        full_preflight_net_gain_units=action_route.verification.full_preflight_net_gain_units,
+        owner_approval_required=action_route.verification.owner_approval_required,
+        model_advisory_eligible=action_route.verification.model_advisory_eligible,
+        decision_source=action_route.verification.decision_source,
+        selected_by_tool_intelligence=True,
+        authorizes_external_action=False,
+        authorizes_execution=False,
+        execution_authority="none",
+        no_external_action_performed=True,
     )
 
 

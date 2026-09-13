@@ -203,21 +203,48 @@ class SelectingBackend:
         else:
             candidate = request.input_payload["candidates"][0]
             assert isinstance(candidate, dict)
+            evidence_id = candidate["evidence_ref_ids"][0]
             payload = {
                 "schema_version": "1.0",
-                "project_id": request.input_payload["project_id"],
-                "snapshot_revision": request.input_payload["snapshot_revision"],
-                "snapshot_sha256": request.input_payload["snapshot_sha256"],
-                "intent_fingerprint": request.input_payload["intent_fingerprint"],
-                "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
-                "entries": [
-                    {
-                        "candidate_id": candidate["candidate_id"],
-                        "group": candidate["allowed_groups"][0],
-                        "emphasis": candidate["allowed_emphasis"][0],
-                        "focus_ref_ids": [],
-                    }
-                ],
+                "plan": {
+                    "schema_version": "1.0",
+                    "project_id": request.input_payload["project_id"],
+                    "snapshot_revision": request.input_payload["snapshot_revision"],
+                    "snapshot_sha256": request.input_payload["snapshot_sha256"],
+                    "intent_fingerprint": request.input_payload["intent_fingerprint"],
+                    "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
+                    "entries": [
+                        {
+                            "candidate_id": candidate["candidate_id"],
+                            "group": candidate["allowed_groups"][0],
+                            "emphasis": candidate["allowed_emphasis"][0],
+                            "focus_ref_ids": [],
+                        }
+                    ],
+                },
+                "brief": {
+                    "schema_version": "1.0",
+                    "title": "Current project evidence",
+                    "synthesis": "The generated answer is grounded in the selected evidence.",
+                    "points": [
+                        {
+                            "point_id": "current-state",
+                            "kind": "finding",
+                            "text": "The selected project evidence supports this answer.",
+                            "source_candidate_ids": [candidate["candidate_id"]],
+                            "evidence_ref_ids": [evidence_id],
+                        }
+                    ],
+                    "suggested_questions": ["Which evidence remains incomplete?"],
+                    "edited_from_turn_id": (
+                        request.input_payload["prior_authored_brief"]["turn_id"]
+                        if request.input_payload.get("prior_authored_brief")
+                        else None
+                    ),
+                    "evidence_only": True,
+                    "advisory_only": True,
+                    "execution_authority": "none",
+                },
             }
         raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
         return StructuredModelResponse(
@@ -261,5 +288,48 @@ def test_long_tail_model_selection_reenters_the_same_canonical_intent_path(
     assert document.planning is not None
     assert document.planning.provenance is not None
     assert document.planning.provenance.mode == "model_assisted"
+    assert document.planning.authored_brief is not None
+    assert document.planning.authored_brief.evidence_only is True
     assert len(backend.calls) == 2
     assert "research cockpit" not in document.model_dump_json()
+
+
+def test_followup_feedback_rewrites_the_prior_cited_brief(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    offline = WorkspaceGenerationService(runtime)
+    quick = offline.quick_catalog("generation-project")
+    backend = SelectingBackend(quick.intents[0].quick_intent_id)
+    service = WorkspaceGenerationService(
+        runtime,
+        planner=StructuredWorkspacePlanner(
+            backend,
+            ModelPlannerPolicy(expected_backend=backend.name, expected_model=backend.model),
+        ),
+    )
+    first = service.generate(_request(service, quick_intent_id=quick.intents[0].quick_intent_id))
+    assert first.planning is not None and first.planning.authored_brief is not None
+    context = PlannerConversationContext(
+        project_id="generation-project",
+        workspace_id="conversation-one",
+        turns=(
+            PlannerContextTurn(
+                turn_id="turn-0001",
+                ordinal=1,
+                prompt_kind="quick",
+                prompt_text=quick.intents[0].quick_intent_id,
+                authored_brief=first.planning.authored_brief,
+            ),
+        ),
+    )
+    followup_request = _request(service, question="项目进度,重点解释尚未完成的工作")
+    followup_request = followup_request.model_copy(update={"context_turn_ids": ("turn-0001",)})
+
+    edited = service.generate_output(
+        followup_request,
+        conversation_context=context,
+    ).document
+
+    assert edited.status == "generated"
+    assert edited.planning is not None and edited.planning.authored_brief is not None
+    assert edited.planning.authored_brief.edited_from_turn_id == "turn-0001"
+    assert edited.conversation_context_sha256 == context.fingerprint

@@ -138,21 +138,49 @@ def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
     allowed_emphasis = first["allowed_emphasis"]
     assert isinstance(allowed_groups, list)
     assert isinstance(allowed_emphasis, list)
+    evidence_ids = first["evidence_ref_ids"]
+    assert isinstance(evidence_ids, list)
     return {
         "schema_version": "1.0",
-        "project_id": payload["project_id"],
-        "snapshot_revision": payload["snapshot_revision"],
-        "snapshot_sha256": payload["snapshot_sha256"],
-        "intent_fingerprint": payload["intent_fingerprint"],
-        "catalog_fingerprint": payload["catalog_fingerprint"],
-        "entries": [
-            {
-                "candidate_id": first["candidate_id"],
-                "group": allowed_groups[0],
-                "emphasis": allowed_emphasis[0],
-                "focus_ref_ids": [],
-            }
-        ],
+        "plan": {
+            "schema_version": "1.0",
+            "project_id": payload["project_id"],
+            "snapshot_revision": payload["snapshot_revision"],
+            "snapshot_sha256": payload["snapshot_sha256"],
+            "intent_fingerprint": payload["intent_fingerprint"],
+            "catalog_fingerprint": payload["catalog_fingerprint"],
+            "entries": [
+                {
+                    "candidate_id": first["candidate_id"],
+                    "group": allowed_groups[0],
+                    "emphasis": allowed_emphasis[0],
+                    "focus_ref_ids": [],
+                }
+            ],
+        },
+        "brief": {
+            "schema_version": "1.0",
+            "title": "Evidence-bound project answer",
+            "synthesis": "The selected evidence gives the most relevant current project view.",
+            "points": [
+                {
+                    "point_id": "current-evidence",
+                    "kind": "finding",
+                    "text": "This point is grounded only in the selected project component.",
+                    "source_candidate_ids": [first["candidate_id"]],
+                    "evidence_ref_ids": [evidence_ids[0]],
+                }
+            ],
+            "suggested_questions": ["What evidence would change this conclusion?"],
+            "edited_from_turn_id": (
+                payload["prior_authored_brief"]["turn_id"]
+                if payload.get("prior_authored_brief")
+                else None
+            ),
+            "evidence_only": True,
+            "advisory_only": True,
+            "execution_authority": "none",
+        },
     }
 
 
@@ -366,7 +394,7 @@ def test_model_classification_rejects_unknown_ids_without_guessing(tmp_path: Pat
     assert outcome.provenance is None
 
 
-def test_model_composition_receives_only_descriptors_and_admits_closed_plan(
+def test_model_composition_receives_bounded_evidence_and_admits_cited_content(
     tmp_path: Path,
 ) -> None:
     _, _, catalog = _inputs(_runtime(tmp_path))
@@ -377,14 +405,51 @@ def test_model_composition_receives_only_descriptors_and_admits_closed_plan(
     assert outcome.plan is not None
     assert outcome.provenance is not None
     assert outcome.provenance.mode == PlannerMode.MODEL_ASSISTED
+    assert outcome.authored_brief is not None
+    assert outcome.provenance.content_fingerprint == outcome.authored_brief.fingerprint
     request_payload = backend.calls[0].input_payload
     serialized = json.dumps(request_payload)
     assert "component_id" not in serialized
-    assert '"data"' not in serialized
+    assert '"evidence_digest"' in serialized
+    assert '"facts"' in serialized
     assert '"actions"' not in serialized
     assert '"proposal"' not in serialized
     assert "locator" not in serialized
     assert "http" not in serialized
+
+
+def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    backend = FakeStructuredBackend(_model_plan)
+    planner = StructuredWorkspacePlanner(backend, _policy())
+    first = planner.compose(catalog, prompt_text="Summarize current progress")
+    assert first.authored_brief is not None
+    context = PlannerConversationContext(
+        project_id="planner-project",
+        workspace_id="conversation-one",
+        turns=(
+            PlannerContextTurn(
+                turn_id="turn-0001",
+                ordinal=1,
+                prompt_kind="free_question",
+                prompt_text="Summarize current progress",
+                authored_brief=first.authored_brief,
+            ),
+        ),
+    )
+
+    edited = planner.compose(
+        catalog,
+        prompt_text="Focus the answer on unresolved evidence",
+        context=context,
+    )
+
+    assert edited.authored_brief is not None
+    assert edited.authored_brief.edited_from_turn_id == "turn-0001"
+    assert backend.calls[-1].input_payload["prior_authored_brief"] == {
+        "turn_id": "turn-0001",
+        "brief": first.authored_brief.model_dump(mode="json"),
+    }
 
 
 def test_model_generates_a_non_executable_project_bound_program_amendment() -> None:
@@ -444,7 +509,9 @@ def test_malformed_model_plan_falls_back_to_deterministic_layout(
 
     def malicious(request: StructuredModelRequest) -> dict[str, object]:
         payload = _model_plan(request)
-        entries = payload["entries"]
+        plan = payload["plan"]
+        assert isinstance(plan, dict)
+        entries = plan["entries"]
         assert isinstance(entries, list)
         entry = entries[0]
         assert isinstance(entry, dict)

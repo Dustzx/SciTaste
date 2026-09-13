@@ -388,7 +388,7 @@ class ResearchWorkspaceStore:
         workspace_id: str,
         turn_ids: tuple[str, ...],
     ) -> PlannerConversationContext:
-        """Load an ordered, bounded prompt-only selection from immutable turns."""
+        """Load bounded prompts and prior cited briefs from immutable project turns."""
 
         if not turn_ids:
             raise ValueError("conversation context requires at least one turn")
@@ -414,6 +414,11 @@ class ResearchWorkspaceStore:
                         ordinal=turn.ordinal,
                         prompt_kind=turn.prompt.kind,
                         prompt_text=turn.prompt.text,
+                        authored_brief=(
+                            turn.document.planning.authored_brief
+                            if turn.document.planning is not None
+                            else None
+                        ),
                     )
                     for turn in turns
                 ),

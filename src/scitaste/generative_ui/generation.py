@@ -49,7 +49,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_GENERATION_ID_CONTRACT = "generated-workspace-envelope-v2"
+_GENERATION_ID_CONTRACT = "generated-workspace-envelope-v3"
 
 
 class WorkspaceGenerationRequest(BaseModel):
@@ -196,6 +196,30 @@ class GeneratedWorkspaceDocument(BaseModel):
                 raise ValueError("generated component placement differs from its plan")
             if set(placement.focus_ref_ids) - set(component.evidence_ref_ids):
                 raise ValueError("generated component focus is outside its evidence")
+        if self.planning.authored_brief is not None:
+            authored_brief = self.planning.authored_brief
+            if (
+                self.planning.provenance is None
+                or self.planning.provenance.mode != "model_assisted"
+                or self.planning.provenance.content_fingerprint != authored_brief.fingerprint
+            ):
+                raise ValueError("generated model content lacks exact provider provenance")
+            selected_candidates = {item.candidate_id for item in self.placements}
+            visible_evidence = {
+                evidence_id
+                for component in self.renderer.components
+                for evidence_id in component.evidence_ref_ids
+            }
+            for point in authored_brief.points:
+                if set(point.source_candidate_ids) - selected_candidates:
+                    raise ValueError("generated model content cites a hidden candidate")
+                if set(point.evidence_ref_ids) - visible_evidence:
+                    raise ValueError("generated model content cites hidden evidence")
+            if (
+                authored_brief.edited_from_turn_id is not None
+                and authored_brief.edited_from_turn_id not in self.context_turn_ids
+            ):
+                raise ValueError("generated model edit predecessor is outside conversation context")
         return self
 
 
@@ -324,7 +348,15 @@ class WorkspaceGenerationService:
             )
 
         candidates = self._candidate_factory.build(resolution.intent)
-        planning = self._planner.compose(candidates)
+        planning = self._planner.compose(
+            candidates,
+            prompt_text=(
+                intent_request.question
+                if isinstance(intent_request, FreeQuestionRequest)
+                else f"Open the {resolution.intent.goal.value} project workspace."
+            ),
+            context=conversation_context,
+        )
         if planning.plan is None:
             return WorkspaceGenerationOutput(
                 document=GeneratedWorkspaceDocument(
@@ -355,6 +387,11 @@ class WorkspaceGenerationService:
                     conversation_context.fingerprint if conversation_context is not None else None
                 ),
                 "materialized_surface_fingerprint": materialized.surface.fingerprint,
+                "authored_brief_fingerprint": (
+                    planning.authored_brief.fingerprint
+                    if planning.authored_brief is not None
+                    else None
+                ),
             }
         )
         scoped_surface = SurfaceSpec.model_validate(

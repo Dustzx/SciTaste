@@ -1975,6 +1975,32 @@ function renderEvidenceProgram(data) {
   controls.append(inspect, discuss);
   decision.append(decisionCopy, gateFacts, controls);
 
+  const routePortfolio = document.createElement("section");
+  routePortfolio.className = "tool-route-portfolio";
+  const routeHeader = document.createElement("div");
+  const routeTitle = document.createElement("strong");
+  appendText(routeTitle, t("progress.program.route_portfolio.title"));
+  const routeSummary = document.createElement("small");
+  appendText(routeSummary, t("progress.program.route_portfolio.summary"));
+  routeHeader.append(routeTitle, routeSummary);
+  const routeGrid = document.createElement("div");
+  routeGrid.className = "tool-route-grid";
+  for (const [index, item] of (data.next_gate_action_routes || []).entries()) {
+    const routeCard = document.createElement("article");
+    routeCard.className = `tool-route-card route-${item.verification_route}`;
+    const stage = document.createElement("strong");
+    appendText(stage, readableCode(item.stage_id));
+    const routeBadge = document.createElement("span");
+    routeBadge.className = "program-badge neutral";
+    appendText(routeBadge, t(`progress.program.route.${item.verification_route}`));
+    const action = document.createElement("small");
+    appendText(action, t(`progress.program.next_action.${item.next_action_kind}`));
+    if (index === 0) routeCard.classList.add("current");
+    routeCard.append(stage, routeBadge, action);
+    routeGrid.appendChild(routeCard);
+  }
+  routePortfolio.append(routeHeader, routeGrid);
+
   const tracks = document.createElement("div");
   tracks.className = "evidence-program-tracks";
   for (const track of data.tracks) {
@@ -2070,6 +2096,9 @@ function renderEvidenceProgram(data) {
   }));
 
   section.append(header, railShell, decision);
+  if ((data.next_gate_action_routes || []).length > 0) {
+    section.appendChild(routePortfolio);
+  }
   const gateAction = renderGateAction(currentGateActionView, data);
   if (gateAction) section.appendChild(gateAction);
   section.appendChild(tracks);
@@ -4459,6 +4488,9 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   }
   if (generated) {
     workspace.appendChild(renderGenerationSummary(documentValue));
+    if (documentValue.planning?.authored_brief) {
+      workspace.appendChild(renderModelAuthoredBrief(documentValue.planning.authored_brief));
+    }
   }
   if (!generated) {
     const title = document.createElement("h2");
@@ -4519,6 +4551,93 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     workspace.focus({preventScroll: true});
     workspace.scrollIntoView({block: "start"});
   }
+}
+
+function prepareAuthoredBriefFollowup(question) {
+  intentQuestion.value = question;
+  conversationContextMode.value = "recent";
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function renderModelAuthoredBrief(brief) {
+  const section = document.createElement("section");
+  section.className = "model-authored-brief";
+  const header = document.createElement("div");
+  header.className = "model-authored-brief-header";
+  const identity = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow dark";
+  appendText(eyebrow, t("generation.brief.eyebrow"));
+  const title = document.createElement("h2");
+  appendText(title, brief.title);
+  identity.append(eyebrow, title);
+  const badges = document.createElement("div");
+  badges.className = "model-authored-brief-badges";
+  for (const key of [
+    "generation.brief.model_generated",
+    "generation.brief.evidence_bound",
+    "generation.brief.no_execution",
+  ]) {
+    const badge = document.createElement("span");
+    badge.className = "program-badge neutral";
+    appendText(badge, t(key));
+    badges.appendChild(badge);
+  }
+  header.append(identity, badges);
+  const synthesis = document.createElement("p");
+  synthesis.className = "model-authored-synthesis";
+  appendText(synthesis, brief.synthesis);
+  const points = document.createElement("div");
+  points.className = "model-authored-points";
+  for (const point of brief.points) {
+    const card = document.createElement("article");
+    card.className = `model-authored-point kind-${point.kind}`;
+    const kind = document.createElement("small");
+    appendText(kind, t(`generation.brief.kind.${point.kind}`));
+    const text = document.createElement("p");
+    appendText(text, point.text);
+    const evidence = document.createElement("div");
+    evidence.className = "model-authored-evidence";
+    for (const evidenceId of point.evidence_ref_ids) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "evidence-chip";
+      appendText(button, readableCode(evidenceId));
+      button.addEventListener("click", () => prepareAuthoredBriefFollowup(
+        t("generation.brief.evidence_question", {evidence: evidenceId}),
+      ));
+      evidence.appendChild(button);
+    }
+    card.append(kind, text, evidence);
+    points.appendChild(card);
+  }
+  section.append(header, synthesis, points);
+  if ((brief.suggested_questions || []).length > 0) {
+    const followups = document.createElement("div");
+    followups.className = "model-authored-followups";
+    const label = document.createElement("strong");
+    appendText(label, t("generation.brief.followups"));
+    followups.appendChild(label);
+    for (const question of brief.suggested_questions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary-button";
+      appendText(button, question);
+      button.addEventListener("click", () => prepareAuthoredBriefFollowup(question));
+      followups.appendChild(button);
+    }
+    section.appendChild(followups);
+  }
+  if (brief.edited_from_turn_id) {
+    const lineage = document.createElement("small");
+    lineage.className = "model-authored-lineage";
+    appendText(lineage, t("generation.brief.edited_from", {
+      turn: brief.edited_from_turn_id,
+    }));
+    section.appendChild(lineage);
+  }
+  return section;
 }
 
 function renderGenerationSummary(documentValue) {

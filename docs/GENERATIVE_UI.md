@@ -10,10 +10,12 @@ untrusted display text and is never evaluated.
 This module is a contract and interaction-boundary layer plus a trusted
 ProjectRuntime adapter. It includes a framework-neutral renderer document and a
 runnable, local receiver-owned browser/API application. An optional bounded
-structured model may classify a long-tail question or arrange server-owned
-component candidates. An explicit deterministic controller can approve a
-bounded handoff, but the interface includes no task executor and the provider
-never authors renderer content or authority.
+structured model may classify a long-tail question and, in one call, arrange
+server-owned component candidates plus author a concise cited brief. The brief
+is inert text, each point names selected candidate and evidence IDs, and
+follow-up feedback must name the exact predecessor turn it edits. An explicit
+deterministic controller can approve a bounded handoff, but the model never
+authors renderer code or authority.
 
 ## Evidence-native project workspace
 
@@ -95,13 +97,13 @@ the default human-facing history label.
 
 Each follow-up explicitly chooses either the current question alone or at most
 the eight latest immutable turns. The receiver submits only their IDs; the
-server reloads them from the same project and conversation, verifies their
-registered order, and exposes only the retained prior questions to the optional
-model intent classifier. The selected IDs and a hash of the exact context are
-bound into the generated document and immutable turn. Prior generated prose,
-components, actions, and explanations are never replayed as authority. The
-deterministic resolver still evaluates the current question first, so this is a
-bounded conversational intent aid rather than an unconstrained chat agent.
+server reloads them from the same project and conversation and verifies their
+registered order. Prior questions may guide intent selection, while only the
+latest validated model-authored brief is exposed to composition as an explicit
+edit predecessor. Components, actions, controller decisions, and arbitrary
+renderer payloads are never replayed as model authority. The selected IDs and a
+hash of the exact context are bound into the generated document and immutable
+turn.
 
 The browser shell contains no credential field. Loopback use establishes an
 ephemeral HttpOnly session automatically; a remote deployment must enforce
@@ -504,10 +506,12 @@ All references are revalidated against the exact `SnapshotBinding`.
 `SurfaceCandidateFactory` then assembles complete server-owned component and
 action candidates from the existing closed workspace views. It scopes component
 and action IDs to prevent collisions and validates the whole catalog as one
-legal `SurfaceSpec`. An external planner receives only
-`SurfaceCandidateDescriptor`: candidate ID, registered component enum, source
-view, evidence IDs, reason code, and allowed group/emphasis enums. Component
-data, titles, action proposals, paths, and evidence content are withheld.
+legal `SurfaceSpec`. An external planner receives `SurfaceCandidateDescriptor`
+plus a bounded digest of the already visible candidate data. The digest strips
+paths, locators, credential fields, hashes, actions, and controller proposals;
+caps depth, list length, string length, candidate count, and total bytes; and
+declares that omitted content is unknown. This gives the model enough project
+evidence to write useful content without exposing the execution plane.
 
 A `SurfacePlan` can contain only an ordered candidate ID, closed group,
 closed emphasis, and optional focus evidence IDs for each entry. It is bound to
@@ -522,8 +526,9 @@ or stale fingerprint rejects the complete plan.
 
 `WorkspacePlanner` exposes only two advisory operations: classify a long-tail
 question by selecting one server-issued quick-intent ID, and compose a surface
-by returning a closed `SurfacePlan`. There is deliberately no execute, mutate,
-transition, callback, fetch, or tool method. Deterministic intent recognition in
+by returning a closed `SurfacePlan` together with a cited `ModelAuthoredBrief`.
+There is deliberately no execute, mutate, transition, callback, fetch, or tool
+method. Deterministic intent recognition in
 `WorkspaceIntentResolver` remains the first path; the optional classifier is
 only useful after that path returns `long-tail-question-requires-planner`.
 
@@ -537,9 +542,10 @@ diagnosis. Candidate ID remains the deterministic tie-breaker.
 existing provider-neutral `StructuredModelBackend`; it does not import a vendor
 SDK or read credentials itself. Classification receives the bounded question
 and a list of closed quick-intent IDs/goals/registered target IDs. Composition
-receives only snapshot and intent hashes plus data-free candidate descriptors.
-Neither operation receives evidence content, component data, action proposals,
-artifact paths, titles, URLs, or controller state.
+receives snapshot and intent hashes, candidate descriptors, the current prompt,
+the bounded visible-data digest, and at most one prior cited brief. It receives
+no action proposal, artifact path/locator, credential field, content hash, or
+controller state.
 
 The model response is untrusted. Backend/model identity, request bytes,
 response bytes, token telemetry, latency, tool-call absence, exact response
@@ -552,7 +558,7 @@ an intent would change meaning.
 
 Accepted provenance records planner implementation and configuration hashes,
 snapshot, intent, candidate catalog, structured request, provider response hash,
-and result plan hash. It never records the free question or credentials.
+result plan hash, and authored-content hash. It never records credentials.
 Model-assisted results set `deterministic_reproducible=false`; deterministic
 fallbacks identify the attempted provider planner and bind the independently
 reproducible fallback plan. The existing OpenAI-compatible backend supplies the
@@ -572,7 +578,7 @@ question ──> deterministic resolver ──resolved──┐
    └─long-tail─> optional ID-only classifier ───┤
                                                 v
 project snapshot ─> trusted candidate factory ─> planner
-                                                │ IDs/enums only
+                                                │ closed plan + cited brief
                                                 v
                                  validate + materialize SurfacePlan
                                                 │
@@ -593,8 +599,12 @@ field. The buttons are not a universal prompt menu: each comes from the current
 `WorkspaceGenerationRequest` to the same service and bind the exact quick
 catalog, project revision, snapshot hash, and request fingerprint.
 
-Successful generation visibly changes component order, grouping, emphasis, and
-the set of goal-relevant panels. Featured goal components span the workspace;
+Successful model generation first renders a concise authored brief with finding,
+uncertainty, and recommendation cards, evidence chips, and follow-up/edit
+prompts. It also changes component order, grouping, emphasis, and the set of
+goal-relevant panels. Clicking an evidence chip or suggested question prepares a
+new feedback turn in the same project conversation; the next brief must bind the
+exact prior authored turn. Featured goal components span the workspace;
 a progress board used only for context collapses its timeline, activity, and
 next-step regions while preserving its categorical synopsis and exact record
 counts. The receiver shows the admitted intent goal, planner mode, snapshot
@@ -1257,12 +1267,13 @@ two project identities.
   topic catalog. General schema migration remains future work.
 - The first deterministic free-question resolver is a bounded Chinese/English
   keyword classifier. Unknown phrasing needs the optional model selector; the
-  general workspace model can still choose only a currently offered quick intent.
-  The evidence-program revision endpoint is deliberately different: it may write
-  concise planning content from feedback, but only against server-issued stage,
-  track, resource-ID, and role catalogs. Its project-local cache is a proposal
-  cache, not canonical state. Conversation context currently informs bounded
-  intent selection only; it is not a general memory or answer history.
+  general workspace model can select only a currently offered quick intent and
+  may synthesize only the bounded visible evidence digest. Its cited brief can be
+  edited from the latest selected predecessor, but this is not unrestricted
+  memory and it cannot change project state. The evidence-program revision
+  endpoint is deliberately different: it writes typed planning content against
+  server-issued stage, track, resource-ID, and role catalogs. Its project-local
+  cache is a proposal cache, not canonical state.
 - Automatic session bootstrap is loopback-only. This remains a single-user
   engineering receiver, not a multi-user identity or remote authorization
   system.
@@ -1373,14 +1384,17 @@ The next model revision receives this same effective current stage and order plu
 the full active directive, so iterative feedback never silently falls back to the
 dossier's pre-intervention display state.
 
-The current gate is independently compiled into a Tool Intelligence action route.
-The visible gate card distinguishes direct progress, a positive-value targeted
-check, a justified full preflight, and a non-negotiable owner boundary. Its
-evidence drawer exposes declared effects, expected loss, check net gains, reason
-codes, and route hash. These v1 economics are policy priors rather than empirical
-measurements. A semantic gray zone may admit bounded model advice, but model
-output cannot weaken paid-compute, secret, external-mutation, untrusted-code,
-irreversibility, or dossier-declared owner boundaries.
+Every currently eligible next gate is independently compiled into a Tool
+Intelligence action route without changing its user-published order. The project
+home shows the route portfolio beside the primary current decision, so parallel
+work can distinguish direct progress, a positive-value targeted check, a
+justified full preflight, and a non-negotiable owner boundary before any check is
+run. The current gate evidence drawer exposes declared effects, expected loss,
+check net gains, reason codes, and route hash. These v1 economics are policy
+priors rather than empirical measurements. A semantic gray zone may admit
+bounded model advice, but model output cannot weaken paid-compute, secret,
+external-mutation, untrusted-code, irreversibility, or dossier-declared owner
+boundaries.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free

@@ -2293,6 +2293,10 @@ class ProjectEvidenceProgramData(BaseModel):
     current_owner_approval_required: bool
     current_external_actions: tuple[SafeIdentifier, ...] = ()
     gate_action_route: ProjectProgramActionRouteData
+    next_gate_action_routes: tuple[ProjectProgramActionRouteData, ...] = Field(
+        default=(),
+        max_length=50,
+    )
     current_action_run_id: str | None = Field(
         default=None,
         max_length=255,
@@ -2331,6 +2335,17 @@ class ProjectEvidenceProgramData(BaseModel):
             raise ValueError("evidence-program next-stage count must use its effective order")
         if self.current_stage_id != self.effective_next_stage_ids[0]:
             raise ValueError("evidence-program current stage must lead its effective order")
+        if self.next_gate_action_routes:
+            route_stage_ids = tuple(item.stage_id for item in self.next_gate_action_routes)
+            if route_stage_ids != self.effective_next_stage_ids:
+                raise ValueError("next-gate Tool Intelligence routes must follow effective order")
+            if self.next_gate_action_routes[0] != self.gate_action_route:
+                raise ValueError("current gate route must lead next-gate Tool Intelligence routes")
+            if any(
+                item.effective_program_sha256 != self.effective_program_sha256
+                for item in self.next_gate_action_routes
+            ):
+                raise ValueError("next-gate Tool Intelligence routes target another program")
         for values in (self.baseline_next_stage_ids, self.effective_next_stage_ids):
             if len(values) != len(set(values)):
                 raise ValueError("evidence-program next-stage order must be unique")

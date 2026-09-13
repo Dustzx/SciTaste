@@ -11,6 +11,7 @@ from scitaste.evaluation import (
     inspect_experiment_decision_dossier,
     load_experiment_decision_dossier,
     route_effective_program_action,
+    route_program_stage_action,
 )
 
 _DOSSIER = Path("configs/evaluation/campaigns/iclr2027_self_development_v1.yaml")
@@ -86,6 +87,27 @@ def test_costly_check_is_used_only_when_expected_gain_is_positive() -> None:
     )
     assert direct.verification.model_advisory_eligible is True
     assert direct.next_action_kind == "resolve_registered_blockers"
+
+
+def test_each_parallel_next_gate_is_routed_without_reordering_or_execution() -> None:
+    report = _report()
+    effective = _effective(report)
+
+    routes = tuple(
+        route_program_stage_action(report, effective, stage_id=stage_id)
+        for stage_id in effective.effective_next_stage_ids
+    )
+
+    assert tuple(item.stage_id for item in routes) == effective.effective_next_stage_ids
+    assert routes[0] == route_effective_program_action(report, effective)
+    assert all(item.effective_program_sha256 == effective.program_sha256 for item in routes)
+    assert all(item.authorizes_execution is False for item in routes)
+    with pytest.raises(ValueError, match="only an eligible next gate"):
+        route_program_stage_action(
+            report,
+            effective,
+            stage_id="render-current-paper-draft",
+        )
 
 
 def test_action_route_is_bound_to_the_effective_program() -> None:

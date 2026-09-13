@@ -32,21 +32,44 @@ class _PlannerBackend:
         assert isinstance(candidates, list)
         selected = candidates[0]
         assert isinstance(selected, dict)
+        evidence_id = selected["evidence_ref_ids"][0]
         payload = {
             "schema_version": "1.0",
-            "project_id": request.input_payload["project_id"],
-            "snapshot_revision": request.input_payload["snapshot_revision"],
-            "snapshot_sha256": request.input_payload["snapshot_sha256"],
-            "intent_fingerprint": request.input_payload["intent_fingerprint"],
-            "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
-            "entries": [
-                {
-                    "candidate_id": selected["candidate_id"],
-                    "group": selected["allowed_groups"][0],
-                    "emphasis": selected["allowed_emphasis"][0],
-                    "focus_ref_ids": [],
-                }
-            ],
+            "plan": {
+                "schema_version": "1.0",
+                "project_id": request.input_payload["project_id"],
+                "snapshot_revision": request.input_payload["snapshot_revision"],
+                "snapshot_sha256": request.input_payload["snapshot_sha256"],
+                "intent_fingerprint": request.input_payload["intent_fingerprint"],
+                "catalog_fingerprint": request.input_payload["catalog_fingerprint"],
+                "entries": [
+                    {
+                        "candidate_id": selected["candidate_id"],
+                        "group": selected["allowed_groups"][0],
+                        "emphasis": selected["allowed_emphasis"][0],
+                        "focus_ref_ids": [],
+                    }
+                ],
+            },
+            "brief": {
+                "schema_version": "1.0",
+                "title": "Cached project answer",
+                "synthesis": "This fixed entry is generated from current project evidence.",
+                "points": [
+                    {
+                        "point_id": "cached-state",
+                        "kind": "finding",
+                        "text": "The answer remains bound to the cached project snapshot.",
+                        "source_candidate_ids": [selected["candidate_id"]],
+                        "evidence_ref_ids": [evidence_id],
+                    }
+                ],
+                "suggested_questions": [],
+                "edited_from_turn_id": None,
+                "evidence_only": True,
+                "advisory_only": True,
+                "execution_authority": "none",
+            },
         }
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return StructuredModelResponse(
@@ -144,6 +167,7 @@ def test_authorized_warm_cache_generates_once_and_serves_the_exact_model_page(
     assert document.planning.provenance is not None
     assert document.planning.provenance.mode == "model_assisted"
     assert document.planning.provenance.input_tokens == 100
+    assert document.planning.authored_brief is not None
 
 
 def test_warm_cache_refuses_an_inactive_owner_policy_before_any_provider_call(

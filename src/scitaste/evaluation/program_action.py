@@ -117,6 +117,21 @@ def route_effective_program_action(
 ) -> EffectiveProgramActionRoute:
     """Choose the least costly justified route for the effective current gate."""
 
+    return route_program_stage_action(
+        report,
+        effective_program,
+        stage_id=effective_program.effective_current_stage_id,
+    )
+
+
+def route_program_stage_action(
+    report: ExperimentDecisionDossierReport,
+    effective_program: EffectiveExperimentProgram,
+    *,
+    stage_id: str,
+) -> EffectiveProgramActionRoute:
+    """Route one eligible next gate without changing the effective program order."""
+
     report_sha256 = content_sha256(report.model_dump(mode="json"))
     if (
         effective_program.dossier_id != report.dossier_id
@@ -125,7 +140,9 @@ def route_effective_program_action(
     ):
         raise ValueError("effective program action inputs describe different dossiers")
     stages = {item.stage_id: item for item in report.stages}
-    stage = stages.get(effective_program.effective_current_stage_id)
+    if stage_id not in effective_program.effective_next_stage_ids:
+        raise ValueError("program action can route only an eligible next gate")
+    stage = stages.get(stage_id)
     if stage is None or stage.state is CampaignStageState.COMPLETE:
         raise ValueError("effective program current gate is unavailable")
 
@@ -252,4 +269,5 @@ __all__ = [
     "EffectiveProgramActionRoute",
     "ProgramNextActionKind",
     "route_effective_program_action",
+    "route_program_stage_action",
 ]

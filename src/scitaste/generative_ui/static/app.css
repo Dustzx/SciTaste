@@ -786,10 +786,101 @@ fieldset {
 }
 
 .generated-workspace > .generation-summary,
+.generated-workspace > .model-authored-brief,
 .generated-workspace > .workspace-title,
 .generated-workspace > .plan-emphasis-featured,
 .generated-workspace > .component-evidence-graph {
   grid-column: 1 / -1;
+}
+
+.model-authored-brief {
+  background: linear-gradient(135deg, #fffdf6, #f5f0df);
+  border: 1px solid #d9cfad;
+  border-radius: 0.7rem;
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.95rem;
+}
+
+.model-authored-brief-header {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.model-authored-brief-header h2,
+.model-authored-point p {
+  margin: 0;
+}
+
+.model-authored-brief-badges,
+.model-authored-evidence,
+.model-authored-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.model-authored-synthesis {
+  font-size: 1.02rem;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 78ch;
+}
+
+.model-authored-points {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.model-authored-point {
+  background: rgb(255 255 255 / 68%);
+  border: 1px solid #ded8c3;
+  border-left: 0.3rem solid #6d876f;
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem;
+}
+
+.model-authored-point.kind-uncertainty {
+  border-left-color: #b47f32;
+}
+
+.model-authored-point.kind-recommendation {
+  border-left-color: #3f6f88;
+}
+
+.model-authored-point > small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.evidence-chip {
+  background: #edf3ed;
+  border: 1px solid #c4d2c4;
+  color: var(--forest-dark);
+  font-size: 0.68rem;
+  min-height: 1.8rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.model-authored-followups {
+  align-items: center;
+}
+
+.model-authored-followups > strong {
+  font-size: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+.model-authored-lineage {
+  color: var(--muted);
 }
 
 .generation-summary {
@@ -1990,6 +2081,72 @@ fieldset {
 .evidence-program-controls button {
   font-size: 0.68rem;
   white-space: nowrap;
+}
+
+.tool-route-portfolio {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.tool-route-portfolio > div:first-child {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+}
+
+.tool-route-portfolio > div:first-child strong {
+  color: var(--forest-dark);
+  font-size: 0.75rem;
+}
+
+.tool-route-portfolio > div:first-child small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.tool-route-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+
+.tool-route-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #d7dfd6;
+  border-radius: 0.48rem;
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+  padding: 0.58rem 0.65rem;
+}
+
+.tool-route-card.current {
+  border-color: #9b7e24;
+  box-shadow: inset 0.18rem 0 #9b7e24;
+}
+
+.tool-route-card.route-owner_approval,
+.tool-route-card.route-full_preflight {
+  background: #fff5f1;
+}
+
+.tool-route-card.route-targeted_check {
+  background: #fffaf0;
+}
+
+.tool-route-card > strong {
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.tool-route-card > span {
+  justify-self: start;
+}
+
+.tool-route-card > small {
+  color: var(--muted);
+  font-size: 0.6rem;
 }
 
 .evidence-program-tracks {
@@ -3806,6 +3963,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .model-authored-points {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .landscape-experiment-tracks {
     grid-template-columns: 1fr;
   }
@@ -3944,10 +4105,19 @@ code {
   }
 
   .generated-workspace > .generation-summary,
+  .generated-workspace > .model-authored-brief,
   .generated-workspace > .workspace-title,
   .generated-workspace > .plan-emphasis-featured,
   .generated-workspace > .component-evidence-graph {
     grid-column: auto;
+  }
+
+  .model-authored-brief-header {
+    display: grid;
+  }
+
+  .model-authored-points {
+    grid-template-columns: 1fr;
   }
 
   .field-list {

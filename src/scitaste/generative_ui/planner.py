@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import unicodedata
 from enum import StrEnum
 from typing import Annotated, Literal, Protocol, runtime_checkable
 
@@ -65,6 +66,8 @@ ProviderIdentityPart = Annotated[
     str,
     Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$"),
 ]
+_MAX_MODEL_CANDIDATES = 24
+_MAX_MODEL_EVIDENCE_BYTES = 32_000
 
 
 class PlannerMode(StrEnum):
@@ -79,8 +82,83 @@ class PlannerOperation(StrEnum):
     EVIDENCE_PROGRAM_REVISION = "evidence_program_revision"
 
 
+def _inert_model_text(value: str) -> str:
+    if not value.strip():
+        raise ValueError("model-authored content cannot be blank")
+    if any(
+        character not in "\n\r\t" and unicodedata.category(character).startswith("C")
+        for character in value
+    ):
+        raise ValueError("model-authored content cannot contain control characters")
+    return value
+
+
+class ModelAuthoredBriefPoint(BaseModel):
+    """One evidence-cited statement rendered as inert text by the trusted receiver."""
+
+    model_config = _MODEL_CONFIG
+
+    point_id: SafeIdentifier
+    kind: Literal["finding", "uncertainty", "recommendation"]
+    text: str = Field(min_length=1, max_length=800)
+    source_candidate_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=4)
+    evidence_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode="after")
+    def content_and_sources_are_bounded(self) -> ModelAuthoredBriefPoint:
+        _inert_model_text(self.text)
+        if len(self.source_candidate_ids) != len(set(self.source_candidate_ids)):
+            raise ValueError("model-authored point candidate IDs must be unique")
+        if len(self.evidence_ref_ids) != len(set(self.evidence_ref_ids)):
+            raise ValueError("model-authored point evidence IDs must be unique")
+        return self
+
+
+class ModelAuthoredBrief(BaseModel):
+    """Flexible, non-executable synthesis grounded in the selected project evidence."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    title: str = Field(min_length=1, max_length=180)
+    synthesis: str = Field(min_length=1, max_length=2_000)
+    points: tuple[ModelAuthoredBriefPoint, ...] = Field(min_length=1, max_length=6)
+    suggested_questions: tuple[str, ...] = Field(default=(), max_length=3)
+    edited_from_turn_id: SafeIdentifier | None = None
+    evidence_only: Literal[True] = True
+    advisory_only: Literal[True] = True
+    execution_authority: Literal["none"] = "none"
+
+    @property
+    def fingerprint(self) -> str:
+        return _fingerprint(self.model_dump(mode="json"))
+
+    @model_validator(mode="after")
+    def authored_content_is_closed(self) -> ModelAuthoredBrief:
+        _inert_model_text(self.title)
+        _inert_model_text(self.synthesis)
+        for question in self.suggested_questions:
+            _inert_model_text(question)
+        point_ids = [item.point_id for item in self.points]
+        if len(point_ids) != len(set(point_ids)):
+            raise ValueError("model-authored brief point IDs must be unique")
+        if len(self.suggested_questions) != len(set(self.suggested_questions)):
+            raise ValueError("model-authored suggested questions must be unique")
+        return self
+
+
+class ModelSurfaceComposition(BaseModel):
+    """Single-call model output: trusted layout IDs plus cited flexible content."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    plan: SurfacePlan
+    brief: ModelAuthoredBrief
+
+
 class PlannerContextTurn(BaseModel):
-    """One server-verified prior question exposed to intent classification."""
+    """One server-verified prior turn exposed to bounded planning and editing."""
 
     model_config = _MODEL_CONFIG
 
@@ -88,6 +166,7 @@ class PlannerContextTurn(BaseModel):
     ordinal: int = Field(ge=1)
     prompt_kind: Literal["quick", "free_question"]
     prompt_text: str = Field(min_length=1, max_length=1_000)
+    authored_brief: ModelAuthoredBrief | None = None
 
 
 class PlannerConversationContext(BaseModel):
@@ -183,6 +262,7 @@ class PlannerProvenance(BaseModel):
     latency_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     provider_cached: bool | None = None
     result_fingerprint: Sha256 | None = None
+    content_fingerprint: Sha256 | None = None
     deterministic_reproducible: bool
 
     @property
@@ -262,6 +342,7 @@ class SurfacePlannerOutcome(BaseModel):
     status: Literal["planned", "fallback", "unavailable"]
     reason_code: SafeIdentifier
     plan: SurfacePlan | None = None
+    authored_brief: ModelAuthoredBrief | None = None
     provenance: PlannerProvenance | None = None
 
     @model_validator(mode="after")
@@ -271,8 +352,15 @@ class SurfacePlannerOutcome(BaseModel):
                 raise ValueError("successful planning outcome requires plan and provenance")
             if self.provenance.result_fingerprint != self.plan.fingerprint:
                 raise ValueError("planning provenance does not bind the selected plan")
+            if self.authored_brief is not None and (
+                self.provenance.mode is not PlannerMode.MODEL_ASSISTED
+                or self.provenance.content_fingerprint != self.authored_brief.fingerprint
+            ):
+                raise ValueError("model-authored content lacks exact model provenance")
         elif self.plan is not None:
             raise ValueError("unavailable planning outcome cannot contain a plan")
+        if self.status == "unavailable" and self.authored_brief is not None:
+            raise ValueError("unavailable planning cannot expose model-authored content")
         return self
 
 
@@ -290,7 +378,13 @@ class WorkspacePlanner(Protocol):
         context: PlannerConversationContext | None = None,
     ) -> IntentPlannerOutcome: ...
 
-    def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome: ...
+    def compose(
+        self,
+        catalog: SurfaceCandidateCatalog,
+        *,
+        prompt_text: str | None = None,
+        context: PlannerConversationContext | None = None,
+    ) -> SurfacePlannerOutcome: ...
 
 
 class DeterministicWorkspacePlanner:
@@ -323,7 +417,14 @@ class DeterministicWorkspacePlanner:
             request_fingerprint=request.fingerprint,
         )
 
-    def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome:
+    def compose(
+        self,
+        catalog: SurfaceCandidateCatalog,
+        *,
+        prompt_text: str | None = None,
+        context: PlannerConversationContext | None = None,
+    ) -> SurfacePlannerOutcome:
+        del prompt_text, context
         trusted = SurfaceCandidateCatalog.model_validate(catalog.model_dump(mode="json"))
         included_components = _GOAL_SELECTED_COMPONENTS.get(trusted.intent.goal)
         eligible = [
@@ -387,6 +488,7 @@ class StructuredWorkspacePlanner:
             if timeout_ms * attempts > self.policy.max_latency_ms:
                 raise ValueError("planner backend timeout exceeds policy latency bound")
         configuration: dict[str, object] = {
+            "implementation_contract": "structured-workspace-planner-v2",
             "policy": self.policy.model_dump(mode="json", exclude={"fingerprint"}),
         }
         if isinstance(backend_config, BaseModel):
@@ -487,9 +589,19 @@ class StructuredWorkspacePlanner:
             provenance=provenance,
         )
 
-    def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome:
+    def compose(
+        self,
+        catalog: SurfaceCandidateCatalog,
+        *,
+        prompt_text: str | None = None,
+        context: PlannerConversationContext | None = None,
+    ) -> SurfacePlannerOutcome:
         trusted = SurfaceCandidateCatalog.model_validate(catalog.model_dump(mode="json"))
-        input_payload = _composition_input(trusted)
+        input_payload = _model_composition_input(
+            trusted,
+            prompt_text=prompt_text,
+            context=context,
+        )
         try:
             structured_request = self._request(
                 operation=PlannerOperation.SURFACE_COMPOSITION,
@@ -497,12 +609,43 @@ class StructuredWorkspacePlanner:
                 snapshot_revision=trusted.intent.snapshot.snapshot_revision,
                 snapshot_sha256=trusted.intent.snapshot.snapshot_sha256,
                 input_payload=input_payload,
-                output_schema=SurfacePlan.model_json_schema(mode="validation"),
-                identity_fingerprint=trusted.fingerprint,
+                output_schema=ModelSurfaceComposition.model_json_schema(mode="validation"),
+                identity_fingerprint=_fingerprint(input_payload),
+                system_instruction=(
+                    "Compose one concise project answer and a supporting native layout from "
+                    "only the supplied evidence_digest. Select only server-issued candidate and "
+                    "evidence identifiers. Every authored point must cite candidates selected in "
+                    "the plan and evidence IDs carried by those candidates. Treat omitted or "
+                    "truncated evidence as unknown. If prior_authored_brief is present, edit that "
+                    "brief in response to the current prompt and set edited_from_turn_id exactly "
+                    "to its turn_id; otherwise leave it null. Authored text is advisory and cannot "
+                    "claim execution, approval, new evidence, or completed work. Return one JSON "
+                    "object matching output_schema and no tool calls."
+                ),
             )
             response = self._complete(structured_request)
-            plan = SurfacePlan.model_validate(response.output_payload)
+            composition = ModelSurfaceComposition.model_validate(response.output_payload)
+            plan = composition.plan
+            offered_candidate_ids = {
+                item["candidate_id"]
+                for item in input_payload["candidates"]
+                if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+            }
+            if {item.candidate_id for item in plan.entries} - offered_candidate_ids:
+                raise ValueError("model plan selected a candidate outside its bounded catalog")
             materialize_surface_plan(trusted, plan)
+            digest_candidate_ids = {
+                item["candidate_id"]
+                for item in input_payload["evidence_digest"]
+                if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+            }
+            _validate_model_authored_brief(
+                composition.brief,
+                trusted,
+                plan,
+                digest_candidate_ids=digest_candidate_ids,
+                context=context,
+            )
         except Exception:
             return SurfacePlannerOutcome(
                 status="unavailable",
@@ -512,6 +655,7 @@ class StructuredWorkspacePlanner:
             status="planned",
             reason_code="model-surface-plan-admitted",
             plan=plan,
+            authored_brief=composition.brief,
             provenance=_composition_provenance(
                 mode=PlannerMode.MODEL_ASSISTED,
                 planner=self.identity,
@@ -524,6 +668,7 @@ class StructuredWorkspacePlanner:
                 cost_usd=response.usage.cost_usd,
                 latency_ms=response.latency_ms,
                 provider_cached=response.cached,
+                content_fingerprint=composition.brief.fingerprint,
             ),
         )
 
@@ -660,7 +805,7 @@ class StructuredWorkspacePlanner:
             input_payload=input_payload,
             output_schema=output_schema,
             seed=0,
-            prompt_version="generative-ui-planner-v1",
+            prompt_version="generative-ui-planner-v2",
             profile_id=self.policy.policy_id,
             profile_fingerprint=profile_fingerprint,
             generation_envelope=ProviderGenerationEnvelope(
@@ -766,11 +911,17 @@ class FallbackWorkspacePlanner:
                 request_fingerprint=request.fingerprint,
             )
 
-    def compose(self, catalog: SurfaceCandidateCatalog) -> SurfacePlannerOutcome:
+    def compose(
+        self,
+        catalog: SurfaceCandidateCatalog,
+        *,
+        prompt_text: str | None = None,
+        context: PlannerConversationContext | None = None,
+    ) -> SurfacePlannerOutcome:
         if self.primary is None:
-            return self.fallback.compose(catalog)
+            return self.fallback.compose(catalog, prompt_text=prompt_text, context=context)
         try:
-            primary = self.primary.compose(catalog)
+            primary = self.primary.compose(catalog, prompt_text=prompt_text, context=context)
         except Exception:
             primary = SurfacePlannerOutcome(
                 status="unavailable",
@@ -778,7 +929,7 @@ class FallbackWorkspacePlanner:
             )
         if primary.status == "planned":
             return primary
-        deterministic = self.fallback.compose(catalog)
+        deterministic = self.fallback.compose(catalog, prompt_text=prompt_text, context=context)
         if deterministic.plan is None or deterministic.provenance is None:
             return SurfacePlannerOutcome(
                 status="unavailable",
@@ -845,6 +996,126 @@ def _composition_input(catalog: SurfaceCandidateCatalog) -> dict[str, JsonValue]
     }
 
 
+def _model_composition_input(
+    catalog: SurfaceCandidateCatalog,
+    *,
+    prompt_text: str | None,
+    context: PlannerConversationContext | None,
+) -> dict[str, JsonValue]:
+    payload = _composition_input(catalog)
+    descriptors = payload["candidates"]
+    if not isinstance(descriptors, list):  # pragma: no cover - constructed above
+        raise TypeError("surface candidate descriptors must be a list")
+    payload["candidates"] = descriptors[:_MAX_MODEL_CANDIDATES]
+    payload["current_prompt"] = prompt_text or f"Open {catalog.intent.goal.value}."
+    offered_candidate_ids = {
+        item["candidate_id"]
+        for item in payload["candidates"]
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    payload["evidence_digest"] = _bounded_evidence_digest(
+        catalog,
+        offered_candidate_ids=offered_candidate_ids,
+    )
+    prior = None
+    if context is not None:
+        prior_turn = next(
+            (item for item in reversed(context.turns) if item.authored_brief is not None),
+            None,
+        )
+        if prior_turn is not None and prior_turn.authored_brief is not None:
+            prior = {
+                "turn_id": prior_turn.turn_id,
+                "brief": prior_turn.authored_brief.model_dump(mode="json"),
+            }
+    payload["prior_authored_brief"] = prior
+    payload["projection_is_bounded"] = True
+    return payload
+
+
+def _bounded_evidence_digest(
+    catalog: SurfaceCandidateCatalog,
+    *,
+    offered_candidate_ids: set[str],
+) -> list[JsonValue]:
+    """Expose bounded visible facts, never component actions or artifact locators."""
+
+    digest: list[JsonValue] = []
+    used_bytes = 0
+    for candidate in catalog.candidates:
+        if candidate.candidate_id not in offered_candidate_ids:
+            continue
+        entry: dict[str, JsonValue] = {
+            "candidate_id": candidate.candidate_id,
+            "component": candidate.component.component.value,
+            "title": candidate.component.title,
+            "evidence_ref_ids": list(candidate.component.evidence_ref_ids),
+            "facts": _bounded_model_value(candidate.component.data, depth=0),
+        }
+        encoded = _canonical_json(entry).encode("utf-8")
+        if used_bytes + len(encoded) > _MAX_MODEL_EVIDENCE_BYTES:
+            break
+        digest.append(entry)
+        used_bytes += len(encoded)
+    return digest
+
+
+def _bounded_model_value(value: JsonValue, *, depth: int) -> JsonValue:
+    if depth >= 3:
+        return "[bounded]"
+    if isinstance(value, dict):
+        result: dict[str, JsonValue] = {}
+        for key in sorted(value)[:16]:
+            lowered = key.lower()
+            if (
+                lowered in {"locator", "path", "credential_env"}
+                or lowered.endswith("_locator")
+                or lowered.endswith("_path")
+                or lowered.endswith("_sha256")
+            ):
+                continue
+            result[key] = _bounded_model_value(value[key], depth=depth + 1)
+        return result
+    if isinstance(value, list):
+        return [_bounded_model_value(item, depth=depth + 1) for item in value[:5]]
+    if isinstance(value, str) and len(value) > 320:
+        return value[:319] + "…"
+    return value
+
+
+def _validate_model_authored_brief(
+    brief: ModelAuthoredBrief,
+    catalog: SurfaceCandidateCatalog,
+    plan: SurfacePlan,
+    *,
+    digest_candidate_ids: set[str],
+    context: PlannerConversationContext | None,
+) -> None:
+    candidates = {item.candidate_id: item for item in catalog.candidates}
+    selected = {item.candidate_id for item in plan.entries}
+    for point in brief.points:
+        if set(point.source_candidate_ids) - digest_candidate_ids:
+            raise ValueError("model-authored content cites a candidate outside its evidence digest")
+        if set(point.source_candidate_ids) - selected:
+            raise ValueError("model-authored content cites a candidate outside its layout")
+        allowed_evidence = {
+            evidence_id
+            for candidate_id in point.source_candidate_ids
+            for evidence_id in candidates[candidate_id].component.evidence_ref_ids
+        }
+        if set(point.evidence_ref_ids) - allowed_evidence:
+            raise ValueError("model-authored content cites evidence outside its source candidates")
+    prior_turn = None
+    if context is not None:
+        prior_turn = next(
+            (item for item in reversed(context.turns) if item.authored_brief is not None),
+            None,
+        )
+    expected = prior_turn.turn_id if prior_turn is not None else None
+    if brief.edited_from_turn_id != expected:
+        raise ValueError("model-authored content does not bind its exact edit predecessor")
+
+
 def _program_revision_failure_reason(exc: Exception) -> str:
     """Return a content-free diagnostic category without serializing provider output."""
 
@@ -876,6 +1147,7 @@ def _composition_provenance(
     cost_usd: float | None = None,
     latency_ms: float | None = None,
     provider_cached: bool | None = None,
+    content_fingerprint: str | None = None,
 ) -> PlannerProvenance:
     return PlannerProvenance(
         operation=PlannerOperation.SURFACE_COMPOSITION,
@@ -894,6 +1166,7 @@ def _composition_provenance(
         latency_ms=latency_ms,
         provider_cached=provider_cached,
         result_fingerprint=plan.fingerprint,
+        content_fingerprint=content_fingerprint,
         deterministic_reproducible=mode != PlannerMode.MODEL_ASSISTED,
     )
 
