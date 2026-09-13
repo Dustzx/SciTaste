@@ -60,9 +60,7 @@ def test_published_reprioritization_changes_core_next_stage_without_execution() 
     assert program.control_sha256 == control.control_sha256
     assert program.controller_consumed is True
     assert program.verification_route == "direct_path"
-    assert program.verification_reason_codes == (
-        "verification-cost-exceeds-avoidable-loss",
-    )
+    assert program.verification_reason_codes == ("verification-cost-exceeds-avoidable-loss",)
     assert program.authorizes_external_action is False
     assert program.authorizes_execution is False
     assert program.execution_authority == "none"

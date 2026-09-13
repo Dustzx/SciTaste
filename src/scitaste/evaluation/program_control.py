@@ -219,11 +219,12 @@ def compile_effective_experiment_program(
     validate_project_id(project_id)
     stages = {item.stage_id: item for item in report.stages}
     tracks = {item.track_id for item in report.tracks}
-    baseline = report.next_stage_ids or tuple(
-        item.stage_id
-        for item in report.stages
-        if item.state is not CampaignStageState.COMPLETE
-    )[:1]
+    baseline = (
+        report.next_stage_ids
+        or tuple(
+            item.stage_id for item in report.stages if item.state is not CampaignStageState.COMPLETE
+        )[:1]
+    )
     if not baseline:
         baseline = (report.stages[-1].stage_id,)
 
@@ -245,10 +246,9 @@ def compile_effective_experiment_program(
         if control.change_kind == "reprioritize_next_gates":
             if control.target_stage_id not in baseline:
                 raise ValueError("published reprioritization must target a current next gate")
-            if (
-                len(control.proposed_next_stage_order) != len(baseline)
-                or set(control.proposed_next_stage_order) != set(baseline)
-            ):
+            if len(control.proposed_next_stage_order) != len(baseline) or set(
+                control.proposed_next_stage_order
+            ) != set(baseline):
                 raise ValueError("published stage order must retain every current next gate")
             effective = control.proposed_next_stage_order
             effect = "stage_order"
@@ -286,9 +286,7 @@ def compile_effective_experiment_program(
         "control_effect": effect,
         "control_sha256": control.control_sha256 if control else None,
         "source_publication_id": control.source_publication_id if control else None,
-        "source_publication_sha256": (
-            control.source_publication_sha256 if control else None
-        ),
+        "source_publication_sha256": (control.source_publication_sha256 if control else None),
         "change_kind": control.change_kind if control else None,
         "target_stage_id": control.target_stage_id if control else None,
         "target_track_ids": control.target_track_ids if control else (),
@@ -299,9 +297,7 @@ def compile_effective_experiment_program(
         "published_guidance": control.summary if control else None,
         "guidance_rationale": control.rationale if control else None,
         "required_evidence": control.required_evidence if control else (),
-        "risk_note": (
-            control.summary if control is not None and effect == "risk_note" else None
-        ),
+        "risk_note": (control.summary if control is not None and effect == "risk_note" else None),
         "requested_resource_roles": control.requested_resource_roles if control else (),
         "requested_resource_ids": control.requested_resource_ids if control else (),
         "controller_consumed": True,

@@ -2154,12 +2154,15 @@ class ProjectPlanningDirectiveData(BaseModel):
     verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
     controller_consumed: bool = False
     effective_program_sha256: Sha256 | None = None
-    control_effect: Literal[
-        "stage_order",
-        "decision_guidance",
-        "risk_note",
-        "resource_preference",
-    ] | None = None
+    control_effect: (
+        Literal[
+            "stage_order",
+            "decision_guidance",
+            "risk_note",
+            "resource_preference",
+        ]
+        | None
+    ) = None
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
 
     @model_validator(mode="after")
@@ -2273,10 +2276,7 @@ class ProjectEvidenceProgramData(BaseModel):
             value is not None for value in publication_identity
         ):
             raise ValueError("dossier-only evidence program cannot claim a publication")
-        if (
-            self.planning_authority == "user_published_control"
-            and self.control_effect == "none"
-        ):
+        if self.planning_authority == "user_published_control" and self.control_effect == "none":
             raise ValueError("published evidence program requires a typed control effect")
         if self.planning_authority == "user_published_control" and not all(
             value is not None for value in publication_identity
@@ -2307,11 +2307,9 @@ class ProjectEvidenceProgramData(BaseModel):
             if (
                 self.planning_authority != "user_published_control"
                 or self.planning_directive.publication_id != self.source_publication_id
-                or self.planning_directive.publication_sha256
-                != self.source_publication_sha256
+                or self.planning_directive.publication_sha256 != self.source_publication_sha256
                 or not self.planning_directive.controller_consumed
-                or self.planning_directive.effective_program_sha256
-                != self.effective_program_sha256
+                or self.planning_directive.effective_program_sha256 != self.effective_program_sha256
                 or self.planning_directive.control_effect != self.control_effect
             ):
                 raise ValueError("planning directive differs from the effective core program")
