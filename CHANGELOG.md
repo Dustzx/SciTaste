@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the executable bridge from completed SciTasteBench v3 calls to blinded
+  H1/H2 review. Recording rows now carry timezone-aware timestamps, while the
+  offline `evaluation human-study-prepare` compiler requires the exact selected
+  seed/order population and atomically emits opaque condition-free reviewer
+  decisions, counterbalanced assignments, a public schema-1.2 commitment, and
+  private traces, blind key, and generation ledger. Missing, duplicate, foreign,
+  untimestamped, and mixed-model recordings fail without invoking a provider or
+  contacting a reviewer.
 - Closed the formal H1/H2 reviewer-output identity gap. Human-study schema 1.2
   now precommits the exact formal SciTasteBench v3 suite, typed treatment
   manifest, and a private self-hashed generation ledger. Post-lock blind opening

@@ -21,6 +21,35 @@ The analysis command accepts the original locked-review set and blind opening,
 not a caller-supplied outcome table. It reruns the integrity audit internally so
 that forged `ready` flags or relabeled outcomes cannot enter inference.
 
+## Preparing the blind package
+
+`scitaste evaluation human-study-prepare` closes the gap between an already
+recorded benchmark run and reviewer delivery. It accepts one exact v3 suite,
+its typed treatment manifest, and a timestamped `benchmark run --record` JSONL.
+For the selected seed and candidate order, the recording must contain every
+matched-abstracted, same-source-raw, and source-disjoint-mismatched request
+exactly once; an exact Base record is allowed, while duplicates, missing arms,
+foreign requests, untimestamped legacy records, or mixed models fail closed.
+Formal rows must also retain raw provider/model response bytes with a matching
+digest; a reconstructed rationale alone is not accepted as execution evidence.
+
+The command writes one atomic package:
+
+- `reviewer/outputs/` contains opaque-path JSON decisions with no condition,
+  provider, or model field;
+- `public/study.json` contains the reviewer assignments and only commitments to
+  private evidence;
+- `private/traces/`, `private/generation-ledger.json`, and
+  `private/blind-key.json` retain the condition-bearing generation chain;
+- `private/blinding-secret.json` prevents the published default randomization
+  seed and known compiler algorithm from making opaque IDs enumerable; and
+- `PREPARATION.json` binds all inputs and package identities.
+
+The two preassigned reviewer pseudonyms receive deterministically randomized and
+counterbalanced X/Y order. The compiler does not recruit or contact them and
+does not call a model, API, GPU, or experiment. Condition-bearing private files
+must remain inaccessible until all primary reviews are locked.
+
 A schema-1.2 formal human study binds its scope, exact post-pilot analysis
 contract, power-analysis bytes, formal v3 suite identity, treatment-manifest
 identity, and generation-ledger commitment before outcome review. The ledger is

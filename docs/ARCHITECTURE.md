@@ -2926,3 +2926,33 @@ checks that each reviewer-visible X/Y byte binding resolves to the committed
 condition record. Formal schema-1.1 studies remain readable for historical
 inspection but cannot enter the title gate. The ledger records prior execution;
 it authorizes no model/API/GPU use, human recruitment, experiment, or claim.
+
+### ADR-096: Blinded H1/H2 packages compile from timestamped exact recordings
+
+Status: accepted and executable at offline materialization and CLI boundaries;
+no model call, reviewer contact, blind opening, or H1/H2 outcome was performed.
+
+The generation ledger closes identity continuity only if its hundreds of records,
+reviewer artifacts, comparisons, and blind-key entries are built consistently.
+Hand-authored files would shift the mismatch risk from the audit stage into
+package preparation and make condition leakage through filenames likely.
+
+SciTaste therefore compiles the package directly from one bounded,
+timezone-stamped `benchmark run --record` JSONL. For a fixed seed and candidate
+order, all three mechanism requests for every exact v3 case must occur once.
+The compiler accepts an exact Base row, rejects foreign and duplicate requests,
+and fails on missing timestamps, response/request drift, absent arms, or mixed
+provider/model identities. Formal rows retain hash-verified raw response bytes,
+not only a normalized rationale. Formal preparation additionally requires a
+formal v3 suite whose treatment-manifest bytes and complete contexts match.
+
+The atomic output separates `reviewer/outputs`, `public`, and `private`. Reviewer
+filenames and structural fields are opaque and omit conditions, provider, and
+model. The two preassigned reviewer pseudonyms receive deterministically
+randomized and counterbalanced X/Y ordering. A cryptographic blinding secret is
+mixed into opaque IDs and X/Y assignment, so the documented algorithm and a
+default randomization seed cannot be enumerated to recover conditions. Private
+per-record traces, the secret, key, and generation ledger remain condition-bearing
+and must not be released until review lock. The compiler packages already
+authorized execution evidence; it grants no authority to generate it or to
+recruit reviewers.

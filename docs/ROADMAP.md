@@ -30,6 +30,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.10 — H0 source-arm identity continuity | done | one predeclared representation hash and approval-gated projection bind the exact frozen quality/prestige arm union to identical canonical source bytes, preserve natural overlap once, and retain rejected-but-safe prestige sources without granting model or experiment authority |
 | Phase 8.11 — H1/H2 treatment identity continuity | done | a self-hashed, per-case and per-arm manifest replays projected source identities, matched/mismatched Taste corpus provenance, formal curation/pair status, exact token traces, and complete benchmark-context equality before v3 compilation |
 | Phase 8.12 — H1/H2 reviewer-output identity continuity | done | a precommitted private generation ledger binds every formal v3 case and treatment request to its execution trace and reviewer-visible output, then opens only after all primary reviews lock |
+| Phase 8.13 — H1/H2 blind-package materialization | done | one offline compiler turns exact timestamped benchmark recordings into opaque reviewer outputs, a public schema-1.2 commitment, and private counterbalanced key/ledger artifacts without model or human action |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -79,6 +80,16 @@ case population and requires every X/Y binding to resolve to the corresponding
 condition record after all reviews lock. Legacy schema 1.1 remains readable but
 cannot pass formal H1/H2 analysis. This closes software identity continuity; it
 does not create a real generation, reviewer judgment, or effect.
+
+The treatment-bound study no longer depends on an operator manually assembling
+hundreds of reviewer files and key entries. `human-study-prepare` consumes the
+exact timestamped benchmark recording for one seed and candidate order, requires
+one complete H1/H2 triplet per suite case, and rejects duplicates, foreign
+requests, missing arms, legacy untimestamped rows, and mixed model identities.
+It atomically emits condition-free opaque reviewer artifacts, a public study,
+and private counterbalanced blind key, traces, and generation ledger. This makes
+the next authorized pilot operationally runnable; it still performs no model
+call, reviewer contact, blind opening, or effect estimation.
 
 The runtime selection path no longer treats topical retrieval as Scientific
 Taste. A bounded broad pool is projected into an outcome-hidden

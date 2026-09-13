@@ -168,6 +168,7 @@ from scitaste.evaluation import (
     plan_benchmark_metadata_projection,
     plan_clustered_power,
     plan_structured_metadata_audit,
+    prepare_human_outcome_study,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     project_benchmark_metadata_population,
@@ -1605,6 +1606,40 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_curation)
     taste_corpus_curation.set_defaults(handler=_handle_evaluation_taste_corpus_curation)
+    human_study_prepare = evaluation_commands.add_parser(
+        "human-study-prepare",
+        help="Compile timestamped benchmark recordings into a condition-hidden H1/H2 package",
+    )
+    human_study_prepare.add_argument("--suite", type=Path, required=True)
+    human_study_prepare.add_argument("--treatment-manifest", type=Path, required=True)
+    human_study_prepare.add_argument("--recording", type=Path, required=True)
+    human_study_prepare.add_argument("--study-id", required=True)
+    human_study_prepare.add_argument("--project-id", required=True)
+    human_study_prepare.add_argument("--scope", choices=["pilot", "formal"], required=True)
+    human_study_prepare.add_argument("--protocol", type=Path, required=True)
+    human_study_prepare.add_argument("--rubric", type=Path, required=True)
+    human_study_prepare.add_argument("--interface", type=Path, required=True)
+    human_study_prepare.add_argument("--analysis-contract", type=Path, required=True)
+    human_study_prepare.add_argument("--power-analysis", type=Path, default=None)
+    human_study_prepare.add_argument(
+        "--reviewer-identity-sha256",
+        action="append",
+        required=True,
+        help="Preassigned reviewer pseudonym hash; provide exactly twice",
+    )
+    human_study_prepare.add_argument("--seed", type=int, default=0)
+    human_study_prepare.add_argument(
+        "--candidate-order",
+        choices=[item.value for item in CandidateOrder],
+        default=CandidateOrder.DECLARED.value,
+    )
+    human_study_prepare.add_argument("--randomization-seed", type=int, default=202710)
+    human_study_prepare.add_argument("--context-budget-tokens", type=int, default=8_192)
+    human_study_prepare.add_argument("--maximum-output-tokens", type=int, default=1_024)
+    human_study_prepare.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_study_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(human_study_prepare)
+    human_study_prepare.set_defaults(handler=_handle_evaluation_human_study_prepare)
     human_outcome = evaluation_commands.add_parser(
         "human-outcome-audit",
         help="Audit locked H1/H2 human outcomes and optional post-lock unblinding",
@@ -5412,6 +5447,35 @@ def _handle_evaluation_human_outcome(args: argparse.Namespace) -> int:
         return 1
     if args.require_analysis_ready and not report.ready_for_primary_analysis:
         return 1
+    return 0
+
+
+def _handle_evaluation_human_study_prepare(args: argparse.Namespace) -> int:
+    reviewers = tuple(args.reviewer_identity_sha256)
+    if len(reviewers) != 2:
+        raise ValueError("--reviewer-identity-sha256 must be provided exactly twice")
+    prepared = prepare_human_outcome_study(
+        evidence_root=args.evidence_root,
+        output_dir=args.output,
+        benchmark_suite_path=args.suite,
+        reference_treatment_manifest_path=args.treatment_manifest,
+        recording_path=args.recording,
+        study_id=args.study_id,
+        project_id=args.project_id,
+        study_scope=args.scope,
+        protocol_path=args.protocol,
+        rubric_path=args.rubric,
+        interface_path=args.interface,
+        analysis_contract_path=args.analysis_contract,
+        power_analysis_path=args.power_analysis,
+        reviewer_identity_sha256s=reviewers,
+        seed=args.seed,
+        candidate_order=CandidateOrder(args.candidate_order),
+        randomization_seed=args.randomization_seed,
+        context_budget_tokens=args.context_budget_tokens,
+        maximum_output_tokens=args.maximum_output_tokens,
+    )
+    print(prepared.report.model_dump_json(indent=2))
     return 0
 
 

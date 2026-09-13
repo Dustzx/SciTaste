@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 
 from scitaste.backends.base import PreferenceRequest
-from scitaste.backends.replay import RecordingBackend, ReplayBackend, ReplayMissError
+from scitaste.backends.replay import (
+    RecordingBackend,
+    ReplayBackend,
+    ReplayMissError,
+    ReplayRecord,
+)
 from scitaste.backends.scripted import ScriptedPreferenceBackend
 from scitaste.schema.actions import MetaAction, ResearchAction
 
@@ -28,10 +33,13 @@ def test_record_then_exact_replay(tmp_path) -> None:
     original = recorder.rank(request())
 
     replayed = ReplayBackend(path).rank(request())
+    recorded = ReplayRecord.model_validate_json(path.read_text(encoding="utf-8"))
 
     assert replayed.selected_action_id == original.selected_action_id
     assert replayed.request_fingerprint == original.request_fingerprint
     assert replayed.cached is True
+    assert recorded.recorded_at is not None
+    assert recorded.recorded_at.utcoffset() is not None
 
 
 def test_replay_rejects_changed_request(tmp_path) -> None:

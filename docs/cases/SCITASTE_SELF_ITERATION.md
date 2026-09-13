@@ -1288,3 +1288,26 @@ development host. This iteration used no downloaded content, model/API/GPU
 resource, human recruitment, or experiment and establishes no H1/H2 effect. The
 next real gate remains explicit authorization for the already downloaded AAAR
 pilot's request/receipt-bound local content audit.
+
+## Removing manual construction from the H1/H2 blind package (2026-09-13)
+
+After binding generated outputs to blind review, the self-iteration followed the
+operational path an experimenter would use. No compiler connected
+`benchmark run --record` to the public study, opaque reviewer files, private
+blind key, and generation ledger. Manually creating those artifacts at formal
+scale would reintroduce the same condition/output mismatch that ADR-095 closed.
+
+SciTaste now timestamps newly recorded preference calls and provides an atomic
+offline package compiler. It requires the exact seed/order H1/H2 request
+population, emits condition-free opaque reviewer artifacts, and counterbalances
+X/Y across the two already assigned reviewer pseudonyms. Condition mappings,
+exact replay rows, and generation records stay under `private/`; only commitments
+enter `public/study.json`. A 120-source-group fixture compiled 360 generation
+records and 480 reviewer comparisons, then reloaded the persisted public/private
+contracts and completed the source-group analysis path.
+
+This change does not run a provider, recruit a reviewer, or claim that structural
+blinding eliminates stylistic clues inside model prose; the interface protocol
+and independent reviewers remain necessary. No quarantined content, API, GPU,
+model, or human resource was used. The next real gate remains the separately
+authorized AAAR content audit.

@@ -219,6 +219,14 @@ for every H1/H2 comparison are locked. Only then may schema-1.1 blind opening
 replay the ledger and prove that X/Y were the committed outputs. Legacy formal
 schema 1.1 remains inspectable but is not admissible to the H1/H2 title gate.
 
+The transition is executable rather than operator-authored. A dedicated offline
+compiler accepts the exact timestamped recording from `benchmark run --record`,
+rejects missing, duplicated, foreign, or mixed-model requests, and atomically
+emits opaque reviewer outputs, the public schema-1.2 study, and private blind-key,
+trace, and generation-ledger files. X/Y order is randomized and counterbalanced
+across the two preassigned reviewers. The compiler performs no model call or
+human contact; it only packages already completed, separately authorized runs.
+
 Two oracle-controlled directional contrasts are preregistered: H1 compares
 matched abstraction against same-source raw RAG with representation as the only
 permitted difference; H2a compares matched against mismatched abstractions with

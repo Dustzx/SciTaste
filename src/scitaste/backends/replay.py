@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from scitaste.backends.base import PreferenceBackend, PreferenceRequest, PreferenceResponse
 
@@ -15,6 +16,13 @@ class ReplayRecord(BaseModel):
 
     request: PreferenceRequest
     response: PreferenceResponse
+    recorded_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def timestamp_is_aware_when_present(self) -> ReplayRecord:
+        if self.recorded_at is not None and self.recorded_at.utcoffset() is None:
+            raise ValueError("replay recording timestamp must include a timezone")
+        return self
 
 
 class ReplayMissError(KeyError):
@@ -67,7 +75,11 @@ class RecordingBackend:
         response = self.delegate.rank(request)
         if response.request_fingerprint != request.fingerprint:
             raise ValueError("delegate returned a response for a different request")
-        record = ReplayRecord(request=request, response=response)
+        record = ReplayRecord(
+            request=request,
+            response=response,
+            recorded_at=datetime.now(UTC),
+        )
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(record.model_dump_json(exclude={"request": {"fingerprint"}}) + "\n")

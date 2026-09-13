@@ -397,6 +397,12 @@ from scitaste.evaluation.human_preference_analysis import (
     save_human_preference_analysis_contract,
     save_human_preference_analysis_report,
 )
+from scitaste.evaluation.human_study_preparation import (
+    BlindedDecisionArtifact,
+    HumanStudyPreparation,
+    HumanStudyPreparationReport,
+    prepare_human_outcome_study,
+)
 from scitaste.evaluation.json_content_audit import (
     JsonContentAuditApproval,
     JsonContentAuditApprovalInspection,
@@ -780,6 +786,7 @@ __all__ = [
     "BenchmarkScreenVerdict",
     "BenchmarkTaskPackageManifest",
     "BenchmarkTaskSelectionManifest",
+    "BlindedDecisionArtifact",
     "BlindedHumanComparison",
     "BlindedOutputBinding",
     "CampaignArtifactBinding",
@@ -961,6 +968,8 @@ __all__ = [
     "HumanReviewPolicy",
     "HumanReviewResource",
     "HumanStudyFileBinding",
+    "HumanStudyPreparation",
+    "HumanStudyPreparationReport",
     "HumanStudyTreatmentCommitment",
     "IclrEvidenceProgram",
     "InferenceRole",
@@ -1257,6 +1266,7 @@ __all__ = [
     "plan_reference_selection_comparison",
     "plan_reference_selection_comparison_from_files",
     "plan_structured_metadata_audit",
+    "prepare_human_outcome_study",
     "prepare_project_evaluation",
     "prepare_project_evaluation_result",
     "primary_comparisons_from_objective_report",

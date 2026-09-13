@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from scitaste.backends.base import PreferenceResponse
+from scitaste.backends.replay import ReplayRecord
 from scitaste.benchmark import (
     BenchmarkCase,
     BenchmarkCondition,
     BenchmarkEvidenceTier,
     BenchmarkSuite,
+    CandidateOrder,
     ContrastDifference,
     ContrastPrimaryEndpoint,
     MechanismContextBundle,
@@ -38,16 +42,17 @@ from scitaste.evaluation import (
     HumanPreferenceAnalysisContract,
     HumanPreferenceHypothesisRule,
     HumanStudyFileBinding,
-    HumanStudyTreatmentCommitment,
+    HumanStudyPreparation,
     LockedHumanOutcomeReview,
     LockedHumanReviewSet,
     TasteMechanismHypothesis,
     TasteStudyCondition,
     TreatmentGenerationLedger,
-    TreatmentGenerationRecord,
     analyze_human_preferences,
     inspect_human_outcome_study,
+    load_human_outcome_study,
     load_human_preference_analysis_contract,
+    prepare_human_outcome_study,
     save_human_preference_analysis_contract,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -126,7 +131,7 @@ def test_changed_blind_key_cannot_relabel_locked_reviews(tmp_path: Path) -> None
 
 
 def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -> None:
-    study, key, contract_path, ledger = _formal_study(tmp_path, source_groups=120)
+    study, key, contract_path, ledger, prepared = _formal_study(tmp_path, source_groups=120)
     reviews = _reviews_for_key(study, key)
     opening = HumanBlindOpening(
         schema_version="1.1",
@@ -161,6 +166,42 @@ def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -
     assert all(item.adjusted_p_value < 0.05 for item in analysis.hypotheses)
     assert all(item.conclusion == "supports_claim" for item in analysis.hypotheses)
     assert len(analysis.reviewer_diagnostics) == 2
+    public_payload = prepared.study_path.read_text(encoding="utf-8")
+    assert "matched-abstracted-taste" not in public_payload
+    assert "same-source-raw-rag" not in public_payload
+    assert "source-disjoint-mismatched-taste" not in public_payload
+    assert prepared.report.generation_record_count == 360
+    assert prepared.report.comparison_count == 480
+    forbidden_reviewer_text = (
+        "matched-abstracted-taste",
+        "same-source-raw-rag",
+        "source-disjoint-mismatched-taste",
+        "fixture-provider",
+        "fixture-model",
+    )
+    reviewer_outputs = list((prepared.output_dir / "reviewer" / "outputs").glob("*.json"))
+    assert len(reviewer_outputs) == 360
+    assert all(
+        token not in path.read_text(encoding="utf-8")
+        for path in reviewer_outputs
+        for token in forbidden_reviewer_text
+    )
+    blinding_secret = json.loads(prepared.blinding_secret_path.read_text(encoding="utf-8"))[
+        "blinding_secret"
+    ]
+    assert blinding_secret not in public_payload
+    assert blinding_secret not in prepared.report.model_dump_json()
+    assert load_human_outcome_study(prepared.study_path) == study
+    assert (
+        HumanBlindKey.model_validate_json(prepared.blind_key_path.read_text(encoding="utf-8"))
+        == key
+    )
+    assert (
+        TreatmentGenerationLedger.model_validate_json(
+            prepared.generation_ledger_path.read_text(encoding="utf-8")
+        )
+        == ledger
+    )
     _assert_wrong_generation_record_is_rejected(study, key, ledger, tmp_path)
 
 
@@ -324,7 +365,13 @@ def _formal_study(
     tmp_path: Path,
     *,
     source_groups: int,
-) -> tuple[HumanOutcomeStudyManifest, HumanBlindKey, Path, TreatmentGenerationLedger]:
+) -> tuple[
+    HumanOutcomeStudyManifest,
+    HumanBlindKey,
+    Path,
+    TreatmentGenerationLedger,
+    HumanStudyPreparation,
+]:
     study_id = "human-study-formal"
     contract = HumanPreferenceAnalysisContract.create(
         contract_id="human-preference-formal-v1",
@@ -346,141 +393,44 @@ def _formal_study(
     contract_path = save_human_preference_analysis_contract(
         contract, tmp_path / "analysis-contract.json"
     )
-    bindings = {}
+    inputs = {}
     for name in ("protocol", "rubric", "interface", "power"):
         path = tmp_path / f"{name}.txt"
         path.write_text(name + "\n", encoding="utf-8")
-        bindings[name] = _file_binding(tmp_path, path)
-    analysis_binding = HumanStudyFileBinding(
-        path=contract_path.name,
-        sha256=hashlib.sha256(contract_path.read_bytes()).hexdigest(),
-    )
-    suite, suite_binding, treatment_binding, treatment_semantic_sha256 = (
+        inputs[name] = path
+    suite, _suite_binding, _treatment_binding, _treatment_semantic_sha256 = (
         _formal_benchmark_population(tmp_path, source_groups=source_groups)
     )
-    generation_records = _generation_records(tmp_path, suite)
-    ledger = TreatmentGenerationLedger.create(
-        ledger_id="human-study-formal-generation-ledger",
+    recording_path = _write_recording(tmp_path, suite)
+    prepared = prepare_human_outcome_study(
+        evidence_root=tmp_path,
+        output_dir=tmp_path / "human-study-package",
+        benchmark_suite_path=tmp_path / "benchmark-suite.yaml",
+        reference_treatment_manifest_path=tmp_path / "reference-treatment-manifest.json",
+        recording_path=recording_path,
         study_id=study_id,
         project_id="project-one",
-        benchmark_suite=suite_binding,
-        benchmark_suite_semantic_sha256=suite.sha256,
-        reference_treatment_manifest=treatment_binding,
-        reference_treatment_manifest_semantic_sha256=treatment_semantic_sha256,
-        entries=tuple(generation_records.values()),
-        created_at=datetime(2026, 9, 12, 0, 30, tzinfo=UTC),
-    )
-
-    def output(condition: TasteStudyCondition, case_id: str, label: str) -> BlindedOutputBinding:
-        source = generation_records[(case_id, condition)].output
-        return BlindedOutputBinding(
-            path=source.path,
-            sha256=source.sha256,
-            output_id=label,
-            presentation_profile_sha256=SHA,
-            context_budget_tokens=8_192,
-            maximum_output_tokens=1_024,
-        )
-
-    reviewers = ("2" * 64, "3" * 64)
-    comparisons = []
-    key_specs = []
-    for group_index in range(1, source_groups + 1):
-        case_id = f"case-{group_index}"
-        source_group = f"paper-{group_index}"
-        for hypothesis, short, alternative in (
-            (
-                TasteMechanismHypothesis.H1_TASTE_ABSTRACTION,
-                "h1",
-                TasteStudyCondition.SAME_SOURCE_RAW_RAG,
-            ),
-            (
-                TasteMechanismHypothesis.H2_TASTE_SPECIFICITY,
-                "h2",
-                TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE,
-            ),
-        ):
-            first_id = f"{short}-g{group_index}-r1"
-            second_id = f"{short}-g{group_index}-r2"
-            comparisons.extend(
-                (
-                    BlindedHumanComparison(
-                        comparison_id=first_id,
-                        hypothesis=hypothesis,
-                        case_id=case_id,
-                        source_group=source_group,
-                        reviewer_identity_sha256=reviewers[0],
-                        x_output=output(
-                            TasteStudyCondition.MATCHED_ABSTRACTED_TASTE,
-                            case_id,
-                            f"x-{first_id}",
-                        ),
-                        y_output=output(alternative, case_id, f"y-{first_id}"),
-                    ),
-                    BlindedHumanComparison(
-                        comparison_id=second_id,
-                        hypothesis=hypothesis,
-                        case_id=case_id,
-                        source_group=source_group,
-                        reviewer_identity_sha256=reviewers[1],
-                        x_output=output(alternative, case_id, f"x-{second_id}"),
-                        y_output=output(
-                            TasteStudyCondition.MATCHED_ABSTRACTED_TASTE,
-                            case_id,
-                            f"y-{second_id}",
-                        ),
-                    ),
-                )
-            )
-            key_specs.extend(
-                (
-                    _generation_key(
-                        first_id,
-                        case_id,
-                        TasteStudyCondition.MATCHED_ABSTRACTED_TASTE,
-                        alternative,
-                        generation_records,
-                    ),
-                    _generation_key(
-                        second_id,
-                        case_id,
-                        alternative,
-                        TasteStudyCondition.MATCHED_ABSTRACTED_TASTE,
-                        generation_records,
-                    ),
-                )
-            )
-    draft = HumanOutcomeStudyManifest(
-        schema_version="1.2",
-        study_id=study_id,
-        project_id="project-one",
-        protocol=bindings["protocol"],
-        rubric=bindings["rubric"],
-        interface=bindings["interface"],
         study_scope="formal",
-        preference_analysis_contract=analysis_binding,
-        power_analysis=bindings["power"],
-        treatment_commitment=HumanStudyTreatmentCommitment(
-            benchmark_suite_file_sha256=suite_binding.sha256,
-            benchmark_suite_semantic_sha256=suite.sha256,
-            reference_treatment_manifest_file_sha256=treatment_binding.sha256,
-            reference_treatment_manifest_semantic_sha256=treatment_semantic_sha256,
-            generation_ledger_sha256=ledger.ledger_sha256,
-        ),
-        blind_key_sha256="0" * 64,
-        comparisons=tuple(comparisons),
+        protocol_path=inputs["protocol"],
+        rubric_path=inputs["rubric"],
+        interface_path=inputs["interface"],
+        analysis_contract_path=contract_path,
+        power_analysis_path=inputs["power"],
+        reviewer_identity_sha256s=("2" * 64, "3" * 64),
+        seed=0,
+        candidate_order=CandidateOrder.DECLARED,
+        randomization_seed=202710,
+        context_budget_tokens=8_192,
+        maximum_output_tokens=1_024,
+        prepared_at=datetime(2026, 9, 12, 1, tzinfo=UTC),
     )
-    key = HumanBlindKey(
-        study_id=study_id,
-        assignment_sha256=draft.assignment_sha256,
-        created_at=datetime(2026, 9, 12, 1, tzinfo=UTC),
-        entries=tuple(key_specs),
+    return (
+        prepared.study,
+        prepared.blind_key,
+        contract_path,
+        prepared.generation_ledger,
+        prepared,
     )
-    payload = draft.model_dump(
-        mode="python", exclude={"assignment_sha256", "study_sha256", "blind_key_sha256"}
-    )
-    study = HumanOutcomeStudyManifest(**payload, blind_key_sha256=key.blind_key_sha256)
-    return study, key, contract_path, ledger
 
 
 def _formal_benchmark_population(
@@ -710,65 +660,40 @@ def _mechanism_context(
     )
 
 
-def _generation_records(
-    root: Path,
-    suite: BenchmarkSuite,
-) -> dict[tuple[str, TasteStudyCondition], TreatmentGenerationRecord]:
+def _write_recording(root: Path, suite: BenchmarkSuite) -> Path:
     benchmark_conditions = {
         TasteStudyCondition.MATCHED_ABSTRACTED_TASTE: (BenchmarkCondition.MATCHED_ABSTRACTED_TASTE),
         TasteStudyCondition.SAME_SOURCE_RAW_RAG: BenchmarkCondition.RAW_SOURCE_RAG,
         TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE: (BenchmarkCondition.MISMATCHED_TASTE),
     }
-    records = {}
-    generated_at = datetime(2026, 9, 12, tzinfo=UTC)
+    records = []
     for case in suite.cases:
-        assert case.mechanism_context is not None
-        for condition, benchmark_condition in benchmark_conditions.items():
-            output_path = root / "outputs" / f"{case.case_id}-{condition.value}.txt"
-            trace_path = root / "traces" / f"{case.case_id}-{condition.value}.json"
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            trace_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(
-                f"{case.case_id} {condition.value} generated result\n", encoding="utf-8"
-            )
-            trace_path.write_text(
-                f'{{"case_id":"{case.case_id}","condition":"{condition.value}"}}\n',
-                encoding="utf-8",
-            )
+        for benchmark_condition in benchmark_conditions.values():
             request = case.to_request(benchmark_condition, seed=0)
-            context = case.mechanism_context.for_condition(benchmark_condition)
-            records[(case.case_id, condition)] = TreatmentGenerationRecord.create(
-                record_id=f"{case.case_id}-{condition.value}",
-                case_id=case.case_id,
-                source_group=case.source_group_id,
-                condition=condition,
-                seed=0,
-                candidate_order="declared",
-                benchmark_request_fingerprint=request.fingerprint,
-                treatment_construction_receipt_sha256=(context.construction_receipt_sha256),
-                provider="fixture-provider",
-                model="fixture-model",
-                execution_trace=_file_binding(root, trace_path),
-                output=_file_binding(root, output_path),
-                generated_at=generated_at,
+            raw_response = (
+                '{"selected_action_id":"probe-first",'
+                '"rationale":"The discriminating probe is better."}'
             )
-    return records
-
-
-def _generation_key(
-    comparison_id: str,
-    case_id: str,
-    x: TasteStudyCondition,
-    y: TasteStudyCondition,
-    records: dict[tuple[str, TasteStudyCondition], TreatmentGenerationRecord],
-) -> HumanBlindKeyEntry:
-    return HumanBlindKeyEntry(
-        comparison_id=comparison_id,
-        x_condition=x,
-        y_condition=y,
-        x_generation_trace_sha256=records[(case_id, x)].record_sha256,
-        y_generation_trace_sha256=records[(case_id, y)].record_sha256,
-    )
+            records.append(
+                ReplayRecord(
+                    request=request,
+                    response=PreferenceResponse(
+                        request_id=request.request_id,
+                        request_fingerprint=request.fingerprint,
+                        selected_action_id="probe-first",
+                        rationale="The discriminating probe is the better calibrated next action.",
+                        confidence=0.9,
+                        backend="fixture-provider",
+                        model="fixture-model",
+                        raw_response=raw_response,
+                        raw_response_sha256=hashlib.sha256(raw_response.encode()).hexdigest(),
+                    ),
+                    recorded_at=datetime(2026, 9, 12, tzinfo=UTC),
+                ).model_dump_json(exclude={"request": {"fingerprint"}})
+            )
+    path = root / "benchmark-recording.jsonl"
+    path.write_text("\n".join(records) + "\n", encoding="utf-8")
+    return path
 
 
 def _file_binding(root: Path, path: Path) -> HumanStudyFileBinding:
