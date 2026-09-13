@@ -1262,3 +1262,29 @@ project allocation was fabricated: the acquired benchmark metadata is still
 unopened, so the self-development project correctly remains at the earlier
 content-read approval gate. No provider, model, GPU, human, or experiment
 resource was used.
+
+## Binding exact H1/H2 generations to the later blind review (2026-09-13)
+
+The self-iteration audit followed the newly replayable treatment manifest one
+step downstream. It found that the human endpoint correctly froze reviewer
+assignments, X/Y order, dual-review completeness, and blind-key timing, yet the
+key's generation-trace hashes did not prove that the visible outputs came from
+those v3 treatments. A valid statistical result could therefore be attached to
+the wrong generation batch.
+
+SciTaste now freezes one private treatment-generation ledger before review. It
+contains a complete three-condition record for every held-out source group and
+binds the exact suite, treatment manifest, request fingerprint, construction
+receipt, seed, candidate order, provider/model identity, trace bytes, and output
+bytes. Human-study schema 1.2 publishes only the upstream and ledger commitments;
+the condition-bearing ledger opens with the blind key after all primary reviews
+are locked. Formal analysis then replays the entire identity chain and rejects a
+key whose condition is paired with another valid generation record.
+
+The 120-source-group acceptance fixture also exposed repeated whole-study hashing
+inside the per-review loop. Caching the immutable study identity reduces the
+focused formal-scale check from roughly 43 seconds to roughly 9 seconds on the
+development host. This iteration used no downloaded content, model/API/GPU
+resource, human recruitment, or experiment and establishes no H1/H2 effect. The
+next real gate remains explicit authorization for the already downloaded AAAR
+pilot's request/receipt-bound local content audit.

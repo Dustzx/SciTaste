@@ -209,6 +209,16 @@ formal-ready curation and pair qualification, and arm-specific token traces, the
 requires the manifest contexts to equal the curation package exactly. An opaque
 placeholder file or supplied 64-hex receipt is not admissible evidence.
 
+Treatment correctness must also survive generation and human review. A formal
+schema-1.2 reviewer manifest publicly commits the exact formal v3 suite, typed
+treatment manifest, and a private self-hashed generation ledger. Each case's
+three arms share seed, candidate order, provider, and model; every arm binds its
+reconstructed benchmark request fingerprint, construction receipt, execution
+trace, and output bytes. The ledger remains condition-private until both reviews
+for every H1/H2 comparison are locked. Only then may schema-1.1 blind opening
+replay the ledger and prove that X/Y were the committed outputs. Legacy formal
+schema 1.1 remains inspectable but is not admissible to the H1/H2 title gate.
+
 Two oracle-controlled directional contrasts are preregistered: H1 compares
 matched abstraction against same-source raw RAG with representation as the only
 permitted difference; H2a compares matched against mismatched abstractions with

@@ -2895,3 +2895,34 @@ This is an identity and provenance gate, not evidence of treatment quality or a
 causal effect. It opens only declared local evidence files and grants no source
 acquisition, model/API/GPU use, reviewer recruitment, experiment execution, blind
 opening, or title claim.
+
+### ADR-095: Formal H1/H2 review opens a precommitted generation ledger
+
+Status: accepted and executable at generation-record, reviewer-manifest,
+post-lock blind-opening, and analysis-admission boundaries; no real H1/H2 output,
+human judgment, or effect has been produced.
+
+The earlier blind-review contract committed X/Y ordering and prevented condition
+relabeling after review, but its generation-trace fields could contain arbitrary
+hashes. Consequently, a statistically correct H1/H2 analysis could still review
+outputs that did not come from the compiled v3 cases and exact treatment
+contexts. Treatment construction and outcome identity were separately valid but
+not continuous.
+
+SciTaste therefore adds a private, self-hashed treatment-generation ledger. Each
+record binds a held-out case and source group, one of the three registered
+conditions, seed and candidate order, the reconstructed benchmark request
+fingerprint, treatment-construction receipt, provider/model identity, execution
+trace bytes, output bytes, and generation time. Every case must contain exactly
+one complete triplet with common runtime identity; one ledger cannot mix models.
+The public schema-1.2 study commits the formal v3 suite and treatment-manifest
+file and semantic hashes plus the ledger hash without exposing condition
+mapping. The schema-1.1 opening may reveal the ledger only after the entire
+primary review set is locked.
+
+Analysis admission reloads the suite and treatment manifest, requires the exact
+formal case population and mechanism contexts, reconstructs every request, and
+checks that each reviewer-visible X/Y byte binding resolves to the committed
+condition record. Formal schema-1.1 studies remain readable for historical
+inspection but cannot enter the title gate. The ledger records prior execution;
+it authorizes no model/API/GPU use, human recruitment, experiment, or claim.

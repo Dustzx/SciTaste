@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the formal H1/H2 reviewer-output identity gap. Human-study schema 1.2
+  now precommits the exact formal SciTasteBench v3 suite, typed treatment
+  manifest, and a private self-hashed generation ledger. Post-lock blind opening
+  replays every case, condition request, treatment receipt, model/runtime
+  identity, execution trace, and reviewer-visible output before analysis; legacy
+  schema 1.1 remains readable but cannot enter the formal title gate. The
+  inspection path also computes the study identity once, avoiding quadratic
+  overhead at the 120-source-group formal scale.
 - Closed the SciTasteBench v3 treatment-manifest gap. H1/H2 curation now requires
   a typed, self-hashed, exact-population manifest rather than any hash-matched
   file. Per-arm construction receipts bind rendered contexts, ordered source and

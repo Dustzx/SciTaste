@@ -56,6 +56,137 @@ class HumanStudyFileBinding(BaseModel):
         return self
 
 
+class HumanStudyTreatmentCommitment(BaseModel):
+    """Public hashes for private treatment/generation evidence opened after review lock."""
+
+    model_config = _CONFIG
+
+    benchmark_suite_file_sha256: str = Field(pattern=_SHA256)
+    benchmark_suite_semantic_sha256: str = Field(pattern=_SHA256)
+    reference_treatment_manifest_file_sha256: str = Field(pattern=_SHA256)
+    reference_treatment_manifest_semantic_sha256: str = Field(pattern=_SHA256)
+    generation_ledger_sha256: str = Field(pattern=_SHA256)
+
+
+class TreatmentGenerationRecord(BaseModel):
+    """Private condition-bound generation evidence for one held-out case."""
+
+    model_config = _CONFIG
+
+    record_id: str = Field(pattern=_ID)
+    case_id: str = Field(pattern=_ID)
+    source_group: str = Field(pattern=_ID)
+    condition: TasteStudyCondition
+    seed: int = Field(ge=0, le=2**63 - 1)
+    candidate_order: Literal["declared", "reversed"]
+    benchmark_request_fingerprint: str = Field(pattern=_SHA256)
+    treatment_construction_receipt_sha256: str = Field(pattern=_SHA256)
+    provider: str = Field(min_length=1, max_length=300)
+    model: str = Field(min_length=1, max_length=300)
+    execution_trace: HumanStudyFileBinding
+    output: HumanStudyFileBinding
+    generated_at: datetime
+    record_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def record_is_closed_and_self_hashed(self) -> TreatmentGenerationRecord:
+        if self.generated_at.utcoffset() is None:
+            raise ValueError("treatment generation timestamp must include a timezone")
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"record_sha256"}))
+        if self.record_sha256 != expected:
+            raise ValueError("treatment generation record hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TreatmentGenerationRecord:
+        payload = dict(values)
+        payload.pop("record_sha256", None)
+        unsigned = cls.model_construct(record_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            record_sha256=_canonical_sha256(
+                unsigned.model_dump(mode="json", exclude={"record_sha256"})
+            ),
+        )
+
+
+class TreatmentGenerationLedger(BaseModel):
+    """Private, precommitted bridge from v3 treatments to reviewer-visible outputs."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    ledger_id: str = Field(pattern=_ID)
+    study_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    benchmark_suite: HumanStudyFileBinding
+    benchmark_suite_semantic_sha256: str = Field(pattern=_SHA256)
+    reference_treatment_manifest: HumanStudyFileBinding
+    reference_treatment_manifest_semantic_sha256: str = Field(pattern=_SHA256)
+    entries: tuple[TreatmentGenerationRecord, ...] = Field(min_length=3, max_length=100_000)
+    created_at: datetime
+    conditions_hidden_until_review_lock: Literal[True] = True
+    authorizes_model_calls: Literal[False] = False
+    authorizes_api_spend: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_human_recruitment: Literal[False] = False
+    authorizes_experiment: Literal[False] = False
+    ledger_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def ledger_is_complete_and_self_hashed(self) -> TreatmentGenerationLedger:
+        if self.created_at.utcoffset() is None:
+            raise ValueError("treatment generation ledger timestamp must include a timezone")
+        _require_unique((item.record_id for item in self.entries), "generation record IDs")
+        identities = [(item.case_id, item.condition) for item in self.entries]
+        if len(identities) != len(set(identities)):
+            raise ValueError("treatment generation case/condition identities must be unique")
+        by_case: dict[str, list[TreatmentGenerationRecord]] = defaultdict(list)
+        for item in self.entries:
+            by_case[item.case_id].append(item)
+        if any(
+            {item.condition for item in items} != set(TasteStudyCondition)
+            for items in by_case.values()
+        ):
+            raise ValueError("every treatment generation case requires the complete triplet")
+        if any(len({item.source_group for item in items}) != 1 for items in by_case.values()):
+            raise ValueError("a treatment generation case must retain one source group")
+        if any(
+            len({(item.seed, item.candidate_order, item.provider, item.model) for item in items})
+            != 1
+            for items in by_case.values()
+        ):
+            raise ValueError(
+                "treatment generation triplets must share seed, order, provider, and model"
+            )
+        if len({(item.provider, item.model) for item in self.entries}) != 1:
+            raise ValueError("one treatment generation ledger cannot mix model identities")
+        if any(item.generated_at > self.created_at for item in self.entries):
+            raise ValueError("treatment generation ledger cannot precede a generation record")
+        outputs = [(item.output.path, item.output.sha256) for item in self.entries]
+        traces = [(item.execution_trace.path, item.execution_trace.sha256) for item in self.entries]
+        if len(outputs) != len(set(outputs)):
+            raise ValueError("treatment generation outputs must be unique per case and condition")
+        if len(traces) != len(set(traces)):
+            raise ValueError("treatment generation traces must be unique per case and condition")
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"ledger_sha256"}))
+        if self.ledger_sha256 != expected:
+            raise ValueError("treatment generation ledger hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TreatmentGenerationLedger:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("ledger_sha256", None)
+        unsigned = cls.model_construct(ledger_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            ledger_sha256=_canonical_sha256(
+                unsigned.model_dump(mode="json", exclude={"ledger_sha256"})
+            ),
+        )
+
+
 class BlindedOutputBinding(HumanStudyFileBinding):
     """Reviewer-visible output identity without its experimental condition."""
 
@@ -99,7 +230,7 @@ class HumanOutcomeStudyManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     study_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol: HumanStudyFileBinding
@@ -108,6 +239,7 @@ class HumanOutcomeStudyManifest(BaseModel):
     study_scope: Literal["pilot", "formal"] | None = None
     preference_analysis_contract: HumanStudyFileBinding | None = None
     power_analysis: HumanStudyFileBinding | None = None
+    treatment_commitment: HumanStudyTreatmentCommitment | None = None
     blind_key_sha256: str = Field(pattern=_SHA256)
     comparisons: tuple[BlindedHumanComparison, ...] = Field(min_length=4, max_length=100_000)
     reviewers_per_case_contrast: Literal[2] = 2
@@ -127,7 +259,8 @@ class HumanOutcomeStudyManifest(BaseModel):
             self.preference_analysis_contract,
         )
         if self.schema_version == "1.0" and any(
-            value is not None for value in (*analysis_extensions, self.power_analysis)
+            value is not None
+            for value in (*analysis_extensions, self.power_analysis, self.treatment_commitment)
         ):
             raise ValueError("human outcome study v1.1 is required for analysis bindings")
         if self.schema_version == "1.1":
@@ -135,6 +268,15 @@ class HumanOutcomeStudyManifest(BaseModel):
                 raise ValueError("human outcome study v1.1 requires scope and analysis contract")
             if self.study_scope == "formal" and self.power_analysis is None:
                 raise ValueError("formal human outcome study requires a bound power analysis")
+            if self.treatment_commitment is not None:
+                raise ValueError("human outcome study v1.2 is required for treatment binding")
+        if self.schema_version == "1.2":
+            if any(value is None for value in analysis_extensions):
+                raise ValueError("human outcome study v1.2 requires scope and analysis contract")
+            if self.study_scope == "formal" and self.power_analysis is None:
+                raise ValueError("formal human outcome study requires a bound power analysis")
+            if self.treatment_commitment is None:
+                raise ValueError("human outcome study v1.2 requires a treatment commitment")
         _require_unique((item.comparison_id for item in self.comparisons), "comparison IDs")
         grouped: dict[tuple[TasteMechanismHypothesis, str], list[BlindedHumanComparison]] = (
             defaultdict(list)
@@ -172,6 +314,9 @@ class HumanOutcomeStudyManifest(BaseModel):
             payload.pop("study_scope", None)
             payload.pop("preference_analysis_contract", None)
             payload.pop("power_analysis", None)
+            payload.pop("treatment_commitment", None)
+        elif self.schema_version == "1.1":
+            payload.pop("treatment_commitment", None)
         return payload
 
     @computed_field
@@ -299,11 +444,12 @@ class HumanBlindOpening(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     study_id: str = Field(pattern=_ID)
     study_sha256: str = Field(pattern=_SHA256)
     review_set_sha256: str = Field(pattern=_SHA256)
     blind_key: HumanBlindKey
+    generation_ledger: TreatmentGenerationLedger | None = None
     opened_at: datetime
     opened_after_all_primary_reviews_locked: Literal[True] = True
 
@@ -311,6 +457,10 @@ class HumanBlindOpening(BaseModel):
     def opening_time_is_aware(self) -> HumanBlindOpening:
         if self.opened_at.utcoffset() is None:
             raise ValueError("blind-opening timestamp must include a timezone")
+        if self.schema_version == "1.0" and self.generation_ledger is not None:
+            raise ValueError("human blind opening v1.1 is required for a generation ledger")
+        if self.schema_version == "1.1" and self.generation_ledger is None:
+            raise ValueError("human blind opening v1.1 requires a generation ledger")
         return self
 
 
@@ -357,6 +507,7 @@ class HumanOutcomeStudyReport(BaseModel):
     h1_contrast_verified: bool
     h2_contrast_verified: bool
     shared_triplet_identity_verified: bool
+    treatment_generation_chain_verified: bool
     ready_for_primary_analysis: bool
     outcomes: tuple[UnblindedHumanOutcome, ...]
     findings: tuple[HumanOutcomeFinding, ...]
@@ -392,6 +543,8 @@ def inspect_human_outcome_study(
 
     root = Path(evidence_root).resolve(strict=True)
     findings: list[HumanOutcomeFinding] = []
+    study_sha256 = study.study_sha256
+    assignment_sha256 = study.assignment_sha256
     bindings = (
         study.protocol,
         study.rubric,
@@ -409,7 +562,7 @@ def inspect_human_outcome_study(
     if reviews is None:
         _add(findings, "reviews-not-locked", "the complete dual-human review set is absent")
     else:
-        if reviews.study_id != study.study_id or reviews.study_sha256 != study.study_sha256:
+        if reviews.study_id != study.study_id or reviews.study_sha256 != study_sha256:
             _add(findings, "reviews-study-mismatch", "locked reviews bind another study")
             reviews_complete = False
         review_ids = {item.comparison_id for item in reviews.reviews}
@@ -420,7 +573,7 @@ def inspect_human_outcome_study(
             comparison = comparisons.get(review.comparison_id)
             if comparison is None:
                 continue
-            if review.study_sha256 != study.study_sha256:
+            if review.study_sha256 != study_sha256:
                 _add(findings, "review-study-mismatch", review.review_id)
                 reviews_complete = False
             if review.reviewer_identity_sha256 != comparison.reviewer_identity_sha256:
@@ -428,6 +581,8 @@ def inspect_human_outcome_study(
                 reviews_complete = False
 
     ready_to_open = visible_bindings and reviews_complete
+    generation_chain_required = study.schema_version == "1.2" or study.study_scope == "formal"
+    generation_chain_verified = not generation_chain_required
     blind_verified = False
     opening_order = False
     h1_verified = False
@@ -440,9 +595,9 @@ def inspect_human_outcome_study(
             _add(findings, "blind-key-commitment-mismatch", "opened key was not precommitted")
         if (
             opening.study_id != study.study_id
-            or opening.study_sha256 != study.study_sha256
+            or opening.study_sha256 != study_sha256
             or key.study_id != study.study_id
-            or key.assignment_sha256 != study.assignment_sha256
+            or key.assignment_sha256 != assignment_sha256
         ):
             _add(findings, "blind-opening-study-mismatch", "opening binds another study")
             blind_verified = False
@@ -479,6 +634,16 @@ def inspect_human_outcome_study(
             findings,
         )
         triplet_verified = _triplet_is_valid(comparisons, key_by_comparison, findings)
+        if generation_chain_required:
+            generation_chain_verified = _generation_chain_is_valid(
+                study,
+                reviews,
+                opening,
+                comparisons,
+                key_by_comparison,
+                root,
+                findings,
+            )
         if reviews is not None:
             for review in reviews.reviews:
                 comparison = comparisons.get(review.comparison_id)
@@ -521,11 +686,12 @@ def inspect_human_outcome_study(
         and h1_verified
         and h2_verified
         and triplet_verified
+        and generation_chain_verified
         and len(outcomes) == len(study.comparisons)
     )
     return HumanOutcomeStudyReport(
         study_id=study.study_id,
-        study_sha256=study.study_sha256,
+        study_sha256=study_sha256,
         comparison_count=len(study.comparisons),
         case_count=len({item.case_id for item in study.comparisons}),
         locked_review_count=len(reviews.reviews) if reviews is not None else 0,
@@ -544,6 +710,7 @@ def inspect_human_outcome_study(
         h1_contrast_verified=h1_verified,
         h2_contrast_verified=h2_verified,
         shared_triplet_identity_verified=triplet_verified,
+        treatment_generation_chain_verified=generation_chain_verified,
         ready_for_primary_analysis=ready_for_analysis,
         outcomes=tuple(outcomes),
         findings=tuple(findings),
@@ -627,6 +794,182 @@ def _triplet_is_valid(
     return valid and set(identities) == {item.case_id for item in comparisons.values()}
 
 
+def _generation_chain_is_valid(
+    study: HumanOutcomeStudyManifest,
+    reviews: LockedHumanReviewSet | None,
+    opening: HumanBlindOpening,
+    comparisons: dict[str, BlindedHumanComparison],
+    keys: dict[str, HumanBlindKeyEntry],
+    root: Path,
+    findings: list[HumanOutcomeFinding],
+) -> bool:
+    """Bind every reviewed output to its exact v3 case, treatment, request, and trace."""
+
+    from scitaste.benchmark.models import (
+        BenchmarkCondition,
+        BenchmarkEvidenceTier,
+        CandidateOrder,
+    )
+    from scitaste.benchmark.runner import load_benchmark_suite
+    from scitaste.benchmark.treatment_manifest import load_reference_treatment_manifest
+
+    if study.schema_version != "1.2" or study.treatment_commitment is None:
+        _add(
+            findings,
+            "treatment-generation-commitment-missing",
+            "formal human review requires a v1.2 treatment commitment",
+        )
+        return False
+    ledger = opening.generation_ledger
+    if opening.schema_version != "1.1" or ledger is None:
+        _add(
+            findings,
+            "treatment-generation-ledger-missing",
+            "blind opening does not contain the precommitted generation ledger",
+        )
+        return False
+    commitment = study.treatment_commitment
+    if (
+        ledger.study_id != study.study_id
+        or ledger.project_id != study.project_id
+        or ledger.ledger_sha256 != commitment.generation_ledger_sha256
+        or ledger.benchmark_suite.sha256 != commitment.benchmark_suite_file_sha256
+        or ledger.benchmark_suite_semantic_sha256 != commitment.benchmark_suite_semantic_sha256
+        or ledger.reference_treatment_manifest.sha256
+        != commitment.reference_treatment_manifest_file_sha256
+        or ledger.reference_treatment_manifest_semantic_sha256
+        != commitment.reference_treatment_manifest_semantic_sha256
+    ):
+        _add(
+            findings,
+            "treatment-generation-commitment-mismatch",
+            "opened generation ledger differs from its public commitment",
+        )
+        return False
+    if (
+        reviews is None
+        or ledger.created_at > opening.blind_key.created_at
+        or ledger.created_at > min(item.locked_at for item in reviews.reviews)
+    ):
+        _add(
+            findings,
+            "treatment-generation-ledger-timing-invalid",
+            "generation ledger was not frozen before review locking began",
+        )
+        return False
+    for binding in (ledger.benchmark_suite, ledger.reference_treatment_manifest):
+        if not _binding_matches(binding, root, findings):
+            return False
+    try:
+        suite = load_benchmark_suite(root / ledger.benchmark_suite.path)
+        treatment = load_reference_treatment_manifest(
+            root / ledger.reference_treatment_manifest.path
+        )
+    except (OSError, ValueError):
+        _add(
+            findings,
+            "treatment-generation-upstream-invalid",
+            "benchmark suite or treatment manifest cannot be replayed",
+        )
+        return False
+    if (
+        suite.version != "3.0"
+        or (
+            study.study_scope == "formal"
+            and suite.evidence_tier is not BenchmarkEvidenceTier.FORMAL
+        )
+        or suite.sha256 != ledger.benchmark_suite_semantic_sha256
+        or suite.reference_treatment_manifest_sha256 != ledger.reference_treatment_manifest.sha256
+        or treatment.manifest.manifest_sha256 != ledger.reference_treatment_manifest_semantic_sha256
+        or treatment.manifest.project_id != study.project_id
+    ):
+        _add(
+            findings,
+            "treatment-generation-upstream-mismatch",
+            "suite, treatment manifest, and generation ledger identities differ",
+        )
+        return False
+
+    suite_cases = {item.case_id: item for item in suite.cases}
+    treatment_cases = {item.case_id: item.mechanism_context for item in treatment.manifest.cases}
+    study_case_ids = {item.case_id for item in comparisons.values()}
+    ledger_case_ids = {item.case_id for item in ledger.entries}
+    if (
+        study_case_ids != ledger_case_ids
+        or study_case_ids != set(suite_cases)
+        or study_case_ids != set(treatment_cases)
+        or any(
+            case.mechanism_context is None or treatment_cases[case_id] != case.mechanism_context
+            for case_id, case in suite_cases.items()
+        )
+    ):
+        _add(
+            findings,
+            "treatment-generation-case-population-mismatch",
+            "review, generation, suite, and treatment case populations differ",
+        )
+        return False
+
+    benchmark_condition = {
+        TasteStudyCondition.MATCHED_ABSTRACTED_TASTE: (BenchmarkCondition.MATCHED_ABSTRACTED_TASTE),
+        TasteStudyCondition.SAME_SOURCE_RAW_RAG: BenchmarkCondition.RAW_SOURCE_RAG,
+        TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE: (BenchmarkCondition.MISMATCHED_TASTE),
+    }
+    context_name = {
+        TasteStudyCondition.MATCHED_ABSTRACTED_TASTE: "matched_abstracted_taste",
+        TasteStudyCondition.SAME_SOURCE_RAW_RAG: "raw_source_rag",
+        TasteStudyCondition.SOURCE_DISJOINT_MISMATCHED_TASTE: "mismatched_taste",
+    }
+    records = {(item.case_id, item.condition): item for item in ledger.entries}
+    valid = True
+    for record in ledger.entries:
+        case = suite_cases[record.case_id]
+        context = getattr(case.mechanism_context, context_name[record.condition])
+        expected_request = case.to_request(
+            benchmark_condition[record.condition],
+            seed=record.seed,
+            candidate_order=CandidateOrder(record.candidate_order),
+        )
+        if (
+            record.source_group != case.source_group_id
+            or record.treatment_construction_receipt_sha256 != context.construction_receipt_sha256
+            or record.benchmark_request_fingerprint != expected_request.fingerprint
+        ):
+            _add(
+                findings,
+                "treatment-generation-request-mismatch",
+                record.record_id,
+            )
+            valid = False
+        for binding in (record.execution_trace, record.output):
+            if not _binding_matches(binding, root, findings):
+                valid = False
+
+    for comparison_id, comparison in comparisons.items():
+        key = keys.get(comparison_id)
+        if key is None:
+            valid = False
+            continue
+        for condition, output, trace_sha256 in (
+            (key.x_condition, comparison.x_output, key.x_generation_trace_sha256),
+            (key.y_condition, comparison.y_output, key.y_generation_trace_sha256),
+        ):
+            record = records.get((comparison.case_id, condition))
+            if record is None or (
+                record.source_group != comparison.source_group
+                or record.output.path != output.path
+                or record.output.sha256 != output.sha256
+                or record.record_sha256 != trace_sha256
+            ):
+                _add(
+                    findings,
+                    "treatment-generation-reviewed-output-mismatch",
+                    comparison_id,
+                )
+                valid = False
+    return valid
+
+
 def _binding_matches(
     binding: HumanStudyFileBinding,
     root: Path,
@@ -708,10 +1051,13 @@ __all__ = [
     "HumanPairwisePreference",
     "HumanReviewDisposition",
     "HumanStudyFileBinding",
+    "HumanStudyTreatmentCommitment",
     "LockedHumanOutcomeReview",
     "LockedHumanReviewSet",
     "TasteMechanismHypothesis",
     "TasteStudyCondition",
+    "TreatmentGenerationLedger",
+    "TreatmentGenerationRecord",
     "UnblindedHumanOutcome",
     "inspect_human_outcome_study",
     "load_human_blind_opening",

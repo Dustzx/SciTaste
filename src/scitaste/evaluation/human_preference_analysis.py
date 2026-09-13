@@ -252,8 +252,10 @@ def analyze_human_preferences(
     """Compute H1/H2 source-group effects from the already-unblinded report."""
 
     root = Path(evidence_root).resolve(strict=True)
-    if study.schema_version != "1.1" or study.study_scope is None:
+    if study.schema_version not in {"1.1", "1.2"} or study.study_scope is None:
         raise ValueError("human preference analysis requires a scoped v1.1 study")
+    if study.study_scope == "formal" and study.schema_version != "1.2":
+        raise ValueError("formal human preference analysis requires treatment-bound v1.2")
     if study.preference_analysis_contract is None:
         raise ValueError("human study does not bind a preference analysis contract")
     _require_binding(study.preference_analysis_contract, root, "analysis contract")

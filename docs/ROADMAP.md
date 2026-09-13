@@ -29,6 +29,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.9 — matched H0 source-selection freeze | done | one complete pool feeds type-separated quality and age-normalized-prestige selectors at exact source-count, pattern/role/domain-stratum, downstream-protocol, and token-budget parity; approval and replay still grant no experiment authority |
 | Phase 8.10 — H0 source-arm identity continuity | done | one predeclared representation hash and approval-gated projection bind the exact frozen quality/prestige arm union to identical canonical source bytes, preserve natural overlap once, and retain rejected-but-safe prestige sources without granting model or experiment authority |
 | Phase 8.11 — H1/H2 treatment identity continuity | done | a self-hashed, per-case and per-arm manifest replays projected source identities, matched/mismatched Taste corpus provenance, formal curation/pair status, exact token traces, and complete benchmark-context equality before v3 compilation |
+| Phase 8.12 — H1/H2 reviewer-output identity continuity | done | a precommitted private generation ledger binds every formal v3 case and treatment request to its execution trace and reviewer-visible output, then opens only after all primary reviews lock |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -67,6 +68,17 @@ receipt, matched/mismatched corpus provenance, formal-ready curation and qualifi
 pair reports, and arm-specific token traces before requiring byte-for-byte model
 equality with the curation package. This closes software provenance only; no real
 source was read, no treatment was rendered, and no H1/H2 judgment was collected.
+
+The formal H1/H2 endpoint can no longer attach arbitrary trace hashes to an
+otherwise valid blind key. Human-study schema 1.2 commits the exact formal v3
+suite, treatment manifest, and private generation ledger before review. The
+ledger retains one complete condition triplet per held-out case, shared runtime
+identity within each triplet, reconstructed request fingerprints, construction
+receipts, execution traces, and output bytes. Blind opening replays the entire
+case population and requires every X/Y binding to resolve to the corresponding
+condition record after all reviews lock. Legacy schema 1.1 remains readable but
+cannot pass formal H1/H2 analysis. This closes software identity continuity; it
+does not create a real generation, reviewer judgment, or effect.
 
 The runtime selection path no longer treats topical retrieval as Scientific
 Taste. A bounded broad pool is projected into an outcome-hidden
@@ -1273,10 +1285,12 @@ citation/resource screen and exact adapters/licenses remain open.
   a new formal manifest at one executable commit, approve its declared resources,
   collect real measurements, and run the already-frozen analysis. No H3 effect is
   currently established.
-- Done at the software boundary: a schema-1.1 human study binds the post-pilot
-  analysis and power bytes, and `human-preference-analyze` computes equal-weight
-  source-group H1/H2 effects, intervals, sign-flip tests, Holm decisions,
-  missingness, and reviewer diagnostics after valid blind opening.
+- Done at the software boundary: a schema-1.2 formal human study binds the
+  post-pilot analysis and power bytes plus the formal v3 suite, treatment
+  manifest, and private generation ledger. `human-preference-analyze` computes
+  equal-weight source-group H1/H2 effects, intervals, sign-flip tests, Holm
+  decisions, missingness, and reviewer diagnostics only after treatment-bound
+  blind opening.
 - Pending scientific evidence: run the approved pilot, use its disagreement and
   reviewer/source variance to choose and power the final formal estimator, freeze
   a new formal contract, recruit independent reviewers, and collect real H1/H2
