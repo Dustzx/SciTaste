@@ -50,6 +50,30 @@ counterbalanced X/Y order. The compiler does not recruit or contact them and
 does not call a model, API, GPU, or experiment. Condition-bearing private files
 must remain inaccessible until all primary reviews are locked.
 
+## Running and locking reviewer sessions
+
+`scitaste evaluation human-review-session-prepare` builds one offline workspace
+for one of the two reviewer pseudonym hashes already assigned in the public
+study. It rechecks the treatment-bound suite identity, committed rubric and
+interface bytes, every assigned output digest, and exact half-study coverage.
+The resulting `review.html` is self-contained: the reviewer sees the shared
+decision context and two equal-layout outputs in a fixed-height workspace, can
+navigate assigned comparisons without one long document, saves drafts only in
+browser-local storage, and exports a JSON submission only after every response,
+rationale, missingness reason when applicable, and independence/blinding
+attestation is complete.
+
+The two exported submissions are inputs to
+`scitaste evaluation human-review-lock`. The command rejects a foreign session,
+reviewer mismatch, missing or duplicate comparison, invalid response, future
+submission time, overlapping assignment, or a lock timestamp preceding a
+submission. Its schema-1.1 review set content-addresses both session JSON files
+and both raw submissions. A treatment-bound formal study will not become ready
+to open its key from a legacy hand-authored review set lacking these bindings.
+Neither command recruits or contacts reviewers; informed consent, qualification,
+conflict clearance, compensation, and owner recruitment approval remain
+external human-resource gates.
+
 A schema-1.2 formal human study binds its scope, exact post-pilot analysis
 contract, power-analysis bytes, formal v3 suite identity, treatment-manifest
 identity, and generation-ledger commitment before outcome review. The ledger is

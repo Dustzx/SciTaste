@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added an executable human endpoint for SciTasteBench v3. Each preassigned
+  reviewer now receives a self-contained, condition-blind HTML workspace with
+  the exact committed case context, side-by-side X/Y decisions, local draft
+  recovery, keyboard/accessibility controls, explicit lock attestations, and a
+  complete JSON export. `evaluation human-review-lock` verifies both exact
+  assignment blocks and freezes a schema-1.1 review set that content-addresses
+  the two sessions and submissions; formal analysis rejects legacy unbound
+  review sets. No reviewer is recruited or contacted by these commands.
 - Added the executable bridge from completed SciTasteBench v3 calls to blinded
   H1/H2 review. Recording rows now carry timezone-aware timestamps, while the
   offline `evaluation human-study-prepare` compiler requires the exact selected

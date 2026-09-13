@@ -159,6 +159,7 @@ from scitaste.evaluation import (
     load_task_selection_manifest,
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
+    lock_human_reviewer_submissions,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
     materialize_objective_analysis,
@@ -169,6 +170,7 @@ from scitaste.evaluation import (
     plan_clustered_power,
     plan_structured_metadata_audit,
     prepare_human_outcome_study,
+    prepare_human_reviewer_session,
     prepare_project_evaluation,
     prepare_project_evaluation_result,
     project_benchmark_metadata_population,
@@ -1640,6 +1642,34 @@ def build_parser() -> argparse.ArgumentParser:
     human_study_prepare.add_argument("--output", type=Path, required=True)
     _add_log_level_option(human_study_prepare)
     human_study_prepare.set_defaults(handler=_handle_evaluation_human_study_prepare)
+    human_review_session = evaluation_commands.add_parser(
+        "human-review-session-prepare",
+        help="Build one self-contained condition-blind reviewer workspace",
+    )
+    human_review_session.add_argument("--study", type=Path, required=True)
+    human_review_session.add_argument("--suite", type=Path, required=True)
+    human_review_session.add_argument("--reviewer-identity-sha256", required=True)
+    human_review_session.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_review_session.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(human_review_session)
+    human_review_session.set_defaults(handler=_handle_evaluation_human_review_session)
+    human_review_lock = evaluation_commands.add_parser(
+        "human-review-lock",
+        help="Validate two complete reviewer exports and freeze the primary review set",
+    )
+    human_review_lock.add_argument("--study", type=Path, required=True)
+    human_review_lock.add_argument("--suite", type=Path, required=True)
+    human_review_lock.add_argument(
+        "--session", type=Path, action="append", required=True, help="Provide exactly twice"
+    )
+    human_review_lock.add_argument(
+        "--submission", type=Path, action="append", required=True, help="Provide exactly twice"
+    )
+    human_review_lock.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_review_lock.add_argument("--output", type=Path, required=True)
+    human_review_lock.add_argument("--report", type=Path, required=True)
+    _add_log_level_option(human_review_lock)
+    human_review_lock.set_defaults(handler=_handle_evaluation_human_review_lock)
     human_outcome = evaluation_commands.add_parser(
         "human-outcome-audit",
         help="Audit locked H1/H2 human outcomes and optional post-lock unblinding",
@@ -5476,6 +5506,55 @@ def _handle_evaluation_human_study_prepare(args: argparse.Namespace) -> int:
         maximum_output_tokens=args.maximum_output_tokens,
     )
     print(prepared.report.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_evaluation_human_review_session(args: argparse.Namespace) -> int:
+    session = prepare_human_reviewer_session(
+        evidence_root=args.evidence_root,
+        study_path=args.study,
+        benchmark_suite_path=args.suite,
+        reviewer_identity_sha256=args.reviewer_identity_sha256,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "session_id": session.session_id,
+                "session_sha256": session.session_sha256,
+                "comparison_count": len(session.comparisons),
+                "session": str(args.output / "session.json"),
+                "reviewer_ui": str(args.output / "review.html"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_human_review_lock(args: argparse.Namespace) -> int:
+    if len(args.session) != 2 or len(args.submission) != 2:
+        raise ValueError("--session and --submission must each be provided exactly twice")
+    review_set, report = lock_human_reviewer_submissions(
+        evidence_root=args.evidence_root,
+        study_path=args.study,
+        benchmark_suite_path=args.suite,
+        session_paths=tuple(args.session),
+        submission_paths=tuple(args.submission),
+        output_path=args.output,
+        report_path=args.report,
+    )
+    print(
+        json.dumps(
+            {
+                "review_set_sha256": review_set.review_set_sha256,
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

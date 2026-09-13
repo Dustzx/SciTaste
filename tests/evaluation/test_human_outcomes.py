@@ -41,10 +41,12 @@ from scitaste.evaluation import (
     HumanPairwisePreference,
     HumanPreferenceAnalysisContract,
     HumanPreferenceHypothesisRule,
+    HumanReviewerSubmission,
     HumanStudyFileBinding,
     HumanStudyPreparation,
     LockedHumanOutcomeReview,
     LockedHumanReviewSet,
+    ReviewerSubmissionResponse,
     TasteMechanismHypothesis,
     TasteStudyCondition,
     TreatmentGenerationLedger,
@@ -52,7 +54,9 @@ from scitaste.evaluation import (
     inspect_human_outcome_study,
     load_human_outcome_study,
     load_human_preference_analysis_contract,
+    lock_human_reviewer_submissions,
     prepare_human_outcome_study,
+    prepare_human_reviewer_session,
     save_human_preference_analysis_contract,
 )
 from scitaste.schema.actions import MetaAction, ResearchAction
@@ -132,7 +136,7 @@ def test_changed_blind_key_cannot_relabel_locked_reviews(tmp_path: Path) -> None
 
 def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -> None:
     study, key, contract_path, ledger, prepared = _formal_study(tmp_path, source_groups=120)
-    reviews = _reviews_for_key(study, key)
+    reviews, sessions = _collected_reviews_for_key(study, key, tmp_path)
     opening = HumanBlindOpening(
         schema_version="1.1",
         study_id=study.study_id,
@@ -158,7 +162,21 @@ def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -
     )
 
     assert outcome_report.ready_for_primary_analysis is True
+    assert outcome_report.review_collection_bindings_verified is True
     assert outcome_report.treatment_generation_chain_verified is True
+    legacy_reviews = LockedHumanReviewSet(
+        study_id=reviews.study_id,
+        study_sha256=reviews.study_sha256,
+        reviews=reviews.reviews,
+        locked_at=reviews.locked_at,
+    )
+    legacy_report = inspect_human_outcome_study(
+        study,
+        evidence_root=tmp_path,
+        reviews=legacy_reviews,
+    )
+    assert legacy_report.ready_to_open_blind_key is False
+    assert any(item.code == "reviews-not-session-bound" for item in legacy_report.findings)
     assert analysis.formal_joint_title_gate_passed is True
     assert len(analysis.hypotheses) == 2
     assert all(item.independent_source_group_count == 120 for item in analysis.hypotheses)
@@ -191,6 +209,10 @@ def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -
     ]
     assert blinding_secret not in public_payload
     assert blinding_secret not in prepared.report.model_dump_json()
+    assert all("fixture-provider" not in path.read_text(encoding="utf-8") for path in sessions)
+    assert all(
+        "matched-abstracted-taste" not in path.read_text(encoding="utf-8") for path in sessions
+    )
     assert load_human_outcome_study(prepared.study_path) == study
     assert (
         HumanBlindKey.model_validate_json(prepared.blind_key_path.read_text(encoding="utf-8"))
@@ -245,7 +267,7 @@ def _assert_wrong_generation_record_is_rejected(
         **payload,
         blind_key_sha256=changed_key.blind_key_sha256,
     )
-    reviews = _reviews_for_key(changed_study, changed_key)
+    reviews, _sessions = _collected_reviews_for_key(changed_study, changed_key, root)
     opening = HumanBlindOpening(
         schema_version="1.1",
         study_id=changed_study.study_id,
@@ -394,10 +416,22 @@ def _formal_study(
         contract, tmp_path / "analysis-contract.json"
     )
     inputs = {}
-    for name in ("protocol", "rubric", "interface", "power"):
+    for name in ("protocol", "power"):
         path = tmp_path / f"{name}.txt"
         path.write_text(name + "\n", encoding="utf-8")
         inputs[name] = path
+    inputs["rubric"] = tmp_path / "rubric.yaml"
+    inputs["rubric"].write_text(
+        "primary_question: Which response is the stronger scientific next action?\n"
+        "decision_standard:\n"
+        "  - question: Is the action appropriate?\n"
+        "  - question: Is the claim calibrated?\n"
+        "tie_rule: Use a tie for no substantive difference.\n"
+        "cannot_assess_rule: Use cannot-assess only when evidence is insufficient.\n",
+        encoding="utf-8",
+    )
+    inputs["interface"] = tmp_path / "interface.yaml"
+    inputs["interface"].write_text("layout: side-by-side\n", encoding="utf-8")
     suite, _suite_binding, _treatment_binding, _treatment_semantic_sha256 = (
         _formal_benchmark_population(tmp_path, source_groups=source_groups)
     )
@@ -747,32 +781,69 @@ def _reviews(study: HumanOutcomeStudyManifest) -> LockedHumanReviewSet:
     )
 
 
-def _reviews_for_key(
+def _collected_reviews_for_key(
     study: HumanOutcomeStudyManifest,
     key: HumanBlindKey,
-) -> LockedHumanReviewSet:
-    locked_at = datetime(2026, 9, 12, 2, tzinfo=UTC)
-    study_sha256 = study.study_sha256
+    root: Path,
+) -> tuple[LockedHumanReviewSet, tuple[Path, Path]]:
+    study_suffix = study.study_sha256[:10]
     key_by_comparison = {item.comparison_id: item for item in key.entries}
-    return LockedHumanReviewSet(
-        study_id=study.study_id,
-        study_sha256=study_sha256,
-        reviews=tuple(
-            LockedHumanOutcomeReview(
-                review_id=f"formal-review-{index}",
-                comparison_id=item.comparison_id,
-                study_sha256=study_sha256,
-                reviewer_identity_sha256=item.reviewer_identity_sha256,
-                preference=(
-                    HumanPairwisePreference.X
-                    if key_by_comparison[item.comparison_id].x_condition
-                    is TasteStudyCondition.MATCHED_ABSTRACTED_TASTE
-                    else HumanPairwisePreference.Y
-                ),
-                rationale="The matched Taste decision is more scientifically calibrated.",
-                locked_at=locked_at,
-            )
-            for index, item in enumerate(study.comparisons, start=1)
-        ),
-        locked_at=locked_at,
+    study_path = root / f"study-{study_suffix}.json"
+    study_path.write_text(
+        json.dumps(
+            study.model_dump(mode="json", exclude={"assignment_sha256", "study_sha256"}),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
     )
+    session_paths = []
+    submission_paths = []
+    for reviewer_index, reviewer_identity in enumerate(("2" * 64, "3" * 64), 1):
+        output_dir = root / f"reviewer-{reviewer_index}-{study_suffix}"
+        session = prepare_human_reviewer_session(
+            evidence_root=root,
+            study_path=study_path,
+            benchmark_suite_path=root / "benchmark-suite.yaml",
+            reviewer_identity_sha256=reviewer_identity,
+            output_dir=output_dir,
+            prepared_at=datetime(2026, 9, 12, 1, 30, tzinfo=UTC),
+        )
+        session_path = output_dir / "session.json"
+        submission = HumanReviewerSubmission(
+            session_id=session.session_id,
+            session_sha256=session.session_sha256,
+            study_sha256=study.study_sha256,
+            reviewer_identity_sha256=reviewer_identity,
+            review_started_at=datetime(2026, 9, 12, 1, 35, tzinfo=UTC),
+            submitted_at=datetime(2026, 9, 12, 1, 55, tzinfo=UTC),
+            responses=tuple(
+                ReviewerSubmissionResponse(
+                    comparison_id=item.comparison_id,
+                    response=(
+                        "X"
+                        if key_by_comparison[item.comparison_id].x_condition
+                        is TasteStudyCondition.MATCHED_ABSTRACTED_TASTE
+                        else "Y"
+                    ),
+                    rationale=("The matched Taste decision is more scientifically calibrated."),
+                    duration_seconds=30,
+                )
+                for item in session.comparisons
+            ),
+        )
+        submission_path = root / f"reviewer-{reviewer_index}-{study_suffix}-submission.json"
+        submission_path.write_text(submission.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        session_paths.append(session_path)
+        submission_paths.append(submission_path)
+    review_set, _report = lock_human_reviewer_submissions(
+        evidence_root=root,
+        study_path=study_path,
+        benchmark_suite_path=root / "benchmark-suite.yaml",
+        session_paths=(session_paths[0], session_paths[1]),
+        submission_paths=(submission_paths[0], submission_paths[1]),
+        output_path=root / f"locked-reviews-{study_suffix}.json",
+        report_path=root / f"review-collection-{study_suffix}.json",
+        locked_at=datetime(2026, 9, 12, 2, tzinfo=UTC),
+    )
+    return review_set, (session_paths[0], session_paths[1])

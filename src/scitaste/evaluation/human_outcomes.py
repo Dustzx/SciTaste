@@ -415,10 +415,12 @@ class LockedHumanReviewSet(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     study_id: str = Field(pattern=_ID)
     study_sha256: str = Field(pattern=_SHA256)
     reviews: tuple[LockedHumanOutcomeReview, ...] = Field(min_length=4, max_length=100_000)
+    reviewer_sessions: tuple[HumanStudyFileBinding, ...] = Field(default=(), max_length=100)
+    reviewer_submissions: tuple[HumanStudyFileBinding, ...] = Field(default=(), max_length=100)
     locked_at: datetime
     all_primary_reviews_locked: Literal[True] = True
     outcome_adjudication_performed: Literal[False] = False
@@ -431,7 +433,30 @@ class LockedHumanReviewSet(BaseModel):
             raise ValueError("review-set lock timestamp must include a timezone")
         if any(item.locked_at > self.locked_at for item in self.reviews):
             raise ValueError("review-set lock cannot precede a contained review")
+        collection_bindings = (self.reviewer_sessions, self.reviewer_submissions)
+        if self.schema_version == "1.0" and any(collection_bindings):
+            raise ValueError("human review set v1.1 is required for collection bindings")
+        if self.schema_version == "1.1":
+            if any(len(items) != 2 for items in collection_bindings):
+                raise ValueError("human review set v1.1 requires two sessions and submissions")
+            for label, items in (
+                ("reviewer sessions", self.reviewer_sessions),
+                ("reviewer submissions", self.reviewer_submissions),
+            ):
+                identities = {(item.path, item.sha256) for item in items}
+                if len(identities) != len(items):
+                    raise ValueError(f"{label} must be unique")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_absent_collection_bindings(self, handler):  # type: ignore[no-untyped-def]
+        """Keep frozen v1.0 review sets byte-compatible."""
+
+        payload = handler(self)
+        if self.schema_version == "1.0":
+            payload.pop("reviewer_sessions", None)
+            payload.pop("reviewer_submissions", None)
+        return payload
 
     @computed_field
     @property
@@ -500,6 +525,7 @@ class HumanOutcomeStudyReport(BaseModel):
     missing_preference_count: int = Field(ge=0)
     source_group_count: int = Field(ge=0)
     reviewer_visible_bindings_verified: bool
+    review_collection_bindings_verified: bool
     complete_dual_review_verified: bool
     ready_to_open_blind_key: bool
     blind_key_commitment_verified: bool
@@ -559,9 +585,26 @@ def inspect_human_outcome_study(
 
     comparisons = {item.comparison_id: item for item in study.comparisons}
     reviews_complete = reviews is not None
+    collection_bindings_verified = reviews is None or reviews.schema_version == "1.0"
     if reviews is None:
         _add(findings, "reviews-not-locked", "the complete dual-human review set is absent")
     else:
+        collection_required = study.schema_version == "1.2" or study.study_scope == "formal"
+        if collection_required and reviews.schema_version != "1.1":
+            _add(
+                findings,
+                "reviews-not-session-bound",
+                "formal reviews were not compiled from bound reviewer sessions and submissions",
+            )
+            reviews_complete = False
+            collection_bindings_verified = False
+        elif reviews.schema_version == "1.1":
+            collection_bindings_verified = all(
+                _binding_matches(item, root, findings)
+                for item in (*reviews.reviewer_sessions, *reviews.reviewer_submissions)
+            )
+            if not collection_bindings_verified:
+                reviews_complete = False
         if reviews.study_id != study.study_id or reviews.study_sha256 != study_sha256:
             _add(findings, "reviews-study-mismatch", "locked reviews bind another study")
             reviews_complete = False
@@ -703,6 +746,7 @@ def inspect_human_outcome_study(
         else 0,
         source_group_count=len({item.source_group for item in study.comparisons}),
         reviewer_visible_bindings_verified=visible_bindings,
+        review_collection_bindings_verified=collection_bindings_verified,
         complete_dual_review_verified=reviews_complete,
         ready_to_open_blind_key=ready_to_open,
         blind_key_commitment_verified=blind_verified,

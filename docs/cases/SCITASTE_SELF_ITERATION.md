@@ -1311,3 +1311,32 @@ blinding eliminates stylistic clues inside model prose; the interface protocol
 and independent reviewers remain necessary. No quarantined content, API, GPU,
 model, or human resource was used. The next real gate remains the separately
 authorized AAAR content audit.
+
+## Making the blind package usable by an actual reviewer (2026-09-13)
+
+The next self-iteration followed the public blind package from the operator's
+perspective into the reviewer experience. The package contained valid opaque X/Y
+outputs but no executable surface that combined the committed decision context,
+matched presentation, response constraints, assignment partition, and final
+lock. A spreadsheet or hand-built form at this boundary would weaken the exact
+identity chain just established by the experiment compiler.
+
+SciTaste now compiles one self-contained offline HTML workspace for each of the
+two preassigned reviewer pseudonyms. It verifies the exact treatment-bound suite
+and output bytes, shows the case and side-by-side decisions in one bounded
+viewport, retains drafts only in browser-local storage, and requires complete
+responses, rationales, missingness reasons, and independence/blinding
+attestations before export. A second compiler consumes the two session JSON
+files and two exports, rejects missing, overlapping, foreign, or time-inconsistent
+records, and freezes a schema-1.1 review set that binds all four files before the
+private key can open. Formal treatment-bound studies reject legacy unbound
+review sets.
+
+The 120-source-group acceptance path exercised 240 assignments per reviewer,
+360 generated decision artifacts, and 480 locked comparisons through the actual
+session and collection code. A headless browser render confirmed that context,
+X/Y outputs, progress, and response controls remain simultaneously visible
+instead of forming one long vertical document. This is engineering evidence,
+not a human-usability result or a scientific effect. No source corpus, model,
+API, GPU, recruited reviewer, or experiment was used; qualified independent
+review and the separately authorized AAAR content audit remain real gates.

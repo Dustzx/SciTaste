@@ -31,6 +31,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.11 — H1/H2 treatment identity continuity | done | a self-hashed, per-case and per-arm manifest replays projected source identities, matched/mismatched Taste corpus provenance, formal curation/pair status, exact token traces, and complete benchmark-context equality before v3 compilation |
 | Phase 8.12 — H1/H2 reviewer-output identity continuity | done | a precommitted private generation ledger binds every formal v3 case and treatment request to its execution trace and reviewer-visible output, then opens only after all primary reviews lock |
 | Phase 8.13 — H1/H2 blind-package materialization | done | one offline compiler turns exact timestamped benchmark recordings into opaque reviewer outputs, a public schema-1.2 commitment, and private counterbalanced key/ledger artifacts without model or human action |
+| Phase 8.14 — H1/H2 reviewer session and lock | done | two self-contained, assignment-specific blind workspaces expose exact case context and X/Y decisions; complete exports compile into a session/submission-bound immutable review set before key opening |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -90,6 +91,19 @@ It atomically emits condition-free opaque reviewer artifacts, a public study,
 and private counterbalanced blind key, traces, and generation ledger. This makes
 the next authorized pilot operationally runnable; it still performs no model
 call, reviewer contact, blind opening, or effect estimation.
+
+The reviewer endpoint is now executable rather than an interaction sketch.
+`human-review-session-prepare` verifies the exact treatment-bound study, suite,
+rubric, interface, and output bytes before creating one reviewer-specific,
+self-contained offline HTML workspace. It exposes the shared decision context
+and side-by-side X/Y outputs without condition, model, provider, trace, path, or
+other-reviewer data. Local drafts do not enter project evidence; explicit final
+attestations export one complete condition-blind submission. After both exports
+exist, `human-review-lock` requires exact non-overlapping assignment coverage and
+binds both sessions and submissions into schema-1.1 locked reviews. Formal
+studies reject legacy review sets lacking those byte bindings. This closes the
+UI-to-analysis software path but does not recruit a reviewer or turn fixture
+responses into human evidence.
 
 The runtime selection path no longer treats topical retrieval as Scientific
 Taste. A bounded broad pool is projected into an outcome-hidden
@@ -167,9 +181,10 @@ distinct reviewers are assigned to every H1/H2 case contrast; their responses
 and missingness lock before the precommitted key can be opened. The audit then
 requires the same matched-Taste output across each case's raw-RAG and mismatched-
 Taste comparisons and retains disagreement without outcome adjudication. The
-rubric and interaction contract are frozen, while UI implementation, reviewer
-recruitment, the excluded pilot, power analysis, and formal outcomes remain
-open. The AAAR receipt-to-pilot transition is also ordered explicitly, so a
+rubric, interaction contract, reviewer workspace, and collection lock are
+implemented, while reviewer qualification/recruitment, the excluded pilot,
+power analysis, and formal outcomes remain open. The AAAR receipt-to-pilot
+transition is also ordered explicitly, so a
 download cannot silently become model context or a benchmark case.
 
 The native decision path now includes a shared model-backed candidate

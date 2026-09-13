@@ -2956,3 +2956,32 @@ per-record traces, the secret, key, and generation ledger remain condition-beari
 and must not be released until review lock. The compiler packages already
 authorized execution evidence; it grants no authority to generate it or to
 recruit reviewers.
+
+### ADR-097: Formal human outcomes compile through reviewer-specific blind sessions
+
+Status: accepted and executable at offline session, browser interaction,
+submission collection, and review-lock boundaries; no reviewer has been
+recruited and no real H1/H2 judgment has been collected.
+
+A condition-hidden study manifest and opaque output files are not yet a usable
+human endpoint. Asking operators to assemble forms or transcribe responses would
+omit the committed case context, invite assignment drift, expose other-reviewer
+state, and leave no byte-level connection between what a reviewer saw and the
+review set opened for analysis.
+
+SciTaste therefore compiles one self-contained offline HTML session per
+preassigned reviewer. The compiler rechecks the exact formal suite commitment,
+rubric, interface, assigned comparisons, and output bytes, then embeds only the
+shared decision context and condition-free X/Y decisions. The viewport keeps
+context, pair, and response controls simultaneously navigable; local draft state
+never becomes research evidence. Final export requires complete responses,
+rationales, missingness reasons, and explicit independence, conflict, and
+blinding attestations.
+
+The collection compiler accepts exactly two non-overlapping sessions and two
+complete exports, verifies the original assignment partition, fixes the lock
+time, and writes a schema-1.1 review set that binds all four source files.
+Treatment-bound formal studies reject legacy unbound review sets before blind
+opening. Browser timestamps and attestations remain human-reported evidence,
+not cryptographic proof of identity. These tools grant no consent, recruitment,
+compensation, model, API, GPU, experiment, or blind-opening authority.

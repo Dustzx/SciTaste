@@ -104,7 +104,7 @@ implementation:
   opening_binds-complete-locked-review-set: true
 readiness:
   rubric: design-frozen
-  interface: interaction-contract-frozen-ui-implementation-pending
+  interface: interaction-contract-frozen-ui-implemented
   locking-and-unblinding-audit: implemented
   recruitment: pending-owner-approval
   domain-coverage: pending

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SciTaste blind review</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17201d;
+      --muted: #66706c;
+      --paper: #f3f1ea;
+      --card: #fffef9;
+      --line: #d8d5ca;
+      --accent: #1d6b57;
+      --accent-soft: #dcece5;
+      --warning: #9b4d24;
+      --shadow: 0 12px 30px rgba(28, 39, 34, .08);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font: 15px/1.48 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; }
+    header {
+      display: flex; align-items: center; gap: 18px; min-height: 66px; padding: 12px 22px;
+      border-bottom: 1px solid var(--line); background: rgba(255, 254, 249, .94);
+    }
+    .brand { font-family: Georgia, serif; font-size: 21px; letter-spacing: -.02em; white-space: nowrap; }
+    .study { min-width: 0; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+    .progress { margin-left: auto; display: flex; align-items: center; gap: 10px; min-width: 210px; }
+    .track { height: 6px; flex: 1; border-radius: 9px; overflow: hidden; background: #e4e1d8; }
+    .bar { height: 100%; width: 0; background: var(--accent); transition: width .2s ease; }
+    .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 0; }
+    nav { overflow: auto; padding: 18px 14px; border-right: 1px solid var(--line); background: #ebe8df; }
+    nav h2 { margin: 0 6px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+    .case-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .case-dot {
+      aspect-ratio: 1; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--muted);
+    }
+    .case-dot.active { outline: 2px solid var(--accent); border-color: transparent; color: var(--accent); }
+    .case-dot.complete { background: var(--accent-soft); color: var(--accent); border-color: #b8d4c9; }
+    main { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+    .context {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: start;
+      padding: 15px 20px; border-bottom: 1px solid var(--line); background: var(--card);
+    }
+    .context h1 { margin: 0 0 5px; font: 600 16px/1.3 Georgia, serif; }
+    .context p { margin: 0; max-height: 5.8em; overflow: auto; white-space: pre-wrap; }
+    .tag { padding: 5px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-height: 0; padding: 14px 20px; }
+    .candidate { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+    .candidate h2 { margin: 0; padding: 10px 15px; border-bottom: 1px solid var(--line); font: 600 16px Georgia, serif; }
+    .candidate-body { overflow: auto; padding: 14px 16px 24px; }
+    .action { margin: 0 0 12px; font-weight: 650; }
+    .rationale { white-space: pre-wrap; }
+    .confidence { margin-top: 16px; color: var(--muted); font-size: 12px; }
+    .response { display: grid; grid-template-columns: auto minmax(220px, 1fr) auto; gap: 14px; align-items: end; padding: 12px 20px 15px; border-top: 1px solid var(--line); background: var(--card); }
+    .choices { display: flex; gap: 7px; flex-wrap: wrap; }
+    .choice { min-width: 52px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    .choice.selected { color: white; background: var(--accent); border-color: var(--accent); }
+    .rationale-field label, .reason-field label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; }
+    textarea { width: 100%; min-height: 62px; max-height: 120px; resize: vertical; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    select { max-width: 230px; padding: 9px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    .controls { display: flex; gap: 7px; }
+    .controls button, .finish button { padding: 9px 13px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+    .controls button.primary, .finish button { color: white; border-color: var(--accent); background: var(--accent); }
+    dialog { width: min(680px, calc(100% - 32px)); border: 0; border-radius: 16px; box-shadow: 0 24px 70px rgba(0,0,0,.25); }
+    dialog::backdrop { background: rgba(20, 27, 24, .55); }
+    dialog h2 { font: 600 22px Georgia, serif; }
+    .attestations { display: grid; gap: 10px; margin: 18px 0; }
+    .attestations label { display: flex; gap: 9px; align-items: start; }
+    .finish { display: flex; justify-content: flex-end; gap: 9px; }
+    .warning { color: var(--warning); }
+    .sealed { padding: 24px; text-align: center; color: var(--accent); font-weight: 650; }
+    @media (max-width: 850px) {
+      body { overflow: auto; }
+      .shell { height: auto; min-height: 100%; }
+      .layout { grid-template-columns: 1fr; }
+      nav { position: sticky; top: 0; z-index: 2; border: 0; border-bottom: 1px solid var(--line); padding: 9px 14px; }
+      nav h2 { display: none; }
+      .case-list { display: flex; overflow-x: auto; }
+      .case-dot { width: 38px; flex: 0 0 38px; }
+      main { min-height: 860px; }
+      .pair { grid-template-columns: 1fr; }
+      .candidate { min-height: 300px; }
+      .response { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app">
+    <header>
+      <div class="brand">SciTaste Blind Review</div>
+      <div class="study" id="study-meta"></div>
+      <div class="progress"><span id="progress-label">0 / 0</span><div class="track"><div class="bar" id="progress-bar"></div></div></div>
+    </header>
+    <div class="layout">
+      <nav><h2>Assigned cases</h2><div class="case-list" id="case-list"></div></nav>
+      <main>
+        <section class="context">
+          <div><h1 id="primary-question"></h1><p id="case-context"></p></div>
+          <div class="tag" id="case-tag"></div>
+        </section>
+        <section class="pair">
+          <article class="candidate"><h2>Response X</h2><div class="candidate-body" id="output-x"></div></article>
+          <article class="candidate"><h2>Response Y</h2><div class="candidate-body" id="output-y"></div></article>
+        </section>
+        <section class="response" id="response-panel">
+          <div>
+            <div class="choices" id="choices">
+              <button class="choice" data-choice="X" aria-label="Prefer response X">X</button>
+              <button class="choice" data-choice="tie" aria-label="Responses are tied">Tie</button>
+              <button class="choice" data-choice="Y" aria-label="Prefer response Y">Y</button>
+              <button class="choice" data-choice="cannot-assess" aria-label="Cannot assess">Cannot assess</button>
+            </div>
+            <div class="reason-field" id="reason-field" hidden><label for="reason">Reason</label><select id="reason">
+              <option value="">Select a reason</option>
+              <option value="insufficient-domain-expertise">Insufficient domain expertise</option>
+              <option value="insufficient-visible-evidence">Insufficient visible evidence</option>
+              <option value="malformed-presentation">Malformed presentation</option>
+              <option value="other-bounded-reason">Other bounded reason</option>
+            </select></div>
+          </div>
+          <div class="rationale-field"><label for="rationale">Brief scientific rationale (required)</label><textarea id="rationale" maxlength="4000"></textarea></div>
+          <div class="controls"><button id="previous">Previous</button><button class="primary" id="next">Save & next</button><button id="finish">Lock review</button></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <dialog id="lock-dialog">
+    <h2>Lock this review set?</h2>
+    <p>Locking exports the complete condition-blind submission. It cannot be edited or replaced after outcomes are opened.</p>
+    <p class="warning" id="lock-warning"></p>
+    <div class="attestations">
+      <label><input type="checkbox" data-attestation> I completed this review independently.</label>
+      <label><input type="checkbox" data-attestation> I remain blind to experimental conditions.</label>
+      <label><input type="checkbox" data-attestation> I have not seen another reviewer's responses.</label>
+      <label><input type="checkbox" data-attestation> My conflict screening remains accurate.</label>
+    </div>
+    <div class="finish"><button id="cancel-lock">Continue reviewing</button><button id="confirm-lock">Confirm, lock, and export</button></div>
+  </dialog>
+  <script id="session-data" type="application/json">__SCITASTE_REVIEW_SESSION__</script>
+  <script>
+    "use strict";
+    const session = JSON.parse(document.getElementById("session-data").textContent);
+    const storageKey = `scitaste-review:${session.session_sha256}`;
+    const sealedKey = `${storageKey}:sealed`;
+    const memoryStorage = {};
+    function storageGet(key) { try { return localStorage.getItem(key); } catch (_) { return memoryStorage[key] || null; } }
+    function storageSet(key, value) { try { localStorage.setItem(key, value); } catch (_) { memoryStorage[key] = value; } }
+    function storageRemove(key) { try { localStorage.removeItem(key); } catch (_) { delete memoryStorage[key]; } }
+    let saved = {};
+    try { saved = JSON.parse(storageGet(storageKey) || "{}"); } catch (_) { storageRemove(storageKey); }
+    const state = { index: 0, startedAt: saved.startedAt || new Date().toISOString(), responses: saved.responses || {}, viewedAt: saved.viewedAt || {} };
+    const $ = id => document.getElementById(id);
+
+    function safeText(node, text) { node.textContent = text == null ? "" : String(text); }
+    function outputCard(node, output) {
+      node.replaceChildren();
+      const action = document.createElement("p"); action.className = "action"; safeText(action, output.selected_action_description);
+      const rationale = document.createElement("div"); rationale.className = "rationale"; safeText(rationale, output.rationale);
+      const confidence = document.createElement("div"); confidence.className = "confidence"; safeText(confidence, `Reported confidence: ${Math.round(output.confidence * 100)}%`);
+      node.append(action, rationale, confidence);
+    }
+    function persist() { storageSet(storageKey, JSON.stringify(state)); }
+    function markViewed(item) {
+      if (!state.viewedAt[item.comparison_id]) { state.viewedAt[item.comparison_id] = Date.now(); persist(); }
+    }
+    function completed() { return Object.values(state.responses).filter(validResponse).length; }
+    function validResponse(response) {
+      return response && response.response && response.rationale && response.rationale.trim() &&
+        (response.response !== "cannot-assess" || response.missingness_reason_code);
+    }
+    function renderNavigation() {
+      const list = $("case-list"); list.replaceChildren();
+      session.comparisons.forEach((item, index) => {
+        const button = document.createElement("button"); button.className = "case-dot"; safeText(button, item.ordinal);
+        if (index === state.index) button.classList.add("active");
+        if (validResponse(state.responses[item.comparison_id])) button.classList.add("complete");
+        button.setAttribute("aria-label", `Open assigned case ${item.ordinal}`);
+        button.addEventListener("click", () => { saveCurrent(false); state.index = index; render(); });
+        list.append(button);
+      });
+    }
+    function render() {
+      if (storageGet(sealedKey)) { $("app").innerHTML = '<div class="sealed">This browser session is sealed. Use the exported JSON for collection.</div>'; return; }
+      const item = session.comparisons[state.index]; markViewed(item);
+      safeText($("study-meta"), `${session.study_id} · ${session.reviewer_identity_sha256.slice(0, 12)}…`);
+      safeText($("primary-question"), session.primary_question);
+      safeText($("case-context"), item.case_context);
+      safeText($("case-tag"), `${item.task} · ${item.stage} · ${item.ordinal}/${session.comparisons.length}`);
+      outputCard($("output-x"), item.output_x); outputCard($("output-y"), item.output_y);
+      const response = state.responses[item.comparison_id] || {};
+      document.querySelectorAll(".choice").forEach(button => button.classList.toggle("selected", button.dataset.choice === response.response));
+      $("rationale").value = response.rationale || "";
+      $("reason-field").hidden = response.response !== "cannot-assess";
+      $("reason").value = response.missingness_reason_code || "";
+      $("previous").disabled = state.index === 0;
+      $("next").textContent = state.index === session.comparisons.length - 1 ? "Save" : "Save & next";
+      const count = completed(); safeText($("progress-label"), `${count} / ${session.comparisons.length}`);
+      $("progress-bar").style.width = `${100 * count / session.comparisons.length}%`;
+      renderNavigation();
+    }
+    function saveCurrent(requireValid) {
+      const item = session.comparisons[state.index];
+      const response = state.responses[item.comparison_id] || {};
+      response.rationale = $("rationale").value.trim();
+      response.missingness_reason_code = response.response === "cannot-assess" ? $("reason").value : null;
+      const viewed = state.viewedAt[item.comparison_id] || Date.now();
+      response.duration_seconds = Math.max(response.duration_seconds || 0, Math.max(1, Math.round((Date.now() - viewed) / 1000)));
+      state.responses[item.comparison_id] = response; persist();
+      if (requireValid && !validResponse(response)) { alert("Select a response and provide the required rationale and reason."); return false; }
+      return true;
+    }
+    function choose(value) {
+      const item = session.comparisons[state.index];
+      state.responses[item.comparison_id] = { ...(state.responses[item.comparison_id] || {}), response: value, missingness_reason_code: value === "cannot-assess" ? $("reason").value || null : null };
+      persist(); render(); $("rationale").focus();
+    }
+    function openLock() {
+      saveCurrent(false);
+      const missing = session.comparisons.length - completed();
+      safeText($("lock-warning"), missing ? `${missing} assigned comparison(s) are incomplete.` : "All assigned comparisons are complete.");
+      $("confirm-lock").disabled = missing > 0; $("lock-dialog").showModal();
+    }
+    function exportSubmission() {
+      const checks = [...document.querySelectorAll("[data-attestation]")];
+      if (!checks.every(input => input.checked)) { alert("Confirm all four attestations before locking."); return; }
+      const responses = session.comparisons.map(item => ({ comparison_id: item.comparison_id, ...state.responses[item.comparison_id] }));
+      const submission = {
+        schema_version: "1.0", session_id: session.session_id, session_sha256: session.session_sha256,
+        study_sha256: session.study_sha256, reviewer_identity_sha256: session.reviewer_identity_sha256,
+        review_started_at: state.startedAt, submitted_at: new Date().toISOString(), responses,
+        conflict_cleared: true, independent_review: true, blinded_to_condition: true,
+        blinded_to_other_reviews: true, explicit_lock_confirmed: true
+      };
+      const blob = new Blob([JSON.stringify(submission, null, 2) + "\n"], { type: "application/json" });
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `${session.session_id}-submission.json`; link.click(); URL.revokeObjectURL(link.href);
+      storageSet(sealedKey, submission.submitted_at); storageRemove(storageKey); $("lock-dialog").close(); render();
+    }
+    document.querySelectorAll(".choice").forEach(button => button.addEventListener("click", () => choose(button.dataset.choice)));
+    $("reason").addEventListener("change", persist);
+    $("rationale").addEventListener("input", () => saveCurrent(false));
+    $("previous").addEventListener("click", () => { saveCurrent(false); state.index--; render(); });
+    $("next").addEventListener("click", () => { if (saveCurrent(true) && state.index < session.comparisons.length - 1) state.index++; render(); });
+    $("finish").addEventListener("click", openLock); $("cancel-lock").addEventListener("click", () => $("lock-dialog").close());
+    $("confirm-lock").addEventListener("click", exportSubmission);
+    document.addEventListener("keydown", event => {
+      if (["TEXTAREA", "SELECT", "INPUT"].includes(document.activeElement.tagName)) return;
+      if (event.key.toLowerCase() === "x") choose("X"); else if (event.key.toLowerCase() === "y") choose("Y");
+      else if (event.key.toLowerCase() === "t") choose("tie"); else if (event.key.toLowerCase() === "c") choose("cannot-assess");
+      else if (event.key === "ArrowLeft" && state.index > 0) { saveCurrent(false); state.index--; render(); }
+      else if (event.key === "ArrowRight" && state.index < session.comparisons.length - 1) { saveCurrent(false); state.index++; render(); }
+    });
+    render();
+  </script>
+</body>
+</html>

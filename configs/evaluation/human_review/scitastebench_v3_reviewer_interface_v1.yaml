@@ -1,7 +1,7 @@
 schema_version: "1.0"
 interface_id: scitastebench-v3-reviewer-interface-v1
 project_id: scitaste-self-development
-status: interaction-contract-frozen-ui-implementation-pending
+status: interaction-contract-frozen-ui-implemented
 layout:
   case_context: fixed-width-shared-header
   candidate_outputs: side-by-side-X-and-Y
@@ -63,6 +63,14 @@ audit:
   lock-time-recorded-with-timezone: true
   duration-recorded-as-diagnostic-only: true
   blind-key-opening-not-available-in-reviewer-session: true
+implementation:
+  module: scitaste.evaluation.human_review_collection
+  session_cli: scitaste evaluation human-review-session-prepare
+  collection_cli: scitaste evaluation human-review-lock
+  self_contained_offline_html: true
+  browser_draft_storage_is-local-only: true
+  exported-submission-binds-session-sha256: true
+  locked-review-set-binds-two-sessions-and-submissions: true
 authority:
   authorizes_human_recruitment: false
   authorizes_model_calls: false

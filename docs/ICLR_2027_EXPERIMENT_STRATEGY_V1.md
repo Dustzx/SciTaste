@@ -227,6 +227,19 @@ trace, and generation-ledger files. X/Y order is randomized and counterbalanced
 across the two preassigned reviewers. The compiler performs no model call or
 human contact; it only packages already completed, separately authorized runs.
 
+Reviewer delivery and collection are executable as a separate blind boundary.
+For each preassigned pseudonym, `human-review-session-prepare` rechecks the exact
+suite, study, rubric, interface, assignment block, and output bytes before
+building one self-contained offline workspace. It includes the shared case
+context but omits conditions, provider/model identity, traces, paths, aggregate
+state, and the other reviewer. After complete explicit-lock exports from both
+reviewers, `human-review-lock` verifies the non-overlapping assignment partition
+and content-addresses both sessions and submissions in the immutable review set.
+A formal treatment-bound study rejects an older unbound review set before key
+opening. These commands implement presentation and evidence capture; they do not
+satisfy reviewer qualification, consent, conflict, compensation, independence,
+or recruitment approval.
+
 Two oracle-controlled directional contrasts are preregistered: H1 compares
 matched abstraction against same-source raw RAG with representation as the only
 permitted difference; H2a compares matched against mismatched abstractions with
