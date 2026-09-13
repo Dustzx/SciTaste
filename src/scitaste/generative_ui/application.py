@@ -40,7 +40,12 @@ from scitaste.generative_ui.interaction import (
     SurfaceSession,
 )
 from scitaste.generative_ui.models import SurfaceSpec
-from scitaste.generative_ui.planner import PlannerConversationContext, WorkspacePlanner
+from scitaste.generative_ui.planner import (
+    ModelPlannerPolicy,
+    PlannerConversationContext,
+    PlannerIdentity,
+    WorkspacePlanner,
+)
 from scitaste.generative_ui.planning_directive import (
     PlanningDirectivePublication,
     PlanningDirectivePublicationRequest,
@@ -62,6 +67,11 @@ from scitaste.generative_ui.resource_configuration import (
     apply_project_resource_configuration,
 )
 from scitaste.generative_ui.safety import ProjectIdentifier
+from scitaste.generative_ui.warm_cache import (
+    ModelWarmCacheStatus,
+    ModelWarmCacheStore,
+    model_warm_cache_status,
+)
 from scitaste.generative_ui.workspace import (
     ProjectListDocument,
     ProjectListQuery,
@@ -128,6 +138,7 @@ class GenerativeUIApplication:
         self._artifact_inspector = ArtifactInspector(runtime.projects_root)
         self._generated_archive = GeneratedWorkspaceArchive(runtime.projects_root)
         self._research_workspaces = ResearchWorkspaceStore(runtime.projects_root)
+        self._model_warm_cache = ModelWarmCacheStore(runtime.projects_root)
         self._program_revisions = ProgramRevisionService(runtime, planner)
         self._request_lock = RLock()
         self._generated: OrderedDict[
@@ -140,6 +151,18 @@ class GenerativeUIApplication:
         """Return the configured root without exposing a mutation API."""
 
         return self._runtime.outputs_root
+
+    @property
+    def planner_identity(self) -> PlannerIdentity:
+        """Expose the non-secret planner identity for execution-policy binding."""
+
+        return self._generation_service.planner_identity
+
+    @property
+    def model_planner_policy(self) -> ModelPlannerPolicy | None:
+        """Expose only the active planner bounds, never its transport or credential."""
+
+        return self._generation_service.model_planner_policy
 
     def discover_projects(self) -> ProjectDiscoveryDocument:
         """List canonical project directories that open as valid runtime snapshots."""
@@ -203,6 +226,17 @@ class GenerativeUIApplication:
         validate_project_id(project_id)
         with self._request_lock:
             return self._generation_service.quick_catalog(project_id)
+
+    def model_warm_cache_status(self, project_id: str) -> ModelWarmCacheStatus:
+        """Project the current fixed-entry cache without invoking any provider."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            catalog = self._generation_service.quick_catalog(project_id)
+            return model_warm_cache_status(
+                catalog,
+                self._model_warm_cache.load(project_id),
+            )
 
     def propose_program_revision(
         self,

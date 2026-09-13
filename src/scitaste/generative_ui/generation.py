@@ -24,7 +24,9 @@ from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.planner import (
     FallbackWorkspacePlanner,
     IntentPlannerOutcome,
+    ModelPlannerPolicy,
     PlannerConversationContext,
+    PlannerIdentity,
     SurfacePlannerOutcome,
     WorkspacePlanner,
 )
@@ -240,6 +242,14 @@ class WorkspaceGenerationService:
 
     def quick_catalog(self, project_id: str) -> QuickIntentCatalog:
         return self._resolver.quick_catalog(project_id)
+
+    @property
+    def planner_identity(self) -> PlannerIdentity:
+        return self._planner.identity
+
+    @property
+    def model_planner_policy(self) -> ModelPlannerPolicy | None:
+        return self._planner.model_policy
 
     def generate(
         self,

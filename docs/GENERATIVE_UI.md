@@ -837,6 +837,8 @@ The versioned same-origin JSON API is deliberately closed:
   `ArtifactInspectionEvent` and returns a bounded `ArtifactInspectionDocument`.
 - `GET /api/v3/generative/projects/<project-id>/intents` returns the current
   evidence-derived `QuickIntentCatalog` and fingerprint;
+- `GET /api/v3/generative/projects/<project-id>/warm-cache` returns the
+  project-local model-cache state and only current, unexpired generation IDs;
 - `POST /api/v3/generative/projects/<project-id>/workspace` accepts one
   `WorkspaceGenerationRequest` and returns a question-free
   `GeneratedWorkspaceDocument`;
@@ -929,6 +931,48 @@ The Generation as Content profile allows up to 8,192 output tokens for a flexibl
 structured planning response. This is a per-call safety/budget envelope, not a
 repository-wide development limit; paper drafting and other model-node profiles
 retain their independently configured ceilings.
+
+### Model-authored fixed-entry cache
+
+Generation as Content now separates two equally visible paths. Fixed project
+labels may open a pre-generated model-authored evidence layout, while a free
+question or follow-up remains a fresh, context-aware model interaction. A cache
+hit is labeled in the composer and opens the exact archived generation without
+creating a fake conversation turn or invoking the provider again. Missing,
+expired, stale-snapshot, or unconfigured entries keep the normal flexible path.
+
+The cache is project-owned at
+`outputs/projects/<project-id>/.generative-ui/warm-cache/index.json`. Its policy
+binds the project, provider, model, selected server-issued quick-intent IDs,
+expiry, per-call ceilings, cumulative call/token/cost budgets, and a time-bounded
+owner authorization. Every successful entry retains model telemetry and points
+to an immutable generated-workspace archive. A provider failure is charged its
+full declared per-call envelope so retrying cannot silently escape the approved
+budget. Snapshot or intent-fingerprint changes invalidate presentation reuse;
+they do not delete the archived record.
+
+The paid warm pass is the narrow case where Tool Intelligence keeps an owner
+boundary because it uses a secret, network access, and paid compute. It does not
+add a generic preflight. Cache reads and exact generation replay are cheap local
+operations and take the direct path. The committed example policy is deliberately
+inactive. After copying it outside Git and adding a real owner identity and
+timezone-aware authorization window, an operator may run the bounded pass alone:
+
+```bash
+.venv/bin/scitaste ui warm-cache \
+  --outputs-root outputs \
+  --project-id scitaste-self-development \
+  --planner-config configs/generative_ui/zhipu_glm53_flash.priced_20260908.yaml \
+  --policy /path/to/authorized-warm-cache.yaml \
+  --enable-live-planner \
+  --execute-authorized-warm-cache
+```
+
+Alternatively, `ui serve` accepts the same policy through
+`--warm-cache-policy` plus `--enable-model-warm-cache`; it fills only missing
+current entries before listening and consumes no call when all entries are
+fresh. Neither mode grants experiment, resource-mutation, or arbitrary tool
+authority.
 
 The receiver can explicitly approve or reject the returned proposal. Approval
 rebuilds the current surface, reproduces its audited receipt, checks the current

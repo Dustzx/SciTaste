@@ -444,6 +444,12 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             catalog = self.server.application.quick_intents(project_id)
             self._send_model(HTTPStatus.OK, catalog, etag=catalog.fingerprint)
             return
+        if len(parts) == 6 and resource == "warm-cache":
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            status = self.server.application.model_warm_cache_status(project_id)
+            self._send_model(HTTPStatus.OK, status, etag=status.fingerprint)
+            return
         if len(parts) == 6 and resource == "workspace":
             if method != "POST":
                 raise _method_not_allowed("POST")

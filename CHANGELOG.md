@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added an explicitly authorized project-level model warm cache for Generation as
+  Content. Selected fixed labels can reuse current model-authored layouts while
+  free questions and feedback edits remain flexible. The cache binds provider,
+  model, snapshot, intent fingerprints, TTL, and cumulative call/token/cost
+  budgets; failures debit their full envelope. The browser labels fresh cached
+  entries and otherwise falls back to on-demand generation. Tool Intelligence
+  gates only the secret/network/paid warm pass, while local cache reads require
+  no generic preflight.
 - Routed the effective current experiment gate through cost-sensitive Tool
   Intelligence. The project home now distinguishes direct blocker resolution,
   targeted checks, full preflight, and immutable owner boundaries using declared

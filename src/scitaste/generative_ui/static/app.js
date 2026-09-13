@@ -35,6 +35,7 @@ const intentQuestion = document.getElementById("intent-question");
 const conversationContextMode = document.getElementById("conversation-context-mode");
 const generateWorkspaceButton = document.getElementById("generate-workspace");
 const intentResult = document.getElementById("intent-result");
+const modelCacheState = document.getElementById("model-cache-status");
 const localeSelect = document.getElementById("locale-select");
 const skipLink = document.querySelector(".skip-link");
 const drawerToggle = document.getElementById("drawer-toggle");
@@ -79,6 +80,7 @@ let currentDocument = null;
 let runCatalog = [];
 let paperCatalog = [];
 let quickIntentCatalog = null;
+let modelWarmCacheStatus = null;
 let projectDiscovery = null;
 let activeProjectId = "";
 let accessReady = false;
@@ -582,6 +584,20 @@ function requestCandidateWorkspace(candidateId) {
   );
   if (!descriptor) {
     showError(intentResult, uiError("error.reload_catalog"));
+    return;
+  }
+  activateQuickIntent(descriptor);
+}
+
+function activateQuickIntent(descriptor) {
+  const cached = modelWarmCacheStatus?.fresh_entries?.find(
+    (item) => item.quick_intent_id === descriptor.quick_intent_id,
+  );
+  if (cached) {
+    loadGeneratedWorkspace({
+      project_id: quickIntentCatalog.snapshot.project_id,
+      generation_id: cached.generation_id,
+    });
     return;
   }
   generateWithIntent({
@@ -4784,6 +4800,8 @@ function clearProjectContext(projectId = "") {
   conversationContextMode.value = "recent";
   currentDocument = null;
   quickIntentCatalog = null;
+  modelWarmCacheStatus = null;
+  modelCacheState.hidden = true;
   lastProposalReceipt = null;
   lastControllerDecision = null;
   lastArtifactPreview = null;
@@ -5070,6 +5088,7 @@ async function loadResearchWorkspaceDetail(projectId, workspaceId) {
 
 function renderQuickIntents() {
   quickIntents.replaceChildren();
+  renderModelWarmCacheState();
   if (!quickIntentCatalog) {
     const message = document.createElement("p");
     message.className = "muted";
@@ -5084,18 +5103,56 @@ function renderQuickIntents() {
     button.type = "button";
     button.className = "quick-intent-button";
     button.dataset.quickIntentId = descriptor.quick_intent_id;
+    const label = document.createElement("span");
     const labelKey = quickIntentLabelKeys[descriptor.label_code];
-    appendText(button, labelKey ? t(labelKey) : descriptor.label);
-    button.addEventListener("click", () => generateWithIntent({
-      schema_version: "1.0",
-      kind: "quick",
-      project_id: quickIntentCatalog.snapshot.project_id,
-      snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
-      snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
-      quick_intent_id: descriptor.quick_intent_id,
-    }));
+    appendText(label, labelKey ? t(labelKey) : descriptor.label);
+    button.appendChild(label);
+    const cached = modelWarmCacheStatus?.fresh_entries?.some(
+      (item) => item.quick_intent_id === descriptor.quick_intent_id,
+    );
+    if (cached) {
+      button.classList.add("model-cached");
+      const badge = document.createElement("small");
+      appendText(badge, t("quick.cache_badge"));
+      button.appendChild(badge);
+    }
+    button.addEventListener("click", () => activateQuickIntent(descriptor));
     quickIntents.appendChild(button);
   }
+}
+
+function renderModelWarmCacheState() {
+  modelCacheState.hidden = !quickIntentCatalog;
+  if (!quickIntentCatalog) return;
+  modelCacheState.className = `warm-cache-state state-${modelWarmCacheStatus?.status || "unknown"}`;
+  modelCacheState.textContent = "";
+  appendText(modelCacheState, modelWarmCacheStatus?.status === "fresh"
+    ? t("quick.cache_fresh")
+    : modelWarmCacheStatus?.status === "partial"
+      ? t("quick.cache_partial", {
+        ready: modelWarmCacheStatus.fresh_entries.length,
+        total: modelWarmCacheStatus.expected_entry_count,
+      })
+      : modelWarmCacheStatus?.status === "exhausted"
+        ? t("quick.cache_exhausted")
+        : modelWarmCacheStatus?.status === "stale"
+          ? t("quick.cache_stale")
+          : t("quick.cache_dynamic"));
+}
+
+async function loadModelWarmCacheStatus(projectId) {
+  const requestedProject = projectId;
+  try {
+    const status = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(projectId)}/warm-cache`,
+    );
+    if (activeProjectId !== requestedProject) return;
+    modelWarmCacheStatus = status;
+  } catch (_error) {
+    if (activeProjectId !== requestedProject) return;
+    modelWarmCacheStatus = null;
+  }
+  renderQuickIntents();
 }
 
 async function loadQuickIntents(projectId) {
@@ -5108,7 +5165,7 @@ async function loadQuickIntents(projectId) {
       return;
     }
     quickIntentCatalog = catalog;
-    renderQuickIntents();
+    await loadModelWarmCacheStatus(projectId);
     renderWorkspaceHistory();
     setIntentEnabled(true);
   } catch (error) {

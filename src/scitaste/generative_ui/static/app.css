@@ -587,6 +587,13 @@ body.drawer-open .project-nav {
   margin: 0;
 }
 
+.composer-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+}
+
 .composer-topline .conversation-context-control {
   align-items: center;
   display: flex;
@@ -668,6 +675,39 @@ body.drawer-open .project-nav {
   padding: 0.35rem 0.6rem;
   text-align: left;
   white-space: nowrap;
+}
+
+.quick-intent-button.model-cached {
+  align-items: center;
+  border-color: #7fa98d;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.quick-intent-button.model-cached small {
+  background: var(--forest);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.32rem;
+}
+
+.warm-cache-state {
+  border: 1px solid #c5cec7;
+  border-radius: 999px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  padding: 0.25rem 0.46rem;
+  white-space: nowrap;
+}
+
+.warm-cache-state.state-fresh,
+.warm-cache-state.state-partial {
+  background: #f0f6f1;
+  border-color: #9db8a5;
+  color: var(--forest);
 }
 
 #intent-result {

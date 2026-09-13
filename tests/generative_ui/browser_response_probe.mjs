@@ -166,8 +166,10 @@ async function main() {
       `);
       await waitFor(cdp, sessionId, `
         document.getElementById("workspace").getAttribute("aria-busy") === "false"
-        && location.hash.includes("/workspaces/")
-        && location.hash.includes("/turns/")
+        && (
+          (location.hash.includes("/workspaces/") && location.hash.includes("/turns/"))
+          || location.hash.includes("/generated/")
+        )
         && document.querySelectorAll("#workspace .component-card").length > 0
       `, 30_000);
       const quickIntentToGeneratedMs = await evaluate(cdp, sessionId, `

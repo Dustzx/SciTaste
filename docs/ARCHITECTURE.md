@@ -3310,3 +3310,29 @@ declared policy priors, not measured failure rates, and are exposed for later
 calibration. The self-hashed result may recommend direct blocker resolution, one
 targeted check, a full preflight, or an owner decision, but it carries no executor
 or authority.
+
+### ADR-110: Fixed entry labels may cache model authorship without replacing flexible generation
+
+Status: accepted as an opt-in project capability; no live provider call was made
+while implementing this decision.
+
+Generation as Content has two parallel interaction modes. A fixed project label
+is a stable navigation affordance, but its evidence composition may be authored
+in advance by the same bounded model planner. Free questions and feedback edits
+remain fresh model interactions with bounded conversation context. The receiver
+labels cached entries and otherwise preserves the on-demand path; a cache miss
+never becomes deterministic content masquerading as model output.
+
+The mutable cache index belongs below the project and points only to immutable
+generated-workspace archives. Its policy binds provider, model, selected
+server-issued intent IDs, TTL, and cumulative call, token, and cost limits.
+Successful generations retain response telemetry. A failed or rejected call
+debits the full per-response envelope because provider-side consumption may have
+occurred before validation failed. Project snapshot or intent changes make the
+entry stale without deleting its provenance.
+
+Proactive warming touches the network, a secret, and paid compute, so the common
+Tool Intelligence router keeps an explicit owner boundary and the CLI requires a
+second execution flag. No full generic preflight is added. Reading the cache,
+opening an exact archived generation, and falling through to ordinary on-demand
+interaction are cheap local operations and do not acquire a new check.

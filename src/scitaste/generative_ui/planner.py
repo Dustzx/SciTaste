@@ -177,6 +177,11 @@ class PlannerProvenance(BaseModel):
     request_fingerprint: Sha256
     conversation_context_sha256: Sha256 | None = None
     provider_response_sha256: Sha256 | None = None
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    cost_usd: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    latency_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    provider_cached: bool | None = None
     result_fingerprint: Sha256 | None = None
     deterministic_reproducible: bool
 
@@ -467,6 +472,11 @@ class StructuredWorkspacePlanner:
             request_fingerprint=structured_request.fingerprint,
             conversation_context_sha256=(context.fingerprint if context is not None else None),
             provider_response_sha256=response.raw_response_sha256,
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            cost_usd=response.usage.cost_usd,
+            latency_ms=response.latency_ms,
+            provider_cached=response.cached,
             deterministic_reproducible=False,
         )
         return IntentPlannerOutcome(
@@ -509,6 +519,11 @@ class StructuredWorkspacePlanner:
                 request_fingerprint=structured_request.fingerprint,
                 plan=plan,
                 provider_response_sha256=response.raw_response_sha256,
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens,
+                cost_usd=response.usage.cost_usd,
+                latency_ms=response.latency_ms,
+                provider_cached=response.cached,
             ),
         )
 
@@ -725,6 +740,14 @@ class FallbackWorkspacePlanner:
             self.primary.identity if self.primary is not None else self.fallback.identity
         )
 
+    @property
+    def model_policy(self) -> ModelPlannerPolicy | None:
+        """Expose only the bounded primary policy, never its backend or credential."""
+
+        if isinstance(self.primary, StructuredWorkspacePlanner):
+            return self.primary.policy
+        return None
+
     def classify(
         self,
         request: FreeQuestionRequest,
@@ -848,6 +871,11 @@ def _composition_provenance(
     request_fingerprint: str,
     plan: SurfacePlan,
     provider_response_sha256: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    cost_usd: float | None = None,
+    latency_ms: float | None = None,
+    provider_cached: bool | None = None,
 ) -> PlannerProvenance:
     return PlannerProvenance(
         operation=PlannerOperation.SURFACE_COMPOSITION,
@@ -860,6 +888,11 @@ def _composition_provenance(
         catalog_fingerprint=catalog.fingerprint,
         request_fingerprint=request_fingerprint,
         provider_response_sha256=provider_response_sha256,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=cost_usd,
+        latency_ms=latency_ms,
+        provider_cached=provider_cached,
         result_fingerprint=plan.fingerprint,
         deterministic_reproducible=mode != PlannerMode.MODEL_ASSISTED,
     )

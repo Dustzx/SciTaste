@@ -118,7 +118,10 @@
         </main>
         <section class="conversation-composer" aria-labelledby="intent-heading">
           <div class="composer-topline">
-            <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
+            <div class="composer-heading">
+              <h2 id="intent-heading" data-i18n="generation.question">What do you want to understand?</h2>
+              <span id="model-cache-status" class="warm-cache-state" hidden></span>
+            </div>
             <div class="conversation-context-control">
               <label for="conversation-context-mode" data-i18n="thread.context_label">Conversation context</label>
               <select id="conversation-context-mode" disabled>
