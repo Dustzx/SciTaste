@@ -40,7 +40,7 @@ requirements:
     official_source_urls:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/run_mlr_agent.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   model_mapping:
     status: blocked
     summary: Registry supports a distinct OpenRouter DeepSeek V3 model and unmatched coding agents, not DeepSeek V4.1 Flash for every role.
@@ -48,14 +48,14 @@ requirements:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/mlrbench/llm/llm.py
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/mlrbench/agent/experiment_runner.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   sandbox:
     status: blocked
     summary: Dynamic downloads and generated-code execution have not passed the matched isolation policy.
     official_source_urls:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/mlrbench/agent/experiment_runner.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   telemetry:
     status: blocked
     summary: End-to-end calls, coding work, retries, cost, experiments, and interventions are not completely aggregated.
@@ -63,21 +63,21 @@ requirements:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/mlrbench/llm/llm.py
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/run_mlr_agent.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   artifact_mapping:
     status: pending
     summary: Native Markdown and stage files need a complete failure-inclusive immutable inventory.
     official_source_urls:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/README.md
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   failure_resume:
     status: pending
     summary: No exact-cell content-addressed retry and resume boundary has been demonstrated.
     official_source_urls:
       - https://raw.githubusercontent.com/chchenhui/mlrbench/f728d571a992d71c8b526eeb4d9ab6bb5c8cc824/run_mlr_agent.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
 forbidden_changes:
   - Do not rename a DeepSeek V3 or OpenRouter model as DeepSeek V4.1 Flash.
   - Do not replace the native coding subsystem while calling the condition unchanged-core.

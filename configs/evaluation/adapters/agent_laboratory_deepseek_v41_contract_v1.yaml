@@ -36,7 +36,7 @@ requirements:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/experiment_configs/MATH_agentlab.yaml
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   model_mapping:
     status: blocked
     summary: Release documents DeepSeek V3 under deepseek-chat, not exact DeepSeek V4.1 Flash.
@@ -44,35 +44,35 @@ requirements:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/README.md
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/agents.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   sandbox:
     status: blocked
     summary: External search and generated-code execution have not passed matched network/filesystem controls.
     official_source_urls:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   telemetry:
     status: blocked
     summary: Native phase timing does not prove complete matched provider, token, retry, experiment, and intervention telemetry.
     official_source_urls:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   artifact_mapping:
     status: pending
     summary: Report, source, experiment, state, log, and optional PDF files need an immutable failure-inclusive projection.
     official_source_urls:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
   failure_resume:
     status: pending
     summary: Pickle state saves are not yet bound to an exact SciTaste cell and retry policy.
     official_source_urls:
       - https://raw.githubusercontent.com/SamuelSchmidgall/AgentLaboratory/d9017d90e329112d2a80b7712f37ee9094d2cd27/ai_lab_repo.py
     evidence_ref: docs/research/protocols/EXTERNAL_ADAPTER_COMPATIBILITY_AUDIT_V1.md
-    evidence_sha256: eedc50527f067d1fa1d2b26eb47df044e79b1bde8cab85036e54b5356f96c0f2
+    evidence_sha256: ea1afd09eb5a9fa899495ab9a1859874d7e37cecbb4a997fb567a615e3f21b73
 forbidden_changes:
   - Do not rename the documented DeepSeek V3 backend as DeepSeek V4.1 Flash.
   - Do not flatten the exact research brief into unreviewed notes.
