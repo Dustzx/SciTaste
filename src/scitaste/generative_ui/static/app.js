@@ -6548,6 +6548,11 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
     activeResearchWorkspaceDetail = null;
     currentDocument = documentValue;
     projectSelect.value = documentValue.project_id;
+    intentResultState = {
+      kind: "accepted",
+      mode: documentValue.planning.provenance.mode,
+      contextCount: documentValue.context_turn_ids.length,
+    };
     renderWorkspace(documentValue);
     if (historyMode !== "none") {
       const hash = generatedWorkspaceHash(documentValue);
@@ -6599,6 +6604,11 @@ async function loadResearchTurn(route, historyMode = "push") {
       throw uiError("error.generation_unrenderable");
     }
     currentDocument = documentValue;
+    intentResultState = {
+      kind: "accepted",
+      mode: documentValue.planning.provenance.mode,
+      contextCount: documentValue.context_turn_ids.length,
+    };
     renderWorkspace(documentValue);
     if (historyMode !== "none") {
       const hash = researchTurnHash(turnDocument);
