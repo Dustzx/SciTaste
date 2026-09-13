@@ -482,9 +482,7 @@ class ProjectGateActionService:
             decision="authorized" if authorized else "rejected",
             decided_by=parsed.decided_by,
             decided_at=decided_at,
-            authorization_expires_at=(
-                decided_at + _AUTHORIZATION_LIFETIME if authorized else None
-            ),
+            authorization_expires_at=(decided_at + _AUTHORIZATION_LIFETIME if authorized else None),
             authorization_scope=(
                 "exact-local-reference-quality-calibration" if authorized else None
             ),
@@ -720,9 +718,7 @@ def execute_authorized_gate_action(
     if any(config != backend_configs[0] for config in backend_configs[1:]):
         raise ValueError("gate-action invocations do not share one checkpoint runtime")
     backend = loaded_configs[0].config.build_backend(packet.invocations[0].invocation_id)
-    facade = ModelNodeFacade(
-        ModelNodeRuntime(runtime, node_types=first_party_node_types())
-    )
+    facade = ModelNodeFacade(ModelNodeRuntime(runtime, node_types=first_party_node_types()))
 
     rows: list[GateActionExecutionItem] = []
     for item, loaded in zip(packet.invocations, loaded_configs, strict=True):
@@ -782,19 +778,13 @@ def execute_authorized_gate_action(
         ),
         total_input_tokens=sum(item.input_tokens for item in rows),
         total_output_tokens=sum(item.output_tokens for item in rows),
-        model_calls_performed=sum(
-            outcome in {"accepted", "rejected"} for outcome in outcomes
-        ),
-        gpu_work_performed=any(
-            outcome in {"accepted", "rejected"} for outcome in outcomes
-        ),
+        model_calls_performed=sum(outcome in {"accepted", "rejected"} for outcome in outcomes),
+        gpu_work_performed=any(outcome in {"accepted", "rejected"} for outcome in outcomes),
         execution_complete=not any(
             outcome in {"failed", "blocked", "not_applicable"} for outcome in outcomes
         ),
     )
-    execution_locator = (
-        f"runs/{packet.action_run_id}/gate_action_execution/RECEIPT.json"
-    )
+    execution_locator = f"runs/{packet.action_run_id}/gate_action_execution/RECEIPT.json"
     _atomic_json(
         runtime.projects_root / project_id / execution_locator,
         execution.model_dump(mode="json"),
