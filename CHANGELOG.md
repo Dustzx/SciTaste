@@ -11,7 +11,8 @@ semantic versioning.
   resource guidance. The project home now derives its current phase from that
   effective order and exposes the base/effective order, compiler identity, and a
   Tool Intelligence direct-path decision. This read-only bridge cannot authorize
-  an API call, GPU job, download, or experiment.
+  an API call, GPU job, download, or experiment. Subsequent model edits use the
+  same effective current stage and order shown on the project home.
 - Qualified the complete acquired MLRC two-task archive set under the standing
   local-read policy. All 39 receipt-bound ZIPs were rehashed and all 178,325
   central-directory members were inspected without extraction; zero structural

@@ -13,6 +13,7 @@ from typing import Annotated, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from scitaste.evaluation.program_control import compile_effective_experiment_program
 from scitaste.generative_ui.evidence_program import (
     find_iclr_evidence_program_run,
     load_iclr_evidence_program_report,
@@ -658,13 +659,18 @@ def build_program_revision_catalog(
         raise ValueError("project has no registered ICLR evidence program")
     report, _ = load_iclr_evidence_program_report(runtime.projects_root / project_id, run)
     resource_portfolio = load_project_resource_portfolio(runtime, project_id)
-    from scitaste.generative_ui.planning_directive import load_latest_planning_directive
+    from scitaste.generative_ui.planning_directive import (
+        load_latest_planning_directive,
+        planning_control_from_publication,
+    )
 
     publication = load_latest_planning_directive(runtime, project_id)
     active_directive = None
+    control = None
     if publication is not None:
         if publication.source_dossier_sha256 != report.dossier_sha256:
             raise ValueError("published planning directive belongs to another evidence dossier")
+        control = planning_control_from_publication(publication)
         draft = publication.draft
         active_directive = ProgramRevisionActiveDirectiveOption(
             publication_id=publication.publication_id,
@@ -681,8 +687,10 @@ def build_program_revision_catalog(
             requested_resource_roles=draft.requested_resource_roles,
             requested_resource_ids=draft.requested_resource_ids,
         )
-    current_stage_id = (
-        report.next_stage_ids[0] if report.next_stage_ids else report.stages[-1].stage_id
+    effective_program = compile_effective_experiment_program(
+        report,
+        project_id=project_id,
+        control=control,
     )
     return ProgramRevisionCatalog(
         project_id=project_id,
@@ -690,8 +698,8 @@ def build_program_revision_catalog(
         snapshot_sha256=binding.snapshot_sha256,
         dossier_id=report.dossier_id,
         dossier_sha256=report.dossier_sha256,
-        current_stage_id=current_stage_id,
-        next_stage_ids=report.next_stage_ids or (current_stage_id,),
+        current_stage_id=effective_program.effective_current_stage_id,
+        next_stage_ids=effective_program.effective_next_stage_ids,
         stages=tuple(
             ProgramRevisionStageOption(
                 stage_id=item.stage_id,

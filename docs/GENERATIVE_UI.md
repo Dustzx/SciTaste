@@ -1323,6 +1323,9 @@ project home renders the effective current stage and identifies the base order,
 effective order, control effect, and compiler hash. This derived read-only action
 is routed directly by Tool Intelligence because an additional preflight has
 negative expected value. It grants no API, GPU, download, or execution authority.
+The next model revision receives this same effective current stage and order plus
+the full active directive, so iterative feedback never silently falls back to the
+dossier's pre-intervention display state.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
