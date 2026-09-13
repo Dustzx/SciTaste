@@ -538,6 +538,11 @@ from scitaste.evaluation.prelaunch import (
     inspect_prelaunch_manifest,
     load_prelaunch_manifest,
 )
+from scitaste.evaluation.program_action import (
+    EffectiveProgramActionRoute,
+    ProgramNextActionKind,
+    route_effective_program_action,
+)
 from scitaste.evaluation.program_control import (
     EffectiveExperimentProgram,
     ExperimentProgramControl,
@@ -947,6 +952,7 @@ __all__ = [
     "DirectAgentRunReceipt",
     "DirectAgentTaskPackage",
     "EffectiveExperimentProgram",
+    "EffectiveProgramActionRoute",
     "EvaluationBlindReview",
     "EvaluationCellPlan",
     "EvaluationCellResource",
@@ -1106,6 +1112,7 @@ __all__ = [
     "ProgramCondition",
     "ProgramConditionKind",
     "ProgramControlEffect",
+    "ProgramNextActionKind",
     "ProjectedBenchmarkMetadataRecord",
     "ProjectedMetadataField",
     "ProjectionSemanticRole",
@@ -1381,6 +1388,7 @@ __all__ = [
     "qualify_api_identity_candidate",
     "qualify_source_archives",
     "reference_selection_implementation_sha256",
+    "route_effective_program_action",
     "run_live_direct_agent",
     "save_acquired_task_cohort_report",
     "save_acquisition_gate_report",

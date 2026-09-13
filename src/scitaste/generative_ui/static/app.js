@@ -1920,7 +1920,20 @@ function renderEvidenceProgram(data) {
   appendText(approval, data.current_owner_approval_required
     ? t("progress.program.owner_decision_required")
     : t("progress.program.owner_decision_not_required"));
-  gateFacts.append(blockers, approval);
+  const route = document.createElement("span");
+  route.className = data.gate_action_route.verification_route === "direct_path"
+    ? "program-badge verified"
+    : data.gate_action_route.verification_route === "owner_approval"
+      ? "program-badge warning"
+      : "program-badge neutral";
+  appendText(route, t("progress.program.tool_route", {
+    route: t(`progress.program.route.${data.gate_action_route.verification_route}`),
+  }));
+  const nextAction = document.createElement("span");
+  appendText(nextAction, t("progress.program.tool_next_action", {
+    action: t(`progress.program.next_action.${data.gate_action_route.next_action_kind}`),
+  }));
+  gateFacts.append(blockers, approval, route, nextAction);
   for (const action of data.current_external_actions) {
     const actionTag = document.createElement("span");
     appendText(actionTag, t("progress.program.external_action", {action: localizedCode(action)}));
@@ -2000,6 +2013,20 @@ function renderEvidenceProgram(data) {
       planning_verification_reason_codes: data.planning_verification_reason_codes,
       baseline_next_stage_ids: data.baseline_next_stage_ids,
       effective_next_stage_ids: data.effective_next_stage_ids,
+      gate_action_route_sha256: data.gate_action_route.route_sha256,
+      gate_action_verification_route: data.gate_action_route.verification_route,
+      gate_action_reason_codes: data.gate_action_route.verification_reason_codes,
+      gate_action_effects: data.gate_action_route.action_effects,
+      gate_action_expected_loss_units: Number(
+        data.gate_action_route.expected_loss_units.toFixed(4),
+      ),
+      gate_action_targeted_net_gain_units: Number(
+        data.gate_action_route.targeted_net_gain_units.toFixed(4),
+      ),
+      gate_action_full_preflight_net_gain_units: Number(
+        data.gate_action_route.full_preflight_net_gain_units.toFixed(4),
+      ),
+      gate_action_authorizes_execution: data.gate_action_route.authorizes_execution,
     },
     names: [
       "dossier_id",
@@ -2014,6 +2041,14 @@ function renderEvidenceProgram(data) {
       "planning_verification_reason_codes",
       "baseline_next_stage_ids",
       "effective_next_stage_ids",
+      "gate_action_route_sha256",
+      "gate_action_verification_route",
+      "gate_action_reason_codes",
+      "gate_action_effects",
+      "gate_action_expected_loss_units",
+      "gate_action_targeted_net_gain_units",
+      "gate_action_full_preflight_net_gain_units",
+      "gate_action_authorizes_execution",
     ],
   }));
 

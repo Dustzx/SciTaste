@@ -62,4 +62,7 @@ def test_effective_core_order_controls_the_primary_generation_as_content_phase()
     assert projected.current_phase_id == "method-readiness"
     assert projected.effective_next_stage_ids == order
     assert projected.effective_program_sha256 == effective.program_sha256
+    assert projected.gate_action_route.verification_route == "targeted_check"
+    assert projected.gate_action_route.next_action_kind == "run_targeted_check"
+    assert projected.gate_action_route.authorizes_execution is False
     assert projected.no_external_action_performed is True

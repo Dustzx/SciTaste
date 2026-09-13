@@ -5,6 +5,11 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Routed the effective current experiment gate through cost-sensitive Tool
+  Intelligence. The project home now distinguishes direct blocker resolution,
+  targeted checks, full preflight, and immutable owner boundaries using declared
+  policy priors and displays the chosen next control action. The route is
+  self-hashed, project/dossier/program-bound, and never authorizes execution.
 - Connected user-published Generation as Content planning to SciTaste's core
   evaluation plane. A neutral, self-hashed effective-program compiler can reorder
   only already eligible next gates or carry typed decision, risk, evidence, and

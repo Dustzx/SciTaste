@@ -3297,3 +3297,16 @@ path: their minimal identity, hash, and staleness guards cost less than a generi
 preflight and the writes are reversible project-local metadata. Compiling the
 effective experiment program is also direct: it is a pure local derivation over
 already verified, self-hashed inputs.
+
+### ADR-109: Effective gates use cost-sensitive action routing
+
+Status: accepted and projected on the project home.
+
+The evaluation-layer `program_action` compiler maps the effective gate's declared
+external actions and owner boundary into the common Tool Intelligence effect
+vocabulary. Hard authority boundaries remain hard; otherwise the router compares
+expected avoidable loss with targeted- and full-check costs. The v1 numbers are
+declared policy priors, not measured failure rates, and are exposed for later
+calibration. The self-hashed result may recommend direct blocker resolution, one
+targeted check, a full preflight, or an owner decision, but it carries no executor
+or authority.

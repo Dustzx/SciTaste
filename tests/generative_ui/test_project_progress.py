@@ -1441,6 +1441,10 @@ def test_progress_projects_registered_iclr_evidence_program_without_execution(
     assert program["planning_verification_route"] == "direct_path"
     assert program["baseline_next_stage_ids"] == list(report.next_stage_ids)
     assert program["effective_next_stage_ids"] == list(report.next_stage_ids)
+    assert program["gate_action_route"]["stage_id"] == program["current_stage_id"]
+    assert program["gate_action_route"]["verification_route"] == "owner_approval"
+    assert program["gate_action_route"]["next_action_kind"] == "request_owner_decision"
+    assert program["gate_action_route"]["authorizes_execution"] is False
     assert program["current_action_run_id"] == "quality-calibration"
     assert program["scientific_effectiveness_established"] is False
     assert program["no_external_action_performed"] is True

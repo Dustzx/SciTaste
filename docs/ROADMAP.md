@@ -1394,6 +1394,11 @@ citation/resource screen and exact adapters/licenses remain open.
   home uses the effective stage order and records the base order, typed effect,
   compiler hash, and direct-path Tool Intelligence decision. The compiler is
   read-only and cannot add an eligible stage or grant execution authority.
+- Done: the effective current gate now compiles into a project- and dossier-bound
+  Tool Intelligence route. Hard authority effects stop at owner approval; other
+  gates select direct, targeted, or full checking only from disclosed expected-
+  value priors. The Generation as Content gate card displays the route and next
+  control action without embedding an executor.
 - Next: evaluate whether model-generated evidence surfaces improve researcher
   comprehension and intervention quality under a counterbalanced human study;
   broaden the trusted graph/comparison repertoire only where the study exposes a

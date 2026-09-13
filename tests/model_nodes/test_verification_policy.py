@@ -60,6 +60,10 @@ def test_positive_expected_value_selects_only_the_targeted_check() -> None:
             {"effects": [ActionEffect.UNTRUSTED_CODE]},
             VerificationRoute.FULL_PREFLIGHT,
         ),
+        (
+            {"effects": [ActionEffect.DECLARED_OWNER_BOUNDARY]},
+            VerificationRoute.OWNER_APPROVAL,
+        ),
     ],
 )
 def test_hard_safety_boundaries_cannot_be_optimized_away(

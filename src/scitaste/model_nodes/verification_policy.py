@@ -28,6 +28,7 @@ class ActionEffect(StrEnum):
     SECRET_ACCESS = "secret_access"
     PAID_COMPUTE = "paid_compute"
     UNTRUSTED_CODE = "untrusted_code"
+    DECLARED_OWNER_BOUNDARY = "declared_owner_boundary"
 
 
 class VerificationRoute(StrEnum):
@@ -56,7 +57,7 @@ class VerificationDecisionInput(VerificationPolicyModel):
     schema_version: Literal["1.0"] = "1.0"
     action_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*$")
     reversibility: ActionReversibility
-    effects: tuple[ActionEffect, ...] = Field(min_length=1, max_length=7)
+    effects: tuple[ActionEffect, ...] = Field(min_length=1, max_length=8)
     evidence_state: Literal["current", "stale", "absent"]
     semantic_uncertainty: Literal["low", "medium", "high"]
     failure_probability: float = Field(ge=0, le=1, allow_inf_nan=False)
@@ -132,6 +133,10 @@ def decide_verification_route(
     reasons: list[str] = []
     owner_required = False
     hard_gate = False
+    if ActionEffect.DECLARED_OWNER_BOUNDARY in effects:
+        reasons.append("declared-owner-boundary-requires-owner")
+        owner_required = True
+        hard_gate = True
     if action.reversibility is ActionReversibility.IRREVERSIBLE:
         reasons.append("irreversible-action-requires-owner")
         owner_required = True

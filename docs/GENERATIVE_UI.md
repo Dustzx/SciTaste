@@ -1327,6 +1327,15 @@ The next model revision receives this same effective current stage and order plu
 the full active directive, so iterative feedback never silently falls back to the
 dossier's pre-intervention display state.
 
+The current gate is independently compiled into a Tool Intelligence action route.
+The visible gate card distinguishes direct progress, a positive-value targeted
+check, a justified full preflight, and a non-negotiable owner boundary. Its
+evidence drawer exposes declared effects, expected loss, check net gains, reason
+codes, and route hash. These v1 economics are policy priors rather than empirical
+measurements. A semantic gray zone may admit bounded model advice, but model
+output cannot weaken paid-compute, secret, external-mutation, untrusted-code,
+irreversibility, or dossier-declared owner boundaries.
+
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
 view of its exact binding. The view reports roles, resource identities, declared

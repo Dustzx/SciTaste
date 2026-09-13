@@ -2182,6 +2182,75 @@ class ProjectPlanningDirectiveData(BaseModel):
         return self
 
 
+class ProjectProgramActionRouteData(BaseModel):
+    """Tool Intelligence route for the current effective gate, without authority."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    route_sha256: Sha256
+    effective_program_sha256: Sha256
+    stage_id: SafeIdentifier
+    stage_state: Literal["ready_for_decision", "blocked", "future"]
+    blocker_codes: tuple[SafeText, ...] = Field(default=(), max_length=100)
+    external_actions: tuple[SafeIdentifier, ...] = Field(default=(), max_length=10)
+    routing_basis: Literal["declared-policy-priors"]
+    next_action_kind: Literal[
+        "request_owner_decision",
+        "run_targeted_check",
+        "run_full_preflight",
+        "resolve_registered_blockers",
+        "continue_directly",
+    ]
+    verification_route: Literal[
+        "direct_path",
+        "targeted_check",
+        "full_preflight",
+        "owner_approval",
+    ]
+    verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=12)
+    action_effects: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=8)
+    expected_loss_units: float = Field(ge=0)
+    targeted_net_gain_units: float
+    full_preflight_net_gain_units: float
+    owner_approval_required: bool
+    model_advisory_eligible: bool
+    decision_source: Literal["deterministic", "model_assisted"]
+    selected_by_tool_intelligence: Literal[True] = True
+    authorizes_external_action: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    execution_authority: Literal["none"] = "none"
+    no_external_action_performed: Literal[True] = True
+
+    @model_validator(mode="after")
+    def action_route_is_closed(self) -> ProjectProgramActionRouteData:
+        if len(self.blocker_codes) != len(set(self.blocker_codes)):
+            raise ValueError("program action blockers must be unique")
+        if len(self.external_actions) != len(set(self.external_actions)):
+            raise ValueError("program external actions must be unique")
+        if len(self.action_effects) != len(set(self.action_effects)):
+            raise ValueError("program action effects must be unique")
+        expected_actions = {
+            "owner_approval": {"request_owner_decision"},
+            "targeted_check": {"run_targeted_check"},
+            "full_preflight": {"run_full_preflight"},
+            "direct_path": {"resolve_registered_blockers", "continue_directly"},
+        }
+        if self.next_action_kind not in expected_actions[self.verification_route]:
+            raise ValueError("program next action differs from its verification route")
+        if self.owner_approval_required != (
+            self.verification_route in {"owner_approval", "full_preflight"}
+            and (
+                "declared_owner_boundary" in self.action_effects
+                or "external_mutation" in self.action_effects
+                or "secret_access" in self.action_effects
+                or "paid_compute" in self.action_effects
+                or "untrusted_code" in self.action_effects
+            )
+        ):
+            raise ValueError("program action owner boundary differs from its effects")
+        return self
+
+
 class ProjectEvidenceProgramData(BaseModel):
     """Compact, content-bound ICLR evidence roadmap projected from one run artifact."""
 
@@ -2223,6 +2292,7 @@ class ProjectEvidenceProgramData(BaseModel):
     current_blocker_count: int = Field(ge=0)
     current_owner_approval_required: bool
     current_external_actions: tuple[SafeIdentifier, ...] = ()
+    gate_action_route: ProjectProgramActionRouteData
     current_action_run_id: str | None = Field(
         default=None,
         max_length=255,
@@ -2295,6 +2365,15 @@ class ProjectEvidenceProgramData(BaseModel):
             raise ValueError("evidence-program evidence is outside its support set")
         if (self.current_action_run_id is None) != (self.current_action_run_ref_id is None):
             raise ValueError("evidence-program action run identity must be complete")
+        if (
+            self.gate_action_route.stage_id != self.current_stage_id
+            or self.gate_action_route.effective_program_sha256 != self.effective_program_sha256
+            or len(self.gate_action_route.blocker_codes) != self.current_blocker_count
+            or self.gate_action_route.external_actions != self.current_external_actions
+            or self.gate_action_route.owner_approval_required
+            != self.current_owner_approval_required
+        ):
+            raise ValueError("program gate action route differs from the current gate")
         if any(set(item.support_ref_ids) - set(self.support_ref_ids) for item in self.phases):
             raise ValueError("evidence-program phase evidence is outside its support set")
         if any(set(item.support_ref_ids) - set(self.support_ref_ids) for item in self.tracks):

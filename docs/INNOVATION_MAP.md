@@ -102,6 +102,15 @@ resource-preference effect without accepting executable model output.
 
 ### 3. Tool Intelligence — execution intelligence
 
+The effective experiment gate now provides a shared, project-bound application of
+cost-sensitive verification routing. Declared effects and blocker state determine
+whether SciTaste proceeds directly, performs only a positive-value targeted
+check, escalates to a full preflight, or stops at an owner boundary. Semantic
+model advice is admitted only in the deterministic policy's gray zone. The first
+policy uses disclosed priors and therefore establishes mechanism and auditability,
+not empirical superiority; calibration and an intervention-cost study remain
+required for the paper claim.
+
 Tool Intelligence makes rigid tools adaptive at the points where semantic
 judgment is valuable. Bounded model nodes can classify ambiguity, propose a plan,
 repair a structured response, or recommend one of the explicitly permitted
