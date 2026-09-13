@@ -364,6 +364,7 @@ from scitaste.evaluation.human_outcomes import (
     HumanBlindKey,
     HumanBlindKeyEntry,
     HumanBlindOpening,
+    HumanBlindOpeningReport,
     HumanOutcomeFinding,
     HumanOutcomeStudyManifest,
     HumanOutcomeStudyReport,
@@ -382,6 +383,7 @@ from scitaste.evaluation.human_outcomes import (
     load_human_blind_opening,
     load_human_outcome_study,
     load_locked_human_reviews,
+    materialize_human_blind_opening,
     save_human_outcome_study_report,
 )
 from scitaste.evaluation.human_preference_analysis import (
@@ -406,6 +408,7 @@ from scitaste.evaluation.human_review_collection import (
     ReviewerVisibleDecision,
     lock_human_reviewer_submissions,
     prepare_human_reviewer_session,
+    verify_locked_human_review_set,
 )
 from scitaste.evaluation.human_study_preparation import (
     BlindedDecisionArtifact,
@@ -963,6 +966,7 @@ __all__ = [
     "HumanBlindKey",
     "HumanBlindKeyEntry",
     "HumanBlindOpening",
+    "HumanBlindOpeningReport",
     "HumanOutcomeFinding",
     "HumanOutcomeStudyManifest",
     "HumanOutcomeStudyReport",
@@ -1273,6 +1277,7 @@ __all__ = [
     "lock_human_reviewer_submissions",
     "materialize_dataset_acquisition",
     "materialize_dataset_package_acquisition",
+    "materialize_human_blind_opening",
     "materialize_objective_analysis",
     "materialize_source_projections",
     "materialize_taste_corpus_pair",
@@ -1338,4 +1343,5 @@ __all__ = [
     "source_projection_forbidden_exact_strings",
     "source_projection_protocol_sha256",
     "summarize_evaluation_readiness",
+    "verify_locked_human_review_set",
 ]

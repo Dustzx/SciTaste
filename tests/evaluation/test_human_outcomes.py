@@ -5,6 +5,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from scitaste.backends.base import PreferenceResponse
 from scitaste.backends.replay import ReplayRecord
 from scitaste.benchmark import (
@@ -52,9 +54,11 @@ from scitaste.evaluation import (
     TreatmentGenerationLedger,
     analyze_human_preferences,
     inspect_human_outcome_study,
+    load_human_blind_opening,
     load_human_outcome_study,
     load_human_preference_analysis_contract,
     lock_human_reviewer_submissions,
+    materialize_human_blind_opening,
     prepare_human_outcome_study,
     prepare_human_reviewer_session,
     save_human_preference_analysis_contract,
@@ -137,13 +141,17 @@ def test_changed_blind_key_cannot_relabel_locked_reviews(tmp_path: Path) -> None
 def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -> None:
     study, key, contract_path, ledger, prepared = _formal_study(tmp_path, source_groups=120)
     reviews, sessions = _collected_reviews_for_key(study, key, tmp_path)
-    opening = HumanBlindOpening(
-        schema_version="1.1",
-        study_id=study.study_id,
-        study_sha256=study.study_sha256,
-        review_set_sha256=reviews.review_set_sha256,
-        blind_key=key,
-        generation_ledger=ledger,
+    study_suffix = study.study_sha256[:10]
+    opening_path = tmp_path / "human-blind-opening.json"
+    opening, opening_report = materialize_human_blind_opening(
+        evidence_root=tmp_path,
+        study_path=tmp_path / f"study-{study_suffix}.json",
+        benchmark_suite_path=tmp_path / "benchmark-suite.yaml",
+        reviews_path=tmp_path / f"locked-reviews-{study_suffix}.json",
+        blind_key_path=prepared.blind_key_path,
+        generation_ledger_path=prepared.generation_ledger_path,
+        output_path=opening_path,
+        report_path=tmp_path / "human-blind-opening-report.json",
         opened_at=reviews.locked_at + timedelta(minutes=1),
     )
     outcome_report = inspect_human_outcome_study(
@@ -164,6 +172,28 @@ def test_h1_h2_analysis_uses_source_groups_and_holm_joint_gate(tmp_path: Path) -
     assert outcome_report.ready_for_primary_analysis is True
     assert outcome_report.review_collection_bindings_verified is True
     assert outcome_report.treatment_generation_chain_verified is True
+    assert opening_report.review_collection_replay_verified is True
+    assert opening_report.post_open_analysis_gate_verified is True
+    assert load_human_blind_opening(opening_path) == opening
+    changed = reviews.reviews[0].model_copy(update={"rationale": "A substituted rationale."})
+    forged = reviews.model_copy(update={"reviews": (changed, *reviews.reviews[1:])})
+    forged_path = tmp_path / "forged-reviews.json"
+    forged_path.write_text(
+        forged.model_dump_json(indent=2, exclude={"review_set_sha256"}) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="differs from replayed sessions"):
+        materialize_human_blind_opening(
+            evidence_root=tmp_path,
+            study_path=tmp_path / f"study-{study_suffix}.json",
+            benchmark_suite_path=tmp_path / "benchmark-suite.yaml",
+            reviews_path=forged_path,
+            blind_key_path=tmp_path / "private-key-must-not-be-read.json",
+            generation_ledger_path=tmp_path / "private-ledger-must-not-be-read.json",
+            output_path=tmp_path / "opening-must-not-exist.json",
+            report_path=tmp_path / "report-must-not-exist.json",
+        )
+    assert not (tmp_path / "opening-must-not-exist.json").exists()
     legacy_reviews = LockedHumanReviewSet(
         study_id=reviews.study_id,
         study_sha256=reviews.study_sha256,

@@ -162,6 +162,7 @@ from scitaste.evaluation import (
     lock_human_reviewer_submissions,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
+    materialize_human_blind_opening,
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
@@ -1670,6 +1671,20 @@ def build_parser() -> argparse.ArgumentParser:
     human_review_lock.add_argument("--report", type=Path, required=True)
     _add_log_level_option(human_review_lock)
     human_review_lock.set_defaults(handler=_handle_evaluation_human_review_lock)
+    human_blind_open = evaluation_commands.add_parser(
+        "human-blind-open",
+        help="Replay locked review evidence, then open the committed H1/H2 private key",
+    )
+    human_blind_open.add_argument("--study", type=Path, required=True)
+    human_blind_open.add_argument("--suite", type=Path, required=True)
+    human_blind_open.add_argument("--reviews", type=Path, required=True)
+    human_blind_open.add_argument("--blind-key", type=Path, required=True)
+    human_blind_open.add_argument("--generation-ledger", type=Path, required=True)
+    human_blind_open.add_argument("--evidence-root", type=Path, default=Path("."))
+    human_blind_open.add_argument("--output", type=Path, required=True)
+    human_blind_open.add_argument("--report", type=Path, required=True)
+    _add_log_level_option(human_blind_open)
+    human_blind_open.set_defaults(handler=_handle_evaluation_human_blind_open)
     human_outcome = evaluation_commands.add_parser(
         "human-outcome-audit",
         help="Audit locked H1/H2 human outcomes and optional post-lock unblinding",
@@ -5550,6 +5565,36 @@ def _handle_evaluation_human_review_lock(args: argparse.Namespace) -> int:
             {
                 "review_set_sha256": review_set.review_set_sha256,
                 **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_human_blind_open(args: argparse.Namespace) -> int:
+    opening, report = materialize_human_blind_opening(
+        evidence_root=args.evidence_root,
+        study_path=args.study,
+        benchmark_suite_path=args.suite,
+        reviews_path=args.reviews,
+        blind_key_path=args.blind_key,
+        generation_ledger_path=args.generation_ledger,
+        output_path=args.output,
+        report_path=args.report,
+    )
+    print(
+        json.dumps(
+            {
+                "study_id": opening.study_id,
+                "study_sha256": opening.study_sha256,
+                "review_set_sha256": opening.review_set_sha256,
+                "blind_key_sha256": opening.blind_key.blind_key_sha256,
+                "generation_ledger_sha256": report.generation_ledger_sha256,
+                "opening": report.opening.model_dump(mode="json"),
+                "report": str(args.report),
+                "ready_for_primary_analysis": report.post_open_analysis_gate_verified,
             },
             indent=2,
             ensure_ascii=False,

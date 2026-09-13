@@ -74,6 +74,36 @@ Neither command recruits or contacts reviewers; informed consent, qualification,
 conflict clearance, compensation, and owner recruitment approval remain
 external human-resource gates.
 
+## Opening the blind only after collection replay
+
+`scitaste evaluation human-blind-open` is the only operational bridge from the
+locked review set to the analysis input. It first performs the public readiness
+audit, then reconstructs the complete review set from the two bound session
+files and two raw browser exports using the original suite. Only if the
+reconstructed object is byte-semantically identical to the locked set does the
+command read the private key or generation ledger. It then replays the complete
+generation chain, writes the opening, and emits a receipt binding every input
+and the opening bytes. A substituted rationale, response, session, lock time,
+suite, or visible output fails before private evidence is accessed.
+
+```bash
+.venv/bin/scitaste evaluation human-blind-open \
+  --study STUDY_PACKAGE/public/study.json \
+  --suite BENCHMARK_SUITE.yaml \
+  --reviews LOCKED_REVIEWS.json \
+  --blind-key STUDY_PACKAGE/private/blind-key.json \
+  --generation-ledger STUDY_PACKAGE/private/generation-ledger.json \
+  --evidence-root EVIDENCE_ROOT \
+  --output OPENING.json \
+  --report OPENING_REPORT.json
+```
+
+The opening contains condition identities and is analysis-only evidence; it
+must not be exposed to reviewers. The command grants no experiment, model, API,
+GPU, recruitment, compensation, or data-use authority. Direct callers of the
+analyzer receive the same collection replay check after opening, so a manually
+assembled review set cannot bypass the operational command.
+
 A schema-1.2 formal human study binds its scope, exact post-pilot analysis
 contract, power-analysis bytes, formal v3 suite identity, treatment-manifest
 identity, and generation-ledger commitment before outcome review. The ledger is

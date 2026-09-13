@@ -32,6 +32,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.12 — H1/H2 reviewer-output identity continuity | done | a precommitted private generation ledger binds every formal v3 case and treatment request to its execution trace and reviewer-visible output, then opens only after all primary reviews lock |
 | Phase 8.13 — H1/H2 blind-package materialization | done | one offline compiler turns exact timestamped benchmark recordings into opaque reviewer outputs, a public schema-1.2 commitment, and private counterbalanced key/ledger artifacts without model or human action |
 | Phase 8.14 — H1/H2 reviewer session and lock | done | two self-contained, assignment-specific blind workspaces expose exact case context and X/Y decisions; complete exports compile into a session/submission-bound immutable review set before key opening |
+| Phase 8.15 — H1/H2 review replay and blind opening | done | the four bound collection files must exactly reproduce the locked set before private key/ledger access; post-open generation replay must pass before an analysis input is emitted |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing

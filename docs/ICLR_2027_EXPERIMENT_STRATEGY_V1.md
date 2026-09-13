@@ -240,6 +240,17 @@ opening. These commands implement presentation and evidence capture; they do not
 satisfy reviewer qualification, consent, conflict, compensation, independence,
 or recruitment approval.
 
+Opening is now a third executable boundary rather than a JSON object assembled
+by an operator. Before either private file is read, `human-blind-open` reruns the
+public readiness audit and uses the original collection compiler to reproduce
+the complete review set from its two bound sessions and two raw submissions at
+the frozen lock time. Exact equality is required. It then opens the committed
+key and generation ledger and emits an analysis input only after the entire
+treatment-to-output chain passes. The analyzer independently repeats collection
+replay from the ledger-bound suite. This prevents a valid set of collection-file
+hashes from being attached to substituted review rows while preserving the rule
+that condition identity cannot enter reviewer-visible state.
+
 Two oracle-controlled directional contrasts are preregistered: H1 compares
 matched abstraction against same-source raw RAG with representation as the only
 permitted difference; H2a compares matched against mismatched abstractions with

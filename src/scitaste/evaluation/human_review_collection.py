@@ -307,6 +307,83 @@ def lock_human_reviewer_submissions(
     submission_files = tuple(
         _regular_file(root, item, _MAX_SESSION_BYTES) for item in submission_paths
     )
+    lock_time = locked_at or datetime.now(UTC)
+    review_set = _compile_locked_review_set(
+        root=root,
+        study=study,
+        suite=suite,
+        session_files=session_files,
+        submission_files=submission_files,
+        locked_at=lock_time,
+    )
+    _atomic_json(target, review_set.model_dump(mode="json", exclude={"review_set_sha256"}))
+    review_binding = _binding(root, target)
+    report = HumanReviewCollectionReport(
+        study_id=study.study_id,
+        study_sha256=study_sha256,
+        comparison_count=len(review_set.reviews),
+        completed_count=sum(item.preference is not None for item in review_set.reviews),
+        cannot_assess_count=sum(item.preference is None for item in review_set.reviews),
+        reviewer_sessions=review_set.reviewer_sessions,
+        reviewer_submissions=review_set.reviewer_submissions,
+        locked_review_set=review_binding,
+        review_set_sha256=review_set.review_set_sha256,
+        locked_at=lock_time,
+    )
+    _atomic_json(report_target, report.model_dump(mode="json"))
+    return review_set, report
+
+
+def verify_locked_human_review_set(
+    *,
+    evidence_root: str | Path,
+    study: HumanOutcomeStudyManifest,
+    benchmark_suite_path: str | Path,
+    reviews: LockedHumanReviewSet,
+) -> LockedHumanReviewSet:
+    """Replay the four bound collection files and reproduce the locked set exactly."""
+
+    root = Path(evidence_root).resolve(strict=True)
+    if reviews.schema_version != "1.1":
+        raise ValueError("review collection replay requires a session-bound review set")
+    suite_file = _regular_file(root, benchmark_suite_path)
+    suite = load_benchmark_suite(suite_file)
+    _verify_study_suite(study, suite, suite_file)
+    session_files = tuple(
+        _bound_file(root, item, maximum_bytes=_MAX_SESSION_BYTES)
+        for item in reviews.reviewer_sessions
+    )
+    submission_files = tuple(
+        _bound_file(root, item, maximum_bytes=_MAX_SESSION_BYTES)
+        for item in reviews.reviewer_submissions
+    )
+    replayed = _compile_locked_review_set(
+        root=root,
+        study=study,
+        suite=suite,
+        session_files=session_files,
+        submission_files=submission_files,
+        locked_at=reviews.locked_at,
+    )
+    if replayed != reviews:
+        raise ValueError("locked review set differs from replayed sessions and submissions")
+    return replayed
+
+
+def _compile_locked_review_set(
+    *,
+    root: Path,
+    study: HumanOutcomeStudyManifest,
+    suite: BenchmarkSuite,
+    session_files: tuple[Path, ...],
+    submission_files: tuple[Path, ...],
+    locked_at: datetime,
+) -> LockedHumanReviewSet:
+    """Compile a review set in memory so locking and later opening share one replay path."""
+
+    if len(session_files) != 2 or len(submission_files) != 2:
+        raise ValueError("review collection requires exactly two sessions and submissions")
+    study_sha256 = study.study_sha256
     sessions = tuple(
         HumanReviewerSession.model_validate_json(path.read_text(encoding="utf-8"))
         for path in session_files
@@ -328,7 +405,7 @@ def lock_human_reviewer_submissions(
         raise ValueError("review sessions do not cover the study reviewer assignments")
     all_session_ids: set[str] = set()
     reviews: list[LockedHumanOutcomeReview] = []
-    lock_time = locked_at or datetime.now(UTC)
+    lock_time = locked_at
     if lock_time.utcoffset() is None:
         raise ValueError("review collection lock timestamp must include a timezone")
     session_bindings = tuple(_binding(root, item) for item in session_files)
@@ -419,7 +496,7 @@ def lock_human_reviewer_submissions(
             )
     if all_session_ids != set(comparisons):
         raise ValueError("reviewer sessions do not cover every study comparison")
-    review_set = LockedHumanReviewSet(
+    return LockedHumanReviewSet(
         schema_version="1.1",
         study_id=study.study_id,
         study_sha256=study_sha256,
@@ -428,22 +505,6 @@ def lock_human_reviewer_submissions(
         reviewer_submissions=submission_bindings,
         locked_at=lock_time,
     )
-    _atomic_json(target, review_set.model_dump(mode="json", exclude={"review_set_sha256"}))
-    review_binding = _binding(root, target)
-    report = HumanReviewCollectionReport(
-        study_id=study.study_id,
-        study_sha256=study_sha256,
-        comparison_count=len(reviews),
-        completed_count=sum(item.preference is not None for item in reviews),
-        cannot_assess_count=sum(item.preference is None for item in reviews),
-        reviewer_sessions=session_bindings,
-        reviewer_submissions=submission_bindings,
-        locked_review_set=review_binding,
-        review_set_sha256=review_set.review_set_sha256,
-        locked_at=lock_time,
-    )
-    _atomic_json(report_target, report.model_dump(mode="json"))
-    return review_set, report
 
 
 def _verify_study_suite(
@@ -488,8 +549,13 @@ def _required_string(payload: dict[str, object], key: str) -> str:
     return value
 
 
-def _bound_file(root: Path, binding: HumanStudyFileBinding) -> Path:
-    path = _regular_file(root, binding.path)
+def _bound_file(
+    root: Path,
+    binding: HumanStudyFileBinding,
+    *,
+    maximum_bytes: int = _MAX_INPUT_BYTES,
+) -> Path:
+    path = _regular_file(root, binding.path, maximum_bytes)
     if _sha256(path) != binding.sha256:
         raise ValueError("reviewer-visible file binding differs from its committed bytes")
     return path
@@ -586,4 +652,5 @@ __all__ = [
     "ReviewerVisibleDecision",
     "lock_human_reviewer_submissions",
     "prepare_human_reviewer_session",
+    "verify_locked_human_review_set",
 ]

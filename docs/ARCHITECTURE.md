@@ -2985,3 +2985,31 @@ Treatment-bound formal studies reject legacy unbound review sets before blind
 opening. Browser timestamps and attestations remain human-reported evidence,
 not cryptographic proof of identity. These tools grant no consent, recruitment,
 compensation, model, API, GPU, experiment, or blind-opening authority.
+
+### ADR-098: Formal blind opening replays collection before private evidence access
+
+Status: accepted and executable; no real reviewer outcome or private formal
+opening exists yet.
+
+A schema-1.1 review set content-addresses its reviewer sessions and submissions,
+but checking only that those four files still have the recorded hashes does not
+prove that the review rows were compiled from their contents. A manually
+assembled review set could otherwise retain valid file bindings while changing
+a preference, rationale, duration, or lock time.
+
+SciTaste now uses the same pure in-memory collection compiler both when locking
+and when opening. The opening command first verifies the public study and visible
+bytes, reloads the exact committed suite, replays both sessions and submissions
+at the recorded lock time, and requires full equality with the locked review
+set. Private key and generation-ledger files are not read until that replay
+passes. After access, the existing condition, timing, treatment, request, trace,
+and output checks must establish analysis readiness before an opening and its
+input-binding receipt are written. The analysis audit repeats collection replay
+from the opened ledger's bound suite path, preventing direct callers from
+bypassing the command.
+
+This is an evidence-ordering control, not a claim that the software can prevent
+an authorized filesystem user from opening a private file manually. Filesystem
+separation, reviewer access control, consent, and independent qualification
+remain operational responsibilities. The compiler grants no model, API, GPU,
+experiment, recruitment, or compensation authority.

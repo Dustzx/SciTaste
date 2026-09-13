@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added an executable post-review blind-opening boundary for SciTasteBench v3.
+  `evaluation human-blind-open` reproduces the complete locked set from its two
+  bound sessions and two browser submissions before it reads the private key or
+  generation ledger, then emits an opening only after full treatment-generation
+  replay establishes analysis readiness. Direct formal analysis repeats the
+  collection replay, so valid source-file hashes cannot legitimize substituted
+  review rows.
 - Added an executable human endpoint for SciTasteBench v3. Each preassigned
   reviewer now receives a self-contained, condition-blind HTML workspace with
   the exact committed case context, side-by-side X/Y decisions, local draft

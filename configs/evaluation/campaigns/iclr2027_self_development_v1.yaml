@@ -22,7 +22,7 @@ artifacts:
     sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: dd16ce05274e195c474ea6e1742b2f6cf9ba3223e6dff8557c18a54c91117012
+    sha256: 95b50f0e297f1ea9f7a52fd3cf2df491fd5a1521dc09c6b9a8bc39ae7f4b6926
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a

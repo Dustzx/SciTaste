@@ -1340,3 +1340,27 @@ instead of forming one long vertical document. This is engineering evidence,
 not a human-usability result or a scientific effect. No source corpus, model,
 API, GPU, recruited reviewer, or experiment was used; qualified independent
 review and the separately authorized AAAR content audit remain real gates.
+
+## Replaying locked reviews before opening the H1/H2 key (2026-09-13)
+
+Following the implemented reviewer workflow one boundary further exposed a
+validity gap: the formal audit checked that the two session and two submission
+files still matched their recorded hashes, but it did not reconstruct the
+locked rows from those files. A manually assembled review set could therefore
+claim valid collection bindings without being their actual product.
+
+SciTaste now shares one in-memory collection compiler between review locking and
+later blind opening. The new opening path completes the public readiness audit,
+replays the exact four collection files against the committed suite and study,
+and requires full equality with the locked set before reading either private
+file. It then opens the committed key and generation ledger, replays the formal
+treatment-to-output chain, and writes an analysis input only when every gate
+passes. The analyzer performs the collection replay again for direct callers.
+
+The focused formal-scale acceptance path used 120 source groups, 360 generation
+records, and 480 locked comparisons. It completed opening and the preregistered
+analysis entrance; a review set with one substituted rationale failed before a
+deliberately nonexistent private-key path was examined. This is executable
+integrity evidence, not a real scientific outcome. No acquired content, model,
+API, GPU, recruited reviewer, or experiment was used. The next empirical gate
+remains owner authorization to read the already downloaded AAAR pilot content.

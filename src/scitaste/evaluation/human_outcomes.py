@@ -7,7 +7,7 @@ import json
 import os
 import tempfile
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -489,6 +489,41 @@ class HumanBlindOpening(BaseModel):
         return self
 
 
+class HumanBlindOpeningReport(BaseModel):
+    """Local receipt proving that review replay preceded private-key access."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    study_id: str = Field(pattern=_ID)
+    study: HumanStudyFileBinding
+    study_sha256: str = Field(pattern=_SHA256)
+    locked_reviews: HumanStudyFileBinding
+    review_set_sha256: str = Field(pattern=_SHA256)
+    private_blind_key: HumanStudyFileBinding
+    blind_key_sha256: str = Field(pattern=_SHA256)
+    private_generation_ledger: HumanStudyFileBinding
+    generation_ledger_sha256: str = Field(pattern=_SHA256)
+    opening: HumanStudyFileBinding
+    opened_at: datetime
+    pre_open_review_gate_verified: Literal[True] = True
+    review_collection_replay_verified: Literal[True] = True
+    post_open_analysis_gate_verified: Literal[True] = True
+    condition_identity_opened_after_review_lock: Literal[True] = True
+    no_external_action_performed: Literal[True] = True
+    authorizes_human_recruitment: Literal[False] = False
+    authorizes_model_calls: Literal[False] = False
+    authorizes_api_spend: Literal[False] = False
+    authorizes_gpu_work: Literal[False] = False
+    authorizes_experiment: Literal[False] = False
+
+    @model_validator(mode="after")
+    def opening_time_is_aware(self) -> HumanBlindOpeningReport:
+        if self.opened_at.utcoffset() is None:
+            raise ValueError("blind-opening report timestamp must include a timezone")
+        return self
+
+
 class HumanOutcomeFinding(BaseModel):
     model_config = _CONFIG
 
@@ -678,6 +713,27 @@ def inspect_human_outcome_study(
         )
         triplet_verified = _triplet_is_valid(comparisons, key_by_comparison, findings)
         if generation_chain_required:
+            if reviews is not None and opening.generation_ledger is not None:
+                try:
+                    from scitaste.evaluation.human_review_collection import (
+                        verify_locked_human_review_set,
+                    )
+
+                    verify_locked_human_review_set(
+                        evidence_root=root,
+                        study=study,
+                        benchmark_suite_path=opening.generation_ledger.benchmark_suite.path,
+                        reviews=reviews,
+                    )
+                except (OSError, ValueError) as exc:
+                    _add(
+                        findings,
+                        "review-collection-replay-invalid",
+                        f"locked reviews cannot be reproduced from their bound files: {exc}",
+                    )
+                    collection_bindings_verified = False
+                    reviews_complete = False
+                    ready_to_open = False
             generation_chain_verified = _generation_chain_is_valid(
                 study,
                 reviews,
@@ -759,6 +815,95 @@ def inspect_human_outcome_study(
         outcomes=tuple(outcomes),
         findings=tuple(findings),
     )
+
+
+def materialize_human_blind_opening(
+    *,
+    evidence_root: str | Path,
+    study_path: str | Path,
+    benchmark_suite_path: str | Path,
+    reviews_path: str | Path,
+    blind_key_path: str | Path,
+    generation_ledger_path: str | Path,
+    output_path: str | Path,
+    report_path: str | Path,
+    opened_at: datetime | None = None,
+) -> tuple[HumanBlindOpening, HumanBlindOpeningReport]:
+    """Open committed private evidence only after replaying the locked review chain."""
+
+    from scitaste.evaluation.human_review_collection import verify_locked_human_review_set
+
+    root = Path(evidence_root).resolve(strict=True)
+    study_file = _root_file(root, study_path, "human outcome study")
+    reviews_file = _root_file(root, reviews_path, "locked human reviews")
+    suite_file = _root_file(root, benchmark_suite_path, "human benchmark suite")
+    study = load_human_outcome_study(study_file)
+    reviews = load_locked_human_reviews(reviews_file)
+    pre_open = inspect_human_outcome_study(study, evidence_root=root, reviews=reviews)
+    if not pre_open.ready_to_open_blind_key:
+        codes = ", ".join(item.code for item in pre_open.findings) or "unknown"
+        raise ValueError(f"human review set is not ready for blind opening: {codes}")
+
+    # This is deliberately the last public-only gate before either private file is read.
+    verify_locked_human_review_set(
+        evidence_root=root,
+        study=study,
+        benchmark_suite_path=suite_file,
+        reviews=reviews,
+    )
+
+    key_file = _root_file(root, blind_key_path, "private human blind key")
+    ledger_file = _root_file(root, generation_ledger_path, "private generation ledger")
+    key = HumanBlindKey.model_validate(_load_mapping(key_file, "private human blind key"))
+    ledger = TreatmentGenerationLedger.model_validate(
+        _load_mapping(ledger_file, "private generation ledger")
+    )
+    timestamp = opened_at or datetime.now(UTC)
+    opening = HumanBlindOpening(
+        schema_version="1.1",
+        study_id=study.study_id,
+        study_sha256=study.study_sha256,
+        review_set_sha256=reviews.review_set_sha256,
+        blind_key=key,
+        generation_ledger=ledger,
+        opened_at=timestamp,
+    )
+    post_open = inspect_human_outcome_study(
+        study,
+        evidence_root=root,
+        reviews=reviews,
+        opening=opening,
+    )
+    if not post_open.ready_for_primary_analysis:
+        codes = ", ".join(item.code for item in post_open.findings) or "unknown"
+        raise ValueError(f"opened human study is not ready for primary analysis: {codes}")
+
+    target = _new_root_file(root, output_path, "human blind opening")
+    report_target = _new_root_file(root, report_path, "human blind opening report")
+    if target == report_target:
+        raise ValueError("human blind opening and report paths must differ")
+    _atomic_json(
+        target,
+        opening.model_dump(
+            mode="json",
+            exclude={"blind_key": {"blind_key_sha256"}},
+        ),
+    )
+    report = HumanBlindOpeningReport(
+        study_id=study.study_id,
+        study=_file_binding(root, study_file),
+        study_sha256=study.study_sha256,
+        locked_reviews=_file_binding(root, reviews_file),
+        review_set_sha256=reviews.review_set_sha256,
+        private_blind_key=_file_binding(root, key_file),
+        blind_key_sha256=key.blind_key_sha256,
+        private_generation_ledger=_file_binding(root, ledger_file),
+        generation_ledger_sha256=ledger.ledger_sha256,
+        opening=_file_binding(root, target),
+        opened_at=timestamp,
+    )
+    _atomic_json(report_target, report.model_dump(mode="json"))
+    return opening, report
 
 
 def save_human_outcome_study_report(
@@ -1054,6 +1199,62 @@ def _load_mapping(path: str | Path, label: str) -> dict[str, object]:
     return payload
 
 
+def _root_file(root: Path, path: str | Path, label: str) -> Path:
+    source = Path(path)
+    if not source.is_absolute():
+        source = root / source
+    if source.is_symlink():
+        raise ValueError(f"{label} cannot be a symlink")
+    resolved = source.resolve(strict=True)
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"{label} must stay inside the evidence root") from exc
+    if not resolved.is_file() or resolved.stat().st_size > _MAX_MANIFEST_BYTES:
+        raise ValueError(f"{label} must be a bounded regular file")
+    return resolved
+
+
+def _new_root_file(root: Path, path: str | Path, label: str) -> Path:
+    target = Path(path)
+    if not target.is_absolute():
+        target = root / target
+    target = target.resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"{label} must stay inside the evidence root") from exc
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(target)
+    return target
+
+
+def _file_binding(root: Path, path: Path) -> HumanStudyFileBinding:
+    return HumanStudyFileBinding(
+        path=path.relative_to(root).as_posix(),
+        sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+    )
+
+
+def _atomic_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        if path.exists() or path.is_symlink():
+            raise FileExistsError(path)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _validate_relative_path(value: str) -> None:
     if "\\" in value or "//" in value:
         raise ValueError("human outcome bindings must use normalized POSIX paths")
@@ -1089,6 +1290,7 @@ __all__ = [
     "HumanBlindKey",
     "HumanBlindKeyEntry",
     "HumanBlindOpening",
+    "HumanBlindOpeningReport",
     "HumanOutcomeFinding",
     "HumanOutcomeStudyManifest",
     "HumanOutcomeStudyReport",
@@ -1107,5 +1309,6 @@ __all__ = [
     "load_human_blind_opening",
     "load_human_outcome_study",
     "load_locked_human_reviews",
+    "materialize_human_blind_opening",
     "save_human_outcome_study_report",
 ]
