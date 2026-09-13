@@ -1359,13 +1359,14 @@ citation/resource screen and exact adapters/licenses remain open.
   amendment over closed stage, track, resource-ID, and resource-role catalogs.
   Proposals are cached below the project, survive reload, accept follow-up
   feedback as an edit of an exact predecessor, and have explicit immutable
-  accept/reject decisions. An accepted item is a planning directive, not a
-  dossier mutation, external-action approval, or execution authorization; model
-  unavailability has no fake deterministic replacement.
+  accept/reject decisions. An accepted item is a review-complete working
+  directive awaiting explicit publication, not a dossier mutation,
+  external-action approval, or execution authorization; model unavailability has
+  no fake deterministic replacement.
 - Done: the same home projects the current project resource binding as a compact,
   secret-free API/GPU/checkpoint portfolio. Shared infrastructure remains in the
   superordinate registry while configuration discussion returns through the
-  typed planning proposal path. Accepted resource IDs are visibly projected as
+  typed planning proposal path. Published resource IDs are visibly projected as
   project planning preferences without falsifying registry state.
 - Done: Tool Intelligence can select the direct path, a targeted check, a full
   preflight, or an owner boundary from declared reversibility, expected loss,
@@ -1374,10 +1375,17 @@ citation/resource screen and exact adapters/licenses remain open.
 - Done: low-risk local accept/reject decisions also use that router and take the
   direct path after the necessary hash/staleness guard; owner-gated Full Workflow
   actions are deferred before any model or tool request is constructed.
-- Next: compile an accepted directive into a new immutable evidence-program or
-  resource-binding successor. Until then, project planning is configurable in
-  the UI, while shared runtime infrastructure and experiment authorization remain
-  unchanged.
+- Done: acceptance and publication are separate user actions. Publication
+  compiles one exact accepted proposal into a self-hashed, predecessor-linked
+  project run; the project home displays it parallel to the immutable evidence
+  program, and subsequent model feedback automatically edits the published
+  direction. Tool Intelligence selects the direct path for this cheap reversible
+  write, so no generic preflight is added. Publication still changes neither the
+  source dossier nor experiment authority.
+- Next: compile a published resource-planning version into a separately reviewed
+  successor project resource binding. Shared runtime infrastructure, credentials,
+  provider contact, and experiment authorization remain unchanged until that
+  controller boundary is implemented and explicitly approved.
 
 ## Project controls
 

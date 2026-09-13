@@ -12,9 +12,14 @@ semantic versioning.
   but the proposal cannot apply itself, remove blockers, authorize an external
   action, or execute work; an unavailable model produces no synthetic fallback.
   Cached proposals now survive reload, accept exact follow-up feedback as chained
-  model edits, and support explicit immutable user acceptance or rejection. An
-  accepted proposal is a visible planning directive only, and accepted resource
-  choices become project-view preferences without mutating the shared registry.
+  model edits, and support explicit immutable user acceptance or rejection. A
+  separate user action publishes an accepted proposal as a self-hashed,
+  predecessor-linked project planning run; the published version is displayed
+  parallel to the scientific evidence program and automatically seeds the next
+  model edit. Published resource choices become project-view preferences without
+  mutating the shared registry or granting execution authority. Tool Intelligence
+  records a direct route for this cheap reversible publication rather than adding
+  a generic preflight.
   The project home now also projects the exact secret-free API/GPU/checkpoint
   portfolio, access-presence state, and registry provenance, with configuration
   requests routed back through the same proposal boundary.

@@ -477,6 +477,18 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 raise ValueError("program-revision route identity mismatch")
             self._send_model(HTTPStatus.CREATED, decision)
             return
+        if len(parts) == 8 and resource == "program-revisions" and parts[7] == "publish":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            payload = self._read_json_object()
+            if payload.get("proposal_id") != parts[6]:
+                raise ValueError("planning-directive route identity mismatch")
+            publication = self.server.application.publish_program_revision(
+                project_id,
+                payload,
+            )
+            self._send_model(HTTPStatus.CREATED, publication)
+            return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]
             operation = parts[7] if len(parts) == 8 else None

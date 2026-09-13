@@ -87,8 +87,10 @@ presentation plane parallel to SciTaste's scientific controller, and an
 interaction plane only through typed, reviewable proposals and explicit user
 decisions; it is not the scientific state itself. Cached proposals survive a
 reload, accept/reject is immutable, and later feedback can ask the model to edit
-an exact prior draft. Accepted resource proposals also reorder the project view
-as planning preferences without mutating the shared registry.
+an exact prior draft. A second explicit action publishes an accepted proposal as
+a self-hashed, predecessor-linked project planning version; later model edits
+automatically inherit that version. Published resource proposals also reorder the
+project view as planning preferences without mutating the shared registry.
 
 ### 3. Tool Intelligence — execution intelligence
 
@@ -158,7 +160,7 @@ designs:
 | Capability | Current state | Remaining proof or implementation |
 |---|---|---|
 | Scientific Taste control | Stage-specific critics, a six-condition native isolation runtime, real decision-gap-driven OpenAlex/Crossref mining with frozen replay, source-identity/relevance/family/grounded-domain admission and saturation, prestige-blind five-dimensional reference qualification, a type-separated and stratum-matched H0 quality-versus-prestige selector with exact arm-to-projection identity continuity, replayable H1/H2 source/corpus/token treatment manifests, an exact-recording-to-blind-package compiler with precommitted generation ledgers, reviewer-specific offline blind workspaces, session/submission-bound review locking, pre-key collection replay and post-key generation-chain opening, one opt-in content-bound model path that concretizes every non-trivial controller-owned candidate set, ledger-bound grounded contrastive Taste distillation, decision-grounded source-diverse and tension-preserving Taste selection, schema-1.1 dual-human source admission, a paired corpus compiler, and outcome-gated continual project memory are implemented; the search path has real self-iteration evidence | Content-authorized and quality-screened task-specific sources, provider-produced qualification/abstraction/selector traces, qualified independent humans using the implemented sessions, real frozen H0 source arms and H0/H1/H2 outcomes, real longitudinal admitted project memories, powered held-out evaluation, and formal independent matched-system effectiveness evidence |
-| Generation as Content workspace | Trusted shell, evidence-bound generated surfaces, project conversations, compact evidence-program home, secret-free project resource portfolio, model-authored snapshot-bound planning amendments, chained feedback editing, and explicit accept/reject planning directives are implemented | Successor dossier/resource-binding compiler, counterbalanced human study, and a richer safe presentation repertoire |
+| Generation as Content workspace | Trusted shell, evidence-bound generated surfaces, project conversations, compact evidence-program home, secret-free project resource portfolio, model-authored snapshot-bound planning amendments, chained feedback editing, explicit accept/reject decisions, and immutable predecessor-linked planning publication are implemented | Reviewed project resource-binding compiler, counterbalanced human study, and a richer safe presentation repertoire |
 | Tool Intelligence | Plans, schema-pinned repair, replay/live gating, content-addressed handlers, a durable project-owned single-step loop, a deterministic Full Workflow hotspot, and cost-sensitive direct/targeted/full/owner verification routing are implemented; one registered live study is a narrow preliminary signal | Model-advisory evaluation for semantic gray zones, independent blinded review, durable observation-to-evidence admission, broader main-workflow tasks, and external replication |
 | Native Knowledge retrieval | Implemented for project-owned local libraries | Licensed open-web/search connectors and snapshot governance |
 | Native experiment execution | Static code admission, isolated replicate measurement, content-bound read-only datasets, explicit NVIDIA device profiles, and one content-bound local Qwen3-VL-2B CUDA environment implemented | Portable environment construction, cross-host/cold-cache reproduction, quality evaluation, and broader workloads |

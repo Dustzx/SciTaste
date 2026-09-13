@@ -2077,6 +2077,57 @@ class ProjectEvidenceProgramTrackItem(BaseModel):
         return self
 
 
+class ProjectPlanningDirectiveData(BaseModel):
+    """Published user-approved planning overlay; it grants no execution authority."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    publication_id: SafeIdentifier
+    publication_sha256: Sha256
+    run_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    run_ref_id: SafeIdentifier
+    artifact_ref_id: SafeIdentifier
+    source_dossier_sha256: Sha256
+    proposal_id: SafeIdentifier
+    proposal_record_sha256: Sha256
+    decision_id: SafeIdentifier
+    decision_sha256: Sha256
+    change_kind: Literal[
+        "reprioritize_next_gates",
+        "clarify_stage_decision",
+        "request_resource_revision",
+        "add_risk_note",
+    ]
+    target_stage_id: SafeIdentifier
+    target_track_ids: tuple[SafeIdentifier, ...] = ()
+    proposed_next_stage_order: tuple[SafeIdentifier, ...] = ()
+    summary: SafeText
+    required_evidence: tuple[SafeText, ...] = Field(default=(), max_length=12)
+    requested_resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    requested_resource_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    predecessor_publication_id: SafeIdentifier | None = None
+    predecessor_publication_sha256: Sha256 | None = None
+    source_dossier_unchanged: Literal[True] = True
+    source_resource_binding_unchanged: Literal[True] = True
+    authorizes_external_action: Literal[False] = False
+    authorizes_execution: Literal[False] = False
+    verification_route: Literal["direct_path"] = "direct_path"
+    verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def planning_directive_is_closed(self) -> ProjectPlanningDirectiveData:
+        if (self.predecessor_publication_id is None) != (
+            self.predecessor_publication_sha256 is None
+        ):
+            raise ValueError("planning-directive predecessor identity must be complete")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("planning-directive support references must be unique")
+        if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
+            raise ValueError("planning-directive evidence is outside its support set")
+        return self
+
+
 class ProjectEvidenceProgramData(BaseModel):
     """Compact, content-bound ICLR evidence roadmap projected from one run artifact."""
 
@@ -2110,6 +2161,7 @@ class ProjectEvidenceProgramData(BaseModel):
     current_action_run_ref_id: SafeIdentifier | None = None
     phases: tuple[ProjectEvidenceProgramPhaseItem, ...] = Field(min_length=7, max_length=7)
     tracks: tuple[ProjectEvidenceProgramTrackItem, ...] = Field(min_length=1, max_length=4)
+    planning_directive: ProjectPlanningDirectiveData | None = None
     scientific_effectiveness_established: Literal[False] = False
     no_external_action_performed: Literal[True] = True
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
@@ -2152,6 +2204,10 @@ class ProjectEvidenceProgramData(BaseModel):
             raise ValueError("evidence-program phase evidence is outside its support set")
         if any(set(item.support_ref_ids) - set(self.support_ref_ids) for item in self.tracks):
             raise ValueError("evidence-program track evidence is outside its support set")
+        if self.planning_directive is not None and (
+            set(self.planning_directive.support_ref_ids) - set(self.support_ref_ids)
+        ):
+            raise ValueError("planning-directive evidence is outside the program support set")
         return self
 
 

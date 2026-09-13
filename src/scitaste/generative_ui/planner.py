@@ -561,6 +561,11 @@ class StructuredWorkspacePlanner:
                 if prior_record is not None and prior_record.outcome.draft is not None
                 else None
             ),
+            "published_directive": (
+                catalog.active_directive.model_dump(mode="json")
+                if catalog.active_directive is not None
+                else None
+            ),
         }
         try:
             structured_request = self._request(
@@ -573,7 +578,8 @@ class StructuredWorkspacePlanner:
                 identity_fingerprint=request.fingerprint,
                 system_instruction=(
                     "Draft one concise scientific-planning amendment from the user feedback. "
-                    "When prior_proposal is present, edit it in response to the new feedback "
+                    "When prior_proposal or published_directive is present, edit that active "
+                    "planning direction in response to the new feedback "
                     "rather than treating the request as an unrelated conversation. "
                     "Select only stage and track identifiers present in input_payload. Preserve "
                     "completed stages and every blocker. Do not claim new evidence, apply a "

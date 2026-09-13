@@ -95,6 +95,31 @@ class ProgramRevisionResourceOption(BaseModel):
     binding_status: Literal["verified", "reported", "pending", "blocked"]
 
 
+class ProgramRevisionActiveDirectiveOption(BaseModel):
+    """Current published planning overlay exposed to the next model edit."""
+
+    model_config = _MODEL_CONFIG
+
+    publication_id: SafeIdentifier
+    publication_sha256: Sha256
+    proposal_id: SafeIdentifier
+    proposal_record_sha256: Sha256
+    change_kind: Literal[
+        "reprioritize_next_gates",
+        "clarify_stage_decision",
+        "request_resource_revision",
+        "add_risk_note",
+    ]
+    target_stage_id: SafeIdentifier
+    target_track_ids: tuple[SafeIdentifier, ...] = ()
+    proposed_next_stage_order: tuple[SafeIdentifier, ...] = ()
+    summary: str = Field(min_length=1, max_length=1_000)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    required_evidence: tuple[str, ...] = Field(default=(), max_length=12)
+    requested_resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    requested_resource_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+
+
 class ProgramRevisionCatalog(BaseModel):
     """Exact choices exposed to the content model; it grants no mutation authority."""
 
@@ -112,6 +137,7 @@ class ProgramRevisionCatalog(BaseModel):
     tracks: tuple[ProgramRevisionTrackOption, ...] = Field(min_length=1, max_length=20)
     resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=100)
     resources: tuple[ProgramRevisionResourceOption, ...] = Field(default=(), max_length=100)
+    active_directive: ProgramRevisionActiveDirectiveOption | None = None
 
     @computed_field
     @property
@@ -132,6 +158,17 @@ class ProgramRevisionCatalog(BaseModel):
             raise ValueError("program-revision roles must describe the project resources")
         if self.current_stage_id not in stage_ids or set(self.next_stage_ids) - set(stage_ids):
             raise ValueError("program-revision current choices must be registered")
+        if self.active_directive is not None:
+            if self.active_directive.target_stage_id not in stage_ids:
+                raise ValueError("active planning directive names an unknown stage")
+            if set(self.active_directive.target_track_ids) - set(track_ids):
+                raise ValueError("active planning directive names an unknown track")
+            if set(self.active_directive.requested_resource_roles) - set(self.resource_roles):
+                raise ValueError("active planning directive names an unknown resource role")
+            if set(self.active_directive.requested_resource_ids) - {
+                item.resource_id for item in self.resources
+            }:
+                raise ValueError("active planning directive names an unknown resource")
         return self
 
 
@@ -414,6 +451,8 @@ class ProgramRevisionService:
         ):
             raise ValueError("program-revision request is stale")
         prior_record = self._base_record(parsed)
+        if prior_record is None:
+            prior_record = self._active_directive_record(catalog)
         cached = _load_record(self._runtime.projects_root, parsed)
         if cached is not None:
             return cached
@@ -581,6 +620,32 @@ class ProgramRevisionService:
             raise ValueError("a rejected program revision cannot be refined")
         return record
 
+    def _active_directive_record(
+        self,
+        catalog: ProgramRevisionCatalog,
+    ) -> ProgramRevisionRecord | None:
+        """Restore the accepted proposal behind the current published overlay."""
+
+        active = catalog.active_directive
+        if active is None:
+            return None
+        record = _load_record_by_id(
+            self._runtime.projects_root,
+            catalog.project_id,
+            active.proposal_id,
+        )
+        decision = _load_decision(self._runtime.projects_root, record)
+        if (
+            record.record_sha256 != active.proposal_record_sha256
+            or record.outcome.status != "proposed"
+            or record.outcome.draft is None
+            or record.request.dossier_sha256 != catalog.dossier_sha256
+            or decision is None
+            or decision.status != "accepted"
+        ):
+            raise ValueError("active planning directive has invalid proposal lineage")
+        return record
+
 
 def build_program_revision_catalog(
     runtime: ProjectRuntime,
@@ -593,6 +658,29 @@ def build_program_revision_catalog(
         raise ValueError("project has no registered ICLR evidence program")
     report, _ = load_iclr_evidence_program_report(runtime.projects_root / project_id, run)
     resource_portfolio = load_project_resource_portfolio(runtime, project_id)
+    from scitaste.generative_ui.planning_directive import load_latest_planning_directive
+
+    publication = load_latest_planning_directive(runtime, project_id)
+    active_directive = None
+    if publication is not None:
+        if publication.source_dossier_sha256 != report.dossier_sha256:
+            raise ValueError("published planning directive belongs to another evidence dossier")
+        draft = publication.draft
+        active_directive = ProgramRevisionActiveDirectiveOption(
+            publication_id=publication.publication_id,
+            publication_sha256=publication.publication_sha256,
+            proposal_id=publication.proposal_id,
+            proposal_record_sha256=publication.proposal_record_sha256,
+            change_kind=draft.change_kind,
+            target_stage_id=draft.target_stage_id,
+            target_track_ids=draft.target_track_ids,
+            proposed_next_stage_order=draft.proposed_next_stage_order,
+            summary=draft.summary,
+            rationale=draft.rationale,
+            required_evidence=draft.required_evidence,
+            requested_resource_roles=draft.requested_resource_roles,
+            requested_resource_ids=draft.requested_resource_ids,
+        )
     current_stage_id = (
         report.next_stage_ids[0] if report.next_stage_ids else report.stages[-1].stage_id
     )
@@ -644,6 +732,7 @@ def build_program_revision_catalog(
             if resource_portfolio is not None
             else ()
         ),
+        active_directive=active_directive,
     )
 
 
@@ -728,6 +817,16 @@ def _load_record_by_id(
     return record
 
 
+def load_program_revision_record(
+    projects_root: Path,
+    project_id: str,
+    proposal_id: str,
+) -> ProgramRevisionRecord:
+    """Load one content-verified proposal by its closed project identity."""
+
+    return _load_record_by_id(projects_root, project_id, proposal_id)
+
+
 def _store_decision(
     projects_root: Path,
     record: ProgramRevisionDecisionRecord,
@@ -777,6 +876,15 @@ def _load_decision(
     return decision
 
 
+def load_program_revision_decision(
+    projects_root: Path,
+    proposal: ProgramRevisionRecord,
+) -> ProgramRevisionDecisionRecord | None:
+    """Load the immutable disposition bound to one verified proposal, if present."""
+
+    return _load_decision(projects_root, proposal)
+
+
 def _record_path(projects_root: Path, project_id: str, request_fingerprint: str) -> Path:
     proposal_id = f"program-revision-{request_fingerprint[:20]}"
     return _revision_root(projects_root, project_id) / proposal_id / "PROPOSAL.json"
@@ -812,7 +920,11 @@ def _record_content(
         "project_id": project_id,
         "created_at": created_at.isoformat(),
         "request": request.model_dump(mode="json", exclude_computed_fields=True),
-        "outcome": outcome.model_dump(mode="json", exclude_computed_fields=True),
+        "outcome": outcome.model_dump(
+            mode="json",
+            exclude_computed_fields=True,
+            exclude_none=True,
+        ),
     }
 
 
@@ -856,6 +968,7 @@ def _fingerprint(value: object) -> str:
 
 
 __all__ = [
+    "ProgramRevisionActiveDirectiveOption",
     "ProgramRevisionCatalog",
     "ProgramRevisionDecisionRecord",
     "ProgramRevisionDecisionRequest",
@@ -870,5 +983,7 @@ __all__ = [
     "ProgramRevisionTrackOption",
     "ProgramRevisionView",
     "build_program_revision_catalog",
+    "load_program_revision_decision",
+    "load_program_revision_record",
     "validate_program_revision_draft",
 ]

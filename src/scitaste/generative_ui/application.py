@@ -41,6 +41,11 @@ from scitaste.generative_ui.interaction import (
 )
 from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.planner import PlannerConversationContext, WorkspacePlanner
+from scitaste.generative_ui.planning_directive import (
+    PlanningDirectivePublication,
+    PlanningDirectivePublicationRequest,
+    publish_planning_directive,
+)
 from scitaste.generative_ui.program_revision import (
     ProgramRevisionDecisionRecord,
     ProgramRevisionDecisionRequest,
@@ -236,6 +241,25 @@ class GenerativeUIApplication:
             raise ValueError("program-revision decision belongs to another project")
         with self._request_lock:
             return self._program_revisions.decide(parsed)
+
+    def publish_program_revision(
+        self,
+        project_id: str,
+        request: PlanningDirectivePublicationRequest | dict[str, object],
+    ) -> PlanningDirectivePublication:
+        """Publish an accepted proposal as a non-executing project planning version."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, PlanningDirectivePublicationRequest)
+            else PlanningDirectivePublicationRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("planning-directive publication belongs to another project")
+        with self._request_lock:
+            _, publication = publish_planning_directive(self._runtime, parsed)
+            return publication
 
     def research_workspace_catalog(self, project_id: str) -> ResearchWorkspaceCatalog:
         """List persistent research topics owned by one project."""

@@ -2026,6 +2026,54 @@ fieldset {
   overflow: hidden;
 }
 
+.planning-directive-flow {
+  align-items: stretch;
+  display: grid;
+  gap: 0.42rem;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.planning-directive-node {
+  background: rgb(255 255 255 / 66%);
+  border: 1px solid rgb(19 83 64 / 18%);
+  border-radius: 0.48rem;
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  padding: 0.48rem 0.56rem;
+}
+
+.planning-directive-node small {
+  color: var(--muted);
+  font-size: 0.59rem;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.planning-directive-node strong {
+  color: var(--forest-dark);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.planning-directive-connector {
+  align-self: center;
+  color: var(--forest);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .planning-directive-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-directive-connector {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+}
+
 .program-revision-boundary {
   justify-content: flex-start;
 }

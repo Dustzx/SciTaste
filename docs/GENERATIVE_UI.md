@@ -1299,10 +1299,15 @@ schema rejection) rather than exposing raw provider content.
 The latest proposal is restored after a reload. New feedback may name that exact
 proposal and record hash, causing the model to edit the prior draft rather than
 generate an unrelated answer. Accept and reject are explicit user actions stored
-as immutable decisions. An accepted proposal becomes a planning directive for
-later generation, can itself be revised, and never changes its source dossier or
-grants execution authority. Reject closes that proposal. Stale proposals remain
-visible but cannot be decided or refined.
+as immutable decisions. Acceptance does not silently mutate project state: a
+second explicit publish action compiles the accepted proposal into a self-hashed
+project run below `runs/<run-id>/planning_directive/PUBLICATION.json`. Each
+publication binds its source dossier, proposal, decision, and predecessor while
+declaring that the dossier and resource binding are unchanged and execution is
+not authorized. The current publication is projected beside—not inside—the
+scientific evidence plan, and becomes the automatic edit baseline for the next
+model-authored revision. Reject closes a proposal. Stale proposals remain visible
+but cannot be decided, refined, or published.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
@@ -1310,11 +1315,18 @@ view of its exact binding. The view reports roles, resource identities, declared
 and observed status, whether required access material is present, and registry
 hashes. It does not serialize a credential value, probe a remote host, or run a
 workload. “Generate configuration proposal” routes through the program revision
-contract. When a resource proposal is accepted, its selected resource IDs become
-a visible project planning preference and guide the next model revision. The
-shared registry remains unchanged. Compiling that directive into a new immutable
-resource binding still requires the next controller slice; the UI does not
-pretend that a discussion changed credentials, infrastructure, or availability.
+contract. When an accepted resource proposal is published, its selected resource
+IDs become a visible project planning preference and guide the next model
+revision. The shared registry remains unchanged. Compiling that directive into a
+new immutable project resource binding still requires the next controller slice;
+the UI does not pretend that a discussion changed credentials, infrastructure,
+or availability.
+
+Planning publication is a cheap, versioned local write. Tool Intelligence routes
+it directly after the necessary proposal/decision/hash/staleness checks instead
+of imposing a generic preflight. The route and reason code are recorded in the
+publication and projected in the interface. Paid compute, provider contact,
+credential changes, and experiment launch remain separate owner-gated actions.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

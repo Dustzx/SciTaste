@@ -82,9 +82,14 @@ from scitaste.generative_ui.models import (
     ComponentSpec,
     EvidenceRef,
     InspectArtifactPayload,
+    ProjectEvidenceProgramData,
     RequestApprovalPayload,
     SnapshotBinding,
     SurfaceSpec,
+)
+from scitaste.generative_ui.planning_directive import (
+    load_latest_planning_directive,
+    project_planning_directive,
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.project_resources import load_project_resource_portfolio
@@ -644,6 +649,47 @@ class WorkspaceSurfaceFactory:
                 current_action_run_ref_id=current_action_run_ref_id,
             )
             evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
+            publication = load_latest_planning_directive(
+                self._runtime,
+                snapshot.project_id,
+            )
+            if publication is not None:
+                if publication.source_dossier_sha256 != report.dossier_sha256:
+                    raise ProjectSurfaceChangedError(
+                        "published planning directive belongs to another evidence dossier"
+                    )
+                directive_run_ref = run_refs.get(publication.run_id)
+                if directive_run_ref is None:
+                    raise ProjectSurfaceChangedError(
+                        "published planning directive lacks its registered project run"
+                    )
+                directive_run = _require_run(snapshot, publication.run_id)
+                if directive_run.artifact is None:
+                    raise ProjectSurfaceChangedError(
+                        "published planning directive does not declare its artifact"
+                    )
+                directive_artifact_ref = _evidence_for_locator(
+                    binding,
+                    EvidenceKind.ARTIFACT,
+                    directive_run.artifact,
+                )
+                directive = project_planning_directive(
+                    publication,
+                    run_ref_id=directive_run_ref.evidence_id,
+                    artifact_ref_id=directive_artifact_ref.evidence_id,
+                )
+                payload = evidence_program.model_dump(mode="json")
+                payload["planning_directive"] = directive.model_dump(mode="json")
+                payload["support_ref_ids"] = list(
+                    dict.fromkeys(
+                        [
+                            *evidence_program.support_ref_ids,
+                            *directive.support_ref_ids,
+                        ]
+                    )
+                )
+                evidence_program = ProjectEvidenceProgramData.model_validate(payload)
+                evidence_ref_ids.extend(directive.support_ref_ids)
         resource_portfolio = load_project_resource_portfolio(
             self._runtime,
             snapshot.project_id,

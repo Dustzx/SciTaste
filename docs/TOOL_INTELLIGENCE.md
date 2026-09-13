@@ -545,11 +545,12 @@ model/tool request. A `direct_path` skips the Tool Intelligence invocation; an
 owner-gated route is durably deferred before either model or tool is called; and
 admitted targeted/full routes preserve the existing project-owned model and tool
 ledgers. The current evidence-inspection hook selects one targeted read-only
-check. Generation as Content also routes its explicit local planning-decision
-write: because that content-addressed write is reversible and cheap, it takes the
-direct path after only its necessary stale/hash guard. This integration does not
-generalize the read-only tool catalog into code, network, GPU, or mutable
-authority.
+check. Generation as Content also routes its explicit local planning-decision and
+planning-publication writes: because these content-addressed/versioned writes are
+reversible and cheap, they take the direct path after only the necessary
+identity, stale-state, and hash guards. The published project artifact records the
+route and reason. This integration does not generalize the read-only tool catalog
+into code, network, GPU, credential, or mutable infrastructure authority.
 
 ## Threat model and extension rules
 
