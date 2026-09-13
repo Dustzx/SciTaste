@@ -6554,6 +6554,7 @@ async function loadGeneratedWorkspace(route, historyMode = "push") {
       contextCount: documentValue.context_turn_ids.length,
     };
     renderWorkspace(documentValue);
+    renderIntentResult();
     if (historyMode !== "none") {
       const hash = generatedWorkspaceHash(documentValue);
       if (historyMode === "replace") {
@@ -6610,6 +6611,7 @@ async function loadResearchTurn(route, historyMode = "push") {
       contextCount: documentValue.context_turn_ids.length,
     };
     renderWorkspace(documentValue);
+    renderIntentResult();
     if (historyMode !== "none") {
       const hash = researchTurnHash(turnDocument);
       if (historyMode === "replace") {
