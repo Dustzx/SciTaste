@@ -419,6 +419,12 @@ class ResearchWorkspaceStore:
                             if turn.document.planning is not None
                             else None
                         ),
+                        surface_entries=(
+                            turn.document.planning.plan.entries
+                            if turn.document.planning is not None
+                            and turn.document.planning.plan is not None
+                            else ()
+                        ),
                     )
                     for turn in turns
                 ),

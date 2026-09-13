@@ -2264,9 +2264,11 @@ function renderEvidenceProgram(data) {
     }
     const advisory = document.createElement("small");
     advisory.className = "verification-advisory-state";
-    appendText(advisory, t(item.model_advisory_eligible
-      ? "progress.program.economics.model_eligible"
-      : "progress.program.economics.deterministic"));
+    appendText(advisory, t(item.decision_source === "model_assisted"
+      ? "progress.program.economics.model_applied"
+      : item.model_advisory_eligible
+        ? "progress.program.economics.model_eligible"
+        : "progress.program.economics.deterministic"));
     const adapt = document.createElement("button");
     adapt.type = "button";
     adapt.className = "program-phase-action";
@@ -2336,6 +2338,8 @@ function renderEvidenceProgram(data) {
       gate_action_route_sha256: data.gate_action_route.route_sha256,
       gate_action_verification_route: data.gate_action_route.verification_route,
       gate_action_reason_codes: data.gate_action_route.verification_reason_codes,
+      gate_action_decision_source: data.gate_action_route.decision_source,
+      gate_action_advisory_fingerprint: data.gate_action_route.advisory_fingerprint,
       gate_action_effects: data.gate_action_route.action_effects,
       gate_action_expected_loss_units: Number(
         data.gate_action_route.expected_loss_units.toFixed(4),
@@ -2364,6 +2368,8 @@ function renderEvidenceProgram(data) {
       "gate_action_route_sha256",
       "gate_action_verification_route",
       "gate_action_reason_codes",
+      "gate_action_decision_source",
+      "gate_action_advisory_fingerprint",
       "gate_action_effects",
       "gate_action_expected_loss_units",
       "gate_action_targeted_net_gain_units",
@@ -4831,7 +4837,10 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
   if (generated) {
     workspace.appendChild(renderGenerationSummary(documentValue));
     if (documentValue.planning?.authored_brief) {
-      workspace.appendChild(renderModelAuthoredBrief(documentValue.planning.authored_brief));
+      workspace.appendChild(renderModelAuthoredBrief(
+        documentValue.planning.authored_brief,
+        documentValue.planning.edit_delta,
+      ));
     }
   }
   if (!generated) {
@@ -4963,7 +4972,58 @@ function renderModelAuthoredCanvas(canvas) {
   return shell;
 }
 
-function renderModelAuthoredBrief(brief) {
+function renderSurfaceEditDelta(delta) {
+  const details = document.createElement("details");
+  details.className = "model-authored-edit-delta";
+  const summary = document.createElement("summary");
+  const label = document.createElement("strong");
+  appendText(label, t("generation.edit_delta.title"));
+  const headline = document.createElement("span");
+  appendText(headline, t("generation.edit_delta.summary", {
+    added: delta.added_candidate_ids.length,
+    removed: delta.removed_candidate_ids.length,
+    moved: new Set([
+      ...delta.reordered_candidate_ids,
+      ...delta.regrouped_candidate_ids,
+      ...delta.reemphasized_candidate_ids,
+      ...delta.refocused_candidate_ids,
+    ]).size,
+  }));
+  const state = document.createElement("span");
+  state.className = "program-badge verified";
+  appendText(state, t(delta.authored_content_changed
+    ? "generation.edit_delta.content_changed"
+    : "generation.edit_delta.content_retained"));
+  summary.append(label, headline, state);
+  const groups = document.createElement("div");
+  groups.className = "model-authored-edit-groups";
+  for (const [key, values] of [
+    ["retained", delta.retained_candidate_ids],
+    ["added", delta.added_candidate_ids],
+    ["removed", delta.removed_candidate_ids],
+    ["reordered", delta.reordered_candidate_ids],
+    ["regrouped", delta.regrouped_candidate_ids],
+    ["reemphasized", delta.reemphasized_candidate_ids],
+    ["refocused", delta.refocused_candidate_ids],
+  ]) {
+    if (values.length === 0) continue;
+    const group = document.createElement("div");
+    const groupLabel = document.createElement("strong");
+    appendText(groupLabel, t(`generation.edit_delta.${key}`));
+    const list = document.createElement("span");
+    appendText(list, values.map(readableCode).join(" · "));
+    group.append(groupLabel, list);
+    groups.appendChild(group);
+  }
+  const lineage = document.createElement("small");
+  appendText(lineage, t("generation.edit_delta.predecessor", {
+    turn: delta.predecessor_turn_id,
+  }));
+  details.append(summary, groups, lineage);
+  return details;
+}
+
+function renderModelAuthoredBrief(brief, editDelta = null) {
   const section = document.createElement("section");
   section.className = "model-authored-brief";
   const header = document.createElement("div");
@@ -5025,6 +5085,9 @@ function renderModelAuthoredBrief(brief) {
     points.appendChild(card);
   }
   section.appendChild(header);
+  if (editDelta) {
+    section.appendChild(renderSurfaceEditDelta(editDelta));
+  }
   if (brief.canvas) {
     section.appendChild(renderModelAuthoredCanvas(brief.canvas));
   }

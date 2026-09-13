@@ -197,8 +197,8 @@ def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
             },
             "suggested_questions": ["What evidence would change this conclusion?"],
             "edited_from_turn_id": (
-                payload["prior_authored_brief"]["turn_id"]
-                if payload.get("prior_authored_brief")
+                payload["prior_generated_workspace"]["turn_id"]
+                if payload.get("prior_generated_workspace")
                 else None
             ),
             "evidence_only": True,
@@ -474,7 +474,7 @@ def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) 
     backend = FakeStructuredBackend(_model_plan)
     planner = StructuredWorkspacePlanner(backend, _policy())
     first = planner.compose(catalog, prompt_text="Summarize current progress")
-    assert first.authored_brief is not None
+    assert first.authored_brief is not None and first.plan is not None
     context = PlannerConversationContext(
         project_id="planner-project",
         workspace_id="conversation-one",
@@ -485,6 +485,7 @@ def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) 
                 prompt_kind="free_question",
                 prompt_text="Summarize current progress",
                 authored_brief=first.authored_brief,
+                surface_entries=first.plan.entries,
             ),
         ),
     )
@@ -497,9 +498,22 @@ def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) 
 
     assert edited.authored_brief is not None
     assert edited.authored_brief.edited_from_turn_id == "turn-0001"
-    assert backend.calls[-1].input_payload["prior_authored_brief"] == {
+    assert edited.edit_delta is not None
+    assert edited.edit_delta.predecessor_turn_id == "turn-0001"
+    assert edited.edit_delta.layout_changed is False
+    assert edited.edit_delta.authored_content_changed is False
+    assert backend.calls[-1].input_payload["conversation_history"] == [
+        {
+            "turn_id": "turn-0001",
+            "ordinal": 1,
+            "prompt_kind": "free_question",
+            "prompt_text": "Summarize current progress",
+        }
+    ]
+    assert backend.calls[-1].input_payload["prior_generated_workspace"] == {
         "turn_id": "turn-0001",
         "brief": first.authored_brief.model_dump(mode="json"),
+        "surface_plan_entries": [item.model_dump(mode="json") for item in first.plan.entries],
     }
 
 
@@ -594,6 +608,11 @@ def test_program_amendment_rejects_model_ids_outside_the_server_catalog() -> Non
     assert outcome.status == "unavailable"
     assert outcome.draft is None
     assert outcome.model_generated is False
+    assert outcome.provider_response_sha256 is not None
+    assert outcome.input_tokens == 100
+    assert outcome.output_tokens == 50
+    assert outcome.cost_usd == 0
+    assert outcome.latency_ms == 2
 
 
 @pytest.mark.parametrize(

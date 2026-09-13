@@ -229,8 +229,8 @@ class SelectingBackend:
                     ],
                     "suggested_questions": ["Which evidence remains incomplete?"],
                     "edited_from_turn_id": (
-                        request.input_payload["prior_authored_brief"]["turn_id"]
-                        if request.input_payload.get("prior_authored_brief")
+                        request.input_payload["prior_generated_workspace"]["turn_id"]
+                        if request.input_payload.get("prior_generated_workspace")
                         else None
                     ),
                     "evidence_only": True,
@@ -299,7 +299,11 @@ def test_followup_feedback_rewrites_the_prior_cited_brief(tmp_path: Path) -> Non
         ),
     )
     first = service.generate(_request(service, quick_intent_id=quick.intents[0].quick_intent_id))
-    assert first.planning is not None and first.planning.authored_brief is not None
+    assert (
+        first.planning is not None
+        and first.planning.authored_brief is not None
+        and first.planning.plan is not None
+    )
     context = PlannerConversationContext(
         project_id="generation-project",
         workspace_id="conversation-one",
@@ -310,6 +314,7 @@ def test_followup_feedback_rewrites_the_prior_cited_brief(tmp_path: Path) -> Non
                 prompt_kind="quick",
                 prompt_text=quick.intents[0].quick_intent_id,
                 authored_brief=first.planning.authored_brief,
+                surface_entries=first.planning.plan.entries,
             ),
         ),
     )
@@ -324,6 +329,8 @@ def test_followup_feedback_rewrites_the_prior_cited_brief(tmp_path: Path) -> Non
     assert edited.status == "generated"
     assert edited.planning is not None and edited.planning.authored_brief is not None
     assert edited.planning.authored_brief.edited_from_turn_id == "turn-0001"
+    assert edited.planning.edit_delta is not None
+    assert edited.planning.edit_delta.predecessor_turn_id == "turn-0001"
     assert edited.conversation_context_sha256 == context.fingerprint
 
 

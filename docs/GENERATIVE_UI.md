@@ -1466,6 +1466,18 @@ predecessor-bound edit; publishing an admitted planning or resource revision is
 the explicit interaction boundary into SciTaste Core. Thus the generated plane
 is neither a passive dashboard nor the executor itself.
 
+A predecessor-bound edit now supplies the model with both the bounded cited
+brief and the prior safe `SurfacePlan`, not merely the previous prose. The model
+can therefore retain, remove, reorder, regroup, re-emphasize, or refocus existing
+components while rewriting the cited content in response to feedback. The
+server derives an exact `SurfaceEditDelta` from the admitted predecessor and
+successor plans; the model cannot self-report or conceal the change. The browser
+renders that delta as a compact revision ribbon before the edited canvas. Fixed
+entry labels may still be generated ahead of time under the project-owned warm
+cache budget, but opening a cache hit promotes it into an ordinary conversation,
+so the next free-form feedback uses the same flexible edit path. Cache warming
+is an optional cost-bearing action rather than a prerequisite for project use.
+
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
 view of its exact binding and the compatible remainder of the shared catalog. The
@@ -1554,6 +1566,26 @@ membership or priority revision through the normal conversation. Endpoint
 definitions, observations, credential names, and credential values remain
 administrator-level shared-registry concerns in this version; a project surface
 never receives credential values.
+
+One live self-project pass at snapshot revision 475 exercised this distinction.
+GLM-5.3-Flash authored a ten-component project-progress canvas, then edited the
+same conversation from `turn-0001` to `turn-0002` after the user selected the
+next-gate question. The admitted successor retained six components, removed four,
+changed the authored brief, and exposed both content and layout changes. The edit
+used 12,110 input and 2,104 output tokens, reported USD 0.0011488407763553773,
+and took 13,447 ms. This is a receiver-and-accounting dogfood observation, not
+evidence of usability or scientific benefit.
+
+The same project interaction produced a still-pending planning proposal for
+`attest-native-condition-implementations`. The model attached a semantic
+gray-zone `direct_path` advisory to the exact verification-input fingerprint in
+the same paid response. Deterministic policy revalidated the advice and retained
+the existing blocker; it did not execute, accept, publish, or alter Core state.
+Schema-rejected provider responses now retain known token, cost, latency, and
+response-hash telemetry and are negative-cached for the exact request. A pure
+no-response transport failure remains retryable. This prevents repeated payment
+for an identically invalid response without turning transient availability into a
+permanent result.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

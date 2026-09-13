@@ -13,6 +13,7 @@ from scitaste.evaluation import (
     route_effective_program_action,
     route_program_stage_action,
 )
+from scitaste.model_nodes import VerificationAdvisory
 
 _DOSSIER = Path("configs/evaluation/campaigns/iclr2027_self_development_v1.yaml")
 
@@ -107,6 +108,49 @@ def test_each_parallel_next_gate_is_routed_without_reordering_or_execution() -> 
             report,
             effective,
             stage_id="render-current-paper-draft",
+        )
+
+
+def test_semantic_gray_zone_reuses_model_feedback_without_adding_a_model_call() -> None:
+    report = _report()
+    effective = _effective(report, "attest-native-condition-implementations")
+    baseline = route_effective_program_action(report, effective)
+    assert baseline.verification.model_advisory_eligible is True
+
+    advised = route_effective_program_action(
+        report,
+        effective,
+        advisory=VerificationAdvisory(
+            input_fingerprint=baseline.verification_input.fingerprint,
+            recommended_route="direct_path",
+            rationale=(
+                "The current implementation evidence is bounded and reversible; a separate "
+                "preflight would duplicate the intrinsic checks."
+            ),
+        ),
+    )
+
+    assert advised.verification.route == "direct_path"
+    assert advised.verification.decision_source == "model_assisted"
+    assert advised.verification.advisory_fingerprint is not None
+    assert advised.next_action_kind == "resolve_registered_blockers"
+    assert advised.authorizes_execution is False
+
+
+def test_model_advice_cannot_weaken_a_paid_compute_owner_boundary() -> None:
+    report = _report()
+    effective = _effective(report)
+    baseline = route_effective_program_action(report, effective)
+
+    with pytest.raises(ValueError, match="outside the model-advisory gray zone"):
+        route_effective_program_action(
+            report,
+            effective,
+            advisory=VerificationAdvisory(
+                input_fingerprint=baseline.verification_input.fingerprint,
+                recommended_route="direct_path",
+                rationale="Try to bypass the explicit paid-compute owner boundary.",
+            ),
         )
 
 

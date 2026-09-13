@@ -171,9 +171,7 @@ class ModelAuthoredCanvas(BaseModel):
         if len(node_ids) != len(set(node_ids)):
             raise ValueError("model-authored canvas node IDs must be unique")
         endpoints = {
-            node_id
-            for edge in self.edges
-            for node_id in (edge.source_node_id, edge.target_node_id)
+            node_id for edge in self.edges for node_id in (edge.source_node_id, edge.target_node_id)
         }
         if endpoints - set(node_ids):
             raise ValueError("model-authored canvas edges reference unknown nodes")
@@ -250,6 +248,14 @@ class PlannerContextTurn(BaseModel):
     prompt_kind: Literal["quick", "free_question"]
     prompt_text: str = Field(min_length=1, max_length=1_000)
     authored_brief: ModelAuthoredBrief | None = None
+    surface_entries: tuple[SurfacePlanEntry, ...] = Field(default=(), max_length=12)
+
+    @model_validator(mode="after")
+    def surface_entries_are_unique(self) -> PlannerContextTurn:
+        candidate_ids = [item.candidate_id for item in self.surface_entries]
+        if len(candidate_ids) != len(set(candidate_ids)):
+            raise ValueError("prior surface entries must name unique candidates")
+        return self
 
 
 class PlannerConversationContext(BaseModel):
@@ -418,6 +424,57 @@ class IntentPlannerOutcome(BaseModel):
         return self
 
 
+class SurfaceEditDelta(BaseModel):
+    """Server-derived change summary between one model page and its predecessor."""
+
+    model_config = _MODEL_CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    predecessor_turn_id: SafeIdentifier
+    retained_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    added_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    removed_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    reordered_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    regrouped_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    reemphasized_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    refocused_candidate_ids: tuple[SafeIdentifier, ...] = Field(max_length=12)
+    layout_changed: bool
+    authored_content_changed: bool
+
+    @model_validator(mode="after")
+    def candidate_sets_are_closed(self) -> SurfaceEditDelta:
+        sequences = (
+            self.retained_candidate_ids,
+            self.added_candidate_ids,
+            self.removed_candidate_ids,
+            self.reordered_candidate_ids,
+            self.regrouped_candidate_ids,
+            self.reemphasized_candidate_ids,
+            self.refocused_candidate_ids,
+        )
+        if any(len(values) != len(set(values)) for values in sequences):
+            raise ValueError("surface edit-delta candidate IDs must be unique")
+        retained = set(self.retained_candidate_ids)
+        if set(self.added_candidate_ids).intersection(self.removed_candidate_ids):
+            raise ValueError("surface edit-delta additions and removals must be disjoint")
+        for values in sequences[3:]:
+            if set(values) - retained:
+                raise ValueError("surface edit-delta changes must name retained candidates")
+        observed_layout_change = any(
+            (
+                self.added_candidate_ids,
+                self.removed_candidate_ids,
+                self.reordered_candidate_ids,
+                self.regrouped_candidate_ids,
+                self.reemphasized_candidate_ids,
+                self.refocused_candidate_ids,
+            )
+        )
+        if self.layout_changed != observed_layout_change:
+            raise ValueError("surface edit-delta layout flag differs from its changes")
+        return self
+
+
 class SurfacePlannerOutcome(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -426,6 +483,7 @@ class SurfacePlannerOutcome(BaseModel):
     reason_code: SafeIdentifier
     plan: SurfacePlan | None = None
     authored_brief: ModelAuthoredBrief | None = None
+    edit_delta: SurfaceEditDelta | None = None
     provenance: PlannerProvenance | None = None
 
     @model_validator(mode="after")
@@ -440,9 +498,16 @@ class SurfacePlannerOutcome(BaseModel):
                 or self.provenance.content_fingerprint != self.authored_brief.fingerprint
             ):
                 raise ValueError("model-authored content lacks exact model provenance")
+            if self.edit_delta is not None and (
+                self.authored_brief is None
+                or self.authored_brief.edited_from_turn_id != self.edit_delta.predecessor_turn_id
+            ):
+                raise ValueError("surface edit delta differs from its model-authored predecessor")
         elif self.plan is not None:
             raise ValueError("unavailable planning outcome cannot contain a plan")
-        if self.status == "unavailable" and self.authored_brief is not None:
+        if self.status == "unavailable" and (
+            self.authored_brief is not None or self.edit_delta is not None
+        ):
             raise ValueError("unavailable planning cannot expose model-authored content")
         return self
 
@@ -705,9 +770,11 @@ class StructuredWorkspacePlanner:
                     "The receiver, "
                     "not the model, supplies project, snapshot, intent, and catalog identities. "
                     "Treat omitted or "
-                    "truncated evidence as unknown. If prior_authored_brief is present, edit that "
-                    "brief in response to the current prompt and set edited_from_turn_id exactly "
-                    "to its turn_id; otherwise leave it null. Authored text is advisory and cannot "
+                    "truncated evidence as unknown. Use conversation_history as bounded user "
+                    "context. If prior_generated_workspace is present, edit both its cited brief "
+                    "and its safe surface_plan_entries in response to the current prompt, and set "
+                    "edited_from_turn_id exactly to its turn_id; otherwise leave it null. "
+                    "Authored text is advisory and cannot "
                     "claim execution, approval, new evidence, or completed work. Return one JSON "
                     "object matching output_schema and no tool calls."
                 ),
@@ -762,6 +829,11 @@ class StructuredWorkspacePlanner:
             reason_code="model-surface-plan-admitted",
             plan=plan,
             authored_brief=composition.brief,
+            edit_delta=_surface_edit_delta(
+                context,
+                plan=plan,
+                brief=composition.brief,
+            ),
             provenance=_composition_provenance(
                 mode=PlannerMode.MODEL_ASSISTED,
                 planner=self.identity,
@@ -788,10 +860,10 @@ class StructuredWorkspacePlanner:
         """Generate planning content while keeping IDs and authority server constrained."""
 
         request = ProgramRevisionRequest.model_validate(
-            request.model_dump(mode="json", exclude={"fingerprint"})
+            request.model_dump(mode="json", exclude_computed_fields=True)
         )
         catalog = ProgramRevisionCatalog.model_validate(
-            catalog.model_dump(mode="json", exclude={"fingerprint"})
+            catalog.model_dump(mode="json", exclude_computed_fields=True)
         )
         if (
             request.project_id != catalog.project_id
@@ -844,6 +916,7 @@ class StructuredWorkspacePlanner:
                 else None
             ),
         }
+        response: StructuredModelResponse | None = None
         try:
             structured_request = self._request(
                 operation=PlannerOperation.EVIDENCE_PROGRAM_REVISION,
@@ -861,7 +934,11 @@ class StructuredWorkspacePlanner:
                     "If requested_action_focus is present, target exactly that stage and use its "
                     "Tool Intelligence route: do not add a check when it says direct_path, do not "
                     "expand targeted_check into a full preflight, and do not treat owner_approval "
-                    "as execution authority. "
+                    "as execution authority. If that exact route has "
+                    "verification.model_advisory_eligible=true, you may include "
+                    "verification_advisory using its verification.input_fingerprint; otherwise "
+                    "leave verification_advisory null. Advice may skip a low-value check or "
+                    "select only the positive-value best check, and never creates authority. "
                     "Select only stage and track identifiers present in input_payload. Preserve "
                     "completed stages and every blocker. Do not claim new evidence, apply a "
                     "change, authorize an external action, or authorize execution. For a "
@@ -886,6 +963,13 @@ class StructuredWorkspacePlanner:
                 request_fingerprint=request.fingerprint,
                 catalog_fingerprint=catalog.fingerprint,
                 planner_id=self.identity.planner_id,
+                provider_response_sha256=(
+                    response.raw_response_sha256 if response is not None else None
+                ),
+                input_tokens=response.usage.input_tokens if response is not None else None,
+                output_tokens=response.usage.output_tokens if response is not None else None,
+                cost_usd=response.usage.cost_usd if response is not None else None,
+                latency_ms=response.latency_ms if response is not None else None,
                 model_generated=False,
             )
         return ProgramRevisionOutcome(
@@ -1174,6 +1258,19 @@ def _model_composition_input(
         catalog,
         offered_candidate_ids=offered_candidate_ids,
     )
+    payload["conversation_history"] = (
+        [
+            {
+                "turn_id": item.turn_id,
+                "ordinal": item.ordinal,
+                "prompt_kind": item.prompt_kind,
+                "prompt_text": item.prompt_text,
+            }
+            for item in context.turns
+        ]
+        if context is not None
+        else []
+    )
     prior = None
     if context is not None:
         prior_turn = next(
@@ -1184,10 +1281,86 @@ def _model_composition_input(
             prior = {
                 "turn_id": prior_turn.turn_id,
                 "brief": prior_turn.authored_brief.model_dump(mode="json"),
+                "surface_plan_entries": [
+                    item.model_dump(mode="json")
+                    for item in prior_turn.surface_entries
+                    if item.candidate_id in offered_candidate_ids
+                ],
             }
-    payload["prior_authored_brief"] = prior
+    payload["prior_generated_workspace"] = prior
     payload["projection_is_bounded"] = True
     return payload
+
+
+def _surface_edit_delta(
+    context: PlannerConversationContext | None,
+    *,
+    plan: SurfacePlan,
+    brief: ModelAuthoredBrief,
+) -> SurfaceEditDelta | None:
+    """Describe the admitted edit without trusting the provider to report its own delta."""
+
+    if context is None or brief.edited_from_turn_id is None:
+        return None
+    predecessor = next(
+        (
+            item
+            for item in context.turns
+            if item.turn_id == brief.edited_from_turn_id and item.authored_brief is not None
+        ),
+        None,
+    )
+    if predecessor is None:
+        return None
+    before = predecessor.surface_entries
+    after = plan.entries
+    before_by_id = {item.candidate_id: item for item in before}
+    after_by_id = {item.candidate_id: item for item in after}
+    retained = tuple(item.candidate_id for item in after if item.candidate_id in before_by_id)
+    added = tuple(item.candidate_id for item in after if item.candidate_id not in before_by_id)
+    removed = tuple(item.candidate_id for item in before if item.candidate_id not in after_by_id)
+    before_retained = [item.candidate_id for item in before if item.candidate_id in after_by_id]
+    after_retained = [item.candidate_id for item in after if item.candidate_id in before_by_id]
+    before_positions = {candidate_id: index for index, candidate_id in enumerate(before_retained)}
+    reordered = tuple(
+        candidate_id
+        for index, candidate_id in enumerate(after_retained)
+        if before_positions[candidate_id] != index
+    )
+    regrouped = tuple(
+        candidate_id
+        for candidate_id in retained
+        if before_by_id[candidate_id].group != after_by_id[candidate_id].group
+    )
+    reemphasized = tuple(
+        candidate_id
+        for candidate_id in retained
+        if before_by_id[candidate_id].emphasis != after_by_id[candidate_id].emphasis
+    )
+    refocused = tuple(
+        candidate_id
+        for candidate_id in retained
+        if before_by_id[candidate_id].focus_ref_ids != after_by_id[candidate_id].focus_ref_ids
+    )
+    previous_content = predecessor.authored_brief.model_dump(
+        mode="json",
+        exclude={"edited_from_turn_id"},
+    )
+    current_content = brief.model_dump(mode="json", exclude={"edited_from_turn_id"})
+    return SurfaceEditDelta(
+        predecessor_turn_id=predecessor.turn_id,
+        retained_candidate_ids=retained,
+        added_candidate_ids=added,
+        removed_candidate_ids=removed,
+        reordered_candidate_ids=reordered,
+        regrouped_candidate_ids=regrouped,
+        reemphasized_candidate_ids=reemphasized,
+        refocused_candidate_ids=refocused,
+        layout_changed=bool(
+            added or removed or reordered or regrouped or reemphasized or refocused
+        ),
+        authored_content_changed=previous_content != current_content,
+    )
 
 
 def _bounded_evidence_digest(
@@ -1288,11 +1461,7 @@ def _admit_cited_candidates(
     cited_items = list(brief.points)
     if brief.canvas is not None:
         cited_items.extend(brief.canvas.nodes)
-    cited_ids = {
-        candidate_id
-        for item in cited_items
-        for candidate_id in item.source_candidate_ids
-    }
+    cited_ids = {candidate_id for item in cited_items for candidate_id in item.source_candidate_ids}
     if cited_ids - offered_candidate_ids:
         raise ValueError("model-authored content cites a candidate outside its evidence digest")
     selected = {item.candidate_id for item in entries}
@@ -1561,6 +1730,7 @@ __all__ = [
     "PlannerOperation",
     "PlannerProvenance",
     "StructuredWorkspacePlanner",
+    "SurfaceEditDelta",
     "SurfacePlannerOutcome",
     "WorkspacePlanner",
 ]

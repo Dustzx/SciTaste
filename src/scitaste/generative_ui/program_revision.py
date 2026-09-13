@@ -26,8 +26,11 @@ from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha
 from scitaste.model_nodes.verification_policy import (
     ActionEffect,
     ActionReversibility,
+    VerificationAdvisory,
+    VerificationDecision,
     VerificationDecisionInput,
     VerificationRoute,
+    apply_verification_advisory,
     decide_verification_route,
 )
 from scitaste.project import ProjectRuntime
@@ -132,6 +135,26 @@ class ProgramRevisionActionRouteOption(BaseModel):
     targeted_net_gain_units: float = Field(allow_inf_nan=False)
     full_preflight_net_gain_units: float = Field(allow_inf_nan=False)
     authorizes_execution: Literal[False] = False
+    verification_input: VerificationDecisionInput | None = None
+    verification: VerificationDecision | None = None
+
+    @model_validator(mode="after")
+    def summary_matches_verification(self) -> ProgramRevisionActionRouteOption:
+        if (self.verification_input is None) != (self.verification is None):
+            raise ValueError("program route verification details must be atomic")
+        if self.verification_input is None or self.verification is None:
+            return self
+        if (
+            self.verification.input_fingerprint != self.verification_input.fingerprint
+            or self.verification.action_id != self.verification_input.action_id
+            or self.verification_route != self.verification.route.value
+            or self.verification_reason_codes != self.verification.reason_codes
+            or self.expected_loss_units != self.verification.expected_loss_units
+            or self.targeted_net_gain_units != self.verification.targeted_net_gain_units
+            or self.full_preflight_net_gain_units != self.verification.full_preflight_net_gain_units
+        ):
+            raise ValueError("program route summary differs from its verification decision")
+        return self
 
 
 class ProgramRevisionActiveDirectiveOption(BaseModel):
@@ -157,6 +180,7 @@ class ProgramRevisionActiveDirectiveOption(BaseModel):
     required_evidence: tuple[str, ...] = Field(default=(), max_length=12)
     requested_resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
     requested_resource_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    verification_advisory: VerificationAdvisory | None = None
 
 
 class ProgramRevisionCatalog(BaseModel):
@@ -276,6 +300,7 @@ class ProgramRevisionDraft(BaseModel):
     required_evidence: tuple[str, ...] = Field(default=(), max_length=12)
     requested_resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
     requested_resource_ids: tuple[SafeIdentifier, ...] = Field(default=(), max_length=12)
+    verification_advisory: VerificationAdvisory | None = None
     preserves_completed_stages: Literal[True] = True
     removes_blockers: Literal[False] = False
     applies_change: Literal[False] = False
@@ -345,8 +370,13 @@ class ProgramRevisionOutcome(BaseModel):
                 or not self.model_generated
             ):
                 raise ValueError("model-generated program revision requires full provenance")
-        elif self.draft is not None or self.provider_response_sha256 is not None:
+        elif self.draft is not None:
             raise ValueError("unavailable or rejected revision cannot expose a draft")
+        if self.status != "proposed" and (
+            (self.provider_response_sha256 is not None)
+            != all(value is not None for value in telemetry)
+        ):
+            raise ValueError("program-revision response hash and telemetry must be atomic")
         return self
 
 
@@ -550,7 +580,7 @@ class ProgramRevisionService:
             **unsigned,
             record_sha256=_fingerprint(_jsonable(unsigned)),
         )
-        if outcome.status == "proposed":
+        if outcome.status == "proposed" or outcome.provider_response_sha256 is not None:
             return _store_record(self._runtime.projects_root, record)
         return record
 
@@ -750,6 +780,7 @@ def build_program_revision_catalog(
             required_evidence=draft.required_evidence,
             requested_resource_roles=draft.requested_resource_roles,
             requested_resource_ids=draft.requested_resource_ids,
+            verification_advisory=draft.verification_advisory,
         )
     effective_program = compile_effective_experiment_program(
         report,
@@ -761,6 +792,11 @@ def build_program_revision_catalog(
             report,
             effective_program,
             stage_id=stage_id,
+            advisory=(
+                publication.draft.verification_advisory
+                if publication is not None and publication.draft.target_stage_id == stage_id
+                else None
+            ),
         )
         for stage_id in effective_program.effective_next_stage_ids
     )
@@ -812,6 +848,8 @@ def build_program_revision_catalog(
                 targeted_net_gain_units=item.verification.targeted_net_gain_units,
                 full_preflight_net_gain_units=item.verification.full_preflight_net_gain_units,
                 authorizes_execution=False,
+                verification_input=item.verification_input,
+                verification=item.verification,
             )
             for item in action_routes
         ),
@@ -896,6 +934,17 @@ def validate_program_revision_draft(
         compatible = set(option.compatible_roles).intersection(draft.requested_resource_roles)
         if not option.attached and len(compatible) != 1:
             raise ValueError("an unattached resource requires exactly one compatible selected role")
+    if draft.verification_advisory is not None:
+        route = next(
+            (item for item in catalog.action_routes if item.stage_id == draft.target_stage_id),
+            None,
+        )
+        if route is None:
+            raise ValueError("verification advice requires a current eligible action route")
+        if route.verification_input is None:
+            raise ValueError("verification advice requires the exact route decision input")
+        baseline = decide_verification_route(route.verification_input)
+        apply_verification_advisory(baseline, draft.verification_advisory)
 
 
 def _store_record(projects_root: Path, record: ProgramRevisionRecord) -> ProgramRevisionRecord:

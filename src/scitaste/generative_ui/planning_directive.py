@@ -107,7 +107,9 @@ class PlanningDirectivePublication(BaseModel):
             self.predecessor_publication_sha256 is None
         ):
             raise ValueError("planning-directive predecessor identity must be complete")
-        expected = _fingerprint(self.model_dump(mode="json", exclude={"publication_sha256"}))
+        expected = _fingerprint(
+            _jsonable(self.model_dump(mode="json", exclude={"publication_sha256"}))
+        )
         if self.publication_sha256 != expected:
             raise ValueError("planning-directive publication hash mismatch")
         return self
@@ -503,9 +505,13 @@ def _require_publication_request(
 
 def _jsonable(value: object) -> object:
     if isinstance(value, BaseModel):
-        return value.model_dump(mode="json")
+        return _jsonable(value.model_dump(mode="json"))
     if isinstance(value, dict):
-        return {key: _jsonable(item) for key, item in value.items()}
+        return {
+            key: _jsonable(item)
+            for key, item in value.items()
+            if not (key == "verification_advisory" and item is None)
+        }
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
     if isinstance(value, datetime):

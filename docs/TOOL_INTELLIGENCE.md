@@ -577,6 +577,23 @@ for stale high-impact evidence or untrusted code; and external authority is
 requested from the owner. Optional model advice may help estimate semantic gray
 zones, but it cannot downgrade a hard gate or invent execution authority.
 
+Generation as Content consumes this optional advice without adding a separate
+review call. When the exact selected project route is advisory-eligible, the
+bounded program-revision schema lets the same model response include a
+`VerificationAdvisory` over the server-issued input fingerprint. The controller
+recomputes the deterministic baseline and applies the ordinary advisory admission
+policy; the model cannot change declared effects, probabilities, costs, route
+catalogs, blockers, or hard authority boundaries. A published advisory affects
+only its exact current stage and route. This makes semantic judgment available
+where it can add value while preserving zero extra model calls for verification.
+
+Cost accounting also covers rejected structured responses. If a provider
+returned bytes but schema admission failed, SciTaste stores the response hash and
+known token/cost/latency telemetry and negative-caches that exact request. It does
+not pay repeatedly for the same invalid answer. Failures that returned no
+provider response remain retryable, because caching an availability fault would
+not represent a reusable judgment.
+
 The optional-check chooser is intentionally lexicographic about effort. Once a
 targeted check clears the configured minimum net gain, a full preflight replaces
 it only when the deeper check's *incremental* net gain also clears that margin.

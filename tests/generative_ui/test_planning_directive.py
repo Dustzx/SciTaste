@@ -61,6 +61,10 @@ class _Planner:
             catalog_fingerprint=catalog.fingerprint,
             planner_id="test-planning-directive-model",
             provider_response_sha256=hashlib.sha256(draft.model_dump_json().encode()).hexdigest(),
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=0.001,
+            latency_ms=2,
             draft=draft,
             model_generated=True,
         )

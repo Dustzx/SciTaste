@@ -518,7 +518,16 @@ def build_current_gate_action_packet(
     publication = load_latest_planning_directive(runtime, project_id)
     control = planning_control_from_publication(publication) if publication is not None else None
     effective = compile_effective_experiment_program(report, project_id=project_id, control=control)
-    route = route_effective_program_action(report, effective)
+    route = route_effective_program_action(
+        report,
+        effective,
+        advisory=(
+            publication.draft.verification_advisory
+            if publication is not None
+            and publication.draft.target_stage_id == effective.effective_current_stage_id
+            else None
+        ),
+    )
     if (
         route.stage_id != "qualify-scientific-taste-source-pilot"
         or route.verification.route is not VerificationRoute.OWNER_APPROVAL

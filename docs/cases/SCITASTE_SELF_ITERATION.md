@@ -1511,3 +1511,47 @@ runtime or HTTP failures, no horizontal page overflow at 320, 390, 768, and 1440
 pixels, and a bounded bottom composer. The generated workspace fit a 1,009-pixel
 document at desktop width in this probe. The check used deterministic fallback,
 no provider call, and no GPU; it verifies receiver behavior and layout only.
+
+## Editing generated project pages and eliminating review overhead (2026-09-14)
+
+The next live self-use pass found a deeper product gap. Free-form follow-up
+generation received the prior cited prose but not the prior generated layout, so
+the model could rewrite content without deliberately editing the page it had
+already made. The interface also did not state what the successor retained or
+changed. This fell short of Generation as Content: feedback had continuity at the
+conversation level, but not at the generated artifact level.
+
+The planner now receives a bounded representation of the exact predecessor's
+safe `SurfacePlan` beside its cited brief. It may revise component inclusion,
+order, grouping, emphasis, focus, and authored content. SciTaste derives the
+resulting delta itself and renders it before the successor canvas. Fixed-label
+warm-cache entries use the same mechanism after promotion into a project
+conversation, preserving fast entry without reducing the product to a static
+dashboard.
+
+A real GLM-5.3-Flash conversation on self-project revision 475 first authored a
+ten-component progress canvas. Feedback requesting the next gate produced
+`turn-0002` in the same workspace: six components were retained, four removed,
+and both layout and cited authored content changed. That edit reported 12,110
+input tokens, 2,104 output tokens, USD 0.0011488407763553773, and 13,447 ms. The
+browser showed the compact delta and edited canvas above the persistent bottom
+composer.
+
+The self-use pass also tested whether Tool Intelligence could replace ritual
+prechecking with bounded judgment rather than introduce a second review model.
+The same model call that drafted a route-bound program clarification returned a
+`direct_path` advisory over the exact server-issued verification input. The
+controller re-ran deterministic policy, admitted the advice only for the
+eligible route, and preserved the existing scientific blocker. Proposal
+`program-revision-ce3c369b31b43ad5c816` remains pending: no user decision,
+publication, Core mutation, external action, or execution occurred. The call
+reported 5,583 input tokens, 545 output tokens, USD 0.00044189133384461095, and
+6,257 ms.
+
+An earlier response in this pass failed schema admission after the provider had
+already charged for generation. SciTaste previously discarded that cost evidence
+and allowed the exact request to be retried. It now persists the known response
+hash and telemetry and negative-caches only that exact cost-bearing rejection;
+transport failures with no response remain retryable. These observations verify
+artifact continuity, policy enforcement, and accounting behavior only. They do
+not establish interaction-quality, research-quality, or efficiency superiority.

@@ -56,8 +56,39 @@ class ProposingPlanner:
             catalog_fingerprint=catalog.fingerprint,
             planner_id="test-program-planner",
             provider_response_sha256=hashlib.sha256(raw).hexdigest(),
+            input_tokens=100,
+            output_tokens=50,
+            cost_usd=0.001,
+            latency_ms=2,
             draft=draft,
             model_generated=True,
+        )
+
+
+class SchemaRejectedPlanner:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def revise_program(
+        self,
+        request: ProgramRevisionRequest,
+        catalog: ProgramRevisionCatalog,
+        *,
+        prior_record: ProgramRevisionRecord | None = None,
+    ) -> ProgramRevisionOutcome:
+        self.calls += 1
+        return ProgramRevisionOutcome(
+            status="unavailable",
+            reason_code="model-program-revision-schema-rejected",
+            request_fingerprint=request.fingerprint,
+            catalog_fingerprint=catalog.fingerprint,
+            planner_id="test-program-planner",
+            provider_response_sha256="9" * 64,
+            input_tokens=120,
+            output_tokens=30,
+            cost_usd=0.002,
+            latency_ms=3,
+            model_generated=False,
         )
 
 
@@ -163,6 +194,21 @@ def test_successful_model_revision_is_cached_without_reinvocation(
     assert restored.record == refined
     assert restored.decision == decision
     assert restored.stale is False
+
+    rejected_request = request.model_copy(
+        update={"feedback": "Return a response that fails the bounded output schema."}
+    )
+    rejected_planner = SchemaRejectedPlanner()
+    rejected_service = ProgramRevisionService(runtime, rejected_planner)
+    rejected = rejected_service.propose(rejected_request)
+    repeated_rejection = rejected_service.propose(rejected_request)
+
+    assert repeated_rejection == rejected
+    assert rejected_planner.calls == 1
+    assert rejected.outcome.provider_response_sha256 == "9" * 64
+    assert rejected.outcome.cost_usd == 0.002
+    rejected_path = path.parent.parent / rejected.proposal_id / "PROPOSAL.json"
+    assert rejected_path.is_file()
 
 
 def test_focused_revision_binds_the_exact_tool_intelligence_route(

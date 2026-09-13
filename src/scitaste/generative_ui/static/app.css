@@ -998,6 +998,57 @@ fieldset {
   color: var(--muted);
 }
 
+.model-authored-edit-delta {
+  background: rgb(232 242 235 / 78%);
+  border: 1px solid #bfd0c2;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.model-authored-edit-delta > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+}
+
+.model-authored-edit-delta > summary > strong {
+  color: var(--forest-dark);
+  font-size: 0.78rem;
+}
+
+.model-authored-edit-delta > summary > span:not(.program-badge) {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.model-authored-edit-groups {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin: 0.65rem 0 0.45rem;
+}
+
+.model-authored-edit-groups > div {
+  background: rgb(255 255 255 / 65%);
+  border-radius: 0.35rem;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.45rem;
+}
+
+.model-authored-edit-groups strong,
+.model-authored-edit-groups span,
+.model-authored-edit-delta > small {
+  font-size: 0.68rem;
+}
+
+.model-authored-edit-groups span,
+.model-authored-edit-delta > small {
+  color: var(--muted);
+}
+
 .generation-summary {
   background: #dcebe1;
   border: 1px solid #b7cbbd;

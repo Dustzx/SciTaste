@@ -15,9 +15,11 @@ from scitaste.evaluation.program_control import EffectiveExperimentProgram
 from scitaste.model_nodes.verification_policy import (
     ActionEffect,
     ActionReversibility,
+    VerificationAdvisory,
     VerificationDecision,
     VerificationDecisionInput,
     VerificationRoute,
+    apply_verification_advisory,
     decide_verification_route,
 )
 from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
@@ -57,6 +59,7 @@ class EffectiveProgramActionRoute(BaseModel):
     routing_basis: Literal["declared-policy-priors"] = "declared-policy-priors"
     verification_input: VerificationDecisionInput
     verification: VerificationDecision
+    verification_advisory: VerificationAdvisory | None = None
     next_action_kind: ProgramNextActionKind
     selected_by_tool_intelligence: Literal[True] = True
     authorizes_external_action: Literal[False] = False
@@ -89,6 +92,14 @@ class EffectiveProgramActionRoute(BaseModel):
             or self.verification.input_fingerprint != self.verification_input.fingerprint
         ):
             raise ValueError("verification decision belongs to another program gate")
+        baseline = decide_verification_route(self.verification_input)
+        expected_verification = (
+            baseline
+            if self.verification_advisory is None
+            else apply_verification_advisory(baseline, self.verification_advisory)
+        )
+        if self.verification != expected_verification:
+            raise ValueError("program action verification differs from its admitted policy")
         expected_action = _next_action_kind(
             self.verification.route,
             has_blockers=bool(self.blocker_codes),
@@ -114,6 +125,8 @@ class EffectiveProgramActionRoute(BaseModel):
 def route_effective_program_action(
     report: ExperimentDecisionDossierReport,
     effective_program: EffectiveExperimentProgram,
+    *,
+    advisory: VerificationAdvisory | None = None,
 ) -> EffectiveProgramActionRoute:
     """Choose the least costly justified route for the effective current gate."""
 
@@ -121,6 +134,7 @@ def route_effective_program_action(
         report,
         effective_program,
         stage_id=effective_program.effective_current_stage_id,
+        advisory=advisory,
     )
 
 
@@ -129,6 +143,7 @@ def route_program_stage_action(
     effective_program: EffectiveExperimentProgram,
     *,
     stage_id: str,
+    advisory: VerificationAdvisory | None = None,
 ) -> EffectiveProgramActionRoute:
     """Route one eligible next gate without changing the effective program order."""
 
@@ -176,6 +191,8 @@ def route_program_stage_action(
         full_preflight_detection_probability=0.95,
     )
     verification = decide_verification_route(action)
+    if advisory is not None:
+        verification = apply_verification_advisory(verification, advisory)
     return EffectiveProgramActionRoute.create(
         project_id=effective_program.project_id,
         dossier_id=report.dossier_id,
@@ -189,6 +206,7 @@ def route_program_stage_action(
         routing_basis="declared-policy-priors",
         verification_input=action,
         verification=verification,
+        verification_advisory=advisory,
         next_action_kind=_next_action_kind(
             verification.route,
             has_blockers=bool(stage.blocker_codes),

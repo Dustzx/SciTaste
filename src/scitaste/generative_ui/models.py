@@ -2215,6 +2215,7 @@ class ProjectProgramActionRouteData(BaseModel):
     owner_approval_required: bool
     model_advisory_eligible: bool
     decision_source: Literal["deterministic", "model_assisted"]
+    advisory_fingerprint: Sha256 | None = None
     selected_by_tool_intelligence: Literal[True] = True
     authorizes_external_action: Literal[False] = False
     authorizes_execution: Literal[False] = False
@@ -2248,6 +2249,8 @@ class ProjectProgramActionRouteData(BaseModel):
             )
         ):
             raise ValueError("program action owner boundary differs from its effects")
+        if (self.decision_source == "model_assisted") != (self.advisory_fingerprint is not None):
+            raise ValueError("model-assisted program action requires its advisory fingerprint")
         return self
 
 

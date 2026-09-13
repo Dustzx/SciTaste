@@ -22,6 +22,7 @@ from scitaste.generative_ui.models import (
     ProjectEvidenceProgramData,
     ProjectProgramActionRouteData,
 )
+from scitaste.model_nodes.verification_policy import VerificationAdvisory
 from scitaste.project.models import ProjectRun, ProjectSnapshot
 
 ICLR_EVIDENCE_PROGRAM_PROJECTION = "iclr-evidence-program-v1"
@@ -127,6 +128,8 @@ def project_iclr_evidence_program(
     artifact_ref_id: str,
     current_action_run: ProjectRun | None = None,
     current_action_run_ref_id: str | None = None,
+    verification_advisory: VerificationAdvisory | None = None,
+    verification_advisory_stage_id: str | None = None,
 ) -> ProjectEvidenceProgramData:
     """Collapse the full campaign DAG into seven truthful, progressive-disclosure phases."""
 
@@ -204,11 +207,24 @@ def project_iclr_evidence_program(
         for track in report.tracks
     ]
     completed_stage_count = sum(item.state is CampaignStageState.COMPLETE for item in report.stages)
-    action_route = route_effective_program_action(report, effective_program)
+    action_route = route_effective_program_action(
+        report,
+        effective_program,
+        advisory=(
+            verification_advisory if current_stage_id == verification_advisory_stage_id else None
+        ),
+    )
     projected_action_route = _project_action_route(action_route)
     next_gate_action_routes = tuple(
         _project_action_route(
-            route_program_stage_action(report, effective_program, stage_id=stage_id)
+            route_program_stage_action(
+                report,
+                effective_program,
+                stage_id=stage_id,
+                advisory=(
+                    verification_advisory if stage_id == verification_advisory_stage_id else None
+                ),
+            )
         )
         for stage_id in effective_next_stage_ids
     )
@@ -276,6 +292,7 @@ def _project_action_route(
         owner_approval_required=action_route.verification.owner_approval_required,
         model_advisory_eligible=action_route.verification.model_advisory_eligible,
         decision_source=action_route.verification.decision_source,
+        advisory_fingerprint=action_route.verification.advisory_fingerprint,
         selected_by_tool_intelligence=True,
         authorizes_external_action=False,
         authorizes_execution=False,

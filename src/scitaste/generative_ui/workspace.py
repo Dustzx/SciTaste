@@ -680,6 +680,12 @@ class WorkspaceSurfaceFactory:
                 artifact_ref_id=evidence_program_artifact_ref.evidence_id,
                 current_action_run=current_action_run,
                 current_action_run_ref_id=current_action_run_ref_id,
+                verification_advisory=(
+                    publication.draft.verification_advisory if publication is not None else None
+                ),
+                verification_advisory_stage_id=(
+                    publication.draft.target_stage_id if publication is not None else None
+                ),
             )
             evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
             if publication is not None:
