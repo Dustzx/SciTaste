@@ -496,11 +496,7 @@ class ProgramRevisionService:
             raise ValueError("program-revision request is stale")
         if parsed.target_stage_id is not None:
             route = next(
-                (
-                    item
-                    for item in catalog.action_routes
-                    if item.stage_id == parsed.target_stage_id
-                ),
+                (item for item in catalog.action_routes if item.stage_id == parsed.target_stage_id),
                 None,
             )
             if route is None or route.route_sha256 != parsed.target_route_sha256:
