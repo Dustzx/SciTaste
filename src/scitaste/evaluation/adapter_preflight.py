@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from scitaste.evaluation.prelaunch import ReadinessStatus
 from scitaste.evaluation.resources import (
@@ -58,7 +58,7 @@ class ExternalAdapterPreflightManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     preflight_id: str = Field(pattern=_ID)
     authorization_scope: Literal["static-inspection-only"]
     external_resource_id: str = Field(pattern=_ID)
@@ -67,6 +67,9 @@ class ExternalAdapterPreflightManifest(BaseModel):
     require_clean_upstream: Literal[True] = True
     adapter_entrypoint: str = Field(min_length=1, max_length=1_000)
     adapter_entrypoint_sha256: str = Field(pattern=_SHA256)
+    adapter_contract_ref: str | None = Field(default=None, max_length=1_000)
+    adapter_contract_file_sha256: str | None = Field(default=None, pattern=_SHA256)
+    adapter_contract_proposal_sha256: str | None = Field(default=None, pattern=_SHA256)
     requirements: dict[AdapterRequirement, AdapterRequirementEvidence]
     no_external_download: Literal[True] = True
     no_execution_performed: Literal[True] = True
@@ -81,12 +84,35 @@ class ExternalAdapterPreflightManifest(BaseModel):
                 f"missing={sorted(item.value for item in missing)}, "
                 f"extra={sorted(str(item) for item in extra)}"
             )
+        contract = (
+            self.adapter_contract_ref,
+            self.adapter_contract_file_sha256,
+            self.adapter_contract_proposal_sha256,
+        )
+        if self.schema_version == "1.1" and not all(contract):
+            raise ValueError("adapter preflight v1.1 requires an exact adapter contract")
+        if self.schema_version == "1.0" and any(contract):
+            raise ValueError("adapter preflight v1.0 cannot declare a v1.1 contract binding")
         return self
 
     @property
     def proposal_sha256(self) -> str:
-        canonical = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        payload = self.model_dump(mode="json")
+        if self.schema_version == "1.0":
+            payload.pop("adapter_contract_ref", None)
+            payload.pop("adapter_contract_file_sha256", None)
+            payload.pop("adapter_contract_proposal_sha256", None)
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+    @model_serializer(mode="wrap")
+    def omit_v10_contract_extension(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        if self.schema_version == "1.0":
+            payload.pop("adapter_contract_ref", None)
+            payload.pop("adapter_contract_file_sha256", None)
+            payload.pop("adapter_contract_proposal_sha256", None)
+        return payload
 
 
 class AdapterPreflightInspection(BaseModel):
@@ -109,9 +135,11 @@ class AdapterPreflightReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     preflight_id: str
+    external_resource_id: str = Field(pattern=_ID)
     proposal_sha256: str = Field(pattern=_SHA256)
+    adapter_contract_proposal_sha256: str | None = Field(default=None, pattern=_SHA256)
     resource_corpus_sha256: str = Field(pattern=_SHA256)
     observed_upstream_commit: str | None = Field(default=None, pattern=_COMMIT)
     upstream_tree_clean: bool | None = None
@@ -172,7 +200,15 @@ def inspect_adapter_preflight(
 
     observed_commit: str | None = None
     upstream_clean: bool | None = None
+    contract_proposal_sha256: str | None = None
     if root is not None:
+        if manifest.schema_version == "1.1":
+            contract_proposal_sha256 = _inspect_bound_contract(
+                manifest,
+                resource_corpus,
+                root,
+                blockers,
+            )
         upstream = _resolve_bounded_path(root, manifest.upstream_checkout)
         if upstream is None or not upstream.is_dir():
             _add(blockers, "upstream_checkout_unavailable", "upstream checkout is unavailable")
@@ -230,7 +266,9 @@ def inspect_adapter_preflight(
     ready_for_matched = ready_for_revision and not pending
     return AdapterPreflightReport(
         preflight_id=manifest.preflight_id,
+        external_resource_id=manifest.external_resource_id,
         proposal_sha256=manifest.proposal_sha256,
+        adapter_contract_proposal_sha256=contract_proposal_sha256,
         resource_corpus_sha256=resource_corpus.semantic_sha256,
         observed_upstream_commit=observed_commit,
         upstream_tree_clean=upstream_clean,
@@ -260,6 +298,68 @@ def _verify_file(
     observed = hashlib.sha256(candidate.read_bytes()).hexdigest()
     if observed != expected_sha256:
         _add(blockers, f"{code_prefix}:hash_mismatch", f"evidence hash differs: {locator}")
+
+
+def _inspect_bound_contract(
+    manifest: ExternalAdapterPreflightManifest,
+    resource_corpus: ExternalResourceCorpus,
+    root: Path,
+    blockers: list[AdapterPreflightFinding],
+) -> str | None:
+    locator = manifest.adapter_contract_ref
+    file_sha256 = manifest.adapter_contract_file_sha256
+    proposal_sha256 = manifest.adapter_contract_proposal_sha256
+    if locator is None or file_sha256 is None or proposal_sha256 is None:
+        return None
+    before = len(blockers)
+    _verify_file(
+        blockers,
+        root,
+        locator,
+        file_sha256,
+        code_prefix="adapter_contract",
+    )
+    if len(blockers) != before:
+        return None
+    path = _resolve_bounded_path(root, locator)
+    if path is None:
+        return None
+    try:
+        from scitaste.evaluation.adapter_contract import (
+            inspect_adapter_contract,
+            load_adapter_contract_manifest,
+        )
+
+        contract = load_adapter_contract_manifest(path).manifest
+        report = inspect_adapter_contract(contract, resource_corpus, source_root=root)
+    except (OSError, ValueError) as exc:
+        _add(blockers, "adapter_contract:invalid", f"adapter contract is invalid: {exc}")
+        return None
+    if contract.proposal_sha256 != proposal_sha256:
+        _add(
+            blockers,
+            "adapter_contract:proposal_mismatch",
+            "adapter contract semantic hash differs from the preflight binding",
+        )
+    if contract.external_resource_id != manifest.external_resource_id:
+        _add(
+            blockers,
+            "adapter_contract:resource_mismatch",
+            "adapter contract names another external resource",
+        )
+    if contract.expected_upstream_commit != manifest.expected_upstream_commit:
+        _add(
+            blockers,
+            "adapter_contract:commit_mismatch",
+            "adapter contract and preflight name different upstream commits",
+        )
+    if not report.ready_for_adapter_implementation:
+        _add(
+            blockers,
+            "adapter_contract:not_implementation_ready",
+            "adapter contract has not cleared code-use and implementation requirements",
+        )
+    return contract.proposal_sha256
 
 
 def _resolve_bounded_path(root: Path, locator: str) -> Path | None:

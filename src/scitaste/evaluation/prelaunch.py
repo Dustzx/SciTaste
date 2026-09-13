@@ -7,7 +7,7 @@ import json
 import subprocess
 from datetime import date
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
@@ -24,6 +24,7 @@ _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
 _SHA256 = r"^[0-9a-f]{64}$"
 _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_MANIFEST_BYTES = 1_048_576
+_MAX_EVIDENCE_BYTES = 16 * 1_048_576
 
 
 class ReadinessStatus(StrEnum):
@@ -56,6 +57,31 @@ class ComparisonRegime(StrEnum):
 
     MATCHED_BACKBONE = "matched_backbone"
     BEST_NATIVE = "best_native"
+
+
+class AdapterEvidenceKind(StrEnum):
+    """Semantic type of bytes named by a system's adapter evidence binding."""
+
+    STATIC_CONTRACT = "static_contract"
+    EXTERNAL_PREFLIGHT_REPORT = "external_preflight_report"
+    NATIVE_PREFLIGHT_MANIFEST = "native_preflight_manifest"
+    NATIVE_PREFLIGHT_REPORT = "native_preflight_report"
+
+
+class EvidenceProgramBinding(BaseModel):
+    """Exact scientific program that one operational proposal claims to execute."""
+
+    model_config = _CONFIG
+
+    program_id: str = Field(pattern=_ID)
+    manifest_ref: str = Field(min_length=1, max_length=1_000)
+    manifest_file_sha256: str = Field(pattern=_SHA256)
+    proposal_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def manifest_path_is_project_relative(self) -> EvidenceProgramBinding:
+        _validate_relative_path(self.manifest_ref, "evidence-program manifest")
+        return self
 
 
 class ScientificEndpointKind(StrEnum):
@@ -177,6 +203,7 @@ class PrelaunchSystem(BaseModel):
     real_implementation: bool
     adapter_preflight_ref: str | None = Field(default=None, max_length=1_000)
     adapter_preflight_sha256: str | None = Field(default=None, pattern=_SHA256)
+    adapter_evidence_kind: AdapterEvidenceKind | None = None
 
     @model_validator(mode="after")
     def external_methods_have_resource_identity(self) -> PrelaunchSystem:
@@ -190,7 +217,16 @@ class PrelaunchSystem(BaseModel):
             raise ValueError("verified systems require a real pinned implementation")
         if (self.adapter_preflight_ref is None) != (self.adapter_preflight_sha256 is None):
             raise ValueError("adapter preflight reference and SHA-256 must be supplied together")
+        if self.adapter_preflight_ref is None and self.adapter_evidence_kind is not None:
+            raise ValueError("adapter evidence kind requires a bound evidence file")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_legacy_adapter_evidence_kind(self, handler):  # type: ignore[no-untyped-def]
+        payload = handler(self)
+        if self.adapter_evidence_kind is None:
+            payload.pop("adapter_evidence_kind", None)
+        return payload
 
 
 class PrelaunchTask(BaseModel):
@@ -529,7 +565,7 @@ class ExperimentPrelaunchManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"] = "1.0"
     manifest_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
     protocol_version: str = Field(min_length=1, max_length=100)
@@ -542,6 +578,7 @@ class ExperimentPrelaunchManifest(BaseModel):
     source_commit: str | None = Field(default=None, pattern=_COMMIT)
     require_clean_tree: Literal[True] = True
     resource_corpus_sha256: str = Field(pattern=_SHA256)
+    evidence_program: EvidenceProgramBinding | None = None
     systems: tuple[PrelaunchSystem, ...] = Field(min_length=2, max_length=30)
     tasks: tuple[PrelaunchTask, ...] = Field(min_length=1, max_length=500)
     lanes: tuple[ExecutionLane, ...] = Field(min_length=1, max_length=10)
@@ -619,13 +656,13 @@ class ExperimentPrelaunchManifest(BaseModel):
                 raise ValueError(
                     "automated judges cannot replace the primary blinded human preference"
                 )
-        if self.schema_version in {"1.2", "1.3", "1.4", "1.5"}:
+        if self.schema_version in {"1.2", "1.3", "1.4", "1.5", "1.6"}:
             api_lanes = [lane for lane in self.lanes if lane.kind is ExecutionLaneKind.API_ONLY]
             if any(lane.comparison_regime is None for lane in api_lanes):
                 raise ValueError("prelaunch v1.2 requires an explicit API comparison regime")
         task_freeze_semantics = self.integrity.task_freeze_semantics
         if task_freeze_semantics is TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION:
-            if self.schema_version != "1.5":
+            if self.schema_version not in {"1.5", "1.6"}:
                 raise ValueError("prelaunch v1.5 is required for benchmark allocation binding")
             if (
                 self.study_scope != "formal"
@@ -637,13 +674,13 @@ class ExperimentPrelaunchManifest(BaseModel):
             if any(task.source_group is None for task in self.tasks):
                 raise ValueError("benchmark allocation binding requires every task source group")
         if (
-            self.schema_version == "1.5"
+            self.schema_version in {"1.5", "1.6"}
             and self.study_scope == "formal"
             and self.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
             and task_freeze_semantics is not TaskFreezeSemantics.BENCHMARK_METADATA_ALLOCATION
         ):
             raise ValueError("formal objective prelaunch v1.5 requires benchmark allocation")
-        if self.schema_version not in {"1.3", "1.4", "1.5"}:
+        if self.schema_version not in {"1.3", "1.4", "1.5", "1.6"}:
             if self.analysis.claim_admission is not None:
                 raise ValueError("prelaunch v1.3 is required for claim-admission semantics")
             return self
@@ -654,14 +691,53 @@ class ExperimentPrelaunchManifest(BaseModel):
         )
         if self.schema_version == "1.3" and any(role is not None for role in inference_roles):
             raise ValueError("prelaunch v1.4 is required for contrast-inference semantics")
-        if self.schema_version in {"1.4", "1.5"} and any(role is None for role in inference_roles):
+        if self.schema_version in {"1.4", "1.5", "1.6"} and any(
+            role is None for role in inference_roles
+        ):
             raise ValueError("prelaunch v1.4 requires every contrast inference role")
         self._validate_claim_admission(
             self.analysis.claim_admission,
             systems={item.system_id: item for item in self.systems},
             lanes={item.lane_id: item for item in self.lanes},
-            explicit_inference=self.schema_version in {"1.4", "1.5"},
+            explicit_inference=self.schema_version in {"1.4", "1.5", "1.6"},
         )
+        if self.schema_version == "1.6":
+            if self.evidence_program is None:
+                raise ValueError("prelaunch v1.6 requires an exact evidence-program binding")
+            for system in self.systems:
+                if (
+                    system.adapter_preflight_ref is not None
+                    and system.adapter_evidence_kind is None
+                ):
+                    raise ValueError(
+                        "prelaunch v1.6 requires a semantic type for every adapter evidence file"
+                    )
+                if (
+                    system.role is SystemRole.METHOD_COMPARATOR
+                    and system.adapter_preflight_ref is None
+                ):
+                    raise ValueError("prelaunch v1.6 method comparators require adapter evidence")
+                if (
+                    system.role is SystemRole.METHOD_COMPARATOR
+                    and system.availability is ReadinessStatus.VERIFIED
+                    and system.adapter_evidence_kind
+                    is not AdapterEvidenceKind.EXTERNAL_PREFLIGHT_REPORT
+                ):
+                    raise ValueError(
+                        "verified external methods require a real adapter preflight report"
+                    )
+                if (
+                    system.role is not SystemRole.METHOD_COMPARATOR
+                    and system.availability is ReadinessStatus.VERIFIED
+                    and (
+                        system.adapter_preflight_ref is None
+                        or system.adapter_evidence_kind
+                        is not AdapterEvidenceKind.NATIVE_PREFLIGHT_REPORT
+                    )
+                ):
+                    raise ValueError(
+                        "verified first-party systems require a real native preflight report"
+                    )
         return self
 
     @staticmethod
@@ -759,9 +835,13 @@ class ExperimentPrelaunchManifest(BaseModel):
     @property
     def proposal_sha256(self) -> str:
         payload = self.model_dump(mode="json", exclude={"approval"})
-        if self.schema_version != "1.5":
+        if self.schema_version not in {"1.5", "1.6"}:
             for task in payload["tasks"]:
                 task.pop("source_group", None)
+        if self.schema_version != "1.6":
+            payload.pop("evidence_program", None)
+            for system in payload["systems"]:
+                system.pop("adapter_evidence_kind", None)
         if self.schema_version in {"1.0", "1.1"}:
             for lane in payload["lanes"]:
                 for key in (
@@ -843,6 +923,7 @@ def inspect_prelaunch_manifest(
     *,
     observed_source_commit: str | None = None,
     source_tree_clean: bool | None = None,
+    evidence_root: str | Path | None = None,
 ) -> PrelaunchGateReport:
     """Evaluate readiness and approval without accessing providers or GPUs."""
 
@@ -863,6 +944,30 @@ def inspect_prelaunch_manifest(
         _block(blockers, "source_tree_dirty", "the executable Git tree is not clean")
     if manifest.resource_corpus_sha256 != resource_corpus.semantic_sha256:
         _block(blockers, "resource_corpus_drift", "resource corpus hash differs from the manifest")
+    evidence_path_root: Path | None = None
+    if manifest.schema_version == "1.6":
+        if evidence_root is None:
+            _block(
+                blockers,
+                "evidence_root_unobserved",
+                "prelaunch v1.6 requires the bound evidence root",
+            )
+        else:
+            try:
+                evidence_path_root = Path(evidence_root).resolve(strict=True)
+            except (OSError, ValueError):
+                _block(
+                    blockers,
+                    "evidence_root_unavailable",
+                    "the bound evidence root could not be resolved",
+                )
+        if manifest.evidence_program is not None and evidence_path_root is not None:
+            _inspect_evidence_program_binding(
+                manifest,
+                resource_corpus,
+                evidence_path_root,
+                blockers,
+            )
     if (
         manifest.study_scope == "formal"
         and manifest.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS
@@ -897,6 +1002,18 @@ def inspect_prelaunch_manifest(
                     f"system_resource:{system.system_id}:{code}",
                     f"system {system.system_id} failed resource gate {code}",
                 )
+        if (
+            manifest.schema_version == "1.6"
+            and system.adapter_preflight_ref is not None
+            and evidence_path_root is not None
+        ):
+            _inspect_adapter_evidence(
+                system,
+                resource_corpus,
+                evidence_path_root,
+                blockers,
+                expected_source_commit=manifest.source_commit,
+            )
 
     for task in manifest.tasks:
         if not task.held_out or not task.source_group_disjoint:
@@ -1017,6 +1134,205 @@ def inspect_git_source(path: str | Path) -> tuple[str, bool]:
     return commit, not bool(status)
 
 
+def _inspect_evidence_program_binding(
+    manifest: ExperimentPrelaunchManifest,
+    resource_corpus: ExternalResourceCorpus,
+    root: Path,
+    blockers: list[PrelaunchBlocker],
+) -> None:
+    binding = manifest.evidence_program
+    if binding is None:
+        return
+    path = _read_bound_evidence(
+        root,
+        binding.manifest_ref,
+        binding.manifest_file_sha256,
+        blockers,
+        code_prefix="evidence_program",
+    )
+    if path is None:
+        return
+    try:
+        from scitaste.evaluation.evidence_program import load_evidence_program
+
+        program = load_evidence_program(path).program
+    except (OSError, ValueError) as exc:
+        _block(
+            blockers,
+            "evidence_program_invalid",
+            f"the bound evidence program is invalid: {exc}",
+        )
+        return
+    if program.program_id != binding.program_id:
+        _block(blockers, "evidence_program_id_mismatch", "evidence-program ID differs")
+    if program.proposal_sha256 != binding.proposal_sha256:
+        _block(
+            blockers,
+            "evidence_program_proposal_mismatch",
+            "evidence-program semantic hash differs",
+        )
+    if program.resource_corpus_sha256 != resource_corpus.semantic_sha256:
+        _block(
+            blockers,
+            "evidence_program_resource_corpus_mismatch",
+            "evidence program and prelaunch use different resource corpora",
+        )
+
+    selected_methods = {
+        item.resource_id for item in program.system_candidates if item.selected_for_adapter_proposal
+    }
+    planned_methods = {
+        item.external_resource_id
+        for item in manifest.systems
+        if item.role is SystemRole.METHOD_COMPARATOR
+    }
+    if not planned_methods.issubset(selected_methods):
+        _block(
+            blockers,
+            "evidence_program_system_scope_mismatch",
+            "prelaunch names a comparator outside the selected evidence-program methods",
+        )
+    selected_task_resources = {
+        item.resource_id
+        for item in program.task_sources
+        if item.selected_for_acquisition_proposal and item.resource_id is not None
+    }
+    planned_task_resources = {item.benchmark_resource_id for item in manifest.tasks}
+    if not planned_task_resources.issubset(selected_task_resources):
+        _block(
+            blockers,
+            "evidence_program_task_scope_mismatch",
+            "prelaunch names task resources outside the selected evidence-program sources",
+        )
+
+
+def _inspect_adapter_evidence(
+    system: PrelaunchSystem,
+    resource_corpus: ExternalResourceCorpus,
+    root: Path,
+    blockers: list[PrelaunchBlocker],
+    *,
+    expected_source_commit: str | None,
+) -> None:
+    kind = system.adapter_evidence_kind
+    locator = system.adapter_preflight_ref
+    sha256 = system.adapter_preflight_sha256
+    if kind is None or locator is None or sha256 is None:
+        return
+    prefix = f"adapter_evidence_{system.system_id}"
+    path = _read_bound_evidence(root, locator, sha256, blockers, code_prefix=prefix)
+    if path is None:
+        return
+    try:
+        if kind is AdapterEvidenceKind.STATIC_CONTRACT:
+            from scitaste.evaluation.adapter_contract import load_adapter_contract_manifest
+
+            contract = load_adapter_contract_manifest(path).manifest
+            if contract.external_resource_id != system.external_resource_id:
+                raise ValueError("static adapter contract names a different external resource")
+            _block(
+                blockers,
+                f"{prefix}_static_contract_only",
+                "a static adapter contract is a proposal, not an observed preflight",
+            )
+            return
+        if kind is AdapterEvidenceKind.EXTERNAL_PREFLIGHT_REPORT:
+            from scitaste.evaluation.adapter_preflight import AdapterPreflightReport
+
+            report = AdapterPreflightReport.model_validate_json(path.read_bytes())
+            if report.external_resource_id != system.external_resource_id:
+                raise ValueError("adapter preflight report names a different external resource")
+            if report.resource_corpus_sha256 != resource_corpus.semantic_sha256:
+                raise ValueError("adapter preflight report binds another resource corpus")
+            if not report.ready_for_matched_adapter:
+                _block(
+                    blockers,
+                    f"{prefix}_preflight_not_ready",
+                    "the external adapter preflight did not admit a matched adapter",
+                )
+            return
+        if kind is AdapterEvidenceKind.NATIVE_PREFLIGHT_MANIFEST:
+            from scitaste.evaluation.native_condition_preflight import (
+                load_native_condition_preflight_manifest,
+            )
+
+            load_native_condition_preflight_manifest(path)
+            _block(
+                blockers,
+                f"{prefix}_native_manifest_only",
+                "a native preflight manifest is a plan, not an observed readiness report",
+            )
+            return
+        from scitaste.evaluation.native_condition_preflight import NativeConditionPreflightReport
+
+        report = NativeConditionPreflightReport.model_validate_json(path.read_bytes())
+        if report.source_commit != expected_source_commit:
+            raise ValueError("native preflight report binds another source commit")
+        if not report.ready_for_experiment:
+            _block(
+                blockers,
+                f"{prefix}_native_preflight_not_ready",
+                "the native preflight report is not experiment-ready",
+            )
+    except (OSError, ValueError) as exc:
+        _block(
+            blockers,
+            f"{prefix}_type_invalid",
+            f"adapter evidence does not match its declared semantic type: {exc}",
+        )
+
+
+def _read_bound_evidence(
+    root: Path,
+    locator: str,
+    expected_sha256: str,
+    blockers: list[PrelaunchBlocker],
+    *,
+    code_prefix: str,
+) -> Path | None:
+    path = _resolve_bounded_path(root, locator)
+    if path is None or not path.is_file():
+        _block(blockers, f"{code_prefix}_missing", f"evidence file is missing: {locator}")
+        return None
+    if path.stat().st_size > _MAX_EVIDENCE_BYTES:
+        _block(blockers, f"{code_prefix}_oversized", f"evidence file is oversized: {locator}")
+        return None
+    if hashlib.sha256(path.read_bytes()).hexdigest() != expected_sha256:
+        _block(blockers, f"{code_prefix}_hash_mismatch", f"evidence file drifted: {locator}")
+        return None
+    return path
+
+
+def _resolve_bounded_path(root: Path, locator: str) -> Path | None:
+    try:
+        _validate_relative_path(locator, "prelaunch evidence")
+    except ValueError:
+        return None
+    current = root
+    for part in PurePosixPath(locator).parts:
+        current = current / part
+        if current.is_symlink():
+            return None
+    try:
+        resolved = current.resolve(strict=True)
+        resolved.relative_to(root)
+    except (OSError, ValueError):
+        return None
+    return resolved
+
+
+def _validate_relative_path(value: str, label: str) -> None:
+    path = PurePosixPath(value)
+    if (
+        "\\" in value
+        or path.is_absolute()
+        or not path.parts
+        or "//" in value
+        or any(part in {"", ".", ".."} for part in path.parts)
+    ):
+        raise ValueError(f"{label} must be a normalized relative path")
+
+
 def _block(blockers: list[PrelaunchBlocker], code: str, message: str) -> None:
     blockers.append(PrelaunchBlocker(code=code, message=message))
 
@@ -1047,6 +1363,7 @@ def _git(cwd: Path, *arguments: str) -> str:
 
 
 __all__ = [
+    "AdapterEvidenceKind",
     "AnalysisContract",
     "ApiModelResource",
     "AutomatedJudgeRole",
@@ -1056,6 +1373,7 @@ __all__ = [
     "ConfirmatoryContrastSpec",
     "ConfirmatoryEstimandKind",
     "ContrastInferenceRole",
+    "EvidenceProgramBinding",
     "ExecutionLane",
     "ExecutionLaneKind",
     "ExperimentPrelaunchManifest",

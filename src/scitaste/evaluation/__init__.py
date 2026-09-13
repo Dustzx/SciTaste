@@ -504,6 +504,7 @@ from scitaste.evaluation.objective_analysis import (
     save_objective_outcome_contract,
 )
 from scitaste.evaluation.prelaunch import (
+    AdapterEvidenceKind,
     AnalysisContract,
     ApiModelResource,
     AutomatedJudgeRole,
@@ -513,6 +514,7 @@ from scitaste.evaluation.prelaunch import (
     ConfirmatoryContrastSpec,
     ConfirmatoryEstimandKind,
     ContrastInferenceRole,
+    EvidenceProgramBinding,
     ExecutionLane,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
@@ -793,6 +795,7 @@ __all__ = [
     "AdapterContractFinding",
     "AdapterContractInspection",
     "AdapterContractReport",
+    "AdapterEvidenceKind",
     "AdapterInvocationContract",
     "AdapterModelTranslation",
     "AdapterPreflightFinding",
@@ -980,6 +983,7 @@ __all__ = [
     "EvidenceBenchmarkAlignmentReport",
     "EvidenceHypothesis",
     "EvidenceLayer",
+    "EvidenceProgramBinding",
     "EvidenceProgramFinding",
     "EvidenceProgramInspection",
     "EvidenceProgramReport",

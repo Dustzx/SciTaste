@@ -418,6 +418,36 @@ or execute a real benchmark. A passing report establishes first-party condition
 wiring; it does not clear matched/placebo corpus parity or support an effect
 claim.
 
+### Program-bound and typed execution evidence
+
+Prelaunch schema `1.6` closes the last identity boundary before an expensive
+pilot or formal block. A new proposal binds the exact ICLR evidence-program file,
+its semantic hash, and the resource corpus. Inspection rejects task resources or
+external comparators that are outside the program's selected scope, so an older
+operational manifest cannot silently execute after the scientific plan changes.
+
+Adapter evidence now declares whether its bytes are a static contract, an
+external preflight report, a native preflight manifest, or a native preflight
+report. The declaration is parsed, not trusted from the filename. Static
+contracts and native manifests remain proposal-only and block readiness. A
+verified external method requires a schema-1.1 adapter preflight report that
+names the same external resource and resource corpus and reports
+`ready_for_matched_adapter=true`. A verified first-party system analogously
+requires a ready native report bound to the exact source commit.
+
+External adapter preflight schema `1.1` also binds and replays the preceding
+static contract by file hash and proposal hash. It checks code-use viability,
+external-resource identity, upstream commit, and every implementation requirement
+before inspecting a checkout. This prevents an unrelated or rights-blocked
+adapter implementation from manufacturing a clean downstream report.
+
+These validations are part of the launch transaction's identity, comparable to
+checking that a payment addresses the intended recipient. They are required
+because a wrong experiment can consume API/GPU/human resources and invalidate an
+entire comparison. They do not change Tool Intelligence's direct path for cheap,
+reversible project metadata work and do not add repeated environment-wide
+prechecks.
+
 Static exact-commit translation review has now resolved one ambiguity inside
 that open adapter gate. MLR-Agent and Agent Laboratory are real method
 candidates, but their pinned releases cannot provide an unchanged-core, fully

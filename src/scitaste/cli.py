@@ -5469,6 +5469,7 @@ def _handle_evaluation_prelaunch(args: argparse.Namespace) -> int:
         corpus.corpus,
         observed_source_commit=source_commit,
         source_tree_clean=source_tree_clean,
+        evidence_root=args.evidence_root,
     )
     critic_report = EvaluationCriticSuite().review(
         inspection.manifest,

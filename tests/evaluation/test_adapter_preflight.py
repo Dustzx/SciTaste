@@ -4,12 +4,16 @@ import hashlib
 import subprocess
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from scitaste.evaluation import (
     AdapterRequirement,
     AdapterRequirementEvidence,
     ExternalAdapterPreflightManifest,
     ReadinessStatus,
     inspect_adapter_preflight,
+    load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
     load_external_resource_corpus,
 )
@@ -17,6 +21,10 @@ from scitaste.evaluation import (
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS = ROOT / "docs/research/data/autoresearch_evaluation_resources_v2.yaml"
 ARC_PREFLIGHT = ROOT / "configs/evaluation/adapters/autoresearchclaw_mlr_v1.yaml"
+AGENT_LAB_CONTRACT = (
+    ROOT / "configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml"
+)
+V9_CORPUS = ROOT / "docs/research/data/autoresearch_evaluation_resources_v9.yaml"
 
 
 def _run_git(cwd: Path, *args: str) -> str:
@@ -137,3 +145,50 @@ def test_repository_arc_preflight_is_static_and_incomplete() -> None:
         AdapterRequirement.SANDBOX,
         AdapterRequirement.TELEMETRY,
     }
+
+
+def test_v11_preflight_requires_and_replays_exact_adapter_contract() -> None:
+    contract = load_adapter_contract_manifest(AGENT_LAB_CONTRACT)
+    corpus = load_external_resource_corpus(V9_CORPUS).corpus
+    adapter = ROOT / "src/scitaste/evaluation/adapter_contract.py"
+    requirements = {
+        requirement: AdapterRequirementEvidence(
+            status=ReadinessStatus.PENDING,
+            summary=f"Pending observed {requirement.value} evidence.",
+        )
+        for requirement in AdapterRequirement
+    }
+    manifest = ExternalAdapterPreflightManifest(
+        schema_version="1.1",
+        preflight_id="agent-laboratory-preflight-v2",
+        authorization_scope="static-inspection-only",
+        external_resource_id="agent-laboratory",
+        expected_upstream_commit=contract.manifest.expected_upstream_commit,
+        upstream_checkout="third_party/agent-laboratory",
+        adapter_entrypoint="src/scitaste/evaluation/adapter_contract.py",
+        adapter_entrypoint_sha256=hashlib.sha256(adapter.read_bytes()).hexdigest(),
+        adapter_contract_ref=(
+            "configs/evaluation/adapters/agent_laboratory_best_native_contract_v1.yaml"
+        ),
+        adapter_contract_file_sha256=contract.file_sha256,
+        adapter_contract_proposal_sha256=contract.manifest.proposal_sha256,
+        requirements=requirements,
+    )
+
+    report = inspect_adapter_preflight(manifest, corpus, source_root=ROOT)
+
+    assert report.adapter_contract_proposal_sha256 == contract.manifest.proposal_sha256
+    assert report.ready_for_corpus_revision_review is False
+    assert report.ready_for_matched_adapter is False
+    assert "adapter_contract:not_implementation_ready" in {
+        finding.code for finding in report.blockers
+    }
+
+
+def test_v11_preflight_cannot_omit_contract_identity(tmp_path: Path) -> None:
+    manifest, _ = _fixture(tmp_path)
+    payload = manifest.model_dump(mode="json")
+    payload["schema_version"] = "1.1"
+
+    with pytest.raises(ValidationError, match="requires an exact adapter contract"):
+        ExternalAdapterPreflightManifest.model_validate(payload)

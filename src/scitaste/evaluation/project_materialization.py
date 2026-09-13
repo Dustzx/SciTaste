@@ -62,6 +62,7 @@ def prepare_project_evaluation(
         corpus_inspection.corpus,
         observed_source_commit=observed_commit,
         source_tree_clean=source_tree_clean,
+        evidence_root=evidence_root,
     )
     critic = EvaluationCriticSuite().review(
         manifest_inspection.manifest,

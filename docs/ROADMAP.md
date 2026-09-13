@@ -1431,6 +1431,27 @@ citation/resource screen and exact adapters/licenses remain open.
   broaden the trusted graph/comparison repertoire only where the study exposes a
   concrete presentation gap.
 
+## Program-bound experiment launch identity
+
+- Done: SciTasteBench v3 already encodes the title-critical H1/H2 mechanism
+  conditions as same-source raw RAG, same-source abstracted Taste, and
+  source-disjoint mismatched Taste. Exact tokenizer traces, treatment-construction
+  receipts, registered directional contrasts, and blinded human preference as the
+  primary endpoint prevent the older Knowledge-RAG/placebo diagnostics from being
+  misreported as confirmatory evidence.
+- Done: prelaunch schema 1.6 binds an operational proposal to the exact ICLR
+  evidence program and refuses task resources or external methods outside its
+  selected scope. Adapter evidence is typed and parsed; a static contract or
+  native preflight manifest cannot masquerade as an observed ready report.
+- Done: external adapter preflight schema 1.1 binds the preceding static contract,
+  code-use status, upstream commit, and resource corpus. A rights-blocked or
+  implementation-incomplete contract cannot produce a matched-adapter-ready
+  preflight.
+- Next: create schema-1.6 prepilot manifests only after task-source admission and
+  adapter reports actually exist. Do not migrate the current blocked v11/v7
+  proposals merely to obtain a newer version number; their stale resource and
+  implementation evidence must remain visible.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

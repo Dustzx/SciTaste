@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed an experiment-identity gap before any new formal run. Prelaunch schema
+  1.6 now binds the exact ICLR evidence program by file and semantic hash, checks
+  that planned task resources and external methods remain within its selected
+  scope, and gives adapter evidence an explicit semantic type. A static adapter
+  contract or native preflight manifest remains a proposal even when its bytes
+  and filename look like a report; only a parsed, ready report can support a
+  verified system. External adapter preflight schema 1.1 additionally replays
+  the exact preceding adapter contract, code-use gates, upstream commit, and
+  resource corpus. These are intrinsic identity checks for costly experiments,
+  not a generic preflight imposed on low-risk work.
 - Made project resources configurable through the same model-authored
   Generation as Content loop as research planning. The project surface now shows
   compatible unbound catalog resources with explicit current, historical, and

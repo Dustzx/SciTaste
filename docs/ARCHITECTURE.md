@@ -3394,3 +3394,36 @@ are intrinsic transaction guards, not a separate check phase. Catalog editing,
 credential-value administration, observations, connectivity qualification,
 scheduling, and scientific resource selection remain independently governed
 operations.
+
+### ADR-112: Costly experiment launch binds scientific intent and typed readiness evidence
+
+Status: accepted for prelaunch schema 1.6 and external adapter preflight schema
+1.1; no new experiment is authorized.
+
+A file path and SHA-256 establish byte identity but not semantic type. Earlier
+prelaunch manifests could point `adapter_preflight_ref` at a static translation
+contract, and the generic artifact critic could verify those bytes without
+proving that a checkout had been inspected or that an adapter was ready. The same
+operational manifest also lacked an exact link to the ICLR evidence program,
+allowing scientific scope and execution scope to drift independently.
+
+Schema 1.6 binds the evidence-program file hash, semantic proposal hash, program
+identity, and resource corpus. Its gate checks that every benchmark resource and
+external method remains within the program's selected scope. Adapter evidence is
+declared and parsed as a static contract, external preflight report, native
+preflight manifest, or native preflight report. Static contracts and manifests
+are proposal-only. A verified external system requires a ready preflight report
+for the same resource and corpus; a verified first-party system requires a ready
+native report for the same source commit.
+
+External adapter preflight schema 1.1 separately binds the preceding static
+contract by file and proposal hash. Before a checkout can be called ready, the
+compiler replays code-use eligibility, contract requirement status, resource
+identity, and upstream commit. A rights-blocked, incomplete, unrelated, renamed,
+or drifted contract therefore cannot manufacture downstream readiness.
+
+These checks are intrinsic identity validation at an API/GPU/human-resource
+transaction whose failure cost is material. Under ADR-108 they do not justify a
+repository-wide preflight or additional checks for cheap reversible actions. Old
+manifests retain their historical hashes; they are not silently upgraded, and a
+fresh 1.6 proposal should be created only after the bound evidence exists.

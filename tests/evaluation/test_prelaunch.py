@@ -5,9 +5,11 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation import (
+    AdapterEvidenceKind,
     AnalysisContract,
     ApiModelResource,
     AutomatedJudgeRole,
@@ -30,6 +32,7 @@ from scitaste.evaluation import (
     SystemRole,
     TaskSignalKind,
     inspect_prelaunch_manifest,
+    load_evidence_program,
     load_external_resource_corpus,
     load_prelaunch_manifest,
 )
@@ -49,6 +52,12 @@ CURRENT_MANIFEST_PATHS = (
     Path("configs/evaluation/prelaunch/deepseek_v41flash_pilot_v3.yaml"),
     Path("configs/evaluation/prelaunch/zhipu_glm53flash_pilot_v2.yaml"),
     Path("configs/evaluation/prelaunch/qwen3vl2b_8x3090_robustness_v2.yaml"),
+)
+EXTERNAL_BEST_NATIVE_PATH = Path(
+    "configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml"
+)
+EVIDENCE_PROGRAM_PATH = Path(
+    "configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml"
 )
 HASH = "a" * 64
 COMMIT = "b" * 40
@@ -176,6 +185,79 @@ def _manifest(*, approval: PrelaunchApproval | None = None):
         stop_rules=("Stop on provider model drift.",),
         approval=approval or PrelaunchApproval(),
     )
+
+
+def _program_bound_external_payload() -> dict[str, object]:
+    payload = yaml.safe_load(EXTERNAL_BEST_NATIVE_PATH.read_text(encoding="utf-8"))
+    program = load_evidence_program(EVIDENCE_PROGRAM_PATH)
+    payload["schema_version"] = "1.6"
+    payload["evidence_program"] = {
+        "program_id": program.program.program_id,
+        "manifest_ref": EVIDENCE_PROGRAM_PATH.as_posix(),
+        "manifest_file_sha256": hashlib.sha256(EVIDENCE_PROGRAM_PATH.read_bytes()).hexdigest(),
+        "proposal_sha256": program.program.proposal_sha256,
+    }
+    for system in payload["systems"]:
+        if system.get("adapter_preflight_ref"):
+            system["adapter_evidence_kind"] = AdapterEvidenceKind.STATIC_CONTRACT.value
+    for contrast in payload["analysis"]["claim_admission"]["contrasts"]:
+        contrast["inference_role"] = "confirmatory"
+    return payload
+
+
+def test_prelaunch_v16_rejects_static_contract_as_verified_adapter() -> None:
+    payload = _program_bound_external_payload()
+    method = payload["systems"][1]
+    method["availability"] = ReadinessStatus.VERIFIED.value
+
+    with pytest.raises(ValidationError, match="real adapter preflight report"):
+        ExperimentPrelaunchManifest.model_validate(payload)
+
+
+def test_prelaunch_v16_types_bound_adapter_bytes_and_program_scope() -> None:
+    manifest = ExperimentPrelaunchManifest.model_validate(_program_bound_external_payload())
+    corpus = load_external_resource_corpus(
+        "docs/research/data/autoresearch_evaluation_resources_v8.yaml"
+    ).corpus
+
+    report = inspect_prelaunch_manifest(
+        manifest,
+        corpus,
+        observed_source_commit=manifest.source_commit,
+        source_tree_clean=True,
+        evidence_root=Path.cwd(),
+    )
+
+    codes = {item.code for item in report.blockers}
+    assert "adapter_evidence_agent-laboratory_static_contract_only" in codes
+    assert "adapter_evidence_tiny-scientist_static_contract_only" in codes
+    assert "evidence_program_resource_corpus_mismatch" in codes
+    assert "evidence_program_system_scope_mismatch" in codes
+    assert report.ready_for_author_approval is False
+    assert report.execution_authorized is False
+
+
+def test_prelaunch_v16_rejects_a_contract_relabelled_as_preflight_report() -> None:
+    payload = _program_bound_external_payload()
+    payload["systems"][1]["adapter_evidence_kind"] = (
+        AdapterEvidenceKind.EXTERNAL_PREFLIGHT_REPORT.value
+    )
+    manifest = ExperimentPrelaunchManifest.model_validate(payload)
+    corpus = load_external_resource_corpus(
+        "docs/research/data/autoresearch_evaluation_resources_v8.yaml"
+    ).corpus
+
+    report = inspect_prelaunch_manifest(
+        manifest,
+        corpus,
+        observed_source_commit=manifest.source_commit,
+        source_tree_clean=True,
+        evidence_root=Path.cwd(),
+    )
+
+    assert "adapter_evidence_agent-laboratory_type_invalid" in {
+        item.code for item in report.blockers
+    }
 
 
 def test_complete_manifest_is_ready_but_not_authorized() -> None:
