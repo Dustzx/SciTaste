@@ -3037,11 +3037,10 @@ standing policy exactly. Archive media support is download authority only: no
 member listing, extraction, parsing, installation, import, execution, provider
 call, GPU work, task admission, or scientific claim follows from a receipt.
 
-### ADR-100: Source-archive inspection is a separately approved, no-extraction gate
+### ADR-100: Source-archive inspection is a bounded, no-extraction gate
 
-Status: accepted and exercised only with synthetic safe and adversarial
-archives; the acquired Agent Laboratory and DeepScientist member streams remain
-unopened.
+Status: accepted and exercised on the acquired Agent Laboratory and
+DeepScientist archives under the project owner's standing local-read policy.
 
 Possession of a hash-receipted tarball does not make it safe to extract or prove
 which source tree it contains. Conversely, opening a downloaded archive during
@@ -3055,14 +3054,24 @@ the license identifier and license-file digest, per-member and expanded-size
 ceilings, and a still-absent output root. Its first inspection streams only the
 outer file hash and does not instantiate a tar reader.
 
-A separate owner record binds read-only member qualification to the exact plan
-hash. Qualification additionally requires an explicit local switch and never
-calls extraction. It admits only non-sparse regular files and directories,
-rejects unsafe paths, links, special files, duplicate names, unsafe mode bits,
-root drift, size/expansion breaches, and license drift, and hashes every admitted
-file into a deterministic tree manifest. Even a passing report is only ready
-for a later extraction proposal; it authorizes no extraction, installation,
-import, execution, adapter claim, network/API action, or GPU work.
+A separate authority record binds read-only member qualification to the exact
+plan hash; it can instantiate the owner's standing local-read instruction
+without another interaction. Qualification additionally requires an explicit
+local switch and never calls extraction. It admits non-sparse regular files,
+directories, and only relative symbolic links that resolve directly to recorded
+regular files inside the same archive root. Schema 1.1 may predeclare exact
+dangling package-manager links that a later extraction proposal must omit.
+Absolute, escaping, chained, missing, type-mismatched, or ancestor-conflicting
+links still fail closed, as do special files, duplicate names, unsafe mode bits,
+root drift, size/expansion breaches, and license drift.
+
+The real 83,023,421-byte transaction now yields a 128,923,245-byte manifest:
+Agent Laboratory contains 39 members, and DeepScientist contains 2,845. Four
+DeepScientist Web UI command links point into an absent ignored `node_modules`
+tree and are excluded by exact path; the remaining 2,841 members are preserved.
+Even this passing result is only ready for a later extraction proposal. It
+authorizes no extraction, installation, import, execution, adapter claim,
+network/API action, or GPU work.
 
 ### ADR-101: Executable-task ZIP metadata has its own post-download read authority
 

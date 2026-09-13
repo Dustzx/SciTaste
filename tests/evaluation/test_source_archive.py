@@ -37,7 +37,14 @@ def _sha256_file(path: Path) -> str:
     return _sha256_bytes(path.read_bytes())
 
 
-def _write_tar(path: Path, *, unsafe: bool) -> tuple[str, bytes]:
+def _write_tar(
+    path: Path,
+    *,
+    unsafe: bool,
+    safe_internal_link: bool = False,
+    link_parent_conflict: bool = False,
+    dangling_internal_link: bool = False,
+) -> tuple[str, bytes]:
     root = f"Synthetic-{_COMMIT}"
     license_body = b"synthetic license\n"
     with tarfile.open(path, "w:gz") as package:
@@ -53,6 +60,26 @@ def _write_tar(path: Path, *, unsafe: bool) -> tuple[str, bytes]:
             member.mode = 0o644
             member.size = len(body)
             package.addfile(member, io.BytesIO(body))
+        if safe_internal_link:
+            link = tarfile.TarInfo(f"{root}/bin/main")
+            link.type = tarfile.SYMTYPE
+            link.linkname = "../main.py"
+            package.addfile(link)
+        if link_parent_conflict:
+            link = tarfile.TarInfo(f"{root}/nested")
+            link.type = tarfile.SYMTYPE
+            link.linkname = "main.py"
+            package.addfile(link)
+            child = tarfile.TarInfo(f"{root}/nested/child.py")
+            body = b"pass\n"
+            child.mode = 0o644
+            child.size = len(body)
+            package.addfile(child, io.BytesIO(body))
+        if dangling_internal_link:
+            link = tarfile.TarInfo(f"{root}/bin/missing")
+            link.type = tarfile.SYMTYPE
+            link.linkname = "../missing.py"
+            package.addfile(link)
         if unsafe:
             escaped = tarfile.TarInfo("../escape.py")
             body = b"pass\n"
@@ -66,12 +93,26 @@ def _write_tar(path: Path, *, unsafe: bool) -> tuple[str, bytes]:
     return root, license_body
 
 
-def _chain(tmp_path: Path, *, unsafe: bool) -> SourceArchiveQualificationPlan:
+def _chain(
+    tmp_path: Path,
+    *,
+    unsafe: bool,
+    safe_internal_link: bool = False,
+    link_parent_conflict: bool = False,
+    dangling_internal_link: bool = False,
+    exclude_dangling_link: bool = False,
+) -> SourceArchiveQualificationPlan:
     evidence = tmp_path / "evidence.txt"
     evidence.write_text("synthetic test evidence\n", encoding="utf-8")
     archive = tmp_path / "acquisitions" / "synthetic-source-v1" / "raw" / "source.tar.gz"
     archive.parent.mkdir(parents=True)
-    root, license_body = _write_tar(archive, unsafe=unsafe)
+    root, license_body = _write_tar(
+        archive,
+        unsafe=unsafe,
+        safe_internal_link=safe_internal_link,
+        link_parent_conflict=link_parent_conflict,
+        dangling_internal_link=dangling_internal_link,
+    )
     item = AcquisitionItem(
         item_id=_COMMIT,
         source_url=f"https://example.test/source/tar.gz/{_COMMIT}",
@@ -140,6 +181,7 @@ def _chain(tmp_path: Path, *, unsafe: bool) -> SourceArchiveQualificationPlan:
     receipt_path = archive.parent.parent / "RECEIPT.json"
     receipt_path.write_text(receipt.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return SourceArchiveQualificationPlan(
+        schema_version="1.1" if exclude_dangling_link else "1.0",
         plan_id="synthetic-source-plan-v1",
         project_id=request.project_id,
         purpose="Qualify a synthetic source archive without extraction.",
@@ -172,6 +214,12 @@ def _chain(tmp_path: Path, *, unsafe: bool) -> SourceArchiveQualificationPlan:
                 maximum_expanded_bytes=1024 * 1024,
                 maximum_regular_file_bytes=1024 * 1024,
                 output_directory="synthetic-system",
+                excluded_member_paths=(f"{root}/bin/missing",) if exclude_dangling_link else (),
+                excluded_member_reason=(
+                    "Synthetic package-manager link excluded from extraction."
+                    if exclude_dangling_link
+                    else None
+                ),
             ),
         ),
         output_root="qualified/synthetic-source-plan-v1",
@@ -212,6 +260,7 @@ def test_archive_read_requires_exact_approval_and_never_extracts(tmp_path: Path)
     )
 
     assert report.all_archives_safe is True
+    assert report.schema_version == "1.1"
     assert report.items[0].regular_file_count == 2
     assert report.items[0].tree_sha256 is not None
     assert report.archive_content_read is True
@@ -240,8 +289,90 @@ def test_unsafe_paths_and_links_fail_closed_without_extraction(tmp_path: Path) -
     assert report.all_archives_safe is False
     assert {finding.code for finding in report.items[0].findings} >= {
         "member-path-unsafe",
-        "member-type-unsafe",
+        "symbolic-link-target-unsafe",
     }
     assert report.ready_for_extraction_proposal is False
     assert not (tmp_path / "escape.py").exists()
     assert not (tmp_path / plan.output_root).exists()
+
+
+def test_internal_relative_link_to_regular_file_is_qualified_without_extraction(
+    tmp_path: Path,
+) -> None:
+    plan = _chain(tmp_path, unsafe=False, safe_internal_link=True)
+    approval = approve_source_archive_read(
+        plan,
+        confirmed_plan_sha256=plan.plan_sha256,
+        approved_by="test-owner",
+        approved_at=_NOW,
+    )
+
+    report = qualify_source_archives(
+        plan,
+        approval,
+        workspace_root=tmp_path,
+        allow_local_archive_read=True,
+        qualified_at=_NOW,
+    )
+
+    assert report.all_archives_safe is True
+    link = next(record for record in report.items[0].members if record.kind == "symbolic-link")
+    assert link.path.endswith("/bin/main")
+    assert link.link_target.endswith("/main.py")
+    assert report.extraction_performed is False
+    assert not (tmp_path / plan.output_root).exists()
+
+
+def test_member_below_internal_symbolic_link_fails_closed(tmp_path: Path) -> None:
+    plan = _chain(tmp_path, unsafe=False, link_parent_conflict=True)
+    approval = approve_source_archive_read(
+        plan,
+        confirmed_plan_sha256=plan.plan_sha256,
+        approved_by="test-owner",
+        approved_at=_NOW,
+    )
+
+    report = qualify_source_archives(
+        plan,
+        approval,
+        workspace_root=tmp_path,
+        allow_local_archive_read=True,
+        qualified_at=_NOW,
+    )
+
+    assert report.all_archives_safe is False
+    assert "symbolic-link-ancestor-conflict" in {
+        finding.code for finding in report.items[0].findings
+    }
+    assert report.extraction_performed is False
+
+
+def test_exact_dangling_internal_link_can_be_excluded_from_extraction(
+    tmp_path: Path,
+) -> None:
+    plan = _chain(
+        tmp_path,
+        unsafe=False,
+        dangling_internal_link=True,
+        exclude_dangling_link=True,
+    )
+    assert plan.schema_version == "1.1"
+    approval = approve_source_archive_read(
+        plan,
+        confirmed_plan_sha256=plan.plan_sha256,
+        approved_by="test-owner",
+        approved_at=_NOW,
+    )
+
+    report = qualify_source_archives(
+        plan,
+        approval,
+        workspace_root=tmp_path,
+        allow_local_archive_read=True,
+        qualified_at=_NOW,
+    )
+
+    assert report.all_archives_safe is True
+    assert report.items[0].excluded_member_paths[0].endswith("/bin/missing")
+    assert report.items[0].excluded_member_reason is not None
+    assert report.extraction_performed is False

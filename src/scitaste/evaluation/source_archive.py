@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import posixpath
 import tarfile
 import tempfile
 from datetime import datetime
@@ -58,6 +59,8 @@ class SourceArchivePlanItem(BaseModel):
     maximum_expanded_bytes: int = Field(gt=0, le=20_000_000_000)
     maximum_regular_file_bytes: int = Field(gt=0, le=5_000_000_000)
     output_directory: str = Field(min_length=1, max_length=500)
+    excluded_member_paths: tuple[str, ...] = Field(default=(), max_length=100)
+    excluded_member_reason: str | None = Field(default=None, max_length=1_000)
 
     @model_validator(mode="after")
     def item_is_closed(self) -> SourceArchivePlanItem:
@@ -71,6 +74,14 @@ class SourceArchivePlanItem(BaseModel):
         if PurePosixPath(self.license_file_path).parts[0] != self.expected_root_directory:
             raise ValueError("source archive license file must be below its expected root")
         _validate_relative_path(self.output_directory, "source-archive output")
+        if len(self.excluded_member_paths) != len(set(self.excluded_member_paths)):
+            raise ValueError("source archive excluded member paths must be unique")
+        for path in self.excluded_member_paths:
+            _validate_relative_path(path, "source-archive excluded member")
+            if PurePosixPath(path).parts[0] != self.expected_root_directory:
+                raise ValueError("source archive excluded member must remain below its root")
+        if bool(self.excluded_member_paths) != (self.excluded_member_reason is not None):
+            raise ValueError("source archive exclusions require exactly one stated reason")
         if self.maximum_expanded_bytes < self.archive_size_bytes:
             raise ValueError("source archive expanded ceiling is below its archive bytes")
         if self.maximum_regular_file_bytes > self.maximum_expanded_bytes:
@@ -83,7 +94,7 @@ class SourceArchiveQualificationPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     plan_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     purpose: str = Field(min_length=1, max_length=2_000)
@@ -106,6 +117,8 @@ class SourceArchiveQualificationPlan(BaseModel):
     @model_validator(mode="after")
     def plan_is_closed(self) -> SourceArchiveQualificationPlan:
         _validate_relative_path(self.output_root, "source-archive output root")
+        if self.schema_version == "1.0" and any(item.excluded_member_paths for item in self.items):
+            raise ValueError("source archive member exclusions require plan schema 1.1")
         for values, label in (
             ([item.system_id for item in self.items], "system IDs"),
             ([item.acquisition_item_id for item in self.items], "acquisition item IDs"),
@@ -123,7 +136,12 @@ class SourceArchiveQualificationPlan(BaseModel):
     @computed_field
     @property
     def plan_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"plan_sha256"})
+        if self.schema_version == "1.0":
+            for item in payload["items"]:
+                item.pop("excluded_member_paths", None)
+                item.pop("excluded_member_reason", None)
+        return _canonical_sha256(payload)
 
 
 class SourceArchiveReadApproval(BaseModel):
@@ -192,18 +210,24 @@ class SourceArchiveMemberRecord(BaseModel):
     model_config = _CONFIG
 
     path: str = Field(min_length=1, max_length=2_000)
-    kind: Literal["directory", "regular-file"]
+    kind: Literal["directory", "regular-file", "symbolic-link"]
     size_bytes: int = Field(ge=0)
     mode: int = Field(ge=0, le=0o777)
     sha256: str | None = Field(default=None, pattern=_SHA256)
+    link_target: str | None = Field(default=None, max_length=2_000)
 
     @model_validator(mode="after")
     def member_is_consistent(self) -> SourceArchiveMemberRecord:
         _validate_relative_path(self.path, "source archive member")
-        if self.kind == "directory" and (self.size_bytes != 0 or self.sha256 is not None):
+        if self.kind == "regular-file":
+            if self.sha256 is None or self.link_target is not None:
+                raise ValueError("source archive regular file requires only a digest")
+        elif self.kind == "symbolic-link":
+            if self.size_bytes != 0 or self.sha256 is not None or self.link_target is None:
+                raise ValueError("source archive symbolic link requires only a target")
+            _validate_relative_path(self.link_target, "source archive symbolic-link target")
+        elif self.size_bytes != 0 or self.sha256 is not None or self.link_target is not None:
             raise ValueError("source archive directory cannot contain file evidence")
-        if self.kind == "regular-file" and self.sha256 is None:
-            raise ValueError("source archive regular file requires a digest")
         return self
 
 
@@ -222,6 +246,8 @@ class SourceArchiveItemQualification(BaseModel):
     expanded_bytes: int = Field(ge=0)
     tree_sha256: str | None = Field(default=None, pattern=_SHA256)
     members: tuple[SourceArchiveMemberRecord, ...]
+    excluded_member_paths: tuple[str, ...] = ()
+    excluded_member_reason: str | None = None
     safe_for_extraction_proposal: bool
     findings: tuple[SourceArchiveFinding, ...]
 
@@ -231,7 +257,7 @@ class SourceArchiveQualificationReport(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     plan_id: str = Field(pattern=_ID)
     plan_sha256: str = Field(pattern=_SHA256)
     approval_sha256: str = Field(pattern=_SHA256)
@@ -458,6 +484,9 @@ def _qualify_item(root: Path, item: SourceArchivePlanItem) -> SourceArchiveItemQ
     regular_files = 0
     directories = 0
     observed_members = 0
+    symbolic_links: list[tuple[str, str, int]] = []
+    declared_exclusions = set(item.excluded_member_paths)
+    observed_exclusions: set[str] = set()
     try:
         with tarfile.open(archive, mode="r:gz") as package:
             for index, member in enumerate(package, 1):
@@ -511,6 +540,36 @@ def _qualify_item(root: Path, item: SourceArchivePlanItem) -> SourceArchiveItemQ
                         )
                     )
                     continue
+                if member.issym():
+                    link_target = _symbolic_link_target(
+                        normalized,
+                        member.linkname,
+                        expected_root=item.expected_root_directory,
+                    )
+                    if link_target is None:
+                        _add(
+                            findings,
+                            "symbolic-link-target-unsafe",
+                            (
+                                "symbolic link target is absolute, non-normalized, "
+                                "or escapes the archive root"
+                            ),
+                            system_id=item.system_id,
+                            member_path=normalized,
+                        )
+                        continue
+                    if normalized in declared_exclusions:
+                        observed_exclusions.add(normalized)
+                    symbolic_links.append((normalized, link_target, member.mode))
+                    continue
+                if normalized in declared_exclusions:
+                    _add(
+                        findings,
+                        "excluded-member-type-mismatch",
+                        "only a symbolic link may be excluded from an extraction proposal",
+                        system_id=item.system_id,
+                        member_path=normalized,
+                    )
                 if not member.isreg() or member.sparse is not None:
                     _add(
                         findings,
@@ -579,6 +638,47 @@ def _qualify_item(root: Path, item: SourceArchivePlanItem) -> SourceArchiveItemQ
     except (OSError, tarfile.TarError) as exc:
         _add(findings, "archive-invalid", str(exc), system_id=item.system_id)
 
+    for missing in sorted(declared_exclusions - observed_exclusions):
+        _add(
+            findings,
+            "excluded-member-missing",
+            "predeclared excluded symbolic link is absent from the archive",
+            system_id=item.system_id,
+            member_path=missing,
+        )
+
+    regular_paths = {record.path for record in records if record.kind == "regular-file"}
+    symbolic_link_paths = {path for path, _, _ in symbolic_links}
+    for record_path in sorted(seen):
+        ancestors = PurePosixPath(record_path).parents[:-1]
+        if any(parent.as_posix() in symbolic_link_paths for parent in ancestors):
+            _add(
+                findings,
+                "symbolic-link-ancestor-conflict",
+                "archive member is nested below a symbolic link",
+                system_id=item.system_id,
+                member_path=record_path,
+            )
+    for path, target, mode in symbolic_links:
+        if target not in regular_paths and path not in declared_exclusions:
+            _add(
+                findings,
+                "symbolic-link-target-not-regular-file",
+                "symbolic link must resolve directly to a recorded regular file",
+                system_id=item.system_id,
+                member_path=path,
+            )
+            continue
+        records.append(
+            SourceArchiveMemberRecord(
+                path=path,
+                kind="symbolic-link",
+                size_bytes=0,
+                mode=mode,
+                link_target=target,
+            )
+        )
+
     observed_root = next(iter(roots)) if len(roots) == 1 else None
     if roots != {item.expected_root_directory}:
         _add(
@@ -618,6 +718,8 @@ def _qualify_item(root: Path, item: SourceArchivePlanItem) -> SourceArchiveItemQ
         expanded_bytes=expanded,
         tree_sha256=tree_sha256,
         members=ordered,
+        excluded_member_paths=item.excluded_member_paths,
+        excluded_member_reason=item.excluded_member_reason,
         safe_for_extraction_proposal=safe,
         findings=tuple(findings),
     )
@@ -631,6 +733,27 @@ def _member_path(value: str) -> str | None:
         return None
     normalized = path.as_posix()
     if value.rstrip("/") != normalized:
+        return None
+    return normalized
+
+
+def _symbolic_link_target(
+    member_path: str,
+    link_name: str,
+    *,
+    expected_root: str,
+) -> str | None:
+    if not link_name or "\\" in link_name or "//" in link_name:
+        return None
+    target = PurePosixPath(link_name)
+    if target.is_absolute():
+        return None
+    combined = posixpath.normpath((PurePosixPath(member_path).parent / target).as_posix())
+    normalized = _member_path(combined)
+    if normalized is None or normalized == member_path:
+        return None
+    parts = PurePosixPath(normalized).parts
+    if not parts or parts[0] != expected_root:
         return None
     return normalized
 

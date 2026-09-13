@@ -1,0 +1,71 @@
+schema_version: "1.1"
+plan_id: autoresearch-method-sources-v2
+project_id: scitaste-self-development
+purpose: >-
+  Bind the exact acquired Agent Laboratory and DeepScientist source archives to
+  a read-only, no-extraction tree qualification while excluding only four
+  predeclared dangling package-manager links from any later extraction proposal.
+claim_boundary: >-
+  A passing qualification establishes bounded archive structure, member hashes,
+  root identity, license-file identity, and the exact exclusion set. It does not
+  authorize extraction, installation, execution, adapter implementation, API
+  calls, GPU work, or any effectiveness claim.
+approved_acquisition_request:
+  path: outputs/projects/scitaste-self-development/evaluations/acquisition-approvals/autoresearch-method-source-archives-v1.yaml
+  sha256: 2ce251f7863a95306f06c127cc87f9af918aaff13b7d54bf140452fd2f0f61bb
+acquisition_request_sha256: cf5c50c24d60314c20b91ea1ca5a98b5f52ebd1c75206820efad485863ca5e19
+acquisition_receipt:
+  path: outputs/projects/scitaste-self-development/evaluations/acquisitions/autoresearch-method-source-archives-v1/RECEIPT.json
+  sha256: 6f7b3355bde4a6c1445093f9cbc0fe4a366e34c18164da67f489d9635bcc9dc4
+acquisition_receipt_sha256: 7a119c3bec53de52c8cd928472f64090098c89e5c3f3bfe2ad408e14d09b7009
+items:
+  - system_id: agent-laboratory
+    acquisition_item_id: d9017d90e329112d2a80b7712f37ee9094d2cd27
+    source_commit: d9017d90e329112d2a80b7712f37ee9094d2cd27
+    archive:
+      path: outputs/projects/scitaste-self-development/evaluations/acquisitions/autoresearch-method-source-archives-v1/raw/agent-laboratory-d9017d90e329112d2a80b7712f37ee9094d2cd27.tar.gz
+      sha256: 3b85bdff2cd92ad023a321e588b0ee31507322e7df855ef8bdffe4a06efd63a1
+    archive_size_bytes: 1327928
+    expected_root_directory: AgentLaboratory-d9017d90e329112d2a80b7712f37ee9094d2cd27
+    license_identifier: MIT
+    license_file_path: AgentLaboratory-d9017d90e329112d2a80b7712f37ee9094d2cd27/LICENSE
+    license_file_sha256: bf38a159d01e82d58f986c2d6dd06e03ba0b9cd59a6d286dd94109aac358e583
+    maximum_members: 2000
+    maximum_expanded_bytes: 268435456
+    maximum_regular_file_bytes: 134217728
+    output_directory: agent-laboratory-d9017d90e329112d2a80b7712f37ee9094d2cd27
+    excluded_member_paths: []
+    excluded_member_reason: null
+  - system_id: deep-scientist
+    acquisition_item_id: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    source_commit: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    archive:
+      path: outputs/projects/scitaste-self-development/evaluations/acquisitions/autoresearch-method-source-archives-v1/raw/deep-scientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0.tar.gz
+      sha256: 59a39e7b668e08bcf67d069ff81fbb9828dd061457c186109c840c1404c08266
+    archive_size_bytes: 81695493
+    expected_root_directory: DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    license_identifier: Apache-2.0
+    license_file_path: DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0/LICENSE
+    license_file_sha256: 7da7c1fd9f2c66c4ee6f5cb72abf36b8520964ed364dc516655051c87ce316c5
+    maximum_members: 20000
+    maximum_expanded_bytes: 2147483648
+    maximum_regular_file_bytes: 536870912
+    output_directory: deep-scientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    excluded_member_paths:
+      - DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/ui/bin/ds
+      - DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/ui/bin/ds-cli
+      - DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/ui/bin/resear
+      - DeepScientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0/src/ui/bin/research
+    excluded_member_reason: >-
+      The GitHub source archive contains package-manager command links whose
+      ignored node_modules target is absent. They are outside the Python
+      research runtime and must not be materialized by a later extraction plan.
+output_root: outputs/projects/scitaste-self-development/evaluations/external-sources/autoresearch-method-sources-v2
+maximum_total_expanded_bytes: 2415919104
+owner_read_approval_required: true
+authorizes_archive_read: false
+authorizes_extraction: false
+authorizes_installation: false
+authorizes_execution: false
+authorizes_api_calls: false
+authorizes_gpu_work: false

@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Qualified the real Agent Laboratory and DeepScientist source archives without
+  extraction. Source-archive schema 1.1 now accepts only relative symbolic links
+  that resolve directly to recorded regular files and supports a content-bound
+  exclusion set for dangling package-manager links; absolute, root-escaping,
+  chained, ancestor-conflicting, missing, or type-mismatched links still fail
+  closed. The 83,023,421 acquired bytes produced a 128,923,245-byte tree
+  manifest; four predeclared DeepScientist UI command links are excluded from
+  any later extraction proposal. No archive was extracted, installed, imported,
+  or executed.
 - Connected every eligible Tool Intelligence gate route to a focused
   Generation as Content intervention. A route card now seeds editable user
   feedback and sends the exact stage and route hash to the model-planning
@@ -148,10 +157,9 @@ semantic versioning.
 - Added a separately approved, no-extraction qualification boundary for pinned
   external-method source archives. A no-read plan replays exact acquisition and
   outer-byte identities; only a plan-hash approval plus explicit local switch
-  may scan members. Path traversal, links/special files, sparse files, duplicate
-  names, unsafe modes, root drift, expansion ceilings, and license-file drift
-  fail closed, while a passing scan emits only a deterministic tree manifest.
-  Real Agent Laboratory and DeepScientist member contents remain unopened.
+  may scan members. Path traversal, unsafe links/special files, sparse files,
+  duplicate names, unsafe modes, root drift, expansion ceilings, and license-file
+  drift fail closed, while a passing scan emits only a deterministic tree manifest.
 - Extended the approval-gated acquisition path to stream bounded gzip source
   archives directly into its atomic staging transaction under the decimal-10-GB
   ceiling. The pinned Agent Laboratory and DeepScientist archives are now
