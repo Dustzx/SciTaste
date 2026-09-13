@@ -137,3 +137,63 @@ def test_model_cannot_add_a_negative_value_check_in_a_gray_zone() -> None:
 
     with pytest.raises(ValueError, match="negative-value verification"):
         apply_verification_advisory(decision, advisory)
+
+
+def test_model_cannot_expand_to_a_lower_value_full_preflight() -> None:
+    action = _action(
+        effects=(ActionEffect.READ_ONLY_LOCAL,),
+        semantic_uncertainty="high",
+        failure_probability=0.2,
+        failure_impact_units=20.0,
+        targeted_check_cost_units=1.0,
+        targeted_detection_probability=0.8,
+        full_preflight_cost_units=3.5,
+        full_preflight_detection_probability=0.95,
+    )
+    decision = decide_verification_route(action)
+    assert decision.route is VerificationRoute.TARGETED_CHECK
+    assert decision.model_advisory_eligible is True
+    advisory = VerificationAdvisory(
+        input_fingerprint=action.fingerprint,
+        recommended_route="full_preflight",
+        rationale="Request a broader check despite its lower declared net value.",
+    )
+
+    with pytest.raises(ValueError, match="lower-value verification step"):
+        apply_verification_advisory(decision, advisory)
+
+
+def test_model_may_choose_only_the_best_positive_check_or_direct_path() -> None:
+    action = _action(
+        effects=(ActionEffect.READ_ONLY_LOCAL,),
+        semantic_uncertainty="high",
+        failure_probability=0.2,
+        failure_impact_units=20.0,
+        targeted_check_cost_units=2.3,
+        targeted_detection_probability=0.75,
+        full_preflight_cost_units=2.5,
+        full_preflight_detection_probability=0.95,
+    )
+    decision = decide_verification_route(action)
+    assert decision.model_advisory_eligible is True
+    assert decision.full_preflight_net_gain_units > decision.targeted_net_gain_units
+
+    admitted = apply_verification_advisory(
+        decision,
+        VerificationAdvisory(
+            input_fingerprint=action.fingerprint,
+            recommended_route="full_preflight",
+            rationale="The deeper check has the highest positive declared net value.",
+        ),
+    )
+    assert admitted.route is VerificationRoute.FULL_PREFLIGHT
+
+    skipped = apply_verification_advisory(
+        decision,
+        VerificationAdvisory(
+            input_fingerprint=action.fingerprint,
+            recommended_route="direct_path",
+            rationale="The semantic concern does not apply to this exact action.",
+        ),
+    )
+    assert skipped.route is VerificationRoute.DIRECT_PATH

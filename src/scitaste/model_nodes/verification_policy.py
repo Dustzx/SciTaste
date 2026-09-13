@@ -219,6 +219,14 @@ def apply_verification_advisory(
     }[advisory.recommended_route]
     if advisory.recommended_route is not VerificationRoute.DIRECT_PATH and recommended_gain <= 0:
         raise ValueError("model advice cannot add a negative-value verification step")
+    if advisory.recommended_route is not VerificationRoute.DIRECT_PATH:
+        best_check_route = (
+            VerificationRoute.FULL_PREFLIGHT
+            if decision.full_preflight_net_gain_units > decision.targeted_net_gain_units
+            else VerificationRoute.TARGETED_CHECK
+        )
+        if advisory.recommended_route is not best_check_route:
+            raise ValueError("model advice cannot select a lower-value verification step")
     return decision.model_copy(
         update={
             "route": advisory.recommended_route,

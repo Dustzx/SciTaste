@@ -575,9 +575,11 @@ targeted check clears the configured minimum net gain, a full preflight replaces
 it only when the deeper check's *incremental* net gain also clears that margin.
 A tiny positive marginal gain is not enough. Likewise, model advice in a semantic
 gray zone may skip or select a positive-value check, but it cannot add a check
-whose declared net value is non-positive. The project route portfolio renders
-both net-gain bars and the model-advisory eligibility flag, making the choice
-inspectable before any check is run.
+whose declared net value is non-positive. If both check depths are positive, the
+model may select only the one with the higher declared net value; it cannot turn
+semantic uncertainty into a broader but economically worse preflight. The
+project route portfolio renders both net-gain bars and the model-advisory
+eligibility flag, making the choice inspectable before any check is run.
 
 ## Threat model and extension rules
 

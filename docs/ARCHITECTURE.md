@@ -3313,8 +3313,9 @@ Among optional checks, the router prefers the smallest sufficient intervention.
 If a targeted check already clears the minimum expected-net-gain threshold, a
 full preflight must clear that same threshold on *incremental* value over the
 targeted check. A model advisory cannot introduce a declared negative-value
-check. This prevents semantic uncertainty from becoming a generic reason to add
-ritual preflight.
+check or choose the lower-value check depth when both are positive; it may still
+select the direct path if the semantic concern does not apply. This prevents
+semantic uncertainty from becoming a generic reason to add ritual preflight.
 
 ### ADR-109: Effective gates use cost-sensitive action routing
 

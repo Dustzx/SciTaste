@@ -68,8 +68,10 @@ semantic versioning.
   not expanded into a full preflight for a merely positive marginal gain. Full
   preflight now requires material incremental net value unless a critical or
   untrusted-code hard rule applies, and gray-zone model advice cannot add a
-  negative-value check. Route cards visualize targeted versus deep-check net
-  value and disclose whether semantic model advice is eligible.
+  negative-value check or select the lower-value of the targeted and full
+  options. A model may still recommend the direct path when the semantic concern
+  does not apply. Route cards visualize targeted versus deep-check net value and
+  disclose whether semantic model advice is eligible.
 - Qualified the real Agent Laboratory and DeepScientist source archives without
   extraction. Source-archive schema 1.1 now accepts only relative symbolic links
   that resolve directly to recorded regular files and supports a content-bound
