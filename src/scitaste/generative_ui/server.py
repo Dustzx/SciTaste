@@ -489,6 +489,18 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             )
             self._send_model(HTTPStatus.CREATED, publication)
             return
+        if len(parts) == 8 and resource == "resource-configurations" and parts[7] == "apply":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            payload = self._read_json_object()
+            if payload.get("publication_id") != parts[6]:
+                raise ValueError("resource configuration route identity mismatch")
+            publication = self.server.application.apply_resource_configuration(
+                project_id,
+                payload,
+            )
+            self._send_model(HTTPStatus.CREATED, publication)
+            return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]
             operation = parts[7] if len(parts) == 8 else None

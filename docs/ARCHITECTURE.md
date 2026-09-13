@@ -3229,8 +3229,10 @@ does not edit the campaign or grant execution.
 
 ### ADR-107: Generated planning content is a cached proposal, not scientific state
 
-Status: accepted through generated proposal, iterative edit, and explicit user
-decision; successor evidence publication remains open.
+Status: accepted through generated proposal, iterative edit, explicit user
+decision, versioned planning publication, and project-resource configuration.
+Canonical campaign rewriting and experiment execution remain separate controller
+boundaries.
 
 Generation as Content needs model-authored content, not only a model-selected
 layout. `ProgramRevisionService` therefore binds user feedback to the exact
@@ -3245,15 +3247,20 @@ Successful proposals are cached under the owning project for reuse; unavailable
 responses are not cached and receive no deterministic pseudo-proposal. A user
 may bind new feedback to an exact prior proposal, so the model edits the prior
 planning content instead of starting an unrelated answer. Accept/reject is a
-separate immutable user decision. Acceptance makes the proposal a project
-planning directive for subsequent generation, but does not rewrite its source
-dossier or authorize execution. The
-project resource portfolio is projected from the shared, content-addressed
-registry without copying infrastructure or serializing credential values. This
-keeps Generation as Content parallel to SciTaste as a display plane and
-interactive with it only through typed proposals and decisions. A later compiler
-must publish an immutable successor dossier or resource binding before canonical
-scientific or infrastructure state can change.
+separate immutable user decision. Acceptance alone does not mutate project state.
+A second explicit action publishes the accepted proposal as a predecessor-linked
+project planning directive for subsequent generation without rewriting its source
+dossier or authorizing execution.
+
+The project resource portfolio is projected from the shared, content-addressed
+registry without copying infrastructure or serializing credential values. For a
+resource directive, one further explicit user action may compile already-bound
+resource IDs into a successor project binding by changing role-local priority
+only. The predecessor, exact proposal, user confirmation, registry identity, and
+successor hash remain project-owned evidence; the shared catalog, credentials,
+observations, provider state, and execution authority do not change. This keeps
+Generation as Content parallel to SciTaste as a display plane and interactive
+with it only through typed, reviewable controller inputs.
 
 ### ADR-108: Verification effort is proportional to expected avoidable loss
 
@@ -3275,6 +3282,7 @@ bind the exact action fingerprint and cannot weaken a hard gate. The native Full
 Workflow records this route before constructing any model/tool request; a direct
 route avoids that invocation entirely. An owner-gated route is deferred before
 constructing a model/tool request. The same router records that accepting or
-rejecting a content-bound local planning proposal takes the direct path: its
-minimal hash/staleness guard costs less than a generic preflight and the write is
-reversible project-local metadata.
+rejecting a content-bound local planning proposal, publishing its planning
+version, and applying a role-local resource-priority revision take the direct
+path: their minimal identity, hash, and staleness guards cost less than a generic
+preflight and the writes are reversible project-local metadata.

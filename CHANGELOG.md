@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Qualified the complete acquired MLRC two-task archive set under the standing
+  local-read policy. All 39 receipt-bound ZIPs were rehashed and all 178,325
+  central-directory members were inspected without extraction; zero structural
+  blockers were found across 4,167,482,153 declared expanded bytes. The result is
+  now a project-owned run and appears on the Generation as Content project home.
+  AWA per-image license coverage, task-layout materialization, baseline
+  reproduction, held-out signal, ingestion, models, APIs, GPUs, and experiments
+  remain separate unresolved gates.
 - Added the first genuinely model-authored Generation as Content planning path.
   Project feedback is bound to the exact snapshot and ICLR dossier, constrained
   to registered stages, tracks, resource IDs, and resource roles, and cached as
@@ -16,10 +24,14 @@ semantic versioning.
   separate user action publishes an accepted proposal as a self-hashed,
   predecessor-linked project planning run; the published version is displayed
   parallel to the scientific evidence program and automatically seeds the next
-  model edit. Published resource choices become project-view preferences without
-  mutating the shared registry or granting execution authority. Tool Intelligence
-  records a direct route for this cheap reversible publication rather than adding
-  a generic preflight.
+  model edit. Published resource choices first become project-view preferences;
+  a further explicit user action can now compile them into a successor project
+  resource binding. The binding update retains its predecessor, the model plan,
+  exact user confirmation, registry identity, resulting priorities, and a
+  project-owned receipt while leaving credentials, shared catalog, provider
+  contact, probes, workloads, and experiment authority unchanged. Tool
+  Intelligence records a direct route for these cheap reversible local writes
+  rather than adding a generic preflight.
   The project home now also projects the exact secret-free API/GPU/checkpoint
   portfolio, access-presence state, and registry provenance, with configuration
   requests routed back through the same proposal boundary.

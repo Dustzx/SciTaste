@@ -89,6 +89,16 @@ def load_project_resource_portfolio(
             }
         )
     statuses = [item.status.value for item in registered.binding.bindings]
+    from scitaste.generative_ui.resource_configuration import (
+        load_latest_project_resource_configuration,
+    )
+
+    configuration = load_latest_project_resource_configuration(runtime, project_id)
+    if (
+        configuration is not None
+        and configuration.configured_binding_record_sha256 != registered.record_sha256
+    ):
+        configuration = None
     return ProjectResourcePortfolioData(
         project_id=project_id,
         binding_set_id=registered.binding.binding_set_id,
@@ -102,6 +112,20 @@ def load_project_resource_portfolio(
         pending_binding_count=statuses.count("pending"),
         blocked_binding_count=statuses.count("blocked"),
         resources=resources,
+        configuration_authority="user_applied" if configuration is not None else "proposal_only",
+        configuration_run_id=configuration.run_id if configuration is not None else None,
+        source_planning_publication_id=(
+            configuration.source_publication_id if configuration is not None else None
+        ),
+        source_planning_publication_sha256=(
+            configuration.source_publication_sha256 if configuration is not None else None
+        ),
+        predecessor_binding_record_sha256=(
+            configuration.source_binding_record_sha256 if configuration is not None else None
+        ),
+        configuration_verification_route=(
+            configuration.verification_route.value if configuration is not None else None
+        ),
     )
 
 

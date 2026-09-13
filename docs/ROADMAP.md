@@ -36,7 +36,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 | Phase 9.1 — external-method source freeze | done | pinned Agent Laboratory and DeepScientist archives are atomically streamed and hash-receipted under the standing sub-10-GB policy; source read, extraction, unchanged-core audit, installation, and execution remain separate gates |
 | Phase 9.2 — external-method archive qualification gate | done | exact acquisition bytes compile into a no-read plan; separate hash-bound approval and local switch can produce a no-extraction tree manifest with path, type, expansion, root, and license-file checks; real archive member reads remain unapproved |
-| Phase 9.3 — executable-task archive read gate | done | MLRC acquisition is reflected in the campaign; ZIP qualification now requires a receipt-bound read approval and explicit local switch, while extraction, ingestion, baseline reproduction, API, GPU, and experiments remain closed |
+| Phase 9.3 — executable-task archive read gate | done | all 39 receipt-bound MLRC ZIPs and 178,325 members pass real no-extraction structural qualification under standing local-read authority; license coverage, task layout, baseline reproduction, held-out signal, ingestion, API, GPU, and experiments remain closed |
 | Phase 9.4 — native condition implementation attestation | done | all six first-party conditions complete one identical four-stage offline fixture with Knowledge, matched/mismatched Taste, critic, single-factor, and invariant-integrity routes verified; real corpora, checkpoint/task execution, and effects remain open |
 | Phase 9.5 — current API identity and Taste-path continuity | done | the live DeepSeek catalog change is preserved as a new immutable resource/identity stratum; all four title-critical Taste nodes expose the current V4 Flash candidate while historical V4.1 plans remain non-launchable |
 | Phase 9.6 — title-first acquisition continuity | done | the exact acquired AAAR pilot is represented by tracked receipt-bound evidence, and the campaign exposes its separately approved local audit as the first unresolved title-level stage instead of prioritizing secondary task or adapter work |
@@ -1382,10 +1382,17 @@ citation/resource screen and exact adapters/licenses remain open.
   direction. Tool Intelligence selects the direct path for this cheap reversible
   write, so no generic preflight is added. Publication still changes neither the
   source dossier nor experiment authority.
-- Next: compile a published resource-planning version into a separately reviewed
-  successor project resource binding. Shared runtime infrastructure, credentials,
-  provider contact, and experiment authorization remain unchanged until that
-  controller boundary is implemented and explicitly approved.
+- Done: a published resource-planning version exposes one more explicit user
+  action that compiles only its registered resource IDs into successor role
+  priorities. The old binding is retained in project-scoped resource history and
+  a project run binds the model proposal, user confirmation, predecessor/new
+  binding hashes, registry identity, and Tool Intelligence route. This local
+  direct-path update does not read credentials, alter the shared catalog, probe a
+  host, contact a provider, launch a workload, or authorize an experiment.
+- Next: evaluate whether model-generated evidence surfaces improve researcher
+  comprehension and intervention quality under a counterbalanced human study;
+  broaden the trusted graph/comparison repertoire only where the study exposes a
+  concrete presentation gap.
 
 ## Project controls
 

@@ -47,6 +47,10 @@ from scitaste.evaluation.dataset_package import (
     DatasetPackageGateReport,
     load_dataset_package_gate_report,
 )
+from scitaste.evaluation.dataset_package_acquisition import (
+    DatasetArchiveQualificationReport,
+    load_dataset_archive_qualification_report,
+)
 from scitaste.evaluation.executable_candidate import (
     ExecutableCandidateReport,
     load_executable_candidate_report,
@@ -1271,6 +1275,58 @@ class WorkspaceSurfaceFactory:
                 "no_dataset_file_created": report.no_dataset_file_created,
                 "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
             }
+        dataset_package_rows = list(dataset_package_by_request.values())
+        for run in snapshot.manifest.runs:
+            inspected = _dataset_archive_qualification_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_file_sha256 = inspected
+            row = dataset_package_by_request.get(report.request_id)
+            if row is None:
+                raise ProjectSurfaceChangedError(
+                    "registered archive qualification has no dataset package request"
+                )
+            if (
+                report.proposal_sha256 != row["proposal_sha256"]
+                or len(report.assets) != row["asset_count"]
+                or tuple(item.task_id for item in report.tasks) != tuple(row["selected_task_ids"])
+            ):
+                raise ProjectSurfaceChangedError(
+                    "registered archive qualification differs from its dataset package"
+                )
+            run_ref = run_refs[run.run_id]
+            row.update(
+                {
+                    "archive_safety_status": (
+                        "qualified" if report.archive_safety_qualified else "blocked"
+                    ),
+                    "archive_qualification_run_ref_id": run_ref.evidence_id,
+                    "archive_qualification_run_id": run.run_id,
+                    "archive_qualification_report_sha256": report.report_sha256,
+                    "archive_qualification_file_sha256": report_file_sha256,
+                    "archive_member_count": sum(item.member_count for item in report.assets),
+                    "archive_expanded_bytes": sum(item.expanded_bytes for item in report.assets),
+                    "all_receipt_hashes_reverified": report.all_receipt_hashes_reverified,
+                    "extraction_performed": report.extraction_performed,
+                    "pending_content_hash_count": (
+                        0
+                        if report.all_receipt_hashes_reverified
+                        else row["pending_content_hash_count"]
+                    ),
+                    "pending_qualification_codes": (
+                        []
+                        if report.archive_safety_qualified
+                        else [item.code for item in report.blockers]
+                    ),
+                    "support_ref_ids": [
+                        *row["support_ref_ids"],
+                        run_ref.evidence_id,
+                    ],
+                }
+            )
         dataset_package_rows = list(dataset_package_by_request.values())
 
         qualification_by_selection: dict[str, dict[str, object]] = {}
@@ -3296,6 +3352,31 @@ def _dataset_package_report_for_run(
         report = load_dataset_package_gate_report(resolved)
     except (ValidationError, ValueError) as exc:
         raise ProjectSurfaceChangedError("registered dataset package report is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def _dataset_archive_qualification_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[DatasetArchiveQualificationReport, str] | None:
+    """Read one canonical no-extraction archive qualification result."""
+
+    stage = "dataset_archive_qualification"
+    expected = f"runs/{run.run_id}/{stage}/ARCHIVE_QUALIFICATION.json"
+    if run.stage_path != stage or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered archive qualification is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered archive qualification escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = load_dataset_archive_qualification_report(resolved)
+    except (ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered archive qualification is invalid") from exc
     return report, hashlib.sha256(raw).hexdigest()
 
 

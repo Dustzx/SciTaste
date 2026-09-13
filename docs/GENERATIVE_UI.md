@@ -1317,16 +1317,31 @@ hashes. It does not serialize a credential value, probe a remote host, or run a
 workload. “Generate configuration proposal” routes through the program revision
 contract. When an accepted resource proposal is published, its selected resource
 IDs become a visible project planning preference and guide the next model
-revision. The shared registry remains unchanged. Compiling that directive into a
-new immutable project resource binding still requires the next controller slice;
-the UI does not pretend that a discussion changed credentials, infrastructure,
-or availability.
+revision. The shared registry remains unchanged until the user invokes a separate
+“apply as project configuration” action. That action accepts only the latest
+published resource directive and the exact current project snapshot, binding
+record, and registry hashes. It changes role-local priorities for already bound
+resource IDs, archives the predecessor binding, and writes a self-hashed project
+run receipt containing the complete lineage. It cannot add a catalog resource,
+change an observation or credential binding, probe a host, contact an API, launch
+a workload, or authorize an experiment. The project resource card distinguishes
+a published planning preference from an applied project binding and exposes the
+configuration run and predecessor identity.
 
-Planning publication is a cheap, versioned local write. Tool Intelligence routes
-it directly after the necessary proposal/decision/hash/staleness checks instead
-of imposing a generic preflight. The route and reason code are recorded in the
-publication and projected in the interface. Paid compute, provider contact,
-credential changes, and experiment launch remain separate owner-gated actions.
+The project data-package card can also join a no-download request with a later
+project-owned archive-qualification run. Pending source hashes and future-safety
+copy are replaced only when the exact proposal, task order, and asset count match.
+The current self-development surface therefore shows the observed 39-archive,
+178,325-member MLRC structural qualification while retaining license, layout,
+baseline, held-out, ingestion, compute, and experiment gates.
+
+Planning publication and project-local resource reprioritization are cheap,
+versioned, reversible local writes. Tool Intelligence routes them directly after
+the necessary proposal/decision/hash/staleness checks instead of imposing a
+generic preflight. The route and reason code are recorded in their publications
+and projected in the interface. Paid compute, provider contact, credential
+changes, untrusted code, and experiment launch remain separate hard-gated
+actions.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

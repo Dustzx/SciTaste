@@ -21,6 +21,9 @@ from scitaste.evaluation import (
     BenchmarkMetadataScreenItemReport,
     BenchmarkRecordScreenDisposition,
     DatasetAcquisitionReceipt,
+    DatasetArchiveAssetQualification,
+    DatasetArchiveQualificationReport,
+    DatasetArchiveTaskQualification,
     ProjectedBenchmarkMetadataRecord,
     ProjectedMetadataField,
     ReadinessStatus,
@@ -34,6 +37,7 @@ from scitaste.evaluation import (
     load_dataset_acquisition_request,
     load_dataset_package_request,
     load_executable_candidate_manifest,
+    save_dataset_archive_qualification_report,
     save_dataset_package_gate_report,
     save_executable_candidate_report,
     save_structured_metadata_audit_plan,
@@ -1152,6 +1156,64 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
     )
     report_path = runtime.projects_root / "progress-project" / artifact
     save_dataset_package_gate_report(report, report_path)
+    archive_run_id = "dataset-archive-qualification-run"
+    archive_artifact = (
+        f"runs/{archive_run_id}/dataset_archive_qualification/ARCHIVE_QUALIFICATION.json"
+    )
+    current = runtime.open("progress-project")
+    _begin_run(
+        runtime,
+        current,
+        run_id=archive_run_id,
+        status="complete",
+        stage_path="dataset_archive_qualification",
+        artifact=archive_artifact,
+    )
+    asset_rows = tuple(
+        DatasetArchiveAssetQualification(
+            task_id=("perception_temporal_action_loc" if index < 9 else "meta-learning"),
+            asset_id=f"asset-{index:02d}",
+            destination=f"asset-{index:02d}.zip",
+            archive_bytes=100,
+            member_count=10,
+            expanded_bytes=120,
+            safe=True,
+            blocker_codes=(),
+        )
+        for index in range(39)
+    )
+    archive_report = DatasetArchiveQualificationReport(
+        request_id=report.request_id,
+        proposal_sha256=report.proposal_sha256,
+        approval_sha256="a" * 64,
+        receipt_sha256="b" * 64,
+        archive_read_approval_sha256="c" * 64,
+        inventory_file_sha256="d" * 64,
+        assets=asset_rows,
+        tasks=(
+            DatasetArchiveTaskQualification(
+                task_id="perception_temporal_action_loc",
+                asset_count=9,
+                member_count=90,
+                expanded_bytes=1_080,
+                maximum_unpacked_bytes=4 * 1024**3,
+                safe=True,
+            ),
+            DatasetArchiveTaskQualification(
+                task_id="meta-learning",
+                asset_count=30,
+                member_count=300,
+                expanded_bytes=3_600,
+                maximum_unpacked_bytes=12 * 1024**3,
+                safe=True,
+            ),
+        ),
+        blockers=(),
+        archive_safety_qualified=True,
+        all_receipt_hashes_reverified=True,
+    )
+    archive_path = runtime.projects_root / "progress-project" / archive_artifact
+    save_dataset_archive_qualification_report(archive_report, archive_path)
 
     _, data = _progress(runtime)
 
@@ -1174,13 +1236,26 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
             ],
             "metadata_review_ready": True,
             "ready_for_owner_approval": report.ready_for_owner_approval,
-            "pending_content_hash_count": 39,
+            "pending_content_hash_count": 0,
             "integrity_blocker_codes": [],
             "approval_blocker_codes": [item.code for item in report.approval_blockers],
-            "pending_qualification_codes": [item.code for item in report.pending_qualifications],
+            "pending_qualification_codes": [],
             "authorization_blocker_codes": [item.code for item in report.authorization_blockers],
             "post_approval_streaming_available": True,
             "archive_safety_check_available": True,
+            "archive_safety_status": "qualified",
+            "archive_qualification_run_ref_id": data["dataset_packages"][0][
+                "archive_qualification_run_ref_id"
+            ],
+            "archive_qualification_run_id": archive_run_id,
+            "archive_qualification_report_sha256": archive_report.report_sha256,
+            "archive_qualification_file_sha256": data["dataset_packages"][0][
+                "archive_qualification_file_sha256"
+            ],
+            "archive_member_count": 390,
+            "archive_expanded_bytes": 4_680,
+            "all_receipt_hashes_reverified": True,
+            "extraction_performed": False,
             "authorizes_network_preflight": False,
             "authorizes_download": False,
             "authorizes_ingestion": False,

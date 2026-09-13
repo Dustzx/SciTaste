@@ -1497,6 +1497,18 @@ class ProjectProgressDatasetPackageItem(BaseModel):
     authorization_blocker_codes: tuple[SafeText, ...] = ()
     post_approval_streaming_available: Literal[True] = True
     archive_safety_check_available: Literal[True] = True
+    archive_safety_status: Literal["pending", "qualified", "blocked"] = "pending"
+    archive_qualification_run_ref_id: SafeIdentifier | None = None
+    archive_qualification_run_id: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    archive_qualification_report_sha256: Sha256 | None = None
+    archive_qualification_file_sha256: Sha256 | None = None
+    archive_member_count: int | None = Field(default=None, ge=0)
+    archive_expanded_bytes: int | None = Field(default=None, ge=0)
+    all_receipt_hashes_reverified: bool | None = None
+    extraction_performed: Literal[False] = False
     authorizes_network_preflight: Literal[False] = False
     authorizes_download: Literal[False] = False
     authorizes_ingestion: Literal[False] = False
@@ -1534,6 +1546,33 @@ class ProjectProgressDatasetPackageItem(BaseModel):
             raise ValueError("dataset package must cite its registered run")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("dataset package evidence references must be unique")
+        qualification_fields = (
+            self.archive_qualification_run_ref_id,
+            self.archive_qualification_run_id,
+            self.archive_qualification_report_sha256,
+            self.archive_qualification_file_sha256,
+            self.archive_member_count,
+            self.archive_expanded_bytes,
+            self.all_receipt_hashes_reverified,
+        )
+        if self.archive_safety_status == "pending" and any(
+            value is not None for value in qualification_fields
+        ):
+            raise ValueError("pending archive qualification cannot expose result evidence")
+        if self.archive_safety_status != "pending" and not all(
+            value is not None for value in qualification_fields
+        ):
+            raise ValueError("observed archive qualification requires complete evidence")
+        if (
+            self.archive_safety_status == "qualified"
+            and self.all_receipt_hashes_reverified is not True
+        ):
+            raise ValueError("qualified archives require reverified receipt hashes")
+        if (
+            self.archive_qualification_run_ref_id is not None
+            and self.archive_qualification_run_ref_id not in self.support_ref_ids
+        ):
+            raise ValueError("archive qualification must cite its registered run")
         return self
 
 
@@ -2246,7 +2285,16 @@ class ProjectResourcePortfolioData(BaseModel):
     pending_binding_count: int = Field(ge=0)
     blocked_binding_count: int = Field(ge=0)
     resources: tuple[ProjectResourcePortfolioItem, ...] = Field(min_length=1, max_length=100)
-    configuration_authority: Literal["proposal_only"] = "proposal_only"
+    configuration_authority: Literal["proposal_only", "user_applied"] = "proposal_only"
+    configuration_run_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    source_planning_publication_id: SafeIdentifier | None = None
+    source_planning_publication_sha256: Sha256 | None = None
+    predecessor_binding_record_sha256: Sha256 | None = None
+    configuration_verification_route: Literal["direct_path"] | None = None
     credential_values_exposed: Literal[False] = False
     remote_probe_performed: Literal[False] = False
     workload_executed: Literal[False] = False
@@ -2264,6 +2312,17 @@ class ProjectResourcePortfolioData(BaseModel):
             raise ValueError("blocked resource count differs from binding rows")
         if len({item.binding_id for item in self.resources}) != len(self.resources):
             raise ValueError("project resource binding IDs must be unique")
+        configuration_fields = (
+            self.configuration_run_id,
+            self.source_planning_publication_id,
+            self.source_planning_publication_sha256,
+            self.predecessor_binding_record_sha256,
+            self.configuration_verification_route,
+        )
+        if self.configuration_authority == "user_applied" and not all(configuration_fields):
+            raise ValueError("an applied project resource configuration requires full lineage")
+        if self.configuration_authority == "proposal_only" and any(configuration_fields):
+            raise ValueError("a proposal-only resource view cannot claim applied lineage")
         return self
 
 

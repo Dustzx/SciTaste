@@ -56,6 +56,11 @@ from scitaste.generative_ui.program_revision import (
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.projection import RendererDocument, project_surface
+from scitaste.generative_ui.resource_configuration import (
+    ProjectResourceConfigurationPublication,
+    ProjectResourceConfigurationRequest,
+    apply_project_resource_configuration,
+)
 from scitaste.generative_ui.safety import ProjectIdentifier
 from scitaste.generative_ui.workspace import (
     ProjectListDocument,
@@ -259,6 +264,25 @@ class GenerativeUIApplication:
             raise ValueError("planning-directive publication belongs to another project")
         with self._request_lock:
             _, publication = publish_planning_directive(self._runtime, parsed)
+            return publication
+
+    def apply_resource_configuration(
+        self,
+        project_id: str,
+        request: ProjectResourceConfigurationRequest | dict[str, object],
+    ) -> ProjectResourceConfigurationPublication:
+        """Apply a published resource preference after explicit user confirmation."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, ProjectResourceConfigurationRequest)
+            else ProjectResourceConfigurationRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("resource configuration request belongs to another project")
+        with self._request_lock:
+            _, publication = apply_project_resource_configuration(self._runtime, parsed)
             return publication
 
     def research_workspace_catalog(self, project_id: str) -> ResearchWorkspaceCatalog:

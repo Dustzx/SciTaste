@@ -140,6 +140,9 @@ artifacts:
   - artifact_id: mlrc-first-acquisition
     path: docs/research/data/mlrc_first_preflight_acquisition_v1.yaml
     sha256: 9e761677a981a6e81cc102c6042b235d6ec46f68bf58bd875a1093d4043d9e5e
+  - artifact_id: mlrc-archive-qualification
+    path: docs/research/data/mlrc_archive_qualification_v1.yaml
+    sha256: 980e72fd1759e652dc04f4dddda2f7ce29baabba5dfb69e96827d1d71fab92d0
   - artifact_id: mlrc-license-policy
     path: configs/evaluation/acquisition/mlrc_first_preflight_license_policy_v1.yaml
     sha256: d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
@@ -327,12 +330,14 @@ tracks:
       - taste-corpus-curation-guide
       - mlrc-first-assets
       - mlrc-first-acquisition
+      - mlrc-archive-qualification
       - mlrc-license-policy
       - gpu-host-inventory
     blocker_codes:
       - taste-corpora:source-and-review-bytes-not-present
       - taste-corpora:paired-qualification-not-complete
-      - task-assets:zip-read-and-safety-qualification-not-authorized
+      - task-assets:post-acquisition-license-not-qualified
+      - task-assets:task-layout-and-baseline-not-qualified
       - held-out-audit:not-complete
       - remote-checkpoint:not-attested
       - independent-reviewers:not-secured
@@ -411,10 +416,12 @@ tracks:
       - tiny-scientist-contract
       - mlrc-first-assets
       - mlrc-first-acquisition
+      - mlrc-archive-qualification
       - mlrc-license-policy
     blocker_codes:
       - api-identity:superseded-deepseek-v41-proposal
-      - task-assets:zip-read-and-safety-qualification-not-authorized
+      - task-assets:post-acquisition-license-not-qualified
+      - task-assets:task-layout-and-baseline-not-qualified
       - agent-laboratory:adapter-not-qualified
       - tiny-scientist:adapter-not-qualified
       - api-credentials:deepseek-and-openai-not-bound
@@ -525,13 +532,19 @@ stages:
     external_actions: []
     owner_approval_required: false
     blocker_codes:
-      - archive-read:not-owner-approved
-      - archives-and-licenses:not-qualified
-      - baselines-and-held-out-signal:not-reproduced
-    completion_artifact_ids: []
+      - awa-license-coverage:not-qualified
+      - task-layout-and-baselines:not-reproduced
+      - held-out-signal:not-verified
+    completion_artifact_ids:
+      - mlrc-first-assets
+      - mlrc-first-acquisition
+      - mlrc-archive-qualification
+      - mlrc-license-policy
     next_decision: >-
-      Rehash and inspect acquired archives without extraction, close AWA license
-      records, reproduce baselines, and freeze task-level failure floors.
+      The exact 39 acquired archives now pass outer-byte rehash and no-extraction
+      structural qualification over 178,325 members. Close AWA per-image license
+      coverage, freeze safe task-layout materialization, reproduce baselines, and
+      verify held-out signal before selecting either task for a SciTaste run.
 
   - stage_id: attest-native-condition-implementations
     kind: runtime_preflight

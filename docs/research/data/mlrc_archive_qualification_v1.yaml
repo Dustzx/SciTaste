@@ -1,0 +1,68 @@
+schema_version: "1.0"
+evidence_id: mlrc-archive-qualification-v1
+project_id: scitaste-self-development
+standing_read_authority:
+  path: configs/evaluation/acquisition/standing_owner_local_read_policy_v1.yaml
+  file_sha256: 0f1fdbe7393a128d9b4af455ec23a0cc3831df32993e0eac01cc9ebda4041cf5
+  per_artifact_conversational_approval_required: false
+  permits_archive_member_listing: true
+read_binding:
+  local_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/ARCHIVE_READ_APPROVAL.json
+  file_sha256: 39ffb82d7f8048897b5a16df262e821c56b10b73accbc1068f8ae5ca0b166bc6
+  read_approval_sha256: c24ecb697dcb0de701ee9bc243c66df6516da4d5c579f68ec5a61e993e51c8da
+  approval_source: standing-owner-local-read-policy-v1
+  scope: zip-central-directory-read-only-no-extraction
+qualification:
+  local_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/ARCHIVE_QUALIFICATION.json
+  file_sha256: a2bd52569e01ae1af9719ede41981cebbe3d9188917e288dd4b4f3502e9e819f
+  report_sha256: 68f24ffd8cd5fa6ac284eec77cbf65f3be491cc7a458bd8e66a2a841cdd16db4
+  request_id: mlrc-first-preflight-assets-v1
+  proposal_sha256: c0b37f72588c9a89a5c4247f139c8b0595571cf639846066b7d7c538c5138ed4
+  download_approval_sha256: 56a5ffcf2d4a50c326ed242beba9ce15745504a04b98abc3fb6b4eb4802ed514
+  receipt_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+  inventory_file_sha256: 7e1d3b3bd66716691b8a70aead205e2af9a361a60971a81e46a91584b078f8ad
+  task_count: 2
+  asset_count: 39
+  archive_bytes_rehashed: 3761168137
+  member_count: 178325
+  declared_expanded_bytes: 4167482153
+  blocker_count: 0
+  all_receipt_hashes_reverified: true
+  archive_safety_qualified: true
+tasks:
+  - task_id: perception_temporal_action_loc
+    asset_count: 9
+    member_count: 15005
+    declared_expanded_bytes: 1067288026
+    maximum_unpacked_bytes: 4294967296
+    safe: true
+  - task_id: meta-learning
+    asset_count: 30
+    member_count: 163320
+    declared_expanded_bytes: 3100194127
+    maximum_unpacked_bytes: 12884901888
+    safe: true
+boundary:
+  archive_content_read: true
+  archive_extracted: false
+  dataset_ingested: false
+  task_layout_validated: false
+  baseline_reproduced: false
+  held_out_status_verified: false
+  license_ingestion_ready: false
+  model_calls: 0
+  api_calls: 0
+  gpu_jobs: 0
+  experiment_runs: 0
+  authorizes_extraction: false
+  authorizes_ingestion: false
+  authorizes_execution: false
+next_gate: >-
+  Close the AWA per-image license-record coverage, then freeze a no-execution
+  task-layout materialization plan and reproduce the selected task baselines and
+  held-out signal before any SciTaste condition is launched.
+claim_boundary: >-
+  This evidence establishes byte continuity and no-extraction ZIP structural
+  safety for the complete acquired two-task package. It does not establish
+  license ingestion readiness, executable task correctness, held-out validity,
+  baseline reproducibility, model quality, or scientific effectiveness.

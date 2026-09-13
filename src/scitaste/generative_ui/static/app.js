@@ -2235,6 +2235,12 @@ function renderProjectResources(data, evidenceProgram) {
   const preferredResourceIds = new Set(
     publishedResourceDirective?.requested_resource_ids || [],
   );
+  const publishedConfigurationApplied = Boolean(
+    publishedResourceDirective
+    && data.configuration_authority === "user_applied"
+    && data.source_planning_publication_id === publishedResourceDirective.publication_id
+    && data.source_planning_publication_sha256 === publishedResourceDirective.publication_sha256,
+  );
   const section = document.createElement("section");
   section.className = "progress-section project-resources";
   const header = document.createElement("div");
@@ -2258,9 +2264,11 @@ function renderProjectResources(data, evidenceProgram) {
   controls.className = "project-resources-controls";
   const boundary = document.createElement("span");
   boundary.className = "program-badge neutral";
-  appendText(boundary, publishedResourceDirective
-    ? t("resources.planning_configuration_active")
-    : t("resources.proposal_only"));
+  appendText(boundary, publishedConfigurationApplied
+    ? t("resources.configuration_applied")
+    : publishedResourceDirective
+      ? t("resources.planning_configuration_active")
+      : t("resources.proposal_only"));
   const revise = document.createElement("button");
   revise.type = "button";
   revise.className = "secondary-button";
@@ -2282,6 +2290,17 @@ function renderProjectResources(data, evidenceProgram) {
     intentForm.scrollIntoView({behavior: "smooth", block: "center"});
   });
   controls.append(boundary, revise);
+  if (publishedResourceDirective && !publishedConfigurationApplied) {
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "primary-button";
+    appendText(apply, t("resources.apply_configuration"));
+    apply.addEventListener("click", () => applyResourceConfiguration(
+      data,
+      publishedResourceDirective,
+    ));
+    controls.appendChild(apply);
+  }
   header.append(identity, controls);
 
   const kindSummary = document.createElement("div");
@@ -2353,6 +2372,11 @@ function renderProjectResources(data, evidenceProgram) {
       credential_values_exposed: data.credential_values_exposed,
       remote_probe_performed: data.remote_probe_performed,
       workload_executed: data.workload_executed,
+      configuration_authority: data.configuration_authority,
+      configuration_run_id: data.configuration_run_id,
+      source_planning_publication_id: data.source_planning_publication_id,
+      predecessor_binding_record_sha256: data.predecessor_binding_record_sha256,
+      configuration_verification_route: data.configuration_verification_route,
     },
     names: [
       "binding_set_id",
@@ -2362,6 +2386,11 @@ function renderProjectResources(data, evidenceProgram) {
       "credential_values_exposed",
       "remote_probe_performed",
       "workload_executed",
+      "configuration_authority",
+      "configuration_run_id",
+      "source_planning_publication_id",
+      "predecessor_binding_record_sha256",
+      "configuration_verification_route",
     ],
   }));
   section.append(header, kindSummary, details);
@@ -3589,7 +3618,12 @@ function renderDatasetPackages(items) {
     const flowItems = [
       [String(item.asset_count), t("progress.dataset_package.archives")],
       [formatByteCeiling(item.observed_download_bytes), t("progress.dataset_package.download")],
-      [formatByteCeiling(item.maximum_unpacked_bytes), t("progress.dataset_package.unpacked")],
+      [item.archive_safety_status === "qualified"
+        ? String(item.archive_member_count)
+        : formatByteCeiling(item.maximum_unpacked_bytes),
+      item.archive_safety_status === "qualified"
+        ? t("progress.dataset_package.members")
+        : t("progress.dataset_package.unpacked")],
       [formatByteCeiling(item.minimum_free_storage_bytes), t("progress.dataset_package.free")],
     ];
     for (const [value, copy] of flowItems) {
@@ -3637,14 +3671,21 @@ function renderDatasetPackages(items) {
     const controlLabel = document.createElement("strong");
     appendText(controlLabel, t("progress.dataset_package.control_path"));
     const controlSteps = document.createElement("span");
-    appendText(controlSteps, t("progress.dataset_package.control_steps"));
+    appendText(controlSteps, item.archive_safety_status === "qualified"
+      ? t("progress.dataset_package.control_steps_qualified", {
+        count: item.asset_count,
+        size: formatByteCeiling(item.archive_expanded_bytes),
+      })
+      : t("progress.dataset_package.control_steps"));
     controlPath.append(controlLabel, controlSteps);
 
     const boundary = document.createElement("p");
     boundary.className = "acquisition-boundary";
-    appendText(boundary, t("progress.dataset_package.boundary", {
-      hashes: item.pending_content_hash_count,
-    }));
+    appendText(boundary, item.archive_safety_status === "qualified"
+      ? t("progress.dataset_package.boundary_qualified")
+      : t("progress.dataset_package.boundary", {
+        hashes: item.pending_content_hash_count,
+      }));
     const review = document.createElement("button");
     review.type = "button";
     review.className = "secondary-button acquisition-review";
@@ -3673,6 +3714,13 @@ function renderDatasetPackages(items) {
           authorizes_gpu_work: item.authorizes_gpu_work,
           authorizes_execution: item.authorizes_execution,
           no_dataset_file_created: item.no_dataset_file_created,
+          archive_safety_status: item.archive_safety_status,
+          archive_qualification_run_id: item.archive_qualification_run_id,
+          archive_qualification_report_sha256: item.archive_qualification_report_sha256,
+          archive_qualification_file_sha256: item.archive_qualification_file_sha256,
+          archive_expanded_bytes: item.archive_expanded_bytes,
+          all_receipt_hashes_reverified: item.all_receipt_hashes_reverified,
+          extraction_performed: item.extraction_performed,
         },
         names: [
           "proposal_sha256",
@@ -3686,6 +3734,13 @@ function renderDatasetPackages(items) {
           "authorizes_gpu_work",
           "authorizes_execution",
           "no_dataset_file_created",
+          "archive_safety_status",
+          "archive_qualification_run_id",
+          "archive_qualification_report_sha256",
+          "archive_qualification_file_sha256",
+          "archive_expanded_bytes",
+          "all_receipt_hashes_reverified",
+          "extraction_performed",
         ],
       }),
     );
@@ -5249,6 +5304,52 @@ async function publishProgramRevision(record, decision) {
   }
 }
 
+async function applyResourceConfiguration(portfolio, directive) {
+  if (!quickIntentCatalog || !portfolio || !directive) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "resource_configuration_applying"};
+  renderIntentResult();
+  try {
+    await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + `/resource-configurations/${encodeURIComponent(directive.publication_id)}/apply`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          publication_id: directive.publication_id,
+          publication_sha256: directive.publication_sha256,
+          expected_project_revision: quickIntentCatalog.snapshot.snapshot_revision,
+          expected_snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+          expected_binding_record_sha256: portfolio.binding_record_sha256,
+          expected_registry_sha256: portfolio.registry_sha256,
+          confirm_apply: true,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    intentResultState = {kind: "resource_configuration_applied"};
+    await loadWorkspace({
+      view: "project-progress",
+      project_id: requestedProject,
+    }, "replace");
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
 function renderGenerationFailure(documentValue) {
   intentResultState = {kind: "failure", documentValue};
   renderIntentResult();
@@ -5318,6 +5419,20 @@ function renderIntentResult() {
     published.className = "generation-accepted";
     appendText(published, t("generation.revision_published"));
     intentResult.appendChild(published);
+    return;
+  }
+  if (intentResultState.kind === "resource_configuration_applying") {
+    const applying = document.createElement("p");
+    applying.className = "muted";
+    appendText(applying, t("generation.resource_configuration_applying"));
+    intentResult.appendChild(applying);
+    return;
+  }
+  if (intentResultState.kind === "resource_configuration_applied") {
+    const applied = document.createElement("p");
+    applied.className = "generation-accepted";
+    appendText(applied, t("generation.resource_configuration_applied"));
+    intentResult.appendChild(applied);
     return;
   }
   if (intentResultState.kind === "accepted") {
