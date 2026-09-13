@@ -40,6 +40,13 @@ count because the natural cases, human labels, source-disjoint split, blinded
 review protocol, model-conformance result, and power analysis do not yet exist.
 The local and remote Qwen checkpoints remain feasibility assets rather than
 scientific design inputs.
+The rights-filtered sixteen-record AAAR pilot is already downloaded and
+receipt-bound at 2,636,951 bytes, but remains unopened and is not part of the
+120-case target population. The first unresolved campaign stage is therefore
+its exact local structural and identity audit, not secondary task qualification
+or external-adapter work. That audit still requires a separate owner decision
+and cannot project records, invoke a model, recruit reviewers, or run an
+experiment.
 The older Qwen/MLR-Bench objective-progress proposal remains historical. The
 new 12-trajectory Qwen proposal instead names two MLRC objective-task
 candidates and a separate claim contract. Their 39 assets are now acquired and

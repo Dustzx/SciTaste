@@ -39,6 +39,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.3 — executable-task archive read gate | done | MLRC acquisition is reflected in the campaign; ZIP qualification now requires a receipt-bound read approval and explicit local switch, while extraction, ingestion, baseline reproduction, API, GPU, and experiments remain closed |
 | Phase 9.4 — native condition implementation attestation | done | all six first-party conditions complete one identical four-stage offline fixture with Knowledge, matched/mismatched Taste, critic, single-factor, and invariant-integrity routes verified; real corpora, checkpoint/task execution, and effects remain open |
 | Phase 9.5 — current API identity and Taste-path continuity | done | the live DeepSeek catalog change is preserved as a new immutable resource/identity stratum; all four title-critical Taste nodes expose the current V4 Flash candidate while historical V4.1 plans remain non-launchable |
+| Phase 9.6 — title-first acquisition continuity | done | the exact acquired AAAR pilot is represented by tracked receipt-bound evidence, and the campaign exposes its separately approved local audit as the first unresolved title-level stage instead of prioritizing secondary task or adapter work |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
 sub-10-GB policy. The receipt binds sixteen

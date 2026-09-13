@@ -34,7 +34,7 @@ artifacts:
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 4356236bd271139f623619eeeeb77f907b7ceadbbf3678ea2f56c4a9c2c20c0a
+    sha256: b025c576a599bfa4eea623ab779c7eb102ed0230cd34e40b58d91fa06e712876
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: eed6b98a9eae316589058a3c42680ff12f18e556010b9df5d95c12beb75acb1f
@@ -59,6 +59,15 @@ artifacts:
   - artifact_id: reference-quality-pipeline
     path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v3.yaml
     sha256: 9896e98e679d791a378ccc6735ccdd9aa7a7d1e06c1e586ab69f62478b75bcdb
+  - artifact_id: aaar-rights-pilot-scope
+    path: docs/research/data/aaar_experiment_design_rights_pilot_scope_v1.yaml
+    sha256: e7234c2475d3a73b70ef85d30ef3613b026eb373f5f65ef8cb375a6ee27c11ec
+  - artifact_id: aaar-rights-pilot-request
+    path: configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml
+    sha256: ce9905d441ee85c5da086b90f96c0ce2127b04da0e393831d3908104e0ab5741
+  - artifact_id: aaar-rights-pilot-acquisition
+    path: docs/research/data/aaar_experiment_design_rights_pilot_acquisition_v1.yaml
+    sha256: 83c4dff3bacf1c3280d075ff2b0c67c138bb97f218847e219e4c03018e40128a
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -161,7 +170,9 @@ tracks:
       dataset_id: scitastebench-v3
       role: >-
         At least 120 natural, source-group-disjoint research decisions across
-        at least three domains and all six SciTaste decision families.
+        at least three domains and all six SciTaste decision families. A
+        rights-filtered sixteen-record AAAR pilot is acquired and byte-verified
+        but has not been opened or admitted into this target population.
       item_ids: [aaar-1.0, aries, openreview-public-comments]
       population_floor: 120
       exact_bytes_available: false
@@ -205,6 +216,9 @@ tracks:
       - scientific-reference-quality
       - reference-quality-profiles
       - reference-quality-pipeline
+      - aaar-rights-pilot-scope
+      - aaar-rights-pilot-request
+      - aaar-rights-pilot-acquisition
       - grounded-taste-abstraction-profiles
       - current-compute-catalog
       - current-project-resource-binding
@@ -217,7 +231,8 @@ tracks:
       - taste-corpus-curation-guide
       - gpu-host-inventory
     blocker_codes:
-      - natural-case-bytes:not-acquired
+      - natural-case-pilot:acquired-content-read-not-authorized
+      - natural-case-population:not-frozen
       - prestige-blind-quality-projections:not-materialized
       - quality-screen-model-traces:not-collected
       - expert-labels:not-collected
@@ -437,19 +452,49 @@ stages:
   - stage_id: approve-exact-source-acquisition
     kind: asset_acquisition
     state: complete
-    track_ids: [native-taste-causal-prepilot, external-best-native-prepilot]
+    track_ids:
+      - scientific-taste-decisions
+      - native-taste-causal-prepilot
+      - external-best-native-prepilot
     depends_on: [freeze-dual-estimand-design]
     external_actions: [download_data]
     owner_approval_required: true
     blocker_codes: []
     completion_artifact_ids:
+      - aaar-rights-pilot-scope
+      - aaar-rights-pilot-request
+      - aaar-rights-pilot-acquisition
       - mlrc-first-assets
       - mlrc-first-acquisition
       - mlrc-license-policy
     next_decision: >-
-      The exact 39-asset, 3,761,168,137-byte package is acquired and independently
-      rehashed. Obtain separate read-only authority before opening ZIP central
-      directories; extraction and ingestion remain later decisions.
+      The exact sixteen-file, 2,636,951-byte AAAR pilot and 39-asset,
+      3,761,168,137-byte MLRC package are acquired and independently rehashed.
+      Obtain separate read-only authority before opening JSON bodies or ZIP
+      central directories; projection, extraction, and ingestion remain later
+      decisions.
+
+  - stage_id: qualify-scientific-taste-source-pilot
+    kind: human_curation
+    state: blocked
+    track_ids: [scientific-taste-decisions]
+    depends_on: [approve-exact-source-acquisition]
+    external_actions: []
+    owner_approval_required: true
+    blocker_codes:
+      - local-content-read:not-owner-approved
+      - source-structure:not-qualified
+      - source-admission:not-reviewed
+    completion_artifact_ids:
+      - aaar-rights-pilot-scope
+      - aaar-rights-pilot-request
+      - aaar-rights-pilot-acquisition
+      - reference-quality-pipeline
+    next_decision: >-
+      Authorize only the receipt-bound local structural and identity audit of
+      the sixteen acquired AAAR JSON files. If it passes, freeze a separate
+      prestige-blind source-admission and projection decision before any model
+      or human sees source content.
 
   - stage_id: qualify-held-out-task-bytes
     kind: human_curation

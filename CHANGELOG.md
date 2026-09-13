@@ -5,6 +5,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Corrected the ICLR campaign's post-acquisition priority. A tracked AAAR
+  acquisition record now binds the frozen request, standing download policy,
+  local approval, receipt, item count, byte count, and no-read boundary. The
+  first unresolved stage is now the separately approved sixteen-record
+  Scientific Taste source audit; secondary MLRC and external-adapter work no
+  longer appears ahead of the paper's title-critical evidence path.
 - Restored identity continuity between the current hosted-model inventory and
   the title-critical Scientific Taste path. A new immutable compute catalog,
   project binding, API identity protocol, and review activation move new work

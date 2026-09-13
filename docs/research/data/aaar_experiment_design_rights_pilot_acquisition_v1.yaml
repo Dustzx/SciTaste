@@ -1,0 +1,52 @@
+schema_version: "1.0"
+evidence_id: aaar-experiment-design-rights-pilot-acquisition-v1
+project_id: scitaste-self-development
+request:
+  path: configs/evaluation/acquisition/aaar_experiment_design_rights_pilot_v1.yaml
+  file_sha256: ce9905d441ee85c5da086b90f96c0ce2127b04da0e393831d3908104e0ab5741
+  request_sha256: 32c95222c62788ae94693f30333757a5969efb40fdbb87ed1579257663d0736c
+  source_revision: 26738cfa644dd038ad6cc3a847682c0ca8e07d1d
+download_approval:
+  local_path: outputs/projects/scitaste-self-development/runs/2026-09-12__scitaste-native__aaar-rights-pilot-acquisition-gate-v1__seed-00/acquisition/APPROVED_REQUEST.yaml
+  file_sha256: 9e0965f6b538dd6292f3e78606ca5bd13f33590ccec01ac087d444dba870f1f8
+  scope: download-only-no-ingestion
+  standing_policy:
+    path: configs/evaluation/acquisition/standing_owner_download_policy_v1.yaml
+    file_sha256: b369d232e83e95a11e6dc684a2a9e467a8f089d81cf99806bce2b81924ff97ed
+    maximum_transaction_bytes: 10000000000
+receipt:
+  local_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/aaar-experiment-design-rights-pilot-v1/RECEIPT.json
+  file_sha256: f1123a51a09e0ccc0415006a9f7ed56d20cdb0836d01a98a73876119a653317b
+  receipt_sha256: d6bebb88fa91830d28a1038b8ff69d3bbe2ebec23a0e9fbe666dedd51a806dcc
+  item_count: 16
+  total_bytes: 2636951
+  media_type: application/json
+  source_host: huggingface.co
+  redirects_followed: false
+  overwrote_existing_files: false
+outer_byte_verification:
+  verified_item_count: 16
+  verified_total_bytes: 2636951
+  size_mismatches: 0
+  sha256_mismatches: 0
+  passed: true
+current_boundary:
+  source_content_read: false
+  source_structure_qualified: false
+  source_admission_performed: false
+  model_visible_projection_created: false
+  taste_abstraction_created: false
+  human_labeling_performed: false
+  experiment_run: false
+  api_calls: 0
+  gpu_jobs: 0
+next_gate: >-
+  A separately hash-bound owner decision may authorize the bounded local
+  structural and identity audit of exactly these sixteen JSON files. That
+  decision does not authorize projection, ingestion, model calls, human
+  labeling, benchmark construction, or experiment execution.
+claim_boundary: >-
+  This evidence proves download-only acquisition and receipt-bound outer-byte
+  verification of a rights-filtered pilot. It does not prove record quality,
+  source admission, a valid Scientific Taste abstraction, benchmark validity,
+  or SciTaste effectiveness.
