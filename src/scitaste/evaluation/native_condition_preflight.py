@@ -4,17 +4,24 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import posixpath
 import subprocess
+import tempfile
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from scitaste.evaluation.prelaunch import ReadinessStatus
-from scitaste.taste.conditions import NativeConditionMatrix, NativeTasteCondition
+from scitaste.taste.conditions import (
+    NativeConditionComponents,
+    NativeConditionMatrix,
+    NativeTasteCondition,
+    load_native_condition_matrix,
+)
 
 _CONFIG = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 _ID = r"^[a-z0-9]+(?:[a-z0-9._-]*[a-z0-9])?$"
@@ -22,6 +29,15 @@ _SHA256 = r"^[0-9a-f]{64}$"
 _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_MANIFEST_BYTES = 1_048_576
 _MAX_GIT_OBJECT_BYTES = 2 * 1_048_576
+_IMPLEMENTATION_EVIDENCE_PATHS = (
+    "src/scitaste/full_workflow.py",
+    "src/scitaste/taste/conditions.py",
+    "src/scitaste/taste/controller.py",
+    "src/scitaste/taste/critics.py",
+    "src/scitaste/executor/native.py",
+    "src/scitaste/state/persistence.py",
+)
+_FIXTURE_STAGE_NAMES = ("discovery", "evidence", "communication", "figure")
 
 
 class NativePathRequirement(StrEnum):
@@ -181,6 +197,96 @@ class NativeConditionPreflightReport(BaseModel):
     corpus_parity_status: dict[CorpusParityDimension, ReadinessStatus]
     blockers: tuple[NativeConditionPreflightFinding, ...]
     no_external_action_performed: Literal[True] = True
+
+
+class NativeImplementationEvidenceFile(BaseModel):
+    """One implementation object proved identical at the pinned source and HEAD."""
+
+    model_config = _CONFIG
+
+    path: str = Field(min_length=1, max_length=1_000)
+    source_sha256: str = Field(pattern=_SHA256)
+    head_sha256: str = Field(pattern=_SHA256)
+    unchanged: bool
+
+
+class NativeConditionBehaviorProbe(BaseModel):
+    """Observed condition wiring from one complete offline fixture workflow."""
+
+    model_config = _CONFIG
+
+    condition_id: NativeTasteCondition
+    components: NativeConditionComponents
+    stage_names: tuple[Literal["discovery", "evidence", "communication", "figure"], ...]
+    decision_count: int = Field(gt=0)
+    knowledge_result_basis: Literal["knowledge-library-retrieval", "workflow-component-receipt"]
+    retrieved_document_count: int = Field(ge=0)
+    retrieved_taste_case_ids: tuple[str, ...]
+    final_blocking_findings: int = Field(ge=0)
+    integrity_gates_invariant: bool
+    condition_contract_verified: bool
+
+
+class NativeTasteRoutingProbe(BaseModel):
+    """A closed two-case probe of matched versus source-disjoint retrieval."""
+
+    model_config = _CONFIG
+
+    matched_case_ids: tuple[str, ...]
+    mismatched_case_ids: tuple[str, ...]
+    matched_selected_action_id: str
+    mismatched_selected_action_id: str
+    disjoint: bool
+    verified: bool
+
+
+class NativeCriticRoutingProbe(BaseModel):
+    """A fixed decision probe showing the critic switch changes score evidence."""
+
+    model_config = _CONFIG
+
+    control_commit_score: float
+    critics_commit_score: float
+    control_has_critic_rationale: bool
+    critics_has_critic_rationale: bool
+    critics_selected_action_id: str
+    verified: bool
+
+
+class NativeConditionImplementationAttestation(BaseModel):
+    """Behavioral evidence for all six first-party conditions, never a model result."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    attestation_id: str = Field(pattern=_ID)
+    preflight_id: str = Field(pattern=_ID)
+    preflight_proposal_sha256: str = Field(pattern=_SHA256)
+    source_commit: str = Field(pattern=_COMMIT)
+    observed_head_commit: str = Field(pattern=_COMMIT)
+    fixture_workflow_ref: str = Field(min_length=1, max_length=1_000)
+    fixture_workflow_sha256: str = Field(pattern=_SHA256)
+    implementation_evidence: tuple[NativeImplementationEvidenceFile, ...] = Field(min_length=1)
+    condition_probes: tuple[NativeConditionBehaviorProbe, ...]
+    taste_routing_probe: NativeTasteRoutingProbe | None = None
+    critic_routing_probe: NativeCriticRoutingProbe | None = None
+    exact_condition_population_verified: bool
+    workflow_component_routes_verified: bool
+    full_placebo_single_factor_verified: bool
+    implementation_qualified: bool
+    findings: tuple[NativeConditionPreflightFinding, ...]
+    local_fixture_execution_performed: bool
+    real_task_or_experiment_execution_performed: Literal[False] = False
+    model_calls: Literal[0] = 0
+    api_calls: Literal[0] = 0
+    gpu_jobs: Literal[0] = 0
+    network_access: Literal[False] = False
+    authorizes_experiment_execution: Literal[False] = False
+
+    @computed_field
+    @property
+    def attestation_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"attestation_sha256"}))
 
 
 def load_native_condition_preflight_manifest(
@@ -380,6 +486,553 @@ def inspect_native_condition_preflight(
         corpus_parity_status=manifest.corpus_pair.dimensions,
         blockers=tuple(blockers),
     )
+
+
+def attest_native_condition_implementations(
+    inspection: NativeConditionPreflightInspection,
+    *,
+    fixture_workflow: str | Path,
+    source_root: str | Path,
+    workspace_root: str | Path,
+    seed: int = 7,
+    allow_local_fixture_execution: bool = False,
+) -> NativeConditionImplementationAttestation:
+    """Execute all six conditions on one local fixture without external resources."""
+
+    if not allow_local_fixture_execution:
+        raise ValueError("native condition attestation requires --allow-local-fixture-execution")
+    root = Path(source_root).resolve(strict=True)
+    workspace = Path(workspace_root).resolve(strict=True)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("native condition source root must be a real directory")
+    if workspace.is_symlink() or not workspace.is_dir():
+        raise ValueError("native condition workspace root must be a real directory")
+    head = _git_text(root, "rev-parse", "HEAD")
+    preflight = inspect_native_condition_preflight(inspection, source_root=root)
+    if not preflight.source_commit_available or not preflight.source_commit_is_ancestor:
+        raise ValueError("native condition source commit is unavailable or not an ancestor")
+    if not (
+        preflight.static_action_path_verified
+        and preflight.model_candidate_generation_verified
+        and preflight.corpus_curation_runtime_verified
+    ):
+        raise ValueError("native condition static implementation preflight is not qualified")
+
+    fixture_path = Path(fixture_workflow).resolve(strict=True)
+    try:
+        fixture_locator = fixture_path.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ValueError("native condition fixture workflow must be inside source root") from exc
+    findings: list[NativeConditionPreflightFinding] = []
+    evidence = _inspect_head_implementation_evidence(
+        inspection.manifest,
+        root=root,
+        head=head,
+        fixture_locator=fixture_locator,
+        findings=findings,
+    )
+
+    from scitaste.full_workflow import load_full_workflow_config
+
+    fixture_sha256 = hashlib.sha256(fixture_path.read_bytes()).hexdigest()
+    config = load_full_workflow_config(fixture_path)
+    _inspect_fixture_workflow_safety(
+        config,
+        fixture_path=fixture_path,
+        condition_matrix_ref=inspection.manifest.condition_matrix_ref,
+        source_root=root,
+        findings=findings,
+    )
+
+    probes: tuple[NativeConditionBehaviorProbe, ...] = ()
+    taste_probe: NativeTasteRoutingProbe | None = None
+    critic_probe: NativeCriticRoutingProbe | None = None
+    execution_performed = False
+    if not findings:
+        with tempfile.TemporaryDirectory(
+            prefix=".scitaste-native-condition-attestation-",
+            dir=workspace,
+        ) as temporary_name:
+            temporary_root = Path(temporary_name)
+            execution_performed = True
+            probes = _run_condition_workflow_probes(
+                config,
+                matrix=load_native_condition_matrix(config.native_condition_config).matrix,
+                output_root=temporary_root / "outputs",
+                seed=seed,
+                findings=findings,
+            )
+            taste_probe = _run_taste_routing_probe(
+                load_native_condition_matrix(config.native_condition_config).matrix,
+                workspace=temporary_root,
+                seed=seed,
+                findings=findings,
+            )
+            critic_probe = _run_critic_routing_probe(
+                load_native_condition_matrix(config.native_condition_config).matrix,
+                seed=seed,
+                findings=findings,
+            )
+
+    expected_conditions = set(NativeTasteCondition)
+    observed_conditions = {item.condition_id for item in probes}
+    exact_population = observed_conditions == expected_conditions and len(probes) == len(
+        expected_conditions
+    )
+    if not exact_population:
+        _add(
+            findings,
+            "condition_probe_population_incomplete",
+            "behavioral probes do not cover the closed six-condition population",
+        )
+    routes_verified = bool(probes) and all(item.condition_contract_verified for item in probes)
+    full = inspection.manifest
+    matrix = load_native_condition_matrix(config.native_condition_config).matrix
+    full_components = matrix.profile(NativeTasteCondition.FULL).components
+    placebo_components = matrix.profile(NativeTasteCondition.MISMATCHED_PLACEBO).components
+    single_factor = (
+        full_components.model_copy(update={"taste_retrieval": placebo_components.taste_retrieval})
+        == placebo_components
+    )
+    all_evidence_unchanged = bool(evidence) and all(item.unchanged for item in evidence)
+    qualified = bool(
+        not findings
+        and execution_performed
+        and exact_population
+        and routes_verified
+        and single_factor
+        and taste_probe is not None
+        and taste_probe.verified
+        and critic_probe is not None
+        and critic_probe.verified
+        and all_evidence_unchanged
+    )
+    return NativeConditionImplementationAttestation(
+        attestation_id=f"{full.preflight_id}-behavioral-v1",
+        preflight_id=full.preflight_id,
+        preflight_proposal_sha256=full.proposal_sha256,
+        source_commit=full.source_commit,
+        observed_head_commit=head,
+        fixture_workflow_ref=fixture_locator,
+        fixture_workflow_sha256=fixture_sha256,
+        implementation_evidence=evidence,
+        condition_probes=probes,
+        taste_routing_probe=taste_probe,
+        critic_routing_probe=critic_probe,
+        exact_condition_population_verified=exact_population,
+        workflow_component_routes_verified=routes_verified,
+        full_placebo_single_factor_verified=single_factor,
+        implementation_qualified=qualified,
+        findings=tuple(findings),
+        local_fixture_execution_performed=execution_performed,
+    )
+
+
+def save_native_condition_implementation_attestation(
+    report: NativeConditionImplementationAttestation,
+    path: str | Path,
+) -> Path:
+    """Publish an immutable attestation report without replacing existing evidence."""
+
+    destination = Path(path)
+    if destination.is_symlink() or destination.exists():
+        raise FileExistsError(f"native condition attestation already exists: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    parent = destination.parent.resolve(strict=True)
+    if destination.parent.is_symlink() or not parent.is_dir():
+        raise ValueError("native condition attestation parent must be a real directory")
+    payload = (report.model_dump_json(indent=2) + "\n").encode()
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return destination
+
+
+def _inspect_head_implementation_evidence(
+    manifest: NativeConditionPreflightManifest,
+    *,
+    root: Path,
+    head: str,
+    fixture_locator: str,
+    findings: list[NativeConditionPreflightFinding],
+) -> tuple[NativeImplementationEvidenceFile, ...]:
+    locators = tuple(
+        dict.fromkeys(
+            (
+                manifest.workflow_config_ref,
+                manifest.condition_matrix_ref,
+                fixture_locator,
+                *_IMPLEMENTATION_EVIDENCE_PATHS,
+            )
+        )
+    )
+    result: list[NativeImplementationEvidenceFile] = []
+    for locator in locators:
+        source_bytes = _git_object(root, manifest.source_commit, locator, findings)
+        head_bytes = _git_object(root, head, locator, findings)
+        if source_bytes is None or head_bytes is None:
+            continue
+        source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+        head_sha256 = hashlib.sha256(head_bytes).hexdigest()
+        unchanged = source_sha256 == head_sha256
+        if not unchanged:
+            _add(
+                findings,
+                "implementation_evidence_drift",
+                f"native condition implementation changed after the pinned source: {locator}",
+            )
+        result.append(
+            NativeImplementationEvidenceFile(
+                path=locator,
+                source_sha256=source_sha256,
+                head_sha256=head_sha256,
+                unchanged=unchanged,
+            )
+        )
+    return tuple(result)
+
+
+def _inspect_fixture_workflow_safety(
+    config: object,
+    *,
+    fixture_path: Path,
+    condition_matrix_ref: str,
+    source_root: Path,
+    findings: list[NativeConditionPreflightFinding],
+) -> None:
+    expected_matrix = (source_root / condition_matrix_ref).resolve(strict=True)
+    observed_matrix = getattr(config, "native_condition_config", None)
+    safe = (
+        getattr(config, "execution_backend", None) == "scitaste-native"
+        and getattr(config, "provider", None) == "mock"
+        and getattr(config, "model", None) == "deterministic-controller"
+        and getattr(config, "native_preference_backend_config", None) is None
+        and getattr(config, "native_candidate_generation_enabled", None) is False
+        and getattr(config, "native_code_generation_config", None) is None
+        and getattr(config, "native_code_repair_config", None) is None
+        and getattr(config, "model_node_advisory", None) is None
+        and getattr(config, "tool_intelligence_advisory", None) is None
+        and observed_matrix == expected_matrix
+    )
+    if not safe:
+        _add(
+            findings,
+            "unsafe_fixture_workflow",
+            f"fixture workflow is not the bounded offline native condition path: {fixture_path}",
+        )
+
+
+def _run_condition_workflow_probes(
+    config: object,
+    *,
+    matrix: NativeConditionMatrix,
+    output_root: Path,
+    seed: int,
+    findings: list[NativeConditionPreflightFinding],
+) -> tuple[NativeConditionBehaviorProbe, ...]:
+    from scitaste.full_workflow import FullWorkflow
+    from scitaste.state.persistence import StateStore
+
+    probes: list[NativeConditionBehaviorProbe] = []
+    for condition in NativeTasteCondition:
+        condition_slug = condition.value.replace("-", "_")
+        condition_config = config.model_copy(
+            update={
+                "project_id": "native-condition-implementation-attestation",
+                "condition": condition.value,
+                "paper_id": f"{condition_slug}-attestation-paper",
+                "paper_directory": f"{condition_slug}-attestation-paper",
+                "paper_title": f"Native condition fixture: {condition.value}",
+            }
+        )
+        run_id = f"{condition_slug}-seed-{seed:02d}"
+        try:
+            result = FullWorkflow(seed=seed).run(
+                condition_config,
+                outputs_root=output_root,
+                run_id=run_id,
+            )
+            condition_payload = result.get("native_condition")
+            if not isinstance(condition_payload, dict):
+                raise ValueError("full workflow omitted native condition telemetry")
+            components = NativeConditionComponents.model_validate(
+                condition_payload.get("components")
+            )
+            run_root = (
+                output_root / "projects/native-condition-implementation-attestation/runs" / run_id
+            )
+            state = StateStore(run_root / "stages/figure").load()
+            search = next(
+                item
+                for item in state.decision_history
+                if item.selected_action.action_id == "discovery-search"
+            )
+            outcome = search.actual_outcome
+            if not isinstance(outcome, dict) or not isinstance(outcome.get("data"), dict):
+                raise ValueError("discovery search omitted native executor telemetry")
+            outcome_data = outcome["data"]
+            basis = outcome_data.get("result_basis")
+            if basis not in {
+                "knowledge-library-retrieval",
+                "workflow-component-receipt",
+            }:
+                raise ValueError("discovery search has an unknown result basis")
+            document_ids = outcome_data.get("retrieved_document_ids", [])
+            if not isinstance(document_ids, list) or not all(
+                isinstance(item, str) for item in document_ids
+            ):
+                raise ValueError("discovery search document IDs are malformed")
+            taste_ids = tuple(
+                sorted(
+                    {
+                        case_id
+                        for decision in state.decision_history
+                        for case_id in decision.retrieved_taste_cases
+                    }
+                )
+            )
+            expected = matrix.profile(condition).components
+            knowledge_expected = expected.knowledge_retrieval_enabled
+            taste_expected = expected.taste_retrieval.value != "disabled"
+            stages = result.get("stages")
+            if not isinstance(stages, dict):
+                raise ValueError("full workflow omitted stage summaries")
+            figure = stages.get("figure")
+            if not isinstance(figure, dict):
+                raise ValueError("full workflow omitted figure summary")
+            final_blockers = figure.get("final_blocking_findings")
+            if not isinstance(final_blockers, int):
+                raise ValueError("figure summary omitted final blocking finding count")
+            stage_names = tuple(stages)
+            contract_verified = bool(
+                condition_payload.get("condition_id") == condition.value
+                and components == expected
+                and condition_payload.get("integrity_gates_invariant") is True
+                and stage_names == _FIXTURE_STAGE_NAMES
+                and final_blockers == 0
+                and (
+                    (knowledge_expected and basis == "knowledge-library-retrieval" and document_ids)
+                    or (
+                        not knowledge_expected
+                        and basis == "workflow-component-receipt"
+                        and not document_ids
+                    )
+                )
+                and ((taste_expected and taste_ids) or (not taste_expected and not taste_ids))
+            )
+            if not contract_verified:
+                _add(
+                    findings,
+                    f"condition_contract_failed:{condition.value}",
+                    f"offline workflow did not preserve the {condition.value} component contract",
+                )
+            probes.append(
+                NativeConditionBehaviorProbe(
+                    condition_id=condition,
+                    components=components,
+                    stage_names=stage_names,
+                    decision_count=len(state.decision_history),
+                    knowledge_result_basis=basis,
+                    retrieved_document_count=len(document_ids),
+                    retrieved_taste_case_ids=taste_ids,
+                    final_blocking_findings=final_blockers,
+                    integrity_gates_invariant=(
+                        condition_payload.get("integrity_gates_invariant") is True
+                    ),
+                    condition_contract_verified=contract_verified,
+                )
+            )
+        except (OSError, RuntimeError, StopIteration, TypeError, ValueError) as exc:
+            _add(
+                findings,
+                f"condition_probe_failed:{condition.value}",
+                f"{type(exc).__name__}: {str(exc)[:1_000]}",
+            )
+    return tuple(probes)
+
+
+def _run_taste_routing_probe(
+    matrix: NativeConditionMatrix,
+    *,
+    workspace: Path,
+    seed: int,
+    findings: list[NativeConditionPreflightFinding],
+) -> NativeTasteRoutingProbe | None:
+    from scitaste.data.models import ProvenanceRecord, TasteCase
+    from scitaste.data.store import TasteLibrary
+    from scitaste.schema.actions import MetaAction, ResearchAction
+    from scitaste.state.research_state import ResearchState
+    from scitaste.taste.conditions import build_native_condition_runtime
+
+    try:
+        library = TasteLibrary(workspace / "routing-probe.jsonl")
+        library.add(
+            TasteCase(
+                case_id="matched-probe",
+                stage="DISCOVERY",
+                context_summary="Choose a bounded diagnostic action",
+                candidate_actions=[MetaAction.PROBE.value, MetaAction.SEARCH.value],
+                preferred_action=MetaAction.PROBE.value,
+                decision_principle="Use a source-matched diagnostic precedent.",
+                why_preferred="The matched precedent favors a bounded probe.",
+                provenance=[
+                    ProvenanceRecord(source_type="attestation", locator="fixture://matched")
+                ],
+                confidence=1.0,
+                retrieval_eligible=True,
+                domain_tags=["testing"],
+            )
+        )
+        library.add(
+            TasteCase(
+                case_id="mismatched-search",
+                stage="DISCOVERY",
+                context_summary="Choose a bounded diagnostic action",
+                candidate_actions=[MetaAction.PROBE.value, MetaAction.SEARCH.value],
+                preferred_action=MetaAction.SEARCH.value,
+                decision_principle="Use a source-disjoint precedent only in placebo routing.",
+                why_preferred="The mismatched precedent favors search.",
+                provenance=[
+                    ProvenanceRecord(source_type="attestation", locator="fixture://mismatched")
+                ],
+                confidence=1.0,
+                retrieval_eligible=True,
+                domain_tags=["biology"],
+            )
+        )
+        state = ResearchState(
+            project_id="native-condition-routing-attestation",
+            research_direction="Choose one bounded diagnostic action",
+            target_domain="testing",
+        )
+        actions = [
+            ResearchAction(action_id="probe", type=MetaAction.PROBE, description="Probe"),
+            ResearchAction(action_id="search", type=MetaAction.SEARCH, description="Search"),
+        ]
+        matched = build_native_condition_runtime(
+            matrix.profile(NativeTasteCondition.FULL),
+            seed=seed,
+            taste_library=library,
+        ).controller.decide(state=state, candidate_actions=actions)
+        mismatched = build_native_condition_runtime(
+            matrix.profile(NativeTasteCondition.MISMATCHED_PLACEBO),
+            seed=seed,
+            taste_library=library,
+        ).controller.decide(state=state, candidate_actions=actions)
+        matched_ids = tuple(matched.retrieved_taste_cases)
+        mismatched_ids = tuple(mismatched.retrieved_taste_cases)
+        disjoint = set(matched_ids).isdisjoint(mismatched_ids)
+        verified = bool(
+            matched_ids == ("matched-probe",)
+            and mismatched_ids == ("mismatched-search",)
+            and matched.selected_action.action_id == "probe"
+            and mismatched.selected_action.action_id == "search"
+            and disjoint
+        )
+        if not verified:
+            _add(
+                findings,
+                "taste_routing_probe_failed",
+                "matched and mismatched Taste conditions did not route disjoint precedents",
+            )
+        return NativeTasteRoutingProbe(
+            matched_case_ids=matched_ids,
+            mismatched_case_ids=mismatched_ids,
+            matched_selected_action_id=matched.selected_action.action_id,
+            mismatched_selected_action_id=mismatched.selected_action.action_id,
+            disjoint=disjoint,
+            verified=verified,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        _add(
+            findings,
+            "taste_routing_probe_failed",
+            f"{type(exc).__name__}: {str(exc)[:1_000]}",
+        )
+        return None
+
+
+def _run_critic_routing_probe(
+    matrix: NativeConditionMatrix,
+    *,
+    seed: int,
+    findings: list[NativeConditionPreflightFinding],
+) -> NativeCriticRoutingProbe | None:
+    from scitaste.schema.actions import MetaAction, ResearchAction
+    from scitaste.state.research_state import ResearchState
+    from scitaste.taste.conditions import build_native_condition_runtime
+
+    try:
+        state = ResearchState(
+            project_id="native-condition-critic-attestation",
+            research_direction="Choose one bounded diagnostic action",
+            target_domain="testing",
+        )
+        actions = [
+            ResearchAction(
+                action_id="probe",
+                type=MetaAction.PROBE,
+                description="Run a diagnostic probe",
+                expected_value={"information_gain": 0.25},
+            ),
+            ResearchAction(
+                action_id="commit",
+                type=MetaAction.FORMULATE_PROBLEM,
+                description="Commit before observing the system",
+                expected_value={"information_gain": 1.0, "problem_validity": 1.0},
+            ),
+        ]
+        control = build_native_condition_runtime(
+            matrix.profile(NativeTasteCondition.BASE),
+            seed=seed,
+            taste_library=None,
+        ).controller.decide(state=state, candidate_actions=actions)
+        critics = build_native_condition_runtime(
+            matrix.profile(NativeTasteCondition.CRITICS),
+            seed=seed,
+            taste_library=None,
+        ).controller.decide(state=state, candidate_actions=actions)
+        control_score = float(control.candidate_scores["commit"] or 0.0)
+        critics_score = float(critics.candidate_scores["commit"] or 0.0)
+        control_has = "Taste critics:" in control.rationale
+        critics_has = "Taste critics:" in critics.rationale
+        verified = bool(
+            control_score == 0.0
+            and critics_score < control_score
+            and not control_has
+            and critics_has
+            and critics.selected_action.action_id == "probe"
+        )
+        if not verified:
+            _add(
+                findings,
+                "critic_routing_probe_failed",
+                "native critics did not produce the expected bounded score evidence",
+            )
+        return NativeCriticRoutingProbe(
+            control_commit_score=control_score,
+            critics_commit_score=critics_score,
+            control_has_critic_rationale=control_has,
+            critics_has_critic_rationale=critics_has,
+            critics_selected_action_id=critics.selected_action.action_id,
+            verified=verified,
+        )
+    except (RuntimeError, TypeError, ValueError) as exc:
+        _add(
+            findings,
+            "critic_routing_probe_failed",
+            f"{type(exc).__name__}: {str(exc)[:1_000]}",
+        )
+        return None
 
 
 def _inspect_semantic_bindings(
@@ -606,13 +1259,20 @@ def _add(
 
 __all__ = [
     "CorpusParityDimension",
+    "NativeConditionBehaviorProbe",
+    "NativeConditionImplementationAttestation",
     "NativeConditionPreflightFinding",
     "NativeConditionPreflightInspection",
     "NativeConditionPreflightManifest",
     "NativeConditionPreflightReport",
     "NativeCorpusPairContract",
+    "NativeCriticRoutingProbe",
+    "NativeImplementationEvidenceFile",
     "NativePathRequirement",
     "NativeRequirementEvidence",
+    "NativeTasteRoutingProbe",
+    "attest_native_condition_implementations",
     "inspect_native_condition_preflight",
     "load_native_condition_preflight_manifest",
+    "save_native_condition_implementation_attestation",
 ]

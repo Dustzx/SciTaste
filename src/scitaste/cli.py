@@ -89,6 +89,7 @@ from scitaste.evaluation import (
     approve_source_archive_read,
     approve_source_projection,
     approve_structured_metadata_audit,
+    attest_native_condition_implementations,
     bind_objective_measurement_set,
     build_source_projection_plan,
     build_structured_metadata_audit_plan_bundle,
@@ -209,6 +210,7 @@ from scitaste.evaluation import (
     save_human_preference_analysis_report,
     save_json_content_audit_approval,
     save_json_content_audit_report,
+    save_native_condition_implementation_attestation,
     save_source_admission_report,
     save_source_archive_plan_report,
     save_source_archive_qualification_report,
@@ -1595,6 +1597,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(native_condition_preflight)
     native_condition_preflight.set_defaults(handler=_handle_evaluation_native_condition_preflight)
+    native_condition_attest = evaluation_commands.add_parser(
+        "native-condition-attest",
+        help="Execute all six native Taste conditions on a bounded offline fixture",
+    )
+    native_condition_attest.add_argument("--manifest", type=Path, required=True)
+    native_condition_attest.add_argument("--fixture-workflow", type=Path, required=True)
+    native_condition_attest.add_argument("--source-root", type=Path, default=Path("."))
+    native_condition_attest.add_argument("--workspace-root", type=Path, default=Path("."))
+    native_condition_attest.add_argument("--seed", type=int, default=7)
+    native_condition_attest.add_argument("--output", type=Path, default=None)
+    native_condition_attest.add_argument(
+        "--allow-local-fixture-execution",
+        action="store_true",
+        help="permit only the deterministic repository fixture; never a real task or model",
+    )
+    native_condition_attest.add_argument(
+        "--require-qualified",
+        action="store_true",
+        help="return nonzero unless every condition and route is behaviorally qualified",
+    )
+    _add_log_level_option(native_condition_attest)
+    native_condition_attest.set_defaults(handler=_handle_evaluation_native_condition_attest)
     taste_corpus_curation = evaluation_commands.add_parser(
         "taste-corpus-curation",
         help="Inspect or materialize dual-human-verified paired Taste corpora",
@@ -5499,6 +5523,31 @@ def _handle_evaluation_native_condition_preflight(args: argparse.Namespace) -> i
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_experiment_ready and not report.ready_for_experiment:
+        return 1
+    return 0
+
+
+def _handle_evaluation_native_condition_attest(args: argparse.Namespace) -> int:
+    inspection = load_native_condition_preflight_manifest(args.manifest)
+    report = attest_native_condition_implementations(
+        inspection,
+        fixture_workflow=args.fixture_workflow,
+        source_root=args.source_root,
+        workspace_root=args.workspace_root,
+        seed=args.seed,
+        allow_local_fixture_execution=args.allow_local_fixture_execution,
+    )
+    payload = {
+        "manifest_path": str(inspection.path),
+        "manifest_file_sha256": inspection.file_sha256,
+        **report.model_dump(mode="json"),
+    }
+    if args.output is not None:
+        payload["report_path"] = str(
+            save_native_condition_implementation_attestation(report, args.output)
+        )
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_qualified and not report.implementation_qualified:
         return 1
     return 0
 

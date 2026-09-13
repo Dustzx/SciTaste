@@ -32,43 +32,43 @@ systems:
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=full-scitaste
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
   - system_id: native-base
     role: ablation
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=native-base
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
   - system_id: native-knowledge
     role: ablation
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=native-knowledge
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
   - system_id: native-taste
     role: ablation
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=native-taste
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
   - system_id: native-critics
     role: ablation
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=native-critics
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
   - system_id: mismatched-taste-placebo
     role: ablation
     implementation_ref: scitaste@eca58df0b4c17387fb4974972a89bc9ea15031bd:full-workflow?condition=mismatched-taste-placebo
     availability: pending
     real_implementation: true
-    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    adapter_preflight_sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    adapter_preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    adapter_preflight_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
 tasks:
   - task_id: perception-temporal-action-loc
     benchmark_resource_id: mlrc-bench-code
