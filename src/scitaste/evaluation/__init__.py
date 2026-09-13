@@ -606,6 +606,8 @@ from scitaste.evaluation.source_projection import (
     save_source_projection_approval,
     save_source_projection_plan,
     save_source_projection_receipt,
+    source_projection_forbidden_exact_strings,
+    source_projection_protocol_sha256,
 )
 from scitaste.evaluation.structured_metadata_audit import (
     StructuredFieldObservation,
@@ -1299,5 +1301,7 @@ __all__ = [
     "save_taste_corpus_curation_report",
     "save_taste_corpus_pair_report",
     "screen_benchmark_metadata_population",
+    "source_projection_forbidden_exact_strings",
+    "source_projection_protocol_sha256",
     "summarize_evaluation_readiness",
 ]

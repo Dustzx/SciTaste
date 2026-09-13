@@ -283,6 +283,21 @@ For JSON scientific sources, passing content audit and human-governed source
 admission still does not make the bytes model-visible. The next no-read command
 freezes an exact terminal-field allowlist and an explicit exclusion set:
 
+For H0, hash that representation before source selection so both selection arms
+are committed to the same downstream treatment:
+
+```bash
+.venv/bin/scitaste evaluation source-projection-protocol \
+  --field problem_context:problem_context=/observed/problem/pointer \
+  --forbid-pointer /observed/outcome/pointer \
+  --forbid-exact-string '<leakage sentinel>' \
+  --held-out-source-group '<held-out source group>' \
+  --outcome-information withheld
+```
+
+The resulting `representation_protocol_sha256` belongs in the H0
+`reference-selection-plan` downstream envelope.
+
 ```bash
 .venv/bin/scitaste evaluation source-projection-plan \
   --plan-id '<new plan id>' \
@@ -290,6 +305,7 @@ freezes an exact terminal-field allowlist and an explicit exclusion set:
   --content-audit-report '<content audit report>' \
   --source-admission-proposal '<admission proposal>' \
   --source-admission-report '<admission report>' \
+  --reference-selection-report '<optional frozen H0 report>' \
   --workspace-root . --projection-output-root '<new relative output root>' \
   --field problem_context:problem_context=/observed/problem/pointer \
   --forbid-pointer /observed/outcome/pointer \
@@ -297,8 +313,12 @@ freezes an exact terminal-field allowlist and an explicit exclusion set:
   --created-at '<timezone-aware ISO-8601>' --output '<new plan path>'
 ```
 
-The plan includes every admitted source and no rejected source. It binds all
-five upstream control artifacts and proves each selected pointer is an audited
+Without the H0 option, the plan includes every admitted source and no rejected
+source. With it, schema 1.1 includes exactly the union of both frozen arms;
+quality-rejected prestige sources remain eligible only when audit, rights, and
+isolation evidence all pass, and natural overlap is projected once while both
+arm ledgers remain explicit. The plan binds all five base control artifacts plus
+the H0 report when present and proves each selected pointer is an audited
 terminal scalar field without external locator text. Creating it performs no
 source read. Materialization requires another exact owner approval followed by
 the explicit local switch:

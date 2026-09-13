@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed H0 source-arm identity continuity from deterministic selection to
+  model-visible source bytes. A pre-selection CLI now hashes the complete common
+  representation protocol; schema-1.1 projection binds that hash, the exact
+  source-admission artifact, and both frozen quality/prestige lists. The projector
+  materializes the arm union once, preserves natural overlap in separate ledgers,
+  and retains quality-rejected prestige sources only with independently verified
+  audit, rights, and isolation evidence. Approval remains local bounded projection
+  authority and grants no model, reviewer, GPU, API, or experiment use.
 - Added an executable H0 source-selection comparator for the title-critical
   Scientific Reference Quality claim. One complete, hash-bound mining pool now
   feeds a content-grounded quality selector and a type-separated prestige

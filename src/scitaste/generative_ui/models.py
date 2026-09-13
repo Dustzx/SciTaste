@@ -1394,7 +1394,7 @@ class ProjectProgressReferenceSelectionComparisonItem(BaseModel):
         "resolve_source_selection_controls",
         "regenerate_source_selection_plan",
         "approve_exact_source_selection",
-        "materialize_matched_h0_inputs",
+        "plan_h0_bound_source_projection",
     ]
     raw_source_content_read: Literal[False]
     model_calls_performed: Literal[False]
@@ -1419,7 +1419,7 @@ class ProjectProgressReferenceSelectionComparisonItem(BaseModel):
             raise ValueError("reference-selection status differs from its evidence")
         expected_gate = {
             "implementation_drift": "regenerate_source_selection_plan",
-            "selection_frozen": "materialize_matched_h0_inputs",
+            "selection_frozen": "plan_h0_bound_source_projection",
             "blocked": "resolve_source_selection_controls",
             "awaiting_owner_approval": "approve_exact_source_selection",
         }[self.status]

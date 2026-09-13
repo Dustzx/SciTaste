@@ -22,7 +22,7 @@ artifacts:
     sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 6ee77a1af4283de09792d3cfd4e1707e93cc88cb197fc0fca7c1021e5f627ea2
+    sha256: 61c7063ca9a02b3c88b47305e5b064145c177e7fd9a4015e1bd043b3ef364f74
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -40,7 +40,7 @@ artifacts:
     sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
-    sha256: 5abe94bfc4db2ecc622223c060cc6a4dffe0eb642a4257c72c798494f4e36845
+    sha256: 694539c4376ff89a85edd3326fc584d5fb181ec58058ce7e1399a1711981840c
   - artifact_id: scientific-reference-mining
     path: docs/SCIENTIFIC_REFERENCE_MINING.md
     sha256: a35c26b4fd8f265f4ce1ff4ff6deef18ba0acfd759296253c7dfc9cfbf1886d4

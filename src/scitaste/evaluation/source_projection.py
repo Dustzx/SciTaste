@@ -28,6 +28,10 @@ from scitaste.evaluation.acquisition import (
     load_dataset_acquisition_request,
 )
 from scitaste.evaluation.json_content_audit import JsonContentAuditReport
+from scitaste.evaluation.reference_selection_comparison import (
+    ReferenceSelectionChainInspection,
+    inspect_reference_selection_comparison_chain,
+)
 from scitaste.evaluation.source_admission import (
     SourceAdmissionProposal,
     SourceAdmissionReport,
@@ -56,6 +60,16 @@ _TREATMENT_LABELS = (
     "native-base",
     "native_base",
 )
+_H0_PLAN_FIELDS = (
+    "reference_selection_report",
+    "reference_selection_comparison_id",
+    "representation_protocol_sha256",
+    "quality_arm_source_ids",
+    "prestige_arm_source_ids",
+    "natural_cross_arm_overlap_source_ids",
+    "h0_source_arm_binding",
+)
+_H0_RECEIPT_FIELDS = _H0_PLAN_FIELDS
 
 
 class ProjectionSemanticRole(StrEnum):
@@ -88,6 +102,76 @@ class SourceProjectionField(BaseModel):
         if value == "/":
             raise ValueError("source projection cannot select the whole JSON document")
         return value
+
+
+def source_projection_protocol_sha256(
+    *,
+    fields: tuple[SourceProjectionField, ...],
+    forbidden_json_pointers: tuple[str, ...],
+    forbidden_model_visible_exact_strings: tuple[str, ...],
+    outcome_information_availability: OutcomeInformationAvailability,
+    maximum_projection_bytes_per_item: int,
+    maximum_total_projection_bytes: int,
+    serialization: str = "canonical-json-utf8-nfc-v1",
+    external_locator_text_allowed: bool = False,
+) -> str:
+    """Hash the complete treatment-invariant source representation protocol."""
+
+    if not fields:
+        raise ValueError("source-projection protocol requires at least one field")
+    _require_unique((field.output_name for field in fields), "projection protocol names")
+    _require_unique((field.json_pointer for field in fields), "projection protocol pointers")
+    _require_unique(forbidden_json_pointers, "forbidden projection protocol pointers")
+    for pointer in forbidden_json_pointers:
+        _pointer_tokens(pointer)
+    if not forbidden_json_pointers:
+        raise ValueError("source-projection protocol requires a forbidden pointer")
+    if any(
+        _pointer_overlaps(field.json_pointer, forbidden)
+        for field in fields
+        for forbidden in forbidden_json_pointers
+    ):
+        raise ValueError("a protocol projection pointer overlaps a forbidden pointer")
+    if outcome_information_availability is OutcomeInformationAvailability.WITHHELD and any(
+        field.semantic_role is ProjectionSemanticRole.OUTCOME for field in fields
+    ):
+        raise ValueError("withheld-outcome protocol cannot select an outcome field")
+    folded = [item.casefold() for item in forbidden_model_visible_exact_strings]
+    if any(not item for item in folded) or len(folded) != len(set(folded)):
+        raise ValueError("protocol forbidden strings must be non-empty and unique")
+    if not 0 < maximum_projection_bytes_per_item <= 16 * 1_048_576:
+        raise ValueError("per-item projection byte ceiling is outside the allowed range")
+    if not (
+        maximum_projection_bytes_per_item
+        <= maximum_total_projection_bytes
+        <= _MAX_TOTAL_PROJECTION_BYTES
+    ):
+        raise ValueError("total projection byte ceiling is outside the allowed range")
+    if serialization != "canonical-json-utf8-nfc-v1" or external_locator_text_allowed:
+        raise ValueError("source-projection protocol must use the safe canonical representation")
+    return _canonical_sha256(
+        {
+            "protocol_id": "scitaste-source-projection-protocol-v1",
+            "fields": [field.model_dump(mode="json") for field in fields],
+            "forbidden_json_pointers": list(forbidden_json_pointers),
+            "forbidden_model_visible_exact_strings": list(forbidden_model_visible_exact_strings),
+            "outcome_information_availability": outcome_information_availability.value,
+            "maximum_projection_bytes_per_item": maximum_projection_bytes_per_item,
+            "maximum_total_projection_bytes": maximum_total_projection_bytes,
+            "serialization": serialization,
+            "external_locator_text_allowed": external_locator_text_allowed,
+        }
+    )
+
+
+def source_projection_forbidden_exact_strings(
+    *,
+    requested: tuple[str, ...],
+    held_out_source_group_ids: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Expand caller exclusions with invariant leakage sentinels."""
+
+    return tuple(dict.fromkeys((*requested, *held_out_source_group_ids, *_TREATMENT_LABELS)))
 
 
 class SourceProjectionControlBinding(BaseModel):
@@ -125,7 +209,7 @@ class SourceProjectionPlan(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     plan_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     created_at: datetime
@@ -134,6 +218,16 @@ class SourceProjectionPlan(BaseModel):
     content_audit_report: SourceProjectionControlBinding
     source_admission_proposal: SourceProjectionControlBinding
     source_admission_report: SourceProjectionControlBinding
+    reference_selection_report: SourceProjectionControlBinding | None = None
+    reference_selection_comparison_id: str | None = Field(default=None, pattern=_ID)
+    representation_protocol_sha256: str | None = Field(default=None, pattern=_SHA256)
+    quality_arm_source_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
+    prestige_arm_source_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
+    natural_cross_arm_overlap_source_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=100,
+    )
+    h0_source_arm_binding: bool = False
     raw_source_root: str = Field(min_length=1, max_length=2_000)
     projection_output_root: str = Field(min_length=1, max_length=2_000)
     fields: tuple[SourceProjectionField, ...] = Field(min_length=1, max_length=100)
@@ -204,12 +298,64 @@ class SourceProjectionPlan(BaseModel):
         folded = [item.casefold() for item in self.forbidden_model_visible_exact_strings]
         if any(not item for item in folded) or len(folded) != len(set(folded)):
             raise ValueError("forbidden model-visible strings must be non-empty and unique")
+        h0_values_absent = (
+            self.reference_selection_report is None
+            and self.reference_selection_comparison_id is None
+            and self.representation_protocol_sha256 is None
+            and not self.quality_arm_source_ids
+            and not self.prestige_arm_source_ids
+            and not self.natural_cross_arm_overlap_source_ids
+            and not self.h0_source_arm_binding
+        )
+        if self.schema_version == "1.0":
+            if not h0_values_absent:
+                raise ValueError("source-projection v1.0 cannot carry H0 arm bindings")
+            return self
+        if (
+            self.reference_selection_report is None
+            or self.reference_selection_comparison_id is None
+            or self.representation_protocol_sha256 is None
+            or not self.h0_source_arm_binding
+        ):
+            raise ValueError("source-projection v1.1 requires the complete H0 binding")
+        _require_unique(self.quality_arm_source_ids, "H0 quality-arm source IDs")
+        _require_unique(self.prestige_arm_source_ids, "H0 prestige-arm source IDs")
+        if len(self.quality_arm_source_ids) < 2 or len(self.quality_arm_source_ids) != len(
+            self.prestige_arm_source_ids
+        ):
+            raise ValueError("H0 source-projection arms require equal source counts")
+        expected_overlap = tuple(
+            sorted(set(self.quality_arm_source_ids) & set(self.prestige_arm_source_ids))
+        )
+        if self.natural_cross_arm_overlap_source_ids != expected_overlap:
+            raise ValueError("H0 source-projection overlap ledger differs")
+        selected_union = tuple(
+            dict.fromkeys((*self.quality_arm_source_ids, *self.prestige_arm_source_ids))
+        )
+        if selected_union != tuple(item.source_id for item in self.items):
+            raise ValueError("H0 source-projection items differ from the frozen arm union")
+        observed_protocol = source_projection_protocol_sha256(
+            fields=self.fields,
+            forbidden_json_pointers=self.forbidden_json_pointers,
+            forbidden_model_visible_exact_strings=self.forbidden_model_visible_exact_strings,
+            outcome_information_availability=self.outcome_information_availability,
+            maximum_projection_bytes_per_item=self.maximum_projection_bytes_per_item,
+            maximum_total_projection_bytes=self.maximum_total_projection_bytes,
+            serialization=self.serialization,
+            external_locator_text_allowed=self.external_locator_text_allowed,
+        )
+        if observed_protocol != self.representation_protocol_sha256:
+            raise ValueError("H0 source-projection representation protocol differs")
         return self
 
     @computed_field
     @property
     def plan_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"plan_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"plan_sha256"})
+        if self.schema_version == "1.0":
+            for field in _H0_PLAN_FIELDS:
+                payload.pop(field, None)
+        return _canonical_sha256(payload)
 
 
 class SourceProjectionPlanInspection(BaseModel):
@@ -225,7 +371,7 @@ class SourceProjectionApproval(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     approval_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     plan_file_sha256: str = Field(pattern=_SHA256)
@@ -234,7 +380,10 @@ class SourceProjectionApproval(BaseModel):
     projector_implementation_sha256: str = Field(pattern=_SHA256)
     approved_by: str = Field(min_length=1, max_length=200)
     approved_at: datetime
-    scope: Literal["exact-admitted-local-json-field-projection-only"]
+    scope: Literal[
+        "exact-admitted-local-json-field-projection-only",
+        "exact-h0-selected-local-json-field-projection-only",
+    ]
     expected_source_ids: tuple[str, ...] = Field(min_length=1, max_length=10_000)
     authorizes_local_source_read: Literal[True] = True
     authorizes_projection_write: Literal[True] = True
@@ -254,6 +403,13 @@ class SourceProjectionApproval(BaseModel):
     @model_validator(mode="after")
     def source_inventory_is_unique(self) -> SourceProjectionApproval:
         _require_unique(self.expected_source_ids, "approved projection source IDs")
+        expected_scope = (
+            "exact-h0-selected-local-json-field-projection-only"
+            if self.schema_version == "1.1"
+            else "exact-admitted-local-json-field-projection-only"
+        )
+        if self.scope != expected_scope:
+            raise ValueError("source-projection approval scope differs from its schema")
         return self
 
     @computed_field
@@ -305,7 +461,7 @@ class SourceProjectionReceipt(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     plan_id: str
     plan_file_sha256: str = Field(pattern=_SHA256)
     plan_sha256: str = Field(pattern=_SHA256)
@@ -321,6 +477,16 @@ class SourceProjectionReceipt(BaseModel):
     total_projection_bytes: int = Field(gt=0)
     outcome_information_availability: OutcomeInformationAvailability
     items: tuple[SourceProjectionItemReceipt, ...] = Field(min_length=1)
+    reference_selection_report: SourceProjectionControlBinding | None = None
+    reference_selection_comparison_id: str | None = Field(default=None, pattern=_ID)
+    representation_protocol_sha256: str | None = Field(default=None, pattern=_SHA256)
+    quality_arm_source_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
+    prestige_arm_source_ids: tuple[str, ...] = Field(default_factory=tuple, max_length=100)
+    natural_cross_arm_overlap_source_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
+        max_length=100,
+    )
+    h0_source_arm_binding: bool = False
     exact_source_bytes_verified: Literal[True] = True
     exact_field_allowlist_applied: Literal[True] = True
     forbidden_fields_excluded: Literal[True] = True
@@ -352,12 +518,51 @@ class SourceProjectionReceipt(BaseModel):
         if self.total_projection_bytes != sum(item.projection_size_bytes for item in self.items):
             raise ValueError("source-projection receipt byte count differs")
         _require_unique((item.source_id for item in self.items), "projected source IDs")
+        h0_values_absent = (
+            self.reference_selection_report is None
+            and self.reference_selection_comparison_id is None
+            and self.representation_protocol_sha256 is None
+            and not self.quality_arm_source_ids
+            and not self.prestige_arm_source_ids
+            and not self.natural_cross_arm_overlap_source_ids
+            and not self.h0_source_arm_binding
+        )
+        if self.schema_version == "1.0" and not h0_values_absent:
+            raise ValueError("source-projection receipt v1.0 cannot carry H0 arm bindings")
+        if self.schema_version == "1.1":
+            if (
+                self.reference_selection_report is None
+                or self.reference_selection_comparison_id is None
+                or self.representation_protocol_sha256 is None
+                or not self.h0_source_arm_binding
+            ):
+                raise ValueError("source-projection receipt v1.1 requires the H0 binding")
+            _require_unique(self.quality_arm_source_ids, "H0 receipt quality-arm source IDs")
+            _require_unique(self.prestige_arm_source_ids, "H0 receipt prestige-arm source IDs")
+            if len(self.quality_arm_source_ids) < 2 or len(self.quality_arm_source_ids) != len(
+                self.prestige_arm_source_ids
+            ):
+                raise ValueError("H0 receipt arms require equal source counts")
+            expected_overlap = tuple(
+                sorted(set(self.quality_arm_source_ids) & set(self.prestige_arm_source_ids))
+            )
+            if self.natural_cross_arm_overlap_source_ids != expected_overlap:
+                raise ValueError("H0 receipt overlap ledger differs")
+            expected_union = tuple(
+                dict.fromkeys((*self.quality_arm_source_ids, *self.prestige_arm_source_ids))
+            )
+            if expected_union != tuple(item.source_id for item in self.items):
+                raise ValueError("H0 receipt items differ from the frozen arm union")
         return self
 
     @computed_field
     @property
     def receipt_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"receipt_sha256"})
+        if self.schema_version == "1.0":
+            for field in _H0_RECEIPT_FIELDS:
+                payload.pop(field, None)
+        return _canonical_sha256(payload)
 
 
 def build_source_projection_plan(
@@ -368,6 +573,7 @@ def build_source_projection_plan(
     content_audit_report_path: str | Path,
     source_admission_proposal_path: str | Path,
     source_admission_report_path: str | Path,
+    reference_selection_report_path: str | Path | None = None,
     workspace_root: str | Path,
     projection_output_root: str,
     fields: tuple[SourceProjectionField, ...],
@@ -400,12 +606,65 @@ def build_source_projection_plan(
     audit_items = {item.item_id: item for item in audit.items}
     proposal_entries = {item.source_id: item for item in admission.proposal.entries}
     report_items = {item.source_id: item for item in admission_report.items}
-    selected_source_ids = admission_report.admitted_source_ids
-    if set(selected_source_ids) != {
-        source_id
-        for source_id, report in report_items.items()
-        if report.disposition is SourceAdmissionVerdict.ADMIT
-    }:
+    selection_chain: ReferenceSelectionChainInspection | None = None
+    quality_source_ids: tuple[str, ...] = ()
+    prestige_source_ids: tuple[str, ...] = ()
+    overlap_source_ids: tuple[str, ...] = ()
+    if reference_selection_report_path is not None:
+        selection_chain = inspect_reference_selection_comparison_chain(
+            reference_selection_report_path,
+            workspace_root=root,
+        )
+        _verify_h0_selection_upstream(
+            selection_chain,
+            admission_report_path_resolved,
+            admission_report_file_sha,
+            admission_report,
+            root,
+        )
+        if not selection_chain.implementation_current:
+            raise ValueError("reference-selection implementation has drifted")
+        if created_at < selection_chain.report.report.frozen_at:
+            raise ValueError("H0 source-projection plan cannot predate source selection")
+        quality_source_ids = tuple(
+            item.source_id for item in selection_chain.report.report.quality_selected
+        )
+        prestige_source_ids = tuple(
+            item.source_id for item in selection_chain.report.report.prestige_selected
+        )
+        overlap_source_ids = tuple(sorted(set(quality_source_ids) & set(prestige_source_ids)))
+        selected_source_ids = tuple(dict.fromkeys((*quality_source_ids, *prestige_source_ids)))
+        candidates = {
+            item.source_id: item
+            for item in selection_chain.plan.plan.candidates
+            if item.source_id is not None
+        }
+        for source_id in quality_source_ids:
+            report_item = report_items.get(source_id)
+            if report_item is None or report_item.disposition is not SourceAdmissionVerdict.ADMIT:
+                raise ValueError(f"H0 quality source {source_id!r} is not content admitted")
+        for source_id in prestige_source_ids:
+            candidate = candidates.get(source_id)
+            report_item = report_items.get(source_id)
+            if candidate is None or report_item is None or not candidate.downstream_eligible:
+                raise ValueError(f"H0 prestige source {source_id!r} is not downstream eligible")
+            if not (
+                report_item.audit_binding_verified
+                and report_item.rights_supported
+                and report_item.source_isolation_supported
+            ):
+                raise ValueError(f"H0 prestige source {source_id!r} lacks safe-use evidence")
+    else:
+        selected_source_ids = admission_report.admitted_source_ids
+    if (
+        set(selected_source_ids)
+        != {
+            source_id
+            for source_id, report in report_items.items()
+            if report.disposition is SourceAdmissionVerdict.ADMIT
+        }
+        and selection_chain is None
+    ):
         raise ValueError("source-admission admitted ledger is inconsistent")
 
     plan_items: list[SourceProjectionItemPlan] = []
@@ -413,19 +672,19 @@ def build_source_projection_plan(
         entry = proposal_entries.get(source_id)
         report_item = report_items.get(source_id)
         if entry is None or report_item is None:
-            raise ValueError(f"admitted source {source_id!r} is absent from the frozen population")
+            raise ValueError(f"selected source {source_id!r} is absent from the frozen population")
         audited = audit_items.get(entry.item_id)
         requested = request_items.get(entry.item_id)
         received = receipt_items.get(entry.item_id)
         if audited is None or requested is None or received is None:
-            raise ValueError(f"admitted source {source_id!r} is absent from the acquisition chain")
+            raise ValueError(f"selected source {source_id!r} is absent from the acquisition chain")
         if not (
             audited.exact_bytes_verified
             and audited.observed_sha256 == entry.source_content_sha256 == received.sha256
             and audited.observed_size_bytes == received.size_bytes
             and audited.destination == received.destination == requested.destination
         ):
-            raise ValueError(f"admitted source {source_id!r} byte binding has drifted")
+            raise ValueError(f"selected source {source_id!r} byte binding has drifted")
         observed = {item.json_pointer: item for item in audited.field_observations}
         for field in fields:
             shape = observed.get(field.json_pointer)
@@ -463,16 +722,26 @@ def build_source_projection_plan(
         missing = sorted(set(forbidden_json_pointers) - observed_forbidden)
         raise ValueError(f"forbidden projection pointers were not observed by audit: {missing}")
 
-    forbidden_strings = tuple(
-        dict.fromkeys(
-            (
-                *forbidden_model_visible_exact_strings,
-                *admission.proposal.held_out_source_group_ids,
-                *_TREATMENT_LABELS,
-            )
-        )
+    forbidden_strings = source_projection_forbidden_exact_strings(
+        requested=forbidden_model_visible_exact_strings,
+        held_out_source_group_ids=admission.proposal.held_out_source_group_ids,
     )
+    representation_protocol_sha = source_projection_protocol_sha256(
+        fields=fields,
+        forbidden_json_pointers=forbidden_json_pointers,
+        forbidden_model_visible_exact_strings=forbidden_strings,
+        outcome_information_availability=outcome_information_availability,
+        maximum_projection_bytes_per_item=maximum_projection_bytes_per_item,
+        maximum_total_projection_bytes=maximum_total_projection_bytes,
+    )
+    if (
+        selection_chain is not None
+        and selection_chain.plan.plan.downstream.representation_protocol_sha256
+        != representation_protocol_sha
+    ):
+        raise ValueError("H0 selection binds a different representation protocol")
     return SourceProjectionPlan(
+        schema_version="1.1" if selection_chain is not None else "1.0",
         plan_id=plan_id,
         project_id=request.request.project_id,
         created_at=created_at,
@@ -506,6 +775,26 @@ def build_source_projection_plan(
             admission_report.report_sha256,
             root,
         ),
+        reference_selection_report=(
+            _control_binding(
+                selection_chain.report.path,
+                selection_chain.report.file_sha256,
+                selection_chain.report.report.report_sha256,
+                root,
+            )
+            if selection_chain is not None
+            else None
+        ),
+        reference_selection_comparison_id=(
+            selection_chain.report.report.comparison_id if selection_chain is not None else None
+        ),
+        representation_protocol_sha256=(
+            representation_protocol_sha if selection_chain is not None else None
+        ),
+        quality_arm_source_ids=quality_source_ids,
+        prestige_arm_source_ids=prestige_source_ids,
+        natural_cross_arm_overlap_source_ids=overlap_source_ids,
+        h0_source_arm_binding=selection_chain is not None,
         raw_source_root=receipt.receipt.destination_root,
         projection_output_root=projection_output_root,
         fields=fields,
@@ -549,6 +838,7 @@ def approve_source_projection(
     if approved_at < plan.plan.created_at:
         raise ValueError("source-projection approval cannot predate the plan")
     return SourceProjectionApproval(
+        schema_version=plan.plan.schema_version,
         approval_id=f"{plan.plan.plan_id}-approval",
         project_id=plan.plan.project_id,
         plan_file_sha256=plan.file_sha256,
@@ -557,7 +847,11 @@ def approve_source_projection(
         projector_implementation_sha256=_module_sha256(),
         approved_by=approved_by,
         approved_at=approved_at,
-        scope="exact-admitted-local-json-field-projection-only",
+        scope=(
+            "exact-h0-selected-local-json-field-projection-only"
+            if plan.plan.schema_version == "1.1"
+            else "exact-admitted-local-json-field-projection-only"
+        ),
         expected_source_ids=tuple(item.source_id for item in plan.plan.items),
     )
 
@@ -677,6 +971,7 @@ def materialize_source_projections(
         shutil.rmtree(temporary, ignore_errors=True)
         raise
     return SourceProjectionReceipt(
+        schema_version=spec.schema_version,
         plan_id=spec.plan_id,
         plan_file_sha256=plan.file_sha256,
         plan_sha256=spec.plan_sha256,
@@ -692,6 +987,13 @@ def materialize_source_projections(
         total_projection_bytes=total_bytes,
         outcome_information_availability=spec.outcome_information_availability,
         items=tuple(receipts),
+        reference_selection_report=spec.reference_selection_report,
+        reference_selection_comparison_id=spec.reference_selection_comparison_id,
+        representation_protocol_sha256=spec.representation_protocol_sha256,
+        quality_arm_source_ids=spec.quality_arm_source_ids,
+        prestige_arm_source_ids=spec.prestige_arm_source_ids,
+        natural_cross_arm_overlap_source_ids=spec.natural_cross_arm_overlap_source_ids,
+        h0_source_arm_binding=spec.h0_source_arm_binding,
     )
 
 
@@ -760,6 +1062,36 @@ def _verify_projection_chain(
         raise ValueError("source-admission report is outside the proposal chain")
 
 
+def _verify_h0_selection_upstream(
+    chain: ReferenceSelectionChainInspection,
+    admission_path: Path,
+    admission_file_sha256: str,
+    admission: SourceAdmissionReport,
+    root: Path,
+) -> None:
+    """Prove the H0 selection and projection use the same source-admission bytes."""
+
+    selection_plan = chain.plan.plan
+    selection_report = chain.report.report
+    bound_admission = selection_plan.source_admission_report
+    if (
+        selection_plan.project_id != admission.project_id
+        or selection_report.project_id != admission.project_id
+        or not selection_report.ready_for_h0_materialization
+    ):
+        raise ValueError("reference selection is outside the source-projection project")
+    if (
+        bound_admission.file_sha256 != admission_file_sha256
+        or bound_admission.semantic_sha256 != admission.report_sha256
+        or _resolve_beneath(root, bound_admission.locator, require_exists=True)
+        != admission_path.resolve(strict=True)
+    ):
+        raise ValueError("reference selection binds a different source-admission report")
+    downstream_sha = _canonical_sha256(selection_plan.downstream.model_dump(mode="json"))
+    if selection_report.downstream_envelope_sha256 != downstream_sha:
+        raise ValueError("reference-selection downstream envelope has drifted")
+
+
 def _verify_projection_authority(
     plan: SourceProjectionPlanInspection,
     approval: SourceProjectionApprovalInspection,
@@ -805,6 +1137,37 @@ def _revalidate_control_chain(spec: SourceProjectionPlan, root: Path) -> None:
     proposal = load_source_admission_proposal(proposal_path)
     _, _, admission = _load_admission_report(admission_path)
     _verify_projection_chain(request, receipt, audit, proposal.proposal, admission)
+    if spec.schema_version == "1.1":
+        if spec.reference_selection_report is None:
+            raise ValueError("H0 source-projection reference-selection binding is absent")
+        reference_path = _resolve_control_binding(
+            spec.reference_selection_report,
+            root,
+            "reference-selection report",
+        )
+        chain = inspect_reference_selection_comparison_chain(reference_path, workspace_root=root)
+        if (
+            not chain.implementation_current
+            or chain.report.report.report_sha256 != spec.reference_selection_report.semantic_sha256
+        ):
+            raise ValueError("H0 reference-selection binding has drifted")
+        _verify_h0_selection_upstream(
+            chain,
+            admission_path,
+            spec.source_admission_report.file_sha256,
+            admission,
+            root,
+        )
+        quality_ids = tuple(item.source_id for item in chain.report.report.quality_selected)
+        prestige_ids = tuple(item.source_id for item in chain.report.report.prestige_selected)
+        if (
+            chain.report.report.comparison_id != spec.reference_selection_comparison_id
+            or quality_ids != spec.quality_arm_source_ids
+            or prestige_ids != spec.prestige_arm_source_ids
+            or chain.plan.plan.downstream.representation_protocol_sha256
+            != spec.representation_protocol_sha256
+        ):
+            raise ValueError("H0 source-projection arm binding has drifted")
 
 
 def _verify_raw_inventory(
@@ -1093,4 +1456,6 @@ __all__ = [
     "save_source_projection_approval",
     "save_source_projection_plan",
     "save_source_projection_receipt",
+    "source_projection_forbidden_exact_strings",
+    "source_projection_protocol_sha256",
 ]

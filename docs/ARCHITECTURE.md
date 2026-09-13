@@ -2838,3 +2838,33 @@ Generation-as-Content shows the strongest registered comparison state and its
 next gate without converting selection into an effectiveness claim. None of the
 four stages reads raw source bodies, materializes treatments, calls a model,
 recruits reviewers, runs an experiment, or authorizes those actions.
+
+### ADR-093: H0 arm identity continues through one common source projector
+
+Status: accepted and executable at protocol hashing, projection planning,
+approval, materialization, receipt, and replay boundaries; no real H0 source body
+has been opened by this decision and no H0 outcome exists.
+
+Freezing quality and prestige source lists is insufficient if the downstream
+projector accepts only content-quality admissions. Such a projector silently
+deletes the deliberately quality-blind prestige comparator. Conversely, a
+separate prestige reader would create a second representation pipeline and make
+field, outcome, serialization, and context differences indistinguishable from
+the source-selection effect.
+
+SciTaste therefore hashes the complete common representation protocol before H0
+selection and requires the selector's downstream envelope to bind it. The
+schema-1.1 projection plan replays the reference-selection chain, requires the
+same source-admission file and semantic identity, and carries the exact quality
+and prestige source lists plus their natural-overlap ledger. Its item population
+is exactly the ordered union of both arms. Quality sources must be content
+admitted; prestige sources may be quality rejected but must remain independently
+audit-, rights-, and isolation-qualified in both the selection view and the
+admission report.
+
+One existing canonical projector then writes every union source once. The
+receipt retains both logical arm ledgers, the protocol hash, exact upstream
+binding, and overlap rather than duplicating shared bytes. Planning reads no
+source body; materialization still requires exact approval and grants no
+tokenizer, model, API, human-review, GPU, or experiment authority. Schema 1.0
+hash semantics remain unchanged for non-H0 admitted-source projections.

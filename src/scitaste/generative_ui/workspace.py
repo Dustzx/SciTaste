@@ -1074,7 +1074,7 @@ class WorkspaceSurfaceFactory:
             run_ref = run_refs[run.run_id]
             status = "selection_frozen" if implementation_current else "implementation_drift"
             next_gate = (
-                "materialize_matched_h0_inputs"
+                "plan_h0_bound_source_projection"
                 if implementation_current
                 else "regenerate_source_selection_plan"
             )

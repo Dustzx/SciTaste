@@ -304,7 +304,7 @@
   "progress.reference_selection.next.resolve_source_selection_controls": "下一决策：补齐来源身份、质量、覆盖、权利或声望信号缺口。",
   "progress.reference_selection.next.regenerate_source_selection_plan": "下一决策：用当前确定性选择器重新生成计划。",
   "progress.reference_selection.next.approve_exact_source_selection": "下一决策：批准这组精确候选池、选择规则、分层与下游等价约束。",
-  "progress.reference_selection.next.materialize_matched_h0_inputs": "下一决策：为两个冻结臂生成完全同界的表示，再单独申请实验启动。",
+  "progress.reference_selection.next.plan_h0_bound_source_projection": "下一决策：将两个冻结臂绑定到同一预声明投影协议，再申请精确的本地投影许可。",
   "progress.reference_selection.boundary": "质量臂不可查看声望，声望臂不可查看内容质量；选择过程不打开原始来源、不调用模型、不运行实验，也不授予实验权限。",
   "progress.reference_selection.inspect": "检查来源选择证据",
   "progress.qualification.title": "已获取任务资格审计",

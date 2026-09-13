@@ -91,6 +91,18 @@ materialization, model/API calls, human review, GPU work, or experiment launch.
 The CLI chain is `reference-selection-plan` → `reference-selection-approve` →
 `reference-selection-freeze` → `reference-selection-inspect`.
 
+The representation identity is now concrete rather than a caller-chosen opaque
+label. `source-projection-protocol` hashes the ordered field/role projection,
+outcome policy, forbidden pointers and exact leakage sentinels, serialization,
+external-locator rule, and byte ceilings before H0 selection. After the selector
+is frozen, `source-projection-plan --reference-selection-report ...` must recover
+that same hash and the exact quality/prestige source IDs. Its schema-1.1 plan and
+receipt project the arm union once, preserve natural overlap in separate ledgers,
+and allow a quality-rejected prestige source only when the frozen candidate and
+admission report both prove exact audit, rights, and isolation eligibility. This
+projection approval still opens no tokenizer, model, API, reviewer, GPU, or
+experiment gate.
+
 ### H1: abstraction beyond retrieval
 
 Given the same source papers, source-quality tier, retrieval query, and context

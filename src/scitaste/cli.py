@@ -206,6 +206,8 @@ from scitaste.evaluation import (
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
     screen_benchmark_metadata_population,
+    source_projection_forbidden_exact_strings,
+    source_projection_protocol_sha256,
     summarize_evaluation_readiness,
 )
 from scitaste.evaluation.reference_selection_comparison import (
@@ -2196,6 +2198,32 @@ def build_parser() -> argparse.ArgumentParser:
     reference_selection_inspect.add_argument("--workspace-root", type=Path, default=Path("."))
     _add_log_level_option(reference_selection_inspect)
     reference_selection_inspect.set_defaults(handler=_handle_evaluation_reference_selection_inspect)
+    source_projection_protocol = evaluation_commands.add_parser(
+        "source-projection-protocol",
+        help="Hash a treatment-invariant source representation before H0 selection",
+    )
+    source_projection_protocol.add_argument(
+        "--field",
+        action="append",
+        required=True,
+        metavar="ROLE:OUTPUT_NAME=JSON_POINTER",
+    )
+    source_projection_protocol.add_argument("--forbid-pointer", action="append", required=True)
+    source_projection_protocol.add_argument("--forbid-exact-string", action="append", default=[])
+    source_projection_protocol.add_argument("--held-out-source-group", action="append", default=[])
+    source_projection_protocol.add_argument(
+        "--outcome-information",
+        choices=[item.value for item in OutcomeInformationAvailability],
+        required=True,
+    )
+    source_projection_protocol.add_argument(
+        "--maximum-projection-bytes-per-item", type=int, default=2 * 1_048_576
+    )
+    source_projection_protocol.add_argument(
+        "--maximum-total-projection-bytes", type=int, default=32 * 1_048_576
+    )
+    _add_log_level_option(source_projection_protocol)
+    source_projection_protocol.set_defaults(handler=_handle_evaluation_source_projection_protocol)
     source_projection_plan = evaluation_commands.add_parser(
         "source-projection-plan",
         help="Freeze admitted JSON fields for identical raw-RAG and Taste source use",
@@ -2206,6 +2234,11 @@ def build_parser() -> argparse.ArgumentParser:
     source_projection_plan.add_argument("--content-audit-report", type=Path, required=True)
     source_projection_plan.add_argument("--source-admission-proposal", type=Path, required=True)
     source_projection_plan.add_argument("--source-admission-report", type=Path, required=True)
+    source_projection_plan.add_argument(
+        "--reference-selection-report",
+        type=Path,
+        help="bind the exact frozen H0 quality/prestige source arms",
+    )
     source_projection_plan.add_argument("--workspace-root", type=Path, default=Path("."))
     source_projection_plan.add_argument("--projection-output-root", required=True)
     source_projection_plan.add_argument(
@@ -6322,9 +6355,9 @@ def _handle_evaluation_reference_selection_inspect(args: argparse.Namespace) -> 
     return 0
 
 
-def _handle_evaluation_source_projection_plan(args: argparse.Namespace) -> int:
+def _parse_source_projection_fields(raw_fields: list[str]) -> tuple[SourceProjectionField, ...]:
     fields: list[SourceProjectionField] = []
-    for raw in args.field:
+    for raw in raw_fields:
         try:
             role_and_name, pointer = raw.split("=", 1)
             role, output_name = role_and_name.split(":", 1)
@@ -6339,6 +6372,43 @@ def _handle_evaluation_source_projection_plan(args: argparse.Namespace) -> int:
                 semantic_role=ProjectionSemanticRole(role),
             )
         )
+    return tuple(fields)
+
+
+def _handle_evaluation_source_projection_protocol(args: argparse.Namespace) -> int:
+    fields = _parse_source_projection_fields(args.field)
+    forbidden_strings = source_projection_forbidden_exact_strings(
+        requested=tuple(args.forbid_exact_string),
+        held_out_source_group_ids=tuple(args.held_out_source_group),
+    )
+    protocol_sha256 = source_projection_protocol_sha256(
+        fields=fields,
+        forbidden_json_pointers=tuple(args.forbid_pointer),
+        forbidden_model_visible_exact_strings=forbidden_strings,
+        outcome_information_availability=OutcomeInformationAvailability(args.outcome_information),
+        maximum_projection_bytes_per_item=args.maximum_projection_bytes_per_item,
+        maximum_total_projection_bytes=args.maximum_total_projection_bytes,
+    )
+    print(
+        json.dumps(
+            {
+                "representation_protocol_sha256": protocol_sha256,
+                "fields": [field.model_dump(mode="json") for field in fields],
+                "forbidden_json_pointers": args.forbid_pointer,
+                "forbidden_model_visible_exact_strings": forbidden_strings,
+                "outcome_information_availability": args.outcome_information,
+                "source_content_read": False,
+                "authorizes_experiment": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_source_projection_plan(args: argparse.Namespace) -> int:
+    fields = _parse_source_projection_fields(args.field)
     plan = build_source_projection_plan(
         plan_id=args.plan_id,
         approved_request_path=args.approved_request,
@@ -6346,9 +6416,10 @@ def _handle_evaluation_source_projection_plan(args: argparse.Namespace) -> int:
         content_audit_report_path=args.content_audit_report,
         source_admission_proposal_path=args.source_admission_proposal,
         source_admission_report_path=args.source_admission_report,
+        reference_selection_report_path=args.reference_selection_report,
         workspace_root=args.workspace_root,
         projection_output_root=args.projection_output_root,
-        fields=tuple(fields),
+        fields=fields,
         forbidden_json_pointers=tuple(args.forbid_pointer),
         forbidden_model_visible_exact_strings=tuple(args.forbid_exact_string),
         outcome_information_availability=OutcomeInformationAvailability(args.outcome_information),

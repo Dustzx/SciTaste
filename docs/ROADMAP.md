@@ -27,6 +27,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.7 — decision-gap-driven reference mining | done | contrastive query families, marginal decision/evidence/domain coverage, source-group caps, and explicit saturation freeze a metadata-only audit cohort without ranking quality by prestige |
 | Phase 8.8 — real reference search and frozen replay | done | accepted concise queries drive bounded OpenAlex/Crossref metadata transactions; identity, record type, relevance, family, and grounded-domain gates freeze a replayable cohort before source-quality review |
 | Phase 8.9 — matched H0 source-selection freeze | done | one complete pool feeds type-separated quality and age-normalized-prestige selectors at exact source-count, pattern/role/domain-stratum, downstream-protocol, and token-budget parity; approval and replay still grant no experiment authority |
+| Phase 8.10 — H0 source-arm identity continuity | done | one predeclared representation hash and approval-gated projection bind the exact frozen quality/prestige arm union to identical canonical source bytes, preserve natural overlap once, and retain rejected-but-safe prestige sources without granting model or experiment authority |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
@@ -85,9 +86,15 @@ source-admission population, keeps the quality selector structurally blind to
 prestige, keeps the prestige selector structurally blind to content quality,
 matches the quality arm's pattern/role/domain strata, and preserves natural overlap.
 The project interface exposes whether controls are blocked, awaiting approval,
-or frozen. This closes experimental specification and provenance only; real
-source-list construction, treatment rendering, blinded judgments, and powered
-H0 outcomes remain open.
+or frozen. A schema-1.1 source projection now consumes that exact frozen report,
+admits the union of both arms (including quality-rejected but independently
+rights/audit/isolation-qualified prestige sources), writes natural overlaps once,
+and carries both arm ledgers into its receipt. The representation protocol is
+hashed before source selection and rechecked before projection, so a field,
+outcome, identity-exclusion, serialization, or byte-ceiling change fails closed.
+This closes specification and source-byte identity continuity only; real
+task-specific source-list construction, treatment rendering, blinded judgments,
+and powered H0 outcomes remain open.
 
 Reference discovery is no longer defined as a manually chosen top-k list. A
 proposal-only node expands each live decision and its evidence gaps into direct,
@@ -110,10 +117,12 @@ read source bodies or authorize field projection, model use, reviewer recruitmen
 or an experiment.
 
 The subsequent admission-to-model boundary is now executable as well. A no-read
-source-projection plan retains every admitted source, accepts only audited
+source-projection plan normally retains every admitted source, accepts only audited
 terminal JSON pointers, freezes forbidden outcome and identity fields, and binds
 one canonical byte representation to both same-source raw RAG and Taste
-abstraction. Materialization remains a separate owner-approved local read/write;
+abstraction. Its H0-bound mode instead retains the exact frozen quality/prestige
+union while independently requiring audit, rights, and isolation for every
+prestige source. Materialization remains a separate owner-approved local read/write;
 its receipt stops before tokenizer/model use. Real AAAR projection cannot be
 planned until content audit and the dual-human source-quality ledger exist.
 

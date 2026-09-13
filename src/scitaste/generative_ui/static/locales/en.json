@@ -304,7 +304,7 @@
   "progress.reference_selection.next.resolve_source_selection_controls": "Next decision: close source identity, quality, coverage, rights, or prestige-signal gaps.",
   "progress.reference_selection.next.regenerate_source_selection_plan": "Next decision: regenerate the plan with the current deterministic selector.",
   "progress.reference_selection.next.approve_exact_source_selection": "Next decision: approve this exact pool, selection rules, strata and downstream parity envelope.",
-  "progress.reference_selection.next.materialize_matched_h0_inputs": "Next decision: materialize identical bounded representations for both frozen arms, then request a separate experiment launch.",
+  "progress.reference_selection.next.plan_h0_bound_source_projection": "Next decision: bind both frozen arms to one predeclared projection protocol, then request exact local projection approval.",
   "progress.reference_selection.boundary": "The quality arm cannot inspect prestige; the prestige arm cannot inspect content quality. Selection does not open raw sources, call models, run experiments, or authorize them.",
   "progress.reference_selection.inspect": "Inspect source-selection evidence",
   "progress.qualification.title": "Acquired cohort qualification",

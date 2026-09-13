@@ -111,14 +111,24 @@ as Content presents this chain as a compact project decision card rather than an
 effectiveness result. Treatment rendering and experimental outcomes remain
 separate gates.
 
+H0 arm identity now continues into source projection. The representation
+protocol is content-addressed before selection; the H0-bound projection plan
+must match that exact protocol, the source-admission bytes used by the selector,
+and both frozen arm lists. The common projector materializes each source in the
+arm union exactly once, records natural overlap separately, and carries both arm
+ledgers into the receipt. Prestige-arm sources need not pass content-quality
+admission—that is the intended comparator—but they must still have exact audit,
+rights, and isolation evidence. Thus a quality rejection cannot silently remove
+the prestige treatment, and a prestige selection cannot bypass safe-use gates.
+
 ## Remaining evidence
 
 The method contract is executable, but the claim remains open. Real progress
-now requires separately authorized bounded content projection of acquired
+now requires separately authorized bounded content projection of task-specific acquired
 sources, real model proposals, two conflict-cleared reviewers, a real
 task-specific broad pool with observed prestige metadata, source-group-disjoint
 held-out cases, matched treatment materialization, and powered outcome analysis.
-The comparator selection algorithm is now frozen in software, but no formal H0
-source list or outcome exists. Until then, SciTaste has a falsifiable definition
+The comparator selection and arm-to-byte continuity algorithms are now frozen in
+software, but no formal H0 source list or outcome exists. Until then, SciTaste has a falsifiable definition
 and non-leaking comparator for a high-quality scientific reference, not evidence
 that the definition improves research.
