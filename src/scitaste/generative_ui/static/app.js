@@ -1251,6 +1251,10 @@ function renderProjectProgress(data) {
     names: ["recorded_project_status", "publication_ready"],
   }));
 
+  const evidenceProgram = data.evidence_program
+    ? renderEvidenceProgram(data.evidence_program)
+    : null;
+
   const metrics = document.createElement("div");
   metrics.className = "progress-metrics";
   metrics.append(
@@ -1743,6 +1747,9 @@ function renderProjectProgress(data) {
     activity,
   );
   details.append(detailsSummary, detailContent);
+  if (evidenceProgram) {
+    container.appendChild(evidenceProgram);
+  }
   container.appendChild(hero);
   if ((data.review_iterations || []).length > 0) {
     container.appendChild(reviewIterations);
@@ -1767,6 +1774,191 @@ function renderProjectProgress(data) {
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
+}
+
+function prepareEvidenceProgramQuestion(program, phase = null) {
+  const phaseName = phase
+    ? t(`progress.program.phase.${phase.label_code}`)
+    : t(`progress.program.phase.${program.current_phase_id}`);
+  intentQuestion.value = t("progress.program.question_prompt", {
+    phase: phaseName,
+    stage: readableCode(program.current_stage_id),
+  });
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function renderEvidenceProgram(data) {
+  const section = document.createElement("section");
+  section.className = "progress-section evidence-program";
+
+  const header = document.createElement("div");
+  header.className = "evidence-program-header";
+  const identity = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  appendText(eyebrow, t("progress.program.eyebrow", {venue: data.target_venue}));
+  const title = document.createElement("h3");
+  appendText(title, data.paper_title);
+  const summary = document.createElement("p");
+  summary.className = "muted compact-copy";
+  appendText(summary, t("progress.program.summary", {
+    completed: data.completed_stage_count,
+    total: data.total_stage_count,
+    next: data.next_stage_count,
+  }));
+  identity.append(eyebrow, title, summary);
+  const truth = document.createElement("div");
+  truth.className = "evidence-program-truth";
+  const binding = document.createElement("span");
+  binding.className = data.artifact_bindings_verified ? "program-badge verified" : "program-badge warning";
+  appendText(binding, data.artifact_bindings_verified
+    ? t("progress.program.bindings_verified")
+    : t("progress.program.bindings_unverified"));
+  const claim = document.createElement("span");
+  claim.className = "program-badge neutral";
+  appendText(claim, t("progress.program.effect_not_established"));
+  truth.append(binding, claim);
+  header.append(identity, truth);
+
+  const railShell = document.createElement("div");
+  railShell.className = "evidence-program-rail-shell";
+  railShell.setAttribute("aria-label", t("progress.program.rail_aria"));
+  const rail = document.createElement("ol");
+  rail.className = "evidence-program-rail";
+  data.phases.forEach((phase, index) => {
+    const item = document.createElement("li");
+    item.className = `evidence-program-phase state-${phase.state}`;
+    if (phase.phase_id === data.current_phase_id) item.classList.add("primary-current");
+    const marker = document.createElement("span");
+    marker.className = "program-phase-marker";
+    appendText(marker, index + 1);
+    const phaseCopy = document.createElement("div");
+    const phaseName = document.createElement("strong");
+    appendText(phaseName, t(`progress.program.phase.${phase.label_code}`));
+    const phaseState = document.createElement("small");
+    appendText(phaseState, t(`progress.program.state.${phase.state}`, {
+      completed: phase.completed_stage_count,
+      total: phase.stage_count,
+    }));
+    phaseCopy.append(phaseName, phaseState);
+    item.append(marker, phaseCopy);
+    if (phase.state === "current" || phase.state === "blocked") {
+      const explore = document.createElement("button");
+      explore.type = "button";
+      explore.className = "program-phase-action";
+      appendText(explore, t("progress.program.explore_phase"));
+      explore.addEventListener("click", () => prepareEvidenceProgramQuestion(data, phase));
+      item.appendChild(explore);
+    }
+    rail.appendChild(item);
+  });
+  railShell.appendChild(rail);
+
+  const decision = document.createElement("div");
+  decision.className = "evidence-program-decision";
+  const decisionCopy = document.createElement("div");
+  const decisionLabel = document.createElement("span");
+  decisionLabel.className = "card-label";
+  appendText(decisionLabel, t("progress.program.current_gate"));
+  const decisionTitle = document.createElement("strong");
+  appendText(decisionTitle, readableCode(data.current_stage_id));
+  const decisionBody = document.createElement("p");
+  appendText(decisionBody, data.current_decision);
+  decisionCopy.append(decisionLabel, decisionTitle, decisionBody);
+  const gateFacts = document.createElement("div");
+  gateFacts.className = "evidence-program-gate-facts";
+  const blockers = document.createElement("span");
+  appendText(blockers, t("progress.program.blockers", {count: data.current_blocker_count}));
+  const approval = document.createElement("span");
+  appendText(approval, data.current_owner_approval_required
+    ? t("progress.program.owner_decision_required")
+    : t("progress.program.owner_decision_not_required"));
+  gateFacts.append(blockers, approval);
+  for (const action of data.current_external_actions) {
+    const actionTag = document.createElement("span");
+    appendText(actionTag, t("progress.program.external_action", {action: localizedCode(action)}));
+    gateFacts.appendChild(actionTag);
+  }
+  const controls = document.createElement("div");
+  controls.className = "evidence-program-controls";
+  const inspect = document.createElement("button");
+  inspect.type = "button";
+  inspect.className = "secondary-button";
+  appendText(inspect, t("progress.program.open_evidence"));
+  inspect.addEventListener("click", () => loadWorkspace({
+    view: "run-stage-explorer",
+    project_id: currentProjectId(),
+    run_id: data.run_id,
+  }));
+  const discuss = document.createElement("button");
+  discuss.type = "button";
+  discuss.className = "primary-button";
+  appendText(discuss, t("progress.program.propose_revision"));
+  discuss.addEventListener("click", () => prepareEvidenceProgramQuestion(data));
+  controls.append(inspect, discuss);
+  decision.append(decisionCopy, gateFacts, controls);
+
+  const tracks = document.createElement("div");
+  tracks.className = "evidence-program-tracks";
+  for (const track of data.tracks) {
+    const card = document.createElement("article");
+    card.className = `evidence-program-track state-${track.state}`;
+    const trackRole = document.createElement("strong");
+    appendText(trackRole, t(`progress.program.track.${track.role}`));
+    const trackState = document.createElement("span");
+    trackState.className = "program-track-state";
+    appendText(trackState, t(`progress.program.track_state.${track.state}`));
+    const measure = document.createElement("small");
+    if (track.planned_cells !== null) {
+      appendText(measure, t("progress.program.cells_designed", {count: track.planned_cells}));
+    } else if (track.population_floor !== null) {
+      appendText(measure, t("progress.program.population_floor", {count: track.population_floor}));
+    } else {
+      appendText(measure, t("progress.program.matrix_unfrozen"));
+    }
+    const resource = document.createElement("small");
+    appendText(resource, t("progress.program.resource_kind", {
+      resource: localizedCode(track.resource_kind),
+      blockers: track.blocker_count,
+    }));
+    card.append(trackRole, trackState, measure, resource);
+    tracks.appendChild(card);
+  }
+
+  const details = document.createElement("details");
+  details.className = "evidence-program-details";
+  const detailsSummary = document.createElement("summary");
+  appendText(detailsSummary, t("progress.program.open_scope"));
+  const question = document.createElement("p");
+  const questionLabel = document.createElement("strong");
+  appendText(questionLabel, `${t("progress.program.central_question")} `);
+  question.append(questionLabel);
+  appendText(question, data.central_question);
+  const boundary = document.createElement("p");
+  const boundaryLabel = document.createElement("strong");
+  appendText(boundaryLabel, `${t("progress.program.claim_boundary")} `);
+  boundary.append(boundaryLabel);
+  appendText(boundary, data.claim_boundary);
+  details.append(detailsSummary, question, boundary, evidenceDisclosure(data.support_ref_ids, {
+    data: {
+      dossier_id: data.dossier_id,
+      dossier_sha256: data.dossier_sha256,
+      exact_designed_cells: data.exact_cell_count,
+      no_external_action_performed: data.no_external_action_performed,
+      scientific_effectiveness_established: data.scientific_effectiveness_established,
+    },
+    names: [
+      "dossier_id",
+      "dossier_sha256",
+      "exact_designed_cells",
+      "no_external_action_performed",
+      "scientific_effectiveness_established",
+    ],
+  }));
+
+  section.append(header, railShell, decision, tracks, details);
+  return section;
 }
 
 function renderReviewIterations(items) {

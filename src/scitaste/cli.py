@@ -703,6 +703,7 @@ def build_parser() -> argparse.ArgumentParser:
             "autoresearch-evaluation-landscape-v4",
             "autoresearch-evaluation-landscape-v5",
             "autoresearch-evaluation-landscape-v6",
+            "iclr-evidence-program-v1",
         ],
         default=None,
     )

@@ -69,6 +69,12 @@ from scitaste.generative_ui.audit import (
     ProposalIssuedAudit,
     SurfaceAuditLog,
 )
+from scitaste.generative_ui.evidence_program import (
+    find_current_action_run,
+    find_iclr_evidence_program_run,
+    load_iclr_evidence_program_report,
+    project_iclr_evidence_program,
+)
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError, ProjectSurfaceFactory
 from scitaste.generative_ui.models import (
     ActionBinding,
@@ -583,6 +589,64 @@ class WorkspaceSurfaceFactory:
                         "support_ref_ids": [project_ref.evidence_id, run_ref.evidence_id],
                     }
                 )
+
+        evidence_program = None
+        evidence_program_artifact_ref = None
+        evidence_program_run = find_iclr_evidence_program_run(snapshot)
+        if evidence_program_run is not None:
+            if evidence_program_run.artifact is None:  # pragma: no cover - adapter rejects first
+                raise ProjectSurfaceChangedError(
+                    "registered ICLR evidence program does not declare an artifact"
+                )
+            report, report_file_sha256 = load_iclr_evidence_program_report(
+                self._runtime.projects_root / snapshot.project_id,
+                evidence_program_run,
+            )
+            if report.dossier_id.split("-scitaste-")[0] != "iclr2027":
+                raise ProjectSurfaceChangedError(
+                    "registered ICLR evidence program has an unexpected dossier identity"
+                )
+            evidence_program_artifact_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.ARTIFACT,
+                evidence_program_run.artifact,
+            )
+            if evidence_program_artifact_ref.sha256 != report_file_sha256:
+                raise ProjectSurfaceChangedError(
+                    "registered ICLR evidence program changed during projection"
+                )
+            program_run_ref = run_refs[evidence_program_run.run_id]
+            provisional_current_stage_id = (
+                report.next_stage_ids[0]
+                if report.next_stage_ids
+                else next(
+                    (
+                        stage.stage_id
+                        for stage in report.stages
+                        if stage.state.value != "complete"
+                    ),
+                    report.stages[-1].stage_id,
+                )
+            )
+            current_action_run = find_current_action_run(
+                snapshot,
+                provisional_current_stage_id,
+            )
+            current_action_run_ref_id = (
+                run_refs[current_action_run.run_id].evidence_id
+                if current_action_run is not None
+                else None
+            )
+            evidence_program = project_iclr_evidence_program(
+                report,
+                run=evidence_program_run,
+                project_ref_id=project_ref.evidence_id,
+                run_ref_id=program_run_ref.evidence_id,
+                artifact_ref_id=evidence_program_artifact_ref.evidence_id,
+                current_action_run=current_action_run,
+                current_action_run_ref_id=current_action_run_ref_id,
+            )
+            evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
 
         acquisition_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
@@ -1992,7 +2056,11 @@ class WorkspaceSurfaceFactory:
             evidence_ref_ids=list(dict.fromkeys(evidence_ref_ids)),
             data={
                 "project_ref_id": project_ref.evidence_id,
-                "summary_ref_ids": [project_ref.evidence_id],
+                "summary_ref_ids": (
+                    list(evidence_program.support_ref_ids)
+                    if evidence_program is not None
+                    else [project_ref.evidence_id]
+                ),
                 "project_status": snapshot.manifest.status,
                 "project_state": _progress_state(snapshot.manifest.status),
                 "publication_ready": snapshot.manifest.publication_ready,
@@ -2051,6 +2119,11 @@ class WorkspaceSurfaceFactory:
                     "gates": lifecycle_gates,
                     "support_ref_ids": list(dict.fromkeys(lifecycle_ref_ids)),
                 },
+                "evidence_program": (
+                    evidence_program.model_dump(mode="json")
+                    if evidence_program is not None
+                    else None
+                ),
                 "current_run_id": snapshot.manifest.current_run,
                 "current_run_ref_id": current_run_ref_id,
                 "current_run_status": current_run_status,
@@ -2155,6 +2228,13 @@ class WorkspaceSurfaceFactory:
                 EvidenceKind.STAGE_RECORD.value,
                 "Completed stage history",
                 "contains-stage-history",
+            )
+        if evidence_program is not None and evidence_program_artifact_ref is not None:
+            connect_to_project(
+                evidence_program_artifact_ref.evidence_id,
+                EvidenceKind.ARTIFACT.value,
+                f"Evidence program · {evidence_program.target_venue}",
+                "declares-evidence-program",
             )
 
         evidence_graph = ComponentSpec(

@@ -1998,6 +1998,163 @@ class ProjectLifecycleSummaryData(BaseModel):
         return self
 
 
+class ProjectEvidenceProgramPhaseItem(BaseModel):
+    """One collapsed phase in a project-owned scientific evidence program."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    phase_id: Literal[
+        "research-basis",
+        "taste-instrument",
+        "method-readiness",
+        "independent-review",
+        "prepilot-evidence",
+        "formal-evidence",
+        "paper-review-loop",
+    ]
+    label_code: SafeIdentifier
+    state: Literal["complete", "current", "blocked", "future"]
+    stage_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    decision_stage_ids: tuple[SafeIdentifier, ...] = ()
+    completed_stage_count: int = Field(ge=0)
+    stage_count: int = Field(gt=0)
+    blocker_count: int = Field(ge=0)
+    owner_approval_required: bool
+    external_actions: tuple[SafeIdentifier, ...] = ()
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def phase_counts_and_references_are_closed(self) -> ProjectEvidenceProgramPhaseItem:
+        if self.completed_stage_count > self.stage_count:
+            raise ValueError("evidence-program completed stages cannot exceed all stages")
+        if len(self.stage_ids) != self.stage_count or len(self.stage_ids) != len(
+            set(self.stage_ids)
+        ):
+            raise ValueError("evidence-program phase stage IDs must be complete and unique")
+        if set(self.decision_stage_ids) - set(self.stage_ids):
+            raise ValueError("evidence-program decision stages must belong to their phase")
+        for values in (
+            self.decision_stage_ids,
+            self.external_actions,
+            self.support_ref_ids,
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError("evidence-program phase values must be unique")
+        if self.state == "complete" and self.completed_stage_count != self.stage_count:
+            raise ValueError("a complete evidence-program phase requires every stage")
+        if self.state == "current" and not self.decision_stage_ids:
+            raise ValueError("a current evidence-program phase requires a next decision")
+        return self
+
+
+class ProjectEvidenceProgramTrackItem(BaseModel):
+    """One scientific claim track without implying that its experiment has run."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    track_id: SafeIdentifier
+    role: Literal[
+        "scientific_taste_mechanism",
+        "native_taste_causal",
+        "end_to_end_external_systems",
+        "small_model_robustness",
+    ]
+    state: Literal["design_only", "blocked", "ready_for_decision"]
+    resource_kind: Literal["unselected", "api", "gpu"]
+    planned_cells: int | None = Field(default=None, gt=0)
+    population_floor: int | None = Field(default=None, gt=0)
+    blocker_count: int = Field(ge=0)
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
+
+    @model_validator(mode="after")
+    def track_state_is_truthful(self) -> ProjectEvidenceProgramTrackItem:
+        if self.state == "ready_for_decision" and self.blocker_count:
+            raise ValueError("a decision-ready evidence track cannot retain blockers")
+        if self.state != "ready_for_decision" and not self.blocker_count:
+            raise ValueError("a non-ready evidence track requires blockers")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("evidence-program track references must be unique")
+        return self
+
+
+class ProjectEvidenceProgramData(BaseModel):
+    """Compact, content-bound ICLR evidence roadmap projected from one run artifact."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_id: str = Field(max_length=255, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    run_ref_id: SafeIdentifier
+    artifact_ref_id: SafeIdentifier
+    dossier_id: SafeIdentifier
+    dossier_sha256: Sha256
+    paper_title: SafeText
+    target_venue: SafeText
+    central_question: SafeText
+    claim_boundary: SafeText
+    artifact_bindings_verified: bool
+    exact_cell_count: int = Field(ge=0)
+    total_stage_count: int = Field(gt=0)
+    completed_stage_count: int = Field(ge=0)
+    next_stage_count: int = Field(ge=0)
+    current_phase_id: SafeIdentifier
+    current_stage_id: SafeIdentifier
+    current_decision: SafeText
+    current_blocker_count: int = Field(ge=0)
+    current_owner_approval_required: bool
+    current_external_actions: tuple[SafeIdentifier, ...] = ()
+    current_action_run_id: str | None = Field(
+        default=None,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    current_action_run_ref_id: SafeIdentifier | None = None
+    phases: tuple[ProjectEvidenceProgramPhaseItem, ...] = Field(min_length=7, max_length=7)
+    tracks: tuple[ProjectEvidenceProgramTrackItem, ...] = Field(min_length=1, max_length=4)
+    scientific_effectiveness_established: Literal[False] = False
+    no_external_action_performed: Literal[True] = True
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
+
+    @model_validator(mode="after")
+    def evidence_program_is_closed(self) -> ProjectEvidenceProgramData:
+        expected_phases = (
+            "research-basis",
+            "taste-instrument",
+            "method-readiness",
+            "independent-review",
+            "prepilot-evidence",
+            "formal-evidence",
+            "paper-review-loop",
+        )
+        if tuple(item.phase_id for item in self.phases) != expected_phases:
+            raise ValueError("evidence-program phases must remain in canonical order")
+        if self.current_phase_id not in expected_phases:
+            raise ValueError("evidence-program current phase must be registered")
+        if self.current_stage_id not in {
+            stage_id for phase in self.phases for stage_id in phase.stage_ids
+        }:
+            raise ValueError("evidence-program current stage must be registered")
+        if self.completed_stage_count > self.total_stage_count:
+            raise ValueError("completed evidence-program stages cannot exceed all stages")
+        if sum(item.stage_count for item in self.phases) != self.total_stage_count:
+            raise ValueError("evidence-program phases must cover every dossier stage")
+        if sum(item.completed_stage_count for item in self.phases) != self.completed_stage_count:
+            raise ValueError("evidence-program completed-stage counts must agree")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("evidence-program references must be unique")
+        required_refs = {self.run_ref_id, self.artifact_ref_id}
+        if self.current_action_run_ref_id is not None:
+            required_refs.add(self.current_action_run_ref_id)
+        if required_refs - set(self.support_ref_ids):
+            raise ValueError("evidence-program evidence is outside its support set")
+        if (self.current_action_run_id is None) != (self.current_action_run_ref_id is None):
+            raise ValueError("evidence-program action run identity must be complete")
+        if any(set(item.support_ref_ids) - set(self.support_ref_ids) for item in self.phases):
+            raise ValueError("evidence-program phase evidence is outside its support set")
+        if any(set(item.support_ref_ids) - set(self.support_ref_ids) for item in self.tracks):
+            raise ValueError("evidence-program track evidence is outside its support set")
+        return self
+
+
 class ProjectProgressBoardData(BaseModel):
     """Evidence-native project status without guessed schedules or percentages."""
 
@@ -2019,6 +2176,7 @@ class ProjectProgressBoardData(BaseModel):
     milestone_reason_code: SafeIdentifier
     counts: ProjectProgressCounts
     lifecycle: ProjectLifecycleSummaryData
+    evidence_program: ProjectEvidenceProgramData | None = None
     current_run_id: str | None = Field(
         default=None,
         max_length=255,
@@ -2127,6 +2285,11 @@ class ProjectProgressBoardData(BaseModel):
         )
         if any(self.project_ref_id not in item.support_ref_ids for item in grounded_rows):
             raise ValueError("every project progress claim must cite the project manifest")
+        if self.evidence_program is not None:
+            if self.project_ref_id not in self.evidence_program.support_ref_ids:
+                raise ValueError("project evidence program must cite the project manifest")
+            if set(self.evidence_program.support_ref_ids) - set(self.summary_ref_ids):
+                raise ValueError("project evidence program must remain inside summary evidence")
 
         paper_ids = [item.paper_id for item in self.papers]
         if len(paper_ids) != len(set(paper_ids)):

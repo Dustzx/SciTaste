@@ -1344,6 +1344,26 @@ citation/resource screen and exact adapters/licenses remain open.
   outcomes. If crossed-reviewer dependence is material, implement and register
   that model before—not after—formal outcomes are opened.
 
+## Generation as Content evidence-program home
+
+- Done: the current ICLR campaign report is registered as an immutable,
+  run-owned self-development artifact and appears before the long project-run
+  synopsis.
+- Done: the project home shows seven evidence phases, three distinct claim
+  tracks, the primary current gate, parallel next gates, blocker counts,
+  resource/action class, owner-decision status, and the explicit no-effect/no-
+  execution boundary without a completion percentage.
+- Done: phase exploration and plan discussion return to the persistent project
+  conversation interface while preserving read-only authority.
+- Next: admit model-authored planning amendments through a typed diff and an
+  explicit controller decision, then publish an immutable successor dossier.
+- Next: project the secret-free project resource binding into the same home and
+  provide a controlled configuration-revision flow rather than exposing shared
+  registry files or credentials.
+- Next: make Tool Intelligence select direct execution, a cheap bounded probe,
+  or a full preflight from declared reversibility, expected loss, and action
+  cost; a model may advise but cannot weaken deterministic hard-safety gates.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

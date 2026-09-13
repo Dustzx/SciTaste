@@ -40,6 +40,11 @@ from scitaste.evaluation import (
     save_structured_metadata_audit_plan_bundle,
 )
 from scitaste.evaluation import structured_metadata_audit as audit_module
+from scitaste.evaluation.decision_dossier import (
+    inspect_experiment_decision_dossier,
+    load_experiment_decision_dossier,
+    save_experiment_decision_dossier_report,
+)
 from scitaste.generative_ui import (
     IntentGoal,
     ProjectProgressQuery,
@@ -1310,3 +1315,70 @@ def test_progress_component_rejects_ungrounded_rows_and_extra_percentage(
         SurfaceSpec.model_validate(payload)
 
     assert document.renderer.execution_authority == "none"
+
+
+def test_progress_projects_registered_iclr_evidence_program_without_execution(
+    tmp_path: Path,
+) -> None:
+    runtime, snapshot = _create_runtime(tmp_path)
+    snapshot = _begin_run(
+        runtime,
+        snapshot,
+        run_id="quality-calibration",
+        status="planned-awaiting-owner-resource-review",
+        stage_path="reference_quality_calibration",
+    )
+    program_run_id = "iclr-evidence-program"
+    artifact = f"runs/{program_run_id}/iclr_evidence_program/REPORT.json"
+    snapshot = _begin_run(
+        runtime,
+        snapshot,
+        run_id=program_run_id,
+        status="complete-no-run-campaign-projection",
+        stage_path="iclr_evidence_program",
+        artifact=artifact,
+        generative_ui_projection="iclr-evidence-program-v1",
+    )
+    repository = Path(__file__).resolve().parents[2]
+    dossier = load_experiment_decision_dossier(
+        repository / "configs/evaluation/campaigns/iclr2027_self_development_v1.yaml"
+    ).dossier
+    report = inspect_experiment_decision_dossier(dossier, evidence_root=repository)
+    save_experiment_decision_dossier_report(
+        report,
+        runtime.projects_root / "progress-project" / artifact,
+    )
+
+    document, data = _progress(runtime)
+    program = data["evidence_program"]
+
+    assert snapshot.revision == 2
+    assert program["paper_title"] == (
+        "SciTaste: Improving Autonomous Research through Scientific Taste"
+    )
+    assert program["target_venue"] == "ICLR 2027"
+    assert program["completed_stage_count"] == 3
+    assert program["total_stage_count"] == 16
+    assert program["current_phase_id"] == "taste-instrument"
+    assert program["current_stage_id"] == "qualify-scientific-taste-source-pilot"
+    assert program["current_action_run_id"] == "quality-calibration"
+    assert program["scientific_effectiveness_established"] is False
+    assert program["no_external_action_performed"] is True
+    assert [item["phase_id"] for item in program["phases"]] == [
+        "research-basis",
+        "taste-instrument",
+        "method-readiness",
+        "independent-review",
+        "prepilot-evidence",
+        "formal-evidence",
+        "paper-review-loop",
+    ]
+    assert [item["state"] for item in program["phases"][:3]] == [
+        "complete",
+        "current",
+        "current",
+    ]
+    assert [item["planned_cells"] for item in program["tracks"]] == [None, 12, 6]
+    assert set(program["support_ref_ids"]).issubset(
+        set(document.renderer.components[0].evidence_ref_ids)
+    )

@@ -3200,3 +3200,31 @@ download policy: its resolved PyTorch 2.5.1/CUDA 12.4 transaction comprised 19
 new wheels and 3,005,789,578 bytes, below the decimal 10-GB ceiling. Import and
 device visibility are verified, but dependency readiness does not satisfy the
 independent `--allow-local` execution gate.
+
+### ADR-106: The evidence program is project content before it is interface layout
+
+Status: accepted and exercised on the SciTaste self-development project; no
+experiment, model generation, API call, GPU work, or resource mutation was
+performed.
+
+An ICLR plan spread across configs, runs, evaluation proposals, resource
+records, and prose is technically traceable but not cognitively usable. The
+Generation as Content project home therefore discovers only an explicitly
+registered `iclr-evidence-program-v1` run and its run-owned, bounded dossier
+report. The snapshot adapter hashes both the declaring run directory and exact
+report; a missing, moved, malformed, oversized, or changed report fails the
+whole projection rather than falling back to documentation.
+
+The receiver collapses the 16-stage campaign DAG into seven stable navigation
+phases while retaining the raw stage graph in the report. It separately shows
+the Scientific Taste mechanism, native causal comparison, and external
+end-to-end validity tracks because their estimands and resource confounds cannot
+be pooled. Designed cells, future resources, and project blockers are presented
+as planning facts; `scientific_effectiveness_established` remains false.
+
+Fixed phase names are a receiver cache, not the generated content. The optional
+model planner still chooses and composes only trusted project surfaces. Phase
+exploration can prefill a bounded feedback question, but it does not edit the
+campaign or grant execution. A later planning-revision boundary must store a
+typed model proposal, require an explicit user decision, and publish a new
+project-owned dossier revision instead of modifying this report in place.

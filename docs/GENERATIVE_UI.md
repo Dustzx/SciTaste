@@ -455,6 +455,24 @@ normal `ProjectRuntime` workflow before they can appear in this view.
 
 ### Unified intent and surface-plan contracts
 
+The self-development project can additionally register one run-owned
+`iclr-evidence-program-v1` report. The default project home puts its compact
+seven-phase evidence route before the large run synopsis: research basis,
+Scientific Taste instrument, task/method readiness, independent review design,
+bounded prepilots, formal evidence, and the paper/reviewer loop. The current
+gate, parallel next gates, exact blocker counts, owner-decision status, external
+action classes, and three non-pooled claim tracks are projected from the
+validated dossier rather than inferred from Git or documentation. Raw scope and
+hashes use progressive disclosure, and fixed labels remain multilingual
+receiver content.
+
+Selecting a phase or “discuss or revise plan” returns a bounded question to the
+conversation composer. This is presently a model-assisted exploration path, not
+a plan mutation: the generated surface remains declarative and read-only. The
+planned revision slice will add a typed amendment proposal and explicit
+controller handoff; until that exists, the UI must not claim that conversation
+feedback changed project state.
+
 Quick clicks and free questions enter one snapshot-bound intent boundary. A
 `QuickIntentRequest` names only a server-issued quick-intent ID; a
 `FreeQuestionRequest` carries bounded opaque text for resolution but that text

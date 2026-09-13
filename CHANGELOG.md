@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Made the project-owned ICLR evidence program the first content block on the
+  Generation as Content project home. A registered no-run dossier is collapsed
+  into seven phases, three separately scoped claim tracks, the current decision
+  gate, exact blocker/action boundaries, and evidence links; it reports 3/16
+  gates complete and never converts 18 designed prepilot cells into results.
+  Phase exploration returns to the model-assisted conversation composer so a
+  user can discuss or propose a revision without silently authorizing execution.
 - Added a no-upload structured local-model path for title-critical Scientific
   Reference Quality. Local Transformers calls share the hosted prompt and
   deterministic verifier but require a separate profile permission, backend

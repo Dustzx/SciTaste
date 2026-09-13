@@ -73,6 +73,20 @@ class ProjectSnapshotAdapter:
                     label=f"Run record {index}",
                 )
             )
+            projection = (run.model_extra or {}).get("generative_ui_projection")
+            if projection == "iclr-evidence-program-v1":
+                if run.artifact is None:
+                    raise ValueError("ICLR evidence-program run must declare its artifact")
+                refs.append(
+                    self._ref(
+                        snapshot=snapshot,
+                        project_root=project_root,
+                        evidence_id=_evidence_id("artifact", run.artifact),
+                        kind=EvidenceKind.ARTIFACT,
+                        locator=run.artifact,
+                        label="ICLR evidence program",
+                    )
+                )
 
         if snapshot.current_stage_locator is not None:
             locator = _project_relative(snapshot, snapshot.current_stage_locator)
