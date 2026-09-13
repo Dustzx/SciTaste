@@ -1530,19 +1530,14 @@ class ModelNodeRuntime:
             run = next(item for item in snapshot.manifest.runs if item.run_id == run_id)
         except StopIteration as exc:
             raise ModelNodeRuntimeError(f"unknown project run {run_id!r}") from exc
-        runs_root = self.project_runtime.outputs_root / "projects" / project_id / "runs"
-        if runs_root.is_symlink() or not runs_root.is_dir():
-            raise ModelNodeRuntimeError("project run root is unavailable or unsafe")
-        run_root = runs_root / run_id
-        if os.path.lexists(run_root):
-            if run_root.resolve(strict=True) != run_root or not run_root.is_dir():
-                raise ModelNodeRuntimeError("registered run directory escapes its project")
-        elif create_stage:
-            # The manifest is authoritative. A no-run planning record need not create an
-            # empty directory, so materialize its exact registered directory only when
-            # execution actually begins.
-            run_root.mkdir(parents=False)
-        stage = run_root / MODEL_NODE_STAGE_PATH
+        stage = (
+            self.project_runtime.outputs_root
+            / "projects"
+            / project_id
+            / "runs"
+            / run_id
+            / MODEL_NODE_STAGE_PATH
+        )
         if os.path.lexists(stage):
             if stage.resolve(strict=True) != stage or not stage.is_dir():
                 raise ModelNodeRuntimeError("model-node stage escapes its project-owned path")
