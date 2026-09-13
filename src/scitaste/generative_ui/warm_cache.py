@@ -205,9 +205,31 @@ class ModelWarmCacheEntryView(BaseModel):
     quick_intent_id: SafeIdentifier
     generation_id: SafeIdentifier
     intent_fingerprint: Sha256
+    document_sha256: Sha256
     entry_expires_at: datetime
     provider: str
     model: str
+
+
+class CachedWorkspaceStartRequest(BaseModel):
+    """Select one exact fresh cached model page as a conversation's first turn."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    project_id: ProjectIdentifier
+    quick_catalog_fingerprint: Sha256
+    quick_intent_id: SafeIdentifier
+    intent_fingerprint: Sha256
+    generation_id: SafeIdentifier
+    document_sha256: Sha256
+    entry_expires_at: datetime
+
+    @model_validator(mode="after")
+    def expiry_is_timezone_aware(self) -> CachedWorkspaceStartRequest:
+        if not _aware(self.entry_expires_at):
+            raise ValueError("cached workspace expiry must include a timezone")
+        return self
 
 
 class ModelWarmCacheStatus(BaseModel):
@@ -546,6 +568,7 @@ def model_warm_cache_status(
                     quick_intent_id=attempt.quick_intent_id,
                     generation_id=attempt.generation_id,
                     intent_fingerprint=attempt.intent_fingerprint,
+                    document_sha256=attempt.document_sha256,
                     entry_expires_at=attempt.entry_expires_at,
                     provider=index.expected_provider,
                     model=index.expected_model,
@@ -638,6 +661,7 @@ def _canonical_bytes(value: object) -> bytes:
 
 
 __all__ = [
+    "CachedWorkspaceStartRequest",
     "ModelWarmCacheAttempt",
     "ModelWarmCacheEntryView",
     "ModelWarmCacheIndex",

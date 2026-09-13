@@ -388,6 +388,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 self._send_model(HTTPStatus.CREATED, document)
                 return
             raise _method_not_allowed("GET, POST")
+        if len(parts) == 6 and parts[5] == "from-cache":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            document = self.server.application.create_research_workspace_from_cache(
+                project_id,
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.CREATED, document)
+            return
         workspace_id = parts[5]
         if len(parts) == 6:
             if method == "GET":

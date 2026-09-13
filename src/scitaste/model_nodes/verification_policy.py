@@ -129,6 +129,7 @@ def decide_verification_route(
         expected_loss * action.full_preflight_detection_probability
         - action.full_preflight_cost_units
     )
+    incremental_full_gain = full_gain - targeted_gain
     effects = set(action.effects)
     reasons: list[str] = []
     owner_required = False
@@ -166,12 +167,15 @@ def decide_verification_route(
     elif max(targeted_gain, full_gain) < policy.minimum_net_gain_units:
         route = VerificationRoute.DIRECT_PATH
         reasons.append("verification-cost-exceeds-avoidable-loss")
-    elif full_gain > targeted_gain:
+    elif full_gain >= policy.minimum_net_gain_units and (
+        targeted_gain < policy.minimum_net_gain_units
+        or incremental_full_gain >= policy.minimum_net_gain_units
+    ):
         route = VerificationRoute.FULL_PREFLIGHT
-        reasons.append("full-preflight-has-greater-expected-net-gain")
+        reasons.append("full-preflight-has-material-incremental-net-gain")
     else:
         route = VerificationRoute.TARGETED_CHECK
-        reasons.append("targeted-check-has-positive-expected-net-gain")
+        reasons.append("targeted-check-is-cheapest-sufficient-verification")
     best_optional_gain = max(targeted_gain, full_gain)
     advisory_eligible = (
         not hard_gate
@@ -208,6 +212,13 @@ def apply_verification_advisory(
         raise ValueError("model advice cannot replace a deterministic owner boundary")
     if advisory.recommended_route is VerificationRoute.OWNER_APPROVAL:
         raise ValueError("model advice cannot create owner authorization")
+    recommended_gain = {
+        VerificationRoute.DIRECT_PATH: 0.0,
+        VerificationRoute.TARGETED_CHECK: decision.targeted_net_gain_units,
+        VerificationRoute.FULL_PREFLIGHT: decision.full_preflight_net_gain_units,
+    }[advisory.recommended_route]
+    if advisory.recommended_route is not VerificationRoute.DIRECT_PATH and recommended_gain <= 0:
+        raise ValueError("model advice cannot add a negative-value verification step")
     return decision.model_copy(
         update={
             "route": advisory.recommended_route,

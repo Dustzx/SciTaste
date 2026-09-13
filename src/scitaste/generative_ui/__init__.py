@@ -274,6 +274,7 @@ from scitaste.generative_ui.server import (
     serve_local_application,
 )
 from scitaste.generative_ui.warm_cache import (
+    CachedWorkspaceStartRequest,
     ModelWarmCacheAttempt,
     ModelWarmCacheEntryView,
     ModelWarmCacheIndex,
@@ -347,6 +348,7 @@ __all__ = [
     "BlockerQuery",
     "BoundedPlannerHTTPTransport",
     "BudgetMeterData",
+    "CachedWorkspaceStartRequest",
     "ClaimMatrixData",
     "CompareRunsPayload",
     "ComparisonCandidate",

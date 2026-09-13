@@ -9,6 +9,7 @@ import pytest
 
 from scitaste.backends.base import Usage
 from scitaste.generative_ui import (
+    CachedWorkspaceStartRequest,
     GenerativeUIApplication,
     ModelPlannerPolicy,
     ModelWarmCachePolicy,
@@ -168,6 +169,61 @@ def test_authorized_warm_cache_generates_once_and_serves_the_exact_model_page(
     assert document.planning.provenance.mode == "model_assisted"
     assert document.planning.provenance.input_tokens == 100
     assert document.planning.authored_brief is not None
+
+    workspace = app.create_research_workspace_from_cache(
+        "warm-project",
+        CachedWorkspaceStartRequest(
+            project_id="warm-project",
+            quick_catalog_fingerprint=repeated.status.catalog_fingerprint,
+            quick_intent_id=entry.quick_intent_id,
+            intent_fingerprint=entry.intent_fingerprint,
+            generation_id=entry.generation_id,
+            document_sha256=entry.document_sha256,
+            entry_expires_at=entry.entry_expires_at,
+        ),
+    )
+
+    assert backend.calls == 1
+    assert workspace.workspace.revision == 1
+    assert workspace.turn.document == document
+    assert workspace.turn.prompt.kind == "quick"
+    assert workspace.turn.generation_id == entry.generation_id
+
+
+def test_cached_workspace_start_rejects_an_unregistered_document_hash(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    backend = _PlannerBackend()
+    planner = StructuredWorkspacePlanner(
+        backend,
+        ModelPlannerPolicy(
+            expected_backend=backend.name,
+            expected_model=backend.model,
+            max_input_tokens=500,
+            max_output_tokens=200,
+            max_response_cost_usd=0.01,
+        ),
+    )
+    app = GenerativeUIApplication(runtime, planner=planner)
+    intent_id = app.quick_intents("warm-project").intents[0].quick_intent_id
+    now = datetime(2026, 9, 13, 9, tzinfo=UTC)
+    status = ModelWarmCacheService(app, _policy(intent_id), now=lambda: now).warm().status
+    entry = status.fresh_entries[0]
+
+    with pytest.raises(ValueError, match="stale or unregistered"):
+        app.create_research_workspace_from_cache(
+            "warm-project",
+            CachedWorkspaceStartRequest(
+                project_id="warm-project",
+                quick_catalog_fingerprint=status.catalog_fingerprint,
+                quick_intent_id=entry.quick_intent_id,
+                intent_fingerprint=entry.intent_fingerprint,
+                generation_id=entry.generation_id,
+                document_sha256="0" * 64,
+                entry_expires_at=entry.entry_expires_at,
+            ),
+        )
+
+    assert backend.calls == 1
 
 
 def test_warm_cache_refuses_an_inactive_owner_policy_before_any_provider_call(

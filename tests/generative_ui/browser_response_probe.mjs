@@ -135,6 +135,11 @@ async function main() {
             workspace.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING
           ),
           research_lens_count: document.querySelectorAll(".research-lens-button").length,
+          operating_loop_present: Boolean(document.querySelector(".project-operating-loop")),
+          operating_plane_count: document.querySelectorAll(".project-operating-plane").length,
+          operating_bridge_present: Boolean(document.querySelector(".project-operating-bridge")),
+          operating_controls_present:
+            document.querySelectorAll(".project-operating-loop button").length >= 2,
         };
       })()`);
       await evaluate(cdp, sessionId, `document.getElementById("drawer-toggle").click()`);
@@ -190,6 +195,8 @@ async function main() {
         return {
           present: true,
           route_count: cards.length,
+          economics_bar_count: cards[0].querySelectorAll(".verification-economy-row").length,
+          advisory_state_present: Boolean(cards[0].querySelector(".verification-advisory-state")),
           focused_stage: cards[0].querySelector("strong")?.textContent || "",
           feedback_seeded: document.getElementById("intent-question").value.length > 0,
           submit_mode_changed: /revision|修订|调整/i.test(
@@ -201,6 +208,17 @@ async function main() {
       if (screenshotRoot) {
         await mkdir(screenshotRoot, {recursive: true});
         await setViewport(cdp, sessionId, 1440, 1000);
+        await evaluate(cdp, sessionId, `window.scrollTo({top: 0, behavior: "instant"})`);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const loopCapture = await cdp.call("Page.captureScreenshot", {
+          format: "png",
+          fromSurface: true,
+          captureBeyondViewport: false,
+        }, sessionId);
+        await writeFile(
+          join(screenshotRoot, "project-operating-loop-1440.png"),
+          Buffer.from(loopCapture.data, "base64"),
+        );
         await evaluate(cdp, sessionId, `
           document.querySelector(".gate-action-card").scrollIntoView({block: "center"})
         `);
@@ -605,6 +623,10 @@ async function main() {
         || !projectHomeShell.mobile_evidence_tools_fit
         || !projectHomeShell.composer_follows_workspace
         || projectHomeShell.research_lens_count !== 4
+        || !projectHomeShell.operating_loop_present
+        || projectHomeShell.operating_plane_count !== 2
+        || !projectHomeShell.operating_bridge_present
+        || !projectHomeShell.operating_controls_present
         || !gateAction.present
         || gateAction.flow_node_count !== 3
         || gateAction.envelope_fact_count !== 6
@@ -612,6 +634,8 @@ async function main() {
         || !gateAction.separate_execute_control_absent
         || !projectHomeShell.route_intervention?.present
         || projectHomeShell.route_intervention.route_count < 1
+        || projectHomeShell.route_intervention.economics_bar_count !== 2
+        || !projectHomeShell.route_intervention.advisory_state_present
         || !projectHomeShell.route_intervention.feedback_seeded
         || !projectHomeShell.route_intervention.submit_mode_changed
         || !generatedResponseFocus.workspace_visible

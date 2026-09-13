@@ -947,9 +947,10 @@ retain their independently configured ceilings.
 Generation as Content now separates two equally visible paths. Fixed project
 labels may open a pre-generated model-authored evidence layout, while a free
 question or follow-up remains a fresh, context-aware model interaction. A cache
-hit is labeled in the composer and opens the exact archived generation without
-creating a fake conversation turn or invoking the provider again. Missing,
-expired, stale-snapshot, or unconfigured entries keep the normal flexible path.
+hit is labeled in the composer and promotes the exact archived generation into
+the first immutable turn of a real editable conversation without invoking the
+provider again. Missing, expired, stale-snapshot, or unconfigured entries keep
+the normal flexible path.
 
 The cache is project-owned at
 `outputs/projects/<project-id>/.generative-ui/warm-cache/index.json`. Its policy
@@ -1357,6 +1358,15 @@ failure is returned explicitly and is not cached or replaced with invented prose
 Failures are reduced to content-free categories (disabled backend, provider HTTP
 or transport failure, invalid provider response, missing cost telemetry, or
 schema rejection) rather than exposing raw provider content.
+
+A cache hit is not a dead-end replay page. The receiver may promote the exact
+fresh generation into the first immutable turn of a new project conversation.
+The server revalidates the project, catalog, quick-intent, generation, document
+hash, and expiry, then performs zero provider calls. Follow-up feedback uses that
+turn as bounded context and asks the model to edit its cited brief. Cache hits in
+an already active conversation are deliberately ignored because a fixed first-
+turn page is not a valid substitute for a context-aware edit.
+
 The latest proposal is restored after a reload. New feedback may name that exact
 proposal and record hash, causing the model to edit the prior draft rather than
 generate an unrelated answer. Accept and reject are explicit user actions stored
@@ -1400,6 +1410,16 @@ priors rather than empirical measurements. A semantic gray zone may admit
 bounded model advice, but model output cannot weaken paid-compute, secret,
 external-mutation, untrusted-code, irreversibility, or dossier-declared owner
 boundaries.
+
+The default project reading path now begins with a compact operating-loop map.
+Generation as Content and SciTaste Core are parallel visual planes separated by
+an explicit user-publication boundary: the former shows model synthesis,
+feedback editing, and proposal status; the latter shows the current evidence
+gate, Tool Intelligence route, next action, and project resource readiness. Its
+controls route back into model-authored plan or resource revisions. Full ledgers,
+metadata screens, and historical evaluations remain accessible in the collapsed
+evidence vault so the generated workspace stays scannable rather than becoming a
+long report.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free

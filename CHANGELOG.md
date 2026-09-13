@@ -5,6 +5,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Closed the gap between Generation as Content warm-cache labels and editable
+  project conversations. A fresh cached model page can now become the immutable
+  first turn of a new project-owned topic without another provider call; the
+  server revalidates project/catalog/intent/generation/document/expiry identity,
+  and later feedback uses the ordinary bounded model-edit path. The project home
+  also adds a compact two-plane operating map showing model synthesis and user
+  publication beside SciTaste's evidence gate, Tool Intelligence route, and
+  project resource binding. Detailed experiment ledgers remain available in the
+  evidence vault instead of dominating the default reading path.
+- Tightened cost-sensitive Tool Intelligence so a sufficient targeted check is
+  not expanded into a full preflight for a merely positive marginal gain. Full
+  preflight now requires material incremental net value unless a critical or
+  untrusted-code hard rule applies, and gray-zone model advice cannot add a
+  negative-value check. Route cards visualize targeted versus deep-check net
+  value and disclose whether semantic model advice is eligible.
 - Qualified the real Agent Laboratory and DeepScientist source archives without
   extraction. Source-archive schema 1.1 now accepts only relative symbolic links
   that resolve directly to recorded regular files and supports a content-bound

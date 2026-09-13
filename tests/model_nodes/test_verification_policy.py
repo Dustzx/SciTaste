@@ -49,6 +49,24 @@ def test_positive_expected_value_selects_only_the_targeted_check() -> None:
     assert decision.full_preflight_net_gain_units < decision.targeted_net_gain_units
 
 
+def test_small_incremental_gain_does_not_expand_a_sufficient_targeted_check() -> None:
+    decision = decide_verification_route(
+        _action(
+            failure_probability=0.5,
+            failure_impact_units=20.0,
+            targeted_check_cost_units=2.0,
+            targeted_detection_probability=0.7,
+            full_preflight_cost_units=3.4,
+            full_preflight_detection_probability=0.85,
+        )
+    )
+
+    assert decision.targeted_net_gain_units >= 1
+    assert decision.full_preflight_net_gain_units > decision.targeted_net_gain_units
+    assert decision.route is VerificationRoute.TARGETED_CHECK
+    assert decision.reason_codes == ("targeted-check-is-cheapest-sufficient-verification",)
+
+
 @pytest.mark.parametrize(
     ("updates", "route"),
     [
@@ -98,3 +116,24 @@ def test_model_can_resolve_only_a_declared_semantic_gray_zone() -> None:
     assert resolved.route is VerificationRoute.DIRECT_PATH
     assert resolved.decision_source == "model_assisted"
     assert resolved.execution_authority == "none"
+
+
+def test_model_cannot_add_a_negative_value_check_in_a_gray_zone() -> None:
+    action = _action(
+        semantic_uncertainty="high",
+        failure_probability=0.25,
+        failure_impact_units=10.0,
+        targeted_check_cost_units=1.5,
+        targeted_detection_probability=0.8,
+        full_preflight_cost_units=5.0,
+        full_preflight_detection_probability=0.95,
+    )
+    decision = decide_verification_route(action)
+    advisory = VerificationAdvisory(
+        input_fingerprint=action.fingerprint,
+        recommended_route="full_preflight",
+        rationale="Request a broad check despite its negative expected value.",
+    )
+
+    with pytest.raises(ValueError, match="negative-value verification"):
+        apply_verification_advisory(decision, advisory)

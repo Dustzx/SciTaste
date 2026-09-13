@@ -1479,3 +1479,35 @@ HTTP failures, no runtime errors, no horizontal page overflow across 320, 390,
 768, and 1440 pixel viewports, and a bounded bottom composer. This is engineering
 acceptance of the control surface, not a human-usability or scientific-effect
 result; it used no provider, API, GPU, download, or experiment.
+
+## Closing cached generation and intervention readability (2026-09-14)
+
+The self-project revealed that the warm-cache implementation reused provider
+output but opened it as a standalone generated page. It saved a call, yet the
+next feedback could not name that cached page as its conversation predecessor.
+The fixed label therefore behaved like a static cache instead of the first step
+of a flexible Generation as Content exchange.
+
+SciTaste now promotes an exact fresh cached generation into a new project topic
+after checking its project, catalog, intent, generation, document hash, and
+expiry. Promotion makes no provider call; later feedback follows the ordinary
+model-edit path. The same project home now presents an abstract two-plane loop:
+model synthesis and feedback editing remain visibly parallel to SciTaste's
+evidence/resource/execution controller, while explicit publication is the only
+bridge that alters effective planning. Deep experiment and metadata records move
+to the evidence vault rather than lengthening the default path.
+
+This iteration also used the user's objection to repeated preflight as a Tool
+Intelligence design signal. The router now keeps a sufficient targeted check
+unless full preflight contributes material incremental net gain, and rejects a
+gray-zone model advisory that adds a negative-value check. These are engineering
+policy changes, not evidence that either the UI or Tool Intelligence improves
+scientific outcomes.
+
+One post-change browser probe against the real revision-461 self project found
+both parallel planes, the user bridge, all four route cards, two route-economics
+comparators per card, and project intervention controls. It also observed no
+runtime or HTTP failures, no horizontal page overflow at 320, 390, 768, and 1440
+pixels, and a bounded bottom composer. The generated workspace fit a 1,009-pixel
+document at desktop width in this probe. The check used deterministic fallback,
+no provider call, and no GPU; it verifies receiver behavior and layout only.

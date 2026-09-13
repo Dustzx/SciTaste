@@ -3307,6 +3307,13 @@ preflight and the writes are reversible project-local metadata. Compiling the
 effective experiment program is also direct: it is a pure local derivation over
 already verified, self-hashed inputs.
 
+Among optional checks, the router prefers the smallest sufficient intervention.
+If a targeted check already clears the minimum expected-net-gain threshold, a
+full preflight must clear that same threshold on *incremental* value over the
+targeted check. A model advisory cannot introduce a declared negative-value
+check. This prevents semantic uncertainty from becoming a generic reason to add
+ritual preflight.
+
 ### ADR-109: Effective gates use cost-sensitive action routing
 
 Status: accepted and projected on the project home.
@@ -3345,3 +3352,11 @@ Tool Intelligence router keeps an explicit owner boundary and the CLI requires a
 second execution flag. No full generic preflight is added. Reading the cache,
 opening an exact archived generation, and falling through to ordinary on-demand
 interaction are cheap local operations and do not acquire a new check.
+
+An exact fresh cached generation may also be promoted into the first immutable
+turn of a project-owned research conversation. Promotion revalidates project,
+catalog, intent, generation, document, and expiry identities and invokes no
+provider. Subsequent feedback takes the normal fresh model-edit path with that
+turn as bounded context. The receiver's operating-loop map presents this content
+plane beside—not inside—the SciTaste controller and routes explicit user changes
+across the existing publication boundary.

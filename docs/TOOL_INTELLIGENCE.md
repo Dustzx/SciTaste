@@ -570,6 +570,15 @@ for stale high-impact evidence or untrusted code; and external authority is
 requested from the owner. Optional model advice may help estimate semantic gray
 zones, but it cannot downgrade a hard gate or invent execution authority.
 
+The optional-check chooser is intentionally lexicographic about effort. Once a
+targeted check clears the configured minimum net gain, a full preflight replaces
+it only when the deeper check's *incremental* net gain also clears that margin.
+A tiny positive marginal gain is not enough. Likewise, model advice in a semantic
+gray zone may skip or select a positive-value check, but it cannot add a check
+whose declared net value is non-positive. The project route portfolio renders
+both net-gain bars and the model-advisory eligibility flag, making the choice
+inspectable before any check is run.
+
 ## Threat model and extension rules
 
 The current gates address these failures:

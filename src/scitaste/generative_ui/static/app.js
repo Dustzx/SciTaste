@@ -594,11 +594,8 @@ function activateQuickIntent(descriptor) {
   const cached = modelWarmCacheStatus?.fresh_entries?.find(
     (item) => item.quick_intent_id === descriptor.quick_intent_id,
   );
-  if (cached) {
-    loadGeneratedWorkspace({
-      project_id: quickIntentCatalog.snapshot.project_id,
-      generation_id: cached.generation_id,
-    });
+  if (cached && !activeResearchWorkspaceId) {
+    startResearchWorkspaceFromCache(descriptor, cached);
     return;
   }
   generateWithIntent({
@@ -609,6 +606,60 @@ function activateQuickIntent(descriptor) {
     snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
     quick_intent_id: descriptor.quick_intent_id,
   });
+}
+
+async function startResearchWorkspaceFromCache(descriptor, cached) {
+  if (!quickIntentCatalog || descriptor.quick_intent_id !== cached.quick_intent_id) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  const requestedProject = quickIntentCatalog.snapshot.project_id;
+  setIntentEnabled(false);
+  intentResultState = {kind: "cache_loading"};
+  renderIntentResult();
+  try {
+    const turnDocument = await api(
+      `/api/v4/projects/${encodeURIComponent(requestedProject)}/workspaces/from-cache`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          quick_catalog_fingerprint: quickIntentCatalog.fingerprint,
+          quick_intent_id: descriptor.quick_intent_id,
+          intent_fingerprint: cached.intent_fingerprint,
+          generation_id: cached.generation_id,
+          document_sha256: cached.document_sha256,
+          entry_expires_at: cached.entry_expires_at,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    activeResearchWorkspace = turnDocument.workspace;
+    activeResearchWorkspaceId = turnDocument.workspace.workspace_id;
+    activeResearchTurnId = turnDocument.turn.turn_id;
+    activeResearchTurn = turnDocument.turn;
+    activeResearchWorkspaceDetail = null;
+    currentDocument = turnDocument.turn.document;
+    renderWorkspace(currentDocument);
+    intentResultState = {kind: "cache_started"};
+    renderIntentResult();
+    const route = researchTurnHash(turnDocument);
+    history.pushState({route}, "", route);
+    await Promise.all([
+      loadResearchWorkspaceCatalog(requestedProject),
+      loadResearchWorkspaceDetail(requestedProject, activeResearchWorkspaceId),
+    ]);
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+    await loadModelWarmCacheStatus(requestedProject);
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
 }
 
 function renderRunStageExplorer(data) {
@@ -1280,6 +1331,9 @@ function renderProjectProgress(data) {
   const resourcePortfolio = data.resource_portfolio
     ? renderProjectResources(data.resource_portfolio, data.evidence_program)
     : null;
+  const operatingLoop = data.evidence_program
+    ? renderProjectOperatingLoop(data.evidence_program, data.resource_portfolio)
+    : null;
 
   const metrics = document.createElement("div");
   metrics.className = "progress-metrics";
@@ -1760,6 +1814,12 @@ function renderProjectProgress(data) {
   const detailContent = document.createElement("div");
   detailContent.className = "progress-evidence-vault-content";
   detailContent.append(
+    reviewIterations,
+    metadataAuditPlans,
+    metadataPopulations,
+    metadataScreenings,
+    metadataAllocations,
+    referenceSelections,
     benchmarkQualifications,
     datasetPackages,
     acquisitions,
@@ -1773,6 +1833,9 @@ function renderProjectProgress(data) {
     activity,
   );
   details.append(detailsSummary, detailContent);
+  if (operatingLoop) {
+    container.appendChild(operatingLoop);
+  }
   if (evidenceProgram) {
     container.appendChild(evidenceProgram);
   }
@@ -1780,29 +1843,129 @@ function renderProjectProgress(data) {
     container.appendChild(resourcePortfolio);
   }
   container.appendChild(hero);
-  if ((data.review_iterations || []).length > 0) {
-    container.appendChild(reviewIterations);
-  }
-  if ((data.metadata_audit_plans || []).length > 0) {
-    container.appendChild(metadataAuditPlans);
-  }
-  if ((data.benchmark_metadata_populations || []).length > 0) {
-    container.appendChild(metadataPopulations);
-  }
-  if ((data.benchmark_metadata_screenings || []).length > 0) {
-    container.appendChild(metadataScreenings);
-  }
-  if (
-    (data.benchmark_metadata_allocation_plans || []).length > 0
-    || (data.benchmark_metadata_allocations || []).length > 0
-  ) {
-    container.appendChild(metadataAllocations);
-  }
-  if ((data.reference_selection_comparisons || []).length > 0) {
-    container.appendChild(referenceSelections);
-  }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
+}
+
+function renderProjectOperatingLoop(program, resources) {
+  const section = document.createElement("section");
+  section.className = "project-operating-loop";
+  const header = document.createElement("div");
+  header.className = "project-operating-loop-header";
+  const heading = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  appendText(eyebrow, t("operating_loop.eyebrow"));
+  const title = document.createElement("h3");
+  appendText(title, t("operating_loop.title"));
+  const summary = document.createElement("p");
+  summary.className = "muted compact-copy";
+  appendText(summary, t("operating_loop.summary"));
+  heading.append(eyebrow, title, summary);
+  const state = document.createElement("span");
+  state.className = "program-badge verified";
+  appendText(state, t("operating_loop.bound"));
+  header.append(heading, state);
+
+  const planes = document.createElement("div");
+  planes.className = "project-operating-planes";
+  const generation = document.createElement("article");
+  generation.className = "project-operating-plane generation-plane";
+  const generationLabel = document.createElement("span");
+  generationLabel.className = "operating-plane-label";
+  appendText(generationLabel, t("operating_loop.generation.label"));
+  const generationTitle = document.createElement("strong");
+  appendText(generationTitle, t("operating_loop.generation.title"));
+  const generationFlow = document.createElement("ol");
+  generationFlow.className = "operating-mini-flow";
+  const latestState = program.planning_directive
+    ? "published"
+    : lastProgramRevisionDecision?.status === "accepted"
+      ? "accepted"
+      : lastProgramRevisionRecord?.outcome?.status === "proposed"
+        ? "draft"
+        : "open";
+  for (const [key, active] of [
+    ["synthesize", true],
+    ["edit", Boolean(lastProgramRevisionRecord)],
+    ["publish", Boolean(program.planning_directive)],
+  ]) {
+    const step = document.createElement("li");
+    step.className = active ? "state-active" : "state-open";
+    appendText(step, t(`operating_loop.generation.${key}`));
+    generationFlow.appendChild(step);
+  }
+  const generationState = document.createElement("small");
+  appendText(generationState, t(`operating_loop.generation.state.${latestState}`));
+  const revise = document.createElement("button");
+  revise.type = "button";
+  revise.className = "secondary-button";
+  appendText(revise, t("operating_loop.revise"));
+  revise.addEventListener("click", () => prepareEvidenceProgramQuestion(program));
+  generation.append(generationLabel, generationTitle, generationFlow, generationState, revise);
+
+  const bridge = document.createElement("div");
+  bridge.className = "project-operating-bridge";
+  const bridgeArrow = document.createElement("span");
+  bridgeArrow.setAttribute("aria-hidden", "true");
+  appendText(bridgeArrow, "⇄");
+  const bridgeLabel = document.createElement("strong");
+  appendText(bridgeLabel, t("operating_loop.bridge.title"));
+  const bridgeState = document.createElement("small");
+  appendText(bridgeState, t(program.planning_directive?.controller_consumed
+    ? "operating_loop.bridge.consumed"
+    : "operating_loop.bridge.proposal"));
+  bridge.append(bridgeArrow, bridgeLabel, bridgeState);
+
+  const controller = document.createElement("article");
+  controller.className = "project-operating-plane controller-plane";
+  const controllerLabel = document.createElement("span");
+  controllerLabel.className = "operating-plane-label";
+  appendText(controllerLabel, t("operating_loop.controller.label"));
+  const controllerTitle = document.createElement("strong");
+  appendText(controllerTitle, readableCode(program.current_stage_id));
+  const controllerFacts = document.createElement("dl");
+  controllerFacts.className = "operating-plane-facts";
+  for (const [labelKey, value] of [
+    ["operating_loop.controller.route", t(
+      `progress.program.route.${program.gate_action_route.verification_route}`,
+    )],
+    ["operating_loop.controller.next", t(
+      `progress.program.next_action.${program.gate_action_route.next_action_kind}`,
+    )],
+    ["operating_loop.controller.resources", resources
+      ? `${resources.verified_binding_count}/${resources.resource_count}`
+      : t("operating_loop.controller.resources_unbound")],
+  ]) {
+    const term = document.createElement("dt");
+    appendText(term, t(labelKey));
+    const description = document.createElement("dd");
+    appendText(description, value);
+    controllerFacts.append(term, description);
+  }
+  const controllerControls = document.createElement("div");
+  controllerControls.className = "operating-plane-controls";
+  const route = document.createElement("button");
+  route.type = "button";
+  route.className = "secondary-button";
+  appendText(route, t("operating_loop.adjust_route"));
+  route.addEventListener("click", () => prepareGateRouteQuestion(
+    program,
+    program.gate_action_route,
+  ));
+  controllerControls.appendChild(route);
+  if (resources) {
+    const configure = document.createElement("button");
+    configure.type = "button";
+    configure.className = "secondary-button";
+    appendText(configure, t("operating_loop.configure_resources"));
+    configure.addEventListener("click", () => prepareResourceRevision(resources, program));
+    controllerControls.appendChild(configure);
+  }
+  controller.append(controllerLabel, controllerTitle, controllerFacts, controllerControls);
+  planes.append(generation, bridge, controller);
+  section.append(header, planes);
+  return section;
 }
 
 function prepareEvidenceProgramQuestion(program, phase = null) {
@@ -1828,6 +1991,26 @@ function prepareEvidenceProgramQuestion(program, phase = null) {
     baseRecordSha256: null,
   };
   generateWorkspaceButton.textContent = t("generation.propose_revision");
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function prepareResourceRevision(data, evidenceProgram) {
+  intentQuestion.value = t("resources.revision_prompt", {
+    roles: data.resources.map((item) => readableCode(item.role)).join(", "),
+  });
+  if (evidenceProgram) {
+    activeProgramRevisionContext = {
+      dossierSha256: evidenceProgram.dossier_sha256,
+      targetStageId: evidenceProgram.gate_action_route.stage_id,
+      targetRouteSha256: evidenceProgram.gate_action_route.route_sha256,
+      baseProposalId: null,
+      baseRecordSha256: null,
+    };
+    generateWorkspaceButton.textContent = t("generation.propose_revision");
+  } else {
+    clearProgramRevisionContext();
+  }
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
 }
@@ -2023,13 +2206,42 @@ function renderEvidenceProgram(data) {
     appendText(routeBadge, t(`progress.program.route.${item.verification_route}`));
     const action = document.createElement("small");
     appendText(action, t(`progress.program.next_action.${item.next_action_kind}`));
+    const economics = document.createElement("div");
+    economics.className = "verification-economics";
+    const scale = Math.max(
+      Math.abs(item.targeted_net_gain_units),
+      Math.abs(item.full_preflight_net_gain_units),
+      1,
+    );
+    for (const [kind, value] of [
+      ["targeted", item.targeted_net_gain_units],
+      ["full", item.full_preflight_net_gain_units],
+    ]) {
+      const row = document.createElement("div");
+      row.className = `verification-economy-row state-${value > 0 ? "positive" : "negative"}`;
+      const label = document.createElement("span");
+      appendText(label, t(`progress.program.economics.${kind}`));
+      const track = document.createElement("i");
+      const bar = document.createElement("b");
+      bar.style.width = `${Math.max(4, Math.round(Math.abs(value) / scale * 100))}%`;
+      track.appendChild(bar);
+      const amount = document.createElement("em");
+      appendText(amount, `${value > 0 ? "+" : ""}${value.toFixed(1)}`);
+      row.append(label, track, amount);
+      economics.appendChild(row);
+    }
+    const advisory = document.createElement("small");
+    advisory.className = "verification-advisory-state";
+    appendText(advisory, t(item.model_advisory_eligible
+      ? "progress.program.economics.model_eligible"
+      : "progress.program.economics.deterministic"));
     const adapt = document.createElement("button");
     adapt.type = "button";
     adapt.className = "program-phase-action";
     appendText(adapt, t("progress.program.adapt_route"));
     adapt.addEventListener("click", () => prepareGateRouteQuestion(data, item));
     if (index === 0) routeCard.classList.add("current");
-    routeCard.append(stage, routeBadge, action, adapt);
+    routeCard.append(stage, routeBadge, action, economics, advisory, adapt);
     routeGrid.appendChild(routeCard);
   }
   routePortfolio.append(routeHeader, routeGrid);
@@ -2577,23 +2789,7 @@ function renderProjectResources(data, evidenceProgram) {
   revise.type = "button";
   revise.className = "secondary-button";
   appendText(revise, t("resources.revise"));
-  revise.addEventListener("click", () => {
-    intentQuestion.value = t("resources.revision_prompt", {
-      roles: data.resources.map((item) => readableCode(item.role)).join(", "),
-    });
-    if (evidenceProgram) {
-      activeProgramRevisionContext = {
-        dossierSha256: evidenceProgram.dossier_sha256,
-        targetStageId: evidenceProgram.gate_action_route.stage_id,
-        targetRouteSha256: evidenceProgram.gate_action_route.route_sha256,
-        baseProposalId: null,
-        baseRecordSha256: null,
-      };
-      generateWorkspaceButton.textContent = t("generation.propose_revision");
-    }
-    intentQuestion.focus({preventScroll: true});
-    intentForm.scrollIntoView({behavior: "smooth", block: "center"});
-  });
+  revise.addEventListener("click", () => prepareResourceRevision(data, evidenceProgram));
   controls.append(boundary, revise);
   if (publishedResourceDirective && !publishedConfigurationApplied) {
     const apply = document.createElement("button");
@@ -5873,6 +6069,20 @@ function renderIntentResult() {
     planning.className = "muted";
     appendText(planning, t("generation.resolving"));
     intentResult.appendChild(planning);
+    return;
+  }
+  if (intentResultState.kind === "cache_loading") {
+    const loading = document.createElement("p");
+    loading.className = "muted";
+    appendText(loading, t("generation.cache_loading"));
+    intentResult.appendChild(loading);
+    return;
+  }
+  if (intentResultState.kind === "cache_started") {
+    const started = document.createElement("p");
+    started.className = "generation-accepted";
+    appendText(started, t("generation.cache_started"));
+    intentResult.appendChild(started);
     return;
   }
   if (intentResultState.kind === "revision_resolving") {

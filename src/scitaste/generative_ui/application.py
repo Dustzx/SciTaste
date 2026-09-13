@@ -35,7 +35,7 @@ from scitaste.generative_ui.inspection import (
     ArtifactInspectionEvent,
     ArtifactInspector,
 )
-from scitaste.generative_ui.intent import QuickIntentCatalog
+from scitaste.generative_ui.intent import QuickIntentCatalog, QuickIntentRequest
 from scitaste.generative_ui.interaction import (
     DuplicateEventError,
     ProposalControllerDecision,
@@ -74,6 +74,7 @@ from scitaste.generative_ui.resource_configuration import (
 )
 from scitaste.generative_ui.safety import ProjectIdentifier
 from scitaste.generative_ui.warm_cache import (
+    CachedWorkspaceStartRequest,
     ModelWarmCacheStatus,
     ModelWarmCacheStore,
     model_warm_cache_status,
@@ -96,7 +97,7 @@ from scitaste.generative_ui.workspace_store import (
     ResearchWorkspaceTurnDocument,
 )
 from scitaste.project import ProjectRuntime
-from scitaste.project.models import validate_entry_id, validate_project_id
+from scitaste.project.models import content_sha256, validate_entry_id, validate_project_id
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -412,6 +413,75 @@ class GenerativeUIApplication:
         with self._request_lock:
             document = self._generate_workspace(project_id, parsed, context=None)
             return self._research_workspaces.create(project_id, parsed, document)
+
+    def create_research_workspace_from_cache(
+        self,
+        project_id: str,
+        request: CachedWorkspaceStartRequest | dict[str, object],
+    ) -> ResearchWorkspaceTurnDocument:
+        """Promote one exact fresh warm-cache page into an editable conversation."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, CachedWorkspaceStartRequest)
+            else CachedWorkspaceStartRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("cached workspace request belongs to another project")
+        with self._request_lock:
+            catalog = self._generation_service.quick_catalog(project_id)
+            if parsed.quick_catalog_fingerprint != catalog.fingerprint:
+                raise ValueError("cached workspace intent catalog is stale")
+            descriptor = next(
+                (
+                    item
+                    for item in catalog.intents
+                    if item.quick_intent_id == parsed.quick_intent_id
+                ),
+                None,
+            )
+            if descriptor is None or descriptor.intent_fingerprint != parsed.intent_fingerprint:
+                raise ValueError("cached workspace intent is unavailable")
+            index = self._model_warm_cache.load(project_id)
+            status = model_warm_cache_status(catalog, index)
+            entry = next(
+                (
+                    item
+                    for item in status.fresh_entries
+                    if item.quick_intent_id == parsed.quick_intent_id
+                    and item.generation_id == parsed.generation_id
+                ),
+                None,
+            )
+            if entry is None or any(
+                (
+                    entry.intent_fingerprint != parsed.intent_fingerprint,
+                    entry.document_sha256 != parsed.document_sha256,
+                    entry.entry_expires_at != parsed.entry_expires_at,
+                )
+            ):
+                raise ValueError("cached workspace entry is stale or unregistered")
+            document, surface = self._current_generated(project_id, parsed.generation_id)
+            if content_sha256(document.model_dump(mode="json")) != parsed.document_sha256:
+                raise ValueError("cached workspace document hash mismatch")
+            generation_request = WorkspaceGenerationRequest(
+                quick_catalog_fingerprint=catalog.fingerprint,
+                intent_request=QuickIntentRequest(
+                    project_id=project_id,
+                    snapshot_revision=catalog.snapshot.snapshot_revision,
+                    snapshot_sha256=catalog.snapshot.snapshot_sha256,
+                    quick_intent_id=parsed.quick_intent_id,
+                ),
+            )
+            if generation_request.intent_request.fingerprint != document.request_fingerprint:
+                raise ValueError("cached workspace request does not match its generated page")
+            self._open_audit(surface)
+            return self._research_workspaces.create(
+                project_id,
+                generation_request,
+                document,
+            )
 
     def append_research_workspace_turn(
         self,
