@@ -2149,6 +2149,13 @@ fieldset {
   font-size: 0.6rem;
 }
 
+.tool-route-card > button {
+  align-self: end;
+  font-size: 0.62rem;
+  justify-self: start;
+  margin-top: 0.12rem;
+}
+
 .evidence-program-tracks {
   display: grid;
   gap: 0.65rem;

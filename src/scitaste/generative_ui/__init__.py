@@ -205,6 +205,7 @@ from scitaste.generative_ui.planning_directive import (
     publish_planning_directive,
 )
 from scitaste.generative_ui.program_revision import (
+    ProgramRevisionActionRouteOption,
     ProgramRevisionActiveDirectiveOption,
     ProgramRevisionCatalog,
     ProgramRevisionDecisionRecord,
@@ -408,6 +409,7 @@ __all__ = [
     "PlanningDirectivePublication",
     "PlanningDirectivePublicationRequest",
     "PlanningGate",
+    "ProgramRevisionActionRouteOption",
     "ProgramRevisionActiveDirectiveOption",
     "ProgramRevisionCatalog",
     "ProgramRevisionDecisionRecord",

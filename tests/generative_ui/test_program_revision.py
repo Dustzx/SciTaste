@@ -5,6 +5,7 @@ from pathlib import Path
 
 from scitaste.generative_ui import program_revision as revision_module
 from scitaste.generative_ui.program_revision import (
+    ProgramRevisionActionRouteOption,
     ProgramRevisionCatalog,
     ProgramRevisionDecisionRequest,
     ProgramRevisionDraft,
@@ -38,7 +39,7 @@ class ProposingPlanner:
         draft = ProgramRevisionDraft(
             base_dossier_sha256=catalog.dossier_sha256,
             change_kind="clarify_stage_decision",
-            target_stage_id=catalog.current_stage_id,
+            target_stage_id=request.target_stage_id or catalog.current_stage_id,
             summary=summary,
             rationale="The current evidence supports planning only, not an effect claim.",
             required_evidence=("One independently reviewed source qualification report.",),
@@ -158,3 +159,88 @@ def test_successful_model_revision_is_cached_without_reinvocation(
     assert restored.record == refined
     assert restored.decision == decision
     assert restored.stale is False
+
+
+def test_focused_revision_binds_the_exact_tool_intelligence_route(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    runtime.create(
+        ProjectManifest(
+            project_id="focused-route-project",
+            title="Focused route project",
+            research_direction="Adapt one selected gate without broad prechecks.",
+            status="active",
+        )
+    )
+    snapshot = runtime.open("focused-route-project")
+    route = ProgramRevisionActionRouteOption(
+        stage_id="qualify-task-bytes",
+        route_sha256="7" * 64,
+        verification_route="targeted_check",
+        next_action_kind="run_targeted_check",
+        blocker_codes=("license-coverage:not-qualified",),
+        verification_reason_codes=("targeted-check-has-positive-expected-net-gain",),
+        expected_loss_units=9.0,
+        targeted_net_gain_units=5.75,
+        full_preflight_net_gain_units=4.55,
+    )
+    catalog = ProgramRevisionCatalog(
+        project_id="focused-route-project",
+        snapshot_revision=snapshot.revision,
+        snapshot_sha256=snapshot.snapshot_sha256,
+        dossier_id="focused-dossier",
+        dossier_sha256="8" * 64,
+        current_stage_id="qualify-task-bytes",
+        next_stage_ids=("qualify-task-bytes",),
+        stages=(
+            ProgramRevisionStageOption(
+                stage_id="qualify-task-bytes",
+                state="blocked",
+                dependencies_complete=True,
+                owner_approval_required=False,
+                blocker_codes=("license-coverage:not-qualified",),
+            ),
+        ),
+        tracks=(
+            ProgramRevisionTrackOption(
+                track_id="native-track",
+                role="native_taste_causal",
+                state="blocked",
+                resource_kind="gpu",
+            ),
+        ),
+        action_routes=(route,),
+    )
+    monkeypatch.setattr(
+        revision_module,
+        "build_program_revision_catalog",
+        lambda _runtime, _project_id: catalog,
+    )
+    service = ProgramRevisionService(runtime, ProposingPlanner())
+    request = ProgramRevisionRequest(
+        project_id="focused-route-project",
+        snapshot_revision=snapshot.revision,
+        snapshot_sha256=snapshot.snapshot_sha256,
+        dossier_sha256=catalog.dossier_sha256,
+        feedback="Use only the targeted license check selected for this gate.",
+        target_stage_id=route.stage_id,
+        target_route_sha256=route.route_sha256,
+    )
+
+    record = service.propose(request)
+
+    assert record.outcome.status == "proposed"
+    assert record.request.target_stage_id == route.stage_id
+    assert record.request.target_route_sha256 == route.route_sha256
+    assert record.outcome.draft is not None
+    assert record.outcome.draft.target_stage_id == route.stage_id
+
+    stale = request.model_copy(update={"target_route_sha256": "9" * 64})
+    try:
+        service.propose(stale)
+    except ValueError as exc:
+        assert "action-route focus is stale" in str(exc)
+    else:  # pragma: no cover - regression guard
+        raise AssertionError("stale Tool Intelligence route was accepted")

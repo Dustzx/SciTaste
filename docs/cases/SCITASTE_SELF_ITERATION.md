@@ -1451,3 +1451,31 @@ first-party implementation qualification. Real source abstraction and
 independent corpus review, MLRC archive/task qualification, checkpoint execution,
 and empirical effects remain open; the attestation used no acquired content,
 model, API, GPU, network, or real experiment.
+
+## Turning Tool Intelligence routes into project interventions (2026-09-14)
+
+The project home could show four independently routed next gates and could ask a
+model to revise the overall evidence program, but those two capabilities were
+only visually adjacent. A user selecting one route supplied natural-language
+context, while the stored model request did not bind the exact gate or route
+identity. The model could therefore return a valid amendment aimed at another
+eligible gate.
+
+SciTaste now includes every eligible route in the bounded model catalog. Clicking
+one seeds editable feedback and binds the request to its stage and route hash.
+The model may rewrite the plan and narrative, but it must keep that target and
+must respect the route selected by Tool Intelligence: direct work receives no
+ritual precheck, a targeted check cannot silently expand, and an owner boundary
+cannot become execution authority. Stale route identities and stage-drifting
+drafts are rejected before storage. Exact-predecessor edits retain the same
+focus.
+
+The first browser pass also exposed a backward-compatibility defect: adding the
+optional focus fields changed the canonical hash of older proposal records and
+made project-memory restoration return HTTP 400. Canonicalization now omits only
+the absent new fields, so old records validate without migration or rewriting.
+The repeated real-project browser probe completed with four route controls, no
+HTTP failures, no runtime errors, no horizontal page overflow across 320, 390,
+768, and 1440 pixel viewports, and a bounded bottom composer. This is engineering
+acceptance of the control surface, not a human-usability or scientific-effect
+result; it used no provider, API, GPU, download, or experiment.

@@ -696,6 +696,14 @@ class StructuredWorkspacePlanner:
             raise ValueError("program-revision request differs from its catalog")
         input_payload: dict[str, JsonValue] = {
             "feedback": request.feedback,
+            "requested_action_focus": (
+                {
+                    "target_stage_id": request.target_stage_id,
+                    "target_route_sha256": request.target_route_sha256,
+                }
+                if request.target_stage_id is not None
+                else None
+            ),
             "base_dossier_sha256": catalog.dossier_sha256,
             "current_stage_id": catalog.current_stage_id,
             "next_stage_ids": list(catalog.next_stage_ids),
@@ -705,6 +713,9 @@ class StructuredWorkspacePlanner:
             "tracks": [item.model_dump(mode="json") for item in catalog.tracks],
             "project_resource_roles": list(catalog.resource_roles),
             "project_resources": [item.model_dump(mode="json") for item in catalog.resources],
+            "tool_intelligence_routes": [
+                item.model_dump(mode="json") for item in catalog.action_routes
+            ],
             "allowed_change_kinds": [
                 "reprioritize_next_gates",
                 "clarify_stage_decision",
@@ -741,6 +752,10 @@ class StructuredWorkspacePlanner:
                     "When prior_proposal or published_directive is present, edit that active "
                     "planning direction in response to the new feedback "
                     "rather than treating the request as an unrelated conversation. "
+                    "If requested_action_focus is present, target exactly that stage and use its "
+                    "Tool Intelligence route: do not add a check when it says direct_path, do not "
+                    "expand targeted_check into a full preflight, and do not treat owner_approval "
+                    "as execution authority. "
                     "Select only stage and track identifiers present in input_payload. Preserve "
                     "completed stages and every blocker. Do not claim new evidence, apply a "
                     "change, authorize an external action, or authorize execution. Return one "
@@ -750,6 +765,11 @@ class StructuredWorkspacePlanner:
             response = self._complete(structured_request)
             draft = ProgramRevisionDraft.model_validate(response.output_payload)
             validate_program_revision_draft(draft, catalog)
+            if (
+                request.target_stage_id is not None
+                and draft.target_stage_id != request.target_stage_id
+            ):
+                raise ValueError("model program revision ignored the focused action route")
         except Exception as exc:
             return ProgramRevisionOutcome(
                 status="unavailable",

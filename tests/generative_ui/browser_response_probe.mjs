@@ -84,6 +84,7 @@ async function main() {
       await cdp.call("Log.enable", {}, sessionId);
 
       const runtimeErrors = [];
+      const httpFailures = [];
       let networkRequests = 0;
       cdp.onEvent((message) => {
         if (message.sessionId !== sessionId) {
@@ -91,6 +92,15 @@ async function main() {
         }
         if (message.method === "Network.requestWillBeSent") {
           networkRequests += 1;
+        } else if (
+          message.method === "Network.responseReceived"
+          && message.params.response.status >= 400
+          && !String(message.params.response.url || "").endsWith("/favicon.ico")
+        ) {
+          httpFailures.push({
+            status: message.params.response.status,
+            url: message.params.response.url,
+          });
         } else if (message.method === "Runtime.exceptionThrown") {
           runtimeErrors.push(message.params.exceptionDetails.text || "runtime exception");
         } else if (
@@ -172,6 +182,22 @@ async function main() {
               .some((item) => /execute|运行|执行/i.test(item.textContent)),
         };
       })()`);
+      const routeIntervention = await evaluate(cdp, sessionId, `(() => {
+        const cards = [...document.querySelectorAll(".tool-route-card")];
+        const button = cards[0]?.querySelector("button");
+        if (!button) return {present: false};
+        button.click();
+        return {
+          present: true,
+          route_count: cards.length,
+          focused_stage: cards[0].querySelector("strong")?.textContent || "",
+          feedback_seeded: document.getElementById("intent-question").value.length > 0,
+          submit_mode_changed: /revision|修订|调整/i.test(
+            document.getElementById("generate-workspace").textContent,
+          ),
+        };
+      })()`);
+      projectHomeShell.route_intervention = routeIntervention;
       if (screenshotRoot) {
         await mkdir(screenshotRoot, {recursive: true});
         await setViewport(cdp, sessionId, 1440, 1000);
@@ -562,6 +588,7 @@ async function main() {
         intervention,
         topic_navigation: topicNavigation,
         runtime_errors: runtimeErrors,
+        http_failures: httpFailures,
         viewports,
       };
       const serializedResult = `${JSON.stringify(result, null, 2)}\n`;
@@ -583,6 +610,10 @@ async function main() {
         || gateAction.envelope_fact_count !== 6
         || !gateAction.decision_controls_consistent
         || !gateAction.separate_execute_control_absent
+        || !projectHomeShell.route_intervention?.present
+        || projectHomeShell.route_intervention.route_count < 1
+        || !projectHomeShell.route_intervention.feedback_seeded
+        || !projectHomeShell.route_intervention.submit_mode_changed
         || !generatedResponseFocus.workspace_visible
         || !generatedResponseFocus.workspace_has_focus
         || !desktopDrawer.hover_preview_opens

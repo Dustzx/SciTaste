@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Connected every eligible Tool Intelligence gate route to a focused
+  Generation as Content intervention. A route card now seeds editable user
+  feedback and sends the exact stage and route hash to the model-planning
+  service. The model receives the complete parallel route portfolio and must
+  preserve the selected direct, targeted-check, full-verification, or owner
+  boundary; stale routes and drafts that drift to another stage are rejected.
+  This makes route selection actionable without running a check, provider call,
+  or experiment from the project home.
 - Added the first exact Generation as Content experiment-intervention bridge.
   The current project gate is rendered as a compact source-to-model-to-instrument
   action packet that binds the project/evidence-program revision, local

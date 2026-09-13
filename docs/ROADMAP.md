@@ -42,6 +42,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.6 — title-first acquisition continuity | done | the exact acquired AAAR pilot is represented by tracked receipt-bound evidence, and the campaign exposes its separately approved local audit as the first unresolved title-level stage instead of prioritizing secondary task or adapter work |
 | Phase 9.7 — real AAAR quality projection | done | all 16 receipt-bound records pass bounded JSON/identity audit and materialize as opaque prestige-blind quality inputs with author, venue, locator, acknowledgment, bibliography, and downstream-task exclusions |
 | Phase 9.8 — local Reference Quality calibration boundary | done | two deterministic AAAR stress records compile to exact local Qwen3-VL-2B structured-node requests; local tokenizer counts, no-upload semantics, independent execution opt-in, JSON-repair evidence, checkpoint identity, and a one-GPU-hour ceiling are bound without loading the model or starting GPU work |
+| Phase 9.9 — route-bound generative project control | done | every eligible experiment gate can seed an editable model planning intervention bound to the exact project snapshot, stage, and Tool Intelligence route; stale routes or stage-drifting drafts fail closed without running checks or experiments |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen

@@ -1389,7 +1389,12 @@ Intelligence action route without changing its user-published order. The project
 home shows the route portfolio beside the primary current decision, so parallel
 work can distinguish direct progress, a positive-value targeted check, a
 justified full preflight, and a non-negotiable owner boundary before any check is
-run. The current gate evidence drawer exposes declared effects, expected loss,
+run. Each route is also an interaction entry point: selecting it seeds editable
+feedback and binds the subsequent model request to the exact stage and route
+hash. The model receives the complete parallel route portfolio, must retain the
+selected route's check/authority boundary, and cannot silently redirect the
+revision to another stage. Route drift is rejected before a proposal is stored.
+The current gate evidence drawer exposes declared effects, expected loss,
 check net gains, reason codes, and route hash. These v1 economics are policy
 priors rather than empirical measurements. A semantic gray zone may admit
 bounded model advice, but model output cannot weaken paid-compute, secret,

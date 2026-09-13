@@ -1806,16 +1806,43 @@ function renderProjectProgress(data) {
 }
 
 function prepareEvidenceProgramQuestion(program, phase = null) {
+  const availableRoutes = program.next_gate_action_routes || [];
+  const targetStageId = phase?.stage_ids?.find(
+    (stageId) => availableRoutes.some((item) => item.stage_id === stageId),
+  ) || program.current_stage_id;
   const phaseName = phase
     ? t(`progress.program.phase.${phase.label_code}`)
     : t(`progress.program.phase.${program.current_phase_id}`);
   intentQuestion.value = t("progress.program.question_prompt", {
     phase: phaseName,
-    stage: readableCode(program.current_stage_id),
+    stage: readableCode(targetStageId),
+  });
+  const targetRoute = availableRoutes.find(
+    (item) => item.stage_id === targetStageId,
+  );
+  activeProgramRevisionContext = {
+    dossierSha256: program.dossier_sha256,
+    targetStageId: targetRoute?.stage_id || null,
+    targetRouteSha256: targetRoute?.route_sha256 || null,
+    baseProposalId: null,
+    baseRecordSha256: null,
+  };
+  generateWorkspaceButton.textContent = t("generation.propose_revision");
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function prepareGateRouteQuestion(program, route) {
+  intentQuestion.value = t("progress.program.route_revision_prompt", {
+    stage: readableCode(route.stage_id),
+    route: t(`progress.program.route.${route.verification_route}`),
+    action: t(`progress.program.next_action.${route.next_action_kind}`),
+    blockers: route.blocker_codes.length,
   });
   activeProgramRevisionContext = {
     dossierSha256: program.dossier_sha256,
-    stageId: phase?.stage_ids?.[0] || program.current_stage_id,
+    targetStageId: route.stage_id,
+    targetRouteSha256: route.route_sha256,
     baseProposalId: null,
     baseRecordSha256: null,
   };
@@ -1835,7 +1862,8 @@ function prepareProgramRevisionRefinement(record, draft) {
   });
   activeProgramRevisionContext = {
     dossierSha256: record.request.dossier_sha256,
-    stageId: draft.target_stage_id,
+    targetStageId: record.request.target_stage_id || null,
+    targetRouteSha256: record.request.target_route_sha256 || null,
     baseProposalId: record.proposal_id,
     baseRecordSha256: record.record_sha256,
   };
@@ -1995,8 +2023,13 @@ function renderEvidenceProgram(data) {
     appendText(routeBadge, t(`progress.program.route.${item.verification_route}`));
     const action = document.createElement("small");
     appendText(action, t(`progress.program.next_action.${item.next_action_kind}`));
+    const adapt = document.createElement("button");
+    adapt.type = "button";
+    adapt.className = "program-phase-action";
+    appendText(adapt, t("progress.program.adapt_route"));
+    adapt.addEventListener("click", () => prepareGateRouteQuestion(data, item));
     if (index === 0) routeCard.classList.add("current");
-    routeCard.append(stage, routeBadge, action);
+    routeCard.append(stage, routeBadge, action, adapt);
     routeGrid.appendChild(routeCard);
   }
   routePortfolio.append(routeHeader, routeGrid);
@@ -2551,7 +2584,8 @@ function renderProjectResources(data, evidenceProgram) {
     if (evidenceProgram) {
       activeProgramRevisionContext = {
         dossierSha256: evidenceProgram.dossier_sha256,
-        stageId: evidenceProgram.current_stage_id,
+        targetStageId: evidenceProgram.gate_action_route.stage_id,
+        targetRouteSha256: evidenceProgram.gate_action_route.route_sha256,
         baseProposalId: null,
         baseRecordSha256: null,
       };
@@ -5566,6 +5600,8 @@ async function generateProgramRevision(feedback, context) {
           snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
           dossier_sha256: context.dossierSha256,
           feedback,
+          target_stage_id: context.targetStageId || null,
+          target_route_sha256: context.targetRouteSha256 || null,
           base_proposal_id: context.baseProposalId || null,
           base_record_sha256: context.baseRecordSha256 || null,
         }),

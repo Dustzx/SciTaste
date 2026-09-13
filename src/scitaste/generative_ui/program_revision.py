@@ -13,6 +13,7 @@ from typing import Annotated, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from scitaste.evaluation.program_action import route_program_stage_action
 from scitaste.evaluation.program_control import compile_effective_experiment_program
 from scitaste.generative_ui.evidence_program import (
     find_iclr_evidence_program_run,
@@ -96,6 +97,34 @@ class ProgramRevisionResourceOption(BaseModel):
     binding_status: Literal["verified", "reported", "pending", "blocked"]
 
 
+class ProgramRevisionActionRouteOption(BaseModel):
+    """Tool Intelligence route available to a focused planning interaction."""
+
+    model_config = _MODEL_CONFIG
+
+    stage_id: SafeIdentifier
+    route_sha256: Sha256
+    verification_route: Literal[
+        "direct_path",
+        "targeted_check",
+        "full_preflight",
+        "owner_approval",
+    ]
+    next_action_kind: Literal[
+        "request_owner_decision",
+        "run_targeted_check",
+        "run_full_preflight",
+        "resolve_registered_blockers",
+        "continue_directly",
+    ]
+    blocker_codes: tuple[ProgramCode, ...] = ()
+    verification_reason_codes: tuple[ProgramCode, ...] = Field(min_length=1, max_length=12)
+    expected_loss_units: float = Field(ge=0, allow_inf_nan=False)
+    targeted_net_gain_units: float = Field(allow_inf_nan=False)
+    full_preflight_net_gain_units: float = Field(allow_inf_nan=False)
+    authorizes_execution: Literal[False] = False
+
+
 class ProgramRevisionActiveDirectiveOption(BaseModel):
     """Current published planning overlay exposed to the next model edit."""
 
@@ -138,6 +167,10 @@ class ProgramRevisionCatalog(BaseModel):
     tracks: tuple[ProgramRevisionTrackOption, ...] = Field(min_length=1, max_length=20)
     resource_roles: tuple[SafeIdentifier, ...] = Field(default=(), max_length=100)
     resources: tuple[ProgramRevisionResourceOption, ...] = Field(default=(), max_length=100)
+    action_routes: tuple[ProgramRevisionActionRouteOption, ...] = Field(
+        default=(),
+        max_length=50,
+    )
     active_directive: ProgramRevisionActiveDirectiveOption | None = None
 
     @computed_field
@@ -155,6 +188,12 @@ class ProgramRevisionCatalog(BaseModel):
             raise ValueError("program-revision resource roles must be unique")
         if len({item.resource_id for item in self.resources}) != len(self.resources):
             raise ValueError("program-revision resource IDs must be unique")
+        if len({item.stage_id for item in self.action_routes}) != len(self.action_routes):
+            raise ValueError("program-revision action-route stages must be unique")
+        if self.action_routes and (
+            {item.stage_id for item in self.action_routes} != set(self.next_stage_ids)
+        ):
+            raise ValueError("program-revision action routes must cover every eligible next stage")
         if {item.role for item in self.resources} != set(self.resource_roles):
             raise ValueError("program-revision roles must describe the project resources")
         if self.current_stage_id not in stage_ids or set(self.next_stage_ids) - set(stage_ids):
@@ -184,6 +223,8 @@ class ProgramRevisionRequest(BaseModel):
     snapshot_sha256: Sha256
     dossier_sha256: Sha256
     feedback: str = Field(min_length=1, max_length=_MAX_FEEDBACK_CHARS)
+    target_stage_id: SafeIdentifier | None = None
+    target_route_sha256: Sha256 | None = None
     base_proposal_id: SafeIdentifier | None = None
     base_record_sha256: Sha256 | None = None
 
@@ -196,12 +237,14 @@ class ProgramRevisionRequest(BaseModel):
     def base_proposal_is_atomic(self) -> ProgramRevisionRequest:
         if (self.base_proposal_id is None) != (self.base_record_sha256 is None):
             raise ValueError("program-revision base proposal identity must be complete")
+        if (self.target_stage_id is None) != (self.target_route_sha256 is None):
+            raise ValueError("program-revision action-route focus must be complete")
         return self
 
     @computed_field
     @property
     def fingerprint(self) -> str:
-        return _fingerprint(self.model_dump(mode="json", exclude={"fingerprint"}))
+        return _fingerprint(_request_content(self))
 
 
 class ProgramRevisionDraft(BaseModel):
@@ -451,6 +494,17 @@ class ProgramRevisionService:
             or parsed.dossier_sha256 != catalog.dossier_sha256
         ):
             raise ValueError("program-revision request is stale")
+        if parsed.target_stage_id is not None:
+            route = next(
+                (
+                    item
+                    for item in catalog.action_routes
+                    if item.stage_id == parsed.target_stage_id
+                ),
+                None,
+            )
+            if route is None or route.route_sha256 != parsed.target_route_sha256:
+                raise ValueError("program-revision action-route focus is stale or unavailable")
         prior_record = self._base_record(parsed)
         if prior_record is None:
             prior_record = self._active_directive_record(catalog)
@@ -473,6 +527,11 @@ class ProgramRevisionService:
             )
         if outcome.status == "proposed" and outcome.draft is not None:
             validate_program_revision_draft(outcome.draft, catalog)
+            if (
+                parsed.target_stage_id is not None
+                and outcome.draft.target_stage_id != parsed.target_stage_id
+            ):
+                raise ValueError("program-revision draft ignored its focused action route")
         created_at = datetime.now(UTC)
         proposal_id = f"program-revision-{outcome.request_fingerprint[:20]}"
         unsigned = _record_content(
@@ -692,6 +751,14 @@ def build_program_revision_catalog(
         project_id=project_id,
         control=control,
     )
+    action_routes = tuple(
+        route_program_stage_action(
+            report,
+            effective_program,
+            stage_id=stage_id,
+        )
+        for stage_id in effective_program.effective_next_stage_ids
+    )
     return ProgramRevisionCatalog(
         project_id=project_id,
         snapshot_revision=binding.snapshot_revision,
@@ -739,6 +806,21 @@ def build_program_revision_catalog(
             )
             if resource_portfolio is not None
             else ()
+        ),
+        action_routes=tuple(
+            ProgramRevisionActionRouteOption(
+                stage_id=item.stage_id,
+                route_sha256=item.route_sha256,
+                verification_route=item.verification.route.value,
+                next_action_kind=item.next_action_kind,
+                blocker_codes=item.blocker_codes,
+                verification_reason_codes=item.verification.reason_codes,
+                expected_loss_units=item.verification.expected_loss_units,
+                targeted_net_gain_units=item.verification.targeted_net_gain_units,
+                full_preflight_net_gain_units=item.verification.full_preflight_net_gain_units,
+                authorizes_execution=False,
+            )
+            for item in action_routes
         ),
         active_directive=active_directive,
     )
@@ -929,7 +1011,7 @@ def _record_content(
         "proposal_id": proposal_id,
         "project_id": project_id,
         "created_at": created_at.isoformat(),
-        "request": request.model_dump(mode="json", exclude_computed_fields=True),
+        "request": _request_content(request),
         "outcome": outcome.model_dump(
             mode="json",
             exclude_computed_fields=True,
@@ -977,7 +1059,18 @@ def _fingerprint(value: object) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _request_content(request: ProgramRevisionRequest) -> dict[str, object]:
+    """Keep v1 records stable when the optional action-route focus is absent."""
+
+    payload = request.model_dump(mode="json", exclude_computed_fields=True)
+    if request.target_stage_id is None:
+        payload.pop("target_stage_id", None)
+        payload.pop("target_route_sha256", None)
+    return payload
+
+
 __all__ = [
+    "ProgramRevisionActionRouteOption",
     "ProgramRevisionActiveDirectiveOption",
     "ProgramRevisionCatalog",
     "ProgramRevisionDecisionRecord",

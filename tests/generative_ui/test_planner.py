@@ -21,6 +21,7 @@ from scitaste.generative_ui.planner import (
 )
 from scitaste.generative_ui.planning import SurfaceCandidateCatalog, SurfaceCandidateFactory
 from scitaste.generative_ui.program_revision import (
+    ProgramRevisionActionRouteOption,
     ProgramRevisionCatalog,
     ProgramRevisionRequest,
     ProgramRevisionStageOption,
@@ -223,6 +224,29 @@ def _program_inputs() -> tuple[ProgramRevisionRequest, ProgramRevisionCatalog]:
                 planned_cells=12,
             ),
         ),
+        action_routes=(
+            ProgramRevisionActionRouteOption(
+                stage_id="qualify-sources",
+                route_sha256="3" * 64,
+                verification_route="owner_approval",
+                next_action_kind="request_owner_decision",
+                blocker_codes=("sources:not-frozen",),
+                verification_reason_codes=("declared-owner-boundary-requires-owner",),
+                expected_loss_units=12.0,
+                targeted_net_gain_units=7.0,
+                full_preflight_net_gain_units=7.4,
+            ),
+            ProgramRevisionActionRouteOption(
+                stage_id="qualify-adapters",
+                route_sha256="4" * 64,
+                verification_route="direct_path",
+                next_action_kind="continue_directly",
+                verification_reason_codes=("verification-cost-exceeds-avoidable-loss",),
+                expected_loss_units=1.0,
+                targeted_net_gain_units=-0.25,
+                full_preflight_net_gain_units=-3.05,
+            ),
+        ),
     )
     return ProgramRevisionRequest(
         project_id="planner-project",
@@ -230,6 +254,8 @@ def _program_inputs() -> tuple[ProgramRevisionRequest, ProgramRevisionCatalog]:
         snapshot_sha256="1" * 64,
         dossier_sha256="2" * 64,
         feedback="先冻结同源 Taste 对照, 再考虑 GPU 预实验。",
+        target_stage_id="qualify-sources",
+        target_route_sha256="3" * 64,
     ), catalog
 
 
@@ -468,6 +494,11 @@ def test_model_generates_a_non_executable_project_bound_program_amendment() -> N
     assert outcome.draft.proposed_next_stage_order == catalog.next_stage_ids
     assert backend.calls[0].request_id.startswith("ui-evidence_program_revision-")
     assert backend.calls[0].input_payload["feedback"] == request.feedback
+    assert backend.calls[0].input_payload["requested_action_focus"] == {
+        "target_stage_id": "qualify-sources",
+        "target_route_sha256": "3" * 64,
+    }
+    assert len(backend.calls[0].input_payload["tool_intelligence_routes"]) == 2
     assert "research-basis" not in {
         item["stage_id"] for item in backend.calls[0].input_payload["stages"]
     }
