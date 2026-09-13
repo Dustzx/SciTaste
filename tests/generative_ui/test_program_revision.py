@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from scitaste.generative_ui import program_revision as revision_module
 from scitaste.generative_ui.program_revision import (
     ProgramRevisionActionRouteOption,
@@ -12,9 +14,11 @@ from scitaste.generative_ui.program_revision import (
     ProgramRevisionOutcome,
     ProgramRevisionRecord,
     ProgramRevisionRequest,
+    ProgramRevisionResourceOption,
     ProgramRevisionService,
     ProgramRevisionStageOption,
     ProgramRevisionTrackOption,
+    validate_program_revision_draft,
 )
 from scitaste.project import ProjectManifest, ProjectRuntime
 
@@ -244,3 +248,70 @@ def test_focused_revision_binds_the_exact_tool_intelligence_route(
         assert "action-route focus is stale" in str(exc)
     else:  # pragma: no cover - regression guard
         raise AssertionError("stale Tool Intelligence route was accepted")
+
+
+def test_resource_revision_can_attach_only_catalog_resource_to_compatible_role() -> None:
+    catalog = ProgramRevisionCatalog(
+        project_id="resource-revision-project",
+        snapshot_revision=4,
+        snapshot_sha256="1" * 64,
+        dossier_id="resource-dossier",
+        dossier_sha256="2" * 64,
+        current_stage_id="select-api",
+        next_stage_ids=("select-api",),
+        stages=(
+            ProgramRevisionStageOption(
+                stage_id="select-api",
+                state="blocked",
+                dependencies_complete=True,
+                owner_approval_required=False,
+            ),
+        ),
+        tracks=(
+            ProgramRevisionTrackOption(
+                track_id="api-track",
+                role="system_comparison",
+                state="blocked",
+                resource_kind="api",
+            ),
+        ),
+        resource_roles=("primary-api",),
+        resources=(
+            ProgramRevisionResourceOption(
+                resource_id="api-a",
+                role="primary-api",
+                kind="api_model",
+                binding_status="pending",
+                compatible_roles=("primary-api",),
+            ),
+            ProgramRevisionResourceOption(
+                resource_id="api-b",
+                role="primary-api",
+                kind="api_model",
+                binding_status="pending",
+                attached=False,
+                compatible_roles=("primary-api",),
+            ),
+        ),
+    )
+    draft = ProgramRevisionDraft(
+        base_dossier_sha256=catalog.dossier_sha256,
+        change_kind="request_resource_revision",
+        target_stage_id="select-api",
+        summary="Attach the alternative API.",
+        rationale="Keep the project-specific comparison option explicit.",
+        requested_resource_roles=("primary-api",),
+        requested_resource_ids=("api-b",),
+    )
+
+    validate_program_revision_draft(draft, catalog)
+
+    with pytest.raises(ValueError, match="exactly one compatible selected role"):
+        validate_program_revision_draft(
+            draft.model_copy(
+                update={
+                    "requested_resource_roles": (),
+                }
+            ),
+            catalog,
+        )

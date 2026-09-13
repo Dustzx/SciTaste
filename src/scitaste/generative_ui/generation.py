@@ -49,7 +49,7 @@ _MODEL_CONFIG = ConfigDict(
     str_strip_whitespace=True,
     revalidate_instances="always",
 )
-_GENERATION_ID_CONTRACT = "generated-workspace-envelope-v3"
+_GENERATION_ID_CONTRACT = "generated-workspace-envelope-v4"
 
 
 class WorkspaceGenerationRequest(BaseModel):

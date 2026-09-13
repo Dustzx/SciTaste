@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import tempfile
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -28,11 +29,14 @@ from scitaste.model_nodes.verification_policy import (
 )
 from scitaste.project import ProjectRun, ProjectRuntime, ProjectSnapshot
 from scitaste.resources.registry import (
+    ComputeResourceCatalog,
     ComputeResourceRuntime,
     ProjectResourceBinding,
     ProjectResourceBindingEntry,
     RegisteredProjectResourceBinding,
     ResourceRegistrySnapshot,
+    ResourceSelectionStatus,
+    load_compute_resource_catalog,
 )
 
 RESOURCE_CONFIGURATION_PROJECTION = "project-resource-configuration-v1"
@@ -128,7 +132,7 @@ def apply_project_resource_configuration(
     runtime: ProjectRuntime,
     request: ProjectResourceConfigurationRequest | dict[str, object],
 ) -> tuple[ProjectSnapshot, ProjectResourceConfigurationPublication]:
-    """Apply only priority changes already named by an accepted, published model plan."""
+    """Apply only resource changes named by an accepted, published model plan."""
 
     parsed = (
         request
@@ -166,10 +170,16 @@ def apply_project_resource_configuration(
         or registry.registry_sha256 != parsed.expected_registry_sha256
     ):
         raise ValueError("project resource configuration binding is stale")
-    configured_binding = compile_project_resource_binding(current.binding, directive)
+    loaded_catalog = load_compute_resource_catalog(_catalog_path(runtime, registry))
+    configured_binding = compile_project_resource_binding(
+        current.binding,
+        directive,
+        catalog=loaded_catalog.catalog,
+        selection_status_by_id=loaded_catalog.selection_status_by_id,
+    )
     verification = decide_verification_route(
         VerificationDecisionInput(
-            action_id="apply-project-resource-priorities",
+            action_id="apply-project-resource-configuration",
             reversibility=ActionReversibility.REVERSIBLE,
             effects=(ActionEffect.FILESYSTEM_WRITE,),
             evidence_state="current",
@@ -195,7 +205,7 @@ def apply_project_resource_configuration(
             condition="generation-as-content-resource-configuration",
             seed=0,
             status="preparing-project-resource-configuration",
-            evidence_scope="project-resource-priorities-only-no-probe-no-workload",
+            evidence_scope="project-resource-membership-and-priorities-no-probe-no-workload",
             stage_path=RESOURCE_CONFIGURATION_STAGE_PATH,
             artifact=artifact,
             generative_ui_projection=RESOURCE_CONFIGURATION_PROJECTION,
@@ -253,13 +263,54 @@ def apply_project_resource_configuration(
 def compile_project_resource_binding(
     current: ProjectResourceBinding,
     directive: PlanningDirectivePublication,
+    *,
+    catalog: ComputeResourceCatalog | None = None,
+    selection_status_by_id: Mapping[str, ResourceSelectionStatus] | None = None,
 ) -> ProjectResourceBinding:
-    """Compile a closed resource preference into priorities without adding authority."""
+    """Compile catalog attachment and priority changes without accessing a resource."""
 
     draft = directive.draft
     if draft.change_kind != "request_resource_revision" or not draft.requested_resource_ids:
         raise ValueError("planning directive does not contain a resource revision")
     by_resource = {item.resource_id: item for item in current.bindings}
+    unattached_resource_ids = set(draft.requested_resource_ids) - set(by_resource)
+    if unattached_resource_ids and catalog is None:
+        raise ValueError("resource attachment compilation requires the bound catalog")
+    if unattached_resource_ids and selection_status_by_id is None:
+        raise ValueError("resource attachment compilation requires catalog lifecycle state")
+    bindings = list(current.bindings)
+    existing_binding_ids = {item.binding_id for item in bindings}
+    for resource_id in sorted(unattached_resource_ids):
+        assert catalog is not None
+        assert selection_status_by_id is not None
+        if selection_status_by_id.get(resource_id) is not ResourceSelectionStatus.CURRENT:
+            raise ValueError("historical or disabled catalog resources cannot be newly attached")
+        definition = catalog.resource(resource_id)
+        compatible_roles = {
+            item.role for item in bindings if item.expected_kind is definition.kind
+        }.intersection(draft.requested_resource_roles)
+        if len(compatible_roles) != 1:
+            raise ValueError("resource attachment requires exactly one compatible project role")
+        role = compatible_roles.pop()
+        binding_id = f"ui-{role}-{resource_id}"
+        if binding_id in existing_binding_ids:
+            raise ValueError("resource attachment binding identity already exists")
+        priorities = [item.priority for item in bindings if item.role == role]
+        bindings.append(
+            ProjectResourceBindingEntry(
+                binding_id=binding_id,
+                resource_id=resource_id,
+                expected_kind=definition.kind,
+                role=role,
+                priority=max(priorities, default=0) + 1,
+                status=definition.availability,
+                purpose=draft.summary,
+                required_for=(draft.target_stage_id,),
+            )
+        )
+        existing_binding_ids.add(binding_id)
+
+    by_resource = {item.resource_id: item for item in bindings}
     unknown = set(draft.requested_resource_ids) - set(by_resource)
     if unknown:
         raise ValueError("planning directive names resources outside the project binding")
@@ -267,7 +318,7 @@ def compile_project_resource_binding(
     requested_roles = set(draft.requested_resource_roles) or selected_roles
     if selected_roles - requested_roles:
         raise ValueError("requested resources do not belong to the requested project roles")
-    if requested_roles - {item.role for item in current.bindings}:
+    if requested_roles - {item.role for item in bindings}:
         raise ValueError("planning directive names unknown project resource roles")
     uncovered = requested_roles - selected_roles
     if uncovered:
@@ -275,8 +326,8 @@ def compile_project_resource_binding(
 
     requested_order = {value: index for index, value in enumerate(draft.requested_resource_ids)}
     configured: list[ProjectResourceBindingEntry] = []
-    for role in dict.fromkeys(item.role for item in current.bindings):
-        rows = [item for item in current.bindings if item.role == role]
+    for role in dict.fromkeys(item.role for item in bindings):
+        rows = [item for item in bindings if item.role == role]
         if role in requested_roles:
             rows.sort(
                 key=lambda item: (

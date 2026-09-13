@@ -227,7 +227,7 @@ class ModelPlannerPolicy(BaseModel):
     expected_model: ProviderIdentityPart
     max_request_bytes: int = Field(default=64_000, ge=512, le=1_000_000)
     max_response_bytes: int = Field(default=24_000, ge=256, le=1_000_000)
-    max_input_tokens: int = Field(default=12_000, ge=1, le=1_000_000)
+    max_input_tokens: int = Field(default=32_000, ge=1, le=1_000_000)
     max_output_tokens: int = Field(default=1_024, ge=1, le=32_000)
     max_latency_ms: float = Field(default=60_000, gt=0, le=300_000, allow_inf_nan=False)
     max_response_cost_usd: float = Field(default=0.15, ge=0, le=100, allow_inf_nan=False)
@@ -646,10 +646,10 @@ class StructuredWorkspacePlanner:
                 digest_candidate_ids=digest_candidate_ids,
                 context=context,
             )
-        except Exception:
+        except Exception as exc:
             return SurfacePlannerOutcome(
                 status="unavailable",
-                reason_code="model-surface-plan-unavailable",
+                reason_code=_surface_composition_failure_reason(exc),
             )
         return SurfacePlannerOutcome(
             status="planned",
@@ -758,7 +758,10 @@ class StructuredWorkspacePlanner:
                     "as execution authority. "
                     "Select only stage and track identifiers present in input_payload. Preserve "
                     "completed stages and every blocker. Do not claim new evidence, apply a "
-                    "change, authorize an external action, or authorize execution. Return one "
+                    "change, authorize an external action, or authorize execution. For a "
+                    "resource revision, project_resources with attached=false may be "
+                    "selected only with exactly one of their compatible roles; publication then "
+                    "attaches catalog metadata but must not claim access, probing, or use. "
                     "JSON object matching output_schema and no tool calls."
                 ),
             )
@@ -1152,6 +1155,24 @@ def _program_revision_failure_reason(exc: Exception) -> str:
     if isinstance(exc, (ValidationError, ValueError)):
         return "model-program-revision-schema-rejected"
     return "model-program-revision-unavailable"
+
+
+def _surface_composition_failure_reason(exc: Exception) -> str:
+    """Keep actionable failure categories while never returning provider text."""
+
+    if isinstance(exc, StructuredBackendDisabledError):
+        return "model-surface-plan-backend-disabled"
+    if isinstance(exc, httpx.HTTPStatusError):
+        return "model-surface-plan-provider-http-error"
+    if isinstance(exc, httpx.TransportError):
+        return "model-surface-plan-provider-transport-error"
+    if isinstance(exc, StructuredProviderResponseError):
+        return "model-surface-plan-provider-response-invalid"
+    if "cost telemetry" in str(exc):
+        return "model-surface-plan-cost-telemetry-unavailable"
+    if isinstance(exc, (ValidationError, ValueError)):
+        return "model-surface-plan-schema-rejected"
+    return "model-surface-plan-unavailable"
 
 
 def _composition_provenance(

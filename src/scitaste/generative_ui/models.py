@@ -2428,6 +2428,28 @@ class ProjectResourcePortfolioItem(BaseModel):
     required_for: tuple[SafeIdentifier, ...] = Field(default=(), max_length=20)
 
 
+class ProjectAvailableResourceItem(BaseModel):
+    """One shared-catalog resource that is not yet attached to this project."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    resource_id: SafeIdentifier
+    kind: Literal["api_model", "gpu_host", "model_checkpoint"]
+    selection_status: Literal["current", "historical", "disabled"]
+    attachable: bool
+    observed_status: Literal["verified", "reported", "pending", "blocked", "unobserved"]
+    access_state: Literal["configured", "missing", "not_required"]
+    compatible_roles: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=20)
+    connection_metadata_complete: bool | None = None
+    local_path_present: bool | None = None
+
+    @model_validator(mode="after")
+    def attachability_matches_lifecycle(self) -> ProjectAvailableResourceItem:
+        if self.attachable != (self.selection_status == "current"):
+            raise ValueError("project resource attachability differs from catalog lifecycle")
+        return self
+
+
 class ProjectResourcePortfolioData(BaseModel):
     """Project-owned view of a shared registry; secrets and execution remain outside it."""
 
@@ -2445,6 +2467,11 @@ class ProjectResourcePortfolioData(BaseModel):
     pending_binding_count: int = Field(ge=0)
     blocked_binding_count: int = Field(ge=0)
     resources: tuple[ProjectResourcePortfolioItem, ...] = Field(min_length=1, max_length=100)
+    available_resource_count: int = Field(default=0, ge=0)
+    available_resources: tuple[ProjectAvailableResourceItem, ...] = Field(
+        default=(),
+        max_length=100,
+    )
     configuration_authority: Literal["proposal_only", "user_applied"] = "proposal_only"
     configuration_run_id: str | None = Field(
         default=None,
@@ -2472,6 +2499,14 @@ class ProjectResourcePortfolioData(BaseModel):
             raise ValueError("blocked resource count differs from binding rows")
         if len({item.binding_id for item in self.resources}) != len(self.resources):
             raise ValueError("project resource binding IDs must be unique")
+        if self.available_resource_count != len(self.available_resources):
+            raise ValueError("available resource count differs from catalog rows")
+        bound_ids = {item.resource_id for item in self.resources}
+        available_ids = [item.resource_id for item in self.available_resources]
+        if len(available_ids) != len(set(available_ids)):
+            raise ValueError("available project resource IDs must be unique")
+        if bound_ids.intersection(available_ids):
+            raise ValueError("a project resource cannot be both bound and available")
         configuration_fields = (
             self.configuration_run_id,
             self.source_planning_publication_id,

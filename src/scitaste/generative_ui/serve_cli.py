@@ -342,7 +342,7 @@ def _load_planner(
             expected_backend=config.provider,
             expected_model=config.model,
             max_response_bytes=response_bytes,
-            max_input_tokens=max_input_tokens or 12_000,
+            max_input_tokens=max_input_tokens or 32_000,
             max_output_tokens=output_limit,
             max_latency_ms=latency_ms,
             max_response_cost_usd=(

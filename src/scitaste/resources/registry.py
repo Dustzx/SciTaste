@@ -33,6 +33,14 @@ class ResourceKind(StrEnum):
     MODEL_CHECKPOINT = "model_checkpoint"
 
 
+class ResourceSelectionStatus(StrEnum):
+    """Whether a catalog entry may be newly attached to a project."""
+
+    CURRENT = "current"
+    HISTORICAL = "historical"
+    DISABLED = "disabled"
+
+
 class ObservationMethod(StrEnum):
     AUTOMATED_PROBE = "automated_probe"
     AUTHENTICATED_CALL = "authenticated_call"
@@ -212,6 +220,7 @@ class ResourceDefinitionRef(BaseModel):
     kind: ResourceKind
     locator: str = Field(min_length=1, max_length=1_000)
     sha256: str = Field(pattern=_SHA256)
+    selection_status: ResourceSelectionStatus = ResourceSelectionStatus.CURRENT
 
     @model_validator(mode="after")
     def locator_is_safe(self) -> ResourceDefinitionRef:
@@ -222,7 +231,7 @@ class ResourceDefinitionRef(BaseModel):
 class ReferencedComputeResourceCatalog(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.1"] = "1.1"
+    schema_version: Literal["1.1", "1.2"] = "1.1"
     catalog_id: str = Field(pattern=_ID)
     resource_refs: tuple[ResourceDefinitionRef, ...] = Field(min_length=1, max_length=100)
 
@@ -234,13 +243,18 @@ class ReferencedComputeResourceCatalog(BaseModel):
             raise ValueError("compute resource reference IDs must be unique")
         if len(locators) != len(set(locators)):
             raise ValueError("compute resource reference locators must be unique")
+        if self.schema_version == "1.1" and any(
+            item.selection_status is not ResourceSelectionStatus.CURRENT
+            for item in self.resource_refs
+        ):
+            raise ValueError("resource selection lifecycle requires catalog schema 1.2")
         return self
 
 
 class ComputeResourceCatalog(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     catalog_id: str = Field(pattern=_ID)
     resources: tuple[ComputeResourceDefinition, ...] = Field(min_length=1, max_length=100)
 
@@ -278,7 +292,16 @@ class LoadedComputeResourceCatalog(BaseModel):
     file_sha256: str = Field(pattern=_SHA256)
     semantic_sha256: str = Field(pattern=_SHA256)
     component_file_sha256: dict[str, str] = Field(default_factory=dict)
+    selection_status_by_id: dict[str, ResourceSelectionStatus] = Field(default_factory=dict)
     catalog: ComputeResourceCatalog
+
+    @model_validator(mode="after")
+    def selection_statuses_cover_catalog(self) -> LoadedComputeResourceCatalog:
+        if set(self.selection_status_by_id) != {
+            item.resource_id for item in self.catalog.resources
+        }:
+            raise ValueError("resource selection lifecycle must cover the catalog")
+        return self
 
 
 class ComputeResourceCatalogInspection(BaseModel):
@@ -566,7 +589,8 @@ class ResourceAccessStatus(BaseModel):
 def load_compute_resource_catalog(path: str | Path) -> LoadedComputeResourceCatalog:
     source, payload = _load_yaml(path)
     component_hashes: dict[str, str] = {}
-    if payload.get("schema_version") == "1.1":
+    selection_status_by_id: dict[str, ResourceSelectionStatus] = {}
+    if payload.get("schema_version") in {"1.1", "1.2"}:
         referenced = ReferencedComputeResourceCatalog.model_validate(payload)
         definitions: list[ComputeResourceDefinition] = []
         for reference in referenced.resource_refs:
@@ -585,18 +609,28 @@ def load_compute_resource_catalog(path: str | Path) -> LoadedComputeResourceCata
                 raise ValueError("compute resource definition kind does not match its reference")
             definitions.append(document.resource)
             component_hashes[reference.locator] = observed_sha256
+            selection_status_by_id[reference.resource_id] = reference.selection_status
         catalog = ComputeResourceCatalog(
-            schema_version="1.1",
+            schema_version=referenced.schema_version,
             catalog_id=referenced.catalog_id,
             resources=tuple(definitions),
         )
     else:
         catalog = ComputeResourceCatalog.model_validate(payload)
+        selection_status_by_id = {
+            item.resource_id: ResourceSelectionStatus.CURRENT for item in catalog.resources
+        }
     return LoadedComputeResourceCatalog(
         path=source,
         file_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
-        semantic_sha256=_semantic_sha256(_catalog_semantic_payload(catalog)),
+        semantic_sha256=_semantic_sha256(
+            _catalog_semantic_payload(
+                catalog,
+                selection_status_by_id=selection_status_by_id,
+            )
+        ),
         component_file_sha256=component_hashes,
+        selection_status_by_id=selection_status_by_id,
         catalog=catalog,
     )
 
@@ -1209,7 +1243,11 @@ def _load_yaml(path: str | Path) -> tuple[Path, object]:
     return source, payload
 
 
-def _catalog_semantic_payload(catalog: ComputeResourceCatalog) -> dict[str, object]:
+def _catalog_semantic_payload(
+    catalog: ComputeResourceCatalog,
+    *,
+    selection_status_by_id: Mapping[str, ResourceSelectionStatus],
+) -> dict[str, object]:
     """Keep newly optional connection fields neutral for historical catalogs."""
 
     payload = catalog.model_dump(mode="json")
@@ -1232,6 +1270,11 @@ def _catalog_semantic_payload(catalog: ComputeResourceCatalog) -> dict[str, obje
                 resource.pop(field, None)
         if not resource.get("remote_forwards"):
             resource.pop("remote_forwards", None)
+    if catalog.schema_version == "1.2":
+        payload["selection_status_by_id"] = {
+            resource_id: status.value
+            for resource_id, status in sorted(selection_status_by_id.items())
+        }
     return payload
 
 

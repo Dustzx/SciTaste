@@ -1,11 +1,11 @@
 # Resource catalog layout
 
-`compute_catalog_v6.yaml` is the current project-superordinate resource index.
+`compute_catalog_v9.yaml` is the current project-superordinate resource index.
 Every entry binds one independently reviewable resource manifest by SHA-256.
 
 ```text
 configs/resources/
-├── compute_catalog_v6.yaml
+├── compute_catalog_v9.yaml
 ├── assets/
 │   └── model_asset_catalog_v1.yaml
 ├── api/
@@ -23,7 +23,7 @@ configs/resources/
 │       ├── qwen3_5_4b_local.yaml
 │       └── qwen3_5_4b_remote.yaml
 ├── projects/
-│   └── scitaste_self_development_v6.yaml
+│   └── scitaste_self_development_v9.yaml
 └── observations/
     ├── *.yaml                 # historical API and remote-host observations
     ├── v2/                    # local v2 observations
@@ -45,7 +45,7 @@ presence. Host-scoped checkpoints name their owning GPU resource, so a remote
 path is never probed as though it were a local directory. Project bindings state
 why and at what evidence status each project can use a shared resource.
 
-`compute_catalog_v1.yaml` through `compute_catalog_v5.yaml` remain immutable
+`compute_catalog_v1.yaml` through `compute_catalog_v8.yaml` remain immutable
 history. V3 added the then-current DeepSeek V4 Flash identity, the refreshed
 GLM-5.3-Flash identity, a verified remote-host snapshot, and content-identical
 local and remote Qwen3.5-4B replicas. V4 records the short-lived DeepSeek V4
@@ -54,8 +54,21 @@ Flash snapshot. V5 follows the then-observed official alias change back to
 historical observations remain addressable; project binding v5 excludes it from
 the then-current candidate set. V6 follows the later official change to
 `deepseek-v4-flash` / `DeepSeek-V4-Flash`, removes V4.1 from current project
-bindings, and preserves every prior file as a historical stratum. New work uses
-v6 instead of relabeling prior records.
+bindings, and preserves every prior file as a historical stratum. V7 and V8
+record subsequent project-binding and observation advances. V9 introduces an
+explicit selection lifecycle: `current` entries may be newly attached to a
+project, `historical` entries remain visible only for provenance, and `disabled`
+entries cannot be selected for new work. New work uses v9 instead of relabeling
+prior records.
+
+Generation as Content projects both a project's attached resources and compatible
+catalog alternatives. A user-reviewed, model-authored resource directive may add
+only a `current` catalog entry to an existing compatible project role and may
+reorder role-local priorities. Applying that directive archives the predecessor
+binding and creates a project-owned receipt. It does not read a credential, probe
+a host, contact a provider, reserve compute, launch a workload, or authorize an
+experiment. Shared endpoint definitions, observations, and secret-value
+administration remain outside the project surface.
 
 `assets/model_asset_catalog_v1.yaml` indexes bounded local and remote discovery
 inventories. Discovery records what already exists, not what the ICLR experiment

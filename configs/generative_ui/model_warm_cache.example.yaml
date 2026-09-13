@@ -12,7 +12,7 @@ quick_intent_ids:
   - review-registered-paper-evidence
 cache_ttl_hours: 24
 max_provider_calls: 4
-max_input_tokens_per_call: 12000
+max_input_tokens_per_call: 32000
 max_output_tokens_per_call: 4096
 max_response_cost_usd: 0.01
 max_total_tokens: 64384

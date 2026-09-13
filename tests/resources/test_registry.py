@@ -18,6 +18,7 @@ from scitaste.resources import (
     ObservationStatus,
     ResourceKind,
     ResourceObservation,
+    ResourceSelectionStatus,
     inspect_compute_resource_catalog,
     inspect_project_resource_binding,
     inspect_resource_access,
@@ -31,12 +32,14 @@ CATALOG_V3 = Path("configs/resources/compute_catalog_v3.yaml")
 CATALOG_V4 = Path("configs/resources/compute_catalog_v4.yaml")
 CATALOG_V5 = Path("configs/resources/compute_catalog_v5.yaml")
 CATALOG_V6 = Path("configs/resources/compute_catalog_v6.yaml")
+CATALOG_V9 = Path("configs/resources/compute_catalog_v9.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
 PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
 PROJECT_BINDING_V4 = Path("configs/resources/projects/scitaste_self_development_v4.yaml")
 PROJECT_BINDING_V5 = Path("configs/resources/projects/scitaste_self_development_v5.yaml")
 PROJECT_BINDING_V6 = Path("configs/resources/projects/scitaste_self_development_v6.yaml")
+PROJECT_BINDING_V9 = Path("configs/resources/projects/scitaste_self_development_v9.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
 REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
 LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
@@ -90,6 +93,20 @@ def test_v6_catalog_and_project_binding_use_current_deepseek_v4_identity() -> No
     assert binding.catalog_id == "scitaste-shared-compute-v6"
     assert binding.api_resource_ids[0] == "deepseek-v4-flash"
     assert "deepseek-v41-flash" not in binding.api_resource_ids
+
+
+def test_v9_catalog_separates_resource_provenance_from_project_selection() -> None:
+    loaded = load_compute_resource_catalog(CATALOG_V9)
+    binding = inspect_project_resource_binding(CATALOG_V9, PROJECT_BINDING_V9)
+
+    assert loaded.catalog.schema_version == "1.2"
+    assert loaded.selection_status_by_id["deepseek-v41-flash"] is (
+        ResourceSelectionStatus.HISTORICAL
+    )
+    assert loaded.selection_status_by_id["bailian-qwen38-max"] is (ResourceSelectionStatus.DISABLED)
+    assert loaded.selection_status_by_id["deepseek-v4-flash"] is (ResourceSelectionStatus.CURRENT)
+    assert binding.valid is True
+    assert binding.catalog_id == "scitaste-shared-compute-v9"
 
 
 def test_explicit_catalog_hash_binds_api_gpu_and_checkpoint_manifests() -> None:

@@ -5,6 +5,19 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Made project resources configurable through the same model-authored
+  Generation as Content loop as research planning. The project surface now shows
+  compatible unbound catalog resources with explicit current, historical, and
+  disabled lifecycle state; only a current entry can be attached to exactly one
+  compatible project role after proposal, acceptance, publication, and a
+  separate apply action. The predecessor binding and registry identity are
+  retained, while credentials, probes, provider calls, workloads, and experiment
+  authority remain outside the action. Tool Intelligence routes this reversible
+  local membership/priority update directly with only intrinsic
+  identity/hash/staleness/lifecycle guards. A real GLM-5.3-Flash project-surface
+  generation also exposed and closed an undersized input envelope: the UI
+  default is now 32,000 input tokens while its independently configured output
+  and cost ceilings remain in force.
 - Closed the gap between Generation as Content warm-cache labels and editable
   project conversations. A fresh cached model page can now become the immutable
   first turn of a new project-owned topic without another provider call; the

@@ -553,7 +553,7 @@ def test_malformed_model_plan_falls_back_to_deterministic_layout(
     outcome = FallbackWorkspacePlanner(primary).compose(catalog)
 
     assert outcome.status == "fallback"
-    assert outcome.reason_code == "model-surface-plan-unavailable"
+    assert outcome.reason_code == "model-surface-plan-schema-rejected"
     assert outcome.plan is not None
     assert outcome.provenance is not None
     assert outcome.provenance.mode == PlannerMode.DETERMINISTIC_FALLBACK

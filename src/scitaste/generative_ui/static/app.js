@@ -1998,6 +1998,29 @@ function prepareEvidenceProgramQuestion(program, phase = null) {
 function prepareResourceRevision(data, evidenceProgram) {
   intentQuestion.value = t("resources.revision_prompt", {
     roles: data.resources.map((item) => readableCode(item.role)).join(", "),
+    available: (data.available_resources || []).filter((item) => item.attachable)
+      .map((item) => readableCode(item.resource_id)).join(", ") || t("resources.none_available"),
+  });
+  if (evidenceProgram) {
+    activeProgramRevisionContext = {
+      dossierSha256: evidenceProgram.dossier_sha256,
+      targetStageId: evidenceProgram.gate_action_route.stage_id,
+      targetRouteSha256: evidenceProgram.gate_action_route.route_sha256,
+      baseProposalId: null,
+      baseRecordSha256: null,
+    };
+    generateWorkspaceButton.textContent = t("generation.propose_revision");
+  } else {
+    clearProgramRevisionContext();
+  }
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function prepareResourceAttachment(data, evidenceProgram, resource) {
+  intentQuestion.value = t("resources.attachment_prompt", {
+    resource: readableCode(resource.resource_id),
+    roles: resource.compatible_roles.map(readableCode).join(", "),
   });
   if (evidenceProgram) {
     activeProgramRevisionContext = {
@@ -2773,6 +2796,7 @@ function renderProjectResources(data, evidenceProgram) {
     verified: data.verified_binding_count,
     pending: data.pending_binding_count,
     blocked: data.blocked_binding_count,
+    available: data.available_resource_count || 0,
   }));
   identity.append(eyebrow, title, summary);
   const controls = document.createElement("div");
@@ -2894,7 +2918,57 @@ function renderProjectResources(data, evidenceProgram) {
       "configuration_verification_route",
     ],
   }));
-  section.append(header, kindSummary, details);
+  section.append(header, kindSummary);
+  if ((data.available_resources || []).length > 0) {
+    const availableDetails = document.createElement("details");
+    availableDetails.className = "project-resource-details";
+    const availableTitle = document.createElement("summary");
+    appendText(availableTitle, t("resources.open_available", {
+      count: data.available_resource_count,
+    }));
+    const availableGrid = document.createElement("div");
+    availableGrid.className = "project-resource-grid";
+    for (const item of data.available_resources) {
+      const row = document.createElement("article");
+      row.className = "project-resource state-pending";
+      const rowHeader = document.createElement("div");
+      const resource = document.createElement("strong");
+      appendText(resource, readableCode(item.resource_id));
+      const kind = document.createElement("span");
+      kind.className = "program-badge neutral";
+      appendText(kind, t(`resources.kind.${item.kind}`));
+      const lifecycle = document.createElement("span");
+      lifecycle.className = item.attachable ? "program-badge verified" : "program-badge neutral";
+      appendText(lifecycle, t(`resources.selection.${item.selection_status}`));
+      rowHeader.append(resource, kind, lifecycle);
+      const roles = document.createElement("small");
+      appendText(roles, t("resources.compatible_roles", {
+        roles: item.compatible_roles.map(readableCode).join(", "),
+      }));
+      const access = document.createElement("small");
+      appendText(access, t("resources.access", {
+        access: localizedCode(item.access_state),
+        observed: localizedCode(item.observed_status),
+      }));
+      const plan = document.createElement("button");
+      plan.type = "button";
+      plan.className = "secondary-button";
+      plan.disabled = !item.attachable;
+      appendText(plan, item.attachable
+        ? t("resources.plan_attachment")
+        : t("resources.attachment_unavailable"));
+      plan.addEventListener("click", () => prepareResourceAttachment(
+        data,
+        evidenceProgram,
+        item,
+      ));
+      row.append(rowHeader, roles, access, plan);
+      availableGrid.appendChild(row);
+    }
+    availableDetails.append(availableTitle, availableGrid);
+    section.appendChild(availableDetails);
+  }
+  section.appendChild(details);
   return section;
 }
 

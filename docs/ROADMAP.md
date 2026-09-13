@@ -1384,12 +1384,14 @@ citation/resource screen and exact adapters/licenses remain open.
   write, so no generic preflight is added. Publication still changes neither the
   source dossier nor experiment authority.
 - Done: a published resource-planning version exposes one more explicit user
-  action that compiles only its registered resource IDs into successor role
-  priorities. The old binding is retained in project-scoped resource history and
-  a project run binds the model proposal, user confirmation, predecessor/new
-  binding hashes, registry identity, and Tool Intelligence route. This local
-  direct-path update does not read credentials, alter the shared catalog, probe a
-  host, contact a provider, launch a workload, or authorize an experiment.
+  action that may attach a `current` catalog resource to exactly one compatible
+  project role and compiles selected IDs into successor role priorities.
+  Historical and disabled entries remain visible but cannot be newly attached.
+  The old binding is retained in project-scoped resource history and a project
+  run binds the model proposal, user confirmation, predecessor/new binding
+  hashes, registry identity, and Tool Intelligence route. This local direct-path
+  update does not read credentials, alter the shared catalog, probe a host,
+  contact a provider, launch a workload, or authorize an experiment.
 - Done: each user-published directive now compiles through the independent
   evaluation layer into a self-hashed effective experiment program. The project
   home uses the effective stage order and records the base order, typed effect,
@@ -1418,6 +1420,12 @@ citation/resource screen and exact adapters/licenses remain open.
   preflight needs material incremental net gain over a sufficient targeted
   check, and semantic gray-zone advice cannot introduce a negative-value check.
   The route portfolio visualizes both alternatives before execution.
+- Done: the live GLM-5.3-Flash composition path was exercised once on the current
+  self-development project after raising the UI-specific input envelope from
+  12,000 to 32,000 tokens. The admitted response used 20,790 input tokens and
+  1,357 output tokens in 11,755 ms at recorded cost USD 0.001506666273376202.
+  This establishes product-path viability only; it is not a usability result or
+  evidence that generated intervention improves scientific outcomes.
 - Next: evaluate whether model-generated evidence surfaces improve researcher
   comprehension and intervention quality under a counterbalanced human study;
   broaden the trusted graph/comparison repertoire only where the study exposes a

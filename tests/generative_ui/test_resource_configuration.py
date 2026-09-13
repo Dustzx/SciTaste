@@ -5,6 +5,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scitaste.generative_ui import resource_configuration as configuration_module
@@ -14,10 +15,16 @@ from scitaste.generative_ui.project_resources import load_project_resource_portf
 from scitaste.generative_ui.resource_configuration import (
     ProjectResourceConfigurationRequest,
     apply_project_resource_configuration,
+    compile_project_resource_binding,
     inspect_project_resource_configuration,
 )
 from scitaste.project import ProjectManifest, ProjectRuntime
-from scitaste.resources import ComputeResourceRuntime, load_project_resource_binding
+from scitaste.resources import (
+    ComputeResourceRuntime,
+    ResourceSelectionStatus,
+    load_compute_resource_catalog,
+    load_project_resource_binding,
+)
 
 
 def _sha(value: object) -> str:
@@ -32,8 +39,8 @@ def _sha(value: object) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def _publication() -> PlanningDirectivePublication:
-    draft = ProgramRevisionDraft(
+def _publication(draft: ProgramRevisionDraft | None = None) -> PlanningDirectivePublication:
+    draft = draft or ProgramRevisionDraft(
         base_dossier_sha256="d" * 64,
         change_kind="request_resource_revision",
         target_stage_id="run-api-prepilot",
@@ -106,7 +113,7 @@ def _resource_runtime(tmp_path: Path) -> tuple[ProjectRuntime, object, object]:
                         "credential_env": f"{resource_id.upper().replace('-', '_')}_KEY",
                         "availability": "pending",
                     }
-                    for resource_id in ("api-a", "api-b")
+                    for resource_id in ("api-a", "api-b", "api-c")
                 ],
             },
             sort_keys=False,
@@ -197,7 +204,89 @@ def test_published_resource_plan_requires_explicit_apply_and_updates_only_priori
     assert portfolio.configuration_authority == "user_applied"
     assert portfolio.source_planning_publication_id == directive.publication_id
     assert portfolio.binding_record_sha256 == publication.configured_binding_record_sha256
+    assert portfolio.available_resource_count == 1
+    assert portfolio.available_resources[0].resource_id == "api-c"
+    assert portfolio.available_resources[0].compatible_roles == ("primary-api",)
+    assert portfolio.available_resources[0].selection_status == "current"
+    assert portfolio.available_resources[0].attachable is True
 
     repeated_snapshot, repeated = apply_project_resource_configuration(runtime, request)
     assert repeated_snapshot.revision == snapshot.revision
     assert repeated == publication
+
+
+def test_model_planned_catalog_attachment_becomes_project_metadata_without_probe(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    runtime, registry, registered = _resource_runtime(tmp_path)
+    directive = _publication(
+        ProgramRevisionDraft(
+            base_dossier_sha256="d" * 64,
+            change_kind="request_resource_revision",
+            target_stage_id="run-api-prepilot",
+            summary="Attach API C to the primary API role.",
+            rationale="Keep the alternative visible to this project before model selection.",
+            requested_resource_roles=("primary-api",),
+            requested_resource_ids=("api-c",),
+        )
+    )
+    monkeypatch.setattr(
+        configuration_module,
+        "load_latest_planning_directive",
+        lambda _runtime, _project_id: directive,
+    )
+    before = runtime.open("resource-project")
+    request = ProjectResourceConfigurationRequest(
+        project_id="resource-project",
+        publication_id=directive.publication_id,
+        publication_sha256=directive.publication_sha256,
+        expected_project_revision=before.revision,
+        expected_snapshot_sha256=before.snapshot_sha256,
+        expected_binding_record_sha256=registered.record_sha256,
+        expected_registry_sha256=registry.registry_sha256,
+        confirm_apply=True,
+    )
+
+    _, publication = apply_project_resource_configuration(runtime, request)
+
+    assert publication.verification_route == "direct_path"
+    assert publication.remote_probe_performed is False
+    assert publication.workload_executed is False
+    portfolio = load_project_resource_portfolio(runtime, "resource-project")
+    assert portfolio is not None
+    assert portfolio.available_resource_count == 0
+    attached = next(item for item in portfolio.resources if item.resource_id == "api-c")
+    assert attached.role == "primary-api"
+    assert attached.priority == 1
+    assert attached.access_state == "missing"
+    assert attached.required_for == ("run-api-prepilot",)
+
+
+def test_historical_catalog_resource_cannot_be_newly_attached(tmp_path: Path) -> None:
+    runtime, _, _ = _resource_runtime(tmp_path)
+    current = load_project_resource_binding(
+        runtime.outputs_root / "resources/projects/resource-project/RESOURCE_BINDING.yaml"
+    )
+    directive = _publication(
+        ProgramRevisionDraft(
+            base_dossier_sha256="d" * 64,
+            change_kind="request_resource_revision",
+            target_stage_id="run-api-prepilot",
+            summary="Reattach the historical API.",
+            rationale="This should be rejected by catalog lifecycle policy.",
+            requested_resource_roles=("primary-api",),
+            requested_resource_ids=("api-c",),
+        )
+    )
+    loaded = load_compute_resource_catalog(tmp_path / "compute.yaml")
+    selection = dict(loaded.selection_status_by_id)
+    selection["api-c"] = ResourceSelectionStatus.HISTORICAL
+
+    with pytest.raises(ValueError, match="historical or disabled"):
+        compile_project_resource_binding(
+            current,
+            directive,
+            catalog=loaded.catalog,
+            selection_status_by_id=selection,
+        )

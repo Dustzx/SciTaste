@@ -10,8 +10,10 @@ from scitaste.resources.registry import (
     ComputeResourceRuntime,
     CredentialBindingSource,
     RegisteredProjectResourceBinding,
+    ResourceAccessBindingItem,
     ResourceRegistrySnapshot,
     inspect_resource_access,
+    load_compute_resource_catalog,
 )
 
 
@@ -44,6 +46,7 @@ def load_project_resource_portfolio(
     except ValueError as exc:
         raise ValueError("project resource catalog escapes the repository") from exc
 
+    loaded_catalog = load_compute_resource_catalog(catalog_path)
     status = ComputeResourceRuntime(runtime.outputs_root).status(catalog_path)
     registered = RegisteredProjectResourceBinding.model_validate_json(
         binding_file.read_text(encoding="utf-8")
@@ -60,15 +63,14 @@ def load_project_resource_portfolio(
     status_by_id = {item.resource_id: item for item in status.resources}
     access_by_id = {item.resource_id: item for item in access.resources}
     resources = []
+    roles_by_kind: dict[str, list[str]] = {}
     for binding in registered.binding.bindings:
         resource_status = status_by_id[binding.resource_id]
         resource_access = access_by_id[binding.resource_id]
-        if resource_access.credential_source is CredentialBindingSource.NOT_REQUIRED:
-            access_state = "not_required"
-        elif resource_access.credential_present:
-            access_state = "configured"
-        else:
-            access_state = "missing"
+        access_state = _access_state(resource_access)
+        roles_by_kind.setdefault(binding.expected_kind.value, [])
+        if binding.role not in roles_by_kind[binding.expected_kind.value]:
+            roles_by_kind[binding.expected_kind.value].append(binding.role)
         resources.append(
             {
                 "binding_id": binding.binding_id,
@@ -86,6 +88,34 @@ def load_project_resource_portfolio(
                 "connection_metadata_complete": resource_access.connection_metadata_complete,
                 "local_path_present": resource_access.local_path_present,
                 "required_for": binding.required_for,
+            }
+        )
+    bound_resource_ids = {item.resource_id for item in registered.binding.bindings}
+    available_resources = []
+    for item in status.resources:
+        if item.resource_id in bound_resource_ids:
+            continue
+        compatible_roles = tuple(roles_by_kind.get(item.kind.value, ()))
+        if not compatible_roles:
+            continue
+        resource_access = access_by_id[item.resource_id]
+        available_resources.append(
+            {
+                "resource_id": item.resource_id,
+                "kind": item.kind.value,
+                "selection_status": loaded_catalog.selection_status_by_id[item.resource_id].value,
+                "attachable": (
+                    loaded_catalog.selection_status_by_id[item.resource_id].value == "current"
+                ),
+                "observed_status": (
+                    item.latest_observation.status.value
+                    if item.latest_observation is not None
+                    else "unobserved"
+                ),
+                "access_state": _access_state(resource_access),
+                "compatible_roles": compatible_roles,
+                "connection_metadata_complete": resource_access.connection_metadata_complete,
+                "local_path_present": resource_access.local_path_present,
             }
         )
     statuses = [item.status.value for item in registered.binding.bindings]
@@ -112,6 +142,8 @@ def load_project_resource_portfolio(
         pending_binding_count=statuses.count("pending"),
         blocked_binding_count=statuses.count("blocked"),
         resources=resources,
+        available_resource_count=len(available_resources),
+        available_resources=available_resources,
         configuration_authority="user_applied" if configuration is not None else "proposal_only",
         configuration_run_id=configuration.run_id if configuration is not None else None,
         source_planning_publication_id=(
@@ -127,6 +159,12 @@ def load_project_resource_portfolio(
             configuration.verification_route.value if configuration is not None else None
         ),
     )
+
+
+def _access_state(resource_access: ResourceAccessBindingItem) -> str:
+    if resource_access.credential_source is CredentialBindingSource.NOT_REQUIRED:
+        return "not_required"
+    return "configured" if resource_access.credential_present else "missing"
 
 
 __all__ = ["load_project_resource_portfolio"]

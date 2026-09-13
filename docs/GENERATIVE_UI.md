@@ -937,10 +937,13 @@ configuration, fails validation. The YAML may name only the API-key environment
 variable; embedded credentials are rejected. Dry-run output includes only the
 provider, model, mode, and configuration hash, never the endpoint credential or
 question. No live provider call is part of the automated test suite.
-The Generation as Content profile allows up to 8,192 output tokens for a flexible
-structured planning response. This is a per-call safety/budget envelope, not a
-repository-wide development limit; paper drafting and other model-node profiles
-retain their independently configured ceilings.
+The Generation as Content profile allows up to 32,000 input tokens by default
+and the current GLM configuration allows up to 8,192 output tokens for a flexible
+structured planning response. These are UI-specific per-call safety/budget
+envelopes, not repository-wide development limits; paper drafting and other
+model-node profiles retain their independently configured ceilings. The larger
+input envelope is necessary because the current project evidence digest is about
+20,800 tokens before generation.
 
 ### Model-authored fixed-entry cache
 
@@ -1423,22 +1426,27 @@ long report.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
-view of its exact binding. The view reports roles, resource identities, declared
-and observed status, whether required access material is present, and registry
+view of its exact binding and the compatible remainder of the shared catalog. The
+view reports roles, resource identities, selection lifecycle, declared and
+observed status, whether required access material is present, and registry
 hashes. It does not serialize a credential value, probe a remote host, or run a
-workload. “Generate configuration proposal” routes through the program revision
-contract. When an accepted resource proposal is published, its selected resource
-IDs become a visible project planning preference and guide the next model
-revision. The shared registry remains unchanged until the user invokes a separate
-“apply as project configuration” action. That action accepts only the latest
-published resource directive and the exact current project snapshot, binding
-record, and registry hashes. It changes role-local priorities for already bound
-resource IDs, archives the predecessor binding, and writes a self-hashed project
-run receipt containing the complete lineage. It cannot add a catalog resource,
-change an observation or credential binding, probe a host, contact an API, launch
-a workload, or authorize an experiment. The project resource card distinguishes
-a published planning preference from an applied project binding and exposes the
-configuration run and predecessor identity.
+workload. `current` resources may be proposed for attachment, while `historical`
+and `disabled` entries remain visible but cannot enter new project work.
+“Generate configuration proposal” and each catalog-row intervention route through
+the program revision contract. When an accepted resource proposal is published,
+its selected resource IDs become a visible project planning preference and guide
+the next model revision. The shared registry remains unchanged until the user
+invokes a separate “apply as project configuration” action. That action accepts
+only the latest published resource directive and the exact current project
+snapshot, binding record, catalog lifecycle, and registry hashes. It may attach a
+current catalog entry to exactly one compatible existing role and reorder
+role-local priorities; it archives the predecessor binding and writes a
+self-hashed project run receipt containing the complete lineage. It cannot create
+or edit a catalog definition, change an observation or credential binding, probe
+a host, contact an API, launch a workload, or authorize an experiment. The
+project resource card distinguishes a published planning preference from an
+applied project binding and exposes the configuration run and predecessor
+identity.
 
 The project data-package card can also join a no-download request with a later
 project-owned archive-qualification run. Pending source hashes and future-safety
@@ -1447,13 +1455,13 @@ The current self-development surface therefore shows the observed 39-archive,
 178,325-member MLRC structural qualification while retaining license, layout,
 baseline, held-out, ingestion, compute, and experiment gates.
 
-Planning publication and project-local resource reprioritization are cheap,
-versioned, reversible local writes; effective-program compilation is a pure local
-derivation. Tool Intelligence routes all three directly after only their necessary
-identity/hash/staleness guards instead of imposing a generic preflight. The routes
-and reasons are projected in the interface. Paid compute, provider contact,
-credential changes, untrusted code, and experiment launch remain separate
-hard-gated actions.
+Planning publication and project-local resource membership/priority changes are
+cheap, versioned, reversible local writes; effective-program compilation is a
+pure local derivation. Tool Intelligence routes all three directly after only
+their intrinsic identity/hash/staleness/lifecycle guards instead of imposing a
+generic preflight. The routes and reasons are projected in the interface. Paid
+compute, provider contact, credential changes, untrusted code, and experiment
+launch remain separate hard-gated actions.
 
 The current Reference Quality calibration is the first complete intervention
 bridge across the two planes. The project home renders a compact action packet
@@ -1481,10 +1489,10 @@ catalog remains shared so the same machine or provider is not duplicated in ever
 project. Each project owns its resource binding, role, priority, access-presence
 view, planning proposal, applied configuration receipt, and action-packet use.
 The platform can therefore inspect resources and model-author a project-local
-priority revision through the normal conversation. Endpoint definitions,
-credential names, and credential values remain administrator-level shared
-registry concerns in this version; a project surface never receives credential
-values.
+membership or priority revision through the normal conversation. Endpoint
+definitions, observations, credential names, and credential values remain
+administrator-level shared-registry concerns in this version; a project surface
+never receives credential values.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

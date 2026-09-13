@@ -19,6 +19,7 @@ from scitaste.generative_ui.evidence_program import (
     find_iclr_evidence_program_run,
     load_iclr_evidence_program_report,
 )
+from scitaste.generative_ui.models import ProjectResourcePortfolioData
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.project_resources import load_project_resource_portfolio
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha256
@@ -95,6 +96,14 @@ class ProgramRevisionResourceOption(BaseModel):
     role: SafeIdentifier
     kind: Literal["api_model", "gpu_host", "model_checkpoint"]
     binding_status: Literal["verified", "reported", "pending", "blocked"]
+    attached: bool = True
+    compatible_roles: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def selected_role_is_compatible(self) -> ProgramRevisionResourceOption:
+        if self.role not in self.compatible_roles:
+            raise ValueError("program resource role is not compatible with its kind")
+        return self
 
 
 class ProgramRevisionActionRouteOption(BaseModel):
@@ -194,7 +203,7 @@ class ProgramRevisionCatalog(BaseModel):
             {item.stage_id for item in self.action_routes} != set(self.next_stage_ids)
         ):
             raise ValueError("program-revision action routes must cover every eligible next stage")
-        if {item.role for item in self.resources} != set(self.resource_roles):
+        if {item.role for item in self.resources if item.attached} != set(self.resource_roles):
             raise ValueError("program-revision roles must describe the project resources")
         if self.current_stage_id not in stage_ids or set(self.next_stage_ids) - set(stage_ids):
             raise ValueError("program-revision current choices must be registered")
@@ -790,19 +799,7 @@ def build_program_revision_catalog(
             if resource_portfolio is not None
             else ()
         ),
-        resources=(
-            tuple(
-                ProgramRevisionResourceOption(
-                    resource_id=item.resource_id,
-                    role=item.role,
-                    kind=item.kind,
-                    binding_status=item.binding_status,
-                )
-                for item in resource_portfolio.resources
-            )
-            if resource_portfolio is not None
-            else ()
-        ),
+        resources=_program_resource_options(resource_portfolio),
         action_routes=tuple(
             ProgramRevisionActionRouteOption(
                 stage_id=item.stage_id,
@@ -819,6 +816,47 @@ def build_program_revision_catalog(
             for item in action_routes
         ),
         active_directive=active_directive,
+    )
+
+
+def _program_resource_options(
+    resource_portfolio: ProjectResourcePortfolioData | None,
+) -> tuple[ProgramRevisionResourceOption, ...]:
+    if resource_portfolio is None:
+        return ()
+    attached = resource_portfolio.resources
+    available = resource_portfolio.available_resources
+    roles_by_kind: dict[str, tuple[str, ...]] = {}
+    for item in attached:
+        roles_by_kind.setdefault(item.kind, ())
+        if item.role not in roles_by_kind[item.kind]:
+            roles_by_kind[item.kind] = (*roles_by_kind[item.kind], item.role)
+    return (
+        *(
+            ProgramRevisionResourceOption(
+                resource_id=item.resource_id,
+                role=item.role,
+                kind=item.kind,
+                binding_status=item.binding_status,
+                attached=True,
+                compatible_roles=roles_by_kind[item.kind],
+            )
+            for item in attached
+        ),
+        *(
+            ProgramRevisionResourceOption(
+                resource_id=item.resource_id,
+                role=item.compatible_roles[0],
+                kind=item.kind,
+                binding_status=(
+                    item.observed_status if item.observed_status != "unobserved" else "pending"
+                ),
+                attached=False,
+                compatible_roles=item.compatible_roles,
+            )
+            for item in available
+            if item.attachable
+        ),
     )
 
 
@@ -852,6 +890,12 @@ def validate_program_revision_draft(
         raise ValueError("program-revision draft names an unknown project resource role")
     if set(draft.requested_resource_ids) - {item.resource_id for item in catalog.resources}:
         raise ValueError("program-revision draft names an unknown project resource ID")
+    resources_by_id = {item.resource_id: item for item in catalog.resources}
+    for resource_id in draft.requested_resource_ids:
+        option = resources_by_id[resource_id]
+        compatible = set(option.compatible_roles).intersection(draft.requested_resource_roles)
+        if not option.attached and len(compatible) != 1:
+            raise ValueError("an unattached resource requires exactly one compatible selected role")
 
 
 def _store_record(projects_root: Path, record: ProgramRevisionRecord) -> ProgramRevisionRecord:

@@ -3272,13 +3272,15 @@ without turning generated prose into evidence or execution authority.
 
 The project resource portfolio is projected from the shared, content-addressed
 registry without copying infrastructure or serializing credential values. For a
-resource directive, one further explicit user action may compile already-bound
-resource IDs into a successor project binding by changing role-local priority
-only. The predecessor, exact proposal, user confirmation, registry identity, and
-successor hash remain project-owned evidence; the shared catalog, credentials,
-observations, provider state, and execution authority do not change. This keeps
-Generation as Content parallel to SciTaste as a display plane and interactive
-with it only through typed, reviewable controller inputs.
+resource directive, one further explicit user action may compile current catalog
+resources into a successor project binding by attaching each new entry to exactly
+one compatible existing role and changing role-local priority. The predecessor,
+exact proposal, user confirmation, registry identity, and successor hash remain
+project-owned evidence; historical or disabled resources cannot be newly
+attached, and the shared catalog, credentials, observations, provider state, and
+execution authority do not change. This keeps Generation as Content parallel to
+SciTaste as a display plane and interactive with it only through typed,
+reviewable controller inputs.
 
 ### ADR-108: Verification effort is proportional to expected avoidable loss
 
@@ -3301,11 +3303,11 @@ Workflow records this route before constructing any model/tool request; a direct
 route avoids that invocation entirely. An owner-gated route is deferred before
 constructing a model/tool request. The same router records that accepting or
 rejecting a content-bound local planning proposal, publishing its planning
-version, and applying a role-local resource-priority revision take the direct
-path: their minimal identity, hash, and staleness guards cost less than a generic
-preflight and the writes are reversible project-local metadata. Compiling the
-effective experiment program is also direct: it is a pure local derivation over
-already verified, self-hashed inputs.
+version, and applying a role-local resource-membership or priority revision take
+the direct path: their minimal identity, hash, staleness, compatibility, and
+lifecycle guards cost less than a generic preflight and the writes are reversible
+project-local metadata. Compiling the effective experiment program is also
+direct: it is a pure local derivation over already verified, self-hashed inputs.
 
 Among optional checks, the router prefers the smallest sufficient intervention.
 If a targeted check already clears the minimum expected-net-gain threshold, a
@@ -3329,8 +3331,9 @@ or authority.
 
 ### ADR-110: Fixed entry labels may cache model authorship without replacing flexible generation
 
-Status: accepted as an opt-in project capability; no live provider call was made
-while implementing this decision.
+Status: accepted as an opt-in project capability and exercised once through the
+current live GLM-5.3-Flash composition path; no usability or scientific-effect
+claim follows from that product validation.
 
 Generation as Content has two parallel interaction modes. A fixed project label
 is a stable navigation affordance, but its evidence composition may be authored
@@ -3360,3 +3363,34 @@ provider. Subsequent feedback takes the normal fresh model-edit path with that
 turn as bounded context. The receiver's operating-loop map presents this content
 plane beside—not inside—the SciTaste controller and routes explicit user changes
 across the existing publication boundary.
+
+### ADR-111: Project resource lifecycle is visible before model-planned attachment
+
+Status: accepted for project resource membership and priority configuration;
+shared-registry administration and scheduling remain separate.
+
+A project cannot make an informed resource intervention when the interface shows
+only resources already attached to it. Conversely, exposing every historical
+provider alias or disabled backend as selectable would let a flexible model revive
+stale infrastructure. Referenced compute catalogs therefore declare each entry
+as `current`, `historical`, or `disabled`. All three remain visible for
+provenance; only `current` resources enter the model planner's closed selection
+catalog.
+
+The project portfolio derives compatible roles from its existing bindings. A
+model-authored resource revision may select an unbound current resource only when
+the same draft selects exactly one compatible role. Acceptance and planning
+publication still precede a distinct apply action. That compiler revalidates the
+current project snapshot, binding, registry, catalog lifecycle, proposal, and
+user decision; archives the predecessor; and emits a self-hashed project run. It
+copies catalog identity into project membership but does not read access material,
+probe or reserve hardware, call a provider, start a workload, or grant experiment
+authority.
+
+The operation is a reversible local metadata change. Under ADR-108, Tool
+Intelligence routes it directly because a generic preflight has negative expected
+value. Its identity, hash, staleness, compatibility, and lifecycle validations
+are intrinsic transaction guards, not a separate check phase. Catalog editing,
+credential-value administration, observations, connectivity qualification,
+scheduling, and scientific resource selection remain independently governed
+operations.
