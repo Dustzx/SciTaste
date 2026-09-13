@@ -1452,6 +1452,26 @@ citation/resource screen and exact adapters/licenses remain open.
   proposals merely to obtain a newer version number; their stale resource and
   implementation evidence must remain visible.
 
+## First accepted-method adapter materialization
+
+- Done: obtained a clean, detached Agent Laboratory checkout at accepted-method
+  commit `d9017d9` under the standing sub-10-GB download authority. The checkout
+  is 3.2 MB and remains outside the tracked SciTaste source tree.
+- Done: implemented a no-run adapter compiler that replays the resource corpus
+  and contract identities, copies only the 35 tracked regular upstream files,
+  and proves that the exact 2,955-byte `iclr2025_bi_align` starting brief survives
+  the native YAML translation unchanged. No upstream code, dependency, model, or
+  provider was executed.
+- Next: construct the dedicated Python 3.12 dependency environment, then add a
+  filesystem sandbox and provider gateway before any live attempt. The gateway
+  must withhold the real provider key from generated-code children and close
+  request, retry, model, token, cost, and ambiguous-spend telemetry.
+- Blocked for live evidence: the best-native estimator requires exact
+  `o3-mini-2025-01-31` access, which the currently registered DeepSeek, Zhipu,
+  Bailian, and local-model resources cannot substitute for. This is a resource
+  identity gap, not a reason to relabel another model as Agent Laboratory's
+  native condition.
+
 ## Project controls
 
 - One milestone owner and one acceptance issue per phase.

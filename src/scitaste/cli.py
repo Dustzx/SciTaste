@@ -123,6 +123,7 @@ from scitaste.evaluation import (
     inspect_taste_corpus_pair,
     load_adapter_contract_manifest,
     load_adapter_preflight_manifest,
+    load_agent_laboratory_preparation,
     load_benchmark_metadata_allocation_approval,
     load_benchmark_metadata_allocation_plan,
     load_benchmark_metadata_projection_approval,
@@ -179,6 +180,7 @@ from scitaste.evaluation import (
     plan_benchmark_metadata_projection,
     plan_clustered_power,
     plan_structured_metadata_audit,
+    prepare_agent_laboratory_adapter,
     prepare_human_outcome_study,
     prepare_human_reviewer_session,
     prepare_project_evaluation,
@@ -2639,6 +2641,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(adapter_contract)
     adapter_contract.set_defaults(handler=_handle_evaluation_adapter_contract)
+    agent_laboratory_prepare = evaluation_commands.add_parser(
+        "agent-laboratory-prepare",
+        help="Compile one exact brief into a pinned no-run Agent Laboratory workspace",
+    )
+    agent_laboratory_prepare.add_argument("--manifest", type=Path, required=True)
+    agent_laboratory_prepare.add_argument("--source-root", type=Path, default=Path("."))
+    agent_laboratory_prepare.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(agent_laboratory_prepare)
+    agent_laboratory_prepare.set_defaults(handler=_handle_evaluation_agent_laboratory_prepare)
     cell_plan = evaluation_commands.add_parser(
         "cell-plan",
         help="Expand a prelaunch proposal into a content-addressed no-run cell matrix",
@@ -7201,6 +7212,28 @@ def _handle_evaluation_adapter_contract(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_upstream_preflight_ready and not report.ready_for_upstream_preflight:
         return 1
+    return 0
+
+
+def _handle_evaluation_agent_laboratory_prepare(args: argparse.Namespace) -> int:
+    inspection = load_agent_laboratory_preparation(args.manifest)
+    receipt = prepare_agent_laboratory_adapter(
+        inspection.manifest,
+        source_root=args.source_root,
+        output_dir=args.output,
+    )
+    print(
+        json.dumps(
+            {
+                "manifest_path": str(inspection.path),
+                "manifest_file_sha256": inspection.file_sha256,
+                "output": str(args.output),
+                **receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first unchanged-core Agent Laboratory adapter preparation path. It
+  binds a clean accepted-method Git commit, resource corpus, adapter contract,
+  and one held-out MLR-Bench brief; copies only tracked regular source files;
+  proves byte-identical YAML task translation; excludes credentials; and emits
+  a self-hashed, failure-inclusive no-run workspace. A real `iclr2025_bi_align`
+  brief was compiled against the pinned 35-file source tree. Dependency,
+  credential, sandbox, provider-telemetry, and task-population gates remain
+  explicit, so the preparation cannot impersonate a runnable adapter.
 - Closed an experiment-identity gap before any new formal run. Prelaunch schema
   1.6 now binds the exact ICLR evidence program by file and semantic hash, checks
   that planned task resources and external methods remain within its selected

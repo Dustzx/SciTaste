@@ -3427,3 +3427,31 @@ transaction whose failure cost is material. Under ADR-108 they do not justify a
 repository-wide preflight or additional checks for cheap reversible actions. Old
 manifests retain their historical hashes; they are not silently upgraded, and a
 fresh 1.6 proposal should be created only after the bound evidence exists.
+
+### ADR-113: External methods receive exact task bytes through an outside adapter
+
+Status: accepted and exercised for Agent Laboratory preparation; live execution
+and comparison evidence remain unavailable.
+
+An accepted external method should not be copied into SciTaste's control path or
+patched until it behaves like SciTaste. The first Agent Laboratory adapter is
+therefore an outside compiler. It accepts one fixed resource corpus, translation
+contract, clean Git checkout, and held-out research brief. Only tracked regular
+upstream files enter a new run-owned workspace. The original brief is retained as
+an immutable file and decoded into the native `research-topic` field; reloading
+the emitted YAML must reproduce the original UTF-8 bytes exactly. Standard notes
+state visibility and asset boundaries but contain no task-specific scientific
+hint. Provider credentials never enter the configuration.
+
+The materialized source tree is hash-equivalent to the clean checkout while the
+generated configuration remains separately identified. This permits native code
+to write its ordinary research directories and checkpoint files without changing
+the upstream source of record. The whole workspace is retained on failure.
+
+Preparation is intentionally weaker than execution readiness. A dependency
+environment, networked filesystem sandbox, exact provider identity, closed
+provider telemetry, and a scientifically qualified task population remain
+required. In particular, the current MLR-Bench brief supports an ecological
+research-package comparison but has no objective executable signal. This avoids
+conflating an operational adapter milestone with a valid ICLR effectiveness
+result.
