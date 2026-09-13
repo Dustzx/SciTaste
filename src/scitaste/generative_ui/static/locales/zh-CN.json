@@ -245,7 +245,7 @@
   "resources.planning_configuration_active": "项目规划配置已生效",
   "resources.planning_preferred": "规划选中",
   "resources.revise": "生成配置调整提案",
-  "resources.revision_prompt": "审阅项目资源组合，并仅针对以下已登记角色提出资源修订：{roles}。说明科学必要性、受影响的证据轨道及成本合理性；不要执行任务或暴露凭据。",
+  "resources.revision_prompt": "审阅项目资源组合，并仅针对以下已登记角色提出资源修订：{roles}。说明科学必要性、受影响的证据轨道及成本合理性；不要执行任务或暴露密钥值。",
   "resources.kind.api_model": "API 模型",
   "resources.kind.gpu_host": "GPU 主机",
   "resources.kind.model_checkpoint": "模型权重",
