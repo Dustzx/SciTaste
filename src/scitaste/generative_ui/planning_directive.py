@@ -13,6 +13,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from scitaste.evaluation.program_control import (
+    ExperimentProgramControl,
+    ProgramControlEffect,
+)
 from scitaste.generative_ui.models import ProjectPlanningDirectiveData
 from scitaste.generative_ui.program_revision import (
     ProgramRevisionDraft,
@@ -323,6 +327,8 @@ def project_planning_directive(
     *,
     run_ref_id: str,
     artifact_ref_id: str,
+    effective_program_sha256: str | None = None,
+    control_effect: ProgramControlEffect | None = None,
 ) -> ProjectPlanningDirectiveData:
     """Project one verified publication without expanding its authority."""
 
@@ -350,7 +356,38 @@ def project_planning_directive(
         predecessor_publication_sha256=publication.predecessor_publication_sha256,
         verification_route=publication.verification_route.value,
         verification_reason_codes=publication.verification_reason_codes,
+        controller_consumed=effective_program_sha256 is not None,
+        effective_program_sha256=effective_program_sha256,
+        control_effect=control_effect,
         support_ref_ids=(run_ref_id, artifact_ref_id),
+    )
+
+
+def planning_control_from_publication(
+    publication: PlanningDirectivePublication,
+) -> ExperimentProgramControl:
+    """Translate a verified UI publication into the neutral SciTaste control contract."""
+
+    draft = publication.draft
+    return ExperimentProgramControl.create(
+        project_id=publication.project_id,
+        source_publication_id=publication.publication_id,
+        source_publication_sha256=publication.publication_sha256,
+        source_dossier_id=publication.source_dossier_id,
+        source_dossier_sha256=publication.source_dossier_sha256,
+        change_kind=draft.change_kind,
+        target_stage_id=draft.target_stage_id,
+        target_track_ids=draft.target_track_ids,
+        proposed_next_stage_order=draft.proposed_next_stage_order,
+        summary=draft.summary,
+        rationale=draft.rationale,
+        required_evidence=draft.required_evidence,
+        requested_resource_roles=draft.requested_resource_roles,
+        requested_resource_ids=draft.requested_resource_ids,
+        user_published=True,
+        authorizes_external_action=False,
+        authorizes_execution=False,
+        execution_authority="none",
     )
 
 
@@ -494,6 +531,7 @@ __all__ = [
     "PlanningDirectivePublicationRequest",
     "inspect_planning_directive",
     "load_latest_planning_directive",
+    "planning_control_from_publication",
     "project_planning_directive",
     "publish_planning_directive",
 ]

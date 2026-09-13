@@ -1436,6 +1436,11 @@ def test_progress_projects_registered_iclr_evidence_program_without_execution(
     assert program["total_stage_count"] == 16
     assert program["current_phase_id"] == "taste-instrument"
     assert program["current_stage_id"] == "qualify-scientific-taste-source-pilot"
+    assert program["planning_authority"] == "dossier_only"
+    assert program["control_effect"] == "none"
+    assert program["planning_verification_route"] == "direct_path"
+    assert program["baseline_next_stage_ids"] == list(report.next_stage_ids)
+    assert program["effective_next_stage_ids"] == list(report.next_stage_ids)
     assert program["current_action_run_id"] == "quality-calibration"
     assert program["scientific_effectiveness_established"] is False
     assert program["no_external_action_performed"] is True

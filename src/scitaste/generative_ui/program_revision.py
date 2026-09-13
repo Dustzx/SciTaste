@@ -752,6 +752,8 @@ def validate_program_revision_draft(
     if draft.change_kind == "reprioritize_next_gates":
         if set(draft.proposed_next_stage_order) != set(catalog.next_stage_ids):
             raise ValueError("reprioritization must retain every current next gate exactly once")
+        if draft.target_stage_id not in catalog.next_stage_ids:
+            raise ValueError("reprioritization must target a current next gate")
     elif draft.proposed_next_stage_order:
         raise ValueError("only reprioritization may order the current next gates")
     if draft.change_kind == "request_resource_revision" and not draft.requested_resource_ids:

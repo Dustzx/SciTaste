@@ -2152,6 +2152,14 @@ class ProjectPlanningDirectiveData(BaseModel):
     authorizes_execution: Literal[False] = False
     verification_route: Literal["direct_path"] = "direct_path"
     verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    controller_consumed: bool = False
+    effective_program_sha256: Sha256 | None = None
+    control_effect: Literal[
+        "stage_order",
+        "decision_guidance",
+        "risk_note",
+        "resource_preference",
+    ] | None = None
     support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=2)
 
     @model_validator(mode="after")
@@ -2164,6 +2172,10 @@ class ProjectPlanningDirectiveData(BaseModel):
             raise ValueError("planning-directive support references must be unique")
         if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
             raise ValueError("planning-directive evidence is outside its support set")
+        if self.controller_consumed != (self.effective_program_sha256 is not None):
+            raise ValueError("planning-directive controller status requires an effective program")
+        if self.controller_consumed != (self.control_effect is not None):
+            raise ValueError("planning-directive controller effect must be atomic")
         return self
 
 
@@ -2177,6 +2189,7 @@ class ProjectEvidenceProgramData(BaseModel):
     artifact_ref_id: SafeIdentifier
     dossier_id: SafeIdentifier
     dossier_sha256: Sha256
+    dossier_report_sha256: Sha256
     paper_title: SafeText
     target_venue: SafeText
     central_question: SafeText
@@ -2186,6 +2199,21 @@ class ProjectEvidenceProgramData(BaseModel):
     total_stage_count: int = Field(gt=0)
     completed_stage_count: int = Field(ge=0)
     next_stage_count: int = Field(ge=0)
+    planning_authority: Literal["dossier_only", "user_published_control"]
+    control_effect: Literal[
+        "none",
+        "stage_order",
+        "decision_guidance",
+        "risk_note",
+        "resource_preference",
+    ]
+    source_publication_id: SafeIdentifier | None = None
+    source_publication_sha256: Sha256 | None = None
+    effective_program_sha256: Sha256
+    planning_verification_route: Literal["direct_path"] = "direct_path"
+    planning_verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    baseline_next_stage_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    effective_next_stage_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
     current_phase_id: SafeIdentifier
     current_stage_id: SafeIdentifier
     current_decision: SafeText
@@ -2226,6 +2254,34 @@ class ProjectEvidenceProgramData(BaseModel):
             raise ValueError("evidence-program current stage must be registered")
         if self.completed_stage_count > self.total_stage_count:
             raise ValueError("completed evidence-program stages cannot exceed all stages")
+        if self.next_stage_count != len(self.effective_next_stage_ids):
+            raise ValueError("evidence-program next-stage count must use its effective order")
+        if self.current_stage_id != self.effective_next_stage_ids[0]:
+            raise ValueError("evidence-program current stage must lead its effective order")
+        for values in (self.baseline_next_stage_ids, self.effective_next_stage_ids):
+            if len(values) != len(set(values)):
+                raise ValueError("evidence-program next-stage order must be unique")
+        if set(self.baseline_next_stage_ids) != set(self.effective_next_stage_ids):
+            raise ValueError("planning controls cannot add or remove eligible next stages")
+        if self.planning_authority == "dossier_only" and self.control_effect != "none":
+            raise ValueError("dossier-only evidence program cannot claim a control effect")
+        publication_identity = (
+            self.source_publication_id,
+            self.source_publication_sha256,
+        )
+        if self.planning_authority == "dossier_only" and any(
+            value is not None for value in publication_identity
+        ):
+            raise ValueError("dossier-only evidence program cannot claim a publication")
+        if (
+            self.planning_authority == "user_published_control"
+            and self.control_effect == "none"
+        ):
+            raise ValueError("published evidence program requires a typed control effect")
+        if self.planning_authority == "user_published_control" and not all(
+            value is not None for value in publication_identity
+        ):
+            raise ValueError("published evidence program requires source publication identity")
         if sum(item.stage_count for item in self.phases) != self.total_stage_count:
             raise ValueError("evidence-program phases must cover every dossier stage")
         if sum(item.completed_stage_count for item in self.phases) != self.completed_stage_count:
@@ -2247,6 +2303,18 @@ class ProjectEvidenceProgramData(BaseModel):
             set(self.planning_directive.support_ref_ids) - set(self.support_ref_ids)
         ):
             raise ValueError("planning-directive evidence is outside the program support set")
+        if self.planning_directive is not None:
+            if (
+                self.planning_authority != "user_published_control"
+                or self.planning_directive.publication_id != self.source_publication_id
+                or self.planning_directive.publication_sha256
+                != self.source_publication_sha256
+                or not self.planning_directive.controller_consumed
+                or self.planning_directive.effective_program_sha256
+                != self.effective_program_sha256
+                or self.planning_directive.control_effect != self.control_effect
+            ):
+                raise ValueError("planning directive differs from the effective core program")
         return self
 
 

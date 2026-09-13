@@ -182,6 +182,7 @@ from scitaste.generative_ui.planning_directive import (
     PlanningDirectivePublicationRequest,
     inspect_planning_directive,
     load_latest_planning_directive,
+    planning_control_from_publication,
     project_planning_directive,
     publish_planning_directive,
 )
@@ -526,6 +527,7 @@ __all__ = [
     "make_surface_event",
     "materialize_research_landscape",
     "materialize_surface_plan",
+    "planning_control_from_publication",
     "project_planning_directive",
     "project_surface",
     "publish_planning_directive",

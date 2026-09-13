@@ -94,7 +94,11 @@ project view as planning preferences without mutating the shared registry. A
 further explicit user action may compile only those already bound resource IDs
 into a successor role-priority binding. Its predecessor and planning lineage are
 retained, while credentials, observations, probes, workloads, and experiment
-authority remain unchanged.
+authority remain unchanged. Independently, SciTaste's evaluation layer now
+compiles every published directive with the immutable evidence dossier into a
+self-hashed effective program. Generation as Content remains the presentation
+plane, while the core consumes its typed stage order, decision guidance, risk, or
+resource-preference effect without accepting executable model output.
 
 ### 3. Tool Intelligence — execution intelligence
 

@@ -8,6 +8,7 @@ from scitaste.generative_ui import program_revision as revision_module
 from scitaste.generative_ui.planning_directive import (
     PlanningDirectivePublicationRequest,
     inspect_planning_directive,
+    planning_control_from_publication,
     project_planning_directive,
     publish_planning_directive,
 )
@@ -162,6 +163,11 @@ def test_accepted_revision_publishes_project_owned_overlay_and_seeds_next_edit(
     assert publication.execution_authority == "none"
     assert publication.verification_route == "direct_path"
     assert publication.verification_reason_codes == ("verification-cost-exceeds-avoidable-loss",)
+    control = planning_control_from_publication(publication)
+    assert control.source_publication_sha256 == publication.publication_sha256
+    assert control.source_dossier_sha256 == publication.source_dossier_sha256
+    assert control.change_kind == publication.draft.change_kind
+    assert control.authorizes_execution is False
     binding = ProjectSnapshotAdapter(runtime).build_binding(catalog.project_id)
     artifact_ref = next(
         item

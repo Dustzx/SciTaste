@@ -1857,7 +1857,14 @@ function renderEvidenceProgram(data) {
   const claim = document.createElement("span");
   claim.className = "program-badge neutral";
   appendText(claim, t("progress.program.effect_not_established"));
-  truth.append(binding, claim);
+  const authority = document.createElement("span");
+  authority.className = data.planning_authority === "user_published_control"
+    ? "program-badge verified"
+    : "program-badge neutral";
+  appendText(authority, data.planning_authority === "user_published_control"
+    ? t("progress.program.control_consumed")
+    : t("progress.program.dossier_control"));
+  truth.append(binding, claim, authority);
   header.append(identity, truth);
 
   const railShell = document.createElement("div");
@@ -1986,6 +1993,13 @@ function renderEvidenceProgram(data) {
       exact_designed_cells: data.exact_cell_count,
       no_external_action_performed: data.no_external_action_performed,
       scientific_effectiveness_established: data.scientific_effectiveness_established,
+      planning_authority: data.planning_authority,
+      control_effect: data.control_effect,
+      effective_program_sha256: data.effective_program_sha256,
+      planning_verification_route: data.planning_verification_route,
+      planning_verification_reason_codes: data.planning_verification_reason_codes,
+      baseline_next_stage_ids: data.baseline_next_stage_ids,
+      effective_next_stage_ids: data.effective_next_stage_ids,
     },
     names: [
       "dossier_id",
@@ -1993,6 +2007,13 @@ function renderEvidenceProgram(data) {
       "exact_designed_cells",
       "no_external_action_performed",
       "scientific_effectiveness_established",
+      "planning_authority",
+      "control_effect",
+      "effective_program_sha256",
+      "planning_verification_route",
+      "planning_verification_reason_codes",
+      "baseline_next_stage_ids",
+      "effective_next_stage_ids",
     ],
   }));
 
@@ -2058,6 +2079,7 @@ function renderPublishedPlanningDirective(program) {
   for (const [key, value] of [
     ["revision_kind", localizedCode(directive.change_kind)],
     ["revision_target", readableCode(directive.target_stage_id)],
+    ["directive_control_effect", localizedCode(directive.control_effect)],
   ]) {
     const fact = document.createElement("span");
     appendText(fact, t(`progress.program.${key}`, {value}));
@@ -2067,6 +2089,7 @@ function renderPublishedPlanningDirective(program) {
   boundary.className = "program-revision-boundary";
   for (const key of [
     "direct_path",
+    "core_consumed",
     "source_unchanged",
     "resource_source_unchanged",
     "no_execution",

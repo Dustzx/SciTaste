@@ -1282,10 +1282,14 @@ campaign dossiers. Generation as Content owns how those records are presented
 and how a user starts a bounded interaction. A generated page cannot become the
 controller merely because it is visually primary.
 
-Fixed high-value tabs may be precomputed and cached. The ICLR program view is one
-such deterministic projection: it collapses 16 exact dossier gates into seven
-readable phases and keeps the three scientific tracks separate. Flexible feedback
-uses `ProgramRevisionService`. The request binds the exact project revision,
+Fixed high-value tabs use deterministic project projections and ETag caching; no
+background model call is currently issued merely because a project was opened.
+The ICLR program view collapses 16 exact dossier gates into seven readable phases
+and keeps the three scientific tracks separate. Successful model generations are
+cached after demand. A future project-level warm-cache policy may opt selected
+labels into background generation only after declaring provider, cost ceiling,
+freshness, and invalidation behavior. Flexible feedback uses
+`ProgramRevisionService`. The request binds the exact project revision,
 snapshot SHA-256, and dossier SHA-256; a structured model can choose only the
 registered change kind, incomplete stage, track, resource ID, and resource role.
 Its summary, rationale, and requested evidence are model-authored text rendered
@@ -1308,6 +1312,17 @@ not authorized. The current publication is projected beside—not inside—the
 scientific evidence plan, and becomes the automatic edit baseline for the next
 model-authored revision. Reject closes a proposal. Stale proposals remain visible
 but cannot be decided, refined, or published.
+
+Publication is also the bridge into the SciTaste control plane. The independent
+`evaluation.program_control` compiler combines the immutable dossier report with
+the exact user-published directive and emits a self-hashed effective program.
+Reprioritization can change only the order of the already eligible next stages;
+decision clarification, risk notes, and evidence requests remain typed guidance;
+resource revisions remain preferences until their separate apply action. The
+project home renders the effective current stage and identifies the base order,
+effective order, control effect, and compiler hash. This derived read-only action
+is routed directly by Tool Intelligence because an additional preflight has
+negative expected value. It grants no API, GPU, download, or execution authority.
 
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
@@ -1336,12 +1351,12 @@ The current self-development surface therefore shows the observed 39-archive,
 baseline, held-out, ingestion, compute, and experiment gates.
 
 Planning publication and project-local resource reprioritization are cheap,
-versioned, reversible local writes. Tool Intelligence routes them directly after
-the necessary proposal/decision/hash/staleness checks instead of imposing a
-generic preflight. The route and reason code are recorded in their publications
-and projected in the interface. Paid compute, provider contact, credential
-changes, untrusted code, and experiment launch remain separate hard-gated
-actions.
+versioned, reversible local writes; effective-program compilation is a pure local
+derivation. Tool Intelligence routes all three directly after only their necessary
+identity/hash/staleness guards instead of imposing a generic preflight. The routes
+and reasons are projected in the interface. Paid compute, provider contact,
+credential changes, untrusted code, and experiment launch remain separate
+hard-gated actions.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

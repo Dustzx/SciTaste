@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Connected user-published Generation as Content planning to SciTaste's core
+  evaluation plane. A neutral, self-hashed effective-program compiler can reorder
+  only already eligible next gates or carry typed decision, risk, evidence, and
+  resource guidance. The project home now derives its current phase from that
+  effective order and exposes the base/effective order, compiler identity, and a
+  Tool Intelligence direct-path decision. This read-only bridge cannot authorize
+  an API call, GPU job, download, or experiment.
 - Qualified the complete acquired MLRC two-task archive set under the standing
   local-read policy. All 39 receipt-bound ZIPs were rehashed and all 178,325
   central-directory members were inspected without extraction; zero structural

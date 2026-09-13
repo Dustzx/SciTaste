@@ -1389,10 +1389,16 @@ citation/resource screen and exact adapters/licenses remain open.
   binding hashes, registry identity, and Tool Intelligence route. This local
   direct-path update does not read credentials, alter the shared catalog, probe a
   host, contact a provider, launch a workload, or authorize an experiment.
+- Done: each user-published directive now compiles through the independent
+  evaluation layer into a self-hashed effective experiment program. The project
+  home uses the effective stage order and records the base order, typed effect,
+  compiler hash, and direct-path Tool Intelligence decision. The compiler is
+  read-only and cannot add an eligible stage or grant execution authority.
 - Next: evaluate whether model-generated evidence surfaces improve researcher
   comprehension and intervention quality under a counterbalanced human study;
   broaden the trusted graph/comparison repertoire only where the study exposes a
-  concrete presentation gap.
+  concrete presentation gap. Add optional fixed-label background warming only
+  after a project declares its provider budget and cache invalidation policy.
 
 ## Project controls
 

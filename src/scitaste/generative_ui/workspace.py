@@ -55,6 +55,7 @@ from scitaste.evaluation.executable_candidate import (
     ExecutableCandidateReport,
     load_executable_candidate_report,
 )
+from scitaste.evaluation.program_control import compile_effective_experiment_program
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.evaluation.reference_selection_comparison import (
     ReferenceSelectionComparisonPlan,
@@ -93,6 +94,7 @@ from scitaste.generative_ui.models import (
 )
 from scitaste.generative_ui.planning_directive import (
     load_latest_planning_directive,
+    planning_control_from_publication,
     project_planning_directive,
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
@@ -626,37 +628,13 @@ class WorkspaceSurfaceFactory:
                     "registered ICLR evidence program changed during projection"
                 )
             program_run_ref = run_refs[evidence_program_run.run_id]
-            provisional_current_stage_id = (
-                report.next_stage_ids[0]
-                if report.next_stage_ids
-                else next(
-                    (stage.stage_id for stage in report.stages if stage.state.value != "complete"),
-                    report.stages[-1].stage_id,
-                )
-            )
-            current_action_run = find_current_action_run(
-                snapshot,
-                provisional_current_stage_id,
-            )
-            current_action_run_ref_id = (
-                run_refs[current_action_run.run_id].evidence_id
-                if current_action_run is not None
-                else None
-            )
-            evidence_program = project_iclr_evidence_program(
-                report,
-                run=evidence_program_run,
-                project_ref_id=project_ref.evidence_id,
-                run_ref_id=program_run_ref.evidence_id,
-                artifact_ref_id=evidence_program_artifact_ref.evidence_id,
-                current_action_run=current_action_run,
-                current_action_run_ref_id=current_action_run_ref_id,
-            )
-            evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
             publication = load_latest_planning_directive(
                 self._runtime,
                 snapshot.project_id,
             )
+            directive_run_ref = None
+            directive_artifact_ref = None
+            control = None
             if publication is not None:
                 if publication.source_dossier_sha256 != report.dossier_sha256:
                     raise ProjectSurfaceChangedError(
@@ -677,10 +655,44 @@ class WorkspaceSurfaceFactory:
                     EvidenceKind.ARTIFACT,
                     directive_run.artifact,
                 )
+                control = planning_control_from_publication(publication)
+            effective_program = compile_effective_experiment_program(
+                report,
+                project_id=snapshot.project_id,
+                control=control,
+            )
+            provisional_current_stage_id = effective_program.effective_current_stage_id
+            current_action_run = find_current_action_run(
+                snapshot,
+                provisional_current_stage_id,
+            )
+            current_action_run_ref_id = (
+                run_refs[current_action_run.run_id].evidence_id
+                if current_action_run is not None
+                else None
+            )
+            evidence_program = project_iclr_evidence_program(
+                report,
+                effective_program=effective_program,
+                run=evidence_program_run,
+                project_ref_id=project_ref.evidence_id,
+                run_ref_id=program_run_ref.evidence_id,
+                artifact_ref_id=evidence_program_artifact_ref.evidence_id,
+                current_action_run=current_action_run,
+                current_action_run_ref_id=current_action_run_ref_id,
+            )
+            evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
+            if publication is not None:
+                if directive_run_ref is None or directive_artifact_ref is None:
+                    raise ProjectSurfaceChangedError(
+                        "published planning directive lacks controller evidence"
+                    )
                 directive = project_planning_directive(
                     publication,
                     run_ref_id=directive_run_ref.evidence_id,
                     artifact_ref_id=directive_artifact_ref.evidence_id,
+                    effective_program_sha256=effective_program.program_sha256,
+                    control_effect=effective_program.control_effect,
                 )
                 payload = evidence_program.model_dump(mode="json")
                 payload["planning_directive"] = directive.model_dump(mode="json")

@@ -538,6 +538,13 @@ from scitaste.evaluation.prelaunch import (
     inspect_prelaunch_manifest,
     load_prelaunch_manifest,
 )
+from scitaste.evaluation.program_control import (
+    EffectiveExperimentProgram,
+    ExperimentProgramControl,
+    ProgramChangeKind,
+    ProgramControlEffect,
+    compile_effective_experiment_program,
+)
 from scitaste.evaluation.project_materialization import (
     PreparedProjectEvaluation,
     prepare_project_evaluation,
@@ -939,6 +946,7 @@ __all__ = [
     "DirectAgentPaperSection",
     "DirectAgentRunReceipt",
     "DirectAgentTaskPackage",
+    "EffectiveExperimentProgram",
     "EvaluationBlindReview",
     "EvaluationCellPlan",
     "EvaluationCellResource",
@@ -988,6 +996,7 @@ __all__ = [
     "ExperimentDesignGate",
     "ExperimentDesignState",
     "ExperimentPrelaunchManifest",
+    "ExperimentProgramControl",
     "ExternalAction",
     "ExternalAdapterContractManifest",
     "ExternalAdapterPreflightManifest",
@@ -1093,8 +1102,10 @@ __all__ = [
     "PreparedProjectEvaluationResult",
     "PriorResourceSnapshot",
     "ProgramApproval",
+    "ProgramChangeKind",
     "ProgramCondition",
     "ProgramConditionKind",
+    "ProgramControlEffect",
     "ProjectedBenchmarkMetadataRecord",
     "ProjectedMetadataField",
     "ProjectionSemanticRole",
@@ -1243,6 +1254,7 @@ __all__ = [
     "build_taste_abstraction_input",
     "claim_analysis_input_sha256",
     "compare_gpu_inventory",
+    "compile_effective_experiment_program",
     "compile_evaluation_cell_plan",
     "complete_objective_result_set",
     "evaluate_resource_feasibility",

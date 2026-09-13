@@ -11,6 +11,7 @@ from scitaste.evaluation.decision_dossier import (
     CampaignStageState,
     ExperimentDecisionDossierReport,
 )
+from scitaste.evaluation.program_control import EffectiveExperimentProgram
 from scitaste.generative_ui.factory import ProjectSurfaceChangedError
 from scitaste.generative_ui.models import ProjectEvidenceProgramData
 from scitaste.project.models import ProjectRun, ProjectSnapshot
@@ -111,6 +112,7 @@ def load_iclr_evidence_program_report(
 def project_iclr_evidence_program(
     report: ExperimentDecisionDossierReport,
     *,
+    effective_program: EffectiveExperimentProgram,
     run: ProjectRun,
     project_ref_id: str,
     run_ref_id: str,
@@ -126,18 +128,16 @@ def project_iclr_evidence_program(
         raise ProjectSurfaceChangedError(
             "registered ICLR evidence program does not match the canonical phase vocabulary"
         )
-
-    if report.next_stage_ids:
-        current_stage_id = report.next_stage_ids[0]
-    else:
-        current_stage_id = next(
-            (
-                item.stage_id
-                for item in report.stages
-                if item.state is not CampaignStageState.COMPLETE
-            ),
-            report.stages[-1].stage_id,
+    if (
+        effective_program.dossier_id != report.dossier_id
+        or effective_program.dossier_sha256 != report.dossier_sha256
+    ):
+        raise ProjectSurfaceChangedError(
+            "effective experiment program belongs to another evidence dossier"
         )
+
+    effective_next_stage_ids = effective_program.effective_next_stage_ids
+    current_stage_id = effective_program.effective_current_stage_id
     current_stage = stages[current_stage_id]
     support_ref_ids = [project_ref_id, run_ref_id, artifact_ref_id]
     if current_action_run_ref_id is not None:
@@ -145,18 +145,16 @@ def project_iclr_evidence_program(
     support_ref_ids = list(dict.fromkeys(support_ref_ids))
 
     phase_rows: list[dict[str, object]] = []
-    current_phase_id: str | None = None
     for phase_id, label_code, stage_ids in _PHASES:
         rows = [stages[stage_id] for stage_id in stage_ids]
         decision_ids = tuple(
-            stage_id for stage_id in report.next_stage_ids if stage_id in stage_ids
+            stage_id for stage_id in effective_next_stage_ids if stage_id in stage_ids
         )
         completed = sum(item.state is CampaignStageState.COMPLETE for item in rows)
         if completed == len(rows):
             state = "complete"
         elif decision_ids:
             state = "current"
-            current_phase_id = current_phase_id or phase_id
         elif any(
             item.state is CampaignStageState.BLOCKED and item.dependencies_complete for item in rows
         ):
@@ -180,10 +178,9 @@ def project_iclr_evidence_program(
                 "support_ref_ids": support_ref_ids,
             }
         )
-    if current_phase_id is None:
-        current_phase_id = next(
-            row["phase_id"] for row in phase_rows if current_stage_id in row["stage_ids"]
-        )
+    current_phase_id = next(
+        row["phase_id"] for row in phase_rows if current_stage_id in row["stage_ids"]
+    )
 
     track_rows = [
         {
@@ -205,6 +202,7 @@ def project_iclr_evidence_program(
         artifact_ref_id=artifact_ref_id,
         dossier_id=report.dossier_id,
         dossier_sha256=report.dossier_sha256,
+        dossier_report_sha256=effective_program.dossier_report_sha256,
         paper_title=report.paper_title,
         target_venue=report.target_venue,
         central_question=report.central_question,
@@ -213,7 +211,16 @@ def project_iclr_evidence_program(
         exact_cell_count=report.exact_cell_count,
         total_stage_count=len(report.stages),
         completed_stage_count=completed_stage_count,
-        next_stage_count=len(report.next_stage_ids),
+        next_stage_count=len(effective_next_stage_ids),
+        planning_authority=effective_program.planning_authority,
+        control_effect=effective_program.control_effect,
+        source_publication_id=effective_program.source_publication_id,
+        source_publication_sha256=effective_program.source_publication_sha256,
+        effective_program_sha256=effective_program.program_sha256,
+        planning_verification_route=effective_program.verification_route.value,
+        planning_verification_reason_codes=effective_program.verification_reason_codes,
+        baseline_next_stage_ids=effective_program.baseline_next_stage_ids,
+        effective_next_stage_ids=effective_next_stage_ids,
         current_phase_id=current_phase_id,
         current_stage_id=current_stage_id,
         current_decision=current_stage.next_decision,

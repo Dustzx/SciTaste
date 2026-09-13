@@ -3252,6 +3252,15 @@ A second explicit action publishes the accepted proposal as a predecessor-linked
 project planning directive for subsequent generation without rewriting its source
 dossier or authorizing execution.
 
+The evaluation layer, rather than the UI package, owns the deterministic
+effective-program compiler. It combines the exact dossier report with a neutral
+control translated from the published directive. A reprioritization can permute
+only the currently dependency-eligible stages; clarification, risk, and required
+evidence remain typed controller guidance. The resulting program has its own hash,
+records the base and effective orders, and is the source of the project home's
+current stage. This makes a published user intervention consumable by SciTaste
+without turning generated prose into evidence or execution authority.
+
 The project resource portfolio is projected from the shared, content-addressed
 registry without copying infrastructure or serializing credential values. For a
 resource directive, one further explicit user action may compile already-bound
@@ -3285,4 +3294,6 @@ constructing a model/tool request. The same router records that accepting or
 rejecting a content-bound local planning proposal, publishing its planning
 version, and applying a role-local resource-priority revision take the direct
 path: their minimal identity, hash, and staleness guards cost less than a generic
-preflight and the writes are reversible project-local metadata.
+preflight and the writes are reversible project-local metadata. Compiling the
+effective experiment program is also direct: it is a pure local derivation over
+already verified, self-hashed inputs.
