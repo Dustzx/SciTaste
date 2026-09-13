@@ -1427,3 +1427,27 @@ was read while extraction, ingestion, API, GPU, and execution authority remain
 false. Synthetic safe, traversal, and symlink ZIPs exercised the boundary; no
 real MLRC ZIP was opened. This removes a real provenance flaw without claiming
 that the downloaded tasks are already executable.
+
+## Behaviorally attesting the six native Taste conditions (2026-09-13)
+
+The next campaign stage exposed a different risk: the formal proposal named six
+first-party conditions and the static preflight verified their Git objects, but
+neither artifact demonstrated that a complete workflow actually respected every
+switch. Treating those names as executable evidence would defer intervention
+leakage discovery until the GPU prepilot.
+
+SciTaste now runs one bounded implementation attestation before real resources.
+Each of the six conditions completed the same 18-decision, four-stage offline
+fixture. The report observed Knowledge retrieval only in the declared three
+conditions, Taste retrieval only in the declared matched or mismatched arms,
+disjoint matched/placebo precedents, critic-specific score evidence, zero final
+blocking findings, and invariant integrity gates. Full and its placebo preserved
+the registered single-factor difference.
+
+This is a concrete self-iteration example of Scientific Taste as experimental
+discipline: it converted a plausible configuration claim into an executable
+falsification check before spending scarce resources. The result closes only
+first-party implementation qualification. Real source abstraction and
+independent corpus review, MLRC archive/task qualification, checkpoint execution,
+and empirical effects remain open; the attestation used no acquired content,
+model, API, GPU, network, or real experiment.

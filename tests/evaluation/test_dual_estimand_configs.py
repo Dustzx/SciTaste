@@ -90,9 +90,9 @@ def test_native_taste_prepilot_compiles_as_one_matched_gpu_estimand() -> None:
     )
     assert all(
         system.adapter_preflight_ref
-        == "configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml"
+        == "configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml"
         and system.adapter_preflight_sha256
-        == "9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7"
+        == "36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025"
         for system in manifest.systems
     )
     assert plan.schema_version == "1.2"

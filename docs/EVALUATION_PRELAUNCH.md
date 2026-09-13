@@ -376,7 +376,7 @@ The model-backed native path has an additional implementation-level preflight:
 
 ```bash
 .venv/bin/scitaste evaluation native-condition-preflight \
-  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml \
+  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml \
   --source-root .
 ```
 
@@ -385,15 +385,39 @@ directly from the pinned Git commit. A dirty or newer worktree therefore cannot
 silently stand in for the claimed implementation. The current report verifies
 the closed six-condition runtime, hard-feasible fixed-candidate selection,
 provider/model/checkpoint identity checks, and durable decision telemetry at
-`ddcd3f8...`. It deliberately remains not experiment-ready: open-ended candidate
-generation is still scenario-defined, the exact checkpoint has not executed this
-path under an approved preflight, and no task-specific matched/placebo corpus pair
-exists. Corpus admission requires equality in stage/decision role, eligible and
-retrieved case counts, context-token budget, provenance tier, curation tier, and
-outcome-information availability; only source/domain relation may differ, and
-zero retrieval invalidates the cell. `--require-experiment-ready` returns nonzero
-while any of these gates remains open. The report always fixes execution authority
-to false.
+the pinned `772cbf0...` implementation. It deliberately remains not
+experiment-ready: bounded model candidate generation is statically verified, but
+the exact checkpoint has not executed this path under an approved preflight and
+no task-specific matched/placebo corpus pair exists. Corpus admission requires
+equality in stage/decision role, eligible and retrieved case counts,
+context-token budget, provenance tier, curation tier, and outcome-information
+availability; only source/domain relation may differ, and zero retrieval
+invalidates the cell. `--require-experiment-ready` returns nonzero while any of
+these gates remains open. The report always fixes execution authority to false.
+
+Static identity is complemented by an executable, local-only implementation
+attestation:
+
+```bash
+.venv/bin/scitaste evaluation native-condition-attest \
+  --manifest configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml \
+  --fixture-workflow configs/workflows/full_offline_native_conditions_v1.yaml \
+  --source-root . \
+  --workspace-root . \
+  --output outputs/projects/scitaste-self-development/evaluations/\
+native-condition-implementation-attestation-v1/REPORT.json \
+  --allow-local-fixture-execution \
+  --require-qualified
+```
+
+The switch permits only the repository's deterministic fixture. The command
+runs all six conditions through Discovery, Evidence, Communication, and Figure,
+checks the observed executor and controller routes against the closed matrix,
+and removes its temporary project after producing the report. It cannot load a
+checkpoint, use the network, call an API, inspect acquired source/task content,
+or execute a real benchmark. A passing report establishes first-party condition
+wiring; it does not clear matched/placebo corpus parity or support an effect
+claim.
 
 Static exact-commit translation review has now resolved one ambiguity inside
 that open adapter gate. MLR-Agent and Agent Laboratory are real method

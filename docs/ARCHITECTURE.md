@@ -3086,3 +3086,31 @@ no extraction occurred. A safe result still grants no extraction, ingestion,
 task-layout validation, baseline execution, API/model use, GPU work, or
 experiment authority. This makes the 39-asset MLRC acquisition visible as exact
 but unqualified rather than either falsely missing or prematurely executable.
+
+### ADR-102: Native condition readiness requires behavioral route attestation
+
+Status: accepted and exercised on the deterministic repository fixture; no real
+task, checkpoint, model, API, GPU, network, or formal experiment was used.
+
+A six-row condition matrix and Git-bound source hashes prove that intended
+component switches exist, but they do not prove that the complete workflow sends
+actions through the corresponding controller and executor paths. A misspelled
+condition, an ignored Knowledge switch, a retriever relation inversion, or a
+critic that never contributes score evidence could otherwise survive a static
+preflight and invalidate an expensive matched run.
+
+SciTaste therefore has a separate local behavioral attestation. It first proves
+that the production workflow, condition matrix, fixture workflow, controller,
+critics, native executor, and state persistence objects are byte-identical at
+the pinned source and inspected HEAD. After an explicit local-fixture switch, it
+runs all six conditions through the same Discovery, Evidence, Communication,
+and Figure workflow and checks observed Knowledge results, Taste retrieval,
+decision counts, final blockers, component telemetry, and invariant integrity
+gates. Closed two-case routing additionally distinguishes matched from
+source-disjoint Taste, while a fixed readiness conflict shows critic score
+evidence is absent from control and active in the critics arm.
+
+The resulting report is implementation evidence, not empirical evidence. It
+does not use acquired content, certify a real matched/placebo corpus, exercise
+the Qwen checkpoint, qualify a benchmark, or estimate any Scientific Taste
+effect. Those gates remain independently blocking in the campaign.

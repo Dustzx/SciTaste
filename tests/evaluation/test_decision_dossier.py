@@ -38,7 +38,10 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
         "qwen3vl2b_native_taste_causal_prepilot_v11.yaml"
     )
     assert artifacts["native-condition-path-preflight"].path.endswith(
-        "qwen3vl2b_native_condition_path_v3.yaml"
+        "qwen3vl2b_native_condition_path_v4.yaml"
+    )
+    assert artifacts["native-condition-implementation-attestation"].path.endswith(
+        "native_condition_implementation_attestation_v1.yaml"
     )
     assert artifacts["taste-corpus-curation-guide"].path.endswith("TASTE_CORPUS_CURATION.md")
     assert mechanism.state is CampaignTrackState.DESIGN_ONLY
@@ -65,6 +68,12 @@ def test_repository_dossier_separates_native_causality_from_best_native_data() -
     assert "two confirmatory" in native.primary_endpoint
     assert "native-controls:model-candidate-generation-not-attested" not in native.blocker_codes
     assert "taste-corpora:paired-qualification-not-complete" in native.blocker_codes
+    attestation_stage = next(
+        stage
+        for stage in dossier.stages
+        if stage.stage_id == "attest-native-condition-implementations"
+    )
+    assert attestation_stage.state is CampaignStageState.BLOCKED
     assert native.budget.allocated_gpu_hours == 5.0
     assert external.state is CampaignTrackState.BLOCKED
     assert external.model.system_api_models is not None

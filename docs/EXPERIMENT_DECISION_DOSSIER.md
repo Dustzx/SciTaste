@@ -107,6 +107,17 @@ not make either task executable. The next stage is a distinct receipt-bound
 approval to read ZIP central directories, followed by no-extraction safety
 qualification. No real MLRC ZIP has yet been opened.
 
+The six native conditions are no longer supported only by configuration names.
+The v4 preflight and its project-level behavioral attestation ran every arm
+through the same deterministic four-stage fixture: Knowledge retrieval was
+present only in the three declared arms, matched and source-disjoint Taste used
+disjoint precedents, critics emitted their bounded score evidence, Full and its
+placebo differed only in source-domain relation, and integrity gates remained
+enabled. This closes implementation qualification only. The campaign stage
+remains blocked until task-specific matched/placebo corpora pass independent
+review and parity checks; no checkpoint, real task, API, GPU, or effectiveness
+result was involved.
+
 The prelaunch schema represents the resulting two estimands without conflating
 them. Schema `1.2` assigns a common resource to every `matched_backbone` cell,
 while a `best_native` lane must bind one provider/model resource to each system

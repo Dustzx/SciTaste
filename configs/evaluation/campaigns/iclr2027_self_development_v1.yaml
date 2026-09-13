@@ -34,7 +34,7 @@ artifacts:
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: e6d1ffe0a5aab4eded3be23011566c42d71cf92989cdca534cd7ee41ab6a5a79
+    sha256: 8b1ded66b3e1159ef454fd8e5ecc2f85097f8ff8629e035b924ad5107193a039
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
     sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
@@ -73,10 +73,13 @@ artifacts:
     sha256: fe125229fa0477b1828b26854dc36f2d68ee23496426021150a3eb22553ca6c6
   - artifact_id: native-taste-causal-proposal
     path: configs/evaluation/prelaunch/qwen3vl2b_native_taste_causal_prepilot_v11.yaml
-    sha256: ebe7d55ef022d09afd352373a267b37352f9f24bdc2a24a2a9bc5c222e024022
+    sha256: cc92d2a699174a752b56e470be7f758e91afdf9036522207399c265d84f5125c
   - artifact_id: native-condition-path-preflight
-    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v3.yaml
-    sha256: 9fee35d6e352c7cc53c1acd131ab2a7db1739f691641375cc1e20ffc201319e7
+    path: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+    sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
+  - artifact_id: native-condition-implementation-attestation
+    path: docs/research/data/native_condition_implementation_attestation_v1.yaml
+    sha256: 6e516f82d0b1819c5c75931b370c6069b57f5dceef28fd041a1e9acadec3167e
   - artifact_id: taste-corpus-curation-guide
     path: docs/TASTE_CORPUS_CURATION.md
     sha256: d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a
@@ -271,6 +274,7 @@ tracks:
       - resource-corpus-v8
       - native-taste-causal-proposal
       - native-condition-path-preflight
+      - native-condition-implementation-attestation
       - taste-corpus-curation-guide
       - mlrc-first-assets
       - mlrc-first-acquisition
@@ -441,7 +445,7 @@ stages:
 
   - stage_id: attest-native-condition-implementations
     kind: runtime_preflight
-    state: future
+    state: blocked
     track_ids: [native-taste-causal-prepilot]
     depends_on: [freeze-dual-estimand-design]
     external_actions: []
@@ -451,11 +455,13 @@ stages:
     completion_artifact_ids:
       - native-taste-causal-proposal
       - native-condition-path-preflight
+      - native-condition-implementation-attestation
     next_decision: >-
-      The six structural policies, bounded candidate generation, fixed-candidate
-      selection, and source/quality-bound curation runtime are Git-bound.
-      Acquire and independently review the task-specific sources, then qualify
-      matched/placebo parity before clearing this stage.
+      All six first-party conditions completed the same four-stage offline
+      fixture, and knowledge, matched/mismatched Taste, critic, single-factor,
+      and invariant-integrity routes were behaviorally attested. Independently
+      review task-specific sources and qualify matched/placebo parity before
+      clearing this stage for a real model/task preflight.
 
   - stage_id: qualify-best-native-adapters
     kind: runtime_preflight

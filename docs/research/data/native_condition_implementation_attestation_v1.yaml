@@ -1,0 +1,62 @@
+schema_version: "1.0"
+evidence_id: native-condition-implementation-attestation-v1
+project_id: scitaste-self-development
+subject:
+  source_commit: 772cbf00348853cfa31aa22db6410b560af45b5b
+  observed_head_commit: 68a135ba01efc395436eaf9888e4babc04ea6e46
+  preflight_ref: configs/evaluation/preflight/qwen3vl2b_native_condition_path_v4.yaml
+  preflight_file_sha256: 36d2d6254ed92be68625ad971091780b591ee1415264c19990c2c8b227009025
+  fixture_workflow_ref: configs/workflows/full_offline_native_conditions_v1.yaml
+  fixture_workflow_sha256: b9a28c8dff5a7c454120c0093c0d014357825b17e9677d343945febc72c6f4f2
+local_report:
+  path: outputs/projects/scitaste-self-development/evaluations/native-condition-implementation-attestation-v1/REPORT.json
+  file_sha256: 7e80a87dd716429342d69a7dd29371861cf6167851bd264c662c7988235cb44a
+  attestation_sha256: eda029b2bab103a1f82bed88992a4ae8c271b9b7b775d84dfe8a23a031305eaa
+  implementation_qualified: true
+behavioral_population:
+  seed: 7
+  condition_count: 6
+  decision_count_per_condition: 18
+  conditions:
+    - native-base
+    - native-knowledge
+    - native-taste
+    - native-critics
+    - full-scitaste
+    - mismatched-taste-placebo
+  all_four_stage_workflows_completed: true
+  all_condition_contracts_verified: true
+  integrity_gates_invariant: true
+observed_routes:
+  knowledge_enabled_conditions:
+    - native-knowledge
+    - full-scitaste
+    - mismatched-taste-placebo
+  knowledge_disabled_conditions:
+    - native-base
+    - native-taste
+    - native-critics
+  matched_and_mismatched_taste_cases_disjoint: true
+  matched_taste_selected_expected_action: true
+  mismatched_taste_selected_expected_action: true
+  critics_changed_bounded_score_evidence: true
+  full_vs_placebo_single_factor_verified: true
+execution_boundary:
+  local_fixture_execution_performed: true
+  real_task_or_experiment_execution_performed: false
+  source_or_task_content_read: false
+  model_calls: 0
+  api_calls: 0
+  gpu_jobs: 0
+  network_access: false
+  authorizes_experiment_execution: false
+remaining_gates:
+  - task-specific matched and source-disjoint Taste corpora are not qualified
+  - corpus parity and independent reviews are not complete
+  - Qwen3-VL-2B has not executed the six-condition path on real task bytes
+  - MLRC archive qualification, held-out audit, and owner launch approval remain open
+claim_boundary: >-
+  This evidence establishes first-party implementation and routing behavior on a
+  deterministic repository fixture. It does not estimate Scientific Taste
+  effectiveness, validate a real benchmark task, establish corpus quality, or
+  support the paper title.

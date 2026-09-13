@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a behavioral implementation attestation for the six first-party native
+  Taste conditions. One explicit local-only command runs the same four-stage
+  deterministic fixture under every condition, verifies Knowledge routing,
+  matched versus source-disjoint Taste routing, critic score evidence,
+  Full/placebo single-factor isolation, and invariant integrity gates, then
+  emits an immutable report. The attestation performs no real task, model, API,
+  GPU, network, or formal experiment work and cannot substitute for corpus
+  qualification or effectiveness evidence.
 - Separated executable-task ZIP qualification from download authority. The
   acquired 39-asset MLRC package is now reflected as exact-but-unqualified in
   the campaign, and central-directory inspection requires a self-hashed
