@@ -38,6 +38,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.2 — external-method archive qualification gate | done | exact acquisition bytes compile into a no-read plan; separate hash-bound approval and local switch can produce a no-extraction tree manifest with path, type, expansion, root, and license-file checks; real archive member reads remain unapproved |
 | Phase 9.3 — executable-task archive read gate | done | MLRC acquisition is reflected in the campaign; ZIP qualification now requires a receipt-bound read approval and explicit local switch, while extraction, ingestion, baseline reproduction, API, GPU, and experiments remain closed |
 | Phase 9.4 — native condition implementation attestation | done | all six first-party conditions complete one identical four-stage offline fixture with Knowledge, matched/mismatched Taste, critic, single-factor, and invariant-integrity routes verified; real corpora, checkpoint/task execution, and effects remain open |
+| Phase 9.5 — current API identity and Taste-path continuity | done | the live DeepSeek catalog change is preserved as a new immutable resource/identity stratum; all four title-critical Taste nodes expose the current V4 Flash candidate while historical V4.1 plans remain non-launchable |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
 sub-10-GB policy. The receipt binds sixteen
@@ -330,13 +331,13 @@ genuinely common backbone or disclose a best-native-system comparison with
 model effects confounded; the choice is an author-level scientific-design
 decision.
 
-DeepSeek's live official model catalog was rechecked again on 2026-09-13. It now
-names callable ID `deepseek-flash` with version `DeepSeek-V4.1-Flash`, and says
-that the retired `deepseek-v4-flash` aliases are served by V4.1. V5 preserves
-this current identity while v4 remains immutable history. Existing proposals
+DeepSeek's live official model catalog changed again on 2026-09-13. The current
+table names callable ID `deepseek-v4-flash` with family `DeepSeek-V4-Flash` and
+a lower published tariff. V6 preserves the earlier V4.1 catalog as immutable
+history, removes it from current project bindings, and binds the current V4
+identity to the four title-critical Taste-node profile sets. Existing proposals
 remain historical no-run artifacts and cannot launch until a new proposal binds
-the current identity and an authenticated response. The internal-review profile
-is also blocked until the missing DeepSeek credential is bound.
+the current identity and an authenticated sentinel window.
 
 Hosted API reproducibility now has a formal no-run contract. DeepSeek combines
 its public dated revision with a maximum 24-hour temporal stratum; Zhipu, whose
@@ -357,8 +358,8 @@ latter remains `reported` until an automated host refresh verifies exact bytes.
 This inventory layer neither reserves capacity nor authorizes work; concurrent
 allocation and usage roll-up remain the next scheduler boundary.
 
-The resource layer now has an explicit hash-indexed v5 topology. Three API
-entries distinguish current DeepSeek V4.1 Flash, current GLM-5.3-Flash, and
+The resource layer now has an explicit hash-indexed v6 topology. Three API
+entries distinguish current DeepSeek V4 Flash, current GLM-5.3-Flash, and
 unavailable-but-preserved Bailian history. Two GPU
 hosts distinguish the verified local 1×3090 from a fresh read-only verification
 of the remote 8×3090 pool. Three checkpoint entries bind Qwen3-VL-2B and the

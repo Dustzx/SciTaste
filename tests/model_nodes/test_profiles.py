@@ -90,6 +90,25 @@ def test_content_addressed_profile_set_loads_two_distinct_budget_layers() -> Non
     assert all(not profile.unrestricted_code_generation for profile in loaded.profiles.values())
 
 
+def test_current_taste_profile_sets_bind_deepseek_v4_without_selecting_a_provider() -> None:
+    expected = {
+        "runtime_profiles.reference_mining_v2.yaml": "deepseek-v4flash-reference-mining",
+        "runtime_profiles.reference_quality_v2.yaml": "deepseek-v4flash-reference-quality",
+        "runtime_profiles.grounded_taste_abstraction_v2.yaml": (
+            "deepseek-v4flash-grounded-taste-abstraction"
+        ),
+        "runtime_profiles.taste_deliberation_v2.yaml": "deepseek-v4flash-taste-deliberation",
+    }
+
+    for filename, profile_id in expected.items():
+        loaded = load_model_node_profile_set(CONFIG_ROOT / filename)
+        profile = loaded.profiles[profile_id]
+        assert profile.provider == "deepseek"
+        assert profile.model == "deepseek-v4-flash"
+        assert profile.live_execution_permitted is True
+        assert len(loaded.profiles) == 2
+
+
 def test_profile_is_bound_into_request_and_fingerprint_without_changing_legacy_hash() -> None:
     legacy = StructuredModelRequest(
         request_id="request-1",

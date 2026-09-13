@@ -1,0 +1,13 @@
+# Current candidates for formal grounded Taste construction.
+# Live use remains separately owner-approved and source-projection-bound.
+schema_version: "1.0"
+profile_set_id: grounded-taste-abstraction-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_grounded_taste_abstraction_v1.yaml
+    sha256: 036d0152be0d55a587605105c815e4ada58b30955b2196a3c35dd32a66575b19
+    profile_sha256: c8f0e1917875c055976032f8e5f43fd66d94bc2e20a7d8d16e1271bfc606631f
+  - path: profile_deepseek_v4flash_grounded_taste_abstraction_v1.yaml
+    sha256: 58a2d09fc769cea9d20bc39de491966f6fc6d838694c6ec074bf5ef9f57d6532
+    profile_sha256: c0335d86445b81a2d950e69e503f5e97060aba0c764ed96585370e1363c71ce6

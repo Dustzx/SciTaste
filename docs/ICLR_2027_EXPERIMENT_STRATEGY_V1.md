@@ -357,7 +357,7 @@ only protocol conformance:
 - retry and schema-failure rates are acceptable on non-study fixtures;
 - cost and rate limits permit the powered design.
 
-The current candidates are [DeepSeek V4.1 Flash](https://api-docs.deepseek.com/quick_start/pricing/)
+The current candidates are [DeepSeek V4 Flash](https://api-docs.deepseek.com/quick_start/pricing/)
 and [GLM-5.3-Flash](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash).
 Official documentation describes both as 1M-context, tool-capable frontier
 agent models; GLM-5.3-Flash is additionally native multimodal. This makes either plausible

@@ -1,0 +1,26 @@
+# Inert backend configuration for the current DeepSeek V4 Flash API stratum.
+# Prices are the official USD rates observed on 2026-09-13. Copy this file to
+# ignored project runtime state; keep live_enabled=false until a hash-bound,
+# task-excluded conformance transaction is approved.
+provider: deepseek
+base_url: https://api.deepseek.com
+model: deepseek-v4-flash
+api_key_env: DEEPSEEK_API_KEY
+live_enabled: false
+timeout_seconds: 600
+max_retries: 0
+max_output_tokens: 32768
+pricing_confirmed: true
+pricing:
+  currency: USD
+  input_usd_per_million_tokens: 0.14
+  cached_input_usd_per_million_tokens: 0.0028
+  output_usd_per_million_tokens: 0.28
+  captured_at: 2026-09-13T12:32:45+08:00
+  source: https://api-docs.deepseek.com/quick_start/pricing
+unpriced_engineering_probe: false
+extra_headers: {}
+extra_body:
+  thinking:
+    type: enabled
+  reasoning_effort: high

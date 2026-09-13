@@ -48,7 +48,7 @@ remain separately gated.
 | Binding | Current no-run proposal; immutable registered instance |
 |---|---|
 | Question | Under matched starting briefs, tools, model, repair rules, and budgets, are complete SciTaste Native packages preferred by blinded experts? |
-| Provider/model | DeepSeek `deepseek-flash` / `DeepSeek-V4.1-Flash`, confirmed by the live official catalog on 2026-09-12; legacy `deepseek-v4-flash` is routed to V4.1; Zhipu `glm-5.3-flash` requires a separate proposal and is not a silent fallback |
+| Provider/model | DeepSeek `deepseek-v4-flash` / `DeepSeek-V4-Flash`, confirmed by the live official catalog on 2026-09-13; prior `deepseek-flash` / `DeepSeek-V4.1-Flash` is historical only; Zhipu `glm-5.3-flash` requires a separate proposal and is not a silent fallback |
 | Data | the ten candidate ICLR-2025 MLR-Bench workshop briefs; exact task assets remain unacquired and unadmitted |
 | Systems | SciTaste Native, Direct Agent, MLR-Agent, Agent Laboratory, TinyScientist candidate |
 | Matrix | historical upper design: 5 systems × 10 tasks × 2 seeds = 100 trajectories; formal size must follow pilot power analysis |

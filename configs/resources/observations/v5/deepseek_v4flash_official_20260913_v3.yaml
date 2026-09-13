@@ -1,0 +1,19 @@
+schema_version: "1.0"
+observation_id: deepseek-v4flash-official-20260913-v3
+resource_id: deepseek-v4-flash
+resource_kind: api_model
+observed_at: 2026-09-13T12:32:45+08:00
+method: official_catalog
+status: verified
+requested_model_id: deepseek-v4-flash
+returned_model_revision: DeepSeek-V4-Flash
+request_succeeded: null
+source_url: https://api-docs.deepseek.com/quick_start/pricing
+notes:
+  - The current official table names deepseek-v4-flash, a 1M context window, JSON output, tool calls, and a 384K maximum output.
+  - The current USD table lists 0.0028 per million cache-hit input tokens, 0.14 per million cache-miss input tokens, and 0.28 per million output tokens.
+  - The official rate-limit page lists an account-level concurrency ceiling of 2500 for deepseek-v4-flash.
+  - The prior deepseek-flash and DeepSeek-V4.1-Flash records remain immutable historical strata and are not evidence for this current callable identity.
+  - This official-catalog observation is not an authenticated API response and grants no call authority.
+credentials_recorded: false
+observation_only: true

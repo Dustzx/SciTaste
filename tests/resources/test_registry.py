@@ -30,11 +30,13 @@ CATALOG_V2 = Path("configs/resources/compute_catalog_v2.yaml")
 CATALOG_V3 = Path("configs/resources/compute_catalog_v3.yaml")
 CATALOG_V4 = Path("configs/resources/compute_catalog_v4.yaml")
 CATALOG_V5 = Path("configs/resources/compute_catalog_v5.yaml")
+CATALOG_V6 = Path("configs/resources/compute_catalog_v6.yaml")
 OBSERVATIONS = Path("configs/resources/observations")
 PROJECT_BINDING = Path("configs/resources/projects/scitaste_self_development.yaml")
 PROJECT_BINDING_V3 = Path("configs/resources/projects/scitaste_self_development_v3.yaml")
 PROJECT_BINDING_V4 = Path("configs/resources/projects/scitaste_self_development_v4.yaml")
 PROJECT_BINDING_V5 = Path("configs/resources/projects/scitaste_self_development_v5.yaml")
+PROJECT_BINDING_V6 = Path("configs/resources/projects/scitaste_self_development_v6.yaml")
 LOCAL_GPU_INVENTORY = Path("docs/research/data/gpu_host_local_3090_inventory_v1.yaml")
 REMOTE_GPU_INVENTORY_V2 = Path("docs/research/data/gpu_host_3090_2_inventory_v2.yaml")
 LOCAL_MODEL_ASSETS = Path("docs/research/data/gpu_host_local_model_assets_v1.yaml")
@@ -64,6 +66,30 @@ def test_tracked_catalog_defines_project_superordinate_api_and_gpu_resources() -
     assert deepseek.model_revision == "DeepSeek-V4.1-Flash"
     assert deepseek.pricing is not None
     assert deepseek.pricing.output_per_million == 1.2
+
+
+def test_v6_catalog_and_project_binding_use_current_deepseek_v4_identity() -> None:
+    inspection = inspect_compute_resource_catalog(CATALOG_V6)
+    loaded = load_compute_resource_catalog(CATALOG_V6)
+    binding = inspect_project_resource_binding(CATALOG_V6, PROJECT_BINDING_V6)
+
+    assert inspection.evidence_verified is True
+    assert inspection.api_model_ids == (
+        "deepseek-v41-flash",
+        "deepseek-v4-flash",
+        "zhipu-glm53-flash",
+        "bailian-qwen38-max",
+    )
+    deepseek = loaded.catalog.resource("deepseek-v4-flash")
+    assert deepseek.model_id == "deepseek-v4-flash"
+    assert deepseek.model_revision == "DeepSeek-V4-Flash"
+    assert deepseek.pricing is not None
+    assert deepseek.pricing.input_cache_miss_per_million == 0.14
+    assert deepseek.pricing.output_per_million == 0.28
+    assert binding.valid is True
+    assert binding.catalog_id == "scitaste-shared-compute-v6"
+    assert binding.api_resource_ids[0] == "deepseek-v4-flash"
+    assert "deepseek-v41-flash" not in binding.api_resource_ids
 
 
 def test_explicit_catalog_hash_binds_api_gpu_and_checkpoint_manifests() -> None:

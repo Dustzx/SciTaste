@@ -80,11 +80,11 @@ Two proposal-only profiles are available for a later approved construction run:
 
 - `profile_zhipu_glm53_grounded_taste_abstraction_v1.yaml` for
   `zhipu-direct/glm-5.3-flash`;
-- `profile_deepseek_v41flash_grounded_taste_abstraction_v1.yaml` for
-  `deepseek/deepseek-flash`.
+- `profile_deepseek_v4flash_grounded_taste_abstraction_v1.yaml` for
+  `deepseek/deepseek-v4-flash`.
 
 The content-addressed
-`runtime_profiles.grounded_taste_abstraction_v1.yaml` set exposes both as
+`runtime_profiles.grounded_taste_abstraction_v2.yaml` set exposes both as
 predeclared candidates without selecting or pooling them.
 
 Both permit up to 32,768 output tokens, rather than the earlier 2,048-token

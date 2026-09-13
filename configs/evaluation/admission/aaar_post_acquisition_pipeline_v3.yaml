@@ -1,0 +1,78 @@
+schema_version: "2.0"
+pipeline_id: aaar-post-acquisition-pipeline-v3
+project_id: scitaste-self-development
+status: implementation-ready-content-and-human-authorizations-pending
+supersedes: aaar-post-acquisition-pipeline-v2
+scientific_question: >-
+  Can a prestige-blind, content-grounded source screen identify complete
+  contrastive decision episodes before Scientific Taste abstraction?
+stages:
+  - id: receipt-and-content-integrity
+    kind: deterministic
+    reads_source_body: true
+    requires_separate_owner_approval: true
+    output: bounded-content-audit-report
+  - id: rights-and-isolation-prescreen
+    kind: deterministic-plus-curator
+    reads_source_body: false
+    requirements:
+      - research-analysis-and-derived-abstraction-rights
+      - attribution-preserved
+      - held-out-and-self-development-source-groups-excluded
+    output: rights-and-isolation-evidence
+  - id: prestige-blind-quality-projection
+    kind: deterministic
+    reads_source_body: true
+    requires_separate_owner_approval: true
+    exclusions: [author, venue, citation_count, relation_label, downstream_task_identity]
+    outcome_policy: explicitly-available-or-withheld
+    output: canonical-hashed-quality-projection
+  - id: reference-quality-proposal
+    kind: proposal-only-model-node
+    node_name: reference-quality
+    dimensions:
+      - evidential_rigor
+      - decision_traceability
+      - alternative_visibility
+      - failure_boundary_visibility
+      - transfer_potential
+    admission_rule: all-five-strong-with-exact-source-support
+    candidate_profiles: configs/model_nodes/runtime_profiles.reference_quality_v2.yaml
+    output: project-ledger-bound-untrusted-proposal
+  - id: content-free-quality-qualification
+    kind: deterministic
+    command: scitaste evaluation reference-quality-qualification
+    output: content-free-reference-quality-receipt
+    authorizes_source_admission: false
+  - id: independent-quality-review
+    kind: dual-independent-human
+    reviewers_per_source: 2
+    reviewer_blinding: [prestige-signals, model-assessment, other-review, downstream-outcome]
+    split_vote_rule: reject-until-independent-adjudication
+    output: anchored-five-dimension-reviews
+  - id: final-source-admission
+    kind: deterministic
+    schema_version: "1.1"
+    implementation: scitaste.evaluation.source_admission
+    requirements:
+      - complete-audited-population-retained
+      - reference-quality-receipt-bound
+      - two-admitting-anchored-reviews
+      - rights-and-isolation-pass
+    output: admitted-and-rejected-source-ledger
+  - id: grounded-taste-abstraction
+    kind: proposal-only-model-plus-dual-human
+    implementation: scitaste.taste.semantic.GroundedTasteAbstractionNode
+    candidate_profiles: configs/model_nodes/runtime_profiles.grounded_taste_abstraction_v2.yaml
+    output: grounded-transfer-bounded-taste-candidate
+authority:
+  authorizes_download: false
+  authorizes_content_access: false
+  authorizes_model_calls: false
+  authorizes_human_recruitment: false
+  authorizes_source_admission: false
+  authorizes_experiment: false
+claim_boundary: >-
+  This pipeline defines and verifies the transition from acquired bytes to a
+  high-quality reference proposal. It contains no real source inspection,
+  provider response, human judgment, admitted corpus, or effectiveness result.

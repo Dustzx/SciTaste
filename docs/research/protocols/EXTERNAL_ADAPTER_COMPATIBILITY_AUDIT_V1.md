@@ -93,7 +93,7 @@ visible instead of being replaced with a pseudo-implementation.
 
 ## Decision effect
 
-The current DeepSeek V4.1 prepilot cannot truthfully clear its requirement for
+The historical DeepSeek V4.1 prepilot cannot truthfully clear its requirement for
 two accepted, matched external method comparators. This is an experiment-design
 constraint exposed by SciTaste's adapter gate, not evidence that the systems are
 low quality and not evidence about SciTaste effectiveness. The next decision is

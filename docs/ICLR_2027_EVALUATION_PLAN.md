@@ -317,7 +317,7 @@ The primary **matched-backbone track** uses the same controller model revision,
 starting evidence/search snapshot, task assets, token and dollar ceilings, wall
 time, experiment count, and accelerator allocation wherever each system permits
 those controls. Current conformance candidates are DeepSeek
-`deepseek-flash` / `DeepSeek-V4.1-Flash` and Zhipu `glm-5.3-flash` /
+`deepseek-v4-flash` / `DeepSeek-V4-Flash` and Zhipu `glm-5.3-flash` /
 `GLM-5.3-Flash`. One primary backbone is frozen before study outcomes; the other
 is a separate non-pooled provider-robustness slice. Exact dated pricing and
 authenticated served identity must be captured in new immutable proposal bytes.
@@ -456,8 +456,8 @@ No formal run may start until all of these gates pass:
    storage, failures/repairs/discards, and human minutes;
 4. `formal-v1` remains frozen to Bailian `qwen3.8-max-2026-09-02`; Zhipu
    `glm-5.3-flash` uses a separate family. Existing DeepSeek proposals remain
-   immutable historical snapshots. The current `deepseek-flash` /
-   `DeepSeek-V4.1-Flash` identity needs a new proposal and a bounded
+   immutable historical snapshots. The current `deepseek-v4-flash` /
+   `DeepSeek-V4-Flash` identity needs a new proposal and a bounded
    sentinel-bracketed temporal window. Any new provider plan needs new
    IDs, blind IDs, hashes, and price records rather than mutating prior studies;
 5. all external systems pass license, sandbox, data-equivalence, artifact, and

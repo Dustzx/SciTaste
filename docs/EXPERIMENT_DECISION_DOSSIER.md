@@ -55,7 +55,9 @@ corpora exist. The external lane contains SciTaste Native, Agent Laboratory, and
 TinyScientist over the same two candidates and one seed: six trajectories with
 DeepSeek V4.1 Flash, o3-mini, and GPT-4o-2024-08-06 explicitly bound per system.
 The latter is best-native, model-confounded, and now non-launchable because the
-DeepSeek identity has been superseded. The historical 100-trajectory
+DeepSeek identity has been superseded. The current DeepSeek conformance
+candidate is `deepseek-v4-flash` / `DeepSeek-V4-Flash`; it requires a new
+task-excluded, sentinel-bracketed proposal. The historical 100-trajectory
 DeepSeek/MLR-Bench matrix remains evidence of an infeasible matched design, not
 an active quota.
 

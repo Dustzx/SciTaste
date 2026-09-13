@@ -24,6 +24,8 @@ _PROTOCOL = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v1.
 _CATALOG = _ROOT / "configs/resources/compute_catalog_v4.yaml"
 _PROTOCOL_V2 = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v2.yaml"
 _CATALOG_V5 = _ROOT / "configs/resources/compute_catalog_v5.yaml"
+_PROTOCOL_V3 = _ROOT / "configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml"
+_CATALOG_V6 = _ROOT / "configs/resources/compute_catalog_v6.yaml"
 _SHA = "a" * 64
 
 
@@ -140,6 +142,27 @@ def test_current_protocol_uses_official_deepseek_v41_identity() -> None:
         "deepseek-flash",
         "DeepSeek-V4.1-Flash",
     )
+
+
+def test_latest_protocol_moves_current_work_to_official_deepseek_v4_identity() -> None:
+    inspection = load_api_identity_protocol(_PROTOCOL_V3)
+    catalog = load_compute_resource_catalog(_CATALOG_V6).catalog
+    deepseek = qualify_api_identity_candidate(
+        catalog.resource("deepseek-v4-flash"),
+        inspection.protocol.policy("deepseek-v4-flash"),
+    )
+
+    assert inspection.protocol.protocol_id == "iclr2027-api-identity-v3"
+    assert deepseek.official_revision == "DeepSeek-V4-Flash"
+    assert deepseek.pilot_proposal_ready is True
+    assert inspection.protocol.policy("deepseek-v4-flash").allowed_returned_model_ids == (
+        "deepseek-v4-flash",
+        "DeepSeek-V4-Flash",
+    )
+    assert {item.resource_id for item in inspection.protocol.candidate_policies} == {
+        "deepseek-v4-flash",
+        "zhipu-glm53-flash",
+    }
 
 
 def test_identity_protocol_rejects_missing_provenance_capture() -> None:

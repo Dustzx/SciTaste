@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Restored identity continuity between the current hosted-model inventory and
+  the title-critical Scientific Taste path. A new immutable compute catalog,
+  project binding, API identity protocol, and review activation move new work
+  from the superseded `deepseek-flash` / `DeepSeek-V4.1-Flash` snapshot to the
+  current official `deepseek-v4-flash` / `DeepSeek-V4-Flash` stratum. New
+  content-addressed profiles expose that model for reference mining, reference
+  quality, grounded Taste abstraction, and Taste deliberation without selecting
+  a provider or authorizing a call; prior configs remain historical evidence.
 - Added a behavioral implementation attestation for the six first-party native
   Taste conditions. One explicit local-only command runs the same four-stage
   deterministic fixture under every condition, verifies Knowledge routing,

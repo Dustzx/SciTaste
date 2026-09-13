@@ -1,0 +1,35 @@
+schema_version: "1.1"
+manifest_id: iclr2027-review-followup-activation-v5
+project_id: scitaste-self-development
+evidence_review_package:
+  path: configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml
+  file_sha256: b9396be5e032fa9974361f70340ad7421c08c0c0764c711ca646fadaa9b68be6
+  semantic_sha256: bcc75d00ad132faa9abd6b3538f8b53bc82b3b664ae9cc0c8c9bdbc1ba109a47
+compute_catalog:
+  path: configs/resources/compute_catalog_v6.yaml
+  file_sha256: 27725e61e560534bc85c61ff9855a5a46d373819fb27d212dcf97b3143736c12
+  semantic_sha256: 6f039c3dd3d1051173b313beea172ce00ff61919924df8d097634b04420239b7
+project_resource_binding:
+  path: configs/resources/projects/scitaste_self_development_v6.yaml
+  file_sha256: ad53339250bea019d5da2c0ace53f5855009730a46bb957a7bafdf231607e6d3
+  semantic_sha256: 68cc03f95d8257e8efcc913dc9be1f7e6a8cb48aee1daa9ff4e3891b43cbec63
+model_identity_protocol:
+  path: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+  file_sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+  semantic_sha256: 79b1ae45b95c95441d538dfc3d30fc5d07613c3b2bbe5d96b3f61ac8a0f84a5b
+primary_api_candidate_ids:
+  - deepseek-v4-flash
+  - zhipu-glm53-flash
+diagnostic_checkpoint_ids:
+  - qwen3-vl-2b-local-47f9c0e0
+  - qwen3-5-4b-local-b4e05070
+primary_selection_stage: after_task_excluded_conformance_pilot
+stable_model_identity_required: true
+pilot_excluded_from_formal_test: true
+automated_judge_is_secondary: true
+authorizes_download: false
+authorizes_repository_checkout: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false
+authorizes_execution: false

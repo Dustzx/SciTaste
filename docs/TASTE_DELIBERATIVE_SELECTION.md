@@ -50,7 +50,7 @@ the selection must retain that action tension. If a source-disjoint challenge or
 boundary precedent is available in a multi-case set, a support-only proposal is
 rejected. There is no lexical fallback after failed deliberation.
 
-Provider profiles for GLM-5.3-Flash and DeepSeek-V4.1-Flash permit structured
+Provider profiles for GLM-5.3-Flash and DeepSeek-V4-Flash permit structured
 32,768-token responses without tools. They are candidates, not a selected model
 or launch authorization.
 

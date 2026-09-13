@@ -1,0 +1,13 @@
+# Current candidates for decision-grounded Taste selection.
+# This set selects no provider and authorizes no model call.
+schema_version: "1.0"
+profile_set_id: taste-deliberation-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_taste_deliberation_v1.yaml
+    sha256: c4afa66330a61530aab1208d90f7f9cb630d27da305057f095dc8feebc3c5ba6
+    profile_sha256: 835b10cdbb8e79d0d88ac59cfb3b405aee9398fa49c6a1fb18d90b87a491cc5f
+  - path: profile_deepseek_v4flash_taste_deliberation_v1.yaml
+    sha256: be3140459ef2703a7d0d6fcd2596c08ce9860f9be920d734d0a4d4e615b2b841
+    profile_sha256: ce7b0f22e7b26f5a63c14f9d01692eff2f8172ee5199f9e37f6c17a2d9d0a2c5

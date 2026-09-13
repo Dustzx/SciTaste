@@ -6,7 +6,7 @@ experiment proposal, approval, result, and paper evidence.
 
 The implementation has two planes:
 
-- `configs/resources/compute_catalog_v5.yaml` is the tracked, secret-free index
+- `configs/resources/compute_catalog_v6.yaml` is the tracked, secret-free index
   of stable resource identity and capability. Each API model, GPU host, and
   checkpoint has its own hash-bound manifest below `configs/resources/api/` or
   `configs/resources/gpu/`; v1 through v4 remain immutable, readable history.
@@ -36,8 +36,7 @@ turning a weak password hash or bearer key into a tracked artifact.
 
 | Class | Resource | Current role/state |
 |---|---|---|
-| API | `deepseek-v41-flash` | current `deepseek-flash` / `DeepSeek-V4.1-Flash` candidate; official identity and peak pricing verified, local credential and current sentinel window absent |
-| API | `deepseek-v4-flash` | retained only to preserve historical observations; excluded from the current project binding and model candidates |
+| API | `deepseek-v4-flash` | current `deepseek-v4-flash` / `DeepSeek-V4-Flash` candidate; official identity and pricing verified, current authenticated sentinel window absent |
 | API | `zhipu-glm53-flash` | current official multimodal candidate and locally bound key; current connectivity unprobed |
 | API | `bailian-qwen38-max` | historical provenance only; blocked by the latest recorded arrearage response |
 | GPU | `gpu-host-local-3090` | verified local 1×RTX 3090 development/preflight host |
@@ -52,7 +51,7 @@ The remote scale-out manifest explicitly resolves SSH alias `3090-2` to host
 127.0.0.1:7890`. These fields describe how an authorized scheduler could reach
 the host; they do not perform a login or persist the password.
 
-`configs/resources/projects/scitaste_self_development_v5.yaml` explicitly binds
+`configs/resources/projects/scitaste_self_development_v6.yaml` explicitly binds
 all eight current resources to the self-development project. The
 two Qwen3.5-4B paths carry `asset-inventory` roles only; availability cannot
 select the paper backbone. The registered copy
@@ -92,15 +91,17 @@ for 4,266,653,057 bytes. The older GPU experiment proposal names
 `8e95e5f6...`; this mismatch remains visible and requires a new proposal or the
 exact old snapshot rather than silent substitution.
 
-The live official DeepSeek table was re-inspected on 2026-09-13. It names
-callable ID `deepseek-flash`, version `DeepSeek-V4.1-Flash`, a 1M context
-window, 384K maximum output, JSON output, and tool calls. The catalog uses the
-current peak prices—USD 0.006/M cached input, USD 0.30/M uncached input, and USD
-1.20/M output—as conservative ceilings; off-peak execution can cost less. The
-official page says the retired `deepseek-v4-flash` aliases are now served by
-V4.1 rather than preserving the retired model. Because no DeepSeek credential
-is locally bound, the current model remains pending until a separately approved
-authenticated identity probe.
+The live official DeepSeek table was re-inspected on 2026-09-13 after the
+earlier same-day catalog snapshot changed. The current table names callable ID
+`deepseek-v4-flash`, family `DeepSeek-V4-Flash`, a 1M context window, 384K
+maximum output, JSON output, and tool calls. The catalog records the current USD
+rates—0.0028/M cached input, 0.14/M uncached input, and 0.28/M output—and the
+official rate-limit page reports an account-level concurrency ceiling of 2500.
+The prior `deepseek-flash` / `DeepSeek-V4.1-Flash` files remain immutable
+historical strata; they are removed from the current project binding rather than
+silently rewritten. Because no current approved DeepSeek sentinel window exists,
+the current model remains pending until a separately approved authenticated
+identity probe.
 The future probe must use the sentinel-bracketed temporal protocol in
 `docs/API_MODEL_IDENTITY.md`; a returned alias alone is not a frozen checkpoint.
 
@@ -120,7 +121,7 @@ Validate the shared catalog and its local evidence without contacting anything:
 
 ```bash
 scitaste resource inspect \
-  --catalog configs/resources/compute_catalog_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
   --evidence-root .
 ```
 
@@ -129,26 +130,26 @@ observations:
 
 ```bash
 scitaste resource update-catalog \
-  --catalog configs/resources/compute_catalog_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
   --evidence-root . --outputs-root outputs
 
 scitaste resource bind-project \
-  --catalog configs/resources/compute_catalog_v5.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v6.yaml \
   --outputs-root outputs
 
 # After a content-bound catalog change, archive and replace an existing binding:
 scitaste resource update-project-binding \
-  --catalog configs/resources/compute_catalog_v5.yaml \
-  --binding configs/resources/projects/scitaste_self_development_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
+  --binding configs/resources/projects/scitaste_self_development_v6.yaml \
   --outputs-root outputs
 
 scitaste resource status \
-  --catalog configs/resources/compute_catalog_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
   --outputs-root outputs
 
 scitaste resource access-status \
-  --catalog configs/resources/compute_catalog_v5.yaml \
+  --catalog configs/resources/compute_catalog_v6.yaml \
   --credential-file outputs/resources/access/credentials.env \
   --output outputs/resources/access/STATUS.json
 ```

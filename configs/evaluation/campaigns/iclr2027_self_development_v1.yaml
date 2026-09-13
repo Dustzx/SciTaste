@@ -19,10 +19,10 @@ claim_boundary: >-
 artifacts:
   - artifact_id: iclr-evaluation-contract
     path: docs/ICLR_2027_EVALUATION_PLAN.md
-    sha256: a4b0ab122b79451d7acc4060a9dafefd62fb27512321170748514b1d8fc5a95f
+    sha256: 06302df5315c5e48e05efbbc87b96bdad58223b5bd048c3fe5b04e03807a9a4b
   - artifact_id: iclr-core-experiment-strategy
     path: docs/ICLR_2027_EXPERIMENT_STRATEGY_V1.md
-    sha256: 2cb9f7e8d5c1107447f8f71e170f999622811525e5885758029c1e272113c3db
+    sha256: 6cc09c31b98dd11cec1108c1412811e03bd033bf90bc1692ec8d9a776f186b89
   - artifact_id: clustered-power-analysis
     path: docs/CLUSTERED_POWER_ANALYSIS.md
     sha256: d452119a33a9a26726f0d32eeff9853853437a137cf816274f7fedac4281764a
@@ -34,10 +34,10 @@ artifacts:
     sha256: b0e65c77620983a6e529c9d2b32e53faf0bdbf3d0b9431d9a5188d67f0b48760
   - artifact_id: dossier-guide
     path: docs/EXPERIMENT_DECISION_DOSSIER.md
-    sha256: 8b1ded66b3e1159ef454fd8e5ecc2f85097f8ff8629e035b924ad5107193a039
+    sha256: 4356236bd271139f623619eeeeb77f907b7ceadbbf3678ea2f56c4a9c2c20c0a
   - artifact_id: experiment-decision-brief
     path: docs/research/SCITASTE_EXPERIMENT_DECISION_BRIEF_V1.md
-    sha256: e8c5a9d415d4ddbf7b48c97d7ca47613363eaf4befbdc9c3bea0a84cc6627d8d
+    sha256: eed6b98a9eae316589058a3c42680ff12f18e556010b9df5d95c12beb75acb1f
   - artifact_id: scientific-reference-quality
     path: docs/SCIENTIFIC_REFERENCE_QUALITY.md
     sha256: 694539c4376ff89a85edd3326fc584d5fb181ec58058ce7e1399a1711981840c
@@ -51,14 +51,14 @@ artifacts:
     path: configs/taste/scitaste_self_reference_need_v1.yaml
     sha256: 8e0f9fd48dcd007df764b845cb482bea2290aa064d43286deaa330fee70a69f3
   - artifact_id: reference-mining-profiles
-    path: configs/model_nodes/runtime_profiles.reference_mining_v1.yaml
-    sha256: 1ec57b17dced70832331e431817fe354450a826ee88172a3f980f5377843370b
+    path: configs/model_nodes/runtime_profiles.reference_mining_v2.yaml
+    sha256: 99ea209d1bacb898e4cfa6a8587820c54f30c52cb48b15f9afac78fc443cc9bd
   - artifact_id: reference-quality-profiles
-    path: configs/model_nodes/runtime_profiles.reference_quality_v1.yaml
-    sha256: 51570f7ef746eff5655b7c7ec731b9c2654e8755058e772fafc1a8a638e13332
+    path: configs/model_nodes/runtime_profiles.reference_quality_v2.yaml
+    sha256: d8291726a65b45a1d4fa347d0bab4bc8bf473e576d91533b74f6f75cd274fc5c
   - artifact_id: reference-quality-pipeline
-    path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v2.yaml
-    sha256: 0f5756d64876796b3dccf300891b2f823ad5399688e92de02ae54b6ecc4e6ff6
+    path: configs/evaluation/admission/aaar_post_acquisition_pipeline_v3.yaml
+    sha256: 9896e98e679d791a378ccc6735ccdd9aa7a7d1e06c1e586ab69f62478b75bcdb
   - artifact_id: mechanism-source-screen
     path: docs/research/data/scitastebench_v2_source_candidates_v1.yaml
     sha256: 75ce17f2936ca3f716afde796fffd247b6ebfe487d59ca5b90308d5c57f55cdb
@@ -85,13 +85,28 @@ artifacts:
     sha256: d091ece13eaa71e80bd9b9a51ba7babba2f4166b169c8033e18804a3632e373a
   - artifact_id: grounded-taste-distillation
     path: docs/GROUNDED_TASTE_DISTILLATION.md
-    sha256: ee496ec3d9a80af43aeb7b081f44df115b4d0ab6ac4023c686ede094c5f61372
+    sha256: b8f9b378c99aa01b42e20e33d3377510af2e8e5485f75ab7bed9075fa5771d8f
   - artifact_id: decision-grounded-taste-selection
     path: docs/TASTE_DELIBERATIVE_SELECTION.md
-    sha256: 9859c1d63366a3f6daa7268ac7ebcc1fad1d61c0c5ef9d1b1a36ac4af43ab1ee
+    sha256: 8596879c8addadbe9bbb9788907e86ff6212c61aa57c63d80d0c1acf9bdb19fb
   - artifact_id: taste-deliberation-profiles
-    path: configs/model_nodes/runtime_profiles.taste_deliberation_v1.yaml
-    sha256: 8775ec346f5584639356f33e047d886e02734d615161dbfa0adbe5f2cfb94120
+    path: configs/model_nodes/runtime_profiles.taste_deliberation_v2.yaml
+    sha256: 39f477f165026c09d3187e0deae01f4b3e79dcacc9168fec89b3649393f347a8
+  - artifact_id: grounded-taste-abstraction-profiles
+    path: configs/model_nodes/runtime_profiles.grounded_taste_abstraction_v2.yaml
+    sha256: cb11d5dcaf24d209c3f3cdf552abc475701e5a97079ae659917e8b3a1951ce8b
+  - artifact_id: current-compute-catalog
+    path: configs/resources/compute_catalog_v6.yaml
+    sha256: 27725e61e560534bc85c61ff9855a5a46d373819fb27d212dcf97b3143736c12
+  - artifact_id: current-project-resource-binding
+    path: configs/resources/projects/scitaste_self_development_v6.yaml
+    sha256: ad53339250bea019d5da2c0ace53f5855009730a46bb957a7bafdf231607e6d3
+  - artifact_id: current-api-identity-protocol
+    path: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+    sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+  - artifact_id: current-review-followup-activation
+    path: configs/evaluation/activation/iclr2027_review_followup_v5.yaml
+    sha256: c2b838c35ed05440c6175954be516652498172a8551df6cec682ad8cdb5b607e
   - artifact_id: external-best-native-proposal
     path: configs/evaluation/prelaunch/external_best_native_prepilot_v7.yaml
     sha256: 22d0043d22caabbd132702ac893eb352b234b8de80105545efc8b983f6ab60dd
@@ -115,7 +130,7 @@ artifacts:
     sha256: 2727e3f040a980fc22303f31070825989877a94b257521e2c1108d44d655b541
   - artifact_id: paper-review-loop
     path: docs/PAPER_REVIEW_LOOP.md
-    sha256: 27cc6f9802b81c033501a8113f6cd921f5ba087f74c9dd3b9df311c13f5cae04
+    sha256: 7ce5e0bd9acd44ddfde1948e9df5665c4f7239f703023446981596e0ae38d3bb
 tracks:
   - track_id: scientific-taste-decisions
     role: scientific_taste_mechanism
@@ -190,6 +205,11 @@ tracks:
       - scientific-reference-quality
       - reference-quality-profiles
       - reference-quality-pipeline
+      - grounded-taste-abstraction-profiles
+      - current-compute-catalog
+      - current-project-resource-binding
+      - current-api-identity-protocol
+      - current-review-followup-activation
       - dual-estimand-addendum
       - experiment-decision-brief
       - mechanism-source-screen
@@ -303,7 +323,10 @@ tracks:
       seed; per-system models are explicit and model effects remain confounded.
     model:
       kind: api
-      usage_scope: Best-native identities are bound per system and never pooled as one backbone.
+      usage_scope: >-
+        This immutable best-native proposal preserves its superseded per-system
+        identities and is non-launchable; a current V4 proposal would require new
+        IDs, hashes, adapter evidence, and approval.
       system_api_models:
         - system_id: scitaste-native
           provider_id: deepseek
@@ -361,6 +384,7 @@ tracks:
       - mlrc-first-acquisition
       - mlrc-license-policy
     blocker_codes:
+      - api-identity:superseded-deepseek-v41-proposal
       - task-assets:zip-read-and-safety-qualification-not-authorized
       - agent-laboratory:adapter-not-qualified
       - tiny-scientist:adapter-not-qualified
@@ -589,7 +613,7 @@ stages:
       - review-runtime:not-hash-approved
     completion_artifact_ids: [paper-review-loop]
     next_decision: >-
-      Use DeepSeek V4.1 Flash or GLM-5.3-Flash as an internal critic only; model
+      Use current DeepSeek V4 Flash or GLM-5.3-Flash as an internal critic only; model
       review never substitutes for independent expert review.
 
   - stage_id: obtain-independent-expert-review

@@ -1,0 +1,13 @@
+# Current candidates for prestige-blind Scientific Reference screening.
+# This set grants no content-read, model-call, human-review, or experiment authority.
+schema_version: "1.0"
+profile_set_id: reference-quality-v2
+profile_set_version: 2.0.0
+live_enabled: true
+profiles:
+  - path: profile_zhipu_glm53_reference_quality_v1.yaml
+    sha256: 056b074967d34275eb214cddd1d51df47f27f90c992d10c118897ea027c73cfe
+    profile_sha256: 88f32bfcd3e5abdee142a408e343cfc8a93e54ab17e907095b15d2bf3c10bda9
+  - path: profile_deepseek_v4flash_reference_quality_v1.yaml
+    sha256: c55823c86a2e674fb89ff7e7bee896eb68c1426dbfd5c71895cbdb761f0b0961
+    profile_sha256: fcfeccbe819b1ab64fee9b1db932ef2a36566cec7735f30e8de9ab8291752866

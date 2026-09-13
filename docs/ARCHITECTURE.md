@@ -3114,3 +3114,29 @@ The resulting report is implementation evidence, not empirical evidence. It
 does not use acquired content, certify a real matched/placebo corpus, exercise
 the Qwen checkpoint, qualify a benchmark, or estimate any Scientific Taste
 effect. Those gates remain independently blocking in the campaign.
+
+### ADR-103: Hosted-model changes create a new end-to-end Taste-path stratum
+
+Status: accepted and bound for planning; no current DeepSeek or Zhipu call was
+made and no primary model was selected.
+
+A provider catalog can change more quickly than a research campaign. Updating
+only the resource inventory is insufficient: a formally current model could
+still be unreachable from the reference-mining, reference-quality, grounded
+abstraction, and decision-deliberation nodes, while old callable aliases remain
+embedded in profile sets. That split would either fail at launch or encourage an
+operator to relabel historical model evidence.
+
+SciTaste therefore versions the whole hosted-model path. The current resource
+definition, compute catalog, project binding, temporal identity protocol,
+review-followup activation, backend ceiling, and four title-critical Taste-node
+profiles are content addressed as one new generation. Earlier DeepSeek V4.1
+files remain readable historical strata but are absent from the current project
+binding and identity allowlist. The current DeepSeek V4 Flash candidate remains
+rolling, so an authenticated sentinel-bracketed conformance window is still
+required before selection and a distinct window is required for formal work.
+
+This continuity is launch correctness, not model quality or Scientific Taste
+effectiveness. The profile sets select no provider, the tracked backend remains
+disabled, and neither catalog facts nor a future conformance pass can substitute
+for real source qualification, independent human review, or held-out outcomes.
