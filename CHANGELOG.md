@@ -18,6 +18,12 @@ semantic versioning.
   not scientific-effect evidence. The browser leads with compact findings and
   recommendations and collapses the longer synthesis to avoid a vertical text
   wall.
+- Made the compiled effective evidence program authoritative for the project
+  home's current focus, state, next decision, and evidence references. A stale
+  manifest focus is now used only when no registered evidence program exists,
+  and the browser labels which source supplied the focus. This prevents the
+  model-generated workspace and the SciTaste controller plane from presenting
+  conflicting gates.
 - Added the first unchanged-core Agent Laboratory adapter preparation path. It
   binds a clean accepted-method Git commit, resource corpus, adapter contract,
   and one held-out MLR-Bench brief; copies only tracked regular source files;

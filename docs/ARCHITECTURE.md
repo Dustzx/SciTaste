@@ -3484,3 +3484,10 @@ admitted model brief and retain their evidence references. The first live
 GLM-5.3-Flash exercise generated a project workspace and then edited it from
 explicit user feedback. It establishes only that the interaction path operates;
 it does not establish research quality or user benefit.
+
+The two displayed planes also share one effective planning identity. When an
+evidence program is registered, its compiled current stage and decision override
+the manifest's historical focus extension in both the browser projection and the
+model-visible digest. The manifest value remains a fallback for projects without
+a compiled program. This prevents generated content from treating stale project
+notes as a gate that SciTaste Core no longer consumes.

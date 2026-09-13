@@ -1393,7 +1393,16 @@ function renderProjectProgress(data) {
   appendText(focusValue, data.focus);
   const focusStatus = document.createElement("small");
   appendText(focusStatus, localizedCode(data.focus_status));
-  focus.append(focusLabel, focusValue, focusStatus, evidenceDisclosure(data.focus_ref_ids));
+  const focusSource = document.createElement("small");
+  focusSource.className = "muted";
+  appendText(focusSource, t(`progress.focus_source.${data.focus_source}`));
+  focus.append(
+    focusLabel,
+    focusValue,
+    focusStatus,
+    focusSource,
+    evidenceDisclosure(data.focus_ref_ids),
+  );
   const gate = document.createElement("article");
   const gateLabel = document.createElement("span");
   gateLabel.className = "card-label";

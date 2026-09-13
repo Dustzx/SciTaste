@@ -1404,6 +1404,13 @@ The next model revision receives this same effective current stage and order plu
 the full active directive, so iterative feedback never silently falls back to the
 dossier's pre-intervention display state.
 
+The same precedence applies to the compact progress header and model-visible
+digest. Once a verified effective evidence program exists, its current stage,
+state, decision, and supporting references replace the manifest's historical
+`current_focus` extension. The manifest remains a fallback for projects without
+a compiled program, and the browser labels which source is in use. A stale
+self-iteration note therefore cannot override the plan consumed by SciTaste Core.
+
 Every currently eligible next gate is independently compiled into a Tool
 Intelligence action route without changing its user-published order. The project
 home shows the route portfolio beside the primary current decision, so parallel

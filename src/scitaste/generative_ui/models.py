@@ -2533,6 +2533,7 @@ class ProjectProgressBoardData(BaseModel):
     publication_ready: bool
     focus: SafeText
     focus_status: SafeText | None = None
+    focus_source: Literal["project_manifest", "effective_evidence_program"]
     next_gate: SafeText | None = None
     focus_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1)
     stage_semantics: SafeText

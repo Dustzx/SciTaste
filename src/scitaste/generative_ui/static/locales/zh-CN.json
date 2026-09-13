@@ -680,6 +680,8 @@
   "progress.direction.subtitle": "已记录的焦点、选择和下一道证据门。",
   "progress.current_focus": "当前焦点",
   "progress.next_gate": "下一道证据门",
+  "progress.focus_source.project_manifest": "来自项目清单的回退信息",
+  "progress.focus_source.effective_evidence_program": "来自当前生效的证据规划",
   "progress.no_next_gate": "尚未记录下一道证据门。",
   "progress.selected_not_execution": "所选运行 · 选择不代表正在执行",
   "progress.open_run": "打开运行阶段",

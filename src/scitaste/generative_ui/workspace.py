@@ -1845,6 +1845,18 @@ class WorkspaceSurfaceFactory:
             )
 
         focus, focus_status, next_gate = _project_focus(snapshot)
+        focus_source = "project_manifest"
+        focus_ref_ids = [project_ref.evidence_id]
+        if evidence_program is not None:
+            # The compiled effective program is the current scientific plan. A
+            # historical manifest focus remains a fallback only; otherwise the
+            # page and model digest can contradict the route actually consumed
+            # by SciTaste Core.
+            focus = evidence_program.current_stage_id
+            focus_status = evidence_program.gate_action_route.stage_state
+            next_gate = evidence_program.current_decision
+            focus_source = "effective_evidence_program"
+            focus_ref_ids = list(evidence_program.support_ref_ids)
         milestone_state, milestone_reason_code, milestone_rows = _project_milestones(
             snapshot,
             binding,
@@ -2181,8 +2193,9 @@ class WorkspaceSurfaceFactory:
                 "publication_ready": snapshot.manifest.publication_ready,
                 "focus": focus,
                 "focus_status": focus_status,
+                "focus_source": focus_source,
                 "next_gate": next_gate,
-                "focus_ref_ids": [project_ref.evidence_id],
+                "focus_ref_ids": focus_ref_ids,
                 "stage_semantics": snapshot.manifest.stage_semantics,
                 "stage_state": stage_state,
                 "stage_reason_code": stage_reason_code,

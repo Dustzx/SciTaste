@@ -680,6 +680,8 @@
   "progress.direction.subtitle": "Recorded focus, selection, and next gate.",
   "progress.current_focus": "Current focus",
   "progress.next_gate": "Next evidence gate",
+  "progress.focus_source.project_manifest": "Fallback from the project manifest",
+  "progress.focus_source.effective_evidence_program": "Current effective evidence program",
   "progress.no_next_gate": "No next gate is recorded.",
   "progress.selected_not_execution": "Selected run · selection is not execution",
   "progress.open_run": "Open run stages",

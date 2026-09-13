@@ -1323,6 +1323,7 @@ def test_strict_manifest_extensions_supply_milestones_or_fail_closed(
     first, data = _progress(runtime)
 
     assert data["focus"] == "bounded-workspace-planner"
+    assert data["focus_source"] == "project_manifest"
     assert data["next_gate"] == "Independent review of a real project pilot"
     assert data["milestone_state"] == "available"
     assert [item["evidence_binding"] for item in data["milestones"]] == [
@@ -1436,6 +1437,11 @@ def test_progress_projects_registered_iclr_evidence_program_without_execution(
     assert program["total_stage_count"] == 16
     assert program["current_phase_id"] == "taste-instrument"
     assert program["current_stage_id"] == "qualify-scientific-taste-source-pilot"
+    assert data["focus"] == program["current_stage_id"]
+    assert data["focus_status"] == program["gate_action_route"]["stage_state"]
+    assert data["focus_source"] == "effective_evidence_program"
+    assert data["next_gate"] == program["current_decision"]
+    assert set(program["support_ref_ids"]).issubset(set(data["focus_ref_ids"]))
     assert program["planning_authority"] == "dossier_only"
     assert program["control_effect"] == "none"
     assert program["planning_verification_route"] == "direct_path"
