@@ -570,9 +570,7 @@ def materialize_dataset_acquisition(
             receipts: list[AcquiredItemReceipt] = []
             total_bytes = 0
             for item in request.items:
-                staged_item = staged_destination.joinpath(
-                    *PurePosixPath(item.destination).parts
-                )
+                staged_item = staged_destination.joinpath(*PurePosixPath(item.destination).parts)
                 staged_item.parent.mkdir(parents=True, exist_ok=True)
                 if fetcher is None:
                     item_bytes, observed_sha256 = _fetch_https_to_file(
