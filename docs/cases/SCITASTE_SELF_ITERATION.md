@@ -1389,3 +1389,23 @@ No archive was listed, extracted, parsed, installed, imported, or executed. This
 turns remote availability into immutable local acquisition evidence only; a
 separate source-read/extraction decision is still required before unchanged-core
 adapter implementation can begin.
+
+## Separating source inspection from extraction (2026-09-13)
+
+The acquisition receipt made the two comparison-method archives immutable, but
+it did not establish whether their tar members are structurally safe or whether
+the archive root and repository license agree with the frozen source census.
+SciTaste now compiles those identities into a second plan that can be reviewed
+without opening the member stream. The real plan reverified both acquisition
+artifacts and all 83,023,421 outer archive bytes and is ready for a separate
+owner content-read decision.
+
+The later qualifier has two independent gates: a plan-hash approval and an
+explicit local-read switch. It does not extract; it rejects traversal, absolute
+or non-normalized paths, links and special files, sparse payloads, duplicates,
+unsafe modes, expansion bombs, unexpected roots, and license-file drift, then
+content-addresses every accepted member and the complete tree. Synthetic safe
+and adversarial archives passed and failed at the intended boundaries while
+creating no extracted file. The real Agent Laboratory and DeepScientist member
+streams remain unopened, so this milestone advances operational readiness but
+does not yet establish unchanged-core adapter equivalence.

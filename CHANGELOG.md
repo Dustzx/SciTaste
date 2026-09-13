@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a separately approved, no-extraction qualification boundary for pinned
+  external-method source archives. A no-read plan replays exact acquisition and
+  outer-byte identities; only a plan-hash approval plus explicit local switch
+  may scan members. Path traversal, links/special files, sparse files, duplicate
+  names, unsafe modes, root drift, expansion ceilings, and license-file drift
+  fail closed, while a passing scan emits only a deterministic tree manifest.
+  Real Agent Laboratory and DeepScientist member contents remain unopened.
 - Extended the approval-gated acquisition path to stream bounded gzip source
   archives directly into its atomic staging transaction under the decimal-10-GB
   ceiling. The pinned Agent Laboratory and DeepScientist archives are now

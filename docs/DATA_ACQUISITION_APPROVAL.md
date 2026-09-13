@@ -116,6 +116,43 @@ The archives remain unextracted and unread. Possession does not resolve
 unchanged-core equivalence, task mapping, sandbox, telemetry, artifact, model,
 or failure/resume gates.
 
+The next boundary is frozen in
+`configs/evaluation/source_archives/autoresearch_method_sources_v1.yaml`. Its
+no-read inspection streams the raw archive hashes again, replays the approved
+request and receipt, requires the local paths to equal the receipt destinations,
+and checks that the future output root does not exist:
+
+```bash
+.venv/bin/scitaste evaluation source-archive-plan \
+  --plan configs/evaluation/source_archives/autoresearch_method_sources_v1.yaml \
+  --workspace-root . --require-review-ready
+```
+
+This command does not open the gzip/tar member stream. Reading member headers
+and bodies requires a new approval bound to the exact plan hash plus an explicit
+local switch:
+
+```bash
+.venv/bin/scitaste evaluation source-archive-read-approve \
+  --plan '<plan>' --workspace-root . \
+  --confirm-plan-sha256 '<exact plan hash>' --approved-by '<owner>' \
+  --approved-at '<timezone-aware ISO-8601>' --output '<new approval path>'
+
+.venv/bin/scitaste evaluation source-archive-qualify \
+  --plan '<plan>' --approval '<approval>' --workspace-root . \
+  --qualified-at '<timezone-aware ISO-8601>' --output '<new report path>' \
+  --allow-local-archive-read --require-safe
+```
+
+Qualification never extracts. It permits only directories and non-sparse
+regular files, rejects absolute/traversing/non-normalized paths, links, devices,
+duplicate members, unsafe modes, false top-level roots, oversized members and
+expansion, and a missing or changed predeclared license file. It records a
+content-addressed tree manifest but still grants no extraction, installation,
+import, adapter modification, execution, API, GPU, or scientific authority.
+The synthetic safe/malicious fixtures exercise this path; the two real archive
+member streams have not been opened.
+
 ## Structured benchmark metadata
 
 Acquired InnovatorBench YAML and EXP-Bench CSV remain unopened after their

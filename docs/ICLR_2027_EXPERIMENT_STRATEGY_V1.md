@@ -470,6 +470,14 @@ unresolved. AI-Researcher remains a valid accepted-paper reference and
 ecological comparator candidate, but its missing repository code license blocks
 code acquisition/adaptation. It cannot be replaced with a mock.
 
+The exact archive-to-tree qualification plan is now executable without opening
+the member streams. It replays the acquisition chain and all outer archive byte
+identities, then stops at an independent owner read decision. If approved, a
+second command may hash bounded tar members without extraction while rejecting
+unsafe paths/types, expansion, root, and license drift. The real archives have
+not crossed that read gate, so no unchanged-core evidence has been promoted and
+no method experiment is yet runnable.
+
 Inspect the combined decision without network, API, model, GPU, or repository
 access:
 

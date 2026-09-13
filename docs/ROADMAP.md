@@ -35,6 +35,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 8.15 — H1/H2 review replay and blind opening | done | the four bound collection files must exactly reproduce the locked set before private key/ledger access; post-open generation replay must pass before an analysis input is emitted |
 | Phase 9 — matched-budget study | in progress | package-preference and objective-progress protocols separated; executable matched cells and external expert review pending |
 | Phase 9.1 — external-method source freeze | done | pinned Agent Laboratory and DeepScientist archives are atomically streamed and hash-receipted under the standing sub-10-GB policy; source read, extraction, unchanged-core audit, installation, and execution remain separate gates |
+| Phase 9.2 — external-method archive qualification gate | done | exact acquisition bytes compile into a no-read plan; separate hash-bound approval and local switch can produce a no-extraction tree manifest with path, type, expansion, root, and license-file checks; real archive member reads remain unapproved |
 
 Phase 8.1 now has its first core-source transaction downloaded under the standing
 sub-10-GB policy. The receipt binds sixteen

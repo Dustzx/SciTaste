@@ -3036,3 +3036,30 @@ The transaction ceiling is decimal 10,000,000,000 bytes to match the owner's
 standing policy exactly. Archive media support is download authority only: no
 member listing, extraction, parsing, installation, import, execution, provider
 call, GPU work, task admission, or scientific claim follows from a receipt.
+
+### ADR-100: Source-archive inspection is a separately approved, no-extraction gate
+
+Status: accepted and exercised only with synthetic safe and adversarial
+archives; the acquired Agent Laboratory and DeepScientist member streams remain
+unopened.
+
+Possession of a hash-receipted tarball does not make it safe to extract or prove
+which source tree it contains. Conversely, opening a downloaded archive during
+adapter implementation would silently combine content-read, extraction, and
+execution authority and make the unchanged-core claim difficult to audit.
+
+SciTaste therefore freezes a source-qualification plan before content access.
+The plan binds the approved request and receipt at both file and semantic hash
+levels, each exact archive path/hash/byte count/commit, the expected single root,
+the license identifier and license-file digest, per-member and expanded-size
+ceilings, and a still-absent output root. Its first inspection streams only the
+outer file hash and does not instantiate a tar reader.
+
+A separate owner record binds read-only member qualification to the exact plan
+hash. Qualification additionally requires an explicit local switch and never
+calls extraction. It admits only non-sparse regular files and directories,
+rejects unsafe paths, links, special files, duplicate names, unsafe mode bits,
+root drift, size/expansion breaches, and license drift, and hashes every admitted
+file into a deterministic tree manifest. Even a passing report is only ready
+for a later extraction proposal; it authorizes no extraction, installation,
+import, execution, adapter claim, network/API action, or GPU work.

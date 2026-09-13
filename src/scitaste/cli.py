@@ -85,6 +85,7 @@ from scitaste.evaluation import (
     approve_dataset_acquisition_request,
     approve_dataset_package_request,
     approve_json_content_audit,
+    approve_source_archive_read,
     approve_source_projection,
     approve_structured_metadata_audit,
     bind_objective_measurement_set,
@@ -113,6 +114,7 @@ from scitaste.evaluation import (
     inspect_native_condition_preflight,
     inspect_prelaunch_manifest,
     inspect_source_admission,
+    inspect_source_archive_qualification_plan,
     inspect_task_package,
     inspect_task_selection,
     inspect_taste_corpus_curation,
@@ -150,6 +152,8 @@ from scitaste.evaluation import (
     load_objective_outcome_contract,
     load_prelaunch_manifest,
     load_source_admission_proposal,
+    load_source_archive_qualification_plan,
+    load_source_archive_read_approval,
     load_source_projection_approval,
     load_source_projection_plan,
     load_structured_metadata_audit_approval,
@@ -177,6 +181,7 @@ from scitaste.evaluation import (
     project_benchmark_metadata_population,
     publish_project_evaluation,
     publish_project_evaluation_result,
+    qualify_source_archives,
     run_live_direct_agent,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
@@ -202,6 +207,9 @@ from scitaste.evaluation import (
     save_json_content_audit_approval,
     save_json_content_audit_report,
     save_source_admission_report,
+    save_source_archive_plan_report,
+    save_source_archive_qualification_report,
+    save_source_archive_read_approval,
     save_source_projection_approval,
     save_source_projection_plan,
     save_source_projection_receipt,
@@ -1959,6 +1967,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(acquisition_download)
     acquisition_download.set_defaults(handler=_handle_evaluation_acquisition_download)
+    source_archive_plan = evaluation_commands.add_parser(
+        "source-archive-plan",
+        help="Verify an acquired source-archive qualification plan without reading members",
+    )
+    source_archive_plan.add_argument("--plan", type=Path, required=True)
+    source_archive_plan.add_argument("--workspace-root", type=Path, default=Path("."))
+    source_archive_plan.add_argument("--output", type=Path, default=None)
+    source_archive_plan.add_argument("--require-review-ready", action="store_true")
+    _add_log_level_option(source_archive_plan)
+    source_archive_plan.set_defaults(handler=_handle_evaluation_source_archive_plan)
+    source_archive_approve = evaluation_commands.add_parser(
+        "source-archive-read-approve",
+        help="Bind read-only tar qualification authority to one exact plan",
+    )
+    source_archive_approve.add_argument("--plan", type=Path, required=True)
+    source_archive_approve.add_argument("--workspace-root", type=Path, default=Path("."))
+    source_archive_approve.add_argument("--confirm-plan-sha256", required=True)
+    source_archive_approve.add_argument("--approved-by", required=True)
+    source_archive_approve.add_argument("--approved-at", required=True)
+    source_archive_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(source_archive_approve)
+    source_archive_approve.set_defaults(handler=_handle_evaluation_source_archive_approve)
+    source_archive_qualify = evaluation_commands.add_parser(
+        "source-archive-qualify",
+        help="Read and hash approved tar members without extracting or executing them",
+    )
+    source_archive_qualify.add_argument("--plan", type=Path, required=True)
+    source_archive_qualify.add_argument("--approval", type=Path, required=True)
+    source_archive_qualify.add_argument("--workspace-root", type=Path, default=Path("."))
+    source_archive_qualify.add_argument("--qualified-at", required=True)
+    source_archive_qualify.add_argument("--output", type=Path, required=True)
+    source_archive_qualify.add_argument("--allow-local-archive-read", action="store_true")
+    source_archive_qualify.add_argument("--require-safe", action="store_true")
+    _add_log_level_option(source_archive_qualify)
+    source_archive_qualify.set_defaults(handler=_handle_evaluation_source_archive_qualify)
     content_audit_approve = evaluation_commands.add_parser(
         "acquisition-content-approve",
         help="Authorize bounded local JSON inspection for one completed acquisition",
@@ -6003,6 +6046,88 @@ def _handle_evaluation_acquisition_download(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _handle_evaluation_source_archive_plan(args: argparse.Namespace) -> int:
+    plan = load_source_archive_qualification_plan(args.plan)
+    report = inspect_source_archive_qualification_plan(
+        plan,
+        workspace_root=args.workspace_root,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(save_source_archive_plan_report(report, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_review_ready and not report.ready_for_owner_read_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_source_archive_approve(args: argparse.Namespace) -> int:
+    plan = load_source_archive_qualification_plan(args.plan)
+    inspection = inspect_source_archive_qualification_plan(
+        plan,
+        workspace_root=args.workspace_root,
+    )
+    if not inspection.ready_for_owner_read_approval:
+        codes = ", ".join(item.code for item in inspection.findings)
+        raise ValueError(f"source archive qualification plan is not review-ready: {codes}")
+    approval = approve_source_archive_read(
+        plan,
+        confirmed_plan_sha256=args.confirm_plan_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_source_archive_read_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                "plan_id": approval.plan_id,
+                "plan_sha256": approval.plan_sha256,
+                "approval_sha256": approval.approval_sha256,
+                "scope": approval.scope,
+                "authorizes_archive_read": approval.authorizes_archive_read,
+                "authorizes_extraction": approval.authorizes_extraction,
+                "read_performed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_source_archive_qualify(args: argparse.Namespace) -> int:
+    plan = load_source_archive_qualification_plan(args.plan)
+    approval = load_source_archive_read_approval(args.approval)
+    report = qualify_source_archives(
+        plan,
+        approval,
+        workspace_root=args.workspace_root,
+        allow_local_archive_read=args.allow_local_archive_read,
+        qualified_at=datetime.fromisoformat(args.qualified_at),
+    )
+    output = save_source_archive_qualification_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "report_path": str(output),
+                "plan_id": report.plan_id,
+                "archive_count": report.archive_count,
+                "archive_bytes": report.archive_bytes,
+                "expanded_bytes": report.expanded_bytes,
+                "all_archives_safe": report.all_archives_safe,
+                "ready_for_extraction_proposal": report.ready_for_extraction_proposal,
+                "extraction_performed": report.extraction_performed,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    if args.require_safe and not report.all_archives_safe:
+        return 1
     return 0
 
 
