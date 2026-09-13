@@ -459,11 +459,16 @@ immutable local acquisition inventory and are not requested again.
 SciTasteBench remains a construction-and-review track rather than a public-file
 download.
 
-The method side is likewise proposal-only. Agent Laboratory and DeepScientist
-have code-use-feasible static contracts but unresolved task, sandbox, telemetry,
-artifact, or resume requirements. AI-Researcher is a valid accepted-paper
-reference and ecological comparator candidate, but its missing repository code
-license blocks code checkout/adaptation. It cannot be replaced with a mock.
+The method source bytes have advanced one bounded step beyond proposal. Under
+the standing sub-10-GB policy, the exact Agent Laboratory and DeepScientist
+commit archives were streamed into one atomic transaction: 83,023,421 bytes
+total, with receipt SHA-256
+`7a119c3bec53de52c8cd928472f64090098c89e5c3f3bfe2ad408e14d09b7009`.
+They remain unextracted and unread, so unchanged-core equivalence and task,
+sandbox, telemetry, artifact, model, and failure/resume mappings are still
+unresolved. AI-Researcher remains a valid accepted-paper reference and
+ecological comparator candidate, but its missing repository code license blocks
+code acquisition/adaptation. It cannot be replaced with a mock.
 
 Inspect the combined decision without network, API, model, GPU, or repository
 access:

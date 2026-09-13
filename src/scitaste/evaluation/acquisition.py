@@ -27,6 +27,7 @@ _COMMIT = r"^[0-9a-f]{40}$"
 _MAX_REQUEST_BYTES = 2 * 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 64 * 1024
 _DOWNLOAD_TIMEOUT_SECONDS = 30.0
+_MAX_TRANSACTION_BYTES = 10_000_000_000
 
 AcquisitionFetcher = Callable[[str, int, str], bytes]
 
@@ -52,12 +53,13 @@ class AcquisitionItem(BaseModel):
     source_url: str = Field(min_length=1, max_length=2_000)
     source_revision: str = Field(pattern=_COMMIT)
     destination: str = Field(min_length=1, max_length=1_000)
-    maximum_bytes: int = Field(gt=0, le=16 * 1024 * 1024)
+    maximum_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     media_type: Literal[
         "text/markdown",
         "text/csv",
         "application/json",
         "application/x-yaml",
+        "application/gzip",
     ]
     license_identifier: str = Field(min_length=1, max_length=200)
     license_scope: str = Field(min_length=1, max_length=1_000)
@@ -120,7 +122,7 @@ class DatasetAcquisitionRequest(BaseModel):
     destination_root: str = Field(min_length=1, max_length=1_000)
     allowed_hosts: tuple[str, ...] = Field(min_length=1, max_length=20)
     items: tuple[AcquisitionItem, ...] = Field(min_length=1, max_length=500)
-    maximum_total_bytes: int = Field(gt=0, le=10 * 1024 * 1024 * 1024)
+    maximum_total_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     evidence: tuple[AcquisitionEvidenceBinding, ...] = Field(min_length=1, max_length=50)
     approval: AcquisitionApproval = Field(default_factory=AcquisitionApproval)
     redirects_allowed: Literal[False] = False
@@ -221,7 +223,7 @@ class AcquiredItemReceipt(BaseModel):
     source_url: str = Field(min_length=1, max_length=2_000)
     source_revision: str = Field(pattern=_COMMIT)
     destination: str = Field(min_length=1, max_length=1_000)
-    size_bytes: int = Field(gt=0, le=16 * 1024 * 1024)
+    size_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     sha256: str = Field(pattern=_SHA256)
     expected_sha256: str | None = Field(default=None, pattern=_SHA256)
 
@@ -258,7 +260,7 @@ class DatasetAcquisitionReceipt(BaseModel):
     items: tuple[AcquiredItemReceipt, ...] = Field(min_length=1, max_length=500)
     item_count: int = Field(gt=0)
     total_bytes: int = Field(gt=0)
-    maximum_total_bytes: int = Field(gt=0, le=10 * 1024 * 1024 * 1024)
+    maximum_total_bytes: int = Field(gt=0, le=_MAX_TRANSACTION_BYTES)
     source_hosts: tuple[str, ...] = Field(min_length=1, max_length=20)
     redirects_followed: Literal[False] = False
     overwrote_existing_files: Literal[False] = False
@@ -549,7 +551,6 @@ def materialize_dataset_acquisition(
     transaction_root = root.joinpath(*transaction_relative.parts)
     transaction_parent = transaction_root.parent
     _ensure_directory_chain(root, transaction_parent)
-    selected_fetcher = fetcher or _fetch_https_bytes
     timestamp = acquired_at or datetime.now(UTC)
     staging: Path | None = None
 
@@ -569,31 +570,44 @@ def materialize_dataset_acquisition(
             receipts: list[AcquiredItemReceipt] = []
             total_bytes = 0
             for item in request.items:
-                content = selected_fetcher(
-                    item.source_url,
-                    item.maximum_bytes,
-                    item.media_type,
+                staged_item = staged_destination.joinpath(
+                    *PurePosixPath(item.destination).parts
                 )
-                if not isinstance(content, bytes) or not content:
-                    raise ValueError(f"acquisition item {item.item_id} returned no bytes")
-                if len(content) > item.maximum_bytes:
-                    raise ValueError(f"acquisition item {item.item_id} exceeded its byte ceiling")
-                total_bytes += len(content)
+                staged_item.parent.mkdir(parents=True, exist_ok=True)
+                if fetcher is None:
+                    item_bytes, observed_sha256 = _fetch_https_to_file(
+                        item.source_url,
+                        item.maximum_bytes,
+                        item.media_type,
+                        staged_item,
+                    )
+                else:
+                    content = fetcher(
+                        item.source_url,
+                        item.maximum_bytes,
+                        item.media_type,
+                    )
+                    if not isinstance(content, bytes) or not content:
+                        raise ValueError(f"acquisition item {item.item_id} returned no bytes")
+                    if len(content) > item.maximum_bytes:
+                        raise ValueError(
+                            f"acquisition item {item.item_id} exceeded its byte ceiling"
+                        )
+                    item_bytes = len(content)
+                    observed_sha256 = hashlib.sha256(content).hexdigest()
+                    _write_new_bytes(staged_item, content)
+                total_bytes += item_bytes
                 if total_bytes > request.maximum_total_bytes:
                     raise ValueError("dataset acquisition exceeded its aggregate byte ceiling")
-                observed_sha256 = hashlib.sha256(content).hexdigest()
                 if item.expected_sha256 is not None and observed_sha256 != item.expected_sha256:
                     raise ValueError(f"acquisition item {item.item_id} failed its expected hash")
-                staged_item = staged_destination.joinpath(*PurePosixPath(item.destination).parts)
-                staged_item.parent.mkdir(parents=True, exist_ok=True)
-                _write_new_bytes(staged_item, content)
                 receipts.append(
                     AcquiredItemReceipt(
                         item_id=item.item_id,
                         source_url=item.source_url,
                         source_revision=item.source_revision,
                         destination=item.destination,
-                        size_bytes=len(content),
+                        size_bytes=item_bytes,
                         sha256=observed_sha256,
                         expected_sha256=item.expected_sha256,
                     )
@@ -634,13 +648,66 @@ class _RejectRedirects(HTTPRedirectHandler):
 
 
 def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -> bytes:
+    response = _open_https_source(url, maximum_bytes, expected_media_type)
+    with response:
+        content = bytearray()
+        while chunk := response.read(_DOWNLOAD_CHUNK_BYTES):
+            content.extend(chunk)
+            if len(content) > maximum_bytes:
+                raise ValueError("acquisition source exceeded its byte ceiling")
+    return bytes(content)
+
+
+def _fetch_https_to_file(
+    url: str,
+    maximum_bytes: int,
+    expected_media_type: str,
+    target: Path,
+) -> tuple[int, str]:
+    """Stream one approved object to a new staging file without buffering it in RAM."""
+
+    response = _open_https_source(url, maximum_bytes, expected_media_type)
+    digest = hashlib.sha256()
+    size = 0
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(
+            target,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        with response, os.fdopen(descriptor, "wb") as handle:
+            descriptor = None
+            while chunk := response.read(_DOWNLOAD_CHUNK_BYTES):
+                size += len(chunk)
+                if size > maximum_bytes:
+                    raise ValueError("acquisition source exceeded its byte ceiling")
+                digest.update(chunk)
+                handle.write(chunk)
+            if size == 0:
+                raise ValueError("acquisition source returned no bytes")
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        _close_response(response)
+        if descriptor is not None:
+            os.close(descriptor)
+        target.unlink(missing_ok=True)
+        raise
+    return size, digest.hexdigest()
+
+
+def _open_https_source(url: str, maximum_bytes: int, expected_media_type: str):
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.hostname:
         raise ValueError("acquisition fetch requires an HTTPS source")
     request = Request(
         url,
         headers={
-            "Accept": "application/octet-stream,text/markdown,text/plain;q=0.9",
+            "Accept": (
+                "application/gzip,application/x-gzip,application/octet-stream,"
+                "text/markdown,text/plain;q=0.9"
+            ),
             "Accept-Encoding": "identity",
             "User-Agent": "SciTaste-approved-acquisition/1.0",
         },
@@ -653,7 +720,7 @@ def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -
         if 300 <= exc.code < 400:
             raise ValueError("acquisition redirects are forbidden") from exc
         raise
-    with response:
+    try:
         if getattr(response, "status", None) != 200:
             raise ValueError("acquisition source did not return HTTP 200")
         if response.geturl() != url:
@@ -679,6 +746,11 @@ def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -
                 "text/yaml",
                 "text/plain",
             },
+            "application/gzip": {
+                "application/gzip",
+                "application/x-gzip",
+                "application/octet-stream",
+            },
         }
         if observed_media_type not in accepted_media_types.get(expected_media_type, set()):
             raise ValueError(
@@ -696,12 +768,16 @@ def _fetch_https_bytes(url: str, maximum_bytes: int, expected_media_type: str) -
                 if "exceeds" in str(exc):
                     raise
                 raise ValueError("acquisition source returned an invalid Content-Length") from exc
-        content = bytearray()
-        while chunk := response.read(_DOWNLOAD_CHUNK_BYTES):
-            content.extend(chunk)
-            if len(content) > maximum_bytes:
-                raise ValueError("acquisition source exceeded its byte ceiling")
-    return bytes(content)
+    except BaseException:
+        _close_response(response)
+        raise
+    return response
+
+
+def _close_response(response: object) -> None:
+    close = getattr(response, "close", None)
+    if callable(close):
+        close()
 
 
 def _atomic_text(path: str | Path, text: str, *, require_absent: bool) -> Path:

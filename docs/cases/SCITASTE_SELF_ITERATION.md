@@ -1364,3 +1364,28 @@ deliberately nonexistent private-key path was examined. This is executable
 integrity evidence, not a real scientific outcome. No acquired content, model,
 API, GPU, recruited reviewer, or experiment was used. The next empirical gate
 remains owner authorization to read the already downloaded AAAR pilot content.
+
+## Freezing real external-method source bytes without executing them (2026-09-13)
+
+The current evidence review identified Agent Laboratory and DeepScientist as the
+two license-feasible archival method candidates, but both remained attached only
+to remote commit metadata. The owner's standing policy now permits automatic
+downloads below decimal 10 GB, so SciTaste created one exact transaction with
+64-MiB and 512-MiB item ceilings, verified MIT and Apache-2.0 acquisition scope,
+and the two already registered commit-addressed GitHub archive URLs.
+
+The generic acquisition path had a 16-MiB per-file, text-only implementation
+despite its transaction schema advertising a much larger aggregate ceiling.
+SciTaste closed that operational gap by admitting gzip as an explicit media type
+and streaming it directly into the atomic staging file while incrementally
+enforcing size and SHA-256. Existing small-file fetcher semantics remain
+available for deterministic tests; large default downloads no longer require
+whole-object memory buffering.
+
+The completed transaction acquired 1,327,928 Agent Laboratory bytes and
+81,695,493 DeepScientist bytes, with exact hashes recorded in receipt
+`7a119c3bec53de52c8cd928472f64090098c89e5c3f3bfe2ad408e14d09b7009`.
+No archive was listed, extracted, parsed, installed, imported, or executed. This
+turns remote availability into immutable local acquisition evidence only; a
+separate source-read/extraction decision is still required before unchanged-core
+adapter implementation can begin.

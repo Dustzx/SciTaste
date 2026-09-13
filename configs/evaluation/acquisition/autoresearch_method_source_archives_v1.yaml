@@ -1,0 +1,65 @@
+schema_version: "1.0"
+request_id: autoresearch-method-source-archives-v1
+project_id: scitaste-self-development
+track_id: external-method-unchanged-core-qualification
+authorization_scope: download-only-no-ingestion
+purpose: >-
+  Acquire the pinned Agent Laboratory and DeepScientist source archives for a
+  later, separately authorized unchanged-core adapter qualification.
+claim_boundary: >-
+  Download and receipt verification establish possession of immutable source
+  archives only. They establish no source-paper equivalence, adapter validity,
+  task comparability, execution safety, experimental result, or effectiveness.
+selection_id: autoresearch-method-source-acquisition-scope-v1
+selection_proposal_sha256: 0f1ae1b2750efec4ce663316ab5bab46cc28986ab226b149f0935dccbd645802
+destination_root: outputs/projects/scitaste-self-development/evaluations/acquisitions/autoresearch-method-source-archives-v1/raw
+allowed_hosts: [codeload.github.com]
+items:
+  - item_id: d9017d90e329112d2a80b7712f37ee9094d2cd27
+    source_url: https://codeload.github.com/SamuelSchmidgall/AgentLaboratory/tar.gz/d9017d90e329112d2a80b7712f37ee9094d2cd27
+    source_revision: d9017d90e329112d2a80b7712f37ee9094d2cd27
+    destination: agent-laboratory-d9017d90e329112d2a80b7712f37ee9094d2cd27.tar.gz
+    maximum_bytes: 67108864
+    media_type: application/gzip
+    license_identifier: MIT
+    license_scope: >-
+      Official repository source code at the pinned commit. Preserve the
+      copyright and permission notice in redistributed code; dependencies,
+      generated artifacts, task data, and services retain separate terms.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+  - item_id: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    source_url: https://codeload.github.com/ResearAI/DeepScientist/tar.gz/b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    source_revision: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+    destination: deep-scientist-b36624417f0c6b8238ec02db37b94d6db2faa5b0.tar.gz
+    maximum_bytes: 536870912
+    media_type: application/gzip
+    license_identifier: Apache-2.0
+    license_scope: >-
+      Source covered by the root LICENSE at the pinned official repository
+      commit. Preserve the Apache-2.0 license and notices where required;
+      dependencies, generated artifacts, task data, and services retain their
+      own terms.
+    license_status: verified
+    expected_sha256: null
+    runtime_assets_included: false
+maximum_total_bytes: 603979776
+evidence:
+  - evidence_id: frozen-acquisition-scope
+    path: docs/research/data/autoresearch_method_source_acquisition_scope_v1.yaml
+    sha256: 0f1ae1b2750efec4ce663316ab5bab46cc28986ab226b149f0935dccbd645802
+  - evidence_id: owner-standing-download-policy
+    path: configs/evaluation/acquisition/standing_owner_download_policy_v1.yaml
+    sha256: b369d232e83e95a11e6dc684a2a9e467a8f089d81cf99806bce2b81924ff97ed
+approval:
+  approved: false
+  request_sha256: null
+  approved_by: null
+  approved_at: null
+  scope: null
+redirects_allowed: false
+overwrite_allowed: false
+secrets_forbidden: true
+authorizes_ingestion: false
+authorizes_execution: false

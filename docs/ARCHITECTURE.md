@@ -3013,3 +3013,26 @@ an authorized filesystem user from opening a private file manually. Filesystem
 separation, reviewer access control, consent, and independent qualification
 remain operational responsibilities. The compiler grants no model, API, GPU,
 experiment, recruitment, or compensation authority.
+
+### ADR-099: Approved method archives use the atomic streaming acquisition path
+
+Status: accepted and exercised for pinned Agent Laboratory and DeepScientist
+source archives; neither archive has been opened or executed.
+
+The generic acquisition contract already bounded a transaction near 10 GB, but
+its implementation admitted only small text records and accumulated each file
+in memory. That mismatch made the owner-approved source-archive transaction
+either impossible or unsafe to scale.
+
+The default downloader now admits an explicit gzip media type and streams every
+chunk directly to a newly created staging file. It enforces declared and
+observed per-item ceilings while hashing, rejects redirects and content encoding,
+fsyncs completed bytes, and publishes the transaction directory only after all
+items and the self-hashed receipt are complete. Test fetchers retain their
+bounded byte-returning interface so existing deterministic acquisition tests do
+not gain filesystem or network behavior.
+
+The transaction ceiling is decimal 10,000,000,000 bytes to match the owner's
+standing policy exactly. Archive media support is download authority only: no
+member listing, extraction, parsing, installation, import, execution, provider
+call, GPU work, task admission, or scientific claim follows from a receipt.

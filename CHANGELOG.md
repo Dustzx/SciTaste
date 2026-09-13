@@ -5,6 +5,11 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Extended the approval-gated acquisition path to stream bounded gzip source
+  archives directly into its atomic staging transaction under the decimal-10-GB
+  ceiling. The pinned Agent Laboratory and DeepScientist archives are now
+  acquired with byte/hash receipts for later unchanged-core qualification; they
+  remain unextracted, unread, uninstalled, and unexecuted.
 - Added an executable post-review blind-opening boundary for SciTasteBench v3.
   `evaluation human-blind-open` reproduces the complete locked set from its two
   bound sessions and two browser submissions before it reads the private key or

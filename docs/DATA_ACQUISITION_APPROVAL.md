@@ -87,6 +87,35 @@ review and execution gates. A transaction above decimal 10 GB requires a new
 explicit owner decision, and the policy never creates or expands an unfrozen
 request.
 
+### Pinned external-method source archives
+
+The first standing-policy transaction for executable comparison methods is
+`configs/evaluation/acquisition/autoresearch_method_source_archives_v1.yaml`.
+It contains exactly two commit-addressed GitHub source archives:
+
+- Agent Laboratory at `d9017d90e329112d2a80b7712f37ee9094d2cd27`,
+  covered by the verified MIT repository license; and
+- DeepScientist at `b36624417f0c6b8238ec02db37b94d6db2faa5b0`,
+  covered by the verified Apache-2.0 root license.
+
+The per-item ceilings are 64 MiB and 512 MiB; the 603,979,776-byte aggregate
+ceiling is below the standing decimal-10-GB policy. The downloader now streams
+approved gzip objects directly into the private atomic staging transaction while
+incrementally enforcing byte ceilings and computing SHA-256. It never buffers a
+large archive in memory, follows redirects, extracts members, or publishes a
+partial transaction.
+
+The completed local receipt records 83,023,421 bytes total: Agent Laboratory is
+1,327,928 bytes with SHA-256
+`3b85bdff2cd92ad023a321e588b0ee31507322e7df855ef8bdffe4a06efd63a1`;
+DeepScientist is 81,695,493 bytes with SHA-256
+`59a39e7b668e08bcf67d069ff81fbb9828dd061457c186109c840c1404c08266`.
+Receipt SHA-256 is
+`7a119c3bec53de52c8cd928472f64090098c89e5c3f3bfe2ad408e14d09b7009`.
+The archives remain unextracted and unread. Possession does not resolve
+unchanged-core equivalence, task mapping, sandbox, telemetry, artifact, model,
+or failure/resume gates.
+
 ## Structured benchmark metadata
 
 Acquired InnovatorBench YAML and EXP-Bench CSV remain unopened after their

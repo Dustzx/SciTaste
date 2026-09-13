@@ -27,6 +27,9 @@ from scitaste.evaluation import (
 REQUEST_PATH = Path("configs/evaluation/acquisition/mlr_bench_official_ten_briefs_v1.yaml")
 INNOVATOR_REQUEST_PATH = Path("configs/evaluation/acquisition/innovatorbench_task_metadata_v1.yaml")
 EXP_REQUEST_PATH = Path("configs/evaluation/acquisition/expbench_task_metadata_v1.yaml")
+METHOD_SOURCE_REQUEST_PATH = Path(
+    "configs/evaluation/acquisition/autoresearch_method_source_archives_v1.yaml"
+)
 
 
 def _isolated_request(tmp_path: Path) -> DatasetAcquisitionRequest:
@@ -110,6 +113,26 @@ def test_iclr_metadata_requests_are_exact_no_run_owner_proposals(
     assert report.authorizes_execution is False
     assert report.no_network_access_performed is True
     assert report.no_download_performed is True
+
+
+def test_method_source_archives_fit_the_standing_download_ceiling(tmp_path: Path) -> None:
+    request = load_dataset_acquisition_request(METHOD_SOURCE_REQUEST_PATH).request
+    for binding in request.evidence:
+        source = Path(binding.path)
+        target = tmp_path / binding.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+
+    report = inspect_dataset_acquisition_request(request, workspace_root=tmp_path)
+
+    assert report.item_count == 2
+    assert report.maximum_total_bytes == 603_979_776
+    assert report.maximum_total_bytes < 10_000_000_000
+    assert report.source_hosts == ("codeload.github.com",)
+    assert report.ready_for_owner_approval is True
+    assert {item.media_type for item in report.items} == {"application/gzip"}
+    assert all(item.license_status.value == "verified" for item in report.items)
+    assert report.download_authorized is False
 
 
 def test_exact_hash_approval_authorizes_download_only(tmp_path: Path) -> None:
@@ -335,6 +358,7 @@ def test_download_requires_both_switch_and_authority_and_rolls_back_on_failure(
 
 def test_default_https_fetch_is_bounded_and_rejects_redirects(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     source_url = (
         "https://raw.githubusercontent.com/example/repository/"
@@ -391,6 +415,30 @@ def test_default_https_fetch_is_bounded_and_rejects_redirects(
         lambda _handler: Opener(Response(body, final_url=source_url, declared_length=len(body))),
     )
     assert acquisition_module._fetch_https_bytes(source_url, 1024, "text/markdown") == body
+
+    archive_body = b"\x1f\x8b" + b"bounded-archive" * 100
+    monkeypatch.setattr(
+        acquisition_module,
+        "build_opener",
+        lambda _handler: Opener(
+            Response(
+                archive_body,
+                final_url=source_url,
+                declared_length=len(archive_body),
+                content_type="application/x-gzip",
+            )
+        ),
+    )
+    archive_path = tmp_path / "source.tar.gz"
+    size, digest = acquisition_module._fetch_https_to_file(
+        source_url,
+        4_096,
+        "application/gzip",
+        archive_path,
+    )
+    assert size == len(archive_body)
+    assert digest == hashlib.sha256(archive_body).hexdigest()
+    assert archive_path.read_bytes() == archive_body
 
     csv_body = b"task_id,paper_id\n1,1\n"
     monkeypatch.setattr(

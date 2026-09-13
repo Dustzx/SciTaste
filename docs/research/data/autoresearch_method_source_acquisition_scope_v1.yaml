@@ -1,0 +1,72 @@
+schema_version: "1.0"
+scope_id: autoresearch-method-source-acquisition-scope-v1
+project_id: scitaste-self-development
+decided_at: "2026-09-13T10:53:00+08:00"
+authorization_basis:
+  policy: configs/evaluation/acquisition/standing_owner_download_policy_v1.yaml
+  policy_sha256: b369d232e83e95a11e6dc684a2a9e467a8f089d81cf99806bce2b81924ff97ed
+  owner_instruction: resources-at-or-below-decimal-10gb-are-automatically-approved-for-download
+purpose: >-
+  Acquire immutable upstream source archives for the two currently viable
+  archival autonomous-research method candidates so unchanged-core, task,
+  sandbox, telemetry, artifact, and failure/resume adapters can later be
+  qualified from exact bytes under a separate source-read decision.
+claim_boundary: >-
+  Archive acquisition and transport hashing establish possession of exact
+  upstream bytes only. They establish neither source equivalence to the
+  published systems, adapter correctness, task comparability, runtime safety,
+  successful execution, nor SciTaste effectiveness.
+selection:
+  principle: >-
+    Include every currently proposal-viable archival method in the frozen ICLR
+    evidence package whose official code license and pinned repository commit
+    are verified. Exclude AI-Researcher because its source license remains
+    unresolved; do not substitute a mock.
+  systems:
+    - system_id: agent-laboratory
+      publication_status: Findings of EMNLP 2025 archival method
+      official_repository: https://github.com/SamuelSchmidgall/AgentLaboratory
+      source_archive: https://codeload.github.com/SamuelSchmidgall/AgentLaboratory/tar.gz/d9017d90e329112d2a80b7712f37ee9094d2cd27
+      commit: d9017d90e329112d2a80b7712f37ee9094d2cd27
+      license: MIT
+      license_file_sha256: bf38a159d01e82d58f986c2d6dd06e03ba0b9cd59a6d286dd94109aac358e583
+      github_repository_size_kib_observed: 1424
+      maximum_download_bytes: 67108864
+    - system_id: deep-scientist
+      publication_status: ICLR 2026 archival method
+      official_repository: https://github.com/ResearAI/DeepScientist
+      source_archive: https://codeload.github.com/ResearAI/DeepScientist/tar.gz/b36624417f0c6b8238ec02db37b94d6db2faa5b0
+      commit: b36624417f0c6b8238ec02db37b94d6db2faa5b0
+      license: Apache-2.0
+      license_file_sha256: 7da7c1fd9f2c66c4ee6f5cb72abf36b8520964ed364dc516655051c87ce316c5
+      github_repository_size_kib_observed: 75901
+      maximum_download_bytes: 536870912
+maximum_total_bytes: 603979776
+byte_ceiling_check:
+  owner_policy_decimal_bytes: 10000000000
+  within_policy: true
+download_controls:
+  destination_must_be_empty: true
+  redirects_allowed: false
+  overwrites_allowed: false
+  secrets_forbidden: true
+  extraction_allowed: false
+  source_read_allowed: false
+  installation_allowed: false
+  execution_allowed: false
+  model_calls_allowed: false
+  api_spend_allowed: false
+  gpu_work_allowed: false
+  human_activity_allowed: false
+next_gate: >-
+  After receipt verification, obtain separate authority to inspect and extract
+  the two archives before implementing or claiming an unchanged-core adapter.
+evidence:
+  - path: docs/research/data/autoresearch_evaluation_resources_v3.yaml
+    sha256: b8dd8ac15afc6deb6f3269b9e83f8b31fba5ed54f71d44c59a8e97e0f00e6cd9
+  - path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+    sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+  - path: docs/research/protocols/AGENT_LABORATORY_BEST_NATIVE_ADAPTER_AUDIT_V1.md
+    sha256: b4d674dd25da43d6c7df7646cc19c550c0f48e94f9da0f9a0d67f7b4ebaf3c71
+  - path: docs/research/AUTORESEARCH_ACCEPTED_EVALUATION_AUDIT_V1.md
+    sha256: 8dc5d4f76252d1f37757f5da1346959350c83285949985e52c48c1998aa9a2af
