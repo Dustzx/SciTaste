@@ -2265,6 +2265,7 @@ function renderProjectResources(data, evidenceProgram) {
   const boundary = document.createElement("span");
   boundary.className = "program-badge neutral";
   appendText(boundary, publishedConfigurationApplied
+    || (!publishedResourceDirective && data.configuration_authority === "user_applied")
     ? t("resources.configuration_applied")
     : publishedResourceDirective
       ? t("resources.planning_configuration_active")

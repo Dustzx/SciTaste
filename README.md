@@ -88,14 +88,11 @@ Discover ──► Evidence ──► Communicate ──► Review
   optional CPU, local-GPU, API, and external-framework paths fail closed.
 - Paper builds produce Markdown, TeX, PDF, assessments, and claim-linked artifacts.
 - The local Generation-as-Content workspace provides project homes, conversations,
-  immutable turns, evidence-bound generated surfaces, feedback-edited planning
-  proposals, and explicit publication-to-project-configuration controls.
+  immutable turns, generated surfaces, feedback-edited plans, and configuration controls.
 - Every run, paper, review, evaluation, and interface surface belongs beneath one
   `outputs/projects/<project-id>/` tree.
-- Shared API/GPU definitions and changing observations live above projects in a
-  secret-free catalog plus the local `outputs/resources/` registry; every project
-  receives its own versioned resource binding and can apply a published priority
-  plan without exposing credentials or launching work.
+- Shared resources remain in a secret-free registry; each project receives a versioned
+  binding and can apply priority plans without exposing credentials or launching work.
 
 See the [architecture](docs/ARCHITECTURE.md) for component boundaries and the
 [innovation map](docs/INNOVATION_MAP.md) for the full research argument.
