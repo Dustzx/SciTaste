@@ -544,8 +544,13 @@ The native Full Workflow hook now records this decision before constructing a
 model/tool request. A `direct_path` skips the Tool Intelligence invocation; an
 owner-gated route is durably deferred before either model or tool is called; and
 admitted targeted/full routes preserve the existing project-owned model and tool
-ledgers. The current evidence-inspection hook selects one targeted read-only
-check. Generation as Content also routes its explicit local planning-decision and
+ledgers. A broad or semantically uncertain evidence-inspection task may still
+select one targeted read-only check. Opening an already visible,
+content-addressed local artifact is different: Tool Intelligence classifies it
+as cheap, reversible, read-only, and current, then takes `direct_path`. The
+descriptor, media/size, and content-hash guards run inline because they define a
+valid read; no separate preflight or owner approval is performed. Generation as
+Content also routes its explicit local planning-decision and
 planning-publication writes: because these content-addressed/versioned writes are
 reversible and cheap, they take the direct path after only the necessary
 identity, stale-state, and hash guards. The published project artifact records the
@@ -565,7 +570,9 @@ performed merely to determine whether the action is allowed.
 This is the intended checking rule for future blocks: first classify the action,
 then pay only for evidence whose expected avoided loss exceeds its cost. A cheap
 reversible local write normally proceeds after invariant checks; an uncertain
-read gets one targeted observation when valuable; a full preflight is reserved
+read gets one targeted observation only when valuable; an exact current local
+artifact read proceeds directly with its intrinsic content guard; a full
+preflight is reserved
 for stale high-impact evidence or untrusted code; and external authority is
 requested from the owner. Optional model advice may help estimate semantic gray
 zones, but it cannot downgrade a hard gate or invent execution authority.

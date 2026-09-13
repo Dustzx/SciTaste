@@ -38,6 +38,7 @@ from scitaste.generative_ui.planning import (
     materialize_surface_plan,
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
+from scitaste.generative_ui.project_resources import inspect_project_planner_admission
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, SafeText, Sha256
 from scitaste.generative_ui.workspace import WorkspaceFreshness, WorkspaceView
@@ -210,10 +211,13 @@ class GeneratedWorkspaceDocument(BaseModel):
                 for component in self.renderer.components
                 for evidence_id in component.evidence_ref_ids
             }
-            for point in authored_brief.points:
-                if set(point.source_candidate_ids) - selected_candidates:
+            cited_items = list(authored_brief.points)
+            if authored_brief.canvas is not None:
+                cited_items.extend(authored_brief.canvas.nodes)
+            for item in cited_items:
+                if set(item.source_candidate_ids) - selected_candidates:
                     raise ValueError("generated model content cites a hidden candidate")
-                if set(point.evidence_ref_ids) - visible_evidence:
+                if set(item.evidence_ref_ids) - visible_evidence:
                     raise ValueError("generated model content cites hidden evidence")
             if (
                 authored_brief.edited_from_turn_id is not None
@@ -298,6 +302,14 @@ class WorkspaceGenerationService:
         quick_catalog = self._resolver.quick_catalog(intent_request.project_id)
         if parsed.quick_catalog_fingerprint != quick_catalog.fingerprint:
             raise StaleIntentRequestError("quick-intent catalog is stale")
+        planner_identity = self._planner.identity
+        planner_admission = inspect_project_planner_admission(
+            self._runtime,
+            intent_request.project_id,
+            planner_implementation=planner_identity.implementation,
+            planner_backend=planner_identity.backend,
+            planner_model=planner_identity.model,
+        )
 
         resolution = self._resolver.resolve(intent_request)
         classification: IntentPlannerOutcome | None = None
@@ -306,6 +318,23 @@ class WorkspaceGenerationService:
         # current server-issued intents, including ambiguous keyword matches.
         model_classification_needed = resolution.intent is None
         if model_classification_needed and isinstance(intent_request, FreeQuestionRequest):
+            if not planner_admission.admitted:
+                return WorkspaceGenerationOutput(
+                    document=GeneratedWorkspaceDocument(
+                        status="provider_unavailable",
+                        reason_code=planner_admission.reason_code,
+                        request_fingerprint=intent_request.fingerprint,
+                        project_id=resolution.project_id,
+                        snapshot_revision=resolution.snapshot_revision,
+                        snapshot_sha256=resolution.snapshot_sha256,
+                        context_turn_ids=parsed.context_turn_ids,
+                        conversation_context_sha256=(
+                            conversation_context.fingerprint
+                            if conversation_context is not None
+                            else None
+                        ),
+                    )
+                )
             classification = self._planner.classify(
                 intent_request,
                 quick_catalog,
@@ -354,14 +383,24 @@ class WorkspaceGenerationService:
             )
 
         candidates = self._candidate_factory.build(resolution.intent)
-        planning = self._planner.compose(
-            candidates,
-            prompt_text=(
-                intent_request.question
-                if isinstance(intent_request, FreeQuestionRequest)
-                else f"Open the {resolution.intent.goal.value} project workspace."
-            ),
-            context=conversation_context,
+        prompt_text = (
+            intent_request.question
+            if isinstance(intent_request, FreeQuestionRequest)
+            else f"Open the {resolution.intent.goal.value} project workspace."
+        )
+        planning = (
+            self._planner.compose(
+                candidates,
+                prompt_text=prompt_text,
+                context=conversation_context,
+            )
+            if planner_admission.admitted
+            else self._planner.compose_offline(
+                candidates,
+                prompt_text=prompt_text,
+                context=conversation_context,
+                reason_code=planner_admission.reason_code,
+            )
         )
         if planning.plan is None:
             return WorkspaceGenerationOutput(

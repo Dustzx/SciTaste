@@ -164,6 +164,37 @@ def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
                     "evidence_ref_ids": [evidence_ids[0]],
                 }
             ],
+            "canvas": {
+                "layout": "flow",
+                "title": "Current evidence to next decision",
+                "nodes": [
+                    {
+                        "node_id": "observed-state",
+                        "kind": "evidence",
+                        "state": "observed",
+                        "label": "Observed project state",
+                        "detail": "The selected evidence is the starting point.",
+                        "source_candidate_ids": [first["candidate_id"]],
+                        "evidence_ref_ids": [evidence_ids[0]],
+                    },
+                    {
+                        "node_id": "next-decision",
+                        "kind": "decision",
+                        "state": "proposed",
+                        "label": "Choose the next evidence action",
+                        "detail": "The relationship remains advisory until user feedback.",
+                        "source_candidate_ids": [first["candidate_id"]],
+                        "evidence_ref_ids": [evidence_ids[0]],
+                    },
+                ],
+                "edges": [
+                    {
+                        "source_node_id": "next-decision",
+                        "target_node_id": "observed-state",
+                        "relation": "depends_on",
+                    }
+                ],
+            },
             "suggested_questions": ["What evidence would change this conclusion?"],
             "edited_from_turn_id": (
                 payload["prior_authored_brief"]["turn_id"]
@@ -424,6 +455,8 @@ def test_model_composition_receives_bounded_evidence_and_admits_cited_content(
     assert outcome.provenance is not None
     assert outcome.provenance.mode == PlannerMode.MODEL_ASSISTED
     assert outcome.authored_brief is not None
+    assert outcome.authored_brief.canvas is not None
+    assert outcome.authored_brief.canvas.layout == "flow"
     assert outcome.provenance.content_fingerprint == outcome.authored_brief.fingerprint
     request_payload = backend.calls[0].input_payload
     serialized = json.dumps(request_payload)
@@ -468,6 +501,56 @@ def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) 
         "turn_id": "turn-0001",
         "brief": first.authored_brief.model_dump(mode="json"),
     }
+
+
+def test_model_canvas_cannot_cite_hidden_evidence(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+
+    def forged_canvas(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        brief = payload["brief"]
+        assert isinstance(brief, dict)
+        canvas = brief["canvas"]
+        assert isinstance(canvas, dict)
+        nodes = canvas["nodes"]
+        assert isinstance(nodes, list)
+        nodes[0]["evidence_ref_ids"] = ["hidden-evidence"]
+        return payload
+
+    outcome = StructuredWorkspacePlanner(
+        FakeStructuredBackend(forged_canvas),
+        _policy(),
+    ).compose(catalog)
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "model-surface-plan-schema-rejected"
+
+
+def test_cited_server_candidate_is_admitted_into_model_layout(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+
+    def citation_outside_layout(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        candidates = request.input_payload["candidates"]
+        assert isinstance(candidates, list) and len(candidates) >= 2
+        second = candidates[1]
+        assert isinstance(second, dict)
+        brief = payload["brief"]
+        assert isinstance(brief, dict)
+        points = brief["points"]
+        assert isinstance(points, list)
+        points[0]["source_candidate_ids"] = [second["candidate_id"]]
+        points[0]["evidence_ref_ids"] = [second["evidence_ref_ids"][0]]
+        return payload
+
+    outcome = StructuredWorkspacePlanner(
+        FakeStructuredBackend(citation_outside_layout),
+        _policy(),
+    ).compose(catalog)
+
+    assert outcome.status == "planned"
+    assert outcome.plan is not None
+    assert len(outcome.plan.entries) == 2
 
 
 def test_model_generates_a_non_executable_project_bound_program_amendment() -> None:

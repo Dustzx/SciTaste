@@ -2837,6 +2837,27 @@ function renderProjectResources(data, evidenceProgram) {
   }
   header.append(identity, controls);
 
+  const plannerRoute = document.createElement("article");
+  plannerRoute.className = `project-resource-planner state-${data.planner_binding_state}`;
+  const plannerLabel = document.createElement("small");
+  appendText(plannerLabel, t("resources.planner_label"));
+  const plannerIdentity = document.createElement("strong");
+  appendText(plannerIdentity, data.planner_resource_id || t("resources.planner_unmanaged"));
+  const plannerState = document.createElement("span");
+  plannerState.className = data.planner_binding_state === "ready"
+    ? "program-badge verified"
+    : "program-badge neutral";
+  appendText(plannerState, t(`resources.planner_state.${data.planner_binding_state}`));
+  const plannerModel = document.createElement("p");
+  plannerModel.className = "muted compact-copy";
+  appendText(plannerModel, data.planner_model_id
+    ? t("resources.planner_identity", {
+      provider: data.planner_provider_id,
+      model: data.planner_model_id,
+    })
+    : t("resources.planner_offline_fallback"));
+  plannerRoute.append(plannerLabel, plannerIdentity, plannerState, plannerModel);
+
   const kindSummary = document.createElement("div");
   kindSummary.className = "project-resource-kinds";
   for (const kind of ["api_model", "gpu_host", "model_checkpoint"]) {
@@ -2911,6 +2932,10 @@ function renderProjectResources(data, evidenceProgram) {
       source_planning_publication_id: data.source_planning_publication_id,
       predecessor_binding_record_sha256: data.predecessor_binding_record_sha256,
       configuration_verification_route: data.configuration_verification_route,
+      planner_binding_state: data.planner_binding_state,
+      planner_resource_id: data.planner_resource_id,
+      planner_provider_id: data.planner_provider_id,
+      planner_model_id: data.planner_model_id,
     },
     names: [
       "binding_set_id",
@@ -2925,9 +2950,13 @@ function renderProjectResources(data, evidenceProgram) {
       "source_planning_publication_id",
       "predecessor_binding_record_sha256",
       "configuration_verification_route",
+      "planner_binding_state",
+      "planner_resource_id",
+      "planner_provider_id",
+      "planner_model_id",
     ],
   }));
-  section.append(header, kindSummary);
+  section.append(header, plannerRoute, kindSummary);
   if ((data.available_resources || []).length > 0) {
     const availableDetails = document.createElement("details");
     availableDetails.className = "project-resource-details";
@@ -4838,6 +4867,9 @@ function renderWorkspace(documentValue, {preserveTransient = false, focus = true
     cards.set(component.component_id, card);
   }
   for (const action of renderer.actions) {
+    // ArtifactViewer already exposes an inline, content-addressed read control.
+    // Do not add a second proposal/approval-shaped button for the same safe read.
+    if (action.proposal_kind === "inspect_artifact") continue;
     const card = cards.get(action.component_id);
     if (!card) {
       throw uiError("workspace.orphan_action");
@@ -4871,6 +4903,64 @@ function prepareAuthoredBriefFollowup(question) {
   conversationContextMode.value = "recent";
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function renderModelAuthoredCanvas(canvas) {
+  const shell = document.createElement("section");
+  shell.className = `model-authored-canvas layout-${canvas.layout}`;
+  const heading = document.createElement("div");
+  heading.className = "model-authored-canvas-heading";
+  const eyebrow = document.createElement("small");
+  appendText(eyebrow, t(`generation.canvas.layout.${canvas.layout}`));
+  const title = document.createElement("h3");
+  appendText(title, canvas.title);
+  heading.append(eyebrow, title);
+
+  const nodes = document.createElement("div");
+  nodes.className = "model-authored-canvas-nodes";
+  for (const node of canvas.nodes) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `model-authored-canvas-node kind-${node.kind} state-${node.state}`;
+    button.setAttribute("aria-label", t("generation.canvas.explore", {node: node.label}));
+    const metadata = document.createElement("small");
+    appendText(metadata, `${t(`generation.canvas.kind.${node.kind}`)} · ${
+      t(`generation.canvas.state.${node.state}`)
+    }`);
+    const label = document.createElement("strong");
+    appendText(label, node.label);
+    const detail = document.createElement("span");
+    appendText(detail, node.detail);
+    button.append(metadata, label, detail);
+    button.addEventListener("click", () => prepareAuthoredBriefFollowup(
+      t("generation.canvas.followup", {node: node.label}),
+    ));
+    nodes.appendChild(button);
+  }
+  shell.append(heading, nodes);
+
+  if ((canvas.edges || []).length > 0) {
+    const relations = document.createElement("div");
+    relations.className = "model-authored-canvas-relations";
+    const nodesById = new Map(canvas.nodes.map((node) => [node.node_id, node]));
+    for (const edge of canvas.edges) {
+      const relation = document.createElement("button");
+      relation.type = "button";
+      relation.className = "model-authored-canvas-relation";
+      const source = nodesById.get(edge.source_node_id);
+      const target = nodesById.get(edge.target_node_id);
+      appendText(relation, `${source.label} → ${t(`generation.canvas.relation.${edge.relation}`)} → ${target.label}`);
+      relation.addEventListener("click", () => prepareAuthoredBriefFollowup(
+        t("generation.canvas.relation_followup", {
+          source: source.label,
+          target: target.label,
+        }),
+      ));
+      relations.appendChild(relation);
+    }
+    shell.appendChild(relations);
+  }
+  return shell;
 }
 
 function renderModelAuthoredBrief(brief) {
@@ -4934,7 +5024,11 @@ function renderModelAuthoredBrief(brief) {
     card.append(kind, text, evidence);
     points.appendChild(card);
   }
-  section.append(header, points, synthesisDetails);
+  section.appendChild(header);
+  if (brief.canvas) {
+    section.appendChild(renderModelAuthoredCanvas(brief.canvas));
+  }
+  section.append(points, synthesisDetails);
   if ((brief.suggested_questions || []).length > 0) {
     const followups = document.createElement("div");
     followups.className = "model-authored-followups";

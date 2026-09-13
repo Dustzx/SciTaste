@@ -16,6 +16,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scitaste.generative_ui.models import EvidenceRef, SurfaceSpec
 from scitaste.generative_ui.registry import EvidenceKind, TrustedComponent
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, SafeLocator, Sha256
+from scitaste.model_nodes.verification_policy import (
+    ActionEffect,
+    ActionReversibility,
+    VerificationDecisionInput,
+    VerificationRoute,
+    decide_verification_route,
+)
 
 _MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -89,6 +96,10 @@ class ArtifactInspectionReceipt(BaseModel):
         "application/pdf",
     ]
     byte_length: int = Field(ge=0)
+    verification_route: Literal[VerificationRoute.DIRECT_PATH] = VerificationRoute.DIRECT_PATH
+    verification_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    standalone_preflight_performed: Literal[False] = False
+    owner_approval_required: Literal[False] = False
     execution_authority: Literal["none"] = "none"
 
     @property
@@ -156,6 +167,23 @@ class ArtifactInspector:
         )
         parsed = ArtifactInspectionEvent.model_validate(parsed.model_dump(mode="json"))
         evidence, media_type = validate_inspection_binding(surface, parsed)
+        verification = decide_verification_route(
+            VerificationDecisionInput(
+                action_id="inspect-content-addressed-local-artifact",
+                reversibility=ActionReversibility.REVERSIBLE,
+                effects=(ActionEffect.READ_ONLY_LOCAL,),
+                evidence_state="current",
+                semantic_uncertainty="low",
+                failure_probability=0.01,
+                failure_impact_units=5.0,
+                targeted_check_cost_units=0.5,
+                targeted_detection_probability=0.8,
+                full_preflight_cost_units=2.0,
+                full_preflight_detection_probability=0.95,
+            )
+        )
+        if verification.route is not VerificationRoute.DIRECT_PATH:
+            raise ArtifactInspectionError("local artifact inspection unexpectedly needs a check")
         content = self._read_verified(surface.project_id, evidence, media_type)
         receipt = ArtifactInspectionReceipt(
             event_id=parsed.event_id,
@@ -171,6 +199,7 @@ class ArtifactInspector:
             locator=evidence.locator,
             media_type=media_type,
             byte_length=len(content),
+            verification_reason_codes=verification.reason_codes,
         )
         return _preview_document(receipt, content)
 

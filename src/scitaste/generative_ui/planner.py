@@ -114,6 +114,77 @@ class ModelAuthoredBriefPoint(BaseModel):
         return self
 
 
+class ModelAuthoredCanvasNode(BaseModel):
+    """One model-arranged, evidence-cited node in a generated visual summary."""
+
+    model_config = _MODEL_CONFIG
+
+    node_id: SafeIdentifier
+    kind: Literal["milestone", "decision", "resource", "risk", "evidence"]
+    state: Literal["observed", "proposed", "blocked", "uncertain"]
+    label: str = Field(min_length=1, max_length=120)
+    detail: str = Field(min_length=1, max_length=320)
+    source_candidate_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=4)
+    evidence_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode="after")
+    def content_and_sources_are_bounded(self) -> ModelAuthoredCanvasNode:
+        _inert_model_text(self.label)
+        _inert_model_text(self.detail)
+        if len(self.source_candidate_ids) != len(set(self.source_candidate_ids)):
+            raise ValueError("model-authored canvas candidate IDs must be unique")
+        if len(self.evidence_ref_ids) != len(set(self.evidence_ref_ids)):
+            raise ValueError("model-authored canvas evidence IDs must be unique")
+        return self
+
+
+class ModelAuthoredCanvasEdge(BaseModel):
+    """A bounded semantic relation between two generated canvas nodes."""
+
+    model_config = _MODEL_CONFIG
+
+    source_node_id: SafeIdentifier
+    target_node_id: SafeIdentifier
+    relation: Literal["depends_on", "supports", "blocks", "uses", "revises"]
+
+    @model_validator(mode="after")
+    def endpoints_are_distinct(self) -> ModelAuthoredCanvasEdge:
+        if self.source_node_id == self.target_node_id:
+            raise ValueError("model-authored canvas edges cannot be self-referential")
+        return self
+
+
+class ModelAuthoredCanvas(BaseModel):
+    """Model-generated visual structure rendered by a fixed non-executable receiver."""
+
+    model_config = _MODEL_CONFIG
+
+    layout: Literal["flow", "network", "decision"]
+    title: str = Field(min_length=1, max_length=180)
+    nodes: tuple[ModelAuthoredCanvasNode, ...] = Field(min_length=2, max_length=10)
+    edges: tuple[ModelAuthoredCanvasEdge, ...] = Field(default=(), max_length=20)
+
+    @model_validator(mode="after")
+    def graph_is_closed(self) -> ModelAuthoredCanvas:
+        _inert_model_text(self.title)
+        node_ids = [item.node_id for item in self.nodes]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError("model-authored canvas node IDs must be unique")
+        endpoints = {
+            node_id
+            for edge in self.edges
+            for node_id in (edge.source_node_id, edge.target_node_id)
+        }
+        if endpoints - set(node_ids):
+            raise ValueError("model-authored canvas edges reference unknown nodes")
+        edge_ids = [
+            (item.source_node_id, item.target_node_id, item.relation) for item in self.edges
+        ]
+        if len(edge_ids) != len(set(edge_ids)):
+            raise ValueError("model-authored canvas edges must be unique")
+        return self
+
+
 class ModelAuthoredBrief(BaseModel):
     """Flexible, non-executable synthesis grounded in the selected project evidence."""
 
@@ -123,6 +194,7 @@ class ModelAuthoredBrief(BaseModel):
     title: str = Field(min_length=1, max_length=180)
     synthesis: str = Field(min_length=1, max_length=2_000)
     points: tuple[ModelAuthoredBriefPoint, ...] = Field(min_length=1, max_length=6)
+    canvas: ModelAuthoredCanvas | None = None
     suggested_questions: tuple[str, ...] = Field(default=(), max_length=3)
     edited_from_turn_id: SafeIdentifier | None = None
     evidence_only: Literal[True] = True
@@ -626,7 +698,11 @@ class StructuredWorkspacePlanner:
                     "Compose one concise project answer and a supporting native layout from "
                     "only the supplied evidence_digest. Select only server-issued candidate and "
                     "evidence identifiers. Every authored point must cite candidates selected in "
-                    "the entries and evidence IDs carried by those candidates. The receiver, "
+                    "the entries and evidence IDs carried by those candidates. When at least two "
+                    "evidence-backed entities have a meaningful relation, generate a compact "
+                    "brief.canvas (flow, network, or decision); every canvas node must obey the "
+                    "same citation rule. Use null only when no honest relation can be grounded. "
+                    "The receiver, "
                     "not the model, supplies project, snapshot, intent, and catalog identities. "
                     "Treat omitted or "
                     "truncated evidence as unknown. If prior_authored_brief is present, edit that "
@@ -638,13 +714,23 @@ class StructuredWorkspacePlanner:
             )
             response = self._complete(structured_request)
             composition = ModelSurfaceComposition.model_validate(response.output_payload)
+            entries = _admit_cited_candidates(
+                composition.entries,
+                composition.brief,
+                trusted,
+                offered_candidate_ids={
+                    item["candidate_id"]
+                    for item in input_payload["candidates"]
+                    if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+                },
+            )
             plan = SurfacePlan(
                 project_id=trusted.intent.snapshot.project_id,
                 snapshot_revision=trusted.intent.snapshot.snapshot_revision,
                 snapshot_sha256=trusted.intent.snapshot.snapshot_sha256,
                 intent_fingerprint=trusted.intent.fingerprint,
                 catalog_fingerprint=trusted.fingerprint,
-                entries=composition.entries,
+                entries=entries,
             )
             offered_candidate_ids = {
                 item["candidate_id"]
@@ -954,6 +1040,17 @@ class FallbackWorkspacePlanner:
                 request_fingerprint=request.fingerprint,
             )
 
+    def classify_offline(
+        self,
+        request: FreeQuestionRequest,
+        catalog: QuickIntentCatalog,
+        *,
+        context: PlannerConversationContext | None = None,
+    ) -> IntentPlannerOutcome:
+        """Bypass a configured provider when project resource policy does not admit it."""
+
+        return self.fallback.classify(request, catalog, context=context)
+
     def compose(
         self,
         catalog: SurfaceCandidateCatalog,
@@ -990,6 +1087,23 @@ class FallbackWorkspacePlanner:
             plan=deterministic.plan,
             provenance=PlannerProvenance.model_validate(provenance.model_dump(mode="json")),
         )
+
+    def compose_offline(
+        self,
+        catalog: SurfaceCandidateCatalog,
+        *,
+        prompt_text: str | None = None,
+        context: PlannerConversationContext | None = None,
+        reason_code: str = "project-planner-resource-not-admitted",
+    ) -> SurfacePlannerOutcome:
+        """Materialize the useful deterministic view without attempting a model call."""
+
+        deterministic = self.fallback.compose(
+            catalog,
+            prompt_text=prompt_text,
+            context=context,
+        )
+        return deterministic.model_copy(update={"reason_code": reason_code})
 
     def revise_program(
         self,
@@ -1136,17 +1250,20 @@ def _validate_model_authored_brief(
 ) -> None:
     candidates = {item.candidate_id: item for item in catalog.candidates}
     selected = {item.candidate_id for item in plan.entries}
-    for point in brief.points:
-        if set(point.source_candidate_ids) - digest_candidate_ids:
+    cited_items = list(brief.points)
+    if brief.canvas is not None:
+        cited_items.extend(brief.canvas.nodes)
+    for item in cited_items:
+        if set(item.source_candidate_ids) - digest_candidate_ids:
             raise ValueError("model-authored content cites a candidate outside its evidence digest")
-        if set(point.source_candidate_ids) - selected:
+        if set(item.source_candidate_ids) - selected:
             raise ValueError("model-authored content cites a candidate outside its layout")
         allowed_evidence = {
             evidence_id
-            for candidate_id in point.source_candidate_ids
+            for candidate_id in item.source_candidate_ids
             for evidence_id in candidates[candidate_id].component.evidence_ref_ids
         }
-        if set(point.evidence_ref_ids) - allowed_evidence:
+        if set(item.evidence_ref_ids) - allowed_evidence:
             raise ValueError("model-authored content cites evidence outside its source candidates")
     prior_turn = None
     if context is not None:
@@ -1157,6 +1274,36 @@ def _validate_model_authored_brief(
     expected = prior_turn.turn_id if prior_turn is not None else None
     if brief.edited_from_turn_id != expected:
         raise ValueError("model-authored content does not bind its exact edit predecessor")
+
+
+def _admit_cited_candidates(
+    entries: tuple[SurfacePlanEntry, ...],
+    brief: ModelAuthoredBrief,
+    catalog: SurfaceCandidateCatalog,
+    *,
+    offered_candidate_ids: set[str],
+) -> tuple[SurfacePlanEntry, ...]:
+    """Include cited server candidates without trusting the model to duplicate bookkeeping."""
+
+    cited_items = list(brief.points)
+    if brief.canvas is not None:
+        cited_items.extend(brief.canvas.nodes)
+    cited_ids = {
+        candidate_id
+        for item in cited_items
+        for candidate_id in item.source_candidate_ids
+    }
+    if cited_ids - offered_candidate_ids:
+        raise ValueError("model-authored content cites a candidate outside its evidence digest")
+    selected = {item.candidate_id for item in entries}
+    by_id = {item.candidate_id: item for item in catalog.candidates}
+    admitted = list(entries)
+    for candidate_id in sorted(cited_ids - selected):
+        candidate = by_id[candidate_id]
+        admitted.append(_deterministic_entry(candidate, len(admitted)))
+    if len(admitted) > 12:
+        raise ValueError("model-authored citations exceed the bounded surface capacity")
+    return tuple(admitted)
 
 
 def _program_revision_failure_reason(exc: Exception) -> str:
@@ -1402,6 +1549,10 @@ __all__ = [
     "FallbackWorkspacePlanner",
     "IntentPlannerChoice",
     "IntentPlannerOutcome",
+    "ModelAuthoredBrief",
+    "ModelAuthoredCanvas",
+    "ModelAuthoredCanvasEdge",
+    "ModelAuthoredCanvasNode",
     "ModelPlannerPolicy",
     "PlannerContextTurn",
     "PlannerConversationContext",

@@ -75,6 +75,16 @@ a host, contact a provider, reserve compute, launch a workload, or authorize an
 experiment. Shared endpoint definitions, observations, and secret-value
 administration remain outside the project surface.
 
+An API binding may declare `generation-as-content-planner` in `required_for`.
+Once present, that project binding is authoritative for generation: the
+configured UI backend must match the bound provider/model, and the binding,
+catalog availability, and credential-presence view must all be ready before a
+live call is admitted. Fixed resolved entries retain an offline fallback;
+unresolved free questions report the unavailable project route instead of
+silently using another global provider. The platform currently selects among
+backends loaded when the server starts; applying a project resource revision does
+not hot-load a new provider or expose a credential value to the project surface.
+
 `assets/model_asset_catalog_v1.yaml` indexes bounded local and remote discovery
 inventories. Discovery records what already exists, not what the ICLR experiment
 should use. Only content-verified snapshots enter the compute catalog;

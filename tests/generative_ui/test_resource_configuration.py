@@ -11,7 +11,10 @@ import yaml
 from scitaste.generative_ui import resource_configuration as configuration_module
 from scitaste.generative_ui.planning_directive import PlanningDirectivePublication
 from scitaste.generative_ui.program_revision import ProgramRevisionDraft
-from scitaste.generative_ui.project_resources import load_project_resource_portfolio
+from scitaste.generative_ui.project_resources import (
+    inspect_project_planner_admission,
+    load_project_resource_portfolio,
+)
 from scitaste.generative_ui.resource_configuration import (
     ProjectResourceConfigurationRequest,
     apply_project_resource_configuration,
@@ -82,7 +85,11 @@ def _publication(draft: ProgramRevisionDraft | None = None) -> PlanningDirective
     )
 
 
-def _resource_runtime(tmp_path: Path) -> tuple[ProjectRuntime, object, object]:
+def _resource_runtime(
+    tmp_path: Path,
+    *,
+    planner_ready: bool = False,
+) -> tuple[ProjectRuntime, object, object]:
     runtime = ProjectRuntime(tmp_path / "outputs")
     runtime.create(
         ProjectManifest(
@@ -111,7 +118,9 @@ def _resource_runtime(tmp_path: Path) -> tuple[ProjectRuntime, object, object]:
                         "identity_source_url": f"https://{resource_id}.example.test/models",
                         "identity_verified_on": "2026-09-13",
                         "credential_env": f"{resource_id.upper().replace('-', '_')}_KEY",
-                        "availability": "pending",
+                        "availability": (
+                            "verified" if planner_ready and resource_id == "api-a" else "pending"
+                        ),
                     }
                     for resource_id in ("api-a", "api-b", "api-c")
                 ],
@@ -138,9 +147,15 @@ def _resource_runtime(tmp_path: Path) -> tuple[ProjectRuntime, object, object]:
                         "expected_kind": "api_model",
                         "role": "primary-api",
                         "priority": priority,
-                        "status": "pending",
+                        "status": (
+                            "verified" if planner_ready and resource_id == "api-a" else "pending"
+                        ),
                         "purpose": "Registered candidate for a later owner-approved API study.",
-                        "required_for": ["api-prepilot"],
+                        "required_for": (
+                            ["generation-as-content-planner"]
+                            if planner_ready and resource_id == "api-a"
+                            else ["api-prepilot"]
+                        ),
                     }
                     for priority, resource_id in enumerate(("api-a", "api-b"), 1)
                 ],
@@ -151,6 +166,35 @@ def _resource_runtime(tmp_path: Path) -> tuple[ProjectRuntime, object, object]:
     )
     registered = resource_runtime.register_project_binding(catalog_path, binding_path)
     return runtime, registry, registered
+
+
+def test_project_binding_admits_only_its_configured_generation_model(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("API_A_KEY", "local-test-only")
+    runtime, _, _ = _resource_runtime(tmp_path, planner_ready=True)
+
+    portfolio = load_project_resource_portfolio(runtime, "resource-project")
+    assert portfolio is not None
+    assert portfolio.planner_binding_state == "ready"
+    assert portfolio.planner_resource_id == "api-a"
+    assert inspect_project_planner_admission(
+        runtime,
+        "resource-project",
+        planner_implementation="structured-model-v1",
+        planner_backend="api-a",
+        planner_model="api-a",
+    ).admitted is True
+    mismatch = inspect_project_planner_admission(
+        runtime,
+        "resource-project",
+        planner_implementation="structured-model-v1",
+        planner_backend="api-b",
+        planner_model="api-b",
+    )
+    assert mismatch.admitted is False
+    assert mismatch.reason_code == "project-planner-resource-not-admitted"
 
 
 def test_published_resource_plan_requires_explicit_apply_and_updates_only_priorities(

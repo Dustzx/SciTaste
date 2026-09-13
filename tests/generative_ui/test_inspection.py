@@ -102,6 +102,9 @@ def test_inspector_supports_only_fixed_bounded_preview_kinds(
     assert round_trip == document
     assert document.preview_kind == preview_kind
     assert document.receipt.execution_authority == "none"
+    assert document.receipt.verification_route == "direct_path"
+    assert document.receipt.standalone_preflight_performed is False
+    assert document.receipt.owner_approval_required is False
     evidence = {item.evidence_id: item for item in surface.snapshot.evidence_refs}
     assert document.receipt.artifact_sha256 == evidence[event.artifact_ref_id].sha256
 

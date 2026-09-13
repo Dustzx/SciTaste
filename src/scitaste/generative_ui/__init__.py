@@ -166,6 +166,9 @@ from scitaste.generative_ui.planner import (
     IntentPlannerOutcome,
     ModelAuthoredBrief,
     ModelAuthoredBriefPoint,
+    ModelAuthoredCanvas,
+    ModelAuthoredCanvasEdge,
+    ModelAuthoredCanvasNode,
     ModelPlannerPolicy,
     ModelSurfaceComposition,
     PlannerContextTurn,
@@ -224,7 +227,11 @@ from scitaste.generative_ui.program_revision import (
     validate_program_revision_draft,
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
-from scitaste.generative_ui.project_resources import load_project_resource_portfolio
+from scitaste.generative_ui.project_resources import (
+    ProjectPlannerAdmission,
+    inspect_project_planner_admission,
+    load_project_resource_portfolio,
+)
 from scitaste.generative_ui.projection import (
     FixedApplicationShell,
     RendererAction,
@@ -387,6 +394,9 @@ __all__ = [
     "MaterializedSurfacePlan",
     "ModelAuthoredBrief",
     "ModelAuthoredBriefPoint",
+    "ModelAuthoredCanvas",
+    "ModelAuthoredCanvasEdge",
+    "ModelAuthoredCanvasNode",
     "ModelPlannerPolicy",
     "ModelSurfaceComposition",
     "ModelWarmCacheAttempt",
@@ -439,6 +449,7 @@ __all__ = [
     "ProjectListDocument",
     "ProjectListQuery",
     "ProjectOverviewQuery",
+    "ProjectPlannerAdmission",
     "ProjectPlanningDirectiveData",
     "ProjectProgramActionRouteData",
     "ProjectProgressAcquisitionItem",
@@ -575,6 +586,7 @@ __all__ = [
     "find_research_landscape_run",
     "fixture_snapshot_binding",
     "inspect_planning_directive",
+    "inspect_project_planner_admission",
     "inspect_project_resource_configuration",
     "load_latest_planning_directive",
     "load_latest_project_resource_configuration",

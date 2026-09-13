@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from scitaste.generative_ui.models import ProjectResourcePortfolioData
@@ -90,6 +91,41 @@ def load_project_resource_portfolio(
                 "required_for": binding.required_for,
             }
         )
+    planner_binding = next(
+        iter(
+            sorted(
+                (
+                    item
+                    for item in registered.binding.bindings
+                    if item.expected_kind.value == "api_model"
+                    and "generation-as-content-planner" in item.required_for
+                ),
+                key=lambda item: (item.priority, item.binding_id),
+            )
+        ),
+        None,
+    )
+    planner_definition = (
+        loaded_catalog.catalog.resource(planner_binding.resource_id)
+        if planner_binding is not None
+        else None
+    )
+    planner_access = (
+        access_by_id[planner_binding.resource_id] if planner_binding is not None else None
+    )
+    planner_state = "unmanaged"
+    if (
+        planner_binding is not None
+        and planner_definition is not None
+        and planner_access is not None
+    ):
+        planner_state = (
+            "ready"
+            if planner_binding.status.value == "verified"
+            and planner_definition.availability.value == "verified"
+            and _access_state(planner_access) == "configured"
+            else "unavailable"
+        )
     bound_resource_ids = {item.resource_id for item in registered.binding.bindings}
     available_resources = []
     for item in status.resources:
@@ -144,6 +180,16 @@ def load_project_resource_portfolio(
         resources=resources,
         available_resource_count=len(available_resources),
         available_resources=available_resources,
+        planner_binding_state=planner_state,
+        planner_resource_id=(
+            planner_binding.resource_id if planner_binding is not None else None
+        ),
+        planner_provider_id=(
+            planner_definition.provider_id if planner_definition is not None else None
+        ),
+        planner_model_id=(
+            planner_definition.model_id if planner_definition is not None else None
+        ),
         configuration_authority="user_applied" if configuration is not None else "proposal_only",
         configuration_run_id=configuration.run_id if configuration is not None else None,
         source_planning_publication_id=(
@@ -161,10 +207,72 @@ def load_project_resource_portfolio(
     )
 
 
+@dataclass(frozen=True)
+class ProjectPlannerAdmission:
+    """Decision made from existing local bindings; it performs no resource probe."""
+
+    admitted: bool
+    managed: bool
+    reason_code: str
+    resource_id: str | None = None
+
+
+def inspect_project_planner_admission(
+    runtime: ProjectRuntime,
+    project_id: str,
+    *,
+    planner_implementation: str,
+    planner_backend: str | None,
+    planner_model: str | None,
+) -> ProjectPlannerAdmission:
+    """Admit a live planner only when its exact project resource is ready."""
+
+    if planner_implementation == "deterministic-v1":
+        return ProjectPlannerAdmission(
+            admitted=True,
+            managed=False,
+            reason_code="deterministic-planner-needs-no-resource",
+        )
+    portfolio = load_project_resource_portfolio(runtime, project_id)
+    if portfolio is None or portfolio.planner_binding_state == "unmanaged":
+        # Projects created before the resource registry remain compatible. Once
+        # a planner binding exists, however, it becomes authoritative.
+        return ProjectPlannerAdmission(
+            admitted=True,
+            managed=False,
+            reason_code="project-planner-resource-unmanaged",
+        )
+    identity_matches = (
+        planner_backend is not None
+        and planner_model is not None
+        and portfolio.planner_provider_id is not None
+        and portfolio.planner_model_id == planner_model
+        and (
+            planner_backend == portfolio.planner_provider_id
+            or planner_backend.startswith(f"{portfolio.planner_provider_id}-")
+        )
+    )
+    admitted = portfolio.planner_binding_state == "ready" and identity_matches
+    return ProjectPlannerAdmission(
+        admitted=admitted,
+        managed=True,
+        reason_code=(
+            "project-planner-resource-admitted"
+            if admitted
+            else "project-planner-resource-not-admitted"
+        ),
+        resource_id=portfolio.planner_resource_id,
+    )
+
+
 def _access_state(resource_access: ResourceAccessBindingItem) -> str:
     if resource_access.credential_source is CredentialBindingSource.NOT_REQUIRED:
         return "not_required"
     return "configured" if resource_access.credential_present else "missing"
 
 
-__all__ = ["load_project_resource_portfolio"]
+__all__ = [
+    "ProjectPlannerAdmission",
+    "inspect_project_planner_admission",
+    "load_project_resource_portfolio",
+]

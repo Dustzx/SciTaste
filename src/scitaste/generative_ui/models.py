@@ -2472,6 +2472,10 @@ class ProjectResourcePortfolioData(BaseModel):
         default=(),
         max_length=100,
     )
+    planner_binding_state: Literal["ready", "unavailable", "unmanaged"] = "unmanaged"
+    planner_resource_id: SafeIdentifier | None = None
+    planner_provider_id: SafeIdentifier | None = None
+    planner_model_id: SafeText | None = None
     configuration_authority: Literal["proposal_only", "user_applied"] = "proposal_only"
     configuration_run_id: str | None = Field(
         default=None,
@@ -2507,6 +2511,15 @@ class ProjectResourcePortfolioData(BaseModel):
             raise ValueError("available project resource IDs must be unique")
         if bound_ids.intersection(available_ids):
             raise ValueError("a project resource cannot be both bound and available")
+        planner_fields = (
+            self.planner_resource_id,
+            self.planner_provider_id,
+            self.planner_model_id,
+        )
+        if self.planner_binding_state == "unmanaged" and any(planner_fields):
+            raise ValueError("an unmanaged project planner cannot name a resource")
+        if self.planner_binding_state in {"ready", "unavailable"} and not all(planner_fields):
+            raise ValueError("a managed project planner requires a complete resource identity")
         configuration_fields = (
             self.configuration_run_id,
             self.source_planning_publication_id,

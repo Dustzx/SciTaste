@@ -12,10 +12,12 @@ ProjectRuntime adapter. It includes a framework-neutral renderer document and a
 runnable, local receiver-owned browser/API application. An optional bounded
 structured model may classify a long-tail question and, in one call, arrange
 server-owned component candidates plus author a concise cited brief. The brief
-is inert text, each point names selected candidate and evidence IDs, and
-follow-up feedback must name the exact predecessor turn it edits. An explicit
-deterministic controller can approve a bounded handoff, but the model never
-authors renderer code or authority.
+is inert text, each point names selected candidate and evidence IDs, and it may
+also carry a compact evidence-cited visual canvas whose nodes and relations are
+model-authored inside a closed receiver schema. Follow-up feedback must name the
+exact predecessor turn it edits. An explicit deterministic controller can
+approve a bounded handoff, but the model never authors renderer code or
+authority.
 
 ## Evidence-native project workspace
 
@@ -555,7 +557,14 @@ The model response is untrusted. Backend/model identity, request bytes,
 response bytes, token telemetry, latency, tool-call absence, exact response
 binding, closed Pydantic schema, snapshot hashes, intent hash, catalog hash, and
 final plan materialization are all checked in code. The model returns only
-bounded candidate placements and cited authored content; the receiver injects
+bounded candidate placements and cited authored content. The optional visual
+canvas is likewise data rather than renderer code: it chooses one closed layout,
+two to ten typed nodes, closed node states and closed relation labels. Every node
+must cite the offered component/evidence candidates that ground it, and every
+edge must remain inside that admitted node set. If a model cites a trusted
+candidate but omits its component placement, the receiver may complete that
+placement from the exact offered catalog; it cannot admit a new identity. The
+receiver injects
 project, snapshot, intent, and catalog identities after admission instead of
 asking the model to reproduce integrity metadata. Prompt instructions are
 defense in depth, not the trust boundary. A failed or malicious composition is
@@ -585,7 +594,7 @@ question ──> deterministic resolver ──resolved──┐
    └─long-tail─> optional ID-only classifier ───┤
                                                 v
 project snapshot ─> trusted candidate factory ─> planner
-                                                │ closed plan + cited brief
+                                                │ closed plan + cited brief/canvas
                                                 v
                                  validate + materialize SurfacePlan
                                                 │
@@ -607,11 +616,16 @@ field. The buttons are not a universal prompt menu: each comes from the current
 catalog, project revision, snapshot hash, and request fingerprint.
 
 Successful model generation first renders a concise authored brief with finding,
-uncertainty, and recommendation cards, evidence chips, and follow-up/edit
-prompts. It also changes component order, grouping, emphasis, and the set of
-goal-relevant panels. Clicking an evidence chip or suggested question prepares a
-new feedback turn in the same project conversation; the next brief must bind the
-exact prior authored turn. Featured goal components span the workspace;
+uncertainty, and recommendation cards, evidence chips, follow-up/edit prompts,
+and, when grounded evidence supports it, a compact flow, network, or decision
+canvas. The model authors the canvas content and relations; the receiver owns the
+renderer and citation checks. Clicking a canvas node, evidence chip, or suggested
+question prepares editable feedback in the same project conversation. The next
+brief must bind the exact prior authored turn, so requests such as “move this
+blocker to secondary and foreground the causal decision” edit a concrete prior
+generation rather than restart from a generic prompt. The model also changes
+component order, grouping, emphasis, and the set of goal-relevant panels.
+Featured goal components span the workspace;
 a progress board used only for context collapses its timeline, activity, and
 next-step regions while preserving its categorical synopsis and exact record
 counts. The receiver shows the admitted intent goal, planner mode, snapshot
@@ -994,6 +1008,12 @@ Alternatively, `ui serve` accepts the same policy through
 current entries before listening and consumes no call when all entries are
 fresh. Neither mode grants experiment, resource-mutation, or arbitrary tool
 authority.
+
+The fixed labels are latency optimizations, not the product's semantic boundary.
+They are proactively generated from the same current project evidence, expire
+with that evidence, and become editable conversation turns after opening. Free
+questions, node-selected follow-ups, and predecessor-bound revisions remain the
+primary path for questions and interventions that do not fit a fixed label.
 
 The receiver can explicitly approve or reject the returned proposal. Approval
 rebuilds the current surface, reproduces its audited receipt, checks the current
@@ -1438,6 +1458,14 @@ metadata screens, and historical evaluations remain accessible in the collapsed
 evidence vault so the generated workspace stays scannable rather than becoming a
 long report.
 
+The generated plane may express that loop as a model-authored, evidence-cited
+canvas instead of a vertically serialized report. Its nodes can represent
+milestones, decisions, resources, risks, or evidence and its edges can express
+dependencies, support, blocking, use, and revision. Selecting a node begins a
+predecessor-bound edit; publishing an admitted planning or resource revision is
+the explicit interaction boundary into SciTaste Core. Thus the generated plane
+is neither a passive dashboard nor the executor itself.
+
 Compute remains physically shared above projects in `outputs/resources`, but
 `load_project_resource_portfolio()` gives each project a first-class, secret-free
 view of its exact binding and the compatible remainder of the shared catalog. The
@@ -1462,6 +1490,18 @@ project resource card distinguishes a published planning preference from an
 applied project binding and exposes the configuration run and predecessor
 identity.
 
+An attached API binding whose `required_for` list contains
+`generation-as-content-planner` is also the project's authoritative planner
+route. The portfolio exposes its resource, provider, model, and one of
+`ready`/`unavailable`/`unmanaged`. Once managed, a live planner call is admitted
+only when the binding, catalog definition, access presence, provider, and model
+all match. A mismatch cannot be hidden by a process-global planner configuration:
+a resolved fixed entry falls back to offline composition, while an unresolved
+free question reports provider unavailability. Legacy projects without such a
+binding remain compatible. In this version the server still has to be launched
+with the matching backend configuration; applying a project resource revision
+does not hot-load arbitrary providers or credentials.
+
 The project data-package card can also join a no-download request with a later
 project-owned archive-qualification run. Pending source hashes and future-safety
 copy are replaced only when the exact proposal, task order, and asset count match.
@@ -1476,6 +1516,13 @@ their intrinsic identity/hash/staleness/lifecycle guards instead of imposing a
 generic preflight. The routes and reasons are projected in the interface. Paid
 compute, provider contact, credential changes, untrusted code, and experiment
 launch remain separate hard-gated actions.
+
+Content-addressed inspection follows the same rule. Opening a current local text,
+image, JSON, TeX, or PDF evidence object takes `direct_path`; its existing
+no-follow open, media/size bounds, and post-read hash are intrinsic guards, not a
+standalone preflight or approval ceremony. The inspection receipt records that
+no standalone preflight ran. This prevents a cheap reversible read from being
+blocked while keeping external or expensive effects gated.
 
 The current Reference Quality calibration is the first complete intervention
 bridge across the two planes. The project home renders a compact action packet
