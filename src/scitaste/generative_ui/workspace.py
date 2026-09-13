@@ -87,6 +87,7 @@ from scitaste.generative_ui.models import (
     SurfaceSpec,
 )
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
+from scitaste.generative_ui.project_resources import load_project_resource_portfolio
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.registry import (
     ApprovalSubject,
@@ -647,6 +648,10 @@ class WorkspaceSurfaceFactory:
                 current_action_run_ref_id=current_action_run_ref_id,
             )
             evidence_ref_ids.append(evidence_program_artifact_ref.evidence_id)
+        resource_portfolio = load_project_resource_portfolio(
+            self._runtime,
+            snapshot.project_id,
+        )
 
         acquisition_by_request: dict[str, dict[str, object]] = {}
         for run in snapshot.manifest.runs:
@@ -2122,6 +2127,11 @@ class WorkspaceSurfaceFactory:
                 "evidence_program": (
                     evidence_program.model_dump(mode="json")
                     if evidence_program is not None
+                    else None
+                ),
+                "resource_portfolio": (
+                    resource_portfolio.model_dump(mode="json")
+                    if resource_portfolio is not None
                     else None
                 ),
                 "current_run_id": snapshot.manifest.current_run,

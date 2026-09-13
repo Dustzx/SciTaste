@@ -72,6 +72,13 @@ from scitaste.model_nodes.tool_workflow import (
     ToolHotspotWorkflowDecisionRecord,
     ToolHotspotWorkflowRequest,
 )
+from scitaste.model_nodes.verification_policy import (
+    VerificationDecision,
+    VerificationDecisionInput,
+    VerificationPolicy,
+    VerificationRoute,
+    decide_verification_route,
+)
 from scitaste.project import ProjectRuntime
 from scitaste.project.models import content_sha256
 from scitaste.state.persistence import snapshot_id
@@ -102,6 +109,8 @@ class FullWorkflowToolIntelligenceConfig(FullWorkflowToolModel):
     backend: RuntimeBackendBinding
     controlled_tool_profile: ControlledToolProfile
     budget: ToolHotspotWorkflowBudget = Field(default_factory=ToolHotspotWorkflowBudget)
+    verification_policy: VerificationPolicy | None = None
+    verification_action: VerificationDecisionInput | None = None
     live_enabled: bool = False
     advisory_only: Literal[True] = True
     canonical_evidence_admission: Literal[False] = False
@@ -109,6 +118,8 @@ class FullWorkflowToolIntelligenceConfig(FullWorkflowToolModel):
 
     @model_validator(mode="after")
     def integration_boundary_is_closed(self) -> FullWorkflowToolIntelligenceConfig:
+        if (self.verification_policy is None) != (self.verification_action is None):
+            raise ValueError("verification policy and action must be configured together")
         if len(self.trigger_claim_statuses) != len(set(self.trigger_claim_statuses)):
             raise ValueError("Tool Intelligence trigger statuses must be unique")
         if len(self.reason_codes) != len(set(self.reason_codes)):
@@ -206,6 +217,7 @@ class FullWorkflowToolIntelligenceInputRecord(FullWorkflowToolModel):
     policy_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     controlled_tool_profile_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
     matched_claim_ids: tuple[str, ...] = ()
+    verification_decision: VerificationDecision | None = None
     triggered: bool
     workflow_request: ToolHotspotWorkflowRequest | None = None
     record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -223,8 +235,18 @@ class FullWorkflowToolIntelligenceInputRecord(FullWorkflowToolModel):
 
     @model_validator(mode="after")
     def input_identity_is_closed(self) -> FullWorkflowToolIntelligenceInputRecord:
-        if self.triggered != bool(self.matched_claim_ids):
-            raise ValueError("Tool Intelligence trigger must match its claim evidence")
+        if self.triggered and not self.matched_claim_ids:
+            raise ValueError("Tool Intelligence trigger requires matching claim evidence")
+        if self.verification_decision is not None:
+            expected_trigger = (
+                bool(self.matched_claim_ids)
+                and self.verification_decision.route is not VerificationRoute.DIRECT_PATH
+                and not self.verification_decision.owner_approval_required
+            )
+            if self.triggered != expected_trigger:
+                raise ValueError("Tool Intelligence trigger differs from verification routing")
+        elif self.triggered != bool(self.matched_claim_ids):
+            raise ValueError("legacy Tool Intelligence trigger must match its claim evidence")
         if self.triggered != (self.workflow_request is not None):
             raise ValueError("triggered Tool Intelligence input requires one workflow request")
         if self.workflow_request is not None and (
@@ -250,7 +272,12 @@ class FullWorkflowToolIntelligenceRecord(FullWorkflowToolModel):
     input_record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     input_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     output_state_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    status: Literal["not_applicable", "resolved", "unresolved"]
+    status: Literal[
+        "not_applicable",
+        "deferred_owner_approval",
+        "resolved",
+        "unresolved",
+    ]
     decision: ToolHotspotWorkflowDecisionRecord | None = None
     decision_locator: str | None = None
     decision_envelope_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
@@ -280,9 +307,10 @@ class FullWorkflowToolIntelligenceRecord(FullWorkflowToolModel):
             value is not None for value in decision_values
         ):
             raise ValueError("Tool Intelligence decision evidence must be complete")
-        if self.status == "not_applicable" and self.decision is not None:
-            raise ValueError("not-applicable Tool Intelligence cannot have a decision")
-        if self.status != "not_applicable" and self.decision is None:
+        non_executed = {"not_applicable", "deferred_owner_approval"}
+        if self.status in non_executed and self.decision is not None:
+            raise ValueError("non-executed Tool Intelligence cannot have a decision")
+        if self.status not in non_executed and self.decision is None:
             raise ValueError("triggered Tool Intelligence requires a decision")
         if self.decision is not None:
             expected_status = "resolved" if self.decision.resolved else "unresolved"
@@ -392,6 +420,10 @@ def execute_full_workflow_tool_intelligence(
         )
     before_sha256 = hashlib.sha256(state_path.read_bytes()).hexdigest()
     if input_record.workflow_request is None:
+        deferred = bool(
+            input_record.verification_decision is not None
+            and input_record.verification_decision.owner_approval_required
+        )
         record = FullWorkflowToolIntelligenceRecord.create(
             hook_id=loaded.config.hook_id,
             project_id=project_id,
@@ -400,7 +432,7 @@ def execute_full_workflow_tool_intelligence(
             input_record_sha256=input_record.record_sha256,
             input_state_sha256=before_sha256,
             output_state_sha256=hashlib.sha256(state_path.read_bytes()).hexdigest(),
-            status="not_applicable",
+            status="deferred_owner_approval" if deferred else "not_applicable",
         )
         _write_model_exact(record_path, record)
         return record
@@ -493,9 +525,15 @@ def verify_full_workflow_tool_intelligence(
         or record.output_state_sha256 != state_sha256
     ):
         raise ValueError("Full Workflow Tool Intelligence result binding drift")
-    if record.status == "not_applicable":
+    if record.status in {"not_applicable", "deferred_owner_approval"}:
         if input_record.triggered:
-            raise ValueError("triggered Tool Intelligence cannot be not-applicable")
+            raise ValueError("triggered Tool Intelligence cannot be non-executed")
+        owner_deferred = bool(
+            input_record.verification_decision is not None
+            and input_record.verification_decision.owner_approval_required
+        )
+        if (record.status == "deferred_owner_approval") != owner_deferred:
+            raise ValueError("Tool Intelligence deferral differs from verification routing")
         return record
     if record.decision is None or input_record.workflow_request is None:
         raise ValueError("Tool Intelligence decision evidence is incomplete")
@@ -602,6 +640,23 @@ def _prepare_input_record(
             if claim.status in loaded.config.trigger_claim_statuses
         )
     )
+    verification_decision = (
+        decide_verification_route(
+            loaded.config.verification_action,
+            loaded.config.verification_policy,
+        )
+        if matched_claim_ids
+        and loaded.config.verification_action is not None
+        and loaded.config.verification_policy is not None
+        else None
+    )
+    triggered = bool(matched_claim_ids) and (
+        verification_decision is None
+        or (
+            verification_decision.route is not VerificationRoute.DIRECT_PATH
+            and not verification_decision.owner_approval_required
+        )
+    )
     binding = _materialize_binding(
         loaded,
         project_id=project_id,
@@ -632,7 +687,7 @@ def _prepare_input_record(
             matched_claim_ids=matched_claim_ids,
             seed=seed,
         )
-        if matched_claim_ids
+        if triggered
         else None
     )
     record = FullWorkflowToolIntelligenceInputRecord.create(
@@ -656,7 +711,8 @@ def _prepare_input_record(
         policy_fingerprint=loaded.config.policy.fingerprint,
         controlled_tool_profile_fingerprint=(loaded.config.controlled_tool_profile.fingerprint),
         matched_claim_ids=matched_claim_ids,
-        triggered=bool(matched_claim_ids),
+        verification_decision=verification_decision,
+        triggered=triggered,
         workflow_request=workflow_request,
     )
     _write_model_exact(input_path, record)
@@ -690,6 +746,18 @@ def _load_and_verify_input(
         != loaded.config.controlled_tool_profile.fingerprint
     ):
         raise ValueError("Full Workflow Tool Intelligence input configuration drift")
+    expected_verification = (
+        decide_verification_route(
+            loaded.config.verification_action,
+            loaded.config.verification_policy,
+        )
+        if record.matched_claim_ids
+        and loaded.config.verification_action is not None
+        and loaded.config.verification_policy is not None
+        else None
+    )
+    if record.verification_decision != expected_verification:
+        raise ValueError("Full Workflow Tool Intelligence verification routing drift")
     state_raw = _read_regular(state_path)
     predecessor_raw = _read_regular(predecessor_state_path)
     state = ResearchState.model_validate_json(state_raw)

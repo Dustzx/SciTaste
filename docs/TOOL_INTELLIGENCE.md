@@ -518,6 +518,39 @@ CLI summaries expose only availability, trust state, resource telemetry,
 hashes, and evidence locators. Raw responses, repaired content, tool arguments,
 and secrets are not printed.
 
+## Cost-sensitive verification routing
+
+`verification_policy.py` prevents “preflight everything” from becoming another
+rigid workflow. Each candidate action declares reversibility, effect classes,
+evidence freshness, semantic uncertainty, estimated failure probability and
+impact, plus the cost and detection probability of a targeted check and a full
+preflight. The deterministic router calculates expected avoidable loss and uses
+the least costly route whose expected net gain clears the policy threshold:
+
+- `direct_path` for cheap, reversible work where checking costs more than the
+  expected loss it could prevent;
+- `targeted_check` when one bounded check has positive value and a full preflight
+  adds less value;
+- `full_preflight` for high-impact stale/absent evidence or untrusted code;
+- `owner_approval` for irreversible actions and external authority boundaries.
+
+Paid compute, secret access, external mutation, and irreversibility cannot be
+optimized away. Untrusted code requires both a full preflight route and owner
+approval. In a declared semantic gray zone, a typed model advisory may select a
+different non-authoritative route. It must bind the exact action fingerprint and
+cannot replace an owner boundary or grant execution.
+
+The native Full Workflow hook now records this decision before constructing a
+model/tool request. A `direct_path` skips the Tool Intelligence invocation; an
+owner-gated route is durably deferred before either model or tool is called; and
+admitted targeted/full routes preserve the existing project-owned model and tool
+ledgers. The current evidence-inspection hook selects one targeted read-only
+check. Generation as Content also routes its explicit local planning-decision
+write: because that content-addressed write is reversible and cheap, it takes the
+direct path after only its necessary stale/hash guard. This integration does not
+generalize the read-only tool catalog into code, network, GPU, or mutable
+authority.
+
 ## Threat model and extension rules
 
 The current gates address these failures:

@@ -1355,14 +1355,29 @@ citation/resource screen and exact adapters/licenses remain open.
   execution boundary without a completion percentage.
 - Done: phase exploration and plan discussion return to the persistent project
   conversation interface while preserving read-only authority.
-- Next: admit model-authored planning amendments through a typed diff and an
-  explicit controller decision, then publish an immutable successor dossier.
-- Next: project the secret-free project resource binding into the same home and
-  provide a controlled configuration-revision flow rather than exposing shared
-  registry files or credentials.
-- Next: make Tool Intelligence select direct execution, a cheap bounded probe,
-  or a full preflight from declared reversibility, expected loss, and action
-  cost; a model may advise but cannot weaken deterministic hard-safety gates.
+- Done: feedback can request a genuinely model-authored, snapshot/dossier-bound
+  amendment over closed stage, track, resource-ID, and resource-role catalogs.
+  Proposals are cached below the project, survive reload, accept follow-up
+  feedback as an edit of an exact predecessor, and have explicit immutable
+  accept/reject decisions. An accepted item is a planning directive, not a
+  dossier mutation, external-action approval, or execution authorization; model
+  unavailability has no fake deterministic replacement.
+- Done: the same home projects the current project resource binding as a compact,
+  secret-free API/GPU/checkpoint portfolio. Shared infrastructure remains in the
+  superordinate registry while configuration discussion returns through the
+  typed planning proposal path. Accepted resource IDs are visibly projected as
+  project planning preferences without falsifying registry state.
+- Done: Tool Intelligence can select the direct path, a targeted check, a full
+  preflight, or an owner boundary from declared reversibility, expected loss,
+  detection value, and check cost. The Full Workflow hotspot records that route;
+  models may alter only declared gray-zone choices, never hard safety gates.
+- Done: low-risk local accept/reject decisions also use that router and take the
+  direct path after the necessary hash/staleness guard; owner-gated Full Workflow
+  actions are deferred before any model or tool request is constructed.
+- Next: compile an accepted directive into a new immutable evidence-program or
+  resource-binding successor. Until then, project planning is configurable in
+  the UI, while shared runtime infrastructure and experiment authorization remain
+  unchanged.
 
 ## Project controls
 

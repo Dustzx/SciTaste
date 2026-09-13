@@ -41,6 +41,14 @@ from scitaste.generative_ui.interaction import (
 )
 from scitaste.generative_ui.models import SurfaceSpec
 from scitaste.generative_ui.planner import PlannerConversationContext, WorkspacePlanner
+from scitaste.generative_ui.program_revision import (
+    ProgramRevisionDecisionRecord,
+    ProgramRevisionDecisionRequest,
+    ProgramRevisionRecord,
+    ProgramRevisionRequest,
+    ProgramRevisionService,
+    ProgramRevisionView,
+)
 from scitaste.generative_ui.project_adapter import ProjectSnapshotAdapter
 from scitaste.generative_ui.projection import RendererDocument, project_surface
 from scitaste.generative_ui.safety import ProjectIdentifier
@@ -110,6 +118,7 @@ class GenerativeUIApplication:
         self._artifact_inspector = ArtifactInspector(runtime.projects_root)
         self._generated_archive = GeneratedWorkspaceArchive(runtime.projects_root)
         self._research_workspaces = ResearchWorkspaceStore(runtime.projects_root)
+        self._program_revisions = ProgramRevisionService(runtime, planner)
         self._request_lock = RLock()
         self._generated: OrderedDict[
             tuple[str, str],
@@ -184,6 +193,49 @@ class GenerativeUIApplication:
         validate_project_id(project_id)
         with self._request_lock:
             return self._generation_service.quick_catalog(project_id)
+
+    def propose_program_revision(
+        self,
+        project_id: str,
+        request: ProgramRevisionRequest | dict[str, object],
+    ) -> ProgramRevisionRecord:
+        """Generate and cache one non-applied evidence-program revision proposal."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, ProgramRevisionRequest)
+            else ProgramRevisionRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("program-revision request belongs to another project")
+        with self._request_lock:
+            return self._program_revisions.propose(parsed)
+
+    def latest_program_revision(self, project_id: str) -> ProgramRevisionView:
+        """Restore the latest cached planning proposal and explicit decision."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._program_revisions.latest(project_id)
+
+    def decide_program_revision(
+        self,
+        project_id: str,
+        request: ProgramRevisionDecisionRequest | dict[str, object],
+    ) -> ProgramRevisionDecisionRecord:
+        """Accept or reject one exact model-authored planning proposal."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, ProgramRevisionDecisionRequest)
+            else ProgramRevisionDecisionRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("program-revision decision belongs to another project")
+        with self._request_lock:
+            return self._program_revisions.decide(parsed)
 
     def research_workspace_catalog(self, project_id: str) -> ResearchWorkspaceCatalog:
         """List persistent research topics owned by one project."""

@@ -3224,7 +3224,57 @@ as planning facts; `scientific_effectiveness_established` remains false.
 
 Fixed phase names are a receiver cache, not the generated content. The optional
 model planner still chooses and composes only trusted project surfaces. Phase
-exploration can prefill a bounded feedback question, but it does not edit the
-campaign or grant execution. A later planning-revision boundary must store a
-typed model proposal, require an explicit user decision, and publish a new
-project-owned dossier revision instead of modifying this report in place.
+exploration now reaches the proposal boundary described in ADR-107; it still
+does not edit the campaign or grant execution.
+
+### ADR-107: Generated planning content is a cached proposal, not scientific state
+
+Status: accepted through generated proposal, iterative edit, and explicit user
+decision; successor evidence publication remains open.
+
+Generation as Content needs model-authored content, not only a model-selected
+layout. `ProgramRevisionService` therefore binds user feedback to the exact
+project revision, snapshot hash, and ICLR dossier hash, then exposes closed
+catalogs of incomplete stages, evidence tracks, project resource IDs, and
+resource roles to a structured planner. Summary, rationale, and required-
+evidence prose may be generated flexibly because the receiver always renders it
+as inert text. The model cannot name an unregistered target, mark work complete,
+remove a blocker, apply a change, authorize an external action, or execute.
+
+Successful proposals are cached under the owning project for reuse; unavailable
+responses are not cached and receive no deterministic pseudo-proposal. A user
+may bind new feedback to an exact prior proposal, so the model edits the prior
+planning content instead of starting an unrelated answer. Accept/reject is a
+separate immutable user decision. Acceptance makes the proposal a project
+planning directive for subsequent generation, but does not rewrite its source
+dossier or authorize execution. The
+project resource portfolio is projected from the shared, content-addressed
+registry without copying infrastructure or serializing credential values. This
+keeps Generation as Content parallel to SciTaste as a display plane and
+interactive with it only through typed proposals and decisions. A later compiler
+must publish an immutable successor dossier or resource binding before canonical
+scientific or infrastructure state can change.
+
+### ADR-108: Verification effort is proportional to expected avoidable loss
+
+Status: accepted and connected to the native Full Workflow Tool Intelligence
+hotspot.
+
+Blanket preflight wastes latency and compute on reversible, low-impact work.
+Skipping every check is unsafe for irreversible, external, paid, secret-bearing,
+or untrusted actions. The verification router therefore compares the expected
+avoidable failure loss with the cost and detection probability of a targeted
+check and a full preflight. It chooses the cheapest justified route from direct,
+targeted check, full preflight, and owner approval while returning no execution
+authority.
+
+Irreversibility, paid compute, secret access, and external mutation remain hard
+owner boundaries. Untrusted code requires full preflight plus owner approval.
+Only an explicitly quantified semantic gray zone admits model advice, which must
+bind the exact action fingerprint and cannot weaken a hard gate. The native Full
+Workflow records this route before constructing any model/tool request; a direct
+route avoids that invocation entirely. An owner-gated route is deferred before
+constructing a model/tool request. The same router records that accepting or
+rejecting a content-bound local planning proposal takes the direct path: its
+minimal hash/staleness guard costs less than a generic preflight and the write is
+reversible project-local metadata.

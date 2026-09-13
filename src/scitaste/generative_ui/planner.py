@@ -7,7 +7,16 @@ import json
 from enum import StrEnum
 from typing import Annotated, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
+import httpx
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    ValidationError,
+    computed_field,
+    model_validator,
+)
 
 from scitaste.generative_ui.intent import (
     FreeQuestionRequest,
@@ -22,6 +31,15 @@ from scitaste.generative_ui.planning import (
     SurfacePlanEntry,
     materialize_surface_plan,
 )
+from scitaste.generative_ui.program_revision import (
+    ProgramRevisionCatalog,
+    ProgramRevisionDraft,
+    ProgramRevisionOutcome,
+    ProgramRevisionPlanner,
+    ProgramRevisionRecord,
+    ProgramRevisionRequest,
+    validate_program_revision_draft,
+)
 from scitaste.generative_ui.registry import TrustedComponent
 from scitaste.generative_ui.safety import ProjectIdentifier, SafeIdentifier, Sha256
 from scitaste.model_nodes.backends import StructuredModelBackend
@@ -31,6 +49,10 @@ from scitaste.model_nodes.models import (
     ProviderGenerationEnvelope,
     StructuredModelRequest,
     StructuredModelResponse,
+)
+from scitaste.model_nodes.openai_compatible import (
+    StructuredBackendDisabledError,
+    StructuredProviderResponseError,
 )
 
 _MODEL_CONFIG = ConfigDict(
@@ -54,6 +76,7 @@ class PlannerMode(StrEnum):
 class PlannerOperation(StrEnum):
     INTENT_CLASSIFICATION = "intent_classification"
     SURFACE_COMPOSITION = "surface_composition"
+    EVIDENCE_PROGRAM_REVISION = "evidence_program_revision"
 
 
 class PlannerContextTurn(BaseModel):
@@ -189,7 +212,10 @@ class PlannerProvenance(BaseModel):
         if self.operation == PlannerOperation.SURFACE_COMPOSITION:
             if self.intent_fingerprint is None or self.result_fingerprint is None:
                 raise ValueError("surface composition provenance requires intent and plan hashes")
-        elif self.intent_fingerprint is not None:
+        elif self.operation == PlannerOperation.EVIDENCE_PROGRAM_REVISION:
+            if self.intent_fingerprint is not None or self.result_fingerprint is None:
+                raise ValueError("program revision provenance requires only a result hash")
+        elif self.intent_fingerprint is not None or self.result_fingerprint is not None:
             raise ValueError("intent classification cannot claim a resolved intent hash")
         return self
 
@@ -486,6 +512,102 @@ class StructuredWorkspacePlanner:
             ),
         )
 
+    def revise_program(
+        self,
+        request: ProgramRevisionRequest,
+        catalog: ProgramRevisionCatalog,
+        *,
+        prior_record: ProgramRevisionRecord | None = None,
+    ) -> ProgramRevisionOutcome:
+        """Generate planning content while keeping IDs and authority server constrained."""
+
+        request = ProgramRevisionRequest.model_validate(
+            request.model_dump(mode="json", exclude={"fingerprint"})
+        )
+        catalog = ProgramRevisionCatalog.model_validate(
+            catalog.model_dump(mode="json", exclude={"fingerprint"})
+        )
+        if (
+            request.project_id != catalog.project_id
+            or request.snapshot_revision != catalog.snapshot_revision
+            or request.snapshot_sha256 != catalog.snapshot_sha256
+            or request.dossier_sha256 != catalog.dossier_sha256
+        ):
+            raise ValueError("program-revision request differs from its catalog")
+        input_payload: dict[str, JsonValue] = {
+            "feedback": request.feedback,
+            "base_dossier_sha256": catalog.dossier_sha256,
+            "current_stage_id": catalog.current_stage_id,
+            "next_stage_ids": list(catalog.next_stage_ids),
+            "stages": [
+                item.model_dump(mode="json") for item in catalog.stages if item.state != "complete"
+            ],
+            "tracks": [item.model_dump(mode="json") for item in catalog.tracks],
+            "project_resource_roles": list(catalog.resource_roles),
+            "project_resources": [item.model_dump(mode="json") for item in catalog.resources],
+            "allowed_change_kinds": [
+                "reprioritize_next_gates",
+                "clarify_stage_decision",
+                "request_resource_revision",
+                "add_risk_note",
+            ],
+            "prior_proposal": (
+                {
+                    "proposal_id": prior_record.proposal_id,
+                    "record_sha256": prior_record.record_sha256,
+                    "user_feedback": prior_record.request.feedback,
+                    "draft": prior_record.outcome.draft.model_dump(mode="json"),
+                }
+                if prior_record is not None and prior_record.outcome.draft is not None
+                else None
+            ),
+        }
+        try:
+            structured_request = self._request(
+                operation=PlannerOperation.EVIDENCE_PROGRAM_REVISION,
+                project_id=request.project_id,
+                snapshot_revision=request.snapshot_revision,
+                snapshot_sha256=request.snapshot_sha256,
+                input_payload=input_payload,
+                output_schema=ProgramRevisionDraft.model_json_schema(mode="validation"),
+                identity_fingerprint=request.fingerprint,
+                system_instruction=(
+                    "Draft one concise scientific-planning amendment from the user feedback. "
+                    "When prior_proposal is present, edit it in response to the new feedback "
+                    "rather than treating the request as an unrelated conversation. "
+                    "Select only stage and track identifiers present in input_payload. Preserve "
+                    "completed stages and every blocker. Do not claim new evidence, apply a "
+                    "change, authorize an external action, or authorize execution. Return one "
+                    "JSON object matching output_schema and no tool calls."
+                ),
+            )
+            response = self._complete(structured_request)
+            draft = ProgramRevisionDraft.model_validate(response.output_payload)
+            validate_program_revision_draft(draft, catalog)
+        except Exception as exc:
+            return ProgramRevisionOutcome(
+                status="unavailable",
+                reason_code=_program_revision_failure_reason(exc),
+                request_fingerprint=request.fingerprint,
+                catalog_fingerprint=catalog.fingerprint,
+                planner_id=self.identity.planner_id,
+                model_generated=False,
+            )
+        return ProgramRevisionOutcome(
+            status="proposed",
+            reason_code="model-program-revision-proposed",
+            request_fingerprint=request.fingerprint,
+            catalog_fingerprint=catalog.fingerprint,
+            planner_id=self.identity.planner_id,
+            provider_response_sha256=response.raw_response_sha256,
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+            cost_usd=response.usage.cost_usd,
+            latency_ms=response.latency_ms,
+            draft=draft,
+            model_generated=True,
+        )
+
     def _request(
         self,
         *,
@@ -496,6 +618,7 @@ class StructuredWorkspacePlanner:
         input_payload: dict[str, JsonValue],
         output_schema: dict[str, JsonValue],
         identity_fingerprint: str,
+        system_instruction: str | None = None,
     ) -> StructuredModelRequest:
         profile_fingerprint = self.policy.fingerprint
         request = StructuredModelRequest(
@@ -507,7 +630,8 @@ class StructuredWorkspacePlanner:
             expected_model=self.policy.expected_model,
             policy_id=self.policy.policy_id,
             policy_fingerprint=self.policy.fingerprint,
-            system_instruction=(
+            system_instruction=system_instruction
+            or (
                 "Select only identifiers and enum values present in input_payload. "
                 "Return one JSON object matching output_schema. Never add facts, content, "
                 "actions, URLs, paths, commands, tools, or explanations."
@@ -644,6 +768,39 @@ class FallbackWorkspacePlanner:
             provenance=PlannerProvenance.model_validate(provenance.model_dump(mode="json")),
         )
 
+    def revise_program(
+        self,
+        request: ProgramRevisionRequest,
+        catalog: ProgramRevisionCatalog,
+        *,
+        prior_record: ProgramRevisionRecord | None = None,
+    ) -> ProgramRevisionOutcome:
+        """Use model-authored content when available; never invent an offline draft."""
+
+        if not isinstance(self.primary, ProgramRevisionPlanner):
+            return ProgramRevisionOutcome(
+                status="unavailable",
+                reason_code="model-program-revision-unavailable",
+                request_fingerprint=request.fingerprint,
+                catalog_fingerprint=catalog.fingerprint,
+                model_generated=False,
+            )
+        try:
+            return self.primary.revise_program(
+                request,
+                catalog,
+                prior_record=prior_record,
+            )
+        except Exception:
+            return ProgramRevisionOutcome(
+                status="unavailable",
+                reason_code="model-program-revision-unavailable",
+                request_fingerprint=request.fingerprint,
+                catalog_fingerprint=catalog.fingerprint,
+                planner_id=self.primary.identity.planner_id,
+                model_generated=False,
+            )
+
 
 def _composition_input(catalog: SurfaceCandidateCatalog) -> dict[str, JsonValue]:
     """Return the complete data-free provider projection."""
@@ -657,6 +814,24 @@ def _composition_input(catalog: SurfaceCandidateCatalog) -> dict[str, JsonValue]
         "catalog_fingerprint": catalog.fingerprint,
         "candidates": [item.model_dump(mode="json") for item in catalog.descriptors()],
     }
+
+
+def _program_revision_failure_reason(exc: Exception) -> str:
+    """Return a content-free diagnostic category without serializing provider output."""
+
+    if isinstance(exc, StructuredBackendDisabledError):
+        return "model-program-revision-backend-disabled"
+    if isinstance(exc, httpx.HTTPStatusError):
+        return "model-program-revision-provider-http-error"
+    if isinstance(exc, httpx.TransportError):
+        return "model-program-revision-provider-transport-error"
+    if isinstance(exc, StructuredProviderResponseError):
+        return "model-program-revision-provider-response-invalid"
+    if "cost telemetry" in str(exc):
+        return "model-program-revision-cost-telemetry-unavailable"
+    if isinstance(exc, (ValidationError, ValueError)):
+        return "model-program-revision-schema-rejected"
+    return "model-program-revision-unavailable"
 
 
 def _composition_provenance(

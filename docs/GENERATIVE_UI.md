@@ -912,18 +912,23 @@ export SCITASTE_UI_TOKEN='replace-with-a-long-local-secret'
 export ZAI_API_KEY='read-by-the-provider-backend-only'
 .venv/bin/scitaste ui serve \
   --outputs-root outputs \
-  --planner-config configs/model_nodes/zhipu_glm53_flash.unpriced_probe.yaml \
+  --planner-config configs/generative_ui/zhipu_glm53_flash.priced_20260908.yaml \
   --enable-live-planner
 ```
 
-The committed GLM-5.3-Flash probe config is an explicitly unpriced engineering
-condition, not a production price claim. A normal live configuration must use
-confirmed pricing as required by `StructuredOpenAICompatibleConfig`.
+The committed GLM-5.3-Flash UI config carries date-pinned pricing evidence, not a
+claim that the rate remains current indefinitely. Refresh it before a formal or
+materially larger campaign. A normal live configuration must use confirmed
+pricing as required by `StructuredOpenAICompatibleConfig`.
 `--planner-config` without `--enable-live-planner`, or the flag without a
 configuration, fails validation. The YAML may name only the API-key environment
 variable; embedded credentials are rejected. Dry-run output includes only the
 provider, model, mode, and configuration hash, never the endpoint credential or
 question. No live provider call is part of the automated test suite.
+The Generation as Content profile allows up to 8,192 output tokens for a flexible
+structured planning response. This is a per-call safety/budget envelope, not a
+repository-wide development limit; paper drafting and other model-node profiles
+retain their independently configured ceilings.
 
 The receiver can explicitly approve or reject the returned proposal. Approval
 rebuilds the current surface, reproduces its audited receipt, checks the current
@@ -1208,10 +1213,12 @@ two project identities.
   topic catalog. General schema migration remains future work.
 - The first deterministic free-question resolver is a bounded Chinese/English
   keyword classifier. Unknown phrasing needs the optional model selector; the
-  model can still choose only a currently offered quick intent and cannot answer
-  an arbitrary research question. Conversation context currently informs this
-  bounded intent selection only; it is not a general memory, summarizer, or
-  model-authored answer history.
+  general workspace model can still choose only a currently offered quick intent.
+  The evidence-program revision endpoint is deliberately different: it may write
+  concise planning content from feedback, but only against server-issued stage,
+  track, resource-ID, and role catalogs. Its project-local cache is a proposal
+  cache, not canonical state. Conversation context currently informs bounded
+  intent selection only; it is not a general memory or answer history.
 - Automatic session bootstrap is loopback-only. This remains a single-user
   engineering receiver, not a multi-user identity or remote authorization
   system.
@@ -1266,6 +1273,48 @@ on an A2UI package in this phase:
 | `ProposalControllerRequest` | explicit identity-bound approve/reject request |
 | `ProposalControllerDecision` | audited non-executable handoff result |
 | `SurfaceAuditRecord` | receiver-side append-only interaction history |
+
+## Project program revision and resources
+
+The project home now has two coordinated but distinct planes. The SciTaste
+controller owns research state, evidence, budgets, execution, and immutable
+campaign dossiers. Generation as Content owns how those records are presented
+and how a user starts a bounded interaction. A generated page cannot become the
+controller merely because it is visually primary.
+
+Fixed high-value tabs may be precomputed and cached. The ICLR program view is one
+such deterministic projection: it collapses 16 exact dossier gates into seven
+readable phases and keeps the three scientific tracks separate. Flexible feedback
+uses `ProgramRevisionService`. The request binds the exact project revision,
+snapshot SHA-256, and dossier SHA-256; a structured model can choose only the
+registered change kind, incomplete stage, track, resource ID, and resource role.
+Its summary, rationale, and requested evidence are model-authored text rendered
+through `textContent`. The result is always `applied=false` with
+`execution_authority=none`. Successful model proposals are cached under
+`outputs/projects/<project-id>/.generative-ui/program-revisions/`; provider
+failure is returned explicitly and is not cached or replaced with invented prose.
+Failures are reduced to content-free categories (disabled backend, provider HTTP
+or transport failure, invalid provider response, missing cost telemetry, or
+schema rejection) rather than exposing raw provider content.
+The latest proposal is restored after a reload. New feedback may name that exact
+proposal and record hash, causing the model to edit the prior draft rather than
+generate an unrelated answer. Accept and reject are explicit user actions stored
+as immutable decisions. An accepted proposal becomes a planning directive for
+later generation, can itself be revised, and never changes its source dossier or
+grants execution authority. Reject closes that proposal. Stale proposals remain
+visible but cannot be decided or refined.
+
+Compute remains physically shared above projects in `outputs/resources`, but
+`load_project_resource_portfolio()` gives each project a first-class, secret-free
+view of its exact binding. The view reports roles, resource identities, declared
+and observed status, whether required access material is present, and registry
+hashes. It does not serialize a credential value, probe a remote host, or run a
+workload. “Generate configuration proposal” routes through the program revision
+contract. When a resource proposal is accepted, its selected resource IDs become
+a visible project planning preference and guide the next model revision. The
+shared registry remains unchanged. Compiling that directive into a new immutable
+resource binding still requires the next controller slice; the UI does not
+pretend that a discussion changed credentials, infrastructure, or availability.
 
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,

@@ -5,6 +5,28 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first genuinely model-authored Generation as Content planning path.
+  Project feedback is bound to the exact snapshot and ICLR dossier, constrained
+  to registered stages, tracks, resource IDs, and resource roles, and cached as
+  an immutable project-local proposal. Generated rationale may be flexible text,
+  but the proposal cannot apply itself, remove blockers, authorize an external
+  action, or execute work; an unavailable model produces no synthetic fallback.
+  Cached proposals now survive reload, accept exact follow-up feedback as chained
+  model edits, and support explicit immutable user acceptance or rejection. An
+  accepted proposal is a visible planning directive only, and accepted resource
+  choices become project-view preferences without mutating the shared registry.
+  The project home now also projects the exact secret-free API/GPU/checkpoint
+  portfolio, access-presence state, and registry provenance, with configuration
+  requests routed back through the same proposal boundary.
+- Added cost-sensitive verification routing to Tool Intelligence and connected it
+  to the native Full Workflow hotspot. Reversible low-loss work can take the
+  direct path, a positive expected-value probe selects only a targeted check,
+  and critical or untrusted work selects full preflight. Irreversible, paid,
+  secret-bearing, or externally mutating work retains deterministic owner gates;
+  a model may resolve only an explicitly declared semantic gray zone and receives
+  no execution authority. Owner-gated Full Workflow actions are deferred before
+  any model/tool request, while low-risk local planning decisions take the direct
+  path after their necessary hash/staleness check.
 - Made the project-owned ICLR evidence program the first content block on the
   Generation as Content project home. A registered no-run dossier is collapsed
   into seven phases, three separately scoped claim tracks, the current decision

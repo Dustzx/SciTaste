@@ -2155,6 +2155,62 @@ class ProjectEvidenceProgramData(BaseModel):
         return self
 
 
+class ProjectResourcePortfolioItem(BaseModel):
+    """One secret-free project binding to a shared compute resource."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    binding_id: SafeIdentifier
+    resource_id: SafeIdentifier
+    kind: Literal["api_model", "gpu_host", "model_checkpoint"]
+    role: SafeIdentifier
+    priority: int = Field(ge=1, le=100)
+    binding_status: Literal["verified", "reported", "pending", "blocked"]
+    observed_status: Literal["verified", "reported", "pending", "blocked", "unobserved"]
+    access_state: Literal["configured", "missing", "not_required"]
+    connection_metadata_complete: bool | None = None
+    local_path_present: bool | None = None
+    required_for: tuple[SafeIdentifier, ...] = Field(default=(), max_length=20)
+
+
+class ProjectResourcePortfolioData(BaseModel):
+    """Project-owned view of a shared registry; secrets and execution remain outside it."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    project_id: ProjectIdentifier
+    binding_set_id: SafeIdentifier
+    binding_record_sha256: Sha256
+    registry_revision: int = Field(ge=1)
+    registry_sha256: Sha256
+    catalog_id: SafeIdentifier
+    catalog_semantic_sha256: Sha256
+    resource_count: int = Field(ge=1)
+    verified_binding_count: int = Field(ge=0)
+    pending_binding_count: int = Field(ge=0)
+    blocked_binding_count: int = Field(ge=0)
+    resources: tuple[ProjectResourcePortfolioItem, ...] = Field(min_length=1, max_length=100)
+    configuration_authority: Literal["proposal_only"] = "proposal_only"
+    credential_values_exposed: Literal[False] = False
+    remote_probe_performed: Literal[False] = False
+    workload_executed: Literal[False] = False
+
+    @model_validator(mode="after")
+    def resource_counts_are_exact(self) -> ProjectResourcePortfolioData:
+        if self.resource_count != len(self.resources):
+            raise ValueError("project resource count must match its binding rows")
+        statuses = [item.binding_status for item in self.resources]
+        if self.verified_binding_count != statuses.count("verified"):
+            raise ValueError("verified resource count differs from binding rows")
+        if self.pending_binding_count != statuses.count("pending"):
+            raise ValueError("pending resource count differs from binding rows")
+        if self.blocked_binding_count != statuses.count("blocked"):
+            raise ValueError("blocked resource count differs from binding rows")
+        if len({item.binding_id for item in self.resources}) != len(self.resources):
+            raise ValueError("project resource binding IDs must be unique")
+        return self
+
+
 class ProjectProgressBoardData(BaseModel):
     """Evidence-native project status without guessed schedules or percentages."""
 
@@ -2177,6 +2233,7 @@ class ProjectProgressBoardData(BaseModel):
     counts: ProjectProgressCounts
     lifecycle: ProjectLifecycleSummaryData
     evidence_program: ProjectEvidenceProgramData | None = None
+    resource_portfolio: ProjectResourcePortfolioData | None = None
     current_run_id: str | None = Field(
         default=None,
         max_length=255,

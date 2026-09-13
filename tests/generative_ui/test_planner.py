@@ -20,6 +20,12 @@ from scitaste.generative_ui.planner import (
     WorkspacePlanner,
 )
 from scitaste.generative_ui.planning import SurfaceCandidateCatalog, SurfaceCandidateFactory
+from scitaste.generative_ui.program_revision import (
+    ProgramRevisionCatalog,
+    ProgramRevisionRequest,
+    ProgramRevisionStageOption,
+    ProgramRevisionTrackOption,
+)
 from scitaste.model_nodes.models import (
     StructuredModelRequest,
     StructuredModelResponse,
@@ -147,6 +153,75 @@ def _model_plan(request: StructuredModelRequest) -> dict[str, object]:
                 "focus_ref_ids": [],
             }
         ],
+    }
+
+
+def _program_inputs() -> tuple[ProgramRevisionRequest, ProgramRevisionCatalog]:
+    catalog = ProgramRevisionCatalog(
+        project_id="planner-project",
+        snapshot_revision=2,
+        snapshot_sha256="1" * 64,
+        dossier_id="iclr-program",
+        dossier_sha256="2" * 64,
+        current_stage_id="qualify-sources",
+        next_stage_ids=("qualify-sources", "qualify-adapters"),
+        stages=(
+            ProgramRevisionStageOption(
+                stage_id="research-basis",
+                state="complete",
+                dependencies_complete=True,
+                owner_approval_required=False,
+            ),
+            ProgramRevisionStageOption(
+                stage_id="qualify-sources",
+                state="ready_for_decision",
+                dependencies_complete=True,
+                owner_approval_required=True,
+                blocker_codes=("sources:not-frozen",),
+            ),
+            ProgramRevisionStageOption(
+                stage_id="qualify-adapters",
+                state="blocked",
+                dependencies_complete=True,
+                owner_approval_required=False,
+            ),
+        ),
+        tracks=(
+            ProgramRevisionTrackOption(
+                track_id="native-causal",
+                role="native_taste_causal",
+                state="design_only",
+                resource_kind="gpu",
+                planned_cells=12,
+            ),
+        ),
+    )
+    return ProgramRevisionRequest(
+        project_id="planner-project",
+        snapshot_revision=2,
+        snapshot_sha256="1" * 64,
+        dossier_sha256="2" * 64,
+        feedback="先冻结同源 Taste 对照, 再考虑 GPU 预实验。",
+    ), catalog
+
+
+def _program_draft(request: StructuredModelRequest) -> dict[str, object]:
+    return {
+        "base_dossier_sha256": request.input_payload["base_dossier_sha256"],
+        "change_kind": "reprioritize_next_gates",
+        "target_stage_id": "qualify-sources",
+        "target_track_ids": ["native-causal"],
+        "proposed_next_stage_order": ["qualify-sources", "qualify-adapters"],
+        "summary": "Freeze source-matched Taste conditions before the GPU prepilot.",
+        "rationale": "This preserves the causal contrast and avoids premature compute use.",
+        "required_evidence": ["A source-identity and token-parity qualification report."],
+        "requested_resource_roles": [],
+        "requested_resource_ids": [],
+        "preserves_completed_stages": True,
+        "removes_blockers": False,
+        "applies_change": False,
+        "authorizes_external_action": False,
+        "authorizes_execution": False,
     }
 
 
@@ -310,6 +385,44 @@ def test_model_composition_receives_only_descriptors_and_admits_closed_plan(
     assert '"proposal"' not in serialized
     assert "locator" not in serialized
     assert "http" not in serialized
+
+
+def test_model_generates_a_non_executable_project_bound_program_amendment() -> None:
+    request, catalog = _program_inputs()
+    backend = FakeStructuredBackend(_program_draft)
+    primary = StructuredWorkspacePlanner(backend, _policy())
+
+    outcome = FallbackWorkspacePlanner(primary).revise_program(request, catalog)
+
+    assert outcome.status == "proposed"
+    assert outcome.model_generated is True
+    assert outcome.applied is False
+    assert outcome.execution_authority == "none"
+    assert outcome.draft is not None
+    assert outcome.draft.target_stage_id == "qualify-sources"
+    assert outcome.draft.proposed_next_stage_order == catalog.next_stage_ids
+    assert backend.calls[0].request_id.startswith("ui-evidence_program_revision-")
+    assert backend.calls[0].input_payload["feedback"] == request.feedback
+    assert "research-basis" not in {
+        item["stage_id"] for item in backend.calls[0].input_payload["stages"]
+    }
+
+
+def test_program_amendment_rejects_model_ids_outside_the_server_catalog() -> None:
+    request, catalog = _program_inputs()
+
+    def forged(structured_request: StructuredModelRequest) -> dict[str, object]:
+        payload = _program_draft(structured_request)
+        payload["target_stage_id"] = "unregistered-stage"
+        return payload
+
+    primary = StructuredWorkspacePlanner(FakeStructuredBackend(forged), _policy())
+
+    outcome = FallbackWorkspacePlanner(primary).revise_program(request, catalog)
+
+    assert outcome.status == "unavailable"
+    assert outcome.draft is None
+    assert outcome.model_generated is False
 
 
 @pytest.mark.parametrize(

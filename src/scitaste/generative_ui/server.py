@@ -453,6 +453,30 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             )
             self._send_model(HTTPStatus.OK, document)
             return
+        if len(parts) == 6 and resource == "program-revisions":
+            if method == "GET":
+                view = self.server.application.latest_program_revision(project_id)
+                self._send_model(HTTPStatus.OK, view)
+                return
+            if method == "POST":
+                record = self.server.application.propose_program_revision(
+                    project_id,
+                    self._read_json_object(),
+                )
+                self._send_model(HTTPStatus.CREATED, record)
+                return
+            raise _method_not_allowed("GET, POST")
+        if len(parts) == 8 and resource == "program-revisions" and parts[7] == "decision":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            decision = self.server.application.decide_program_revision(
+                project_id,
+                self._read_json_object(),
+            )
+            if decision.proposal_id != parts[6]:
+                raise ValueError("program-revision route identity mismatch")
+            self._send_model(HTTPStatus.CREATED, decision)
+            return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]
             operation = parts[7] if len(parts) == 8 else None

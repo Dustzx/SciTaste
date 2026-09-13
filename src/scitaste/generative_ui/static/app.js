@@ -59,6 +59,8 @@ const quickIntentLabelKeys = Object.freeze({
   "review-autoresearch-evaluation-landscape": "quick.research_landscape",
   "review-project-data-acquisition-request": "quick.data_acquisition",
   "review-project-benchmark-qualification": "quick.benchmark_qualification",
+  "approve-bounded-structured-metadata-read": "quick.metadata_read",
+  "review-review-driven-iteration-plan": "quick.review_iteration",
 });
 let activeLocale = localeFromFragment() || browserLocale();
 
@@ -94,6 +96,10 @@ let lastControllerDecision = null;
 let lastArtifactPreview = null;
 let lastProposalError = null;
 let lastArtifactError = null;
+let activeProgramRevisionContext = null;
+let lastProgramRevisionRecord = null;
+let lastProgramRevisionDecision = null;
+let lastProgramRevisionStale = false;
 let intentResultState = {kind: "empty"};
 let topicManagementState = {kind: "empty"};
 let connectionStatusKey = "connection.connecting";
@@ -1254,6 +1260,9 @@ function renderProjectProgress(data) {
   const evidenceProgram = data.evidence_program
     ? renderEvidenceProgram(data.evidence_program)
     : null;
+  const resourcePortfolio = data.resource_portfolio
+    ? renderProjectResources(data.resource_portfolio, data.evidence_program)
+    : null;
 
   const metrics = document.createElement("div");
   metrics.className = "progress-metrics";
@@ -1750,6 +1759,9 @@ function renderProjectProgress(data) {
   if (evidenceProgram) {
     container.appendChild(evidenceProgram);
   }
+  if (resourcePortfolio) {
+    container.appendChild(resourcePortfolio);
+  }
   container.appendChild(hero);
   if ((data.review_iterations || []).length > 0) {
     container.appendChild(reviewIterations);
@@ -1784,6 +1796,33 @@ function prepareEvidenceProgramQuestion(program, phase = null) {
     phase: phaseName,
     stage: readableCode(program.current_stage_id),
   });
+  activeProgramRevisionContext = {
+    dossierSha256: program.dossier_sha256,
+    stageId: phase?.stage_ids?.[0] || program.current_stage_id,
+    baseProposalId: null,
+    baseRecordSha256: null,
+  };
+  generateWorkspaceButton.textContent = t("generation.propose_revision");
+  intentQuestion.focus({preventScroll: true});
+  intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+function clearProgramRevisionContext() {
+  activeProgramRevisionContext = null;
+  generateWorkspaceButton.textContent = t("generation.submit");
+}
+
+function prepareProgramRevisionRefinement(record, draft) {
+  intentQuestion.value = t("progress.program.revision_refine_prompt", {
+    summary: draft.summary,
+  });
+  activeProgramRevisionContext = {
+    dossierSha256: record.request.dossier_sha256,
+    stageId: draft.target_stage_id,
+    baseProposalId: record.proposal_id,
+    baseRecordSha256: record.record_sha256,
+  };
+  generateWorkspaceButton.textContent = t("generation.refine_revision");
   intentQuestion.focus({preventScroll: true});
   intentForm.scrollIntoView({behavior: "smooth", block: "center"});
 }
@@ -1957,7 +1996,267 @@ function renderEvidenceProgram(data) {
     ],
   }));
 
-  section.append(header, railShell, decision, tracks, details);
+  section.append(header, railShell, decision, tracks);
+  if (
+    lastProgramRevisionRecord
+    && lastProgramRevisionRecord.request?.dossier_sha256 === data.dossier_sha256
+  ) {
+    section.appendChild(renderProgramRevision(
+      lastProgramRevisionRecord,
+      lastProgramRevisionDecision,
+      lastProgramRevisionStale,
+    ));
+  }
+  section.appendChild(details);
+  return section;
+}
+
+function renderProgramRevision(record, decision = null, stale = false) {
+  const card = document.createElement("article");
+  const displayedState = decision ? `user_${decision.status}` : record.outcome.status;
+  card.className = `program-revision state-${decision?.status || record.outcome.status}`;
+  const header = document.createElement("div");
+  header.className = "program-revision-header";
+  const title = document.createElement("strong");
+  appendText(title, t("progress.program.revision_title"));
+  const state = document.createElement("span");
+  state.className = "program-badge neutral";
+  appendText(state, t(`progress.program.revision_state.${displayedState}`));
+  header.append(title, state);
+  if (stale) {
+    const staleBadge = document.createElement("span");
+    staleBadge.className = "program-badge warning";
+    appendText(staleBadge, t("progress.program.revision_stale"));
+    header.appendChild(staleBadge);
+  }
+  if (record.outcome.status !== "proposed" || !record.outcome.draft) {
+    const unavailable = document.createElement("p");
+    unavailable.className = "muted compact-copy";
+    appendText(unavailable, t("progress.program.revision_unavailable"));
+    card.append(header, unavailable);
+    return card;
+  }
+  const draft = record.outcome.draft;
+  const summary = document.createElement("p");
+  summary.className = "program-revision-summary";
+  appendText(summary, draft.summary);
+  const facts = document.createElement("div");
+  facts.className = "evidence-program-gate-facts";
+  for (const [key, value] of [
+    ["revision_kind", localizedCode(draft.change_kind)],
+    ["revision_target", readableCode(draft.target_stage_id)],
+  ]) {
+    const fact = document.createElement("span");
+    appendText(fact, t(`progress.program.${key}`, {value}));
+    facts.appendChild(fact);
+  }
+  const rationale = document.createElement("p");
+  rationale.className = "muted compact-copy";
+  appendText(rationale, draft.rationale);
+  const boundary = document.createElement("div");
+  boundary.className = "program-revision-boundary";
+  const boundaryKeys = decision?.status === "accepted"
+    ? ["model_generated", "directive_active", "source_unchanged", "no_execution"]
+    : ["model_generated", "not_applied", "no_execution"];
+  for (const key of boundaryKeys) {
+    const badge = document.createElement("span");
+    badge.className = "program-badge neutral";
+    appendText(badge, t(`progress.program.revision_${key}`));
+    boundary.appendChild(badge);
+  }
+  card.append(header, summary, facts, boundary);
+  const evidence = document.createElement("details");
+  const label = document.createElement("summary");
+  appendText(label, t("progress.program.revision_open_details"));
+  evidence.append(label, rationale);
+  if ((draft.required_evidence || []).length > 0) {
+    const evidenceHeading = document.createElement("strong");
+    evidenceHeading.className = "program-revision-evidence-heading";
+    appendText(evidenceHeading, t("progress.program.revision_required_evidence"));
+    evidence.append(evidenceHeading, fixedRows(
+      draft.required_evidence.map((item) => ({requirement: item})),
+      ["requirement"],
+    ));
+  }
+  card.appendChild(evidence);
+  if (decision) {
+    const decisionNote = document.createElement("p");
+    decisionNote.className = "program-revision-decision-note";
+    appendText(decisionNote, decision.status === "accepted"
+      ? t("progress.program.revision_accepted_boundary")
+      : t("progress.program.revision_rejected_boundary"));
+    card.appendChild(decisionNote);
+    if (decision.status === "accepted" && !stale) {
+      const controls = document.createElement("div");
+      controls.className = "program-revision-controls";
+      const adjust = document.createElement("button");
+      adjust.type = "button";
+      adjust.className = "secondary-button";
+      appendText(adjust, t("progress.program.revision_adjust_directive"));
+      adjust.addEventListener("click", () => prepareProgramRevisionRefinement(record, draft));
+      controls.appendChild(adjust);
+      card.appendChild(controls);
+    }
+  } else if (!stale) {
+    const controls = document.createElement("div");
+    controls.className = "program-revision-controls";
+    const refine = document.createElement("button");
+    refine.type = "button";
+    refine.className = "secondary-button";
+    appendText(refine, t("progress.program.revision_refine"));
+    refine.addEventListener("click", () => prepareProgramRevisionRefinement(record, draft));
+    const reject = document.createElement("button");
+    reject.type = "button";
+    reject.className = "secondary-button";
+    appendText(reject, t("progress.program.revision_reject"));
+    reject.addEventListener("click", () => decideProgramRevision(record, "reject"));
+    const accept = document.createElement("button");
+    accept.type = "button";
+    accept.className = "primary-button";
+    appendText(accept, t("progress.program.revision_accept"));
+    accept.addEventListener("click", () => decideProgramRevision(record, "accept"));
+    controls.append(refine, reject, accept);
+    card.appendChild(controls);
+  }
+  return card;
+}
+
+function renderProjectResources(data, evidenceProgram) {
+  const acceptedResourceDraft = (
+    lastProgramRevisionDecision?.status === "accepted"
+    && lastProgramRevisionRecord?.outcome?.draft?.change_kind === "request_resource_revision"
+  ) ? lastProgramRevisionRecord.outcome.draft : null;
+  const preferredResourceIds = new Set(acceptedResourceDraft?.requested_resource_ids || []);
+  const section = document.createElement("section");
+  section.className = "progress-section project-resources";
+  const header = document.createElement("div");
+  header.className = "project-resources-header";
+  const identity = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "eyebrow";
+  appendText(eyebrow, t("resources.eyebrow"));
+  const title = document.createElement("h3");
+  appendText(title, t("resources.title"));
+  const summary = document.createElement("p");
+  summary.className = "muted compact-copy";
+  appendText(summary, t("resources.summary", {
+    count: data.resource_count,
+    verified: data.verified_binding_count,
+    pending: data.pending_binding_count,
+    blocked: data.blocked_binding_count,
+  }));
+  identity.append(eyebrow, title, summary);
+  const controls = document.createElement("div");
+  controls.className = "project-resources-controls";
+  const boundary = document.createElement("span");
+  boundary.className = "program-badge neutral";
+  appendText(boundary, acceptedResourceDraft
+    ? t("resources.planning_configuration_active")
+    : t("resources.proposal_only"));
+  const revise = document.createElement("button");
+  revise.type = "button";
+  revise.className = "secondary-button";
+  appendText(revise, t("resources.revise"));
+  revise.addEventListener("click", () => {
+    intentQuestion.value = t("resources.revision_prompt", {
+      roles: data.resources.map((item) => readableCode(item.role)).join(", "),
+    });
+    if (evidenceProgram) {
+      activeProgramRevisionContext = {
+        dossierSha256: evidenceProgram.dossier_sha256,
+        stageId: evidenceProgram.current_stage_id,
+        baseProposalId: acceptedResourceDraft ? lastProgramRevisionRecord.proposal_id : null,
+        baseRecordSha256: acceptedResourceDraft ? lastProgramRevisionRecord.record_sha256 : null,
+      };
+      generateWorkspaceButton.textContent = t("generation.propose_revision");
+    }
+    intentQuestion.focus({preventScroll: true});
+    intentForm.scrollIntoView({behavior: "smooth", block: "center"});
+  });
+  controls.append(boundary, revise);
+  header.append(identity, controls);
+
+  const kindSummary = document.createElement("div");
+  kindSummary.className = "project-resource-kinds";
+  for (const kind of ["api_model", "gpu_host", "model_checkpoint"]) {
+    const rows = data.resources.filter((item) => item.kind === kind);
+    const card = document.createElement("article");
+    const label = document.createElement("strong");
+    appendText(label, t(`resources.kind.${kind}`));
+    const count = document.createElement("span");
+    appendText(count, t("resources.kind_count", {count: rows.length}));
+    const configured = document.createElement("small");
+    appendText(configured, t("resources.access_summary", {
+      count: rows.filter((item) => item.access_state !== "missing").length,
+      total: rows.length,
+    }));
+    card.append(label, count, configured);
+    kindSummary.appendChild(card);
+  }
+
+  const details = document.createElement("details");
+  details.className = "project-resource-details";
+  const detailsTitle = document.createElement("summary");
+  appendText(detailsTitle, t("resources.open_bindings"));
+  const grid = document.createElement("div");
+  grid.className = "project-resource-grid";
+  const orderedResources = [...data.resources].sort((left, right) => (
+    Number(preferredResourceIds.has(right.resource_id))
+    - Number(preferredResourceIds.has(left.resource_id))
+  ));
+  for (const item of orderedResources) {
+    const row = document.createElement("article");
+    row.className = `project-resource state-${item.binding_status}`;
+    if (preferredResourceIds.has(item.resource_id)) row.classList.add("planning-preferred");
+    const rowHeader = document.createElement("div");
+    const role = document.createElement("strong");
+    appendText(role, readableCode(item.role));
+    const state = document.createElement("span");
+    state.className = "program-badge neutral";
+    appendText(state, localizedCode(item.binding_status));
+    rowHeader.append(role, state);
+    if (preferredResourceIds.has(item.resource_id)) {
+      const preference = document.createElement("span");
+      preference.className = "program-badge verified";
+      appendText(preference, t("resources.planning_preferred"));
+      rowHeader.appendChild(preference);
+    }
+    const resource = document.createElement("small");
+    appendText(resource, item.resource_id);
+    const access = document.createElement("small");
+    appendText(access, t("resources.access", {
+      access: localizedCode(item.access_state),
+      observed: localizedCode(item.observed_status),
+    }));
+    const purpose = document.createElement("p");
+    purpose.className = "muted compact-copy";
+    appendText(purpose, t("resources.required_for", {
+      targets: item.required_for.map(readableCode).join(", "),
+    }));
+    row.append(rowHeader, resource, access, purpose);
+    grid.appendChild(row);
+  }
+  details.append(detailsTitle, grid, evidenceDisclosure([], {
+    data: {
+      binding_set_id: data.binding_set_id,
+      binding_record_sha256: data.binding_record_sha256,
+      registry_revision: data.registry_revision,
+      registry_sha256: data.registry_sha256,
+      credential_values_exposed: data.credential_values_exposed,
+      remote_probe_performed: data.remote_probe_performed,
+      workload_executed: data.workload_executed,
+    },
+    names: [
+      "binding_set_id",
+      "binding_record_sha256",
+      "registry_revision",
+      "registry_sha256",
+      "credential_values_exposed",
+      "remote_probe_performed",
+      "workload_executed",
+    ],
+  }));
+  section.append(header, kindSummary, details);
   return section;
 }
 
@@ -4268,6 +4567,10 @@ function clearProjectContext(projectId = "") {
   lastArtifactPreview = null;
   lastProposalError = null;
   lastArtifactError = null;
+  activeProgramRevisionContext = null;
+  lastProgramRevisionRecord = null;
+  lastProgramRevisionDecision = null;
+  lastProgramRevisionStale = false;
   intentResultState = {kind: "empty"};
   topicManagementState = {kind: "empty"};
   responseCache.clear();
@@ -4595,6 +4898,7 @@ async function loadQuickIntents(projectId) {
 }
 
 async function generateWithIntent(intentRequest) {
+  clearProgramRevisionContext();
   if (!quickIntentCatalog || intentRequest.project_id !== activeProjectId) {
     intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
     renderIntentResult();
@@ -4673,6 +4977,119 @@ async function generateWithIntent(intentRequest) {
   }
 }
 
+async function generateProgramRevision(feedback, context) {
+  if (!quickIntentCatalog || !currentDocument || !context?.dossierSha256) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "revision_resolving"};
+  renderIntentResult();
+  try {
+    const record = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + "/program-revisions",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+          snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+          dossier_sha256: context.dossierSha256,
+          feedback,
+          base_proposal_id: context.baseProposalId || null,
+          base_record_sha256: context.baseRecordSha256 || null,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    lastProgramRevisionRecord = record;
+    lastProgramRevisionDecision = null;
+    lastProgramRevisionStale = false;
+    intentResultState = {
+      kind: "revision",
+      status: record.outcome.status,
+      reasonCode: record.outcome.reason_code,
+    };
+    renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    clearProgramRevisionContext();
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
+async function loadLatestProgramRevision(projectId) {
+  try {
+    const view = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(projectId)}/program-revisions`,
+    );
+    if (activeProjectId !== projectId) return;
+    lastProgramRevisionRecord = view.status === "available" ? view.record : null;
+    lastProgramRevisionDecision = view.status === "available" ? view.decision : null;
+    lastProgramRevisionStale = Boolean(view.stale);
+    if (currentDocument?.query?.view === "project-progress") {
+      renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+    }
+  } catch (_error) {
+    if (activeProjectId !== projectId) return;
+    lastProgramRevisionRecord = null;
+    lastProgramRevisionDecision = null;
+    lastProgramRevisionStale = false;
+  }
+}
+
+async function decideProgramRevision(record, decision) {
+  if (!quickIntentCatalog || !record || !["accept", "reject"].includes(decision)) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "revision_deciding", decision};
+  renderIntentResult();
+  try {
+    const decided = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + `/program-revisions/${encodeURIComponent(record.proposal_id)}/decision`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          proposal_id: record.proposal_id,
+          proposal_record_sha256: record.record_sha256,
+          snapshot_revision: quickIntentCatalog.snapshot.snapshot_revision,
+          snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+          dossier_sha256: record.request.dossier_sha256,
+          decision,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    lastProgramRevisionDecision = decided;
+    intentResultState = {kind: "revision_decided", decision: decided.status};
+    renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
 function renderGenerationFailure(documentValue) {
   intentResultState = {kind: "failure", documentValue};
   renderIntentResult();
@@ -4692,6 +5109,42 @@ function renderIntentResult() {
     planning.className = "muted";
     appendText(planning, t("generation.resolving"));
     intentResult.appendChild(planning);
+    return;
+  }
+  if (intentResultState.kind === "revision_resolving") {
+    const planning = document.createElement("p");
+    planning.className = "muted";
+    appendText(planning, t("generation.revision_resolving"));
+    intentResult.appendChild(planning);
+    return;
+  }
+  if (intentResultState.kind === "revision") {
+    const result = document.createElement("p");
+    result.className = intentResultState.status === "proposed"
+      ? "generation-accepted"
+      : "muted";
+    appendText(result, intentResultState.status === "proposed"
+      ? t("generation.revision_proposed")
+      : t("generation.revision_unavailable", {
+        reason: localizedCode(intentResultState.reasonCode),
+      }));
+    intentResult.appendChild(result);
+    return;
+  }
+  if (intentResultState.kind === "revision_deciding") {
+    const deciding = document.createElement("p");
+    deciding.className = "muted";
+    appendText(deciding, t("generation.revision_deciding"));
+    intentResult.appendChild(deciding);
+    return;
+  }
+  if (intentResultState.kind === "revision_decided") {
+    const decided = document.createElement("p");
+    decided.className = intentResultState.decision === "accepted"
+      ? "generation-accepted"
+      : "muted";
+    appendText(decided, t(`generation.revision_${intentResultState.decision}`));
+    intentResult.appendChild(decided);
     return;
   }
   if (intentResultState.kind === "accepted") {
@@ -4849,6 +5302,9 @@ async function loadWorkspace(query, historyMode = "push") {
     if (!quickIntentCatalog
         || quickIntentCatalog.snapshot.snapshot_sha256 !== documentValue.freshness.snapshot_sha256) {
       await loadQuickIntents(documentValue.query.project_id);
+    }
+    if (documentValue.query.view === "project-progress") {
+      await loadLatestProgramRevision(documentValue.query.project_id);
     }
     await loadResearchWorkspaceCatalog(documentValue.query.project_id);
   } catch (error) {
@@ -5324,6 +5780,11 @@ intentForm.addEventListener("submit", (event) => {
   }
   intentQuestion.value = "";
   intentQuestion.style.height = "";
+  if (activeProgramRevisionContext) {
+    const context = activeProgramRevisionContext;
+    generateProgramRevision(question, context);
+    return;
+  }
   generateWithIntent({
     schema_version: "1.0",
     kind: "free_question",
