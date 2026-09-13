@@ -19,6 +19,12 @@ from scitaste.generative_ui.audit import (
     SurfaceAuditLog,
 )
 from scitaste.generative_ui.factory import ProjectSurfaceFactory
+from scitaste.generative_ui.gate_action import (
+    GateActionDecisionRecord,
+    GateActionDecisionRequest,
+    ProjectGateActionService,
+    ProjectGateActionView,
+)
 from scitaste.generative_ui.generation import (
     GeneratedWorkspaceDocument,
     WorkspaceGenerationRequest,
@@ -140,6 +146,7 @@ class GenerativeUIApplication:
         self._research_workspaces = ResearchWorkspaceStore(runtime.projects_root)
         self._model_warm_cache = ModelWarmCacheStore(runtime.projects_root)
         self._program_revisions = ProgramRevisionService(runtime, planner)
+        self._gate_actions = ProjectGateActionService(runtime)
         self._request_lock = RLock()
         self._generated: OrderedDict[
             tuple[str, str],
@@ -237,6 +244,31 @@ class GenerativeUIApplication:
                 catalog,
                 self._model_warm_cache.load(project_id),
             )
+
+    def current_gate_action(self, project_id: str) -> ProjectGateActionView:
+        """Return the exact current action envelope without touching its resources."""
+
+        validate_project_id(project_id)
+        with self._request_lock:
+            return self._gate_actions.current(project_id)
+
+    def decide_gate_action(
+        self,
+        project_id: str,
+        request: GateActionDecisionRequest | dict[str, object],
+    ) -> GateActionDecisionRecord:
+        """Record an exact owner authorization or rejection without executing it."""
+
+        validate_project_id(project_id)
+        parsed = (
+            request
+            if isinstance(request, GateActionDecisionRequest)
+            else GateActionDecisionRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id:
+            raise ValueError("gate-action decision belongs to another project")
+        with self._request_lock:
+            return self._gate_actions.decide(parsed)
 
     def propose_program_revision(
         self,

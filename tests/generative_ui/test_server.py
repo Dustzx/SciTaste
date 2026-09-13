@@ -511,6 +511,31 @@ def test_generative_api_exposes_quick_and_free_intents_through_one_safe_boundary
     assert hostile_question not in unavailable.text
 
 
+def test_gate_action_status_is_project_scoped_and_no_run(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    revision = runtime.open("http-project").revision
+
+    with _running_server(runtime) as origin:
+        unavailable = httpx.get(
+            origin + "/api/v3/generative/projects/http-project/gate-action",
+            headers=_headers(),
+        )
+
+    assert unavailable.status_code == 200
+    assert unavailable.json() == {
+        "schema_version": "1.0",
+        "status": "unavailable",
+        "packet": None,
+        "decision": None,
+        "reason_code": "current-gate-action-unavailable",
+        "model_call_performed": False,
+        "gpu_work_performed": False,
+        "network_access_performed": False,
+    }
+    assert runtime.open("http-project").revision == revision
+    assert not (runtime.projects_root / "http-project/.generative-ui/gate-actions").exists()
+
+
 def test_research_workspace_api_creates_lists_and_replays_ordered_turn_pages(
     tmp_path: Path,
 ) -> None:

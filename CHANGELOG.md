@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first exact Generation as Content experiment-intervention bridge.
+  The current project gate is rendered as a compact source-to-model-to-instrument
+  action packet that binds the project/evidence-program revision, local
+  Qwen3-VL-2B invocation configurations, project-owned RTX 3090/checkpoint
+  bindings, token/time ceilings, Tool Intelligence route, and claim boundary.
+  Browser authorization or rejection writes an immutable, 24-hour-bounded owner
+  decision but never starts work. A separate CLI executor requires both the
+  exact decision identity and an independent local-execution switch. It uses
+  inline identity/schema/budget guards and intentionally performs no standalone
+  preflight, API call, network access, or source upload.
 - Added an explicitly authorized project-level model warm cache for Generation as
   Content. Selected fixed labels can reuse current model-authored layouts while
   free questions and feedback edits remain flexible. The cache binds provider,

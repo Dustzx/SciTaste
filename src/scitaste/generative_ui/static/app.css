@@ -2148,6 +2148,127 @@ fieldset {
   margin: 0.65rem 0 0.35rem;
 }
 
+.gate-action-card {
+  background: linear-gradient(135deg, #f4f8f2, #edf4ef);
+  border: 1px solid #b9ccbd;
+  border-left: 0.28rem solid var(--forest);
+  border-radius: 0.58rem;
+  display: grid;
+  gap: 0.68rem;
+  padding: 0.78rem 0.84rem;
+}
+
+.gate-action-card.state-rejected,
+.gate-action-card.state-authorization_expired {
+  background: #f5f2ec;
+  border-color: #d7c9b6;
+  border-left-color: #9b7045;
+}
+
+.gate-action-header,
+.gate-action-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.gate-action-header > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.gate-action-purpose,
+.gate-action-boundary,
+.gate-action-guard {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.gate-action-purpose {
+  color: #283f32;
+  font-weight: 650;
+}
+
+.gate-action-flow {
+  align-items: stretch;
+  display: grid;
+  gap: 0.42rem;
+  grid-template-columns: minmax(0, 0.8fr) auto minmax(0, 1.35fr) auto minmax(0, 0.9fr);
+}
+
+.gate-action-node {
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid rgb(19 83 64 / 18%);
+  border-radius: 0.48rem;
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  padding: 0.48rem 0.56rem;
+}
+
+.gate-action-node small,
+.gate-action-envelope small {
+  color: var(--muted);
+  font-size: 0.57rem;
+}
+
+.gate-action-node strong {
+  color: var(--forest-dark);
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+.gate-action-arrow {
+  align-self: center;
+  color: var(--forest);
+  font-weight: 800;
+}
+
+.gate-action-envelope {
+  display: grid;
+  gap: 0.42rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.gate-action-envelope > span {
+  background: rgb(255 255 255 / 62%);
+  border-radius: 0.42rem;
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.42rem;
+}
+
+.gate-action-envelope strong {
+  color: #234733;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.gate-action-boundary {
+  color: #6e5127;
+}
+
+.gate-action-guard {
+  border-top: 1px solid rgb(19 83 64 / 14%);
+  color: var(--muted);
+  padding-top: 0.52rem;
+}
+
+.gate-action-controls {
+  justify-content: flex-end;
+}
+
+.gate-action-details > summary {
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
 .project-resources {
   background: linear-gradient(135deg, #f7f8f4, #eff3ee);
   border: 1px solid #d3ddd3;
@@ -3908,9 +4029,19 @@ code {
 
   .evidence-program-decision,
   .evidence-program-tracks,
+  .gate-action-envelope,
   .project-resource-kinds,
   .project-resource-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gate-action-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .gate-action-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
   }
 
   .evidence-program-controls {

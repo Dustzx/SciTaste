@@ -155,6 +155,42 @@ async function main() {
       `);
       await waitFor(cdp, sessionId, `!document.querySelector(".evidence-tools").open`);
 
+      await waitFor(cdp, sessionId, `document.querySelector(".gate-action-card")`, 30_000);
+      const gateAction = await evaluate(cdp, sessionId, `(() => {
+        const card = document.querySelector(".gate-action-card");
+        const decisionControlCount = card.querySelectorAll(".gate-action-controls button").length;
+        const awaitsDecision = card.classList.contains("state-ready_for_owner_decision");
+        return {
+          present: Boolean(card),
+          flow_node_count: card.querySelectorAll(".gate-action-node").length,
+          envelope_fact_count: card.querySelectorAll(".gate-action-envelope > span").length,
+          decision_control_count: decisionControlCount,
+          decision_controls_consistent:
+            awaitsDecision ? decisionControlCount === 3 : decisionControlCount === 1,
+          separate_execute_control_absent:
+            ![...card.querySelectorAll("button")]
+              .some((item) => /execute|运行|执行/i.test(item.textContent)),
+        };
+      })()`);
+      if (screenshotRoot) {
+        await mkdir(screenshotRoot, {recursive: true});
+        await setViewport(cdp, sessionId, 1440, 1000);
+        await evaluate(cdp, sessionId, `
+          document.querySelector(".gate-action-card").scrollIntoView({block: "center"})
+        `);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const capture = await cdp.call("Page.captureScreenshot", {
+          format: "png",
+          fromSurface: true,
+          captureBeyondViewport: false,
+        }, sessionId);
+        await writeFile(
+          join(screenshotRoot, "project-gate-action-1440.png"),
+          Buffer.from(capture.data, "base64"),
+        );
+        await setViewport(cdp, sessionId, 390, 844);
+      }
+
       await evaluate(cdp, sessionId, `
         (() => {
           const button = [...document.querySelectorAll("#quick-intents button")]
@@ -515,6 +551,7 @@ async function main() {
         project_id: projectId,
         quick_intent_id: quickIntentId,
         project_home_shell: projectHomeShell,
+        project_gate_action: gateAction,
         locale_switch_network_requests: localeSwitchRequests,
         session_to_fixed_workspace_ms: Math.round(sessionToFixedMs * 1000) / 1000,
         quick_intent_to_generated_workspace_ms:
@@ -541,6 +578,11 @@ async function main() {
         || !projectHomeShell.mobile_evidence_tools_fit
         || !projectHomeShell.composer_follows_workspace
         || projectHomeShell.research_lens_count !== 4
+        || !gateAction.present
+        || gateAction.flow_node_count !== 3
+        || gateAction.envelope_fact_count !== 6
+        || !gateAction.decision_controls_consistent
+        || !gateAction.separate_execute_control_absent
         || !generatedResponseFocus.workspace_visible
         || !generatedResponseFocus.workspace_has_focus
         || !desktopDrawer.hover_preview_opens

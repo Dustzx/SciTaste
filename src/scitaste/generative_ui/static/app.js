@@ -102,6 +102,7 @@ let activeProgramRevisionContext = null;
 let lastProgramRevisionRecord = null;
 let lastProgramRevisionDecision = null;
 let lastProgramRevisionStale = false;
+let currentGateActionView = null;
 let intentResultState = {kind: "empty"};
 let topicManagementState = {kind: "empty"};
 let connectionStatusKey = "connection.connecting";
@@ -2068,7 +2069,10 @@ function renderEvidenceProgram(data) {
     ],
   }));
 
-  section.append(header, railShell, decision, tracks);
+  section.append(header, railShell, decision);
+  const gateAction = renderGateAction(currentGateActionView, data);
+  if (gateAction) section.appendChild(gateAction);
+  section.appendChild(tracks);
   if (data.planning_directive) {
     section.appendChild(renderPublishedPlanningDirective(data));
   }
@@ -2085,6 +2089,165 @@ function renderEvidenceProgram(data) {
   }
   section.appendChild(details);
   return section;
+}
+
+function renderGateAction(view, program) {
+  if (!view?.packet || view.packet.stage_id !== program.current_stage_id) return null;
+  const packet = view.packet;
+  const card = document.createElement("article");
+  card.className = `gate-action-card state-${view.status}`;
+
+  const header = document.createElement("div");
+  header.className = "gate-action-header";
+  const identity = document.createElement("div");
+  const eyebrow = document.createElement("span");
+  eyebrow.className = "card-label";
+  appendText(eyebrow, t("progress.gate_action.eyebrow"));
+  const title = document.createElement("strong");
+  appendText(title, t("progress.gate_action.title"));
+  identity.append(eyebrow, title);
+  const state = document.createElement("span");
+  state.className = view.status === "authorized"
+    ? "program-badge verified"
+    : view.status === "rejected" || view.status === "authorization_expired"
+      ? "program-badge warning"
+      : "program-badge neutral";
+  appendText(state, t(`progress.gate_action.status.${view.status}`));
+  header.append(identity, state);
+
+  const purpose = document.createElement("p");
+  purpose.className = "gate-action-purpose";
+  appendText(purpose, packet.purpose);
+
+  const flow = document.createElement("div");
+  flow.className = "gate-action-flow";
+  const flowItems = [
+    ["inputs", t("progress.gate_action.inputs", {count: packet.invocations.length})],
+    ["model", packet.model],
+    ["output", t("progress.gate_action.instrument_output")],
+  ];
+  for (const [kind, value] of flowItems) {
+    if (flow.childElementCount > 0) {
+      const arrow = document.createElement("span");
+      arrow.className = "gate-action-arrow";
+      arrow.setAttribute("aria-hidden", "true");
+      appendText(arrow, "→");
+      flow.appendChild(arrow);
+    }
+    const node = document.createElement("div");
+    node.className = `gate-action-node node-${kind}`;
+    const label = document.createElement("small");
+    appendText(label, t(`progress.gate_action.node.${kind}`));
+    const nodeValue = document.createElement("strong");
+    appendText(nodeValue, value);
+    node.append(label, nodeValue);
+    flow.appendChild(node);
+  }
+
+  const envelope = document.createElement("div");
+  envelope.className = "gate-action-envelope";
+  for (const [value, key] of [
+    [packet.model_call_ceiling, "calls"],
+    [`${packet.gpu_device_count} × RTX 3090`, "gpu"],
+    [`≤ ${packet.maximum_gpu_hours} h`, "time"],
+    [packet.maximum_input_tokens.toLocaleString(), "input_tokens"],
+    [packet.maximum_output_tokens.toLocaleString(), "output_tokens"],
+    [t("progress.gate_action.none"), "network_api"],
+  ]) {
+    const fact = document.createElement("span");
+    const factValue = document.createElement("strong");
+    appendText(factValue, value);
+    const factLabel = document.createElement("small");
+    appendText(factLabel, t(`progress.gate_action.${key}`));
+    fact.append(factValue, factLabel);
+    envelope.appendChild(fact);
+  }
+
+  const boundary = document.createElement("p");
+  boundary.className = "gate-action-boundary";
+  appendText(boundary, packet.claim_boundary);
+  const guard = document.createElement("p");
+  guard.className = "gate-action-guard";
+  appendText(guard, t("progress.gate_action.inline_guard", {
+    route: localizedCode(packet.verification_route),
+  }));
+
+  const controls = document.createElement("div");
+  controls.className = "gate-action-controls";
+  const inspect = document.createElement("button");
+  inspect.type = "button";
+  inspect.className = "secondary-button";
+  appendText(inspect, t("progress.gate_action.inspect"));
+  inspect.addEventListener("click", () => loadWorkspace({
+    view: "run-stage-explorer",
+    project_id: currentProjectId(),
+    run_id: packet.action_run_id,
+  }));
+  controls.appendChild(inspect);
+  if (view.status === "ready_for_owner_decision") {
+    const reject = document.createElement("button");
+    reject.type = "button";
+    reject.className = "secondary-button";
+    appendText(reject, t("progress.gate_action.reject"));
+    reject.addEventListener("click", () => decideGateAction(view, "reject"));
+    const authorize = document.createElement("button");
+    authorize.type = "button";
+    authorize.className = "primary-button";
+    appendText(authorize, t("progress.gate_action.authorize"));
+    authorize.addEventListener("click", () => decideGateAction(view, "authorize"));
+    controls.append(reject, authorize);
+  }
+
+  const details = document.createElement("details");
+  details.className = "gate-action-details";
+  const detailsTitle = document.createElement("summary");
+  appendText(detailsTitle, t("progress.gate_action.open_details"));
+  const resources = fixedRows(packet.resources.map((item) => ({
+    role: readableCode(item.role),
+    resource_id: item.resource_id,
+    status: localizedCode(item.status),
+  })), ["role", "resource_id", "status"]);
+  const invocations = fixedRows(packet.invocations.map((item) => ({
+    selection_role: readableCode(item.selection_role),
+    source_id: item.source_id,
+    exact_input_tokens: item.exact_input_tokens,
+    maximum_output_tokens: item.maximum_output_tokens,
+  })), ["selection_role", "source_id", "exact_input_tokens", "maximum_output_tokens"]);
+  details.append(
+    detailsTitle,
+    resources,
+    invocations,
+    evidenceDisclosure([], {
+      data: {
+        packet_id: packet.packet_id,
+        packet_sha256: packet.packet_sha256,
+        action_plan_sha256: packet.action_plan_sha256,
+        resource_binding_record_sha256: packet.resource_binding_record_sha256,
+        source_state_revision: packet.source_state_revision,
+        snapshot_revision: packet.snapshot_revision,
+        standalone_preflight_required: packet.standalone_preflight_required,
+        inline_guard_codes: packet.inline_guard_codes,
+        action_performed: packet.action_performed,
+        authorization_expires_at: view.decision?.authorization_expires_at || null,
+        decision_sha256: view.decision?.decision_sha256 || null,
+      },
+      names: [
+        "packet_id",
+        "packet_sha256",
+        "action_plan_sha256",
+        "resource_binding_record_sha256",
+        "source_state_revision",
+        "snapshot_revision",
+        "standalone_preflight_required",
+        "inline_guard_codes",
+        "action_performed",
+        "authorization_expires_at",
+        "decision_sha256",
+      ],
+    }),
+  );
+  card.append(header, purpose, flow, envelope, boundary, guard, controls, details);
+  return card;
 }
 
 function renderPublishedPlanningDirective(program) {
@@ -4811,6 +4974,7 @@ function clearProjectContext(projectId = "") {
   lastProgramRevisionRecord = null;
   lastProgramRevisionDecision = null;
   lastProgramRevisionStale = false;
+  currentGateActionView = null;
   intentResultState = {kind: "empty"};
   topicManagementState = {kind: "empty"};
   responseCache.clear();
@@ -5326,6 +5490,71 @@ async function loadLatestProgramRevision(projectId) {
   }
 }
 
+async function loadCurrentGateAction(projectId) {
+  try {
+    const view = await api(
+      `/api/v3/generative/projects/${encodeURIComponent(projectId)}/gate-action`,
+    );
+    if (activeProjectId !== projectId) return;
+    currentGateActionView = view;
+    if (currentDocument?.query?.view === "project-progress") {
+      renderWorkspace(currentDocument, {preserveTransient: true, focus: false});
+    }
+  } catch (_error) {
+    if (activeProjectId !== projectId) return;
+    currentGateActionView = null;
+  }
+}
+
+async function decideGateAction(view, decision) {
+  const packet = view?.packet;
+  if (!packet || !["authorize", "reject"].includes(decision)) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  if (decision === "authorize" && !window.confirm(t("progress.gate_action.confirm", {
+    model: packet.model,
+    calls: packet.model_call_ceiling,
+    hours: packet.maximum_gpu_hours,
+  }))) return;
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "gate_action_deciding", decision};
+  renderIntentResult();
+  try {
+    await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + `/gate-actions/${encodeURIComponent(packet.packet_id)}/decision`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          packet_id: packet.packet_id,
+          packet_sha256: packet.packet_sha256,
+          expected_snapshot_revision: packet.snapshot_revision,
+          expected_snapshot_sha256: packet.snapshot_sha256,
+          decision,
+          decided_by: "generation-as-content-project-owner",
+          confirm_exact_scope: true,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    await loadCurrentGateAction(requestedProject);
+    intentResultState = {kind: "gate_action_decided", decision};
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
 async function decideProgramRevision(record, decision) {
   if (!quickIntentCatalog || !record || !["accept", "reject"].includes(decision)) {
     intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
@@ -5551,6 +5780,24 @@ function renderIntentResult() {
     intentResult.appendChild(applied);
     return;
   }
+  if (intentResultState.kind === "gate_action_deciding") {
+    const deciding = document.createElement("p");
+    deciding.className = "muted";
+    appendText(deciding, t("generation.gate_action_deciding"));
+    intentResult.appendChild(deciding);
+    return;
+  }
+  if (intentResultState.kind === "gate_action_decided") {
+    const decided = document.createElement("p");
+    decided.className = intentResultState.decision === "authorize"
+      ? "generation-accepted"
+      : "muted";
+    appendText(decided, t(intentResultState.decision === "authorize"
+      ? "generation.gate_action_authorized"
+      : "generation.gate_action_rejected"));
+    intentResult.appendChild(decided);
+    return;
+  }
   if (intentResultState.kind === "accepted") {
     const accepted = document.createElement("p");
     accepted.className = "generation-accepted";
@@ -5708,7 +5955,10 @@ async function loadWorkspace(query, historyMode = "push") {
       await loadQuickIntents(documentValue.query.project_id);
     }
     if (documentValue.query.view === "project-progress") {
-      await loadLatestProgramRevision(documentValue.query.project_id);
+      await Promise.all([
+        loadLatestProgramRevision(documentValue.query.project_id),
+        loadCurrentGateAction(documentValue.query.project_id),
+      ]);
     }
     await loadResearchWorkspaceCatalog(documentValue.query.project_id);
   } catch (error) {

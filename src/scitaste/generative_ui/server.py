@@ -450,6 +450,14 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             status = self.server.application.model_warm_cache_status(project_id)
             self._send_model(HTTPStatus.OK, status, etag=status.fingerprint)
             return
+        if len(parts) == 6 and resource == "gate-action":
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            self._send_model(
+                HTTPStatus.OK,
+                self.server.application.current_gate_action(project_id),
+            )
+            return
         if len(parts) == 6 and resource == "workspace":
             if method != "POST":
                 raise _method_not_allowed("POST")
@@ -506,6 +514,15 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
                 payload,
             )
             self._send_model(HTTPStatus.CREATED, publication)
+            return
+        if len(parts) == 8 and resource == "gate-actions" and parts[7] == "decision":
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            payload = self._read_json_object()
+            if payload.get("packet_id") != parts[6]:
+                raise ValueError("gate-action route identity mismatch")
+            decision = self.server.application.decide_gate_action(project_id, payload)
+            self._send_model(HTTPStatus.CREATED, decision)
             return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]

@@ -261,3 +261,54 @@ def test_ui_planner_config_rejects_disabled_or_secret_bearing_files(
     with pytest.raises(SystemExit):
         main([*base, str(secret)])
     assert "invalid or contains credentials" in capsys.readouterr().err
+
+
+def test_ui_gate_action_execution_requires_authority_and_local_switches(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class Receipt:
+        execution_complete = True
+
+        @staticmethod
+        def model_dump_json(indent: int) -> str:
+            assert indent == 2
+            return '{"status":"complete"}'
+
+    def execute(*args: object, **kwargs: object) -> Receipt:
+        calls.append({"args": args, "kwargs": kwargs})
+        return Receipt()
+
+    monkeypatch.setattr(serve_cli, "execute_authorized_gate_action", execute)
+    base = [
+        "ui",
+        "gate-action-execute",
+        "--outputs-root",
+        str(tmp_path / "outputs"),
+        "--project-id",
+        "gate-project",
+        "--packet-sha256",
+        "a" * 64,
+        "--decision-id",
+        "gate-decision-one",
+        "--decision-sha256",
+        "b" * 64,
+        "--expected-revision",
+        "7",
+    ]
+
+    with pytest.raises(SystemExit):
+        main(base)
+    assert "requires --allow-local" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        main([*base, "--allow-local"])
+    assert "requires --execute-authorized-action" in capsys.readouterr().err
+
+    assert main([*base, "--allow-local", "--execute-authorized-action"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"status": "complete"}
+    assert len(calls) == 1
+    assert calls[0]["kwargs"]["allow_local"] is True
+    assert calls[0]["kwargs"]["expected_project_revision"] == 7

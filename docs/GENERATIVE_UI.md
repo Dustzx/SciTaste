@@ -1414,6 +1414,37 @@ and reasons are projected in the interface. Paid compute, provider contact,
 credential changes, untrusted code, and experiment launch remain separate
 hard-gated actions.
 
+The current Reference Quality calibration is the first complete intervention
+bridge across the two planes. The project home renders a compact action packet
+beside the generated program: two exact source inputs, the bound local
+Qwen3-VL-2B checkpoint, one project-bound RTX 3090, token and time ceilings, the
+scientific role of the output, and the claim boundary. The packet binds the
+current project snapshot, effective program, Tool Intelligence route, immutable
+action plan, invocation configurations, and project resource-binding record.
+Authorize or reject records an immutable owner decision over that exact packet;
+the browser never launches the workload. Execution additionally requires an
+explicit local CLI switch and the packet, decision, and project-revision
+identities. This keeps Generation as Content visually parallel to the SciTaste
+controller while making an intentional user intervention consumable by the
+controller.
+
+This path deliberately has no standalone preflight. Tool Intelligence selected
+an owner boundary because local GPU work is a declared external-resource action.
+At execution time, the existing model-node runtime performs only the guards whose
+value is intrinsic to the call: packet and revision identity, checkpoint binding,
+node schema, and budget. The status and authorization paths do not load the
+checkpoint, reserve a GPU, contact a provider, or create a run directory.
+
+Resources follow a two-level ownership model. The physical API/GPU/checkpoint
+catalog remains shared so the same machine or provider is not duplicated in every
+project. Each project owns its resource binding, role, priority, access-presence
+view, planning proposal, applied configuration receipt, and action-packet use.
+The platform can therefore inspect resources and model-author a project-local
+priority revision through the normal conversation. Endpoint definitions,
+credential names, and credential values remain administrator-level shared
+registry concerns in this version; a project surface never receives credential
+values.
+
 An adapter may translate a validated `SurfaceSpec` into A2UI messages after the
 project-runtime binding is available. It must preserve component registry checks,
 evidence IDs, snapshot revision/hash, and `proposal_only` authority. A2UI events

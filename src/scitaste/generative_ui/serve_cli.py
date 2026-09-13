@@ -14,6 +14,10 @@ from pathlib import Path
 import yaml
 
 from scitaste.generative_ui.application import GenerativeUIApplication
+from scitaste.generative_ui.gate_action import (
+    ProjectGateActionService,
+    execute_authorized_gate_action,
+)
 from scitaste.generative_ui.planner import (
     ModelPlannerPolicy,
     StructuredWorkspacePlanner,
@@ -112,6 +116,39 @@ def add_ui_commands(
     warm.add_argument("--execute-authorized-warm-cache", action="store_true")
     warm.set_defaults(handler=_handle_ui_warm_cache)
 
+    gate_status = ui_commands.add_parser(
+        "gate-action-status",
+        help="Show the exact current project action and owner-decision state",
+    )
+    gate_status.add_argument("--outputs-root", type=Path, required=True)
+    gate_status.add_argument("--project-id", required=True)
+    gate_status.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+    )
+    gate_status.set_defaults(handler=_handle_ui_gate_action_status)
+
+    gate_execute = ui_commands.add_parser(
+        "gate-action-execute",
+        help="Execute one exact owner-authorized local project action",
+    )
+    gate_execute.add_argument("--outputs-root", type=Path, required=True)
+    gate_execute.add_argument("--project-id", required=True)
+    gate_execute.add_argument("--packet-sha256", required=True)
+    gate_execute.add_argument("--decision-id", required=True)
+    gate_execute.add_argument("--decision-sha256", required=True)
+    gate_execute.add_argument("--expected-revision", type=int, required=True)
+    gate_execute.add_argument("--allow-local", action="store_true")
+    gate_execute.add_argument("--execute-authorized-action", action="store_true")
+    gate_execute.add_argument("--resume", action="store_true")
+    gate_execute.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+    )
+    gate_execute.set_defaults(handler=_handle_ui_gate_action_execute)
+
 
 def _handle_ui_serve(args: argparse.Namespace) -> int:
     config = LocalServerConfig(
@@ -200,6 +237,31 @@ def _handle_ui_warm_cache(args: argparse.Namespace) -> int:
     ).warm()
     print(json.dumps(report.model_dump(mode="json"), indent=2, sort_keys=True))
     return 0
+
+
+def _handle_ui_gate_action_status(args: argparse.Namespace) -> int:
+    view = ProjectGateActionService(ProjectRuntime(args.outputs_root)).current(args.project_id)
+    print(view.model_dump_json(indent=2))
+    return 0
+
+
+def _handle_ui_gate_action_execute(args: argparse.Namespace) -> int:
+    if not args.allow_local:
+        raise ValueError("gate-action execution requires --allow-local")
+    if not args.execute_authorized_action:
+        raise ValueError("gate-action execution requires --execute-authorized-action")
+    receipt = execute_authorized_gate_action(
+        ProjectRuntime(args.outputs_root),
+        project_id=args.project_id,
+        packet_sha256=args.packet_sha256,
+        decision_id=args.decision_id,
+        decision_sha256=args.decision_sha256,
+        expected_project_revision=args.expected_revision,
+        allow_local=True,
+        resume=args.resume,
+    )
+    print(receipt.model_dump_json(indent=2))
+    return 0 if receipt.execution_complete else 1
 
 
 def _load_credential(

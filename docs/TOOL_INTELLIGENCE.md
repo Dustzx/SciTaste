@@ -552,6 +552,24 @@ identity, stale-state, and hash guards. The published project artifact records t
 route and reason. This integration does not generalize the read-only tool catalog
 into code, network, GPU, credential, or mutable infrastructure authority.
 
+The current project experiment gate now consumes the same decision instead of
+adding a ritual preflight. Tool Intelligence routes the bounded local Reference
+Quality calibration to `owner_approval`; Generation as Content materializes the
+exact model/data/GPU/token/time envelope and records the owner's decision without
+executing it. A separate executor accepts only the still-current, unexpired
+authorization and an independent local-execution switch. Packet identity,
+project revision, checkpoint binding, schema, and budget are checked inline at
+use. No model load, GPU reservation, provider request, or placeholder run is
+performed merely to determine whether the action is allowed.
+
+This is the intended checking rule for future blocks: first classify the action,
+then pay only for evidence whose expected avoided loss exceeds its cost. A cheap
+reversible local write normally proceeds after invariant checks; an uncertain
+read gets one targeted observation when valuable; a full preflight is reserved
+for stale high-impact evidence or untrusted code; and external authority is
+requested from the owner. Optional model advice may help estimate semantic gray
+zones, but it cannot downgrade a hard gate or invent execution authority.
+
 ## Threat model and extension rules
 
 The current gates address these failures:

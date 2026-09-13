@@ -172,6 +172,23 @@ load, reservation, or experiment. `access_binding_complete` means only that the
 future executor can resolve the declared local credential name. Provider
 availability and execution approval remain independent gates.
 
+Generation as Content exposes this registry through each project's own binding.
+The project page shows secret-free access state, roles, priorities, observations,
+and the exact registry and binding identities. A model-authored resource revision
+can select and reprioritize resources already bound to that project; an explicit
+user action publishes and then applies the revision while retaining the prior
+binding. The shared definition of an endpoint, host, checkpoint, or credential
+environment variable is intentionally not copied into project state. Credential
+values are never returned to the browser.
+
+The first action-level consumer is the local Reference Quality calibration. Its
+Generation as Content packet resolves exactly one verified project-bound local
+RTX 3090 and one verified project-bound Qwen3-VL-2B checkpoint, plus two immutable
+invocation configurations. Status inspection and owner authorization are no-run
+operations. Only the separately gated executor may materialize the registered
+run directory and load the checkpoint; it performs inline identity and budget
+guards instead of a separate GPU/API preflight.
+
 Catalog update preserves the predecessor registry and every compatible
 observation. Project binding publication copies the exact YAML and records its
 hash, size, catalog semantic hash, and self-hashed record. Updating a binding
