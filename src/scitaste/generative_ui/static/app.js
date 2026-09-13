@@ -2117,7 +2117,9 @@ function renderGateAction(view, program) {
 
   const purpose = document.createElement("p");
   purpose.className = "gate-action-purpose";
-  appendText(purpose, packet.purpose);
+  appendText(purpose, packet.action_kind === "local-reference-quality-calibration"
+    ? t("progress.gate_action.purpose.local_reference_quality_calibration")
+    : packet.purpose);
 
   const flow = document.createElement("div");
   flow.className = "gate-action-flow";
@@ -2165,7 +2167,9 @@ function renderGateAction(view, program) {
 
   const boundary = document.createElement("p");
   boundary.className = "gate-action-boundary";
-  appendText(boundary, packet.claim_boundary);
+  appendText(boundary, packet.action_kind === "local-reference-quality-calibration"
+    ? t("progress.gate_action.boundary.local_reference_quality_calibration")
+    : packet.claim_boundary);
   const guard = document.createElement("p");
   guard.className = "gate-action-guard";
   appendText(guard, t("progress.gate_action.inline_guard", {

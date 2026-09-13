@@ -227,6 +227,8 @@
   "progress.program.propose_revision": "Discuss or revise plan",
   "progress.gate_action.eyebrow": "Current action packet",
   "progress.gate_action.title": "Review before using compute",
+  "progress.gate_action.purpose.local_reference_quality_calibration": "Calibrate the prestige-blind Reference Quality instrument on two admitted AAAR stress cases before using it in the Scientific Taste experiment.",
+  "progress.gate_action.boundary.local_reference_quality_calibration": "Instrument calibration only; this cannot establish source quality, Taste effectiveness, benchmark superiority, or paper-level evidence.",
   "progress.gate_action.status.ready_for_owner_decision": "Awaiting your decision",
   "progress.gate_action.status.authorized": "Authorized · not started",
   "progress.gate_action.status.rejected": "Rejected",

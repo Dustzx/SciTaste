@@ -1326,13 +1326,15 @@ campaign dossiers. Generation as Content owns how those records are presented
 and how a user starts a bounded interaction. A generated page cannot become the
 controller merely because it is visually primary.
 
-Fixed high-value tabs use deterministic project projections and ETag caching; no
-background model call is currently issued merely because a project was opened.
-The ICLR program view collapses 16 exact dossier gates into seven readable phases
-and keeps the three scientific tracks separate. Successful model generations are
-cached after demand. A future project-level warm-cache policy may opt selected
-labels into background generation only after declaring provider, cost ceiling,
-freshness, and invalidation behavior. Flexible feedback uses
+Fixed high-value tabs always retain deterministic project projections and ETag
+caching. An explicitly authorized project warm-cache policy may additionally
+pre-generate selected fixed labels with a pinned provider/model, cumulative cost
+and token ceilings, expiry, and snapshot invalidation. It fills only missing
+entries before the local server listens; opening a project by itself never causes
+an undeclared provider call. On-demand generations are also cached after success,
+while free questions and follow-up edits remain fresh model interactions. The ICLR
+program view collapses 16 exact dossier gates into seven readable phases and keeps
+the three scientific tracks separate. Flexible feedback uses
 `ProgramRevisionService`. The request binds the exact project revision,
 snapshot SHA-256, and dossier SHA-256; a structured model can choose only the
 registered change kind, incomplete stage, track, resource ID, and resource role.

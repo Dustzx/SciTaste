@@ -227,6 +227,8 @@
   "progress.program.propose_revision": "讨论或调整规划",
   "progress.gate_action.eyebrow": "当前行动包",
   "progress.gate_action.title": "使用计算资源前确认",
+  "progress.gate_action.purpose.local_reference_quality_calibration": "先用两个已接纳的 AAAR 压力样本校准去声望化的 Reference Quality 测量，再把它用于 Scientific Taste 实验。",
+  "progress.gate_action.boundary.local_reference_quality_calibration": "本动作只校准测量工具，不能证明来源质量、Taste 有效性、基准优势或论文级结论。",
   "progress.gate_action.status.ready_for_owner_decision": "等待你的决定",
   "progress.gate_action.status.authorized": "已授权 · 尚未启动",
   "progress.gate_action.status.rejected": "已拒绝",
