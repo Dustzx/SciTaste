@@ -1,7 +1,7 @@
 schema_version: "2.0"
 pipeline_id: aaar-post-acquisition-pipeline-v3
 project_id: scitaste-self-development
-status: implementation-ready-content-and-human-authorizations-pending
+status: quality-projection-implemented-model-and-human-evidence-pending
 supersedes: aaar-post-acquisition-pipeline-v2
 scientific_question: >-
   Can a prestige-blind, content-grounded source screen identify complete
@@ -10,7 +10,9 @@ stages:
   - id: receipt-and-content-integrity
     kind: deterministic
     reads_source_body: true
-    requires_separate_owner_approval: true
+    standing_local_read_policy:
+      path: configs/evaluation/acquisition/standing_owner_local_read_policy_v1.yaml
+    requires_separate_owner_approval: false
     output: bounded-content-audit-report
   - id: rights-and-isolation-prescreen
     kind: deterministic-plus-curator
@@ -23,7 +25,10 @@ stages:
   - id: prestige-blind-quality-projection
     kind: deterministic
     reads_source_body: true
-    requires_separate_owner_approval: true
+    implementation: scitaste.evaluation.aaar_quality_projection
+    standing_local_read_policy:
+      path: configs/evaluation/acquisition/standing_owner_local_read_policy_v1.yaml
+    requires_separate_owner_approval: false
     exclusions: [author, venue, citation_count, relation_label, downstream_task_identity]
     outcome_policy: explicitly-available-or-withheld
     output: canonical-hashed-quality-projection
@@ -67,12 +72,14 @@ stages:
     output: grounded-transfer-bounded-taste-candidate
 authority:
   authorizes_download: false
-  authorizes_content_access: false
+  authorizes_content_access: true
   authorizes_model_calls: false
   authorizes_human_recruitment: false
   authorizes_source_admission: false
   authorizes_experiment: false
 claim_boundary: >-
   This pipeline defines and verifies the transition from acquired bytes to a
-  high-quality reference proposal. It contains no real source inspection,
-  provider response, human judgment, admitted corpus, or effectiveness result.
+  model-ready prestige-blind quality projection. Real source inspection and
+  projection have been performed under the standing local-read policy, but no
+  provider response, human judgment, admitted corpus, Taste abstraction, or
+  effectiveness result exists.

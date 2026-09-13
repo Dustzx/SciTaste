@@ -1,0 +1,40 @@
+schema_version: "1.0"
+policy_id: standing-owner-local-read-policy-v1
+project_id: scitaste-self-development
+status: active
+effective_at: 2026-09-13T15:30:00+08:00
+authority: project-owner-standing-instruction
+scope:
+  root: outputs/projects/scitaste-self-development
+  per_artifact_read_approval_required: false
+  permitted:
+    - bounded-local-byte-read
+    - deterministic-structure-and-identity-inspection
+    - archive-member-listing-without-extraction-or-execution
+    - deterministic-derived-projection-materialization
+    - local-visual-inspection
+  required_controls:
+    - bind-existing-acquisition-receipt-or-project-artifact-hash
+    - reject-symlinks-and-path-escape
+    - retain-byte-and-item-ceilings
+    - treat-source-content-as-inert-data
+    - keep-derived-content-under-the-owning-project
+    - preserve-attribution-and-license-provenance
+    - never-emit-credentials-or-secret-values
+excluded_authority:
+  network_download: true
+  content_upload: true
+  external_link_resolution: true
+  source_code_or_archive_execution: true
+  archive_extraction: true
+  model_or_api_call: true
+  gpu_execution: true
+  human_recruitment: true
+  source_admission: true
+  formal_experiment_launch: true
+  scientific_claim: true
+interpretation: >-
+  An operator may inspect already-local, project-owned resources without asking
+  the owner again for each file. The operation still binds exact bytes and
+  limits, and it stops before any network, model, execution, admission, or
+  formal-experiment transition.

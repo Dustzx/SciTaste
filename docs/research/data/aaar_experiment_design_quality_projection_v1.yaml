@@ -1,0 +1,90 @@
+schema_version: "1.0"
+evidence_id: aaar-experiment-design-quality-projection-v1
+project_id: scitaste-self-development
+scientific_role: preformal-reference-quality-and-instrument-calibration
+standing_local_read_policy:
+  path: configs/evaluation/acquisition/standing_owner_local_read_policy_v1.yaml
+  file_sha256: 0f1fdbe7393a128d9b4af455ec23a0cc3831df32993e0eac01cc9ebda4041cf5
+  per_artifact_read_approval_required: false
+acquisition:
+  request_id: aaar-experiment-design-rights-pilot-v1
+  request_sha256: 32c95222c62788ae94693f30333757a5969efb40fdbb87ed1579257663d0736c
+  receipt_sha256: d6bebb88fa91830d28a1038b8ff69d3bbe2ebec23a0e9fbe666dedd51a806dcc
+  item_count: 16
+  total_bytes: 2636951
+content_audit:
+  local_path: >-
+    outputs/projects/scitaste-self-development/evaluations/content-audits/aaar-experiment-design-rights-pilot-v1/REPORT-v2.json
+  file_sha256: 54b73a557327beea9480d9de26fa2bef517efad0edf58dcad4f2846918ed958b
+  report_sha256: 81489f51748c4f34807ff4ccec677b9b82e104a67a650cda72ceab19fba6fe74
+  exact_bytes_verified: true
+  bounded_json_verified: true
+  embedded_identities_verified: true
+  passing_items: 16
+observed_record_contract:
+  top_level_fields: [annotator, id, input, output, paper_info, raw_data]
+  source_identity_field: /id
+  problem_context_field: /paper_info/abstract
+  annotated_alternative_field: /output/What experiments do you suggest doing?
+  annotated_rationale_field: /output/Why do you suggest these experiments?
+  observed_experiment_field: /raw_data/context_after_exp
+  annotation_count_range: [4, 8]
+projection:
+  implementation: scitaste.evaluation.aaar_quality_projection
+  command: scitaste evaluation aaar-quality-project
+  projection_id: aaar-experiment-design-quality-projection-v3
+  local_path: >-
+    outputs/projects/scitaste-self-development/evaluations/reference-quality-projections/aaar-experiment-design-quality-projection-v3
+  report_file_sha256: 85d338b670b135a759af159fec6e172470a9a2b50733b16d7a3248dd3057a976
+  report_sha256: b4b71cb476f675719173cf3568394285ffefdaec35428d51927970192433bbc5
+  projector_implementation_sha256: 42976f707798471321314e1aeb05db941866ea8c95d5cf758f741aae479e062f
+  projected_items: 16
+  role_complete_items: 16
+  projection_bytes: 524043
+  maximum_item_bytes: 78401
+  deterministic_redactions: 41
+  explicit_prestige_leak_findings: 0
+  outcome_information_availability: available
+  model_calls: 0
+  gpu_jobs: 0
+field_policy:
+  included:
+    - problem-context-abstract
+    - annotated-experiment-alternatives
+    - annotated-rationales
+    - observed-experiment-record
+  excluded:
+    - arxiv-record-id
+    - annotator-identity
+    - title
+    - authors
+    - comments
+    - preamble-and-pre-experiment-full-text
+    - acknowledgments
+    - bibliography
+    - external-locators
+    - email-addresses
+    - explicit-venue-tokens
+  interpretation: >-
+    Explicit metadata and prestige signals are removed. Scientific content may
+    remain intrinsically recognizable, so this is a prestige-blind field
+    projection rather than a guarantee that a knowledgeable reader cannot infer
+    the paper.
+next_gate:
+  action: bounded-reference-quality-model-calibration
+  candidate_profile_set: configs/model_nodes/runtime_profiles.reference_quality_v2.yaml
+  required_outputs:
+    - one-project-ledger-bound-proposal-per-projected-item
+    - exact-verbatim-support-or-deterministic-rejection
+    - content-free-qualification-receipt-per-accepted-proposal
+  still_requires_separate_authority:
+    - model-api-call
+    - dual-independent-human-review
+    - source-admission
+    - taste-abstraction
+    - formal-experiment-launch
+claim_boundary: >-
+  The sixteen acquired records now have exact, bounded, prestige-blind model
+  inputs. This is real source processing, not effectiveness evidence. No model
+  has judged source quality, no human has reviewed a record, no source has been
+  admitted, and no Taste principle or benchmark result exists.

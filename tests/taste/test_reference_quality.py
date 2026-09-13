@@ -242,6 +242,31 @@ def test_reference_quality_input_rejects_prestige_metadata() -> None:
         _input(include_prestige=True)
 
 
+def test_reference_quality_accepts_explicit_multi_role_source_passages() -> None:
+    payload = json.loads(_projection())
+    payload["outcome_information_availability"] = "available"
+    payload["fields"]["observed_experiment"] = {
+        "semantic_roles": ["scientific_action", "evidence", "limitation", "outcome"],
+        "value": "The bounded probe failed when both mechanisms predicted the same outcome.",
+    }
+    projection = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    input_data = _input().model_copy(
+        update={
+            "source_projection": projection,
+            "source_projection_sha256": hashlib.sha256(projection.encode()).hexdigest(),
+            "outcome_information_availability": "available",
+        }
+    )
+
+    assert ReferenceQualityInput.model_validate(input_data.model_dump()) == input_data
+
+
 def test_reference_quality_rejects_nonverbatim_or_semantically_wrong_support() -> None:
     input_data = _input()
     proposal = _proposal()

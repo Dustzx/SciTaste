@@ -40,15 +40,19 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.4 — native condition implementation attestation | done | all six first-party conditions complete one identical four-stage offline fixture with Knowledge, matched/mismatched Taste, critic, single-factor, and invariant-integrity routes verified; real corpora, checkpoint/task execution, and effects remain open |
 | Phase 9.5 — current API identity and Taste-path continuity | done | the live DeepSeek catalog change is preserved as a new immutable resource/identity stratum; all four title-critical Taste nodes expose the current V4 Flash candidate while historical V4.1 plans remain non-launchable |
 | Phase 9.6 — title-first acquisition continuity | done | the exact acquired AAAR pilot is represented by tracked receipt-bound evidence, and the campaign exposes its separately approved local audit as the first unresolved title-level stage instead of prioritizing secondary task or adapter work |
+| Phase 9.7 — real AAAR quality projection | done | all 16 receipt-bound records pass bounded JSON/identity audit and materialize as opaque prestige-blind quality inputs with author, venue, locator, acknowledgment, bibliography, and downstream-task exclusions |
 
-Phase 8.1 now has its first core-source transaction downloaded under the standing
-sub-10-GB policy. The receipt binds sixteen
+Phase 8.1 now has its first core-source transaction processed under the standing
+download and local-read policies. The receipt binds sixteen
 `Experiment_Design/data_text.json` records at one dataset revision, selected
 from original papers with explicit CC-BY-4.0 metadata across five arXiv primary
 categories. This is an excluded instrument pilot, not a benchmark subset. The
-bytes remain quarantined: download authority did not permit parsing, abstraction,
-labeling, model calls, or GPU work. The next real gate is the exact
-request/receipt-bound local content audit already proposed to the owner.
+exact bytes now pass bounded JSON, identity, and inventory audit. Sixteen
+model-ready projections retain problem context, annotated experiment
+alternatives and reasons, and the observed experiment record while removing
+explicit author, venue, locator, acknowledgment, bibliography, record, and
+downstream-task signals. No quality model, human reviewer, source admission,
+Taste abstraction, benchmark outcome, or GPU work has occurred.
 
 The pilot-to-formal statistical boundary is now executable without inventing a
 cell matrix. An exact H1/H2 or H3 pilot report supplies only source-group/task
@@ -133,7 +137,8 @@ source excerpts. All five dimensions must be strong. A verified live ledger is
 reduced to a content-free receipt before schema-1.1 source admission requires
 two independent, prestige- and model-blind human reviews. H0 compares this gate
 with prestige-only selection from the same pool at equal source and downstream
-budgets. Real source projections, calls, reviews, and H0 outcomes remain open.
+budgets. The first 16 real AAAR projections now exist; model proposals, reviews,
+source admission, and H0 outcomes remain open.
 
 The H0 comparator is no longer merely a prose obligation. A deterministic,
 approval-gated source-selection chain now binds the complete mining and

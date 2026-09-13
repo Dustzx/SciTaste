@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Replaced repeated per-file read coordination with a project-scoped standing
+  local-resource read policy while preserving receipt/hash, bounds, path,
+  no-execution, no-upload, and no-model-call controls. The real 16-record AAAR
+  pilot now passes bounded JSON and embedded-identity audit and materializes as
+  16 opaque prestige-blind Reference Quality inputs. The projector strips
+  explicit authors, titles, record IDs, venues, locators, acknowledgments, and
+  bibliographies while retaining problem context, annotated alternatives and
+  reasons, and observed experiment evidence. This is real source processing;
+  model/human quality judgments, admission, Taste abstraction, and effects are
+  still absent.
 - Corrected the ICLR campaign's post-acquisition priority. A tracked AAAR
   acquisition record now binds the frozen request, standing download policy,
   local approval, receipt, item count, byte count, and no-read boundary. The

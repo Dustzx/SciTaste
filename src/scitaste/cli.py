@@ -167,6 +167,7 @@ from scitaste.evaluation import (
     load_taste_corpus_curation_package,
     load_taste_corpus_pair_manifest,
     lock_human_reviewer_submissions,
+    materialize_aaar_quality_projections,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
     materialize_human_blind_opening,
@@ -2092,6 +2093,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(content_audit)
     content_audit.set_defaults(handler=_handle_evaluation_content_audit)
+    aaar_quality_projection = evaluation_commands.add_parser(
+        "aaar-quality-project",
+        help="Create prestige-blind AAAR quality inputs from audited local records",
+    )
+    aaar_quality_projection.add_argument("--approved-request", type=Path, required=True)
+    aaar_quality_projection.add_argument("--receipt", type=Path, required=True)
+    aaar_quality_projection.add_argument("--content-audit-report", type=Path, required=True)
+    aaar_quality_projection.add_argument("--workspace-root", type=Path, default=Path("."))
+    aaar_quality_projection.add_argument("--projection-id", required=True)
+    aaar_quality_projection.add_argument("--materialized-at", required=True)
+    aaar_quality_projection.add_argument("--output-directory", type=Path, required=True)
+    _add_log_level_option(aaar_quality_projection)
+    aaar_quality_projection.set_defaults(handler=_handle_evaluation_aaar_quality_projection)
     metadata_audit_plan = evaluation_commands.add_parser(
         "acquisition-metadata-audit-plan",
         help="Bind a no-read YAML/CSV structural-audit proposal to acquired bytes",
@@ -6288,6 +6302,31 @@ def _handle_evaluation_content_audit(args: argparse.Namespace) -> int:
     )
     if args.require_source_admission_ready and not report.ready_for_source_admission_proposal:
         return 1
+    return 0
+
+
+def _handle_evaluation_aaar_quality_projection(args: argparse.Namespace) -> int:
+    request = load_dataset_acquisition_request(args.approved_request)
+    receipt = load_dataset_acquisition_receipt(args.receipt)
+    report = materialize_aaar_quality_projections(
+        request,
+        receipt,
+        content_audit_report_path=args.content_audit_report,
+        workspace_root=args.workspace_root,
+        output_directory=args.output_directory,
+        projection_id=args.projection_id,
+        materialized_at=datetime.fromisoformat(args.materialized_at),
+    )
+    print(
+        json.dumps(
+            {
+                "report_path": str(args.output_directory / "REPORT.json"),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

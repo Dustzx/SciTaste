@@ -121,7 +121,10 @@ class ReferenceQualityInput(BaseModel):
             "source_metadata",
         }
         observed_roles = {
-            record.get("semantic_role") for record in fields.values() if isinstance(record, dict)
+            role
+            for record in fields.values()
+            if isinstance(record, dict)
+            for role in _projection_field_roles(record)
         }
         if observed_roles & forbidden_roles:
             raise ValueError("reference-quality projection exposes a forbidden prestige signal")
@@ -289,13 +292,13 @@ def validate_reference_quality(
     projection = json.loads(input_data.source_projection)
     fields = projection["fields"]
     values: dict[str, str] = {}
-    roles: dict[str, str] = {}
+    roles: dict[str, set[str]] = {}
     for name, record in fields.items():
         if not isinstance(name, str) or not isinstance(record, dict):
             findings.append("reference-quality projection contains a malformed field")
             continue
-        role = record.get("semantic_role")
-        if not isinstance(role, str) or "value" not in record:
+        field_roles = _projection_field_roles(record)
+        if not field_roles or "value" not in record:
             findings.append(f"reference-quality field {name!r} lacks role or value")
             continue
         value = record["value"]
@@ -304,7 +307,7 @@ def validate_reference_quality(
             if isinstance(value, str)
             else json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         )
-        roles[name] = role
+        roles[name] = field_roles
 
     allowed_roles = {
         ReferenceQualityDimension.EVIDENTIAL_RIGOR: {
@@ -367,12 +370,13 @@ def validate_reference_quality(
                 findings.append(
                     f"reference-quality evidence for {assessment.dimension.value!r} is not verbatim"
                 )
-            role = roles[support.projection_field]
-            observed_roles.add(role)
-            if role not in allowed_roles[assessment.dimension]:
+            field_roles = roles[support.projection_field]
+            compatible_roles = field_roles & allowed_roles[assessment.dimension]
+            observed_roles.update(compatible_roles)
+            if not compatible_roles:
                 findings.append(
                     f"reference-quality evidence for {assessment.dimension.value!r} uses "
-                    f"incompatible role {role!r}"
+                    f"incompatible roles {sorted(field_roles)!r}"
                 )
         if assessment.rating is ReferenceQualityRating.STRONG:
             for required_alternative in strong_role_requirements[assessment.dimension]:
@@ -383,16 +387,31 @@ def validate_reference_quality(
 
     if proposal.verdict is ReferenceQualityVerdict.QUALIFY:
         role_union = {
-            roles[support.projection_field]
+            role
             for assessment in proposal.assessments
             for support in assessment.supports
             if support.projection_field in roles
+            for role in roles[support.projection_field]
         }
         required_decision_roles = {"alternative", "scientific_action", "evidence", "limitation"}
         if not required_decision_roles <= role_union:
             findings.append("qualified reference lacks a complete contrastive decision episode")
 
     return tuple(sorted(set(findings)))
+
+
+def _projection_field_roles(record: dict[str, object]) -> set[str]:
+    """Accept legacy singular roles and explicit multi-role source passages."""
+
+    singular = record.get("semantic_role")
+    plural = record.get("semantic_roles")
+    if isinstance(singular, str) and plural is None:
+        return {singular}
+    if singular is None and isinstance(plural, list):
+        roles = {item for item in plural if isinstance(item, str) and item}
+        if len(roles) == len(plural):
+            return roles
+    return set()
 
 
 __all__ = [

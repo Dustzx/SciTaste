@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -20,7 +21,10 @@ from scitaste.evaluation import (
     materialize_dataset_acquisition,
     save_dataset_acquisition_request,
     save_json_content_audit_approval,
+    save_json_content_audit_report,
 )
+from scitaste.evaluation.aaar_quality_projection import materialize_aaar_quality_projections
+from scitaste.taste.reference_quality import ReferenceQualityInput
 
 REVISION = "a" * 40
 ACQUIRED_AT = datetime(2026, 9, 12, tzinfo=UTC)
@@ -102,6 +106,124 @@ def test_duplicate_keys_and_identity_mismatch_fail_closed(tmp_path: Path) -> Non
     assert report.ready_for_source_admission_proposal is False
     assert report.all_json_verified is False
     assert "2305.01937:duplicate-json-key" in report.blocker_codes
+
+
+def test_aaar_top_level_id_matches_without_trusting_nested_generic_ids(
+    tmp_path: Path,
+) -> None:
+    matching_root = tmp_path / "matching"
+    matching_root.mkdir()
+    request, receipt = _acquired_json(
+        matching_root,
+        b'{"id":"2305.01937","paper_info":{"id":"untrusted"}}',
+    )
+    approval = _content_approval(matching_root, request, receipt)
+
+    report = inspect_acquired_json_content(
+        request,
+        receipt,
+        approval,
+        workspace_root=matching_root,
+        allow_local_content_read=True,
+        audited_at=ACQUIRED_AT + timedelta(hours=2),
+    )
+
+    assert report.ready_for_source_admission_proposal is True
+    assert report.items[0].identity_observations[0].json_pointer == "/id"
+    assert len(report.items[0].identity_observations) == 1
+
+    nested_root = tmp_path / "nested"
+    nested_root.mkdir()
+    nested_request, nested_receipt = _acquired_json(
+        nested_root,
+        b'{"paper_info":{"id":"2305.01937"}}',
+    )
+    nested_approval = _content_approval(nested_root, nested_request, nested_receipt)
+    nested_report = inspect_acquired_json_content(
+        nested_request,
+        nested_receipt,
+        nested_approval,
+        workspace_root=nested_root,
+        allow_local_content_read=True,
+        audited_at=ACQUIRED_AT + timedelta(hours=2),
+    )
+
+    assert nested_report.ready_for_source_admission_proposal is False
+    assert nested_report.items[0].identity_status.value == "absent"
+
+
+def test_aaar_projection_hides_explicit_prestige_and_retains_decision_roles(
+    tmp_path: Path,
+) -> None:
+    source = {
+        "annotator": "reviewer-name",
+        "id": "2305.01937",
+        "input": ["withheld experiment prompt"],
+        "output": {
+            "What experiments do you suggest doing?": [
+                "Compare the intervention with a controlled alternative at ICLR."
+            ],
+            "Why do you suggest these experiments?": [
+                "The contrast separates two plausible explanations."
+            ],
+        },
+        "paper_info": {
+            "abstract": "Named Author studies the mechanism at https://example.org/paper.",
+            "authors": ["Named Author"],
+            "comments": "Published at ICLR",
+            "title": "Identifying Source Title",
+        },
+        "raw_data": {
+            "context_after_exp": [
+                "\\section{Experiments}\nWe compare both actions and observe a failure boundary.\n",
+                "\\section{Acknowledgments}\nNamed Author thanks ICLR reviewers.\n",
+            ],
+            "context_before_exp": ["problem context"],
+            "del_percentage": 0.1,
+        },
+    }
+    request, receipt = _acquired_json(
+        tmp_path,
+        json.dumps(source, ensure_ascii=False).encode(),
+    )
+    approval = _content_approval(tmp_path, request, receipt)
+    audit = inspect_acquired_json_content(
+        request,
+        receipt,
+        approval,
+        workspace_root=tmp_path,
+        allow_local_content_read=True,
+        audited_at=ACQUIRED_AT + timedelta(hours=2),
+    )
+    audit_path = tmp_path / "audit.json"
+    save_json_content_audit_report(audit, audit_path)
+
+    output = tmp_path / "projection"
+    report = materialize_aaar_quality_projections(
+        request,
+        receipt,
+        content_audit_report_path=audit_path,
+        workspace_root=tmp_path,
+        output_directory=output,
+        projection_id="aaar-quality-test",
+        materialized_at=ACQUIRED_AT + timedelta(hours=3),
+    )
+    projected = ReferenceQualityInput.model_validate_json(
+        (output / report.items[0].projection_locator).read_text(encoding="utf-8")
+    )
+
+    assert report.item_count == report.ready_item_count == report.role_complete_item_count == 1
+    assert set(report.items[0].observed_semantic_roles) >= {
+        "alternative",
+        "evidence",
+        "limitation",
+        "scientific_action",
+    }
+    assert "Named Author" not in projected.source_projection
+    assert "ICLR" not in projected.source_projection
+    assert "https://example.org" not in projected.source_projection
+    assert "Acknowledgments" not in projected.source_projection
+    assert report.model_calls_performed is False
 
 
 def _acquired_json(

@@ -3140,3 +3140,31 @@ This continuity is launch correctness, not model quality or Scientific Taste
 effectiveness. The profile sets select no provider, the tracked backend remains
 disabled, and neither catalog facts nor a future conformance pass can substitute
 for real source qualification, independent human review, or held-out outcomes.
+
+### ADR-104: Local reads use standing authority; semantic transitions stay gated
+
+Status: accepted and exercised on the AAAR pilot.
+
+Repeated conversational approval for every already-local file made scientific
+resource inspection a scheduling bottleneck without changing what the read was
+allowed to do. The project owner therefore established one project-scoped
+standing local-read policy. Readers still bind exact receipt or artifact hashes,
+enforce byte/item bounds, reject links and path escape, treat source content as
+inert data, and keep derivatives under the owning project. No per-artifact owner
+response is required.
+
+Read authority is intentionally narrower than semantic or external authority.
+It does not permit downloads, uploads, link resolution, archive extraction,
+source execution, API/model calls, GPU work, human recruitment, source
+admission, or formal experiment launch. Those operations retain their existing
+controller gates.
+
+The AAAR projector demonstrates the separation. It replays the exact 16-item
+receipt and passing audit, maps each source to an opaque identity, retains only
+the abstract problem context, annotated experiment alternatives/reasons, and
+observed experiment record, and removes explicit author, title, record, venue,
+locator, acknowledgment, and bibliography signals. One source passage can carry
+multiple declared semantic roles so later quality judgments can cite exact
+action, evidence, outcome, or limitation excerpts without duplicating the full
+paper section. The resulting inputs are ready for bounded quality proposals but
+grant no admission or effectiveness claim.

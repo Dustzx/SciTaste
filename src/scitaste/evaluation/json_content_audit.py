@@ -226,6 +226,7 @@ def approve_json_content_audit(
     maximum_nodes_per_item: int = 500_000,
     maximum_string_utf8_bytes: int = 4 * 1_048_576,
     identity_field_names: tuple[str, ...] = (
+        "id",
         "arxiv_id",
         "paper_arxiv_id",
         "paper_id",
@@ -619,9 +620,11 @@ def _walk_json(
         if _is_external_locator(value):
             shape.locator_count += 1
             state.locators += 1
-        if field_name is not None and _normalize_field_name(field_name) in {
-            _normalize_field_name(item) for item in approval.identity_field_names
-        }:
+        if field_name is not None and _is_identity_field(
+            field_name,
+            pointer=pointer,
+            approval=approval,
+        ):
             match = _ARXIV_ID.fullmatch(value.strip())
             normalized = match.group(1) if match else None
             identities.append(
@@ -669,6 +672,22 @@ def _walk_json(
                 identities=identities,
                 state=state,
             )
+
+
+def _is_identity_field(
+    field_name: str,
+    *,
+    pointer: str,
+    approval: JsonContentAuditApproval,
+) -> bool:
+    normalized = _normalize_field_name(field_name)
+    configured = {_normalize_field_name(item) for item in approval.identity_field_names}
+    if normalized not in configured:
+        return False
+    # A bare `id` is common inside arbitrary nested objects. It is usable as a
+    # record identity only at the document root; explicit arXiv field names may
+    # remain nested because their semantics are unambiguous.
+    return normalized != "id" or pointer == "/id"
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:

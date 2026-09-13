@@ -123,9 +123,10 @@ the prestige treatment, and a prestige selection cannot bypass safe-use gates.
 
 ## Remaining evidence
 
-The method contract is executable, but the claim remains open. Real progress
-now requires separately authorized bounded content projection of task-specific acquired
-sources, real model proposals, two conflict-cleared reviewers, a real
+The method contract is executable, but the claim remains open. The first
+rights-filtered AAAR pilot now contributes 16 exact prestige-blind projections
+under the standing local-read policy. Real progress still requires model
+quality proposals, two conflict-cleared reviewers, a real
 task-specific broad pool with observed prestige metadata, source-group-disjoint
 held-out cases, matched treatment materialization, and powered outcome analysis.
 The comparator selection and arm-to-byte continuity algorithms are now frozen in
