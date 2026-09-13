@@ -673,9 +673,7 @@ class ModelNodeRuntime:
                 recording_path=(
                     recording if recording is not None and recording.is_file() else None
                 ),
-                recovered_without_provider=_is_actual_generation_mode(
-                    entry.intent.backend_mode
-                ),
+                recovered_without_provider=_is_actual_generation_mode(entry.intent.backend_mode),
                 entry=entry,
             )
         totals = self._totals(project_id, run_id, entries, stage=stage)
@@ -760,9 +758,7 @@ class ModelNodeRuntime:
                 blockers.append("live backend is not explicitly enabled")
         if intent.backend_mode is RuntimeBackendMode.LOCAL and backend is not None:
             backend_config = getattr(backend, "config", None)
-            if backend_config is None or not getattr(
-                backend_config, "execution_enabled", False
-            ):
+            if backend_config is None or not getattr(backend_config, "execution_enabled", False):
                 blockers.append("local backend is not explicitly enabled")
         if blockers or (backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY):
             if backend is None and intent.backend_mode is not RuntimeBackendMode.REPLAY:

@@ -621,11 +621,7 @@ class WorkspaceSurfaceFactory:
                 report.next_stage_ids[0]
                 if report.next_stage_ids
                 else next(
-                    (
-                        stage.stage_id
-                        for stage in report.stages
-                        if stage.state.value != "complete"
-                    ),
+                    (stage.stage_id for stage in report.stages if stage.state.value != "complete"),
                     report.stages[-1].stage_id,
                 )
             )

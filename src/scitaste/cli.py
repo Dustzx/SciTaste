@@ -2127,9 +2127,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="load only the pinned local tokenizer to measure exact prompt tokens",
     )
     _add_log_level_option(aaar_quality_calibration)
-    aaar_quality_calibration.set_defaults(
-        handler=_handle_evaluation_aaar_quality_calibration_plan
-    )
+    aaar_quality_calibration.set_defaults(handler=_handle_evaluation_aaar_quality_calibration_plan)
     metadata_audit_plan = evaluation_commands.add_parser(
         "acquisition-metadata-audit-plan",
         help="Bind a no-read YAML/CSV structural-audit proposal to acquired bytes",

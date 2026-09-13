@@ -134,9 +134,14 @@ class AaarQualityCalibrationPlan(BaseModel):
                 raise ValueError("verified AAAR token counts require the local tokenizer")
             if self.tokenizer_version is None or self.maximum_exact_input_tokens != max(exact):
                 raise ValueError("AAAR calibration exact token summary differs")
-        elif any(value is not None for value in exact) or any(
-            value is not None for value in (self.maximum_exact_input_tokens, self.tokenizer_version)
-        ) or self.tokenizer_load_performed:
+        elif (
+            any(value is not None for value in exact)
+            or any(
+                value is not None
+                for value in (self.maximum_exact_input_tokens, self.tokenizer_version)
+            )
+            or self.tokenizer_load_performed
+        ):
             raise ValueError("pending AAAR token counts cannot contain tokenizer evidence")
         return self
 

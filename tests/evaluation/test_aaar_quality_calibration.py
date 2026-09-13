@@ -125,7 +125,7 @@ def test_calibration_plan_selects_two_stress_cases_without_model_execution(tmp_p
                 f"model_path: {checkpoint}",
                 "model_id: Qwen/Qwen3-VL-2B-Instruct",
                 "model_revision: local-snapshot-47f9c0e0",
-                f"checkpoint_sha256: \"{'5' * 64}\"",
+                f'checkpoint_sha256: "{"5" * 64}"',
                 "max_new_tokens: 8192",
                 "max_context_tokens: 131072",
                 "max_retries: 1",

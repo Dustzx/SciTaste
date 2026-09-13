@@ -340,9 +340,7 @@ def test_actual_quality_ledger_compiles_to_content_free_qualification(
     input_data = _input()
     proposal = _proposal()
     provider = (
-        "fixture-provider"
-        if backend_mode is RuntimeBackendMode.LIVE
-        else "local-transformers"
+        "fixture-provider" if backend_mode is RuntimeBackendMode.LIVE else "local-transformers"
     )
     profile = ModelNodeProfile(
         profile_id="quality-actual-fixture",

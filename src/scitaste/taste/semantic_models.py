@@ -270,10 +270,9 @@ def validate_grounded_abstraction_against_projection(
                     f"grounding excerpt for {claim.target.value!r} is not verbatim source text"
                 )
             allowed_target_roles = target_roles.get(claim.target)
-            if (
-                allowed_target_roles is not None
-                and observed_roles[support.projection_field].isdisjoint(allowed_target_roles)
-            ):
+            if allowed_target_roles is not None and observed_roles[
+                support.projection_field
+            ].isdisjoint(allowed_target_roles):
                 findings.append(
                     f"grounding for {claim.target.value!r} uses an incompatible semantic role"
                 )

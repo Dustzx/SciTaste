@@ -158,8 +158,7 @@ def project_iclr_evidence_program(
             state = "current"
             current_phase_id = current_phase_id or phase_id
         elif any(
-            item.state is CampaignStageState.BLOCKED and item.dependencies_complete
-            for item in rows
+            item.state is CampaignStageState.BLOCKED and item.dependencies_complete for item in rows
         ):
             state = "blocked"
         else:
@@ -176,9 +175,7 @@ def project_iclr_evidence_program(
                 "blocker_count": sum(len(item.blocker_codes) for item in rows),
                 "owner_approval_required": any(item.owner_approval_required for item in rows),
                 "external_actions": list(
-                    dict.fromkeys(
-                        action.value for item in rows for action in item.external_actions
-                    )
+                    dict.fromkeys(action.value for item in rows for action in item.external_actions)
                 ),
                 "support_ref_ids": support_ref_ids,
             }
@@ -201,9 +198,7 @@ def project_iclr_evidence_program(
         }
         for track in report.tracks
     ]
-    completed_stage_count = sum(
-        item.state is CampaignStageState.COMPLETE for item in report.stages
-    )
+    completed_stage_count = sum(item.state is CampaignStageState.COMPLETE for item in report.stages)
     return ProjectEvidenceProgramData(
         run_id=run.run_id,
         run_ref_id=run_ref_id,
