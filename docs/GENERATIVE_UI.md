@@ -1856,6 +1856,7 @@ A live GLM-5.3-Flash planning turn then exercised that path at project revision
 keeps AAAR separate, identifies 77 as a ceiling rather than exact demand, and
 retains zero execution authority. The proposal remains unaccepted and
 unpublished so the UI can expose the real feedback/accept/reject/publish sequence.
-It used 5,713 input and 284 output tokens, reported USD 0.00039566987198395376,
-and took 6,523 ms. This is an engineering interaction observation, not evidence
+It used 5,710 input and 366 output tokens, reported USD 0.0004124240457790101,
+and took 5,783 ms. A read immediately after persistence reported `stale=false`.
+This is an engineering interaction observation, not evidence
 that the planning advice is scientifically superior.

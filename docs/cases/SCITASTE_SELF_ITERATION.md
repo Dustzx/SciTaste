@@ -1796,12 +1796,13 @@ model generations receive the repaired state.
 
 The next model turn used that repaired state instead of a manually written page.
 GLM-5.3-Flash returned proposal
-`program-revision-c9e08a016f4af238cd5a` as a bounded
+`program-revision-5e702e16b9a50aa63d73` as a bounded
 `clarify_stage_decision`: F1000 is the immediate owner/human decision, AAAR
 remains a distinct local-calibration branch, 77 remains only a capacity ceiling,
 and all API, GPU, contact, corpus, and benchmark authority remains false. The
-turn used 5,713 input and 284 output tokens, USD 0.00039566987198395376, and
-6,523 ms. It is intentionally still a draft. Accepting, feedback-editing,
+turn used 5,710 input and 366 output tokens, USD 0.0004124240457790101, and
+5,783 ms. A post-store reload reported `stale=false`; it is intentionally still
+a draft. Accepting, feedback-editing,
 rejecting, and publishing are user actions visible in Generation as Content;
 recording this model response did not alter the Core plan.
 
