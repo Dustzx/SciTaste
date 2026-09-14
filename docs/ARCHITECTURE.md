@@ -3810,3 +3810,34 @@ campaign/loop/freeze/measurement evidence chain, and its write seam is the
 existing typed project-program revision submitted before launch. It may explain
 or propose a plan change, but it cannot enter the hidden-test process, mutate a
 candidate, or grant model/data/GPU/API authority.
+
+### ADR-123: Acquired archives become two isolated data views in a separate transaction
+
+Status: accepted; first real Perception mapping is owner-review-ready and has not
+been executed.
+
+An acquisition receipt proves downloaded bytes, and an archive qualification
+proves that ZIP metadata is safe. Neither proves that archive members were mapped
+to the paths expected by a task, nor prevents hidden labels from entering the
+model-visible development data. SciTaste now represents archive ingestion as a
+third, independently approved transaction. Its request binds the acquisition and
+qualification semantic hashes, the task's ingestion-license evidence, the exact
+runtime spec, every asset hash and size, each member count and expanded-byte
+total, and the final target of every archive.
+
+The transaction publishes `development/data` and `heldout/data` together or not
+at all. Development targets must be disjoint from every hidden path. Held-out
+targets must equal the runtime spec's complete hidden-path set rather than merely
+containing a caller-selected subset. During extraction, every source ZIP is
+rehashed, only regular non-encrypted members with the declared flat layout are
+streamed, per-asset and aggregate byte ceilings remain active, and neither source
+archive is changed. The published views are read-only and carry the same
+path/size/file-hash digest used by `NativeExecutionProfile`, so later profiles do
+not need an informal conversion step.
+
+The approval grants only local extraction and task-data ingestion. It explicitly
+withholds environment installation, model calls, GPU work, benchmark execution,
+and scientific claims. The receipt repeats those negative facts. Perception is
+the first real proposal: six train/validation archives form the development view
+and three test archives form the scorer-only view. Meta-learning remains blocked
+at its separate AWA license boundary and cannot inherit Perception's authority.

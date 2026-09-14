@@ -1,0 +1,149 @@
+schema_version: "1.0"
+request_id: mlrc-perception-temporal-action-loc-materialization-v1
+project_id: scitaste-self-development
+source_task_id: perception_temporal_action_loc
+runtime_task_id: perception-temporal-action-loc
+authorization_scope: review-only-no-extraction-no-model-no-execution
+purpose: >-
+  Project the nine already acquired and archive-qualified Perception Test
+  archives into a development-only train/validation data tree and a separate
+  scorer-only test data tree for the first native autonomous-research prepilot.
+claim_boundary: >-
+  This proposal and its no-write inspection establish only an exact, licensed,
+  split-isolated archive mapping. They do not authorize extraction until the
+  owner approves the exact proposal and gate hashes, and never authorize an
+  environment installation, model call, GPU job, benchmark execution, or
+  scientific claim.
+acquisition_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+  file_sha256: 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+  semantic_field: receipt_sha256
+  semantic_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+archive_qualification:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/ARCHIVE_QUALIFICATION.json
+  file_sha256: a2bd52569e01ae1af9719ede41981cebbe3d9188917e288dd4b4f3502e9e819f
+  semantic_field: report_sha256
+  semantic_sha256: 68f24ffd8cd5fa6ac284eec77cbf65f3be491cc7a458bd8e66a2a841cdd16db4
+license_evidence:
+  locator: outputs/projects/scitaste-self-development/runs/2026-09-12__scitaste-native__mlrc-license-policy-v1__seed-00/dataset_package_acquisition/LICENSE_POLICY_REPORT.json
+  file_sha256: c375940f7af297a9544ee96f4cead7ad94c050992831a6ebf394abb1d48a308d
+  semantic_field: report_sha256
+  semantic_sha256: 5b774d7cb0b3ce31108511a1ad115295720022843b5ea8c1af80a01d9b1983ca
+task_runtime_spec:
+  locator: configs/evaluation/task_runtime/mlrc_perception_temporal_action_loc_v1.yaml
+  file_sha256: 52342bc421513e8a7c7bc06d6dd738d754291381d291c935cf3574bb2da2e793
+  semantic_field: null
+  semantic_sha256: null
+destination_root: outputs/projects/scitaste-self-development/evaluations/materializations/mlrc-perception-temporal-action-loc-materialization-v1
+assets:
+  - asset_id: perception-action-train-features
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/action_localisation_train_video_features.zip
+    archive_sha256: 37df46465335c1b71a3f312812e578d8bc0d0b3f843dfe9d2235572e6cdf00bb
+    archive_bytes: 69187082
+    expected_member_count: 1734
+    expected_expanded_bytes: 76276480
+    layout: flat-files
+    target_locator: pt/action_localisation_train_video_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-action-valid-features
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/action_localisation_valid_video_features.zip
+    archive_sha256: fecb1a927ab15c1c57fc876a82378748a94b95bb12809c732dfe1816ac38d921
+    archive_bytes: 16185538
+    expected_member_count: 401
+    expected_expanded_bytes: 17842304
+    layout: flat-files
+    target_locator: pt/action_localisation_valid_video_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-sound-train-features
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/sound_localisation_train_audio_features.zip
+    archive_sha256: 7b3bc36d9baf2a9de64621fd2374fd4ee2bbe8423da031140c46ca84df75ef62
+    archive_bytes: 92404354
+    expected_member_count: 1748
+    expected_expanded_bytes: 167420416
+    layout: flat-files
+    target_locator: pt/sound_localisation_train_audio_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-sound-valid-features
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/sound_localisation_valid_audio_features.zip
+    archive_sha256: b3c43d1c1f809c039c9267b6c826f2df2bf5a8aee7fbf88b7963940e07bbdd32
+    archive_bytes: 21632403
+    expected_member_count: 401
+    expected_expanded_bytes: 39174272
+    layout: flat-files
+    target_locator: pt/sound_localisation_valid_audio_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-action-train-annotations
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/challenge_action_localisation_train.json.zip
+    archive_sha256: 38299e4d4f2c9f382aff80d8635da0d38168a56bb6c0cbc3f666001e4f85aa05
+    archive_bytes: 305169
+    expected_member_count: 1
+    expected_expanded_bytes: 3815889
+    layout: single-file
+    target_locator: pt/challenge_action_localisation_train.json
+    member_suffix: null
+    expected_member_name: challenge_action_localisation_train.json
+  - asset_id: perception-action-valid-annotations
+    split_role: development
+    archive_destination: perception_temporal_action_loc/archives/challenge_action_localisation_valid.json.zip
+    archive_sha256: a6dc3fc9528f4628dbf2d89f3502fb797de02d2ea930aba4e36c495d9f02f007
+    archive_bytes: 79491
+    expected_member_count: 1
+    expected_expanded_bytes: 921516
+    layout: single-file
+    target_locator: pt/challenge_action_localisation_valid.json
+    member_suffix: null
+    expected_member_name: challenge_action_localisation_valid.json
+  - asset_id: perception-action-test-features
+    split_role: heldout
+    archive_destination: perception_temporal_action_loc/archives/action_localisation_test_video_features.zip
+    archive_sha256: c2461bc2abbfecb8ce72221432f89d70bc7cdf8e662d62209afd911de3412e15
+    archive_bytes: 212468446
+    expected_member_count: 5359
+    expected_expanded_bytes: 234219392
+    layout: flat-files
+    target_locator: pt/action_localisation_test_video_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-sound-test-features
+    split_role: heldout
+    archive_destination: perception_temporal_action_loc/archives/sound_localisation_test_audio_features.zip
+    archive_sha256: ef76ddae622f39867bc955dd4032784e749b7c698195a6a7a112050c5605134c
+    archive_bytes: 285233264
+    expected_member_count: 5359
+    expected_expanded_bytes: 514842496
+    layout: flat-files
+    target_locator: pt/sound_localisation_test_audio_features
+    member_suffix: .npy
+    expected_member_name: null
+  - asset_id: perception-action-test-annotations
+    split_role: heldout
+    archive_destination: perception_temporal_action_loc/archives/challenge_action_localisation_test.json.zip
+    archive_sha256: 8cc913726b9c6209206e16b8a93fc8336bc46ec19ebab5735b0988223ac569ea
+    archive_bytes: 1011179
+    expected_member_count: 1
+    expected_expanded_bytes: 12775261
+    layout: single-file
+    target_locator: pt/challenge_action_localisation_test.json
+    member_suffix: null
+    expected_member_name: challenge_action_localisation_test.json
+expected_archive_bytes: 698506926
+expected_expanded_bytes: 1067288026
+maximum_materialized_bytes: 2147483648
+minimum_free_storage_bytes: 4294967296
+owner_approval_required: true
+owner_approved: false
+authorizes_extraction: false
+authorizes_ingestion: false
+authorizes_environment_installation: false
+authorizes_model_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

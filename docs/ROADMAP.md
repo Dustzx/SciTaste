@@ -55,7 +55,17 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.19 — model-authored multi-file benchmark patches | done | a first-party model node can use condition-specific Knowledge, Taste, critic, and development feedback to propose bounded replacements for exact visible source or stop spending experiments; the controller binds predecessor bytes, rejects stale/out-of-surface/invalid edits, applies accepted replacements atomically, and retains a self-hashed transition without granting experiment authority |
 | Phase 9.20 — isolated development feedback loop | done | the durable model node drives a bounded propose/stop → admit → isolated development score → adopt/rollback loop; output artifacts and every transition are retained, and the six native conditions compile only from one content-bound five-channel guidance set |
 | Phase 9.21 — frozen-candidate held-out campaign closure | done | the first-party adapter binds an authorized campaign cell to separate development/test resource profiles, freezes the selected source and required artifacts before hidden data opens, executes one scorer-owned held-out command with no later model call, and publishes raw objective/usage/evidence artifacts to the campaign runner |
-| Phase 9.22 — first real native prepilot activation | in progress | materialize licensed development and held-out datasets, pin the two task environments, complete scorer readiness, review and pair the five guidance channels, bind a content-addressed adapter launcher, disclose the exact API/GPU/model/data budget, then request owner authorization before the first real cell |
+| Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping now passes license, receipt, ZIP-safety, and exact development/held-out isolation gates and awaits narrow extraction approval; after materialization, pin its task environment, reproduce the objective scorer, review and pair the five guidance channels, bind the adapter launcher, disclose the full model/data/GPU budget, and request separate cell execution authority |
+
+Phase 9.22 is deliberately advancing one real task before widening the task set.
+The Perception materialization proposal maps 698,506,926 compressed bytes to a
+305,450,877-byte train/validation view and a disjoint 761,837,149-byte test view.
+Its proposal and gate hashes are now stable and owner-review-ready. Meta-learning
+does not share this status because AWA still lacks the required per-image license
+records. No extraction, environment install, model call, GPU job, scorer run, or
+experiment has occurred. The next environment transaction must resolve and record
+the upstream CUDA 11.8/12.4 dependency mixture and compile `nms_1d_cpu`; a mere
+import probe cannot mark the scorer verified.
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen

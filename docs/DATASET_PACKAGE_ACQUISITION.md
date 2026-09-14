@@ -1,18 +1,21 @@
 # Large dataset package acquisition
 
-SciTaste treats large benchmark data as four different states:
+SciTaste treats large benchmark data as five different states:
 
 1. exact source metadata is reviewable;
 2. the exact proposal is legally and operationally ready for owner approval;
 3. an explicitly approved transfer has produced content hashes atomically;
 4. the downloaded archives have passed no-extraction safety qualification.
+5. an independently approved mapping has projected the archives into disjoint
+   development-only and scorer-only task data views.
 
 None of these states authorizes ingestion, benchmark execution, API calls, GPU
 work, or scientific claims. The current MLRC first-preflight request has now
 completed state 3 under the project's standing owner policy: 39 objects totaling
 3,761,168,137 bytes were atomically published and independently rehashed with no
-size or SHA-256 mismatch. State 4 remains unopened because it reads archive
-central directories and therefore requires a separate content-boundary decision.
+size or SHA-256 mismatch. All 39 ZIPs subsequently completed state 4 under a
+separate local-read approval. The Perception task's nine archives are now ready
+for a state-5 owner decision; no archive has been extracted.
 
 ## Approval boundary
 
@@ -107,10 +110,61 @@ scitaste evaluation dataset-package-qualify \
 ```
 
 A safe report is evidence for a later extraction proposal; it is not extraction
-authority. No such report has been produced for the acquired MLRC package.
-Extraction, task-layout checks, environment reproduction, baseline execution,
-and formal experiments remain later gates. For AWA, archive safety also does not
-satisfy the separate per-image license-record coverage gate.
+authority. The acquired MLRC package now has such a report: all 39 receipt hashes,
+member paths, file types, and expanded-byte ceilings passed. For AWA, archive
+safety still does not satisfy the separate per-image license-record coverage gate.
+
+## Split-isolated task materialization
+
+`dataset-materialization-request` closes the gap between a safe ZIP and data that
+may enter an experiment. The Perception proposal binds all nine acquired asset
+hashes, the archive qualification, the ingestion-license disposition, and the
+task runtime spec. Its development view contains only six train/validation
+archives (305,450,877 expanded bytes); its held-out view contains only the three
+test archives (761,837,149 expanded bytes). The latter targets are required to
+equal the task spec's complete hidden-path set, while none may occur in the
+development view.
+
+The current no-write inspection is owner-approval-ready with no blockers:
+
+- proposal SHA-256: `13171500fc841e2ef91601f4d7de781607b4099f01d12896981c92879acff152`;
+- request-file SHA-256: `4af83f201f0c9c5da6266921af336258dd6c23b5d62f8b089ff1e2764c4baf42`;
+- gate-report SHA-256: `1df5af51b0289c9908461df8ddd3932083bd25e857393a2f2d7699047775bc5b`;
+- compressed input: 698,506,926 bytes; expanded output: 1,067,288,026
+  bytes; transaction ceiling: 2 GiB; required free-space floor: 4 GiB.
+
+Review does not create authority. Approval must name and reconfirm both hashes:
+
+```bash
+scitaste evaluation dataset-materialization-approve \
+  --manifest configs/evaluation/materialization/mlrc_perception_temporal_action_loc_v1.yaml \
+  --workspace-root . \
+  --confirm-proposal-sha256 13171500fc841e2ef91601f4d7de781607b4099f01d12896981c92879acff152 \
+  --confirm-gate-report-sha256 1df5af51b0289c9908461df8ddd3932083bd25e857393a2f2d7699047775bc5b \
+  --approved-by <owner> \
+  --approved-at <timezone-aware-iso-8601> \
+  --output outputs/projects/scitaste-self-development/evaluations/materialization-approvals/mlrc-perception-temporal-action-loc-v1.json
+```
+
+Only the separately loaded approval plus the explicit extraction switch can run
+the atomic transaction:
+
+```bash
+scitaste evaluation dataset-materialize \
+  --manifest configs/evaluation/materialization/mlrc_perception_temporal_action_loc_v1.yaml \
+  --approval <approval-path> \
+  --workspace-root . \
+  --materialized-at <timezone-aware-iso-8601> \
+  --allow-local-extraction
+```
+
+Extraction rehashes each source archive, streams every regular member with exact
+count and expanded-byte bounds, publishes both views together, makes their files
+read-only, and emits hashes compatible with `NativeExecutionProfile`. Failure
+removes staging and publishes neither view. The resulting receipt still records
+that no environment, model, GPU job, or benchmark ran. Environment reproduction,
+the compiled NMS extension, scorer-baseline reproduction, and a reviewed Taste
+guidance pair remain later gates.
 
 ## Test boundary
 

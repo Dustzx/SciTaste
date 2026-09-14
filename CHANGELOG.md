@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added an approval-gated dataset materialization transaction between safe
+  archive acquisition and native experiment execution. It rebinds receipt,
+  archive-safety, ingestion-license, task-spec, asset, member-count, and byte
+  identities; atomically publishes disjoint development-only and scorer-only
+  data views; rehashes every source ZIP; enforces declared flat member layouts;
+  and emits `NativeExecutionProfile`-compatible tree hashes without installing an
+  environment or invoking a model, GPU, scorer, or benchmark. The first real
+  Perception mapping covers all nine acquired archives and is review-ready but
+  remains unexecuted pending its own narrow owner approval.
 - Added the first-party native benchmark campaign adapter and one-way held-out
   scorer. One authorized cell now binds its exact campaign, task, condition,
   guidance, model profile, development/held-out resource profiles, and owner

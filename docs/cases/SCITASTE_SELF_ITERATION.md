@@ -1887,3 +1887,31 @@ It also verified receipt-based resource reopening. This is engineering evidence,
 not an ICLR result: no MLRC dataset, task environment, local checkpoint, API, GPU,
 or formal cell was activated. The remaining next step is therefore concrete
 resource preparation and owner-approved prepilot execution, not more project UI.
+
+## Turning acquired bytes into a real split boundary (2026-09-14)
+
+The next mainline iteration stayed outside Generation as Content and followed the
+first real resource dependency of the native adapter. The MLRC archives had been
+downloaded and safely inspected, but that did not say which files could enter a
+model-visible development run. Treating a safe ZIP as an executable dataset would
+have collapsed acquisition, ingestion, and held-out authority into one ambiguous
+state.
+
+SciTaste now binds all nine Perception archive identities to an explicit
+archive-to-task projection. Six train/validation archives produce a
+305,450,877-byte development view; three test archives produce a separate
+761,837,149-byte held-out view. The no-write gate confirms that the latter equals
+the runtime spec's complete hidden-path set and that none of it occurs in the
+development view. The proposal covers 698,506,926 compressed bytes and all of its
+receipt, archive-safety, and ingestion-license checks pass.
+
+The materializer itself was exercised only on generated tiny ZIP fixtures. It
+rehashes each archive, streams bounded regular members into staging, publishes
+both views atomically, makes them read-only, and emits native-profile-compatible
+hashes. The real proposal remains unexecuted because its earlier download/read
+approvals intentionally did not grant extraction. This is useful self-iteration:
+the framework converted a concrete inability to start its own prepilot into a
+reusable authority and evidence boundary rather than bypassing it with a manual
+unzip. Environment reproduction and the first scorer run remain separate next
+steps; the upstream CUDA 11.8/12.4 mixture and compiled NMS extension must be
+measured rather than inferred from an environment file.

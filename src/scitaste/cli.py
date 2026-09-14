@@ -85,6 +85,7 @@ from scitaste.evaluation import (
     approve_benchmark_metadata_projection,
     approve_dataset_acquisition_request,
     approve_dataset_archive_read,
+    approve_dataset_materialization,
     approve_dataset_package_request,
     approve_json_content_audit,
     approve_source_archive_read,
@@ -106,6 +107,7 @@ from scitaste.evaluation import (
     inspect_benchmark_metadata_screening_chain,
     inspect_dataset_acquisition_request,
     inspect_dataset_license_policy,
+    inspect_dataset_materialization_request,
     inspect_dataset_package_archives,
     inspect_dataset_package_request,
     inspect_evidence_program,
@@ -138,6 +140,8 @@ from scitaste.evaluation import (
     load_dataset_acquisition_request,
     load_dataset_archive_read_approval,
     load_dataset_license_policy,
+    load_dataset_materialization_approval,
+    load_dataset_materialization_request,
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
@@ -174,6 +178,7 @@ from scitaste.evaluation import (
     materialize_aaar_quality_projections,
     materialize_dataset_acquisition,
     materialize_dataset_package_acquisition,
+    materialize_dataset_views,
     materialize_human_blind_opening,
     materialize_objective_analysis,
     materialize_source_projections,
@@ -207,6 +212,8 @@ from scitaste.evaluation import (
     save_dataset_archive_qualification_report,
     save_dataset_archive_read_approval,
     save_dataset_license_policy_report,
+    save_dataset_materialization_approval,
+    save_dataset_materialization_gate_report,
     save_dataset_package_approval,
     save_dataset_package_gate_report,
     save_evaluation_cell_plan,
@@ -2012,6 +2019,58 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(dataset_package_qualify)
     dataset_package_qualify.set_defaults(handler=_handle_evaluation_dataset_package_qualify)
+    dataset_materialization_request = evaluation_commands.add_parser(
+        "dataset-materialization-request",
+        help="Inspect an exact archive-to-development/held-out mapping without extraction",
+    )
+    dataset_materialization_request.add_argument("--manifest", type=Path, required=True)
+    dataset_materialization_request.add_argument(
+        "--workspace-root", type=Path, default=Path(".")
+    )
+    dataset_materialization_request.add_argument("--output", type=Path, default=None)
+    dataset_materialization_request.add_argument(
+        "--require-owner-approval-ready",
+        action="store_true",
+        help="return nonzero unless license, archive, and split-isolation gates pass",
+    )
+    _add_log_level_option(dataset_materialization_request)
+    dataset_materialization_request.set_defaults(
+        handler=_handle_evaluation_dataset_materialization_request
+    )
+    dataset_materialization_approve = evaluation_commands.add_parser(
+        "dataset-materialization-approve",
+        help="Bind owner authority to one exact local extraction and split mapping",
+    )
+    dataset_materialization_approve.add_argument("--manifest", type=Path, required=True)
+    dataset_materialization_approve.add_argument(
+        "--workspace-root", type=Path, default=Path(".")
+    )
+    dataset_materialization_approve.add_argument("--confirm-proposal-sha256", required=True)
+    dataset_materialization_approve.add_argument(
+        "--confirm-gate-report-sha256", required=True
+    )
+    dataset_materialization_approve.add_argument("--approved-by", required=True)
+    dataset_materialization_approve.add_argument("--approved-at", required=True)
+    dataset_materialization_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(dataset_materialization_approve)
+    dataset_materialization_approve.set_defaults(
+        handler=_handle_evaluation_dataset_materialization_approve
+    )
+    dataset_materialize = evaluation_commands.add_parser(
+        "dataset-materialize",
+        help="Atomically publish approved development-only and scorer-only task data",
+    )
+    dataset_materialize.add_argument("--manifest", type=Path, required=True)
+    dataset_materialize.add_argument("--approval", type=Path, required=True)
+    dataset_materialize.add_argument("--workspace-root", type=Path, default=Path("."))
+    dataset_materialize.add_argument("--materialized-at", required=True)
+    dataset_materialize.add_argument(
+        "--allow-local-extraction",
+        action="store_true",
+        help="permit only the hash-bound local extraction; no model or execution authority",
+    )
+    _add_log_level_option(dataset_materialize)
+    dataset_materialize.set_defaults(handler=_handle_evaluation_dataset_materialize)
     acquisition_approve = evaluation_commands.add_parser(
         "acquisition-approve",
         help="Bind owner approval to an exact review-ready download request without downloading",
@@ -6176,6 +6235,86 @@ def _handle_evaluation_dataset_package_qualify(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_safe and not report.archive_safety_qualified:
         return 1
+    return 0
+
+
+def _handle_evaluation_dataset_materialization_request(args: argparse.Namespace) -> int:
+    inspection = load_dataset_materialization_request(args.manifest)
+    report = inspect_dataset_materialization_request(
+        inspection,
+        workspace_root=args.workspace_root,
+    )
+    payload = report.model_dump(mode="json")
+    if args.output is not None:
+        payload["report_path"] = str(
+            save_dataset_materialization_gate_report(report, args.output)
+        )
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    if args.require_owner_approval_ready and not report.ready_for_owner_approval:
+        return 1
+    return 0
+
+
+def _handle_evaluation_dataset_materialization_approve(args: argparse.Namespace) -> int:
+    inspection = load_dataset_materialization_request(args.manifest)
+    report = inspect_dataset_materialization_request(
+        inspection,
+        workspace_root=args.workspace_root,
+    )
+    approval = approve_dataset_materialization(
+        inspection,
+        report,
+        confirmed_proposal_sha256=args.confirm_proposal_sha256,
+        confirmed_gate_report_sha256=args.confirm_gate_report_sha256,
+        approved_by=args.approved_by,
+        approved_at=datetime.fromisoformat(args.approved_at),
+    )
+    output = save_dataset_materialization_approval(approval, args.output)
+    print(
+        json.dumps(
+            {
+                "approval_path": str(output),
+                **approval.model_dump(mode="json"),
+                "extraction_performed": False,
+                "model_or_benchmark_executed": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_dataset_materialize(args: argparse.Namespace) -> int:
+    inspection = load_dataset_materialization_request(args.manifest)
+    report = inspect_dataset_materialization_request(
+        inspection,
+        workspace_root=args.workspace_root,
+    )
+    approval = load_dataset_materialization_approval(args.approval)
+    receipt = materialize_dataset_views(
+        inspection,
+        report,
+        approval.approval,
+        workspace_root=args.workspace_root,
+        allow_local_extraction=args.allow_local_extraction,
+        materialized_at=datetime.fromisoformat(args.materialized_at),
+    )
+    receipt_path = (
+        args.workspace_root / inspection.request.destination_root / "RECEIPT.json"
+    ).resolve()
+    print(
+        json.dumps(
+            {
+                "approval_path": str(approval.path),
+                "approval_file_sha256": approval.file_sha256,
+                "receipt_path": str(receipt_path),
+                **receipt.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
