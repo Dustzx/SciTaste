@@ -437,12 +437,16 @@ def analyze_objective_outcomes(
     measurements: ObjectiveMeasurementSet,
     *,
     project_root: str | Path,
+    evidence_root: str | Path | None = None,
     project_id: str,
     evaluation_id: str,
 ) -> ObjectiveAnalysisReport:
     """Compute task-level paired estimates without launching any external resource."""
 
     root = Path(project_root).resolve(strict=True)
+    protocol_root = (
+        Path(evidence_root).resolve(strict=True) if evidence_root is not None else root
+    )
     contract = contract_inspection.contract
     if manifest.analysis is None or manifest.analysis.claim_admission is None:
         raise ValueError("objective analysis requires a preregistered claim-admission contract")
@@ -450,7 +454,9 @@ def analyze_objective_outcomes(
     claim = analysis.claim_admission
     if analysis.objective_outcome_contract_ref is None:
         raise ValueError("prelaunch analysis does not bind an objective-outcome contract")
-    expected_contract_path = _project_regular_file(root, analysis.objective_outcome_contract_ref)
+    expected_contract_path = _project_regular_file(
+        protocol_root, analysis.objective_outcome_contract_ref
+    )
     if contract_inspection.path.resolve(strict=True) != expected_contract_path:
         raise ValueError("objective outcome contract path differs from the prelaunch binding")
     if analysis.objective_outcome_contract_sha256 != contract_inspection.file_sha256:
@@ -460,7 +466,7 @@ def analyze_objective_outcomes(
     if manifest.study_scope == "formal":
         if analysis.power_analysis_ref is None or analysis.power_analysis_sha256 is None:
             raise ValueError("formal objective analysis requires a content-bound power analysis")
-        power_path = _project_regular_file(root, analysis.power_analysis_ref)
+        power_path = _project_regular_file(protocol_root, analysis.power_analysis_ref)
         if _sha256_file(power_path) != analysis.power_analysis_sha256:
             raise ValueError("formal power-analysis bytes differ from prelaunch")
 
@@ -488,7 +494,7 @@ def analyze_objective_outcomes(
     if len(claim_tasks) < claim.minimum_distinct_tasks:
         raise ValueError("objective analysis has too few independent held-out tasks")
     for spec in task_specs.values():
-        if not _artifact_matches(root, spec.scorer_artifact):
+        if not _artifact_matches(protocol_root, spec.scorer_artifact):
             raise ValueError(f"objective scorer artifact is missing or changed: {spec.task_id}")
 
     record_by_cell = {item.cell_id: item for item in results.cell_results}
@@ -674,6 +680,7 @@ def materialize_objective_analysis(
     measurement_set_artifact: EvaluationResultArtifact,
     *,
     project_root: str | Path,
+    evidence_root: str | Path | None = None,
     project_id: str,
     evaluation_id: str,
     output_path: str | Path,
@@ -687,6 +694,7 @@ def materialize_objective_analysis(
         contract_inspection,
         measurements,
         project_root=project_root,
+        evidence_root=evidence_root,
         project_id=project_id,
         evaluation_id=evaluation_id,
     )

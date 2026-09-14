@@ -29,12 +29,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from scitaste.benchmark.study_execution import ProcessRunner, SubprocessRunner
 from scitaste.benchmark.study_models import StudyOutcome
+from scitaste.evaluation.campaign_activation import (
+    EvaluationCampaignActivation,
+    validate_evaluation_campaign_activation,
+)
 from scitaste.evaluation.cell_plan import (
     EvaluationCellPlan,
     PlannedEvaluationCell,
     load_evaluation_cell_plan,
 )
 from scitaste.evaluation.prelaunch import (
+    AdapterEvidenceKind,
+    ConfirmatoryEstimandKind,
     ExecutionLaneKind,
     ExperimentPrelaunchManifest,
     ScientificEndpointKind,
@@ -156,7 +162,7 @@ class EvaluationCampaignManifest(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     run_id: str
     evaluation_id: str
@@ -165,6 +171,8 @@ class EvaluationCampaignManifest(BaseModel):
     plan_sha256: str = Field(pattern=_SHA256)
     launch_config_sha256: str = Field(pattern=_SHA256)
     selected_cell_ids: tuple[str, ...] = Field(min_length=1, max_length=10_000)
+    activation_sha256: str | None = Field(default=None, pattern=_SHA256)
+    claim_authority: bool = True
     execution_authorized: Literal[True] = True
     manifest_sha256: str = Field(pattern=_SHA256)
 
@@ -181,16 +189,29 @@ class EvaluationCampaignManifest(BaseModel):
                 validate_entry_id(value, field_name=label)
         if len(self.selected_cell_ids) != len(set(self.selected_cell_ids)):
             raise ValueError("evaluation campaign selected cell IDs must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"manifest_sha256"}))
+        if self.schema_version == "1.0":
+            if self.activation_sha256 is not None or not self.claim_authority:
+                raise ValueError("campaign manifest v1.0 cannot bind a feasibility activation")
+        elif self.activation_sha256 is None or self.claim_authority:
+            raise ValueError("activated campaign must be feasibility-only and content-bound")
+        expected = content_sha256(self._identity_payload())
         if self.manifest_sha256 != expected:
             raise ValueError("evaluation campaign manifest hash mismatch")
         return self
+
+    def _identity_payload(self) -> dict[str, object]:
+        payload = self.model_dump(mode="json", exclude={"manifest_sha256"})
+        if self.schema_version == "1.0":
+            payload.pop("activation_sha256", None)
+            payload.pop("claim_authority", None)
+        return payload
 
     @classmethod
     def create(cls, **values: object) -> EvaluationCampaignManifest:
         payload = {"schema_version": "1.0", **values}
         payload.pop("manifest_sha256", None)
-        return cls(**payload, manifest_sha256=content_sha256(payload))
+        unsigned = cls.model_construct(manifest_sha256="0" * 64, **payload)
+        return cls(**payload, manifest_sha256=content_sha256(unsigned._identity_payload()))
 
 
 class EvaluationCellCheckpoint(BaseModel):
@@ -241,7 +262,7 @@ class EvaluationCampaignSummary(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     run_id: str
     evaluation_id: str
@@ -250,8 +271,11 @@ class EvaluationCampaignSummary(BaseModel):
         "blocked",
         "planned",
         "partial",
+        "feasibility_complete",
+        "feasibility_complete_with_failures",
         "cells_complete",
         "cells_complete_with_failures",
+        "analysis_complete",
     ]
     selected_cells: int = Field(ge=0)
     executed_cells: int = Field(ge=0)
@@ -264,13 +288,21 @@ class EvaluationCampaignSummary(BaseModel):
         "execution_authorization",
         "cell_execution",
         "retry_or_accept_failures",
+        "feasibility_review",
         "objective_analysis_or_blind_review",
+        "result_registration",
     ]
     dry_run: bool
     result_set_locator: str | None = None
     result_set_sha256: str | None = Field(default=None, pattern=_SHA256)
     handoff_locator: str | None = None
     handoff_sha256: str | None = Field(default=None, pattern=_SHA256)
+    objective_measurement_set_locator: str | None = None
+    objective_measurement_set_sha256: str | None = Field(default=None, pattern=_SHA256)
+    objective_analysis_locator: str | None = None
+    objective_analysis_sha256: str | None = Field(default=None, pattern=_SHA256)
+    completed_result_set_locator: str | None = None
+    completed_result_set_sha256: str | None = Field(default=None, pattern=_SHA256)
     launches: tuple[EvaluationCellLaunch, ...] = ()
 
 
@@ -279,7 +311,7 @@ class EvaluationCampaignHandoff(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     project_id: str
     run_id: str
     evaluation_id: str
@@ -294,7 +326,9 @@ class EvaluationCampaignHandoff(BaseModel):
     next_interface: Literal[
         "project.evaluation.run-campaign",
         "project.evaluation.resolve-cell-failures",
+        "project.evaluation.inspect-feasibility-block",
         "project.evaluation.objective-score-and-analyze",
+        "project.evaluation.register-result",
         "project.evaluation.prepare-blind-review",
         "project.evaluation.select-analysis-path",
     ]
@@ -353,6 +387,17 @@ class _CampaignInputs:
     plan: EvaluationCellPlan
 
 
+@dataclass(frozen=True)
+class _ObjectiveClosure:
+    measurement_set_locator: str
+    measurement_set_sha256: str
+    analysis_locator: str | None = None
+    analysis_sha256: str | None = None
+    completed_result_set_locator: str | None = None
+    completed_result_set_sha256: str | None = None
+    completed_result_set: EvaluationResultSet | None = None
+
+
 class ProjectEvaluationCampaignRunner:
     """Execute one exact authorized evaluation plan inside its owning project."""
 
@@ -363,11 +408,13 @@ class ProjectEvaluationCampaignRunner:
         *,
         process_runner: ProcessRunner | None = None,
         clock: Callable[[], float] = time.perf_counter,
+        evidence_root: str | Path = ".",
     ) -> None:
         self.runtime = runtime
         self.launch_config = launch_config
         self.process_runner = process_runner or SubprocessRunner()
         self.clock = clock
+        self.evidence_root = Path(evidence_root)
 
     def run(
         self,
@@ -379,6 +426,7 @@ class ProjectEvaluationCampaignRunner:
         resume: bool = False,
         retry_failed_cells: bool = False,
         cell_ids: tuple[str, ...] | None = None,
+        activation: EvaluationCampaignActivation | None = None,
         max_cells: int | None = None,
         dry_run: bool = False,
     ) -> EvaluationCampaignSummary:
@@ -388,11 +436,26 @@ class ProjectEvaluationCampaignRunner:
         if max_cells is not None and max_cells < 1:
             raise ValueError("max_cells must be positive")
         inputs = self._inputs(project_id, evaluation_id)
-        selected = self._select_cells(inputs.plan, cell_ids=cell_ids)
+        if activation is None:
+            selected = self._select_cells(inputs.plan, cell_ids=cell_ids)
+            if len(selected) != len(inputs.plan.cells):
+                raise ValueError(
+                    "partial evaluation selection requires an approved task-block activation"
+                )
+        else:
+            selected = validate_evaluation_campaign_activation(
+                activation,
+                inputs.plan,
+                project_id=project_id,
+                evaluation_id=evaluation_id,
+            )
+            if cell_ids is not None and set(cell_ids) != set(activation.selected_cell_ids):
+                raise ValueError("campaign cell selection differs from its activation")
         launches, launch_blockers = self._launches(project_id, run_id, selected)
-        blockers = self._readiness_blockers(inputs, selected, launch_blockers)
+        blockers = self._readiness_blockers(inputs, selected, launch_blockers, activation)
         if blockers or dry_run:
             return EvaluationCampaignSummary(
+                schema_version="1.1",
                 project_id=project_id,
                 run_id=run_id,
                 evaluation_id=evaluation_id,
@@ -413,6 +476,7 @@ class ProjectEvaluationCampaignRunner:
             raise ValueError("evaluation execution requires allow_execution=true")
 
         campaign = EvaluationCampaignManifest.create(
+            schema_version="1.1" if activation is not None else "1.0",
             project_id=project_id,
             run_id=run_id,
             evaluation_id=evaluation_id,
@@ -421,6 +485,8 @@ class ProjectEvaluationCampaignRunner:
             plan_sha256=inputs.plan.plan_sha256,
             launch_config_sha256=self.launch_config.config_sha256,
             selected_cell_ids=tuple(cell.cell_id for cell in selected),
+            activation_sha256=(activation.activation_sha256 if activation is not None else None),
+            claim_authority=activation is None,
             execution_authorized=True,
         )
         snapshot = self._begin_or_resume(inputs.snapshot, campaign, resume=resume)
@@ -453,21 +519,56 @@ class ProjectEvaluationCampaignRunner:
             )
             selected_ids = {cell.cell_id for cell in selected}
             selected_complete = selected_ids <= set(records)
-            evaluation_complete = {cell.cell_id for cell in inputs.plan.cells} <= set(records)
             failed = sum(record.status == "failed" for record in records.values())
-            status: Literal["partial", "cells_complete", "cells_complete_with_failures"]
-            if selected_complete and evaluation_complete:
-                status = "cells_complete_with_failures" if failed else "cells_complete"
+            status: Literal[
+                "partial",
+                "feasibility_complete",
+                "feasibility_complete_with_failures",
+                "cells_complete",
+                "cells_complete_with_failures",
+                "analysis_complete",
+            ]
+            if selected_complete:
+                if failed:
+                    status = (
+                        "cells_complete_with_failures"
+                        if campaign.claim_authority
+                        else "feasibility_complete_with_failures"
+                    )
+                elif campaign.claim_authority:
+                    status = "cells_complete"
+                else:
+                    status = "feasibility_complete"
             else:
                 status = "partial"
-            locator = self._result_set_locator(run_id)
+            closure = self._objective_closure(
+                inputs,
+                campaign,
+                result_set,
+                root,
+                selected_complete=selected_complete,
+                failed=failed,
+            )
+            if status == "cells_complete" and closure is not None:
+                status = "analysis_complete"
+            locator = (
+                closure.completed_result_set_locator
+                if closure is not None and closure.completed_result_set_locator is not None
+                else self._result_set_locator(run_id)
+            )
+            handed_results = (
+                closure.completed_result_set
+                if closure is not None and closure.completed_result_set is not None
+                else result_set
+            )
             handoff = self._handoff(
                 campaign=campaign,
                 manifest=inputs.manifest,
                 plan=inputs.plan,
                 records=records,
-                result_set=result_set,
+                result_set=handed_results,
                 result_set_locator=locator,
+                analysis_complete=status == "analysis_complete",
             )
             _atomic_json_write(root / "HANDOFF.json", handoff.model_dump(mode="json"))
             snapshot = self.runtime.update_run(
@@ -479,20 +580,32 @@ class ProjectEvaluationCampaignRunner:
                 artifact=locator,
                 evaluation_id=evaluation_id,
                 campaign_manifest_sha256=campaign.manifest_sha256,
-                result_set_sha256=result_set.result_set_sha256,
+                result_set_sha256=handed_results.result_set_sha256,
                 handoff_sha256=handoff.handoff_sha256,
+                objective_measurement_set_sha256=(
+                    closure.measurement_set_sha256 if closure is not None else None
+                ),
+                objective_analysis_sha256=(
+                    closure.analysis_sha256 if closure is not None else None
+                ),
                 recorded_cells=len(records),
                 succeeded_cells=sum(record.status == "succeeded" for record in records.values()),
                 failed_cells=failed,
                 next_required_stage=(
                     "retry_or_accept_failures"
                     if status == "cells_complete_with_failures"
+                    else "feasibility_review"
+                    if status
+                    in {"feasibility_complete", "feasibility_complete_with_failures"}
                     else "objective_analysis_or_blind_review"
                     if status == "cells_complete"
+                    else "result_registration"
+                    if status == "analysis_complete"
                     else "cell_execution"
                 ),
             )
         return EvaluationCampaignSummary(
+            schema_version="1.1",
             project_id=project_id,
             run_id=run_id,
             evaluation_id=evaluation_id,
@@ -507,15 +620,33 @@ class ProjectEvaluationCampaignRunner:
             next_required_stage=(
                 "retry_or_accept_failures"
                 if status == "cells_complete_with_failures"
+                else "feasibility_review"
+                if status in {"feasibility_complete", "feasibility_complete_with_failures"}
                 else "objective_analysis_or_blind_review"
                 if status == "cells_complete"
+                else "result_registration"
+                if status == "analysis_complete"
                 else "cell_execution"
             ),
             dry_run=False,
             result_set_locator=locator,
-            result_set_sha256=result_set.result_set_sha256,
+            result_set_sha256=handed_results.result_set_sha256,
             handoff_locator=f"runs/{run_id}/evaluation_campaign/HANDOFF.json",
             handoff_sha256=handoff.handoff_sha256,
+            objective_measurement_set_locator=(
+                closure.measurement_set_locator if closure is not None else None
+            ),
+            objective_measurement_set_sha256=(
+                closure.measurement_set_sha256 if closure is not None else None
+            ),
+            objective_analysis_locator=(closure.analysis_locator if closure is not None else None),
+            objective_analysis_sha256=(closure.analysis_sha256 if closure is not None else None),
+            completed_result_set_locator=(
+                closure.completed_result_set_locator if closure is not None else None
+            ),
+            completed_result_set_sha256=(
+                closure.completed_result_set_sha256 if closure is not None else None
+            ),
             launches=tuple(launches),
         )
 
@@ -528,8 +659,9 @@ class ProjectEvaluationCampaignRunner:
         records: dict[str, EvaluationCellResult],
         result_set: EvaluationResultSet,
         result_set_locator: str,
+        analysis_complete: bool,
     ) -> EvaluationCampaignHandoff:
-        planned = tuple(cell.cell_id for cell in plan.cells)
+        planned = campaign.selected_cell_ids
         recorded = tuple(cell_id for cell_id in planned if cell_id in records)
         failed = tuple(cell_id for cell_id in recorded if records[cell_id].status == "failed")
         if len(recorded) < len(planned):
@@ -538,12 +670,27 @@ class ProjectEvaluationCampaignRunner:
             resume_safe = True
             retry_required = False
             human_required = False
-        elif failed:
+        elif failed and campaign.claim_authority:
             next_interface = "project.evaluation.resolve-cell-failures"
             required_inputs = ("explicit-retry-or-accept-failure-decision",)
             resume_safe = True
             retry_required = True
             human_required = False
+        elif analysis_complete:
+            next_interface = "project.evaluation.register-result"
+            required_inputs = ("completed-objective-result-set",)
+            resume_safe = False
+            retry_required = False
+            human_required = False
+        elif not campaign.claim_authority:
+            next_interface = "project.evaluation.inspect-feasibility-block"
+            required_inputs = (
+                "failure-and-resource-demand-review",
+                "explicit-next-block-decision",
+            )
+            resume_safe = False
+            retry_required = False
+            human_required = True
         elif manifest.primary_endpoint is ScientificEndpointKind.OBJECTIVE_PROGRESS:
             next_interface = "project.evaluation.objective-score-and-analyze"
             required_inputs = (
@@ -569,6 +716,9 @@ class ProjectEvaluationCampaignRunner:
             retry_required = False
             human_required = False
         return EvaluationCampaignHandoff.create(
+            schema_version=(
+                "1.1" if campaign.activation_sha256 is not None or analysis_complete else "1.0"
+            ),
             project_id=campaign.project_id,
             run_id=campaign.run_id,
             evaluation_id=campaign.evaluation_id,
@@ -628,17 +778,270 @@ class ProjectEvaluationCampaignRunner:
         inputs: _CampaignInputs,
         selected: tuple[PlannedEvaluationCell, ...],
         launch_blockers: list[str],
+        activation: EvaluationCampaignActivation | None,
     ) -> list[str]:
         blockers = list(launch_blockers)
-        if not inputs.evaluation.execution_authorized:
-            blockers.append("evaluation:not-execution-authorized")
-        if not inputs.plan.ready_for_launch_preparation:
-            blockers.extend(f"plan:{code}" for code in inputs.plan.plan_blockers)
-        if not inputs.plan.proposal_author_approved:
-            blockers.append("proposal:owner-approval-missing")
+        if activation is None:
+            if not inputs.evaluation.execution_authorized:
+                blockers.append("evaluation:not-execution-authorized")
+            if not inputs.plan.ready_for_launch_preparation:
+                blockers.extend(f"plan:{code}" for code in inputs.plan.plan_blockers)
+            if not inputs.plan.proposal_author_approved:
+                blockers.append("proposal:owner-approval-missing")
+        else:
+            blockers.extend(self._activation_blockers(inputs, selected, activation))
         for cell in selected:
             blockers.extend(f"cell:{cell.cell_id}:{code}" for code in cell.readiness_blockers)
         return sorted(set(blockers))
+
+    def _activation_blockers(
+        self,
+        inputs: _CampaignInputs,
+        selected: tuple[PlannedEvaluationCell, ...],
+        activation: EvaluationCampaignActivation,
+    ) -> list[str]:
+        blockers: list[str] = []
+        if not activation.approval.approved:
+            blockers.append("activation:owner-approval-missing")
+        if inputs.manifest.schema_version != "1.6":
+            blockers.append("activation:typed-prelaunch-v1.6-required")
+        if inputs.manifest.study_scope != "pilot":
+            blockers.append("activation:pilot-scope-required")
+        if inputs.manifest.primary_endpoint is not ScientificEndpointKind.OBJECTIVE_PROGRESS:
+            blockers.append("activation:objective-endpoint-required")
+        if inputs.manifest.analysis is None or inputs.manifest.integrity is None:
+            blockers.append("activation:protocol-contract-incomplete")
+        if (
+            inputs.manifest.source_commit is None
+            or inputs.evaluation.observed_source_commit != inputs.manifest.source_commit
+            or inputs.evaluation.source_tree_clean is not True
+        ):
+            blockers.append("activation:registered-source-integrity-unverified")
+        systems = {system.system_id: system for system in inputs.manifest.systems}
+        for system_id in {cell.system_id for cell in selected}:
+            system = systems[system_id]
+            if system.adapter_evidence_kind is not AdapterEvidenceKind.NATIVE_PREFLIGHT_REPORT:
+                blockers.append(f"activation:{system_id}:native-preflight-report-required")
+                continue
+            if system.adapter_preflight_ref is None or system.adapter_preflight_sha256 is None:
+                blockers.append(f"activation:{system_id}:native-preflight-report-unbound")
+                continue
+            try:
+                from scitaste.evaluation.native_condition_preflight import (
+                    NativeConditionPreflightReport,
+                )
+
+                report_path = self._activation_evidence_file(
+                    system.adapter_preflight_ref,
+                    system.adapter_preflight_sha256,
+                )
+                report = NativeConditionPreflightReport.model_validate_json(
+                    report_path.read_bytes()
+                )
+                if report.source_commit != inputs.manifest.source_commit:
+                    blockers.append(f"activation:{system_id}:native-preflight-source-drift")
+                if not report.ready_for_experiment:
+                    blockers.append(f"activation:{system_id}:native-preflight-not-ready")
+            except (OSError, ValueError):
+                blockers.append(f"activation:{system_id}:native-preflight-report-invalid")
+        analysis = inputs.manifest.analysis
+        if analysis is not None:
+            if (
+                analysis.objective_outcome_contract_ref is None
+                or analysis.objective_outcome_contract_sha256 is None
+            ):
+                blockers.append("activation:objective-outcome-contract-unbound")
+            else:
+                try:
+                    self._activation_evidence_file(
+                        analysis.objective_outcome_contract_ref,
+                        analysis.objective_outcome_contract_sha256,
+                    )
+                except (OSError, ValueError):
+                    blockers.append("activation:objective-outcome-contract-invalid")
+        return blockers
+
+    def _activation_evidence_file(self, locator: str, expected_sha256: str) -> Path:
+        pure = PurePosixPath(locator)
+        if pure.is_absolute() or any(part in {"", ".", ".."} for part in pure.parts):
+            raise ValueError("activation evidence path is unsafe")
+        root = self.evidence_root.resolve(strict=True)
+        candidate = root
+        for part in pure.parts:
+            candidate /= part
+            if candidate.is_symlink():
+                raise ValueError("activation evidence cannot traverse a symbolic link")
+        resolved = candidate.resolve(strict=True)
+        if (
+            not resolved.is_relative_to(root)
+            or not resolved.is_file()
+            or resolved.stat().st_size < 1
+            or resolved.stat().st_size > _MAX_RESULT_BYTES
+            or _file_sha256(resolved) != expected_sha256
+        ):
+            raise ValueError("activation evidence is missing, oversized, or changed")
+        return resolved
+
+    def _objective_closure(
+        self,
+        inputs: _CampaignInputs,
+        campaign: EvaluationCampaignManifest,
+        results: EvaluationResultSet,
+        campaign_root: Path,
+        *,
+        selected_complete: bool,
+        failed: int,
+    ) -> _ObjectiveClosure | None:
+        analysis = inputs.manifest.analysis
+        claim = analysis.claim_admission if analysis is not None else None
+        if (
+            not selected_complete
+            or (failed and campaign.claim_authority)
+            or inputs.manifest.primary_endpoint is not ScientificEndpointKind.OBJECTIVE_PROGRESS
+            or claim is None
+            or claim.estimand_kind
+            not in {
+                ConfirmatoryEstimandKind.NATIVE_TASTE_CAUSAL,
+                ConfirmatoryEstimandKind.NATIVE_TASTE_MECHANISMS,
+            }
+        ):
+            return None
+        if (
+            analysis.objective_outcome_contract_ref is None
+            or analysis.objective_outcome_contract_sha256 is None
+        ):
+            raise ValueError("native objective campaign lacks a bound outcome contract")
+
+        from scitaste.evaluation.objective_analysis import (
+            ObjectiveAnalysisMaterialization,
+            ObjectiveAnalysisReport,
+            analyze_objective_outcomes,
+            bind_objective_measurement_set,
+            complete_objective_result_set,
+            load_objective_measurement_set,
+            load_objective_outcome_contract,
+            materialize_objective_analysis,
+            primary_comparisons_from_objective_report,
+            save_completed_objective_result_set,
+            save_objective_measurement_set,
+        )
+        from scitaste.evaluation.objective_measurement_collection import (
+            collect_native_objective_measurements,
+        )
+
+        contract = load_objective_outcome_contract(
+            self.evidence_root / PurePosixPath(analysis.objective_outcome_contract_ref)
+        )
+        if contract.file_sha256 != analysis.objective_outcome_contract_sha256:
+            raise ValueError("native objective outcome contract differs from prelaunch")
+        project_root = self.runtime.projects_root / campaign.project_id
+        measurements = collect_native_objective_measurements(
+            inputs.plan,
+            results,
+            contract,
+            project_root=project_root,
+            selected_cell_ids=campaign.selected_cell_ids,
+        )
+        measurement_path = campaign_root / "OBJECTIVE_MEASUREMENTS.json"
+        if measurement_path.exists():
+            if load_objective_measurement_set(measurement_path) != measurements:
+                raise ValueError("existing objective measurement set differs on resume")
+        else:
+            save_objective_measurement_set(measurements, measurement_path)
+        measurement_artifact = bind_objective_measurement_set(
+            measurement_path,
+            project_root=project_root,
+        )
+        measurement_locator = measurement_path.relative_to(project_root).as_posix()
+        if not campaign.claim_authority:
+            return _ObjectiveClosure(
+                measurement_set_locator=measurement_locator,
+                measurement_set_sha256=measurements.measurement_set_sha256,
+            )
+
+        analysis_path = campaign_root / "OBJECTIVE_ANALYSIS.json"
+        completed_path = campaign_root / "COMPLETED_RESULT_SET.json"
+        if analysis_path.exists() or completed_path.exists():
+            if not analysis_path.is_file() or not completed_path.is_file():
+                raise ValueError("objective closure is only partially materialized")
+            expected_report = analyze_objective_outcomes(
+                inputs.manifest,
+                inputs.plan,
+                results,
+                contract,
+                measurements,
+                project_root=project_root,
+                evidence_root=self.evidence_root,
+                project_id=campaign.project_id,
+                evaluation_id=campaign.evaluation_id,
+            )
+            observed_report = ObjectiveAnalysisReport.model_validate_json(
+                analysis_path.read_bytes()
+            )
+            if observed_report != expected_report:
+                raise ValueError("existing objective analysis differs on resume")
+            analysis_artifact = EvaluationResultArtifact(
+                locator=analysis_path.relative_to(project_root).as_posix(),
+                sha256=_file_sha256(analysis_path),
+                size_bytes=analysis_path.stat().st_size,
+            )
+            comparisons = primary_comparisons_from_objective_report(
+                observed_report,
+                contract.contract,
+                analysis_artifact=analysis_artifact,
+                measurement_set_artifact=measurement_artifact,
+            )
+            materialized = ObjectiveAnalysisMaterialization(
+                report=observed_report,
+                analysis_artifact=analysis_artifact,
+                primary_comparisons=comparisons,
+                output_path=analysis_path,
+            )
+            completed = complete_objective_result_set(results, materialized)
+            observed_completed = EvaluationResultSet.model_validate_json(
+                completed_path.read_bytes()
+            )
+            if observed_completed != completed:
+                raise ValueError("existing completed objective result differs on resume")
+            return _ObjectiveClosure(
+                measurement_set_locator=measurement_locator,
+                measurement_set_sha256=measurements.measurement_set_sha256,
+                analysis_locator=analysis_path.relative_to(project_root).as_posix(),
+                analysis_sha256=observed_report.report_sha256,
+                completed_result_set_locator=(
+                    completed_path.relative_to(project_root).as_posix()
+                ),
+                completed_result_set_sha256=completed.result_set_sha256,
+                completed_result_set=completed,
+            )
+        materialized = materialize_objective_analysis(
+            inputs.manifest,
+            inputs.plan,
+            results,
+            contract,
+            measurements,
+            measurement_artifact,
+            project_root=project_root,
+            evidence_root=self.evidence_root,
+            project_id=campaign.project_id,
+            evaluation_id=campaign.evaluation_id,
+            output_path=analysis_path.relative_to(project_root).as_posix(),
+        )
+        completed = complete_objective_result_set(results, materialized)
+        save_completed_objective_result_set(
+            completed,
+            completed_path.relative_to(project_root).as_posix(),
+            project_root=project_root,
+        )
+        return _ObjectiveClosure(
+            measurement_set_locator=measurement_locator,
+            measurement_set_sha256=measurements.measurement_set_sha256,
+            analysis_locator=analysis_path.relative_to(project_root).as_posix(),
+            analysis_sha256=materialized.report.report_sha256,
+            completed_result_set_locator=completed_path.relative_to(project_root).as_posix(),
+            completed_result_set_sha256=completed.result_set_sha256,
+            completed_result_set=completed,
+        )
 
     def _launches(
         self,
@@ -734,6 +1137,8 @@ class ProjectEvaluationCampaignRunner:
                 plan_sha256=campaign.plan_sha256,
                 launch_config_sha256=campaign.launch_config_sha256,
                 campaign_manifest_sha256=campaign.manifest_sha256,
+                activation_sha256=campaign.activation_sha256,
+                claim_authority=campaign.claim_authority,
                 resume_attempt=0,
             ),
             expected_revision=snapshot.revision,

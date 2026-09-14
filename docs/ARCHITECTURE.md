@@ -3906,3 +3906,35 @@ The first executable proposal using this contract is the unapproved
 two candidate tasks, the local Qwen3-VL-2B checkpoint, and an executable
 objective-score contract. Authoring these bindings did not materialize task
 data, prepare a runtime, load the model, occupy a GPU, or execute an outcome.
+
+### ADR-126: Pilot activation is a complete task block and objective closure is automatic
+
+Status: accepted and implemented; the first real activation remains unapproved.
+
+A multi-task pilot can contain one task that is executable before another task's
+license or assets are ready. Requiring whole-proposal readiness prevented useful
+feasibility evidence, while the old `--cell-id` selection could expose a single
+condition before its controls and permit adaptive continuation. SciTaste now
+uses a distinct feasibility activation: it recompiles every plan cell for one or
+more selected tasks, fixes their ordered tasks, lanes, systems and cells, sums
+their GPU/API/token/storage ceilings, and requires owner approval over that exact
+hash. A normal claim-bearing campaign must still select the complete plan.
+
+The activation is accepted only for a pilot with an objective endpoint, a clean
+registered source identity, schema-1.6 typed native preflight reports, and a
+content-bound objective-outcome contract. Every selected cell must independently
+be ready. The resulting campaign manifest records the activation hash and
+`claim_authority=false`; completion routes to feasibility review even when all
+five cells succeed and can never enter confirmatory analysis. Failed feasibility
+cells remain retained observations and do not trigger an automatic retry.
+
+For native objective campaigns, the adapter's scorer-owned
+`OBJECTIVE_MEASUREMENT.json` is no longer a manual handoff. The campaign runner
+verifies its result-record hash, cell/task/condition identity, metric, direction,
+baseline and project-owned bytes, then compiles the generic measurement set.
+When the entire claim-authorized task population is complete, it executes the
+already bound task-clustered estimator, freezes the analysis and completed result
+set, and routes only registration. Resume recomputes and verifies these derived
+objects instead of overwriting them. Generation as Content consumes this ledger
+through its existing read seam and may submit only a pre-launch typed program
+revision; it has no experiment or claim authority.

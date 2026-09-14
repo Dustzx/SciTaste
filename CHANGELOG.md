@@ -25,6 +25,14 @@ semantic versioning.
   two-task analysis while limiting the first future activation to the complete
   five-condition Perception feasibility block; no data, model, GPU, or
   experiment was activated.
+- Added feasibility task-block activation and automatic native-objective
+  closure. A blocked multi-task pilot may now execute only an owner-approved,
+  complete task-by-condition block under a typed v1.6 proposal, while retaining
+  `claim_authority=false`; arbitrary favorable cell subsets are rejected. The
+  campaign runner converts scorer-owned native measurements into the generic
+  objective schema and, once a complete claim-authorized matrix exists, runs
+  the frozen task-clustered analysis and emits a completed result set. Both the
+  execution ledger and derived analysis are restart-verifiable.
 - Added an approval-gated dataset materialization transaction between safe
   archive acquisition and native experiment execution. It rebinds receipt,
   archive-safety, ingestion-license, task-spec, asset, member-count, and byte

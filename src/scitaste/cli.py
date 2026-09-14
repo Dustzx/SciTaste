@@ -87,6 +87,7 @@ from scitaste.evaluation import (
     approve_dataset_archive_read,
     approve_dataset_materialization,
     approve_dataset_package_request,
+    approve_evaluation_campaign_activation,
     approve_json_content_audit,
     approve_source_archive_read,
     approve_source_projection,
@@ -95,6 +96,7 @@ from scitaste.evaluation import (
     bind_objective_measurement_set,
     build_source_projection_plan,
     build_structured_metadata_audit_plan_bundle,
+    compile_evaluation_campaign_activation,
     compile_evaluation_cell_plan,
     complete_objective_result_set,
     inspect_acquired_json_content,
@@ -145,6 +147,7 @@ from scitaste.evaluation import (
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
+    load_evaluation_campaign_activation,
     load_evaluation_campaign_launch_config,
     load_evaluation_cell_plan,
     load_evidence_program,
@@ -216,6 +219,7 @@ from scitaste.evaluation import (
     save_dataset_materialization_gate_report,
     save_dataset_package_approval,
     save_dataset_package_gate_report,
+    save_evaluation_campaign_activation,
     save_evaluation_cell_plan,
     save_executable_candidate_report,
     save_experiment_decision_dossier_report,
@@ -667,6 +671,18 @@ def build_parser() -> argparse.ArgumentParser:
     project_evaluation_campaign.add_argument("--evaluation-id", required=True)
     project_evaluation_campaign.add_argument("--run-id", required=True)
     project_evaluation_campaign.add_argument("--launch-config", type=Path, required=True)
+    project_evaluation_campaign.add_argument(
+        "--evidence-root",
+        type=Path,
+        default=Path("."),
+        help="source root containing the proposal's frozen analysis artifacts",
+    )
+    project_evaluation_campaign.add_argument(
+        "--activation",
+        type=Path,
+        default=None,
+        help="approved feasibility task-block activation for a blocked larger pilot",
+    )
     project_evaluation_campaign.add_argument("--cell-id", action="append", default=None)
     project_evaluation_campaign.add_argument("--max-cells", type=int, default=None)
     project_evaluation_campaign.add_argument("--resume", action="store_true")
@@ -2618,6 +2634,12 @@ def build_parser() -> argparse.ArgumentParser:
     objective_analyze.add_argument("--objective-contract", type=Path, required=True)
     objective_analyze.add_argument("--measurement-set", type=Path, required=True)
     objective_analyze.add_argument("--project-root", type=Path, required=True)
+    objective_analyze.add_argument(
+        "--evidence-root",
+        type=Path,
+        default=None,
+        help="source root for frozen objective contracts and scorer artifacts",
+    )
     objective_analyze.add_argument("--project-id", required=True)
     objective_analyze.add_argument("--evaluation-id", required=True)
     objective_analyze.add_argument("--analysis-output", type=Path, required=True)
@@ -2748,6 +2770,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(cell_plan)
     cell_plan.set_defaults(handler=_handle_evaluation_cell_plan)
+    activation_plan = evaluation_commands.add_parser(
+        "campaign-activation-plan",
+        help="Freeze complete pilot task blocks and their aggregate resource ceilings",
+    )
+    activation_plan.add_argument("--cell-plan", type=Path, required=True)
+    activation_plan.add_argument("--activation-id", required=True)
+    activation_plan.add_argument("--project-id", required=True)
+    activation_plan.add_argument("--evaluation-id", required=True)
+    activation_plan.add_argument("--task-id", action="append", required=True)
+    activation_plan.add_argument("--output", type=Path, default=None)
+    _add_log_level_option(activation_plan)
+    activation_plan.set_defaults(handler=_handle_evaluation_campaign_activation_plan)
+    activation_approve = evaluation_commands.add_parser(
+        "campaign-activation-approve",
+        help="Approve one exact feasibility task block without granting claim authority",
+    )
+    activation_approve.add_argument("--activation", type=Path, required=True)
+    activation_approve.add_argument("--confirm-activation-sha256", required=True)
+    activation_approve.add_argument("--approved-by", required=True)
+    activation_approve.add_argument("--approved-at", required=True)
+    activation_approve.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(activation_approve)
+    activation_approve.set_defaults(handler=_handle_evaluation_campaign_activation_approve)
     direct_agent_run = evaluation_commands.add_parser(
         "direct-agent-run",
         help="Run one exactly approved prompt-only API control cell",
@@ -3149,7 +3194,16 @@ def _handle_project_evaluation_status(args: argparse.Namespace) -> int:
 
 def _handle_project_evaluation_campaign(args: argparse.Namespace) -> int:
     launch_config = load_evaluation_campaign_launch_config(args.launch_config)
-    summary = ProjectEvaluationCampaignRunner(ProjectRuntime(args.outputs_root), launch_config).run(
+    activation = (
+        load_evaluation_campaign_activation(args.activation)
+        if args.activation is not None
+        else None
+    )
+    summary = ProjectEvaluationCampaignRunner(
+        ProjectRuntime(args.outputs_root),
+        launch_config,
+        evidence_root=args.evidence_root,
+    ).run(
         project_id=args.project_id,
         evaluation_id=args.evaluation_id,
         run_id=args.run_id,
@@ -3157,11 +3211,17 @@ def _handle_project_evaluation_campaign(args: argparse.Namespace) -> int:
         resume=args.resume,
         retry_failed_cells=args.retry_failed_cells,
         cell_ids=tuple(args.cell_id) if args.cell_id else None,
+        activation=activation,
         max_cells=args.max_cells,
         dry_run=args.dry_run,
     )
     print(summary.model_dump_json(indent=2))
-    return 1 if summary.run_status in {"blocked", "cells_complete_with_failures"} else 0
+    return (
+        1
+        if summary.run_status
+        in {"blocked", "cells_complete_with_failures", "feasibility_complete_with_failures"}
+        else 0
+    )
 
 
 def _handle_project_evaluation_register_result(args: argparse.Namespace) -> int:
@@ -7241,6 +7301,7 @@ def _handle_evaluation_objective_analyze(args: argparse.Namespace) -> int:
         measurements,
         measurement_artifact,
         project_root=args.project_root,
+        evidence_root=args.evidence_root,
         project_id=args.project_id,
         evaluation_id=args.evaluation_id,
         output_path=args.analysis_output,
@@ -7444,6 +7505,44 @@ def _handle_evaluation_cell_plan(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_preparation_ready and not plan.ready_for_launch_preparation:
         return 1
+    return 0
+
+
+def _handle_evaluation_campaign_activation_plan(args: argparse.Namespace) -> int:
+    plan = load_evaluation_cell_plan(args.cell_plan)
+    activation = compile_evaluation_campaign_activation(
+        plan,
+        activation_id=args.activation_id,
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        task_ids=tuple(args.task_id),
+    )
+    payload = activation.model_dump(mode="json")
+    if args.output is not None:
+        payload["output"] = str(save_evaluation_campaign_activation(activation, args.output))
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _handle_evaluation_campaign_activation_approve(args: argparse.Namespace) -> int:
+    activation = load_evaluation_campaign_activation(args.activation)
+    approved = approve_evaluation_campaign_activation(
+        activation,
+        confirm_activation_sha256=args.confirm_activation_sha256,
+        approved_by=args.approved_by,
+        approved_at=args.approved_at,
+    )
+    output = save_evaluation_campaign_activation(approved, args.output)
+    print(
+        json.dumps(
+            {
+                "output": str(output),
+                **approved.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

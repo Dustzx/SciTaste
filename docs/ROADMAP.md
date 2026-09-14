@@ -67,6 +67,24 @@ experiment has occurred. The next environment transaction must resolve and recor
 the upstream CUDA 11.8/12.4 dependency mixture and compile `nms_1d_cpu`; a mere
 import probe cannot mark the scorer verified.
 
+The executor no longer requires the second blocked task merely to test the first
+one, and it no longer accepts an arbitrary hand-picked cell subset. A separately
+hashed activation must cover every system/seed/repetition cell for the selected
+task, disclose aggregate GPU/API/token/storage ceilings, carry exact owner
+approval, and set `claim_authority=false`. The current unapproved Perception
+activation covers five cells, at most 20 aggregate GPU-hours and 100 GiB of
+retained cell artifacts, with zero API cost or API tokens. Before it can execute,
+the proposal must be reissued as schema 1.6 with verified native preflight
+reports; the current v12 file remains a no-run design record.
+
+Once a native objective block succeeds, the campaign runner now derives the
+generic measurement set directly from each scorer-owned hidden-test artifact.
+A feasibility activation stops at an explicit owner review. A complete
+claim-authorized multi-task campaign continues automatically through the bound
+task-clustered analysis and emits the completed result set for registration.
+No UI controller, free-form model decision, or unregistered script sits between
+those stages.
+
 The earlier six-arm Qwen prepilot is retained as a diagnostic design, not reused
 as the paper's formal causal allocation. Its `native-taste` arm also enabled
 Utility, so comparison with Knowledge-only could not isolate abstraction from

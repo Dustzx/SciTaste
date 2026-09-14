@@ -164,6 +164,15 @@ from scitaste.evaluation.benchmark_metadata_screening import (
     save_benchmark_metadata_screening_report,
     screen_benchmark_metadata_population,
 )
+from scitaste.evaluation.campaign_activation import (
+    EvaluationCampaignActivation,
+    EvaluationCampaignActivationApproval,
+    approve_evaluation_campaign_activation,
+    compile_evaluation_campaign_activation,
+    load_evaluation_campaign_activation,
+    save_evaluation_campaign_activation,
+    validate_evaluation_campaign_activation,
+)
 from scitaste.evaluation.campaign_execution import (
     EvaluationAdapterResult,
     EvaluationAdapterUsage,
@@ -600,6 +609,9 @@ from scitaste.evaluation.objective_analysis import (
     save_completed_objective_result_set,
     save_objective_measurement_set,
     save_objective_outcome_contract,
+)
+from scitaste.evaluation.objective_measurement_collection import (
+    collect_native_objective_measurements,
 )
 from scitaste.evaluation.prelaunch import (
     AdapterEvidenceKind,
@@ -1177,6 +1189,8 @@ __all__ = [
     "EvaluationAdapterResult",
     "EvaluationAdapterUsage",
     "EvaluationBlindReview",
+    "EvaluationCampaignActivation",
+    "EvaluationCampaignActivationApproval",
     "EvaluationCampaignHandoff",
     "EvaluationCampaignLaunchConfig",
     "EvaluationCampaignManifest",
@@ -1510,6 +1524,7 @@ __all__ = [
     "approve_dataset_archive_read",
     "approve_dataset_materialization",
     "approve_dataset_package_request",
+    "approve_evaluation_campaign_activation",
     "approve_json_content_audit",
     "approve_reference_selection_comparison",
     "approve_source_archive_read",
@@ -1523,9 +1538,11 @@ __all__ = [
     "build_structured_metadata_audit_plan_bundle",
     "build_taste_abstraction_input",
     "claim_analysis_input_sha256",
+    "collect_native_objective_measurements",
     "compare_gpu_inventory",
     "compile_benchmark_condition_guidance",
     "compile_effective_experiment_program",
+    "compile_evaluation_campaign_activation",
     "compile_evaluation_cell_plan",
     "complete_objective_result_set",
     "evaluate_resource_feasibility",
@@ -1610,6 +1627,7 @@ __all__ = [
     "load_dataset_package_request",
     "load_direct_agent_invocation",
     "load_direct_agent_task",
+    "load_evaluation_campaign_activation",
     "load_evaluation_campaign_launch_config",
     "load_evaluation_cell_plan",
     "load_evidence_program",
@@ -1716,6 +1734,7 @@ __all__ = [
     "save_dataset_materialization_gate_report",
     "save_dataset_package_approval",
     "save_dataset_package_gate_report",
+    "save_evaluation_campaign_activation",
     "save_evaluation_cell_plan",
     "save_executable_candidate_report",
     "save_experiment_decision_dossier_report",
@@ -1748,6 +1767,7 @@ __all__ = [
     "source_projection_forbidden_exact_strings",
     "source_projection_protocol_sha256",
     "summarize_evaluation_readiness",
+    "validate_evaluation_campaign_activation",
     "verify_benchmark_execution_resources",
     "verify_locked_human_review_set",
 ]

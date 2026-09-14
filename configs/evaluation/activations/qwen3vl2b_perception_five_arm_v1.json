@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "activation_id": "qwen3vl2b-perception-five-arm-v1",
+  "project_id": "scitaste-self-development",
+  "evaluation_id": "native-taste-mechanism-prepilot-v12",
+  "proposal_sha256": "5deccdffa39c4000d2ac4cd9834f1cdc3834f4d9f16eda72717159211fc7cd25",
+  "plan_sha256": "4f0625e296188ca1ed3cd43f201033de85778a6cdb3a612de02a85b6a9f97f86",
+  "purpose": "feasibility-task-block",
+  "selected_task_ids": [
+    "perception-temporal-action-loc"
+  ],
+  "selected_lane_ids": [
+    "qwen3vl2b-native-mechanisms-local-gpu"
+  ],
+  "selected_system_ids": [
+    "full-scitaste",
+    "native-base",
+    "raw-source-rag",
+    "matched-abstracted-taste",
+    "mismatched-taste"
+  ],
+  "selected_cell_ids": [
+    "cell-7f486d1c2e58768598221603",
+    "cell-5f22062dc616fe4105b31863",
+    "cell-f994ab8963f797be73d318a8",
+    "cell-b194a01b45c843ff6078b41d",
+    "cell-b880c90ea6d3019e627acd39"
+  ],
+  "maximum_total_gpu_hours": 20.0,
+  "maximum_total_api_cost": 0.0,
+  "maximum_total_tokens": 0,
+  "maximum_total_storage_bytes": 107374182400,
+  "claim_authority": false,
+  "approval": {
+    "approved": false,
+    "approved_activation_sha256": null,
+    "approved_by": null,
+    "approved_at": null
+  },
+  "authorizes_unselected_cells": false,
+  "authorizes_claim_analysis": false,
+  "activation_sha256": "9470cbd1f7b62f81daf4712af39a7772f043fadc7281c99fff501e4da67b2722"
+}
