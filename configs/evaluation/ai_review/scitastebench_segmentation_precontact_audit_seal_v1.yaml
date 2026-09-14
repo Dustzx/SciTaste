@@ -1,0 +1,86 @@
+schema_version: "1.0"
+seal_id: scitastebench-segmentation-precontact-audit-seal-v1
+project_id: scitaste-self-development
+sealed_at: "2026-09-15T07:50:00+08:00"
+purpose: >-
+  Bind the immutable no-contact request pack, AI-only veto reviews, and the
+  deterministic audit implementation before any prospective-v6 provider call.
+
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v6.yaml
+  file_sha256: 9211b5e5c72b9b21e980cca6b4a5cec783d9ab6fbd3768cd400ab15581d15a77
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v8.yaml
+  file_sha256: 1deac153e20c694c87ed6acdc6c5755125ce6e9fd9446b846d37febc5f17878e
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/request-pack-v8/REQUEST_PACK.json
+  file_sha256: 944e772246051a892551dafd933ba43d9c0ce35e6914fed4d0d16f5c4d6b251e
+  pack_sha256: 97b3d673a054aba1fcaab856626b4b9fd9b99bb839872a8c95d6d9713cdc21e8
+
+deterministic_audit_implementation:
+  git_commit: a71445bb3fbd9a9b9845867bfce131cf2a7ee8f2
+  locator: src/scitaste/evaluation/taste_source_segmentation_post_audit.py
+  file_sha256: 861c8fe773e5e05151d70101a9f93067959803ffa6f520e21c1dd71c47cdeaf9
+
+ai_d_attempt_v1:
+  disposition: vetoed-preserved-not-repaired
+  deterministic_veto:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v1/DETERMINISTIC_VETO.yaml
+    file_sha256: e3a84ad7da35d8708bd5088d0802e8cb967c7e7faedcedc42d59e5a3f3f3a9f8
+  blocker_codes: [own-context-overlaps-trigger]
+
+ai_d_attempt_v2:
+  reviewer_kind: ai
+  not_human_review: true
+  verdict: inventory-complete
+  item_count: 20
+  decision_count: 117
+  residual_risk_item_count: 0
+  raw_inventory:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v2/RAW_INVENTORY.json
+    file_sha256: 56e0203e30647baf125330a2884817ab64b7730913b61c53e4d32ae187ee2e1a
+    semantic_sha256: 96e16d7dae88f1b94cd2a1c40ff9eef73f1e0718804d44e4d2902f64e46e9fcc
+  review_receipt:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v2/REVIEW_RECEIPT.yaml
+    file_sha256: 4f6e3bbfb47c36353879d6d34716fbe0ef85429c576772c11bfca12ae2182074
+    receipt_sha256: c3510e7744b7afb1a79296bb392f83ade7f03e630cf44b51a8ebdd9755453ff3
+  normalized_inventory:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-d-sealed-inventory-v2/SEALED_INVENTORY.json
+    file_sha256: fe69af0729ea890cfae27fb9f7a1496b34e3a68f2c89b89a71e399dbffd66045
+    inventory_sha256: 70a905982b3db251702059fe673cd7d5fda3b2bf4d9e92948f42e0f29bdd354c
+
+ai_e_preexecution_review:
+  reviewer_kind: ai
+  not_human_review: true
+  decision: pass
+  blocker_codes: []
+  report:
+    locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v6/ai-e-preexecution-replay-v1/REPORT.yaml
+    file_sha256: 6266c41bc13c3537598239a7b4483aa12e1fc69690e6ba5512be3356986a0e50
+
+execution_boundary:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_claim_allowed: false
+  fresh_exact_owner_authorization_required: true
+  required_authorization_scope:
+    provider: zhipu
+    model: glm-5.3-flash
+    unique_item_count: 20
+    segmenter_requests: 10
+    maximum_adjudication_requests: 5
+    identity_sentinel_requests: 2
+    maximum_provider_requests: 17
+    maximum_input_tokens: 300000
+    maximum_output_tokens: 140000
+    retry_count: 0
+    owner_maximum_liability_usd: 10.0
+
+claim_boundary: >-
+  This seal records only an AI/non-human calibration prerequisite. It is not
+  human validity evidence, benchmark admission, formal effectiveness evidence,
+  scale authorization, or permission to contact the provider.
