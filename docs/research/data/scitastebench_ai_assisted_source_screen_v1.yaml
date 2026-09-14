@@ -1,7 +1,7 @@
 schema_version: "1.0"
 screen_id: scitastebench-ai-assisted-source-screen-v1
 project_id: scitaste-self-development
-status: exploratory-process-calibration-only
+status: typed-calibration-blocked-before-scaling
 purpose: >-
   Dogfood parallel SciTaste agents on a real, fixed, source-group-diverse
   twelve-item subset to expose rubric ambiguity and triage needs before human
@@ -55,9 +55,60 @@ artifacts:
     locator: >-
       outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/privacy.json
     file_sha256: 5ba7399de150794630547cb90c8e8d564d4d14497984f8619adfcf7e0ae5afbc
+canonicalization:
+  schema_version: "1.0"
+  exact_reviewer_visible_item_hashes_bound: true
+  separate_invocation_ids_bound: true
+  source_agent_outputs_hash_bound: true
+  normalized_artifacts:
+    - role: scientific-agent-a
+      locator: >-
+        outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/normalized/scientific-a.json
+      file_sha256: fac022191ff5ee988fbf649701761f50c1c4c14a18d5ebe7327f9b778acdaf1a
+      screen_sha256: 3586201b9b912543b23de7dffbe8a9ecde50814bcf35a4743e7eb651376ebbc5
+    - role: scientific-agent-b
+      locator: >-
+        outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/normalized/scientific-b.json
+      file_sha256: 202045916eed982a33b2523a8677697b029bcf0ac15d9ba4469be642475c1469
+      screen_sha256: afe1cae66f43acef1e79d756a6cf7341ac43a0b26118d499185a77ce25fb3ef6
+    - role: privacy-agent
+      locator: >-
+        outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/normalized/privacy.json
+      file_sha256: 1079b8cd256775ff49cf06fdcaf07e7f238e8f3e2e70f18a8636a48a7d58dd8f
+      screen_sha256: fdbd11cadaa773816c8ce5e7a3d60c0ae47e87dfbf407ae7811ed51845e96b17
+  calibration_report:
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/normalized/CALIBRATION-v2.json
+    file_sha256: 081b92c9b319fba5b9221460b055eb8a19783214b62c70c1aabc7c254741dec9
+    report_sha256: 8e88d771982bb6c78ef4a3dcb3033f1bcfdd5f73187fe819a163df0ca1f49183
+release_governance:
+  policy_locator: >-
+    configs/evaluation/human_review/scitastebench_source_release_governance_v2.yaml
+  file_sha256: 5f56d50e5eb38854bade71db6e29f0656c4468e6b67fedd7b559b4718e4db8e0
+  policy_sha256: 0a6e6697622cdbb275ad5a6cb4258e310374d79c75a1aacd454c09e8e0f8ef03
+  internal_ai_screening_allowed: true
+  public_release_authorized: false
+  release_modes:
+    aries-taste-source-review-v1: controlled-internal-only
+    f1000-multidomain-taste-source-review-v1: controlled-internal-only
+  interpretation: >-
+    Source blindness is not de-identification. ARIES currently binds a database
+    license rather than per-item paper or review rights, while F1000 per-item
+    license and attribution evidence was not preserved in the frozen campaign.
+    Both populations may be screened internally but may not be released.
+scaling_gate:
+  ready_for_scaled_ai_screening: false
+  blocker_codes:
+    - ai-invocation-reproducibility-bindings-incomplete
+    - exact-ai-model-identities-unbound
+    - scientific-rubric-agreement-below-calibration-threshold
+  public_release_blocker_codes:
+    - source-populations-controlled-internal-only
 authority:
   screening_method: interactive-codex-subagents
   exact_model_identity_bound: false
+  invocation_ids_distinct: true
+  reproducibility_ready: false
   not_human_review: true
   not_ethics_review: true
   formal_evidence_eligible: false

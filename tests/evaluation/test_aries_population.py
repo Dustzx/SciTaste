@@ -15,16 +15,21 @@ from scitaste.evaluation import (
     DatasetAcquisitionRequest,
     TasteSourceReviewRole,
     approve_dataset_acquisition_request,
+    compile_taste_source_ai_calibration,
+    load_taste_source_ai_calibration_report,
     load_taste_source_review_assignment_plan,
     load_taste_source_review_policy,
     materialize_aries_taste_population,
     materialize_dataset_acquisition,
+    normalize_taste_source_ai_screen,
     plan_taste_source_review_assignments,
     prepare_taste_source_review_campaign,
     prepare_taste_source_review_session,
     publish_aries_taste_population_run,
     publish_taste_source_review_campaign_run,
     save_dataset_acquisition_request,
+    save_taste_source_ai_calibration_report,
+    save_taste_source_ai_screening_run,
     save_taste_source_review_assignment_plan,
 )
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
@@ -326,6 +331,192 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         prepared_at=datetime(2026, 9, 14, 0, 6, tzinfo=UTC),
     )
     assert len(assigned_session.items) == 1
+    item_id = scientific_item["review_item_id"]
+    quality_dimensions = {
+        "evidential_rigor": "weak",
+        "decision_traceability": "strong",
+        "alternative_visibility": "strong",
+        "failure_boundary_visibility": "weak",
+        "transfer_potential": "strong",
+    }
+    raw_scientific_a = tmp_path / "raw-scientific-a.json"
+    raw_scientific_b = tmp_path / "raw-scientific-b.json"
+    raw_privacy = tmp_path / "raw-privacy.json"
+    raw_scientific_a.write_text(
+        json.dumps(
+            {
+                "input_boundary": {
+                    "other_screener_outputs_read": False,
+                    "private_item_map_read": False,
+                    "population_outcomes_read": False,
+                },
+                "items": [
+                    {
+                        "campaign": "aries",
+                        "review_item_id": item_id,
+                        "domain_label": "computing",
+                        "primary_decision_family": "experiment",
+                        "quality_dimensions": quality_dimensions,
+                        "transferable_taste_candidate": True,
+                        "rationale": "The review requests a concrete comparator.",
+                        "uncertainty": {
+                            "level": "moderate",
+                            "note": "The comparator family is visible.",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    raw_scientific_b.write_text(
+        json.dumps(
+            {
+                "input_boundary": {
+                    "other_screener_outputs_read": False,
+                    "private_item_map_read": False,
+                    "population_outcomes_read": False,
+                },
+                "items": [
+                    {
+                        "campaign_id": campaign.campaign_id,
+                        "review_item_id": item_id,
+                        "domain_label": "computing",
+                        "primary_decision_family": "experiment",
+                        "quality_dimensions": quality_dimensions,
+                        "transferable_taste_candidate": True,
+                        "rationale": "The missing comparator is explicit.",
+                        "uncertainty": "low: the requested action is explicit",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    raw_privacy.write_text(
+        json.dumps(
+            {
+                "scope": {
+                    "private_item_map_read": False,
+                    "population_outcome_read": False,
+                    "scientific_arm_outputs_read": False,
+                },
+                "items": [
+                    {
+                        "campaign": "aries",
+                        "item_id": item_id,
+                        "release_safe": False,
+                        "risk_labels": ["publication_fingerprint"],
+                        "redaction_notes": "Replace exact searchable text.",
+                        "rationale": "The text can identify a public paper.",
+                        "uncertainty": "high: release mode is unresolved",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    campaign_paths = (campaign_root / "CAMPAIGN.json",)
+    aliases = {"aries": campaign.campaign_id}
+    normalized_paths: list[Path] = []
+    for ordinal, raw_path in enumerate(
+        (raw_scientific_a, raw_scientific_b),
+        start=1,
+    ):
+        normalized = normalize_taste_source_ai_screen(
+            raw_screen_path=raw_path,
+            campaign_paths=campaign_paths,
+            campaign_aliases=aliases,
+            role=TasteSourceReviewRole.SCIENTIFIC,
+            screen_id=f"aries-ai-scientific-{ordinal}",
+            screener_id=f"ai-screener-{ordinal}",
+            invocation_id=f"ai-science-invocation-{ordinal}",
+            runtime_surface="test-agent",
+            model_identifier="unresolved-test-model",
+            model_revision=None,
+            exact_model_identity_bound=False,
+            task_instruction_sha256=None,
+            runtime_identity_sha256=None,
+            completed_at=datetime(2026, 9, 14, 0, 7 + ordinal, tzinfo=UTC),
+            locator_root=tmp_path,
+        )
+        normalized_path = tmp_path / f"normalized-scientific-{ordinal}.json"
+        save_taste_source_ai_screening_run(normalized, normalized_path)
+        normalized_paths.append(normalized_path)
+    normalized_privacy = normalize_taste_source_ai_screen(
+        raw_screen_path=raw_privacy,
+        campaign_paths=campaign_paths,
+        campaign_aliases=aliases,
+        role=TasteSourceReviewRole.PRIVACY,
+        screen_id="aries-ai-privacy-1",
+        screener_id="ai-privacy-1",
+        invocation_id="ai-privacy-invocation-1",
+        runtime_surface="test-agent",
+        model_identifier="unresolved-test-model",
+        model_revision=None,
+        exact_model_identity_bound=False,
+        task_instruction_sha256=None,
+        runtime_identity_sha256=None,
+        completed_at=datetime(2026, 9, 14, 0, 10, tzinfo=UTC),
+        locator_root=tmp_path,
+    )
+    normalized_privacy_path = tmp_path / "normalized-privacy.json"
+    save_taste_source_ai_screening_run(
+        normalized_privacy,
+        normalized_privacy_path,
+    )
+    release_governance_path = tmp_path / "release-governance.yaml"
+    release_governance_path.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "2.0",
+                "policy_id": "aries-release-governance-v2",
+                "project_id": "aries-project",
+                "populations": [
+                    {
+                        "campaign_id": campaign.campaign_id,
+                        "item_count": 1,
+                        "release_mode": "controlled-internal-only",
+                        "rights_scope": "unresolved",
+                        "content_license_identifiers": [],
+                        "public_reader_access_verified": False,
+                        "source_attribution_preserved": False,
+                        "exact_source_text_permitted": False,
+                        "private_derivation_map_bound": False,
+                        "redaction_manifest_bound": False,
+                        "reidentification_screen_passed": False,
+                        "rationale": "Synthetic fixture remains internal.",
+                    }
+                ],
+                "internal_ai_screening_allowed": True,
+                "public_release_requires_mode_specific_evidence": True,
+                "source_blindness_is_not_deidentification": True,
+                "database_license_is_not_item_content_license": True,
+                "legal_or_ethics_determination_claimed": False,
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    calibration = compile_taste_source_ai_calibration(
+        report_id="aries-ai-calibration-v1",
+        scientific_screen_paths=(normalized_paths[0], normalized_paths[1]),
+        privacy_screen_path=normalized_privacy_path,
+        compiled_at=datetime(2026, 9, 14, 0, 11, tzinfo=UTC),
+        locator_root=tmp_path,
+        release_governance_path=release_governance_path,
+    )
+    assert calibration.item_count == 1
+    assert calibration.decision_family_agreement_count == 1
+    assert calibration.release_unsafe_count == 1
+    assert calibration.ready_for_scaled_ai_screening is False
+    assert calibration.formal_evidence_eligible is False
+    calibration_path = tmp_path / "ai-calibration.json"
+    save_taste_source_ai_calibration_report(calibration, calibration_path)
+    assert (
+        load_taste_source_ai_calibration_report(calibration_path).report.report_sha256
+        == calibration.report_sha256
+    )
     snapshot, _ = publish_taste_source_review_campaign_run(
         runtime,
         project_id="aries-project",

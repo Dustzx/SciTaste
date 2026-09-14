@@ -1,0 +1,41 @@
+schema_version: "2.0"
+policy_id: scitastebench-source-release-governance-v2
+project_id: scitaste-self-development
+populations:
+  - campaign_id: aries-taste-source-review-v1
+    item_count: 196
+    release_mode: controlled-internal-only
+    rights_scope: database-only
+    content_license_identifiers: []
+    public_reader_access_verified: false
+    source_attribution_preserved: false
+    exact_source_text_permitted: false
+    private_derivation_map_bound: false
+    redaction_manifest_bound: false
+    reidentification_screen_passed: false
+    rationale: >-
+      The acquired ARIES database carries ODC-BY metadata terms, but SciTaste
+      has not established per-paper or per-review content rights. Items remain
+      internal until attributable or genuinely deidentified release evidence is
+      bound per item.
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    item_count: 77
+    release_mode: controlled-internal-only
+    rights_scope: unresolved
+    content_license_identifiers: []
+    public_reader_access_verified: false
+    source_attribution_preserved: false
+    exact_source_text_permitted: false
+    private_derivation_map_bound: false
+    redaction_manifest_bound: false
+    reidentification_screen_passed: false
+    rationale: >-
+      F1000 article and report pages may expose reusable content licenses, but
+      those per-item rights and attribution bindings were not preserved in the
+      frozen review campaign. The population therefore remains internal.
+internal_ai_screening_allowed: true
+public_release_requires_mode_specific_evidence: true
+source_blindness_is_not_deidentification: true
+database_license_is_not_item_content_license: true
+legal_or_ethics_determination_claimed: false
+policy_sha256: 0a6e6697622cdbb275ad5a6cb4258e310374d79c75a1aacd454c09e8e0f8ef03

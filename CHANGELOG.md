@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a typed AI source-screening and calibration layer. Independent screens
+  now bind invocation IDs, raw agent-output hashes, campaign policies, exact
+  reviewer-visible files, and per-item content hashes while structurally
+  forbidding human-review, admission, abstraction, adjudication, or formal-
+  evidence authority. The historical 12-case screen was normalized and exposes
+  its real 11/12 domain, 8/12 decision-family, 12/12 transferability, and 9/12
+  exact-profile agreement together with unresolved model/runtime provenance.
+  Release governance v2 makes attributable public sources, deidentified derived
+  text, and controlled-internal use mutually exclusive. ARIES and F1000 remain
+  internal-only until per-item rights or derived-release evidence is bound.
 - Added a deterministic, content-bound source-review assignment layer for
   SciTasteBench. The complete 273-case ARIES/F1000 pool is balanced across eight
   scientific and two privacy reviewer slots while preserving two independent

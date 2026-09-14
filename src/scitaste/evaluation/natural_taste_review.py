@@ -829,6 +829,28 @@ def load_taste_source_review_private_map(
     return _load_private_map(_bound_file(root, campaign.private_item_map))
 
 
+def load_taste_source_review_items(
+    path: str | Path,
+    role: TasteSourceReviewRole,
+) -> tuple[ScientificTasteSourceReviewItem | PrivacyTasteSourceReviewItem, ...]:
+    """Load the exact reviewer-visible projection bound to one campaign."""
+
+    source = _bounded_file(Path(path), maximum_bytes=_MAX_CONTROL_BYTES)
+    campaign = load_taste_source_review_campaign(source)
+    root = source.parent.resolve(strict=True)
+    binding = (
+        campaign.scientific_items
+        if role is TasteSourceReviewRole.SCIENTIFIC
+        else campaign.privacy_items
+    )
+    item_type = (
+        ScientificTasteSourceReviewItem
+        if role is TasteSourceReviewRole.SCIENTIFIC
+        else PrivacyTasteSourceReviewItem
+    )
+    return _load_jsonl(_bound_file(root, binding), item_type)
+
+
 def load_taste_source_review_activation(path: str | Path) -> TasteSourceReviewActivation:
     source = _bounded_file(Path(path), maximum_bytes=_MAX_CONTROL_BYTES)
     return TasteSourceReviewActivation.model_validate_json(source.read_bytes())
@@ -1543,6 +1565,7 @@ __all__ = [
     "TasteSourceReviewSubmission",
     "load_taste_source_review_activation",
     "load_taste_source_review_campaign",
+    "load_taste_source_review_items",
     "load_taste_source_review_policy",
     "load_taste_source_review_private_map",
     "lock_taste_source_review_submissions",

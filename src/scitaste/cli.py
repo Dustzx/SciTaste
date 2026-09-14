@@ -78,6 +78,7 @@ from scitaste.evaluation import (
     ProjectEvaluationCampaignRunner,
     ProjectionSemanticRole,
     SourceProjectionField,
+    TasteSourceReviewRole,
     align_evidence_program_to_benchmark,
     allocate_benchmark_metadata_population,
     analyze_human_preferences,
@@ -98,6 +99,7 @@ from scitaste.evaluation import (
     build_structured_metadata_audit_plan_bundle,
     compile_evaluation_campaign_activation,
     compile_evaluation_cell_plan,
+    compile_taste_source_ai_calibration,
     complete_objective_result_set,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
@@ -186,6 +188,7 @@ from scitaste.evaluation import (
     materialize_objective_analysis,
     materialize_source_projections,
     materialize_taste_corpus_pair,
+    normalize_taste_source_ai_screen,
     plan_benchmark_metadata_allocation,
     plan_benchmark_metadata_projection,
     plan_clustered_power,
@@ -242,6 +245,8 @@ from scitaste.evaluation import (
     save_structured_metadata_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
+    save_taste_source_ai_calibration_report,
+    save_taste_source_ai_screening_run,
     save_taste_source_review_assignment_plan,
     screen_benchmark_metadata_population,
     source_projection_forbidden_exact_strings,
@@ -2032,6 +2037,56 @@ def build_parser() -> argparse.ArgumentParser:
     taste_source_review_assignment.set_defaults(
         handler=_handle_evaluation_taste_source_review_assignment
     )
+    taste_source_ai_screen = evaluation_commands.add_parser(
+        "taste-source-ai-screen-normalize",
+        help="Normalize a non-human source screen against exact campaign bytes",
+    )
+    taste_source_ai_screen.add_argument("--raw-screen", type=Path, required=True)
+    taste_source_ai_screen.add_argument(
+        "--campaign",
+        type=Path,
+        action="append",
+        required=True,
+        help="campaign CAMPAIGN.json; repeat for each source population",
+    )
+    taste_source_ai_screen.add_argument(
+        "--campaign-alias",
+        action="append",
+        default=[],
+        metavar="ALIAS=CAMPAIGN_ID",
+    )
+    taste_source_ai_screen.add_argument(
+        "--role", choices=tuple(TasteSourceReviewRole), required=True
+    )
+    taste_source_ai_screen.add_argument("--screen-id", required=True)
+    taste_source_ai_screen.add_argument("--screener-id", required=True)
+    taste_source_ai_screen.add_argument("--invocation-id", required=True)
+    taste_source_ai_screen.add_argument("--runtime-surface", required=True)
+    taste_source_ai_screen.add_argument("--model-identifier", required=True)
+    taste_source_ai_screen.add_argument("--model-revision", default=None)
+    taste_source_ai_screen.add_argument("--exact-model-identity-bound", action="store_true")
+    taste_source_ai_screen.add_argument("--task-instruction-sha256", default=None)
+    taste_source_ai_screen.add_argument("--runtime-identity-sha256", default=None)
+    taste_source_ai_screen.add_argument("--completed-at", required=True)
+    taste_source_ai_screen.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_ai_screen.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_ai_screen)
+    taste_source_ai_screen.set_defaults(handler=_handle_evaluation_taste_source_ai_screen_normalize)
+    taste_source_ai_calibration = evaluation_commands.add_parser(
+        "taste-source-ai-calibration",
+        help="Compare two AI science screens and one privacy screen without formal authority",
+    )
+    taste_source_ai_calibration.add_argument("--report-id", required=True)
+    taste_source_ai_calibration.add_argument(
+        "--scientific-screen", type=Path, action="append", required=True
+    )
+    taste_source_ai_calibration.add_argument("--privacy-screen", type=Path, required=True)
+    taste_source_ai_calibration.add_argument("--compiled-at", required=True)
+    taste_source_ai_calibration.add_argument("--release-governance", type=Path, required=True)
+    taste_source_ai_calibration.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_ai_calibration.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_ai_calibration)
+    taste_source_ai_calibration.set_defaults(handler=_handle_evaluation_taste_source_ai_calibration)
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -6494,6 +6549,83 @@ def _handle_evaluation_taste_source_review_assignment(args: argparse.Namespace) 
         )
     )
     return 0
+
+
+def _handle_evaluation_taste_source_ai_screen_normalize(args: argparse.Namespace) -> int:
+    aliases: dict[str, str] = {}
+    for value in args.campaign_alias:
+        alias, separator, campaign_id = value.partition("=")
+        if not separator or not alias or not campaign_id or alias in aliases:
+            raise ValueError("campaign aliases must be unique ALIAS=CAMPAIGN_ID pairs")
+        aliases[alias] = campaign_id
+    run = normalize_taste_source_ai_screen(
+        raw_screen_path=args.raw_screen,
+        campaign_paths=tuple(args.campaign),
+        campaign_aliases=aliases,
+        role=TasteSourceReviewRole(args.role),
+        screen_id=args.screen_id,
+        screener_id=args.screener_id,
+        invocation_id=args.invocation_id,
+        runtime_surface=args.runtime_surface,
+        model_identifier=args.model_identifier,
+        model_revision=args.model_revision,
+        exact_model_identity_bound=args.exact_model_identity_bound,
+        task_instruction_sha256=args.task_instruction_sha256,
+        runtime_identity_sha256=args.runtime_identity_sha256,
+        completed_at=datetime.fromisoformat(args.completed_at),
+        locator_root=args.locator_root,
+    )
+    saved = save_taste_source_ai_screening_run(run, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "ai-source-screen-normalized-non-human",
+                "output": str(saved),
+                "screen_sha256": run.screen_sha256,
+                "role": run.role,
+                "item_count": len(run.scientific_responses or run.privacy_responses),
+                "reproducibility_ready": run.reproducibility_ready,
+                "formal_evidence_eligible": run.formal_evidence_eligible,
+                "human_review_replacement_allowed": run.human_review_replacement_allowed,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_taste_source_ai_calibration(args: argparse.Namespace) -> int:
+    if len(args.scientific_screen) != 2:
+        raise ValueError("AI calibration requires exactly two --scientific-screen values")
+    report = compile_taste_source_ai_calibration(
+        report_id=args.report_id,
+        scientific_screen_paths=(
+            args.scientific_screen[0],
+            args.scientific_screen[1],
+        ),
+        privacy_screen_path=args.privacy_screen,
+        compiled_at=datetime.fromisoformat(args.compiled_at),
+        locator_root=args.locator_root,
+        release_governance_path=args.release_governance,
+    )
+    saved = save_taste_source_ai_calibration_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "ai-source-screen-calibrated"
+                    if report.ready_for_scaled_ai_screening
+                    else "ai-source-screen-calibration-blocked"
+                ),
+                "output": str(saved),
+                **report.model_dump(mode="json"),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if report.ready_for_scaled_ai_screening else 1
 
 
 def _handle_evaluation_acquisition_request(args: argparse.Namespace) -> int:

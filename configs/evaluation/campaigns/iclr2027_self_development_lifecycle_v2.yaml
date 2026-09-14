@@ -45,7 +45,10 @@ artifacts:
     sha256: e1c0eb4c0af829bc49293bdc6accc730467d8cf8be163e8e66581b2d84f4a3ba
   - artifact_id: scitastebench-ai-assisted-source-screen-v1
     path: docs/research/data/scitastebench_ai_assisted_source_screen_v1.yaml
-    sha256: 413587e637c07ad5a5c4cf528ac101ed872952e6f52d07b21867d0cfa34a8097
+    sha256: 90ac71448eafd5cf1c4467470c77978a17ab812f5059797738694251f5246af4
+  - artifact_id: scitastebench-source-release-governance-v2
+    path: configs/evaluation/human_review/scitastebench_source_release_governance_v2.yaml
+    sha256: 5f56d50e5eb38854bade71db6e29f0656c4468e6b67fedd7b559b4718e4db8e0
   - artifact_id: objective-task-resource-qualification-v2
     path: docs/research/data/objective_task_resource_qualification_v2.yaml
     sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
@@ -121,6 +124,7 @@ tracks:
       - f1000-review-policy-v1
       - scitastebench-source-review-assignment-v1
       - scitastebench-ai-assisted-source-screen-v1
+      - scitastebench-source-release-governance-v2
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench
