@@ -64,6 +64,7 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
         run_id="segmentation-calibration-run-v1",
         one_time_nonce="nonce-20260915-v1",
         execution_ledger_locator="outputs/segmentation-calibration-run-v1/LEDGER.json",
+        run_output_locator="outputs/segmentation-calibration-run-v1/run",
         project_id="scitaste-self-development",
         authorized_by="project-owner",
         approval_origin="project-owner-conversation",
@@ -71,14 +72,15 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
         authorized_at=now,
         expires_at=now + timedelta(hours=12),
         protocol=SegmentationExecutionFileBinding(locator="protocol.yaml", file_sha256=_SHA),
-        freeze_receipt=SegmentationExecutionFileBinding(
-            locator="freeze.yaml", file_sha256=_SHA
-        ),
+        freeze_receipt=SegmentationExecutionFileBinding(locator="freeze.yaml", file_sha256=_SHA),
         request_pack=SegmentationExecutionPackBinding(
             locator="REQUEST_PACK.json", file_sha256=_SHA, pack_sha256=_SHA
         ),
         provider_resource=SegmentationExecutionFileBinding(
             locator="provider.yaml", file_sha256=_SHA
+        ),
+        official_catalog_snapshot=SegmentationExecutionFileBinding(
+            locator="catalog.md", file_sha256=_SHA
         ),
         identity_protocol=SegmentationExecutionFileBinding(
             locator="identity.yaml", file_sha256=_SHA
@@ -95,12 +97,17 @@ def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
         credential_env="ZAI_API_KEY",
         execution_scope="prospective-segmentation-calibration-only",
         price_ceiling=SegmentationExecutionPriceCeiling(
-            maximum_input_usd_per_million_tokens=2,
-            maximum_output_usd_per_million_tokens=8,
-            maximum_total_cost_usd=10,
-            basis="owner-approved-conservative-liability-ceiling",
+            input_cache_miss_cny_per_million_tokens=0.8,
+            input_cache_hit_cny_per_million_tokens=0.23,
+            output_cny_per_million_tokens=2.8,
+            maximum_estimated_cost_cny=0.576,
+            owner_maximum_liability_usd=10,
+            basis="official-point-in-time-price-plus-owner-liability-ceiling",
             pricing_source_url="https://example.com/pricing",
             pricing_observed_at=now,
+            pricing_snapshot=SegmentationExecutionFileBinding(
+                locator="pricing.md", file_sha256=_SHA
+            ),
         ),
         limits=SegmentationExecutionLimits(
             maximum_provider_requests=14,

@@ -29,7 +29,13 @@ semantic versioning.
   runner-owned input-firewall receipt instead of asking the model to claim it
   read hidden manifests. Inspection remains no-live and cannot itself authorize
   a call; a schema-1.1 protocol must first separate segmenter blinding from the
-  disputed-only adjudicator boundary.
+  disputed-only adjudicator boundary. The corresponding one-shot runner now
+  brackets byte-identical A/B and disputed-only C requests with API identity
+  sentinels, persists a replay-blocking ledger before every provider contact,
+  rejects malformed identity, usage, item coverage, spans, or budget receipts
+  without retry, and keeps post-adjudication scale authority false pending two
+  independent AI audits. Official CNY token rates and the owner's separate USD
+  liability cap are recorded without inventing a currency conversion.
 - Added exact-span reconstruction for compound natural-source reviews. A model
   may propose multiple uniquely occurring verbatim decision spans, but every
   span is bound to the immutable scientific item, character offsets, one

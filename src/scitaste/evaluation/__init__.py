@@ -1016,11 +1016,13 @@ from scitaste.evaluation.taste_source_segmentation import (
     verify_taste_source_segmentation_sample_bindings,
 )
 from scitaste.evaluation.taste_source_segmentation_execution import (
+    TasteSourceSegmentationCalibrationReceipt,
     TasteSourceSegmentationExecutionAuthorization,
     TasteSourceSegmentationExecutionInspection,
     inspect_taste_source_segmentation_execution_authorization,
     load_taste_source_segmentation_execution_authorization,
     persist_exact_provider_request,
+    run_taste_source_segmentation_calibration,
     save_taste_source_segmentation_execution_authorization,
 )
 from scitaste.evaluation.taste_source_segmentation_protocol import (
@@ -1621,6 +1623,7 @@ __all__ = [
     "TasteSourceSegmentationAgreementItem",
     "TasteSourceSegmentationAgreementReport",
     "TasteSourceSegmentationArtifactBinding",
+    "TasteSourceSegmentationCalibrationReceipt",
     "TasteSourceSegmentationExecutionAuthorization",
     "TasteSourceSegmentationExecutionInspection",
     "TasteSourceSegmentationFreezeReceipt",
@@ -1865,6 +1868,7 @@ __all__ = [
     "route_effective_program_action",
     "route_program_stage_action",
     "run_live_direct_agent",
+    "run_taste_source_segmentation_calibration",
     "save_acquired_task_cohort_report",
     "save_acquisition_gate_report",
     "save_benchmark_metadata_allocation_approval",

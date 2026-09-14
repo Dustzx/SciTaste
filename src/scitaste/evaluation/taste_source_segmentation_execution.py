@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from itertools import pairwise
 from pathlib import Path, PurePosixPath
 from typing import Literal, Protocol
@@ -26,7 +26,21 @@ from scitaste.evaluation.model_identity import (
     ApiIdentityCallReceipt,
     ApiIdentityCallRole,
     ApiIdentityProtocolInspection,
+    ApiIdentityWindowAttestation,
+    ApiIdentityWindowKind,
+    ApiIdentityWindowReport,
+    inspect_api_identity_window,
     load_api_identity_protocol,
+)
+from scitaste.evaluation.taste_source_segmentation import (
+    TasteSourceDecisionSegmentationRun,
+    TasteSourceSegmentationAgreementReport,
+    compile_taste_source_segmentation_agreement,
+    normalize_taste_source_decision_segmentation,
+    normalize_taste_source_segmentation_resolution,
+    save_taste_source_decision_segmentation_run,
+    save_taste_source_segmentation_agreement_report,
+    save_taste_source_segmentation_resolution_run,
 )
 from scitaste.evaluation.taste_source_segmentation_protocol import (
     TasteSourceSegmentationProspectiveProtocol,
@@ -36,7 +50,9 @@ from scitaste.evaluation.taste_source_segmentation_protocol import (
     inspect_taste_source_segmentation_protocol,
     load_taste_source_segmentation_request_pack,
     load_taste_source_segmentation_request_packet,
+    segmentation_campaign_token,
 )
+from scitaste.project.models import content_sha256
 from scitaste.resources import ApiModelDefinition
 
 _CONFIG = ConfigDict(
@@ -81,18 +97,24 @@ class SegmentationExecutionRunnerBinding(SegmentationExecutionFileBinding):
 
 
 class SegmentationExecutionPriceCeiling(BaseModel):
-    """Conservative liability bound, not a claim about the provider invoice."""
+    """Point-in-time CNY estimate plus the owner's independent USD liability cap."""
 
     model_config = _CONFIG
 
-    currency: Literal["USD"] = "USD"
-    maximum_input_usd_per_million_tokens: float = Field(gt=0, allow_inf_nan=False)
-    maximum_output_usd_per_million_tokens: float = Field(gt=0, allow_inf_nan=False)
-    maximum_total_cost_usd: float = Field(gt=0, allow_inf_nan=False)
-    basis: Literal["owner-approved-conservative-liability-ceiling"]
+    currency: Literal["CNY"] = "CNY"
+    input_cache_miss_cny_per_million_tokens: float = Field(gt=0, allow_inf_nan=False)
+    input_cache_hit_cny_per_million_tokens: float = Field(gt=0, allow_inf_nan=False)
+    output_cny_per_million_tokens: float = Field(gt=0, allow_inf_nan=False)
+    maximum_estimated_cost_cny: float = Field(gt=0, allow_inf_nan=False)
+    owner_maximum_liability_usd: float = Field(gt=0, allow_inf_nan=False)
+    basis: Literal["official-point-in-time-price-plus-owner-liability-ceiling"]
     pricing_source_url: str = Field(min_length=1, max_length=2_000)
     pricing_observed_at: datetime
+    pricing_snapshot: SegmentationExecutionFileBinding
+    observed_model_name: Literal["GLM-5.3-Flash"] = "GLM-5.3-Flash"
+    cache_storage_currently_free: Literal[True] = True
     exact_provider_invoice_claimed: Literal[False] = False
+    foreign_exchange_conversion_claimed: Literal[False] = False
 
     @model_validator(mode="after")
     def timestamp_is_aware(self) -> SegmentationExecutionPriceCeiling:
@@ -133,6 +155,7 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
     run_id: str = Field(pattern=_ID)
     one_time_nonce: str = Field(pattern=_ID)
     execution_ledger_locator: str = Field(min_length=1, max_length=2_000)
+    run_output_locator: str = Field(min_length=1, max_length=2_000)
     project_id: str = Field(pattern=_ID)
     authorized_by: str = Field(min_length=1, max_length=200)
     approval_origin: Literal["project-owner-conversation"]
@@ -143,6 +166,7 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
     freeze_receipt: SegmentationExecutionFileBinding
     request_pack: SegmentationExecutionPackBinding
     provider_resource: SegmentationExecutionFileBinding
+    official_catalog_snapshot: SegmentationExecutionFileBinding
     identity_protocol: SegmentationExecutionFileBinding
     runner: SegmentationExecutionRunnerBinding
     requested_provider: str = Field(pattern=_ID)
@@ -163,9 +187,8 @@ class TasteSourceSegmentationExecutionAuthorization(BaseModel):
         ):
             raise ValueError("Segmentation execution authorization window is invalid")
         _safe_locator(self.execution_ledger_locator)
-        expected = _canonical_sha256(
-            self.model_dump(mode="json", exclude={"authorization_sha256"})
-        )
+        _safe_locator(self.run_output_locator)
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"authorization_sha256"}))
         if self.authorization_sha256 != expected:
             raise ValueError("Segmentation execution authorization hash mismatch")
         return self
@@ -229,6 +252,131 @@ class SegmentationProviderOutput(BaseModel):
     items: tuple[SegmentationProviderItem, ...] = Field(min_length=1)
 
 
+class SegmentationAdjudicationProviderItem(SegmentationProviderItem):
+    resolution_rationale: str = Field(min_length=1, max_length=4_000)
+
+
+class SegmentationAdjudicationProviderOutput(BaseModel):
+    model_config = _CONFIG
+
+    items: tuple[SegmentationAdjudicationProviderItem, ...] = Field(min_length=1)
+
+
+class SegmentationCalibrationMetrics(BaseModel):
+    model_config = _CONFIG
+
+    overlap_span_f1_micros: int = Field(ge=0, le=1_000_000)
+    overlap_matched_family_agreement_micros: int = Field(ge=0, le=1_000_000)
+    adjudication_item_rate_micros: int = Field(ge=0, le=1_000_000)
+    residual_risk_item_rate_after_adjudication_micros: int = Field(ge=0, le=1_000_000)
+    all_frozen_thresholds_passed: bool
+
+    @model_validator(mode="after")
+    def thresholds_are_exact(self) -> SegmentationCalibrationMetrics:
+        passed = (
+            self.overlap_span_f1_micros >= 800_000
+            and self.overlap_matched_family_agreement_micros >= 800_000
+            and self.adjudication_item_rate_micros <= 500_000
+            and self.residual_risk_item_rate_after_adjudication_micros == 0
+        )
+        if self.all_frozen_thresholds_passed != passed:
+            raise ValueError("Segmentation calibration threshold summary drifted")
+        return self
+
+
+class SegmentationRunArtifactBinding(BaseModel):
+    model_config = _CONFIG
+
+    locator: str = Field(min_length=1, max_length=2_000)
+    file_sha256: str = Field(pattern=_SHA256)
+    semantic_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def locator_is_safe(self) -> SegmentationRunArtifactBinding:
+        _safe_locator(self.locator)
+        return self
+
+
+class TasteSourceSegmentationCalibrationReceipt(BaseModel):
+    """Closed calibration evidence; it never authorizes population scale by itself."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    run_id: str = Field(pattern=_ID)
+    project_id: str = Field(pattern=_ID)
+    authorization_sha256: str = Field(pattern=_SHA256)
+    protocol_file_sha256: str = Field(pattern=_SHA256)
+    request_pack_sha256: str = Field(pattern=_SHA256)
+    started_at: datetime
+    completed_at: datetime
+    provider: str = Field(pattern=_ID)
+    requested_model: str = Field(min_length=1, max_length=500)
+    returned_models: tuple[str, ...] = Field(min_length=1)
+    identity_attestation: SegmentationRunArtifactBinding
+    identity_report: ApiIdentityWindowReport
+    call_receipts: tuple[SegmentationProviderCallReceipt, ...] = Field(min_length=10)
+    segmenter_firewall_receipts: tuple[SegmentationInputFirewallReceipt, ...] = Field(
+        min_length=8, max_length=8
+    )
+    adjudication_firewall_receipts: tuple[SegmentationAdjudicationInputFirewallReceipt, ...] = (
+        Field(max_length=4)
+    )
+    segmenter_a: SegmentationRunArtifactBinding
+    segmenter_b: SegmentationRunArtifactBinding
+    agreement: SegmentationRunArtifactBinding
+    resolution: SegmentationRunArtifactBinding
+    metrics: SegmentationCalibrationMetrics
+    request_count: int = Field(ge=10, le=14)
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
+    provider_retry_performed: Literal[False] = False
+    ai_integrity_audit_complete: Literal[False] = False
+    ai_authority_audit_complete: Literal[False] = False
+    scale_gate_passed: Literal[False] = False
+    scaled_ai_segmentation_execution_authorized: Literal[False] = False
+    benchmark_admission_authorized: Literal[False] = False
+    formal_evidence_eligible: Literal[False] = False
+    reviewer_kind: Literal["ai"] = "ai"
+    not_human_review: Literal[True] = True
+    receipt_sha256: str = Field(pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def receipt_is_closed(self) -> TasteSourceSegmentationCalibrationReceipt:
+        if (
+            self.started_at.utcoffset() is None
+            or self.completed_at.utcoffset() is None
+            or self.completed_at < self.started_at
+        ):
+            raise ValueError("Segmentation calibration times are invalid")
+        if self.request_count != len(self.call_receipts):
+            raise ValueError("Segmentation calibration request count drifted")
+        if self.input_tokens != sum(item.call.input_tokens for item in self.call_receipts):
+            raise ValueError("Segmentation calibration input-token count drifted")
+        if self.output_tokens != sum(item.call.output_tokens for item in self.call_receipts):
+            raise ValueError("Segmentation calibration output-token count drifted")
+        observed_cost = sum(item.estimated_cost_cny for item in self.call_receipts)
+        if abs(self.estimated_cost_cny - observed_cost) > 1e-9:
+            raise ValueError("Segmentation calibration estimated cost drifted")
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+        if self.receipt_sha256 != expected:
+            raise ValueError("Segmentation calibration receipt hash mismatch")
+        return self
+
+    @classmethod
+    def create(cls, **values: object) -> TasteSourceSegmentationCalibrationReceipt:
+        payload = {"schema_version": "1.0", **values}
+        payload.pop("receipt_sha256", None)
+        unsigned = cls.model_construct(receipt_sha256="0" * 64, **payload)
+        return cls(
+            **payload,
+            receipt_sha256=_canonical_sha256(
+                unsigned.model_dump(mode="json", exclude={"receipt_sha256"})
+            ),
+        )
+
+
 class SegmentationInputFirewallReceipt(BaseModel):
     """Runner observation about bytes sent; it is not a model attestation."""
 
@@ -260,15 +408,51 @@ class SegmentationInputFirewallReceipt(BaseModel):
         return _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
 
 
+class SegmentationAdjudicationInputFirewallReceipt(BaseModel):
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    packet_id: str = Field(pattern=_ID)
+    packet_sha256: str = Field(pattern=_SHA256)
+    raw_request_ref: str = Field(min_length=1, max_length=1_000)
+    raw_request_sha256: str = Field(pattern=_SHA256)
+    request_persisted_before_provider_contact: Literal[True] = True
+    disputed_items_only: Literal[True] = True
+    anonymous_candidate_order: Literal[True] = True
+    segmenter_slot_identities_absent: Literal[True] = True
+    structured_source_identity_fields_absent: Literal[True] = True
+    explicit_outcome_fields_absent: Literal[True] = True
+    provider_tools_absent: Literal[True] = True
+    outbound_endpoint_allowlisted: Literal[True] = True
+    parametric_source_recognition_ruled_out: Literal[False] = False
+    reviewer_kind: Literal["ai"] = "ai"
+    not_human_review: Literal[True] = True
+
+    @model_validator(mode="after")
+    def locator_is_safe(self) -> SegmentationAdjudicationInputFirewallReceipt:
+        _safe_locator(self.raw_request_ref)
+        return self
+
+    @computed_field
+    @property
+    def receipt_sha256(self) -> str:
+        return _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
+
+
 class SegmentationProviderCallReceipt(BaseModel):
     model_config = _CONFIG
 
     call: ApiIdentityCallReceipt
     packet_id: str | None = Field(default=None, pattern=_ID)
     packet_sha256: str | None = Field(default=None, pattern=_SHA256)
+    client_request_id: str = Field(min_length=1, max_length=64)
+    echoed_request_id: str = Field(min_length=1, max_length=64)
+    provider_task_id: str = Field(min_length=1, max_length=500)
     raw_provider_response_sha256: str = Field(pattern=_SHA256)
     output_object_sha256: str = Field(pattern=_SHA256)
-    maximum_estimated_cost_usd: float = Field(ge=0, allow_inf_nan=False)
+    cached_input_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
     retry_count: Literal[0] = 0
     response_schema_verified: Literal[True] = True
     assigned_item_set_verified: Literal[True] = True
@@ -279,6 +463,52 @@ class SegmentationProviderCallReceipt(BaseModel):
         workload = self.call.role is ApiIdentityCallRole.WORKLOAD
         if workload != (self.packet_id is not None and self.packet_sha256 is not None):
             raise ValueError("Segmentation workload receipt packet binding is inconsistent")
+        if self.echoed_request_id != self.client_request_id:
+            raise ValueError("Segmentation provider did not echo the client request ID")
+        if self.cached_input_tokens > self.call.input_tokens:
+            raise ValueError("Segmentation cached input exceeds total input tokens")
+        if self.total_tokens != self.call.input_tokens + self.call.output_tokens:
+            raise ValueError("Segmentation provider total-token count drifted")
+        return self
+
+
+TasteSourceSegmentationCalibrationReceipt.model_rebuild()
+
+
+class SegmentationExecutionLedger(BaseModel):
+    """One-time replay guard updated before and after every provider call."""
+
+    model_config = _CONFIG
+
+    schema_version: Literal["1.0"] = "1.0"
+    authorization_sha256: str = Field(pattern=_SHA256)
+    run_id: str = Field(pattern=_ID)
+    one_time_nonce: str = Field(pattern=_ID)
+    status: Literal["claimed", "provider-call-pending", "failed", "complete"]
+    completed_sequences: tuple[int, ...]
+    pending_sequence: int | None = Field(default=None, ge=1)
+    pending_request_sha256: str | None = Field(default=None, pattern=_SHA256)
+    provider_call_may_have_started: bool
+    updated_at: datetime
+
+    @model_validator(mode="after")
+    def state_is_consistent(self) -> SegmentationExecutionLedger:
+        if self.updated_at.utcoffset() is None:
+            raise ValueError("Segmentation ledger timestamp must include a timezone")
+        if self.completed_sequences != tuple(range(1, len(self.completed_sequences) + 1)):
+            raise ValueError("Segmentation ledger completed calls are not contiguous")
+        pending = self.status == "provider-call-pending"
+        has_pending_binding = (
+            self.pending_sequence is not None and self.pending_request_sha256 is not None
+        )
+        if pending != has_pending_binding or (pending and not self.provider_call_may_have_started):
+            raise ValueError("Segmentation ledger pending state is inconsistent")
+        if pending and self.pending_sequence != len(self.completed_sequences) + 1:
+            raise ValueError("Segmentation ledger pending sequence is not next")
+        if not pending and has_pending_binding:
+            raise ValueError("Segmentation ledger closed state retains pending call")
+        if self.status in {"claimed", "complete"} and self.provider_call_may_have_started:
+            raise ValueError("Segmentation ledger non-failure state retains call uncertainty")
         return self
 
 
@@ -288,6 +518,28 @@ class ProviderHTTPResponse(BaseModel):
     status_code: int = Field(ge=100, le=599)
     headers: dict[str, str]
     content: bytes = Field(max_length=_MAX_RESPONSE_BYTES)
+
+
+class ExtractedProviderResponse(BaseModel):
+    model_config = _CONFIG
+
+    text: str
+    returned_model: str = Field(min_length=1, max_length=200)
+    client_request_id: str = Field(min_length=1, max_length=64)
+    provider_task_id: str = Field(min_length=1, max_length=500)
+    input_tokens: int = Field(ge=0)
+    cached_input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    payload: dict[str, JsonValue]
+
+    @model_validator(mode="after")
+    def usage_is_consistent(self) -> ExtractedProviderResponse:
+        if self.cached_input_tokens > self.input_tokens:
+            raise ValueError("Cached provider input exceeds prompt tokens")
+        if self.total_tokens != self.input_tokens + self.output_tokens:
+            raise ValueError("Provider total-token count is inconsistent")
+        return self
 
 
 class ProviderHTTPTransport(Protocol):
@@ -377,6 +629,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         raise ValueError("Segmentation execution pack differs from the frozen protocol")
 
     resource_path = _bound_path(root, authorization.provider_resource)
+    _bound_path(root, authorization.official_catalog_snapshot)
     resource_payload = yaml.safe_load(resource_path.read_text(encoding="utf-8"))
     if not isinstance(resource_payload, dict):
         raise ValueError("Segmentation provider resource must contain a YAML mapping")
@@ -395,6 +648,15 @@ def inspect_taste_source_segmentation_execution_authorization(
         or resource.interface != "openai-chat-completions"
     ):
         raise ValueError("Segmentation execution provider identity drifted")
+    ledger_path = (root / _safe_locator(authorization.execution_ledger_locator)).resolve()
+    output_path = (root / _safe_locator(authorization.run_output_locator)).resolve()
+    for candidate in (ledger_path, output_path):
+        try:
+            candidate.relative_to(root)
+        except ValueError as error:
+            raise ValueError("Segmentation execution target escapes its root") from error
+    if ledger_path == output_path or output_path in ledger_path.parents:
+        raise ValueError("Segmentation execution output and ledger targets overlap")
 
     runner_path = _bound_path(root, authorization.runner)
     cli_path = _bounded_file(
@@ -414,24 +676,31 @@ def inspect_taste_source_segmentation_execution_authorization(
 
     limits = authorization.limits
     frozen_budget = protocol.protocol.budget
-    maximum_priced_cost = (
+    _bound_path(root, authorization.price_ceiling.pricing_snapshot)
+    maximum_priced_cost_cny = (
         limits.maximum_input_tokens
-        * authorization.price_ceiling.maximum_input_usd_per_million_tokens
-        + limits.maximum_output_tokens
-        * authorization.price_ceiling.maximum_output_usd_per_million_tokens
+        * authorization.price_ceiling.input_cache_miss_cny_per_million_tokens
+        + limits.maximum_output_tokens * authorization.price_ceiling.output_cny_per_million_tokens
     ) / 1_000_000
     if (
         limits.maximum_provider_requests != frozen_budget.maximum_provider_requests
         or limits.maximum_input_tokens != frozen_budget.maximum_input_tokens
         or limits.maximum_output_tokens != frozen_budget.maximum_output_tokens
-        or authorization.price_ceiling.maximum_total_cost_usd
-        > frozen_budget.maximum_api_cost_usd
+        or authorization.price_ceiling.owner_maximum_liability_usd
+        != frozen_budget.maximum_api_cost_usd
         or limits.retry_count != protocol.protocol.generation.retry_count
         or pack.request_count != protocol.protocol.generation.segmenter_total_requests
-        or maximum_priced_cost
-        > authorization.price_ceiling.maximum_total_cost_usd
+        or maximum_priced_cost_cny > authorization.price_ceiling.maximum_estimated_cost_cny
     ):
         raise ValueError("Segmentation execution limits exceed the frozen protocol")
+    if (
+        authorization.price_ceiling.pricing_source_url
+        != "https://docs.bigmodel.cn/cn/guide/start/pricing"
+        or authorization.price_ceiling.input_cache_miss_cny_per_million_tokens != 0.8
+        or authorization.price_ceiling.input_cache_hit_cny_per_million_tokens != 0.23
+        or authorization.price_ceiling.output_cny_per_million_tokens != 2.8
+    ):
+        raise ValueError("Segmentation execution price observation differs from its source row")
     price_age_seconds = (
         authorization.authorized_at - authorization.price_ceiling.pricing_observed_at
     ).total_seconds()
@@ -453,8 +722,7 @@ def inspect_taste_source_segmentation_execution_authorization(
             packet.protocol_id != protocol.protocol.protocol_id
             or packet.requested_provider != authorization.requested_provider
             or packet.requested_model != authorization.requested_model
-            or packet.rubric_file_sha256
-            != protocol.protocol.segmentation_rubric.file_sha256
+            or packet.rubric_file_sha256 != protocol.protocol.segmentation_rubric.file_sha256
             or packet.rubric != frozen_rubric
             or packet.shard_count != protocol.protocol.generation.segmenter_shards
             or len(packet.items) != protocol.protocol.generation.items_per_shard
@@ -497,6 +765,7 @@ def build_segmentation_provider_request(
     }
     return {
         "model": packet.requested_model,
+        "request_id": f"stseg-{packet.packet_sha256[:32]}",
         "messages": [
             {"role": "system", "content": packet.system_instruction},
             {
@@ -552,6 +821,155 @@ def validate_segmentation_provider_output(
     return output
 
 
+def validate_adjudication_provider_output(
+    raw_text: str,
+    *,
+    expected_items: dict[tuple[str, str], str],
+) -> SegmentationAdjudicationProviderOutput:
+    """Validate disputed-only adjudication coverage and exact source spans."""
+
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        raise ValueError("Segmentation adjudication output must be a bare JSON object")
+    try:
+        payload = json.loads(cleaned)
+    except json.JSONDecodeError as error:
+        raise ValueError("Segmentation adjudication output is not valid JSON") from error
+    output = SegmentationAdjudicationProviderOutput.model_validate(payload)
+    observed = [(item.campaign_token, item.review_item_id) for item in output.items]
+    if len(observed) != len(set(observed)) or set(observed) != set(expected_items):
+        raise ValueError("Segmentation adjudication output item coverage drifted")
+    for item in output.items:
+        source = expected_items[(item.campaign_token, item.review_item_id)]
+        intervals: list[tuple[int, int]] = []
+        for segment in item.segments:
+            start = source.find(segment.verbatim_decision_text)
+            if start < 0 or source.find(segment.verbatim_decision_text, start + 1) >= 0:
+                raise ValueError("Segmentation adjudication span is absent or non-unique")
+            intervals.append((start, start + len(segment.verbatim_decision_text)))
+        ordered = sorted(intervals)
+        if any(first[1] > second[0] for first, second in pairwise(ordered)):
+            raise ValueError("Segmentation adjudication spans overlap")
+    return output
+
+
+def build_segmentation_adjudication_request(
+    *,
+    protocol: TasteSourceSegmentationProspectiveProtocol,
+    rubric: dict[str, JsonValue],
+    items: list[dict[str, JsonValue]],
+) -> dict[str, JsonValue]:
+    """Build one disputed-only adjudication payload with anonymous candidates."""
+
+    if not items or len(items) > protocol.generation.items_per_shard:
+        raise ValueError("Segmentation adjudication shard size is invalid")
+    output_contract: dict[str, JsonValue] = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["items"],
+        "properties": {
+            "items": {
+                "type": "array",
+                "minItems": len(items),
+                "maxItems": len(items),
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "campaign_token",
+                        "review_item_id",
+                        "segments",
+                        "residual_decision_bearing_text_possible",
+                        "resolution_rationale",
+                    ],
+                    "properties": {
+                        "campaign_token": {"type": "string"},
+                        "review_item_id": {"type": "string"},
+                        "segments": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 128,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": [
+                                    "verbatim_decision_text",
+                                    "primary_decision_family",
+                                    "atomic_decision_statement",
+                                    "rationale",
+                                    "uncertainty",
+                                ],
+                                "properties": {
+                                    "verbatim_decision_text": {
+                                        "type": "string",
+                                        "minLength": 8,
+                                    },
+                                    "primary_decision_family": {
+                                        "type": "string",
+                                        "enum": [
+                                            "idea",
+                                            "experiment",
+                                            "evidence",
+                                            "writing",
+                                            "review",
+                                            "visual",
+                                            "cannot-assess",
+                                        ],
+                                    },
+                                    "atomic_decision_statement": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                    },
+                                    "rationale": {"type": "string", "minLength": 1},
+                                    "uncertainty": {
+                                        "type": "string",
+                                        "enum": ["low", "medium", "high"],
+                                    },
+                                },
+                            },
+                        },
+                        "residual_decision_bearing_text_possible": {"type": "boolean"},
+                        "resolution_rationale": {"type": "string", "minLength": 1},
+                    },
+                },
+            }
+        },
+    }
+    visible = {"rubric": rubric, "items": items, "output_contract": output_contract}
+    request_identity = _canonical_sha256(visible)
+    return {
+        "model": protocol.model_condition.requested_model_id,
+        "request_id": f"stadj-{request_identity[:32]}",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Resolve only the supplied disputed decision segmentations. "
+                    "Candidate labels are anonymous and their order carries no meaning. "
+                    "Do not infer hidden source or outcome fields, use tools, or browse. "
+                    "Return one bare JSON object only."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    visible,
+                    allow_nan=False,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ),
+            },
+        ],
+        "response_format": {"type": "json_object"},
+        "thinking": {"type": protocol.generation.thinking},
+        "reasoning_effort": protocol.generation.reasoning_effort,
+        "temperature": protocol.generation.temperature,
+        "max_tokens": protocol.generation.maximum_output_tokens_per_call,
+        "stream": False,
+    }
+
+
 def verify_persisted_segmentation_provider_request(
     raw: bytes,
     *,
@@ -586,6 +1004,7 @@ def verify_persisted_segmentation_provider_request(
         "max_tokens",
         "messages",
         "model",
+        "request_id",
         "reasoning_effort",
         "response_format",
         "stream",
@@ -601,9 +1020,67 @@ def verify_persisted_segmentation_provider_request(
     )
 
 
+def verify_persisted_segmentation_adjudication_request(
+    raw: bytes,
+    *,
+    expected_payload: dict[str, JsonValue],
+    packet_id: str,
+    packet_sha256: str,
+    raw_request_ref: str,
+) -> SegmentationAdjudicationInputFirewallReceipt:
+    try:
+        observed = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("Persisted segmentation adjudication request is not JSON") from error
+    if observed != expected_payload:
+        raise ValueError("Persisted adjudication request differs from its compiled payload")
+    forbidden_keys = {
+        "article_title",
+        "author_response",
+        "later_revision",
+        "observed_recommendation",
+        "publisher_subject",
+        "source_identity",
+        "private_item_map",
+        "population_outcome",
+        "campaign_id",
+        "segmenter_slot",
+        "tools",
+        "tool_choice",
+    }
+    if _recursive_keys(observed) & forbidden_keys:
+        raise ValueError("Persisted adjudication request violates its input firewall")
+    if set(observed) != {
+        "max_tokens",
+        "messages",
+        "model",
+        "reasoning_effort",
+        "request_id",
+        "response_format",
+        "stream",
+        "temperature",
+        "thinking",
+    }:
+        raise ValueError("Persisted adjudication provider root fields drifted")
+    content = json.loads(observed["messages"][1]["content"])
+    visible_items = content.get("items") if isinstance(content, dict) else None
+    if not isinstance(visible_items, list) or any(
+        not isinstance(item, dict)
+        or set(item.get("candidates", {})) != {"candidate-left", "candidate-right"}
+        for item in visible_items
+    ):
+        raise ValueError("Persisted adjudication candidates are not anonymously paired")
+    return SegmentationAdjudicationInputFirewallReceipt(
+        packet_id=packet_id,
+        packet_sha256=packet_sha256,
+        raw_request_ref=raw_request_ref,
+        raw_request_sha256=hashlib.sha256(raw).hexdigest(),
+    )
+
+
 def extract_openai_chat_response(
     response: ProviderHTTPResponse,
-) -> tuple[str, str, str, int, int, dict[str, JsonValue]]:
+) -> ExtractedProviderResponse:
     """Extract the response text and mandatory runtime identity fields."""
 
     if not 200 <= response.status_code < 300:
@@ -615,20 +1092,32 @@ def extract_openai_chat_response(
     if not isinstance(payload, dict):
         raise ValueError("Segmentation provider response root must be an object")
     try:
-        choice = payload["choices"][0]
+        choices = payload["choices"]
+        if not isinstance(choices, list) or len(choices) != 1:
+            raise TypeError("exactly one choice is required")
+        choice = choices[0]
+        if not isinstance(choice, dict) or choice.get("index") != 0:
+            raise TypeError("choice index zero is required")
         text = choice["message"]["content"]
         finish_reason = choice["finish_reason"]
         returned_model = payload["model"]
-        provider_request_id = payload.get("request_id") or payload["id"]
+        client_request_id = payload["request_id"]
+        provider_task_id = payload["id"]
         usage = payload["usage"]
         if not isinstance(usage, dict):
             raise TypeError("usage must be an object")
         input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
         output_tokens = usage.get("completion_tokens", usage.get("output_tokens"))
+        total_tokens = usage["total_tokens"]
+        prompt_details = usage.get("prompt_tokens_details", {})
+        if not isinstance(prompt_details, dict):
+            raise TypeError("prompt token details must be an object")
+        cached_input_tokens = prompt_details.get("cached_tokens", 0)
     except (KeyError, IndexError, TypeError) as error:
         raise ValueError("Segmentation provider response lacks required receipt fields") from error
-    if not isinstance(text, str) or not isinstance(returned_model, str) or not isinstance(
-        provider_request_id, str
+    if not all(
+        isinstance(value, str)
+        for value in (text, returned_model, client_request_id, provider_task_id)
     ):
         raise ValueError("Segmentation provider identity fields are invalid")
     if finish_reason != "stop":
@@ -636,17 +1125,21 @@ def extract_openai_chat_response(
     if (
         type(input_tokens) is not int
         or type(output_tokens) is not int
-        or input_tokens < 0
-        or output_tokens < 0
+        or type(cached_input_tokens) is not int
+        or type(total_tokens) is not int
+        or min(input_tokens, cached_input_tokens, output_tokens, total_tokens) < 0
     ):
         raise ValueError("Segmentation provider usage fields are invalid")
-    return (
-        text,
-        returned_model,
-        provider_request_id,
-        input_tokens,
-        output_tokens,
-        payload,
+    return ExtractedProviderResponse(
+        text=text,
+        returned_model=returned_model,
+        client_request_id=client_request_id,
+        provider_task_id=provider_task_id,
+        input_tokens=input_tokens,
+        cached_input_tokens=cached_input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+        payload=payload,
     )
 
 
@@ -665,6 +1158,851 @@ def persist_exact_provider_request(path: str | Path, payload: dict[str, JsonValu
     ).encode()
     _atomic_bytes(Path(path), raw)
     return raw
+
+
+def run_taste_source_segmentation_calibration(
+    *,
+    authorization_path: str | Path,
+    locator_root: str | Path,
+    confirm_authorization_sha256: str,
+    allow_live: bool,
+    transport: ProviderHTTPTransport | None = None,
+) -> TasteSourceSegmentationCalibrationReceipt:
+    """Execute exactly one authorized calibration window with no retries."""
+
+    inspection = inspect_taste_source_segmentation_execution_authorization(
+        authorization_path=authorization_path,
+        locator_root=locator_root,
+    )
+    authorization = inspection.authorization
+    if not allow_live:
+        raise ValueError("Live segmentation execution requires --allow-live")
+    if confirm_authorization_sha256 != authorization.authorization_sha256:
+        raise ValueError("Live segmentation execution confirmation hash differs")
+    root = Path(locator_root).resolve(strict=True)
+    output_root = (root / _safe_locator(authorization.run_output_locator)).resolve()
+    ledger_path = (root / _safe_locator(authorization.execution_ledger_locator)).resolve()
+    if output_root.exists() or output_root.is_symlink():
+        raise FileExistsError(output_root)
+    started_at = datetime.now(UTC)
+    ledger = SegmentationExecutionLedger(
+        authorization_sha256=authorization.authorization_sha256,
+        run_id=authorization.run_id,
+        one_time_nonce=authorization.one_time_nonce,
+        status="claimed",
+        completed_sequences=(),
+        provider_call_may_have_started=False,
+        updated_at=started_at,
+    )
+    _claim_execution_ledger(ledger_path, ledger)
+    output_root.mkdir(parents=True, mode=0o700)
+    os.chmod(output_root, 0o700)
+    active_transport = transport or LiveProviderHTTPTransport()
+    protocol = inspection.protocol.protocol
+    identity_protocol = inspection.identity_protocol.protocol
+    provider = inspection.provider_resource
+    pack_root = (root / _safe_locator(authorization.request_pack.locator)).parent
+    packets = {
+        (packet.segmenter_slot, packet.shard_index): packet
+        for binding in inspection.request_pack.requests
+        for packet in (load_taste_source_segmentation_request_packet(pack_root / binding.locator),)
+    }
+    segmenter_outputs: dict[str, list[SegmentationProviderItem]] = {
+        "segmenter-a": [],
+        "segmenter-b": [],
+    }
+    call_receipts: list[SegmentationProviderCallReceipt] = []
+    firewall_receipts: list[SegmentationInputFirewallReceipt] = []
+    adjudication_firewall_receipts: list[SegmentationAdjudicationInputFirewallReceipt] = []
+    credential = os.environ.get(authorization.credential_env)
+    if not credential:
+        _fail_execution_ledger(
+            ledger_path,
+            ledger,
+            output_root,
+            ValueError(f"Credential environment {authorization.credential_env} is unavailable"),
+        )
+        raise ValueError(f"Credential environment {authorization.credential_env} is unavailable")
+
+    def execute_call(
+        *,
+        role: ApiIdentityCallRole,
+        payload: dict[str, JsonValue],
+        packet_id: str | None = None,
+        packet_sha256: str | None = None,
+        packet: TasteSourceSegmentationRequestPacket | None = None,
+        adjudication_expected: dict[tuple[str, str], str] | None = None,
+    ) -> SegmentationProviderOutput | SegmentationAdjudicationProviderOutput | dict[str, JsonValue]:
+        nonlocal ledger
+        sequence = len(call_receipts) + 1
+        if sequence > authorization.limits.maximum_provider_requests:
+            raise ValueError("Segmentation execution request count exceeded")
+        call_name = f"call-{sequence:02d}-{role.value}"
+        request_path = output_root / "calls" / call_name / "request.json"
+        response_path = output_root / "calls" / call_name / "response.json"
+        headers_path = output_root / "calls" / call_name / "response-headers.json"
+        raw_request = persist_exact_provider_request(request_path, payload)
+        request_ref = _relative_to_root(request_path, root)
+        if packet is not None:
+            firewall_receipts.append(
+                verify_persisted_segmentation_provider_request(
+                    raw_request,
+                    packet=packet,
+                    protocol=protocol,
+                    raw_request_ref=request_ref,
+                )
+            )
+        elif adjudication_expected is not None:
+            assert packet_id is not None and packet_sha256 is not None
+            adjudication_firewall_receipts.append(
+                verify_persisted_segmentation_adjudication_request(
+                    raw_request,
+                    expected_payload=payload,
+                    packet_id=packet_id,
+                    packet_sha256=packet_sha256,
+                    raw_request_ref=request_ref,
+                )
+            )
+        request_sha256 = hashlib.sha256(raw_request).hexdigest()
+        ledger = ledger.model_copy(
+            update={
+                "status": "provider-call-pending",
+                "pending_sequence": sequence,
+                "pending_request_sha256": request_sha256,
+                "provider_call_may_have_started": True,
+                "updated_at": datetime.now(UTC),
+            }
+        )
+        ledger = SegmentationExecutionLedger.model_validate(ledger)
+        _replace_execution_ledger(ledger_path, ledger)
+        request_started_at = datetime.now(UTC)
+        try:
+            response = active_transport.post(
+                provider.endpoint,
+                headers={
+                    "authorization": f"Bearer {credential}",
+                    "content-type": "application/json",
+                    "accept": "application/json",
+                    "user-agent": "SciTaste/segmentation-calibration-v1",
+                },
+                content=raw_request,
+                timeout_seconds=authorization.limits.timeout_seconds_per_request,
+                maximum_response_bytes=authorization.limits.maximum_raw_response_bytes,
+            )
+            response_completed_at = datetime.now(UTC)
+            _atomic_bytes(response_path, response.content)
+            _write_json_new(
+                headers_path,
+                {
+                    key: value
+                    for key, value in response.headers.items()
+                    if key.casefold() in {"content-type", "date", "x-request-id"}
+                },
+            )
+            extracted = extract_openai_chat_response(response)
+            if extracted.client_request_id != payload["request_id"]:
+                raise ValueError("Segmentation provider request ID echo drifted")
+            policy = identity_protocol.policy(provider.resource_id)
+            if extracted.returned_model not in policy.allowed_returned_model_ids:
+                raise ValueError("Segmentation provider returned an unapproved model")
+            if role is ApiIdentityCallRole.WORKLOAD and packet is not None:
+                output: object = validate_segmentation_provider_output(
+                    extracted.text,
+                    packet=packet,
+                )
+            elif role is ApiIdentityCallRole.WORKLOAD:
+                assert adjudication_expected is not None
+                output = validate_adjudication_provider_output(
+                    extracted.text,
+                    expected_items=adjudication_expected,
+                )
+            else:
+                output = json.loads(extracted.text)
+                if output != {"sentinel": "scitaste-api-identity-v3"}:
+                    raise ValueError("Segmentation identity sentinel output drifted")
+            estimated_cost_cny = _estimate_call_cost_cny(
+                input_tokens=extracted.input_tokens,
+                cached_input_tokens=extracted.cached_input_tokens,
+                output_tokens=extracted.output_tokens,
+                price=authorization.price_ceiling,
+            )
+            identity_call = ApiIdentityCallReceipt(
+                sequence=sequence,
+                role=role,
+                provider_id=provider.provider_id,
+                endpoint=provider.endpoint,
+                interface=provider.interface,
+                requested_model_id=provider.model_id,
+                returned_model=extracted.returned_model,
+                provider_request_id=extracted.provider_task_id,
+                request_started_at_utc=request_started_at,
+                response_completed_at_utc=response_completed_at,
+                request_sha256=request_sha256,
+                response_sha256=hashlib.sha256(response.content).hexdigest(),
+                raw_request_ref=request_ref,
+                raw_response_ref=_relative_to_root(response_path, root),
+                http_status=response.status_code,
+                input_tokens=extracted.input_tokens,
+                output_tokens=extracted.output_tokens,
+                sentinel_template_sha256=(
+                    identity_protocol.sentinel_template_sha256
+                    if role is not ApiIdentityCallRole.WORKLOAD
+                    else None
+                ),
+                task_or_benchmark_content_present=role is ApiIdentityCallRole.WORKLOAD,
+            )
+            receipt = SegmentationProviderCallReceipt(
+                call=identity_call,
+                packet_id=packet_id,
+                packet_sha256=packet_sha256,
+                client_request_id=payload["request_id"],
+                echoed_request_id=extracted.client_request_id,
+                provider_task_id=extracted.provider_task_id,
+                raw_provider_response_sha256=hashlib.sha256(response.content).hexdigest(),
+                output_object_sha256=content_sha256(
+                    output.model_dump(mode="json") if isinstance(output, BaseModel) else output
+                ),
+                cached_input_tokens=extracted.cached_input_tokens,
+                total_tokens=extracted.total_tokens,
+                estimated_cost_cny=estimated_cost_cny,
+            )
+            projected = [*call_receipts, receipt]
+            if (
+                sum(item.call.input_tokens for item in projected)
+                > authorization.limits.maximum_input_tokens
+                or sum(item.call.output_tokens for item in projected)
+                > authorization.limits.maximum_output_tokens
+                or sum(item.estimated_cost_cny for item in projected)
+                > authorization.price_ceiling.maximum_estimated_cost_cny
+            ):
+                raise ValueError("Segmentation execution cumulative budget exceeded")
+            call_receipts.append(receipt)
+            ledger = SegmentationExecutionLedger(
+                authorization_sha256=authorization.authorization_sha256,
+                run_id=authorization.run_id,
+                one_time_nonce=authorization.one_time_nonce,
+                status="claimed",
+                completed_sequences=tuple(range(1, sequence + 1)),
+                provider_call_may_have_started=False,
+                updated_at=datetime.now(UTC),
+            )
+            _replace_execution_ledger(ledger_path, ledger)
+            assert isinstance(output, (BaseModel, dict))
+            return output
+        except Exception as error:
+            _fail_execution_ledger(ledger_path, ledger, output_root, error)
+            raise
+
+    try:
+        sentinel_start = _build_identity_sentinel_request(
+            model=provider.model_id,
+            request_id=f"stsent-start-{authorization.one_time_nonce[:32]}",
+            protocol=identity_protocol,
+        )
+        execute_call(role=ApiIdentityCallRole.START_SENTINEL, payload=sentinel_start)
+        for shard_index in range(1, protocol.generation.segmenter_shards + 1):
+            for slot in ("segmenter-a", "segmenter-b"):
+                packet = packets[(slot, shard_index)]
+                output = execute_call(
+                    role=ApiIdentityCallRole.WORKLOAD,
+                    payload=build_segmentation_provider_request(packet, protocol=protocol),
+                    packet_id=packet.packet_id,
+                    packet_sha256=packet.packet_sha256,
+                    packet=packet,
+                )
+                assert isinstance(output, SegmentationProviderOutput)
+                segmenter_outputs[slot].extend(output.items)
+
+        token_to_campaign = _campaign_token_map(inspection, root=root)
+        raw_segmenter_paths: dict[str, Path] = {}
+        for slot in ("segmenter-a", "segmenter-b"):
+            raw_path = output_root / "derived" / f"{slot}-provider-output.json"
+            _write_json_new(
+                raw_path,
+                _legacy_segmenter_payload(
+                    slot=slot,
+                    items=segmenter_outputs[slot],
+                    token_to_campaign=token_to_campaign,
+                    protocol=protocol,
+                    sample_sha256=inspection.request_pack.sample_sha256,
+                    authorization_sha256=authorization.authorization_sha256,
+                ),
+            )
+            raw_segmenter_paths[slot] = raw_path
+        campaign_paths = tuple(
+            root / locator
+            for locator in sorted(_sample_source_campaign_locators(protocol, root).values())
+        )
+        normalized_paths: dict[str, Path] = {}
+        normalized_runs: dict[str, TasteSourceDecisionSegmentationRun] = {}
+        for slot in ("segmenter-a", "segmenter-b"):
+            normalized = normalize_taste_source_decision_segmentation(
+                raw_segmentation_path=raw_segmenter_paths[slot],
+                campaign_paths=campaign_paths,
+                campaign_aliases=token_to_campaign,
+                run_id=f"{authorization.run_id}-{slot}",
+                screener_id=f"{slot}-glm53-flash",
+                invocation_id=f"{authorization.run_id}-{slot}-invocation",
+                runtime_surface="zhipu-direct-byte-runner-v1",
+                model_identifier=provider.model_id,
+                model_revision=None,
+                exact_model_identity_bound=False,
+                rubric_path=root / protocol.segmentation_rubric.locator,
+                sample_manifest_path=root / protocol.sample.locator,
+                runtime_identity_sha256=None,
+                completed_at=datetime.now(UTC),
+                locator_root=root,
+            )
+            normalized_path = output_root / "derived" / f"{slot}.json"
+            save_taste_source_decision_segmentation_run(normalized, normalized_path)
+            normalized_paths[slot] = normalized_path
+            normalized_runs[slot] = normalized
+        agreement = compile_taste_source_segmentation_agreement(
+            report_id=f"{authorization.run_id}-agreement",
+            segmentation_paths=(
+                normalized_paths["segmenter-a"],
+                normalized_paths["segmenter-b"],
+            ),
+            compiled_at=datetime.now(UTC),
+            locator_root=root,
+        )
+        agreement_path = output_root / "derived" / "agreement.json"
+        save_taste_source_segmentation_agreement_report(agreement, agreement_path)
+
+        provider_items_a = {
+            (item.campaign_token, item.review_item_id): item
+            for item in segmenter_outputs["segmenter-a"]
+        }
+        provider_items_b = {
+            (item.campaign_token, item.review_item_id): item
+            for item in segmenter_outputs["segmenter-b"]
+        }
+        campaign_to_token = {value: key for key, value in token_to_campaign.items()}
+        item_sources = _packet_item_sources(packets)
+        agreement_by_shard: dict[int, list[object]] = {}
+        for item in agreement.items:
+            if item.requires_adjudication:
+                token = campaign_to_token[item.campaign_id]
+                shard = item_sources[(token, item.review_item_id)][0]
+                agreement_by_shard.setdefault(shard, []).append(item)
+        adjudicated: dict[tuple[str, str], SegmentationAdjudicationProviderItem] = {}
+        candidate_order_records: list[dict[str, JsonValue]] = []
+        adjudication_rubric_path = root / protocol.adjudication_rubric.locator
+        adjudication_rubric = yaml.safe_load(adjudication_rubric_path.read_text(encoding="utf-8"))
+        if not isinstance(adjudication_rubric, dict):
+            raise ValueError("Segmentation adjudication rubric is not a mapping")
+        for adjudication_index, shard in enumerate(sorted(agreement_by_shard), 1):
+            visible_items: list[dict[str, JsonValue]] = []
+            expected: dict[tuple[str, str], str] = {}
+            for untyped in sorted(
+                agreement_by_shard[shard],
+                key=lambda value: (value.campaign_id, value.review_item_id),
+            ):
+                item = untyped
+                token = campaign_to_token[item.campaign_id]
+                key = (token, item.review_item_id)
+                _, reviewed_abstract, review_comment = item_sources[key]
+                left_is_a = (
+                    int(
+                        hashlib.sha256(
+                            (authorization.one_time_nonce + token + item.review_item_id).encode()
+                        ).hexdigest(),
+                        16,
+                    )
+                    % 2
+                    == 0
+                )
+                candidate_left = provider_items_a[key] if left_is_a else provider_items_b[key]
+                candidate_right = provider_items_b[key] if left_is_a else provider_items_a[key]
+                visible_items.append(
+                    {
+                        "campaign_token": token,
+                        "review_item_id": item.review_item_id,
+                        "reviewed_abstract": reviewed_abstract,
+                        "review_comment": review_comment,
+                        "source_blocker_codes": list(item.blocker_codes),
+                        "candidates": {
+                            "candidate-left": _anonymous_candidate(candidate_left),
+                            "candidate-right": _anonymous_candidate(candidate_right),
+                        },
+                    }
+                )
+                expected[key] = review_comment
+                candidate_order_records.append(
+                    {
+                        "campaign_token": token,
+                        "review_item_id": item.review_item_id,
+                        "candidate_left_source": "segmenter-a" if left_is_a else "segmenter-b",
+                        "candidate_right_source": "segmenter-b" if left_is_a else "segmenter-a",
+                    }
+                )
+            packet_id = f"adjudication-shard-{adjudication_index:02d}"
+            packet_sha256 = _canonical_sha256({"packet_id": packet_id, "items": visible_items})
+            payload = build_segmentation_adjudication_request(
+                protocol=protocol,
+                rubric=adjudication_rubric,
+                items=visible_items,
+            )
+            output = execute_call(
+                role=ApiIdentityCallRole.WORKLOAD,
+                payload=payload,
+                packet_id=packet_id,
+                packet_sha256=packet_sha256,
+                adjudication_expected=expected,
+            )
+            assert isinstance(output, SegmentationAdjudicationProviderOutput)
+            for item in output.items:
+                adjudicated[(item.campaign_token, item.review_item_id)] = item
+        _write_json_new(
+            output_root / "private" / "candidate-order.json",
+            {"items": candidate_order_records},
+        )
+
+        sentinel_end = _build_identity_sentinel_request(
+            model=provider.model_id,
+            request_id=f"stsent-end-{authorization.one_time_nonce[:32]}",
+            protocol=identity_protocol,
+        )
+        execute_call(role=ApiIdentityCallRole.END_SENTINEL, payload=sentinel_end)
+        completed_at = datetime.now(UTC)
+        attestation = ApiIdentityWindowAttestation.create(
+            window_id=f"{authorization.run_id}-identity-window",
+            project_id=authorization.project_id,
+            protocol_id=identity_protocol.protocol_id,
+            protocol_semantic_sha256=inspection.identity_protocol.semantic_sha256,
+            resource_id=provider.resource_id,
+            kind=ApiIdentityWindowKind.CONFORMANCE,
+            opened_at_utc=started_at,
+            closed_at_utc=completed_at,
+            official_catalog_open_sha256=authorization.official_catalog_snapshot.file_sha256,
+            official_catalog_close_sha256=authorization.official_catalog_snapshot.file_sha256,
+            official_revision_at_open=None,
+            official_revision_at_close=None,
+            execution_approval_sha256=authorization.authorization_sha256,
+            calls=tuple(item.call for item in call_receipts),
+        )
+        attestation_path = output_root / "identity" / "attestation.json"
+        _write_json_new(attestation_path, attestation.model_dump(mode="json"))
+        identity_report = inspect_api_identity_window(
+            attestation,
+            protocol_inspection=inspection.identity_protocol,
+            resource=provider,
+        )
+        if not identity_report.admitted:
+            raise ValueError(
+                "Segmentation identity window was rejected: "
+                + ",".join(identity_report.blocker_codes)
+            )
+
+        resolution_payload = _legacy_resolution_payload(
+            agreement=agreement,
+            segmenter_a=normalized_runs["segmenter-a"],
+            campaign_to_token=campaign_to_token,
+            adjudicated=adjudicated,
+            rubric_file_sha256=_sha256_file(adjudication_rubric_path),
+            authorization_sha256=authorization.authorization_sha256,
+        )
+        raw_resolution_path = output_root / "derived" / "adjudicator-provider-output.json"
+        _write_json_new(raw_resolution_path, resolution_payload)
+        resolution = normalize_taste_source_segmentation_resolution(
+            raw_resolution_path=raw_resolution_path,
+            agreement_path=agreement_path,
+            run_id=f"{authorization.run_id}-resolution",
+            adjudicator_id="adjudicator-c-glm53-flash",
+            invocation_id=f"{authorization.run_id}-adjudicator-c-invocation",
+            runtime_surface="zhipu-direct-byte-runner-v1",
+            model_identifier=provider.model_id,
+            model_revision=None,
+            exact_model_identity_bound=False,
+            rubric_path=adjudication_rubric_path,
+            runtime_identity_sha256=None,
+            completed_at=completed_at,
+            locator_root=root,
+        )
+        resolution_path = output_root / "derived" / "resolution.json"
+        save_taste_source_segmentation_resolution_run(resolution, resolution_path)
+        item_count = agreement.source_item_count
+        metrics = SegmentationCalibrationMetrics(
+            overlap_span_f1_micros=agreement.overlap_span_f1_micros,
+            overlap_matched_family_agreement_micros=(
+                agreement.overlap_matched_family_agreement_micros
+            ),
+            adjudication_item_rate_micros=(
+                agreement.adjudication_item_count * 1_000_000 // item_count
+            ),
+            residual_risk_item_rate_after_adjudication_micros=(
+                resolution.residual_risk_item_count * 1_000_000 // item_count
+            ),
+            all_frozen_thresholds_passed=(
+                agreement.overlap_span_f1_micros >= 800_000
+                and agreement.overlap_matched_family_agreement_micros >= 800_000
+                and agreement.adjudication_item_count * 1_000_000 // item_count <= 500_000
+                and resolution.residual_risk_item_count == 0
+            ),
+        )
+        receipt = TasteSourceSegmentationCalibrationReceipt.create(
+            run_id=authorization.run_id,
+            project_id=authorization.project_id,
+            authorization_sha256=authorization.authorization_sha256,
+            protocol_file_sha256=authorization.protocol.file_sha256,
+            request_pack_sha256=authorization.request_pack.pack_sha256,
+            started_at=started_at,
+            completed_at=completed_at,
+            provider=provider.provider_id,
+            requested_model=provider.model_id,
+            returned_models=tuple(
+                dict.fromkeys(item.call.returned_model for item in call_receipts)
+            ),
+            identity_attestation=_artifact_binding(
+                attestation_path,
+                root=root,
+                semantic_sha256=attestation.attestation_sha256,
+            ),
+            identity_report=identity_report,
+            call_receipts=tuple(call_receipts),
+            segmenter_firewall_receipts=tuple(firewall_receipts),
+            adjudication_firewall_receipts=tuple(adjudication_firewall_receipts),
+            segmenter_a=_artifact_binding(
+                normalized_paths["segmenter-a"],
+                root=root,
+                semantic_sha256=normalized_runs["segmenter-a"].run_sha256,
+            ),
+            segmenter_b=_artifact_binding(
+                normalized_paths["segmenter-b"],
+                root=root,
+                semantic_sha256=normalized_runs["segmenter-b"].run_sha256,
+            ),
+            agreement=_artifact_binding(
+                agreement_path,
+                root=root,
+                semantic_sha256=agreement.report_sha256,
+            ),
+            resolution=_artifact_binding(
+                resolution_path,
+                root=root,
+                semantic_sha256=resolution.run_sha256,
+            ),
+            metrics=metrics,
+            request_count=len(call_receipts),
+            input_tokens=sum(item.call.input_tokens for item in call_receipts),
+            output_tokens=sum(item.call.output_tokens for item in call_receipts),
+            estimated_cost_cny=sum(item.estimated_cost_cny for item in call_receipts),
+        )
+        _write_json_new(
+            output_root / "CALIBRATION_RECEIPT.json",
+            receipt.model_dump(mode="json"),
+        )
+        ledger = SegmentationExecutionLedger(
+            authorization_sha256=authorization.authorization_sha256,
+            run_id=authorization.run_id,
+            one_time_nonce=authorization.one_time_nonce,
+            status="complete",
+            completed_sequences=tuple(range(1, len(call_receipts) + 1)),
+            provider_call_may_have_started=False,
+            updated_at=datetime.now(UTC),
+        )
+        _replace_execution_ledger(ledger_path, ledger)
+        return receipt
+    except Exception as error:
+        current = _load_execution_ledger(ledger_path)
+        if current.status not in {"failed", "complete"}:
+            _fail_execution_ledger(ledger_path, current, output_root, error)
+        raise
+
+
+def _build_identity_sentinel_request(
+    *,
+    model: str,
+    request_id: str,
+    protocol: object,
+) -> dict[str, JsonValue]:
+    sentinel = protocol.sentinel
+    return {
+        "model": model,
+        "request_id": request_id,
+        "messages": [
+            {"role": "system", "content": sentinel.system_message},
+            {"role": "user", "content": sentinel.user_message},
+        ],
+        "response_format": {"type": sentinel.response_format},
+        "thinking": {"type": "enabled"},
+        "reasoning_effort": "low",
+        "temperature": 0.0,
+        "max_tokens": sentinel.max_output_tokens,
+        "stream": False,
+    }
+
+
+def _campaign_token_map(
+    inspection: TasteSourceSegmentationExecutionInspection,
+    *,
+    root: Path,
+) -> dict[str, str]:
+    campaigns = _sample_source_campaign_locators(inspection.protocol.protocol, root)
+    mapping = {
+        segmentation_campaign_token(inspection.request_pack.pack_id, campaign_id): campaign_id
+        for campaign_id in campaigns
+    }
+    observed_tokens = {
+        item.campaign_token
+        for binding in inspection.request_pack.requests
+        for packet in (
+            load_taste_source_segmentation_request_packet(
+                (root / inspection.authorization.request_pack.locator).parent / binding.locator
+            ),
+        )
+        for item in packet.items
+    }
+    if set(mapping) != observed_tokens:
+        raise ValueError("Segmentation campaign token map differs from the request pack")
+    return mapping
+
+
+def _sample_source_campaign_locators(
+    protocol: TasteSourceSegmentationProspectiveProtocol,
+    root: Path,
+) -> dict[str, str]:
+    path = _bounded_file(root / _safe_locator(protocol.sample.locator), _MAX_PACKET_BYTES)
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    locators = payload.get("source_campaign_locators") if isinstance(payload, dict) else None
+    if not isinstance(locators, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in locators.items()
+    ):
+        raise ValueError("Prospective sample lacks source campaign locators")
+    return dict(locators)
+
+
+def _packet_item_sources(
+    packets: dict[tuple[str, int], TasteSourceSegmentationRequestPacket],
+) -> dict[tuple[str, str], tuple[int, str, str]]:
+    sources: dict[tuple[str, str], tuple[int, str, str]] = {}
+    for (_, shard), packet in packets.items():
+        for item in packet.items:
+            key = (item.campaign_token, item.review_item_id)
+            value = (shard, item.reviewed_abstract, item.review_comment)
+            if key in sources and sources[key] != value:
+                raise ValueError("Segmenter request packets expose different item content")
+            sources[key] = value
+    if len(sources) * 2 != sum(len(packet.items) for packet in packets.values()):
+        raise ValueError("Segmenter request packet coverage is inconsistent")
+    return sources
+
+
+def _legacy_segmenter_payload(
+    *,
+    slot: str,
+    items: list[SegmentationProviderItem],
+    token_to_campaign: dict[str, str],
+    protocol: TasteSourceSegmentationProspectiveProtocol,
+    sample_sha256: str,
+    authorization_sha256: str,
+) -> dict[str, JsonValue]:
+    normalized_items = []
+    for item in sorted(items, key=lambda value: (value.campaign_token, value.review_item_id)):
+        normalized_items.append(
+            {
+                "campaign_id": token_to_campaign[item.campaign_token],
+                "review_item_id": item.review_item_id,
+                "segments": [segment.model_dump(mode="json") for segment in item.segments],
+                "residual_decision_bearing_text_possible": (
+                    item.residual_decision_bearing_text_possible
+                ),
+            }
+        )
+    return {
+        "rubric_read": True,
+        "sample_manifest_read": True,
+        "rubric_file_sha256": protocol.segmentation_rubric.file_sha256,
+        "sample_sha256": sample_sha256,
+        "input_boundary": {
+            "other_segmenter_outputs_read": False,
+            "private_item_map_read": False,
+            "population_outcomes_read": False,
+        },
+        "runner_binding": {
+            "segmenter_slot": slot,
+            "authorization_sha256": authorization_sha256,
+        },
+        "items": normalized_items,
+    }
+
+
+def _anonymous_candidate(item: SegmentationProviderItem) -> dict[str, JsonValue]:
+    return {
+        "segments": [segment.model_dump(mode="json") for segment in item.segments],
+        "residual_decision_bearing_text_possible": (item.residual_decision_bearing_text_possible),
+    }
+
+
+def _legacy_resolution_payload(
+    *,
+    agreement: TasteSourceSegmentationAgreementReport,
+    segmenter_a: TasteSourceDecisionSegmentationRun,
+    campaign_to_token: dict[str, str],
+    adjudicated: dict[tuple[str, str], SegmentationAdjudicationProviderItem],
+    rubric_file_sha256: str,
+    authorization_sha256: str,
+) -> dict[str, JsonValue]:
+    segmenter_items = {(item.campaign_id, item.review_item_id): item for item in segmenter_a.items}
+    resolved: list[dict[str, JsonValue]] = []
+    for item in agreement.items:
+        token = campaign_to_token[item.campaign_id]
+        key = (token, item.review_item_id)
+        if item.requires_adjudication:
+            adjudicated_item = adjudicated.get(key)
+            if adjudicated_item is None:
+                raise ValueError("Segmentation resolution lacks an adjudicated disputed item")
+            segments = [segment.model_dump(mode="json") for segment in adjudicated_item.segments]
+            residual = adjudicated_item.residual_decision_bearing_text_possible
+            rationale = adjudicated_item.resolution_rationale
+            resolution_kind = "ai-adjudicated"
+        else:
+            source = segmenter_items[(item.campaign_id, item.review_item_id)]
+            segments = [
+                {
+                    "verbatim_decision_text": segment.verbatim_decision_text,
+                    "primary_decision_family": str(segment.primary_decision_family),
+                    "atomic_decision_statement": segment.atomic_decision_statement,
+                    "rationale": segment.rationale,
+                    "uncertainty": segment.uncertainty,
+                }
+                for segment in source.segments
+            ]
+            residual = source.residual_decision_bearing_text_possible
+            rationale = "Copied deterministically from exact dual-agent agreement."
+            resolution_kind = "exact-dual-agent-agreement"
+        resolved.append(
+            {
+                "campaign_id": item.campaign_id,
+                "review_item_id": item.review_item_id,
+                "resolution_kind": resolution_kind,
+                "source_blocker_codes": list(item.blocker_codes),
+                "segments": segments,
+                "residual_decision_bearing_text_possible": residual,
+                "resolution_rationale": rationale,
+            }
+        )
+    return {
+        "rubric_read": True,
+        "rubric_file_sha256": rubric_file_sha256,
+        "source_agreement_report_sha256": agreement.report_sha256,
+        "input_boundary": {
+            "segmenter_outputs_read": True,
+            "private_item_map_read": False,
+            "population_outcomes_read": False,
+        },
+        "runner_binding": {"authorization_sha256": authorization_sha256},
+        "items": resolved,
+    }
+
+
+def _estimate_call_cost_cny(
+    *,
+    input_tokens: int,
+    cached_input_tokens: int,
+    output_tokens: int,
+    price: SegmentationExecutionPriceCeiling,
+) -> float:
+    uncached = input_tokens - cached_input_tokens
+    return (
+        uncached * price.input_cache_miss_cny_per_million_tokens
+        + cached_input_tokens * price.input_cache_hit_cny_per_million_tokens
+        + output_tokens * price.output_cny_per_million_tokens
+    ) / 1_000_000
+
+
+def _artifact_binding(
+    path: Path,
+    *,
+    root: Path,
+    semantic_sha256: str,
+) -> SegmentationRunArtifactBinding:
+    return SegmentationRunArtifactBinding(
+        locator=_relative_to_root(path, root),
+        file_sha256=_sha256_file(path),
+        semantic_sha256=semantic_sha256,
+    )
+
+
+def _relative_to_root(path: Path, root: Path) -> str:
+    try:
+        return path.resolve(strict=True).relative_to(root).as_posix()
+    except ValueError as error:
+        raise ValueError("Segmentation artifact escapes its locator root") from error
+
+
+def _write_json_new(path: Path, payload: object) -> None:
+    raw = (
+        json.dumps(payload, allow_nan=False, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode()
+    _atomic_bytes(path, raw)
+
+
+def _claim_execution_ledger(path: Path, ledger: SegmentationExecutionLedger) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = (ledger.model_dump_json(indent=2) + "\n").encode()
+    descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+
+
+def _replace_execution_ledger(path: Path, ledger: SegmentationExecutionLedger) -> None:
+    raw = (ledger.model_dump_json(indent=2) + "\n").encode()
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _load_execution_ledger(path: Path) -> SegmentationExecutionLedger:
+    payload = json.loads(_bounded_file(path, _MAX_AUTHORIZATION_BYTES).read_bytes())
+    return SegmentationExecutionLedger.model_validate(payload)
+
+
+def _fail_execution_ledger(
+    ledger_path: Path,
+    ledger: SegmentationExecutionLedger,
+    output_root: Path,
+    error: Exception,
+) -> None:
+    failed = SegmentationExecutionLedger(
+        authorization_sha256=ledger.authorization_sha256,
+        run_id=ledger.run_id,
+        one_time_nonce=ledger.one_time_nonce,
+        status="failed",
+        completed_sequences=ledger.completed_sequences,
+        provider_call_may_have_started=ledger.provider_call_may_have_started,
+        updated_at=datetime.now(UTC),
+    )
+    _replace_execution_ledger(ledger_path, failed)
+    marker = output_root / "FAILED.json"
+    if not marker.exists():
+        _write_json_new(
+            marker,
+            {
+                "run_id": ledger.run_id,
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+                "completed_sequences": list(ledger.completed_sequences),
+                "provider_call_may_have_started": ledger.provider_call_may_have_started,
+                "retry_authorized": False,
+                "not_human_review": True,
+            },
+        )
 
 
 def load_taste_source_segmentation_execution_authorization(
@@ -788,9 +2126,7 @@ def _canonical_sha256(value: object) -> str:
 def _recursive_keys(value: object) -> set[str]:
     if isinstance(value, dict):
         return set(value) | {
-            nested
-            for child in value.values()
-            for nested in _recursive_keys(child)
+            nested for child in value.values() for nested in _recursive_keys(child)
         }
     if isinstance(value, list):
         return {nested for child in value for nested in _recursive_keys(child)}
@@ -798,9 +2134,14 @@ def _recursive_keys(value: object) -> set[str]:
 
 
 __all__ = [
+    "ExtractedProviderResponse",
     "LiveProviderHTTPTransport",
     "ProviderHTTPResponse",
     "ProviderHTTPTransport",
+    "SegmentationAdjudicationInputFirewallReceipt",
+    "SegmentationAdjudicationProviderItem",
+    "SegmentationAdjudicationProviderOutput",
+    "SegmentationCalibrationMetrics",
     "SegmentationExecutionAuthority",
     "SegmentationExecutionFileBinding",
     "SegmentationExecutionLimits",
@@ -812,14 +2153,20 @@ __all__ = [
     "SegmentationProviderItem",
     "SegmentationProviderOutput",
     "SegmentationProviderSegment",
+    "SegmentationRunArtifactBinding",
+    "TasteSourceSegmentationCalibrationReceipt",
     "TasteSourceSegmentationExecutionAuthorization",
     "TasteSourceSegmentationExecutionInspection",
+    "build_segmentation_adjudication_request",
     "build_segmentation_provider_request",
     "extract_openai_chat_response",
     "inspect_taste_source_segmentation_execution_authorization",
     "load_taste_source_segmentation_execution_authorization",
     "persist_exact_provider_request",
+    "run_taste_source_segmentation_calibration",
     "save_taste_source_segmentation_execution_authorization",
+    "validate_adjudication_provider_output",
     "validate_segmentation_provider_output",
+    "verify_persisted_segmentation_adjudication_request",
     "verify_persisted_segmentation_provider_request",
 ]

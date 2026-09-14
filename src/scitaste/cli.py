@@ -211,6 +211,7 @@ from scitaste.evaluation import (
     publish_project_evaluation_result,
     qualify_source_archives,
     run_live_direct_agent,
+    run_taste_source_segmentation_calibration,
     save_acquired_task_cohort_report,
     save_acquisition_gate_report,
     save_benchmark_metadata_allocation_approval,
@@ -2109,13 +2110,9 @@ def build_parser() -> argparse.ArgumentParser:
     taste_source_segmentation_sample.add_argument(
         "--exclude-sample", type=Path, action="append", required=True
     )
-    taste_source_segmentation_sample.add_argument(
-        "--per-campaign-items", type=int, required=True
-    )
+    taste_source_segmentation_sample.add_argument("--per-campaign-items", type=int, required=True)
     taste_source_segmentation_sample.add_argument("--seed", type=int, required=True)
-    taste_source_segmentation_sample.add_argument(
-        "--locator-root", type=Path, default=Path(".")
-    )
+    taste_source_segmentation_sample.add_argument("--locator-root", type=Path, default=Path("."))
     taste_source_segmentation_sample.add_argument("--output", type=Path, required=True)
     _add_log_level_option(taste_source_segmentation_sample)
     taste_source_segmentation_sample.set_defaults(
@@ -2126,12 +2123,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify a frozen prospective segmentation protocol without provider access",
     )
     taste_source_segmentation_protocol.add_argument("--protocol", type=Path, required=True)
-    taste_source_segmentation_protocol.add_argument(
-        "--freeze-receipt", type=Path, required=True
-    )
-    taste_source_segmentation_protocol.add_argument(
-        "--locator-root", type=Path, default=Path(".")
-    )
+    taste_source_segmentation_protocol.add_argument("--freeze-receipt", type=Path, required=True)
+    taste_source_segmentation_protocol.add_argument("--locator-root", type=Path, default=Path("."))
     _add_log_level_option(taste_source_segmentation_protocol)
     taste_source_segmentation_protocol.set_defaults(
         handler=_handle_evaluation_taste_source_segmentation_protocol_inspect
@@ -2142,13 +2135,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     taste_source_segmentation_pack.add_argument("--pack-id", required=True)
     taste_source_segmentation_pack.add_argument("--protocol", type=Path, required=True)
-    taste_source_segmentation_pack.add_argument(
-        "--freeze-receipt", type=Path, required=True
-    )
+    taste_source_segmentation_pack.add_argument("--freeze-receipt", type=Path, required=True)
     taste_source_segmentation_pack.add_argument("--created-at", required=True)
-    taste_source_segmentation_pack.add_argument(
-        "--locator-root", type=Path, default=Path(".")
-    )
+    taste_source_segmentation_pack.add_argument("--locator-root", type=Path, default=Path("."))
     taste_source_segmentation_pack.add_argument("--output-dir", type=Path, required=True)
     _add_log_level_option(taste_source_segmentation_pack)
     taste_source_segmentation_pack.set_defaults(
@@ -2158,15 +2147,23 @@ def build_parser() -> argparse.ArgumentParser:
         "taste-source-segmentation-execution-inspect",
         help="Verify one content-addressed live calibration authorization without API access",
     )
-    taste_source_segmentation_execution.add_argument(
-        "--authorization", type=Path, required=True
-    )
-    taste_source_segmentation_execution.add_argument(
-        "--locator-root", type=Path, default=Path(".")
-    )
+    taste_source_segmentation_execution.add_argument("--authorization", type=Path, required=True)
+    taste_source_segmentation_execution.add_argument("--locator-root", type=Path, default=Path("."))
     _add_log_level_option(taste_source_segmentation_execution)
     taste_source_segmentation_execution.set_defaults(
         handler=_handle_evaluation_taste_source_segmentation_execution_inspect
+    )
+    taste_source_segmentation_run = evaluation_commands.add_parser(
+        "taste-source-segmentation-execution-run",
+        help="Run one content-addressed no-retry segmentation calibration window",
+    )
+    taste_source_segmentation_run.add_argument("--authorization", type=Path, required=True)
+    taste_source_segmentation_run.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_segmentation_run.add_argument("--confirm-authorization-sha256", required=True)
+    taste_source_segmentation_run.add_argument("--allow-live", action="store_true")
+    _add_log_level_option(taste_source_segmentation_run)
+    taste_source_segmentation_run.set_defaults(
+        handler=_handle_evaluation_taste_source_segmentation_execution_run
     )
     taste_source_segmentation = evaluation_commands.add_parser(
         "taste-source-decision-segmentation-normalize",
@@ -6796,9 +6793,7 @@ def _handle_evaluation_taste_source_segmentation_sample_plan(
                 "item_count": sample.item_count,
                 "per_campaign_item_counts": sample.per_campaign_item_counts,
                 "excluded_sample_ids": sorted(sample.excluded_sample_sha256s or {}),
-                "scaled_execution_authorized": sample.authority[
-                    "scaled_execution_authorized"
-                ],
+                "scaled_execution_authorized": sample.authority["scaled_execution_authorized"],
                 "formal_evidence_eligible": sample.authority["formal_evidence_eligible"],
             },
             indent=2,
@@ -6828,9 +6823,7 @@ def _handle_evaluation_taste_source_segmentation_protocol_inspect(
         "artifact_bindings_verified": inspection.artifact_bindings_verified,
         "sample_replay_verified": inspection.sample_replay_verified,
         "provider_contact_authorized": inspection.provider_contact_authorized,
-        "calibration_execution_authorized": (
-            inspection.calibration_execution_authorized
-        ),
+        "calibration_execution_authorized": (inspection.calibration_execution_authorized),
     }
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
@@ -6878,9 +6871,7 @@ def _handle_evaluation_taste_source_segmentation_execution_inspect(
             {
                 "status": "segmentation-execution-authorization-candidate-validated-no-live",
                 "authorization_id": inspection.authorization.authorization_id,
-                "authorization_sha256": (
-                    inspection.authorization.authorization_sha256
-                ),
+                "authorization_sha256": (inspection.authorization.authorization_sha256),
                 "authorization_file_sha256": inspection.authorization_file_sha256,
                 "protocol_id": inspection.protocol.protocol.protocol_id,
                 "pack_sha256": inspection.request_pack.pack_sha256,
@@ -6891,16 +6882,15 @@ def _handle_evaluation_taste_source_segmentation_execution_inspect(
                 "maximum_provider_requests": (
                     inspection.authorization.limits.maximum_provider_requests
                 ),
-                "maximum_total_cost_usd": (
-                    inspection.authorization.price_ceiling.maximum_total_cost_usd
+                "maximum_estimated_cost_cny": (
+                    inspection.authorization.price_ceiling.maximum_estimated_cost_cny
                 ),
-                "runner_git_binding_verified": (
-                    inspection.runner_git_binding_verified
+                "owner_maximum_liability_usd": (
+                    inspection.authorization.price_ceiling.owner_maximum_liability_usd
                 ),
+                "runner_git_binding_verified": (inspection.runner_git_binding_verified),
                 "payload_firewall_verified": inspection.payload_firewall_verified,
-                "authorization_candidate_validated": (
-                    inspection.authorization_candidate_validated
-                ),
+                "authorization_candidate_validated": (inspection.authorization_candidate_validated),
                 "execution_ready": inspection.execution_ready,
                 "external_action_performed": inspection.external_action_performed,
                 "human_review_claim_authorized": (
@@ -6915,6 +6905,39 @@ def _handle_evaluation_taste_source_segmentation_execution_inspect(
         )
     )
     return 0
+
+
+def _handle_evaluation_taste_source_segmentation_execution_run(
+    args: argparse.Namespace,
+) -> int:
+    receipt = run_taste_source_segmentation_calibration(
+        authorization_path=args.authorization,
+        locator_root=args.locator_root,
+        confirm_authorization_sha256=args.confirm_authorization_sha256,
+        allow_live=args.allow_live,
+    )
+    print(
+        json.dumps(
+            {
+                "status": "segmentation-calibration-executed-awaiting-ai-audits",
+                "run_id": receipt.run_id,
+                "receipt_sha256": receipt.receipt_sha256,
+                "request_count": receipt.request_count,
+                "input_tokens": receipt.input_tokens,
+                "output_tokens": receipt.output_tokens,
+                "estimated_cost_cny": receipt.estimated_cost_cny,
+                "identity_window_admitted": receipt.identity_report.admitted,
+                "all_frozen_thresholds_passed": (receipt.metrics.all_frozen_thresholds_passed),
+                "scale_gate_passed": receipt.scale_gate_passed,
+                "formal_evidence_eligible": receipt.formal_evidence_eligible,
+                "reviewer_kind": receipt.reviewer_kind,
+                "not_human_review": receipt.not_human_review,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if receipt.metrics.all_frozen_thresholds_passed else 1
 
 
 def _handle_evaluation_taste_source_decision_segmentation_normalize(
