@@ -1,0 +1,65 @@
+schema_version: "1.2"
+rubric_id: scitastebench-decision-segmentation-v3
+purpose: >-
+  Propose complete atomic scientific decisions by selecting deterministic
+  source evidence-unit ranges before source quality, transferability, or
+  outcome assessment.
+input_boundary:
+  allowed:
+    - frozen segmentation rubric
+    - assigned anonymous record abstract and review comment
+    - deterministic evidence-unit IDs and surfaces derived from that comment
+  forbidden:
+    - private item map
+    - publisher subject or source identity
+    - recommendation, author response, later revision, or population outcome
+    - another segmenter's prompt, messages, or output
+unit_definition: >-
+  One segment contains one scientific decision change that a researcher can act
+  on and later evaluate. Independently actionable requests remain separate even
+  when they occur in the same sentence or share a family.
+segmentation_rules:
+  - Read the entire review_comment before emitting any segment.
+  - Return every independently actionable request; exclude boilerplate and checklist-only assessment.
+  - Select only a start_unit_id and end_unit_id present in the assigned evidence_units table.
+  - Never copy, paraphrase, normalize, or reconstruct source text in the response.
+  - Keep enough adjacent source units for the requested decision to remain intelligible.
+  - Split ranges when requests are independently actionable, including same-family requests in one sentence.
+  - Ranges must be ordered, non-overlapping, and contained within one review item.
+  - Set residual_decision_bearing_text_possible whenever any potentially actionable request may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_output_role: evidence-unit-selection-only
+  algorithm: unicode-word-punctuation-v1
+  token_pattern: "\\w+|[^\\w\\s]"
+  requirements:
+    - each Unicode word run is one surface unit
+    - each non-word non-whitespace codepoint is one surface unit
+    - unit IDs are unique within an item and bind hidden exact source offsets
+    - final text is copied from the original review_comment between selected boundaries
+  forbidden:
+    - provider-authored source text
+    - provider-visible character offsets
+    - normalization, fuzzy matching, insertion, deletion, or retry repair
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+required_segment_fields:
+  - start_unit_id
+  - end_unit_id
+  - primary_decision_family
+  - atomic_decision_statement
+  - rationale
+  - uncertainty
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false
