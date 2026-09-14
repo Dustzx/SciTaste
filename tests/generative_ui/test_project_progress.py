@@ -1326,6 +1326,8 @@ def test_strict_manifest_extensions_supply_milestones_or_fail_closed(
                 "status": "completed-dogfooding",
                 "decision": "Use project progress as the generative workspace foundation.",
                 "evidence": "runs/milestone-run/",
+                "negative_evidence": "The first projection exposed an incomplete history.",
+                "limitation": "This milestone is engineering evidence only.",
             },
             {
                 "iteration_id": "external-reference",

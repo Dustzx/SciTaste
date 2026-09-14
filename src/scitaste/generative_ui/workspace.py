@@ -401,6 +401,12 @@ class _ManifestIteration(BaseModel):
     status: SafeText
     decision: SafeText
     evidence: SafeLocator
+    # Historical self-iteration records preserve negative evidence and scoped
+    # limitations alongside the headline decision.  They remain inert display
+    # text; rejecting the whole milestone ledger because either field is present
+    # hides valid project history from the progress surface.
+    negative_evidence: SafeText | None = None
+    limitation: SafeText | None = None
 
     @field_validator("evidence", mode="before")
     @classmethod
