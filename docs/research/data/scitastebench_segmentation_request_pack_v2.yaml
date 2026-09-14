@@ -1,0 +1,48 @@
+schema_version: "1.0"
+artifact_id: scitastebench-segmentation-request-pack-v2
+project_id: scitaste-self-development
+recorded_at: 2026-09-15T04:50:00+08:00
+status: prepared-no-provider-contact
+repository:
+  branch: main
+  builder_commit: b1f1af2ab4ca62151456f343015a60487e1d4168
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v2.yaml
+  file_sha256: 9496738a89dfa129664135e5be983b187e1f3da673afeab2eef80b106e947f65
+  protocol_id: scitastebench-segmentation-prospective-calibration-v2
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v2.yaml
+  file_sha256: 9f4d7c90d2544a61976aea268fb715ec3950f456846d28abfdb749bb41dbc8f2
+request_pack:
+  local_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v2/request-pack-v4/REQUEST_PACK.json
+  file_sha256: 7520741e62853f97b835cdb70201b1191bc061aa799551f8b1e80b66f89d6642
+  pack_sha256: cf6336d17c65e2e22abef08f1e153cae86cd816ebaf99d559a01983c2a6b4985
+  request_count: 8
+  unique_item_count: 24
+  segmenter_count: 2
+  shards_per_segmenter: 4
+privacy_boundary:
+  structured_source_identity_withheld: true
+  explicit_outcome_fields_withheld: true
+  provider_tools_allowed: false
+  parametric_source_recognition_ruled_out: false
+  adjudicator_boundary_separately_frozen: true
+supersedes:
+  artifact: docs/research/data/scitastebench_segmentation_request_pack_v1.yaml
+  reason: >-
+    The earlier protocol used one global firewall for both independent
+    segmenters and their third-party adjudicator. Version 2 explicitly limits
+    adjudication to disputed items and anonymous candidate order before any
+    provider call.
+authority:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_created: false
+next_gate: >-
+  Complete and bind the no-retry runner, one-time execution ledger, current
+  price-liability receipt, and explicit owner authorization. Inspect all exact
+  hashes before the first identity sentinel.
