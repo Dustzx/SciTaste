@@ -1,0 +1,90 @@
+schema_version: '1.1'
+sample_id: scitastebench-segmentation-prospective-calibration-v2
+project_id: scitaste-self-development
+selection_timing: preregistered
+selection_rationale: Freeze an outcome-blind, source-balanced unseen calibration sample
+  before either segmenter receives item text; all earlier calibration items are excluded.
+sampling_algorithm: 'sha256-ranked-balanced-v1: rank each unseen item by the canonical
+  SHA-256 of algorithm, seed, campaign identity, campaign hash, item ID, and item
+  hash; take the lowest ranks independently per campaign.'
+random_seed: 2026091502
+selection_algorithm_version: sha256-ranked-balanced-v1
+source_campaign_locators:
+  aries-taste-source-review-v1: outputs/projects/scitaste-self-development/evaluations/acquisitions/aries-review-edit-population-v1/derived/taste-source-review-v1/CAMPAIGN.json
+  f1000-multidomain-taste-source-review-v1: outputs/projects/scitaste-self-development/evaluations/reviews/f1000-multidomain-taste-source-review-v1/CAMPAIGN.json
+source_campaign_file_sha256s:
+  aries-taste-source-review-v1: 85bced0fcc8a470578aa2fee4040c6182900657ab474c286eb21aad30b426844
+  f1000-multidomain-taste-source-review-v1: deb793bc065d09ddcfd6e02350bd430ecb81f9fc563d9f1bb7b466ebcd60263e
+source_campaign_sha256s:
+  aries-taste-source-review-v1: 83c95d2d0dcbc9f96708aedf95caa9808a093383efb8d61a063572f52adb6af3
+  f1000-multidomain-taste-source-review-v1: 74a45dc4ec755776e887ccc22ae433878abd6a5ad587a89e53690cb95cd99539
+source_scientific_items_sha256s:
+  aries-taste-source-review-v1: 946981aa247e4a50bdac7acd26c65e74658b1307d96c113ffdd2e76460efdbbd
+  f1000-multidomain-taste-source-review-v1: cc6d7d283b2e7dc3a5efef90a04b3dc4d5e2433ba0717940856ba306de74eefd
+excluded_sample_locators:
+  scitastebench-segmentation-calibration-sample-v1: configs/evaluation/ai_review/scitastebench_segmentation_calibration_sample_v1.yaml
+  scitastebench-segmentation-prospective-calibration-v1: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+excluded_sample_file_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: be8ee5edf23c52ad9d5385e7deae7200c58bafda9a42d600b0bd460d3e7c76f9
+  scitastebench-segmentation-prospective-calibration-v1: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+excluded_sample_sha256s:
+  scitastebench-segmentation-calibration-sample-v1: 96fb57bbfade9f0ff5ea29b9f2a09aae3b408f2e547a7def96093eea81e01b1c
+  scitastebench-segmentation-prospective-calibration-v1: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+per_campaign_item_counts:
+  aries-taste-source-review-v1: 12
+  f1000-multidomain-taste-source-review-v1: 12
+items:
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-041d274d8ed13d0bf77377ac
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-12dcbd7d79317aec10342c21
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-47c719f22105163ed4e2f82c
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-80191fbb6511a2392cb0641a
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-8d93110e75373c46c1cd3bbd
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-984c4c14de82b9c74605a66c
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-b3f27d96c61a24ea731ee06d
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-b88e7adbf8002696c9c27dcd
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-c6752f795a17abbc1f10e829
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-d246eb5c3c478cd2d342671f
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-e727b3d4b33b7154b67b6bd7
+- campaign_id: aries-taste-source-review-v1
+  review_item_id: item-ee98e4cb4cf3e7530e52e2b9
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-07c75dcc9dea8f888ca217fa
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-0f6901f479e05fbe897eed1d
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-10b5def6aafdc8236507b86b
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-19503a1ab5916fce0a55c2ef
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-20326b8c98d3d7de8aae06b0
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-2776e969d434e2ab9c651630
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-4b8e08526d32515b3cbfe259
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-61a5dac6111a23b1618d5ab2
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-77a2377e229e94a47a02c9b5
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-ac643e50569c6c96a7b11523
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-d74ebde2259d2b3b7b174d49
+- campaign_id: f1000-multidomain-taste-source-review-v1
+  review_item_id: item-e55aa8e54b90bf3c206a3adb
+item_count: 24
+authority:
+  preregistered: true
+  confirmatory_calibration_authorized: false
+  scaled_execution_authorized: false
+  formal_evidence_eligible: false

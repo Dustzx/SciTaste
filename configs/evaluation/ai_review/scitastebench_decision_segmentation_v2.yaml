@@ -1,0 +1,59 @@
+schema_version: "1.1"
+rubric_id: scitastebench-decision-segmentation-v2
+purpose: >-
+  Propose complete atomic scientific-decision spans before source quality,
+  decision-family, transferability, or outcome assessment.
+input_boundary:
+  allowed:
+    - frozen segmentation rubric
+    - assigned anonymous record abstract and review comment
+  forbidden:
+    - private item map
+    - publisher subject or source identity
+    - recommendation, author response, later revision, or population outcome
+    - another segmenter's prompt, messages, or output
+unit_definition: >-
+  One segment contains one scientific decision change that a researcher can act
+  on and later evaluate. Independently actionable requests remain separate even
+  when they occur in the same sentence or share a family.
+segmentation_rules:
+  - Read the entire review_comment before emitting any segment.
+  - Return every independently actionable request; boilerplate and checklist-only assessment are excluded.
+  - Use reported_decision_text only as a locator candidate copied from review_comment.
+  - Do not paraphrase, normalize punctuation, extend a claim beyond the reported span, or invent context inside reported_decision_text.
+  - Keep enough local source context for the requested decision to be intelligible.
+  - Split spans when the requested changes have different decision families.
+  - Set residual_decision_bearing_text_possible whenever any potentially actionable request may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_text_role: candidate-locator-not-source-of-record
+  algorithm: unicode-typography-normalized-unique-match-v1
+  allowed_codepoint_map: "2018,2019->0027;201C,201D->0022;00A0->0020"
+  requirements:
+    - one-to-one and equal-length mapping only
+    - exactly one normalized match in the original review_comment
+    - final verbatim text copied from the matched original source slice
+  forbidden:
+    - insertion or deletion
+    - whitespace, hyphen, wording, or NFKC repair
+    - fuzzy or semantic matching
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+required_segment_fields:
+  - reported_decision_text
+  - primary_decision_family
+  - atomic_decision_statement
+  - rationale
+  - uncertainty
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

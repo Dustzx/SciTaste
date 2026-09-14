@@ -1,0 +1,19 @@
+schema_version: "1.0"
+registry_id: scitastebench-segmentation-consumed-samples-v1
+project_id: scitaste-self-development
+consumed_samples:
+  - sample_id: scitastebench-segmentation-prospective-calibration-v1
+    sample_sha256: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+    protocol_id: scitastebench-segmentation-prospective-calibration-v2
+    request_pack_sha256: cf6336d17c65e2e22abef08f1e153cae86cd816ebaf99d559a01983c2a6b4985
+    run_id: segmentation-prospective-calibration-20260915-v1
+    status: failed-consumed-no-recalibration
+    provider_request_count: 2
+    failed_call_sequence: 2
+    same_sample_recalibration_allowed: false
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false

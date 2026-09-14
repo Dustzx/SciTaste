@@ -5,6 +5,18 @@ semantic versioning.
 
 ## [Unreleased]
 
+- The first real prospective segmentation window failed closed after exactly
+  two GLM-5.3-Flash requests: the identity sentinel passed, but segmenter A
+  converted two curly-quote pairs to ASCII in a 33-span response. The frozen v2
+  sample is now consumed and cannot be retried. Protocol v3 preselects a new
+  disjoint 24-item sample and permits only an equal-length, one-codepoint
+  typography map followed by a unique match and restoration from the original
+  source slice; whitespace, hyphen, NFKC, insertion/deletion, and fuzzy repair
+  remain forbidden. Raw provider strings and reconstruction offsets receive
+  separate receipts. Successful calls and failed calls are persisted
+  independently, and failed ledgers retain the failed sequence, request,
+  response, HTTP status, and artifact hashes. These are AI pipeline controls,
+  not human agreement or benchmark-validity evidence.
 - Added a deterministic prospective atomic-decision calibration planner. It
   freezes a source-balanced 24-item ARIES/F1000 sample before model execution,
   excludes every record used by the retrospective pilot, and binds the exact

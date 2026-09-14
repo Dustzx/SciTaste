@@ -20,7 +20,15 @@ from typing import Literal, Protocol
 
 import httpx
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    computed_field,
+    model_validator,
+)
 
 from scitaste.evaluation.model_identity import (
     ApiIdentityCallReceipt,
@@ -228,13 +236,27 @@ class TasteSourceSegmentationExecutionInspection(BaseModel):
 class SegmentationProviderSegment(BaseModel):
     model_config = _CONFIG
 
-    verbatim_decision_text: str = Field(min_length=8, max_length=16_000)
+    verbatim_decision_text: str = Field(
+        min_length=8,
+        max_length=16_000,
+        validation_alias=AliasChoices("verbatim_decision_text", "reported_decision_text"),
+    )
     primary_decision_family: Literal[
         "idea", "experiment", "evidence", "writing", "review", "visual", "cannot-assess"
     ]
     atomic_decision_statement: str = Field(min_length=1, max_length=2_000)
     rationale: str = Field(min_length=1, max_length=2_000)
     uncertainty: Literal["low", "medium", "high"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def one_text_field_only(cls, value: object) -> object:
+        if isinstance(value, dict) and {
+            "verbatim_decision_text",
+            "reported_decision_text",
+        }.issubset(value):
+            raise ValueError("Segmentation provider returned both text field variants")
+        return value
 
 
 class SegmentationProviderItem(BaseModel):
@@ -439,6 +461,23 @@ class SegmentationAdjudicationInputFirewallReceipt(BaseModel):
         return _canonical_sha256(self.model_dump(mode="json", exclude={"receipt_sha256"}))
 
 
+class SegmentationSpanReconstructionReceipt(BaseModel):
+    model_config = _CONFIG
+
+    campaign_token: str = Field(pattern=_ID)
+    review_item_id: str = Field(pattern=_ID)
+    segment_ordinal: int = Field(ge=1, le=128)
+    algorithm: Literal["unicode-typography-normalized-unique-match-v1"]
+    provider_text_sha256: str = Field(pattern=_SHA256)
+    source_text_sha256: str = Field(pattern=_SHA256)
+    start_char: int = Field(ge=0)
+    end_char: int = Field(gt=0)
+    changed_codepoint_count: int = Field(gt=0)
+    unique_normalized_match_verified: Literal[True] = True
+    original_source_slice_restored: Literal[True] = True
+    fuzzy_matching_performed: Literal[False] = False
+
+
 class SegmentationProviderCallReceipt(BaseModel):
     model_config = _CONFIG
 
@@ -453,6 +492,7 @@ class SegmentationProviderCallReceipt(BaseModel):
     cached_input_tokens: int = Field(ge=0)
     total_tokens: int = Field(ge=0)
     estimated_cost_cny: float = Field(ge=0, allow_inf_nan=False)
+    span_reconstruction_receipts: tuple[SegmentationSpanReconstructionReceipt, ...] = ()
     retry_count: Literal[0] = 0
     response_schema_verified: Literal[True] = True
     assigned_item_set_verified: Literal[True] = True
@@ -488,6 +528,12 @@ class SegmentationExecutionLedger(BaseModel):
     completed_sequences: tuple[int, ...]
     pending_sequence: int | None = Field(default=None, ge=1)
     pending_request_sha256: str | None = Field(default=None, pattern=_SHA256)
+    failed_sequence: int | None = Field(default=None, ge=1)
+    failed_request_sha256: str | None = Field(default=None, pattern=_SHA256)
+    failed_response_sha256: str | None = Field(default=None, pattern=_SHA256)
+    failed_http_status: int | None = Field(default=None, ge=100, le=599)
+    failed_raw_request_ref: str | None = Field(default=None, max_length=1_000)
+    failed_raw_response_ref: str | None = Field(default=None, max_length=1_000)
     provider_call_may_have_started: bool
     updated_at: datetime
 
@@ -509,6 +555,19 @@ class SegmentationExecutionLedger(BaseModel):
             raise ValueError("Segmentation ledger closed state retains pending call")
         if self.status in {"claimed", "complete"} and self.provider_call_may_have_started:
             raise ValueError("Segmentation ledger non-failure state retains call uncertainty")
+        failure_fields = (
+            self.failed_sequence,
+            self.failed_request_sha256,
+            self.failed_response_sha256,
+            self.failed_http_status,
+            self.failed_raw_request_ref,
+            self.failed_raw_response_ref,
+        )
+        if self.status != "failed" and any(value is not None for value in failure_fields):
+            raise ValueError("Segmentation non-failure ledger retains failure evidence")
+        for locator in (self.failed_raw_request_ref, self.failed_raw_response_ref):
+            if locator is not None:
+                _safe_locator(locator)
         return self
 
 
@@ -610,7 +669,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         locator_root=root,
     )
     if (
-        protocol.protocol.schema_version != "1.1"
+        protocol.protocol.schema_version not in {"1.1", "1.2"}
         or protocol.protocol.adjudication_input_firewall is None
     ):
         raise ValueError(
@@ -792,6 +851,7 @@ def validate_segmentation_provider_output(
     raw_text: str,
     *,
     packet: TasteSourceSegmentationRequestPacket,
+    protocol: TasteSourceSegmentationProspectiveProtocol | None = None,
 ) -> SegmentationProviderOutput:
     """Validate exact item coverage and verbatim spans for one provider response."""
 
@@ -807,6 +867,8 @@ def validate_segmentation_provider_output(
     observed = [(item.campaign_token, item.review_item_id) for item in output.items]
     if len(observed) != len(set(observed)) or set(observed) != set(expected):
         raise ValueError("Segmentation provider output item coverage drifted")
+    if protocol is not None and protocol.span_reconstruction is not None:
+        return _reconstruct_provider_spans(output, packet=packet)
     for item in output.items:
         source = expected[(item.campaign_token, item.review_item_id)].review_comment
         intervals: list[tuple[int, int]] = []
@@ -825,6 +887,7 @@ def validate_adjudication_provider_output(
     raw_text: str,
     *,
     expected_items: dict[tuple[str, str], str],
+    protocol: TasteSourceSegmentationProspectiveProtocol | None = None,
 ) -> SegmentationAdjudicationProviderOutput:
     """Validate disputed-only adjudication coverage and exact source spans."""
 
@@ -839,6 +902,8 @@ def validate_adjudication_provider_output(
     observed = [(item.campaign_token, item.review_item_id) for item in output.items]
     if len(observed) != len(set(observed)) or set(observed) != set(expected_items):
         raise ValueError("Segmentation adjudication output item coverage drifted")
+    if protocol is not None and protocol.span_reconstruction is not None:
+        return _reconstruct_adjudication_spans(output, expected_items=expected_items)
     for item in output.items:
         source = expected_items[(item.campaign_token, item.review_item_id)]
         intervals: list[tuple[int, int]] = []
@@ -863,6 +928,11 @@ def build_segmentation_adjudication_request(
 
     if not items or len(items) > protocol.generation.items_per_shard:
         raise ValueError("Segmentation adjudication shard size is invalid")
+    reported_text_field = (
+        "reported_decision_text"
+        if protocol.span_reconstruction is not None
+        else "verbatim_decision_text"
+    )
     output_contract: dict[str, JsonValue] = {
         "type": "object",
         "additionalProperties": False,
@@ -893,14 +963,14 @@ def build_segmentation_adjudication_request(
                                 "type": "object",
                                 "additionalProperties": False,
                                 "required": [
-                                    "verbatim_decision_text",
+                                    reported_text_field,
                                     "primary_decision_family",
                                     "atomic_decision_statement",
                                     "rationale",
                                     "uncertainty",
                                 ],
                                 "properties": {
-                                    "verbatim_decision_text": {
+                                    reported_text_field: {
                                         "type": "string",
                                         "minLength": 8,
                                     },
@@ -947,7 +1017,8 @@ def build_segmentation_adjudication_request(
                     "Resolve only the supplied disputed decision segmentations. "
                     "Candidate labels are anonymous and their order carries no meaning. "
                     "Do not infer hidden source or outcome fields, use tools, or browse. "
-                    "Return one bare JSON object only."
+                    "Return one bare JSON object only. The reported decision text is "
+                    "only a locator candidate; final source text is copied by the runner."
                 ),
             },
             {
@@ -1276,6 +1347,7 @@ def run_taste_source_segmentation_calibration(
         ledger = SegmentationExecutionLedger.model_validate(ledger)
         _replace_execution_ledger(ledger_path, ledger)
         request_started_at = datetime.now(UTC)
+        response: ProviderHTTPResponse | None = None
         try:
             response = active_transport.post(
                 provider.endpoint,
@@ -1309,12 +1381,14 @@ def run_taste_source_segmentation_calibration(
                 output: object = validate_segmentation_provider_output(
                     extracted.text,
                     packet=packet,
+                    protocol=protocol,
                 )
             elif role is ApiIdentityCallRole.WORKLOAD:
                 assert adjudication_expected is not None
                 output = validate_adjudication_provider_output(
                     extracted.text,
                     expected_items=adjudication_expected,
+                    protocol=protocol,
                 )
             else:
                 output = json.loads(extracted.text)
@@ -1365,6 +1439,18 @@ def run_taste_source_segmentation_calibration(
                 cached_input_tokens=extracted.cached_input_tokens,
                 total_tokens=extracted.total_tokens,
                 estimated_cost_cny=estimated_cost_cny,
+                span_reconstruction_receipts=_compile_span_reconstruction_receipts(
+                    raw_text=extracted.text,
+                    output=output,
+                    source_texts=(
+                        {
+                            (item.campaign_token, item.review_item_id): item.review_comment
+                            for item in packet.items
+                        }
+                        if packet is not None
+                        else adjudication_expected
+                    ),
+                ),
             )
             projected = [*call_receipts, receipt]
             if (
@@ -1377,6 +1463,10 @@ def run_taste_source_segmentation_calibration(
             ):
                 raise ValueError("Segmentation execution cumulative budget exceeded")
             call_receipts.append(receipt)
+            _write_json_new(
+                output_root / "calls" / call_name / "CALL_RECEIPT.json",
+                receipt.model_dump(mode="json"),
+            )
             ledger = SegmentationExecutionLedger(
                 authorization_sha256=authorization.authorization_sha256,
                 run_id=authorization.run_id,
@@ -1390,7 +1480,42 @@ def run_taste_source_segmentation_calibration(
             assert isinstance(output, (BaseModel, dict))
             return output
         except Exception as error:
-            _fail_execution_ledger(ledger_path, ledger, output_root, error)
+            _write_json_new(
+                output_root / "calls" / call_name / "CALL_FAILURE_RECEIPT.json",
+                {
+                    "sequence": sequence,
+                    "role": role.value,
+                    "packet_id": packet_id,
+                    "request_sha256": request_sha256,
+                    "response_sha256": (
+                        hashlib.sha256(response.content).hexdigest()
+                        if response is not None
+                        else None
+                    ),
+                    "http_status": response.status_code if response is not None else None,
+                    "error_type": type(error).__name__,
+                    "error_message": str(error),
+                    "retry_authorized": False,
+                    "reviewer_kind": "ai",
+                    "not_human_review": True,
+                },
+            )
+            _fail_execution_ledger(
+                ledger_path,
+                ledger,
+                output_root,
+                error,
+                failed_sequence=sequence,
+                failed_request_sha256=request_sha256,
+                failed_response_sha256=(
+                    hashlib.sha256(response.content).hexdigest() if response is not None else None
+                ),
+                failed_http_status=response.status_code if response is not None else None,
+                failed_raw_request_ref=request_ref,
+                failed_raw_response_ref=(
+                    _relative_to_root(response_path, root) if response_path.exists() else None
+                ),
+            )
             raise
 
     try:
@@ -1733,6 +1858,142 @@ def _build_identity_sentinel_request(
     }
 
 
+def _typography_normalize(value: str) -> str:
+    return value.translate(
+        {
+            0x2018: 0x27,
+            0x2019: 0x27,
+            0x201C: 0x22,
+            0x201D: 0x22,
+            0x00A0: 0x20,
+        }
+    )
+
+
+def _reconstruct_segment_text(
+    candidate: str,
+    *,
+    source: str,
+) -> tuple[str, int, int]:
+    normalized_candidate = _typography_normalize(candidate)
+    normalized_source = _typography_normalize(source)
+    start = normalized_source.find(normalized_candidate)
+    if start < 0 or normalized_source.find(normalized_candidate, start + 1) >= 0:
+        raise ValueError("Segmentation normalized span is absent or non-unique")
+    end = start + len(candidate)
+    restored = source[start:end]
+    if len(restored) != len(candidate) or _typography_normalize(restored) != normalized_candidate:
+        raise ValueError("Segmentation typography reconstruction changed span length")
+    return restored, start, end
+
+
+def _reconstruct_provider_spans(
+    output: SegmentationProviderOutput,
+    *,
+    packet: TasteSourceSegmentationRequestPacket,
+) -> SegmentationProviderOutput:
+    sources = {
+        (item.campaign_token, item.review_item_id): item.review_comment for item in packet.items
+    }
+    reconstructed = []
+    for item in output.items:
+        source = sources[(item.campaign_token, item.review_item_id)]
+        segments = []
+        intervals: list[tuple[int, int]] = []
+        for segment in item.segments:
+            restored, start, end = _reconstruct_segment_text(
+                segment.verbatim_decision_text,
+                source=source,
+            )
+            intervals.append((start, end))
+            segments.append(segment.model_copy(update={"verbatim_decision_text": restored}))
+        ordered = sorted(intervals)
+        if any(first[1] > second[0] for first, second in pairwise(ordered)):
+            raise ValueError("Segmentation provider spans overlap after reconstruction")
+        reconstructed.append(item.model_copy(update={"segments": tuple(segments)}))
+    return SegmentationProviderOutput(items=tuple(reconstructed))
+
+
+def _reconstruct_adjudication_spans(
+    output: SegmentationAdjudicationProviderOutput,
+    *,
+    expected_items: dict[tuple[str, str], str],
+) -> SegmentationAdjudicationProviderOutput:
+    reconstructed = []
+    for item in output.items:
+        source = expected_items[(item.campaign_token, item.review_item_id)]
+        segments = []
+        intervals: list[tuple[int, int]] = []
+        for segment in item.segments:
+            restored, start, end = _reconstruct_segment_text(
+                segment.verbatim_decision_text,
+                source=source,
+            )
+            intervals.append((start, end))
+            segments.append(segment.model_copy(update={"verbatim_decision_text": restored}))
+        ordered = sorted(intervals)
+        if any(first[1] > second[0] for first, second in pairwise(ordered)):
+            raise ValueError("Segmentation adjudication spans overlap after reconstruction")
+        reconstructed.append(item.model_copy(update={"segments": tuple(segments)}))
+    return SegmentationAdjudicationProviderOutput(items=tuple(reconstructed))
+
+
+def _compile_span_reconstruction_receipts(
+    *,
+    raw_text: str,
+    output: object,
+    source_texts: dict[tuple[str, str], str] | None,
+) -> tuple[SegmentationSpanReconstructionReceipt, ...]:
+    if not isinstance(
+        output,
+        (SegmentationProviderOutput, SegmentationAdjudicationProviderOutput),
+    ):
+        return ()
+    if source_texts is None:
+        raise ValueError("Segmentation reconstruction receipt lacks source text")
+    payload = json.loads(raw_text)
+    raw_output = (
+        SegmentationAdjudicationProviderOutput.model_validate(payload)
+        if isinstance(output, SegmentationAdjudicationProviderOutput)
+        else SegmentationProviderOutput.model_validate(payload)
+    )
+    raw_items = {(item.campaign_token, item.review_item_id): item for item in raw_output.items}
+    receipts = []
+    for item in output.items:
+        raw_item = raw_items[(item.campaign_token, item.review_item_id)]
+        if len(raw_item.segments) != len(item.segments):
+            raise ValueError("Segmentation reconstruction changed segment count")
+        for ordinal, (raw_segment, restored_segment) in enumerate(
+            zip(raw_item.segments, item.segments, strict=True),
+            1,
+        ):
+            raw_value = raw_segment.verbatim_decision_text
+            restored = restored_segment.verbatim_decision_text
+            if raw_value == restored:
+                continue
+            changed = sum(
+                first != second for first, second in zip(raw_value, restored, strict=True)
+            )
+            source = source_texts[(item.campaign_token, item.review_item_id)]
+            start = source.find(restored)
+            if start < 0 or source.find(restored, start + 1) >= 0:
+                raise ValueError("Reconstructed segmentation source slice is not unique")
+            receipts.append(
+                SegmentationSpanReconstructionReceipt(
+                    campaign_token=item.campaign_token,
+                    review_item_id=item.review_item_id,
+                    segment_ordinal=ordinal,
+                    algorithm="unicode-typography-normalized-unique-match-v1",
+                    provider_text_sha256=hashlib.sha256(raw_value.encode()).hexdigest(),
+                    source_text_sha256=hashlib.sha256(restored.encode()).hexdigest(),
+                    start_char=start,
+                    end_char=start + len(restored),
+                    changed_codepoint_count=changed,
+                )
+            )
+    return tuple(receipts)
+
+
 def _campaign_token_map(
     inspection: TasteSourceSegmentationExecutionInspection,
     *,
@@ -1978,6 +2239,12 @@ def _fail_execution_ledger(
     ledger: SegmentationExecutionLedger,
     output_root: Path,
     error: Exception,
+    failed_sequence: int | None = None,
+    failed_request_sha256: str | None = None,
+    failed_response_sha256: str | None = None,
+    failed_http_status: int | None = None,
+    failed_raw_request_ref: str | None = None,
+    failed_raw_response_ref: str | None = None,
 ) -> None:
     failed = SegmentationExecutionLedger(
         authorization_sha256=ledger.authorization_sha256,
@@ -1985,6 +2252,12 @@ def _fail_execution_ledger(
         one_time_nonce=ledger.one_time_nonce,
         status="failed",
         completed_sequences=ledger.completed_sequences,
+        failed_sequence=failed_sequence,
+        failed_request_sha256=failed_request_sha256,
+        failed_response_sha256=failed_response_sha256,
+        failed_http_status=failed_http_status,
+        failed_raw_request_ref=failed_raw_request_ref,
+        failed_raw_response_ref=failed_raw_response_ref,
         provider_call_may_have_started=ledger.provider_call_may_have_started,
         updated_at=datetime.now(UTC),
     )
@@ -1999,6 +2272,12 @@ def _fail_execution_ledger(
                 "error_message": str(error),
                 "completed_sequences": list(ledger.completed_sequences),
                 "provider_call_may_have_started": ledger.provider_call_may_have_started,
+                "failed_sequence": failed_sequence,
+                "failed_request_sha256": failed_request_sha256,
+                "failed_response_sha256": failed_response_sha256,
+                "failed_http_status": failed_http_status,
+                "failed_raw_request_ref": failed_raw_request_ref,
+                "failed_raw_response_ref": failed_raw_response_ref,
                 "retry_authorized": False,
                 "not_human_review": True,
             },
@@ -2154,6 +2433,7 @@ __all__ = [
     "SegmentationProviderOutput",
     "SegmentationProviderSegment",
     "SegmentationRunArtifactBinding",
+    "SegmentationSpanReconstructionReceipt",
     "TasteSourceSegmentationCalibrationReceipt",
     "TasteSourceSegmentationExecutionAuthorization",
     "TasteSourceSegmentationExecutionInspection",

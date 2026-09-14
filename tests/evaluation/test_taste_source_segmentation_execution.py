@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from scitaste.evaluation.taste_source_segmentation_execution import (
@@ -55,6 +56,16 @@ def _packet():
         _PACK
         / "requests/scitastebench-segmentation-prospective-requests-v3-segmenter-a-shard-01.json"
     )
+
+
+def _v3_protocol():
+    payload = yaml.safe_load(
+        (
+            _ROOT
+            / "configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v3.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
 
 
 def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
@@ -244,4 +255,52 @@ def test_provider_output_requires_exact_item_set_and_unique_verbatim_spans() -> 
         validate_segmentation_provider_output(
             json.dumps({"items": items}, ensure_ascii=False),
             packet=packet,
+        )
+
+
+def test_v3_reconstructs_only_unique_equal_length_typography_changes() -> None:
+    packet = _packet()
+    target = next(item for item in packet.items if "“" in item.review_comment)
+    source_span = target.review_comment[
+        target.review_comment.index("“") : target.review_comment.index("”") + 1
+    ]
+    reported_span = source_span.translate({0x201C: 0x22, 0x201D: 0x22})
+    items = []
+    for item in packet.items:
+        span = reported_span if item == target else item.review_comment
+        items.append(
+            {
+                "campaign_token": item.campaign_token,
+                "review_item_id": item.review_item_id,
+                "segments": [
+                    {
+                        "reported_decision_text": span,
+                        "primary_decision_family": "experiment",
+                        "atomic_decision_statement": "Test the requested decision.",
+                        "rationale": "Use the source-bound locator candidate.",
+                        "uncertainty": "low",
+                    }
+                ],
+                "residual_decision_bearing_text_possible": False,
+            }
+        )
+    raw = json.dumps({"items": items}, ensure_ascii=False)
+    output = validate_segmentation_provider_output(
+        raw,
+        packet=packet,
+        protocol=_v3_protocol(),
+    )
+    restored = next(item for item in output.items if item.review_item_id == target.review_item_id)
+    assert restored.segments[0].verbatim_decision_text == source_span
+
+    items_forbidden = json.loads(raw)["items"]
+    changed = next(
+        item for item in items_forbidden if item["review_item_id"] == target.review_item_id
+    )
+    changed["segments"][0]["reported_decision_text"] = reported_span.replace(" ", "-", 1)
+    with pytest.raises(ValueError, match="normalized span is absent"):
+        validate_segmentation_provider_output(
+            json.dumps({"items": items_forbidden}, ensure_ascii=False),
+            packet=packet,
+            protocol=_v3_protocol(),
         )

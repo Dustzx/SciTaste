@@ -1,0 +1,50 @@
+schema_version: "1.1"
+rubric_id: scitastebench-decision-segmentation-adjudication-v2
+purpose: >-
+  Resolve only disputed dual-agent segmentations into one outcome-blind internal
+  AI proposal without conferring human, source-admission, or benchmark authority.
+input_boundary:
+  allowed:
+    - frozen adjudication rubric
+    - assigned disputed anonymous record text and typed blockers
+    - two candidates in hash-randomized anonymous order
+  forbidden:
+    - non-disputed records or segmenter slot identities
+    - private item map or privacy-review records
+    - publisher source identity
+    - recommendation, author response, later revision, or population outcome
+resolution_rules:
+  - Read the complete disputed review_comment and resolve every independently actionable decision.
+  - Use reported_decision_text only as a locator candidate copied from review_comment.
+  - Do not paraphrase, normalize punctuation, extend a claim beyond the reported span, or invent context inside reported_decision_text.
+  - Prefer the shortest uniquely locatable source span that remains intelligible.
+  - Never merge independently actionable changes solely because they share a sentence or family.
+  - Assign the family of the scientific decision changed, not the rhetorical form of the request.
+  - Record residual risk whenever potentially actionable text may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_text_role: candidate-locator-not-source-of-record
+  algorithm: unicode-typography-normalized-unique-match-v1
+  allowed_codepoint_map: "2018,2019->0027;201C,201D->0022;00A0->0020"
+  requirements:
+    - one-to-one and equal-length mapping only
+    - exactly one normalized match in the original review_comment
+    - final verbatim text copied from the matched original source slice
+  forbidden:
+    - insertion or deletion
+    - whitespace, hyphen, wording, or NFKC repair
+    - fuzzy or semantic matching
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

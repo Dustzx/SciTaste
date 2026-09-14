@@ -131,6 +131,20 @@ class SegmentationProtocolGeneration(BaseModel):
         return self
 
 
+class SegmentationProtocolSpanReconstruction(BaseModel):
+    """Precommitted one-character typography repair, never fuzzy alignment."""
+
+    model_config = _CONFIG
+
+    provider_text_role: Literal["candidate-locator-not-source-of-record"]
+    locator_algorithm: Literal["unicode-typography-normalized-unique-match-v1"]
+    allowed_codepoint_map: Literal["2018,2019->0027;201C,201D->0022;00A0->0020"]
+    unique_normalized_match_required: Literal[True] = True
+    reconstructed_text_source: Literal["original-review-comment-slice"]
+    fuzzy_matching_allowed: Literal[False] = False
+    insertion_or_deletion_allowed: Literal[False] = False
+
+
 class SegmentationProtocolInputFirewall(BaseModel):
     model_config = _CONFIG
 
@@ -256,9 +270,7 @@ class SegmentationProtocolMetrics(BaseModel):
             raise ValueError("Prospective family metric drifted")
         if self.adjudication_item_rate != {"pass_threshold_maximum": 0.5}:
             raise ValueError("Prospective adjudication-rate metric drifted")
-        if self.residual_risk_item_rate_after_adjudication != {
-            "pass_threshold_maximum": 0.0
-        }:
+        if self.residual_risk_item_rate_after_adjudication != {"pass_threshold_maximum": 0.0}:
             raise ValueError("Prospective residual-risk metric drifted")
         return self
 
@@ -314,7 +326,7 @@ class SegmentationProtocolScaleGate(BaseModel):
 class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_created_at: datetime
@@ -327,6 +339,8 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     panel: SegmentationProtocolPanel
     model_condition: SegmentationProtocolModelCondition
     generation: SegmentationProtocolGeneration
+    span_reconstruction: SegmentationProtocolSpanReconstruction | None = None
+    consumed_sample_registry: SegmentationProtocolFileBinding | None = None
     input_firewall: SegmentationProtocolInputFirewall
     adjudication_input_firewall: SegmentationProtocolAdjudicationInputFirewall | None = None
     metrics: SegmentationProtocolMetrics
@@ -340,14 +354,11 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     def protocol_is_no_run(self) -> TasteSourceSegmentationProspectiveProtocol:
         if self.protocol_created_at.utcoffset() is None:
             raise ValueError("Segmentation protocol creation time must include a timezone")
-        planned_sample_count = (
-            self.generation.items_per_shard * self.generation.segmenter_shards
-        )
+        planned_sample_count = self.generation.items_per_shard * self.generation.segmenter_shards
         if self.sample.item_count != planned_sample_count:
             raise ValueError("Segmentation sample does not fit its exact shard plan")
         task_output_ceiling = (
-            self.generation.segmenter_total_requests
-            + self.generation.maximum_adjudication_shards
+            self.generation.segmenter_total_requests + self.generation.maximum_adjudication_shards
         ) * self.generation.maximum_output_tokens_per_call
         if self.budget.maximum_provider_requests != self.generation.maximum_total_requests:
             raise ValueError("Segmentation request budget differs from the generation plan")
@@ -355,8 +366,12 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Segmentation output-token budget cannot cover the planned calls")
         if self.schema_version == "1.0" and self.adjudication_input_firewall is not None:
             raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
-        if self.schema_version == "1.1" and self.adjudication_input_firewall is None:
-            raise ValueError("Schema 1.1 requires a separate adjudication firewall")
+        if self.schema_version in {"1.1", "1.2"} and self.adjudication_input_firewall is None:
+            raise ValueError("Schema 1.1+ requires a separate adjudication firewall")
+        if (self.schema_version == "1.2") != (self.span_reconstruction is not None):
+            raise ValueError("Schema 1.2 uniquely requires bounded span reconstruction")
+        if (self.schema_version == "1.2") != (self.consumed_sample_registry is not None):
+            raise ValueError("Schema 1.2 uniquely requires a consumed-sample registry")
         expected_rubric_scope = (
             "frozen segmentation or adjudication rubric"
             if self.schema_version == "1.0"
@@ -385,6 +400,7 @@ class SegmentationFreezeBindingSet(BaseModel):
     adjudication_rubric: SegmentationProtocolFileBinding
     provider_resource: SegmentationProtocolFileBinding
     identity_policy: SegmentationProtocolFileBinding
+    consumed_sample_registry: SegmentationProtocolFileBinding | None = None
 
 
 class SegmentationFreezeImplementation(BaseModel):
@@ -423,7 +439,7 @@ class SegmentationFreezeAuthority(BaseModel):
 class TasteSourceSegmentationFreezeReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
     freeze_receipt_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     frozen_at: datetime
@@ -444,8 +460,10 @@ class TasteSourceSegmentationFreezeReceipt(BaseModel):
         )
         if self.schema_version == "1.0" and any(item is not None for item in extended):
             raise ValueError("Schema 1.0 cannot bind prospective execution modules")
-        if self.schema_version == "1.1" and any(item is None for item in extended):
-            raise ValueError("Schema 1.1 must bind protocol and execution modules")
+        if self.schema_version in {"1.1", "1.2"} and any(item is None for item in extended):
+            raise ValueError("Schema 1.1+ must bind protocol and execution modules")
+        if (self.schema_version == "1.2") != (self.bindings.consumed_sample_registry is not None):
+            raise ValueError("Schema 1.2 uniquely binds the consumed-sample registry")
         return self
 
 
@@ -629,6 +647,11 @@ def inspect_taste_source_segmentation_protocol(
             freeze.bindings.identity_policy,
         ),
     }
+    if protocol.consumed_sample_registry is not None:
+        expected_bindings["consumed_sample_registry"] = (
+            root / protocol.consumed_sample_registry.locator,
+            freeze.bindings.consumed_sample_registry,
+        )
     for binding_name, (candidate_path, binding) in expected_bindings.items():
         source = _bounded_file(Path(candidate_path), _MAX_CONFIG_BYTES)
         expected_locator = _relative(source, root)
@@ -645,6 +668,7 @@ def inspect_taste_source_segmentation_protocol(
         != protocol.model_condition.resource_file_sha256
         or freeze.bindings.identity_policy.file_sha256
         != protocol.model_condition.identity_protocol_file_sha256
+        or freeze.bindings.consumed_sample_registry != protocol.consumed_sample_registry
     ):
         raise ValueError("Segmentation freeze and protocol content bindings differ")
 
@@ -657,9 +681,7 @@ def inspect_taste_source_segmentation_protocol(
         or not resource.rolling_alias
     ):
         raise ValueError("Segmentation provider resource differs from its model condition")
-    identity = load_api_identity_protocol(
-        root / protocol.model_condition.identity_protocol_locator
-    )
+    identity = load_api_identity_protocol(root / protocol.model_condition.identity_protocol_locator)
     if identity.file_sha256 != protocol.model_condition.identity_protocol_file_sha256:
         raise ValueError("Segmentation identity-policy file hash drifted")
     identity_policy = identity.protocol.policy(protocol.model_condition.resource_id)
@@ -682,6 +704,14 @@ def inspect_taste_source_segmentation_protocol(
         or sample_inspection.sample.item_count != protocol.sample.item_count
     ):
         raise ValueError("Segmentation protocol sample binding drifted")
+    if protocol.consumed_sample_registry is not None:
+        consumed_payload = _yaml_mapping(root / protocol.consumed_sample_registry.locator)
+        consumed = consumed_payload.get("consumed_samples")
+        if not isinstance(consumed, list) or any(not isinstance(item, dict) for item in consumed):
+            raise ValueError("Segmentation consumed-sample registry is invalid")
+        consumed_hashes = {item.get("sample_sha256") for item in consumed}
+        if protocol.sample.sample_sha256 in consumed_hashes:
+            raise ValueError("Segmentation protocol attempts to reuse a consumed sample")
 
     _verify_git_commit(root, freeze.git.commit)
     implementation_bindings = [
@@ -699,6 +729,11 @@ def inspect_taste_source_segmentation_protocol(
         freeze.bindings.adjudication_rubric,
         freeze.bindings.provider_resource,
         freeze.bindings.identity_policy,
+        *(
+            (freeze.bindings.consumed_sample_registry,)
+            if freeze.bindings.consumed_sample_registry is not None
+            else ()
+        ),
         *implementation_bindings,
     ):
         if _git_blob_sha256(root, freeze.git.commit, binding.locator) != binding.file_sha256:
@@ -751,9 +786,7 @@ def prepare_taste_source_segmentation_request_pack(
             if isinstance(item, ScientificTasteSourceReviewItem)
             and (campaign_id, item.review_item_id) in selected_keys
         ]
-        observed_keys.update(
-            (campaign_id, item.review_item_id) for item in selected_source_items
-        )
+        observed_keys.update((campaign_id, item.review_item_id) for item in selected_source_items)
         selected = [
             TasteSourceSegmentationRequestItem(
                 campaign_token=campaign_tokens[campaign_id],
@@ -769,16 +802,18 @@ def prepare_taste_source_segmentation_request_pack(
 
     shard_count = protocol.generation.segmenter_shards
     items_per_source_shard = protocol.generation.items_per_shard // len(items_by_campaign)
-    if (
-        items_per_source_shard * len(items_by_campaign)
-        != protocol.generation.items_per_shard
-        or any(
-            len(items) != shard_count * items_per_source_shard
-            for items in items_by_campaign.values()
-        )
+    if items_per_source_shard * len(
+        items_by_campaign
+    ) != protocol.generation.items_per_shard or any(
+        len(items) != shard_count * items_per_source_shard for items in items_by_campaign.values()
     ):
         raise ValueError("Segmentation sample cannot satisfy the source-balanced shard plan")
     rubric_payload = _yaml_mapping(root / protocol.segmentation_rubric.locator)
+    reported_text_field = (
+        "reported_decision_text"
+        if protocol.span_reconstruction is not None
+        else "verbatim_decision_text"
+    )
     output_contract: dict[str, JsonValue] = {
         "type": "object",
         "additionalProperties": False,
@@ -808,14 +843,14 @@ def prepare_taste_source_segmentation_request_pack(
                                 "type": "object",
                                 "additionalProperties": False,
                                 "required": [
-                                    "verbatim_decision_text",
+                                    reported_text_field,
                                     "primary_decision_family",
                                     "atomic_decision_statement",
                                     "rationale",
                                     "uncertainty",
                                 ],
                                 "properties": {
-                                    "verbatim_decision_text": {
+                                    reported_text_field: {
                                         "type": "string",
                                         "minLength": 8,
                                     },
@@ -835,9 +870,7 @@ def prepare_taste_source_segmentation_request_pack(
                                         "minLength": 1,
                                     },
                                     "rationale": {"type": "string", "minLength": 1},
-                                    "uncertainty": {
-                                        "enum": ["low", "medium", "high"]
-                                    },
+                                    "uncertainty": {"enum": ["low", "medium", "high"]},
                                 },
                             },
                         },
@@ -848,8 +881,14 @@ def prepare_taste_source_segmentation_request_pack(
         },
         "item_rule": (
             "Return every assigned campaign_token and review_item_id exactly once. "
-            "Copy each verbatim_decision_text exactly from review_comment and emit "
-            "one primary family per atomic decision."
+            + (
+                "Return reported_decision_text as an exact locator candidate; the runner "
+                "may repair only the frozen one-character typography map and will copy "
+                "the final source-of-record span from review_comment. "
+                if protocol.span_reconstruction is not None
+                else "Copy each verbatim_decision_text exactly from review_comment. "
+            )
+            + "Emit one primary family per atomic decision."
         ),
     }
     packets: list[TasteSourceSegmentationRequestPacket] = []
@@ -1115,6 +1154,7 @@ def _canonical_sha256(value: object) -> str:
 
 __all__ = [
     "SegmentationProtocolAdjudicationInputFirewall",
+    "SegmentationProtocolSpanReconstruction",
     "TasteSourceSegmentationFreezeReceipt",
     "TasteSourceSegmentationProspectiveProtocol",
     "TasteSourceSegmentationProtocolInspection",
