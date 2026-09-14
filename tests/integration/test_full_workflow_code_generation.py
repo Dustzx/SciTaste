@@ -5,6 +5,7 @@ import socket
 from pathlib import Path
 
 import pytest
+import yaml
 
 import scitaste.benchmark.manuscript as manuscript
 import scitaste.full_workflow as full_workflow
@@ -170,6 +171,104 @@ def test_full_workflow_repairs_rejected_code_once_before_execution(
     assert verification.totals.entry_count == 2
     assert verification.totals.total_tokens == 2250
     assert verification.totals.cost_usd == 0
+
+
+def test_full_workflow_repairs_one_isolated_runtime_failure_and_finishes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(manuscript.shutil, "which", lambda _name: None)
+    generation_payload = yaml.safe_load(
+        Path("configs/experiments/native_code_generation_scripted_support_v1.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    generation_payload["profile_set"] = str(
+        Path("configs/experiments/native_code_generation_profiles_scripted_v1.yaml").resolve()
+    )
+    generation_payload["backend"]["reply"]["output_payload"]["source_code"] = """\
+import json
+
+denominator = 0
+measured = 1 / denominator
+metrics = {
+    "baseline_correct_pivot_rate": 0.0,
+    "conflict_aware_correct_pivot_rate": 0.0,
+    "correct_pivot_delta": 0.0,
+}
+print(
+    "SCITASTE_MEASUREMENTS_JSON="
+    + json.dumps({"schema_version": "1.0", "measurements": [metrics, measured]})
+)
+"""
+    generation_path = tmp_path / "runtime-failing-generation.yaml"
+    generation_path.write_text(yaml.safe_dump(generation_payload), encoding="utf-8")
+
+    repair_payload = yaml.safe_load(
+        Path("configs/experiments/native_code_repair_scripted_support_v1.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    repair_payload["profile_set"] = str(
+        Path("configs/experiments/native_code_repair_profiles_scripted_v1.yaml").resolve()
+    )
+    repair_payload["conditional_on_static_rejection"] = False
+    repair_payload["conditional_on_runtime_failure"] = True
+    repair_path = tmp_path / "runtime-repair.yaml"
+    repair_path.write_text(yaml.safe_dump(repair_payload), encoding="utf-8")
+
+    config = _config("runtime-repaired-code-project")
+    config = type(config).model_validate(
+        {
+            **config.model_dump(mode="python"),
+            "native_code_generation_config": generation_path,
+            "native_code_repair_config": repair_path,
+        }
+    )
+    result = FullWorkflow(seed=7).run(
+        config,
+        outputs_root=tmp_path / "outputs",
+        run_id="runtime-repair-seed-07",
+    )
+
+    run_root = (
+        tmp_path
+        / "outputs/projects/runtime-repaired-code-project/runs/runtime-repair-seed-07"
+    )
+    repair_input = json.loads(
+        (run_root / "native_execution/context/code_generation/repair/REPAIR_INPUT.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((run_root / "native_execution/records").glob("*.json"))
+    ]
+    experiment_outcomes = [
+        record["result"]["status"]
+        for record in records
+        if record["capability"] == "experiment"
+        and record["result"]["data"].get("experiment_id") == "experiment-support"
+    ]
+
+    assert result["status"] == "complete"
+    assert result["native_execution"]["code_repair"]["triggered"] is True
+    assert repair_input["node_input"]["trigger"] == "isolated-runtime"
+    assert repair_input["node_input"]["runtime_failure"]["failure_code"] == "nonzero-exit"
+    assert repair_input["node_input"]["runtime_failure"]["verification_route"] == "direct_path"
+    assert (
+        repair_input["node_input"]["runtime_failure"]["authorization_basis"]
+        == "tool-intelligence-direct-path"
+    )
+    assert repair_input["node_input"]["runtime_failure"]["standalone_preflight_performed"] is False
+    assert experiment_outcomes == ["FAILED", "SUCCEEDED"]
+    assert result["stages"]["evidence"]["result_basis"] == "sandbox-measured-replicates"
+    assert (
+        result["native_execution"]["experiment"][
+            "standalone_post_execution_preflight_performed"
+        ]
+        is False
+    )
 
 
 def test_configured_repair_is_not_called_when_first_proposal_is_accepted(

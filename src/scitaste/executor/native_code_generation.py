@@ -13,7 +13,14 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 from scitaste.executor.native_code import (
     NativeCodeAdmissionPolicy,
@@ -151,17 +158,52 @@ class NativeCodeGenerationNode(ModelNode[NativeCodeGenerationInput, NativeCodeGe
         return reasons
 
 
+class NativeCodeRuntimeFailure(GenerationModel):
+    """Bounded diagnostic evidence from one failed isolated execution."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    experiment_id: str = Field(pattern=_SAFE_ID)
+    action_id: str = Field(min_length=1, max_length=1_000)
+    result_id: str = Field(pattern=_SAFE_ID)
+    execution_record_locator: str = Field(min_length=1, max_length=1_000)
+    execution_record_sha256: str = Field(pattern=_SHA256)
+    source_sha256: str = Field(pattern=_SHA256)
+    failure_code: Literal[
+        "nonzero-exit",
+        "timeout",
+        "measurement-contract",
+    ]
+    error_message: str = Field(min_length=1, max_length=4_000)
+    stderr_sha256: str = Field(pattern=_SHA256)
+    stderr_excerpt: str = Field(max_length=4_000)
+    runtime_repairable: Literal[True] = True
+    verification_route: Literal["direct_path", "owner_approval"]
+    verification_reason_codes: tuple[str, ...] = Field(min_length=1, max_length=12)
+    authorization_basis: Literal[
+        "tool-intelligence-direct-path",
+        "workflow-config-and-caller-opt-in",
+    ]
+    standalone_preflight_performed: Literal[False] = False
+
+    @property
+    def fingerprint(self) -> str:
+        return content_sha256(self.model_dump(mode="json"))
+
+
 class NativeCodeRepairInput(GenerationModel):
-    """Hash-bound rejected proposal and deterministic issues supplied to one repair call."""
+    """Hash-bound failed proposal and exact issues supplied to one repair call."""
 
     schema_version: Literal["1.0"] = "1.0"
     generation_input: NativeCodeGenerationInput
     rejected_output: NativeCodeGenerationOutput
     rejected_binding_sha256: str = Field(pattern=_SHA256)
     rejected_source_sha256: str = Field(pattern=_SHA256)
-    validation_issues: tuple[NativeCodeViolation, ...] = Field(min_length=1, max_length=32)
+    trigger: Literal["static-admission", "isolated-runtime"] = "static-admission"
+    validation_issues: tuple[NativeCodeViolation, ...] = Field(max_length=32)
+    runtime_failure: NativeCodeRuntimeFailure | None = None
     repair_contract: Literal[
-        "replace-source-only-then-repeat-identical-deterministic-admission"
+        "replace-source-only-then-repeat-identical-deterministic-admission",
+        "replace-source-only-then-readmit-and-rerun-identical-isolated-experiment",
     ] = "replace-source-only-then-repeat-identical-deterministic-admission"
 
     @model_validator(mode="after")
@@ -169,6 +211,18 @@ class NativeCodeRepairInput(GenerationModel):
         observed = hashlib.sha256(self.rejected_output.source_code.encode("utf-8")).hexdigest()
         if observed != self.rejected_source_sha256:
             raise ValueError("rejected source hash does not match rejected_output")
+        runtime = self.trigger == "isolated-runtime"
+        if runtime != (self.runtime_failure is not None):
+            raise ValueError("native repair trigger differs from its runtime evidence")
+        if not runtime and not self.validation_issues:
+            raise ValueError("static native repair requires deterministic validation issues")
+        expected_contract = (
+            "replace-source-only-then-readmit-and-rerun-identical-isolated-experiment"
+            if runtime
+            else "replace-source-only-then-repeat-identical-deterministic-admission"
+        )
+        if self.repair_contract != expected_contract:
+            raise ValueError("native repair contract differs from its trigger")
         return self
 
 
@@ -203,7 +257,8 @@ class NativeCodeRepairNode(ModelNode[NativeCodeRepairInput, NativeCodeRepairOutp
     prompt_version = "native-code-repair-v1"
     system_instruction = (
         "Return exactly one JSON object matching the supplied output schema. Repair only the "
-        "source_code in response to the deterministic validation_issues. Preserve the supplied "
+        "source_code in response to the deterministic validation_issues or the exact bounded "
+        "isolated-runtime failure. Preserve the supplied "
         "experiment identity, metrics, policy, limits, and output contract. The source must be a "
         "complete UTF-8 Python module without Markdown fences and must print exactly one "
         "SCITASTE_MEASUREMENTS_JSON line. Do not propose commands, paths, dependencies, tools, "
@@ -324,7 +379,8 @@ class NativeCodeRepairConfig(GenerationModel):
     policy: NodePolicy
     backend: RuntimeBackendBinding
     live_enabled: bool = False
-    conditional_on_static_rejection: Literal[True] = True
+    conditional_on_static_rejection: bool = True
+    conditional_on_runtime_failure: bool = False
     repair_proposal_only: Literal[True] = True
     deterministic_readmission_required: Literal[True] = True
     runtime_isolation_required: Literal[True] = True
@@ -332,6 +388,8 @@ class NativeCodeRepairConfig(GenerationModel):
 
     @model_validator(mode="after")
     def authority_and_backend_are_closed(self) -> NativeCodeRepairConfig:
+        if self.conditional_on_static_rejection == self.conditional_on_runtime_failure:
+            raise ValueError("native code repair must bind exactly one failure trigger")
         if self.rejected_proposal_id == self.repaired_proposal_id:
             raise ValueError("repaired proposal identity must differ from the rejected proposal")
         if not self.policy.enabled or self.policy.allowed_node_names != [_REPAIR_NODE_NAME]:
@@ -919,12 +977,35 @@ def repair_native_code_proposal(
     seed: int,
     resume: bool = False,
     allow_live: bool = False,
+    runtime_failure: NativeCodeRuntimeFailure | None = None,
 ) -> RepairedNativeCodeProposal:
-    """Run or recover exactly one repair proposal after deterministic static rejection."""
+    """Run or recover one repair after static rejection or isolated runtime failure."""
 
     validate_native_code_repair_binding(loaded, generated.loaded)
-    if generated.inspection.admission.decision != "rejected":
-        raise NativeCodeGenerationError("native code repair requires a rejected generated proposal")
+    runtime_trigger = runtime_failure is not None
+    if runtime_trigger:
+        if not loaded.config.conditional_on_runtime_failure:
+            raise NativeCodeGenerationError("native code repair is not bound to runtime failure")
+        if generated.inspection.admission.decision != "accepted":
+            raise NativeCodeGenerationError(
+                "runtime repair requires an admitted generated proposal"
+            )
+        if runtime_failure.source_sha256 != generated.record.generated_source_sha256:
+            raise NativeCodeGenerationError("runtime failure belongs to another generated source")
+        validation_issues = (
+            NativeCodeViolation(
+                code=f"runtime-{runtime_failure.failure_code}",
+                message=runtime_failure.error_message,
+            ),
+        )
+    else:
+        if not loaded.config.conditional_on_static_rejection:
+            raise NativeCodeGenerationError("native code repair is not bound to static rejection")
+        if generated.inspection.admission.decision != "rejected":
+            raise NativeCodeGenerationError(
+                "native code repair requires a rejected generated proposal"
+            )
+        validation_issues = generated.inspection.admission.violations
     if isinstance(loaded.config.backend, LiveRuntimeBackend):
         if not loaded.config.live_enabled:
             raise NativeCodeGenerationError("live native source repair is disabled")
@@ -962,7 +1043,14 @@ def repair_native_code_proposal(
         rejected_output=rejected_output,
         rejected_binding_sha256=generated.inspection.binding_sha256,
         rejected_source_sha256=generated.record.generated_source_sha256,
-        validation_issues=generated.inspection.admission.violations,
+        trigger="isolated-runtime" if runtime_trigger else "static-admission",
+        validation_issues=validation_issues,
+        runtime_failure=runtime_failure,
+        repair_contract=(
+            "replace-source-only-then-readmit-and-rerun-identical-isolated-experiment"
+            if runtime_trigger
+            else "replace-source-only-then-repeat-identical-deterministic-admission"
+        ),
     )
     input_path = repair_root / "REPAIR_INPUT.json"
     if input_path.exists():
@@ -1013,6 +1101,10 @@ def repair_native_code_proposal(
         cumulative_api_cost_usd=generated.record.receipt.totals.cost_usd,
         metadata={
             "repair_id": loaded.config.repair_id,
+            "repair_trigger": node_input.trigger,
+            "runtime_failure_sha256": (
+                runtime_failure.fingerprint if runtime_failure is not None else None
+            ),
             "attempt_number": 1,
             "max_attempts": loaded.config.max_attempts,
             "repair_proposal_only": True,
@@ -1882,6 +1974,7 @@ __all__ = [
     "NativeCodeRepairNode",
     "NativeCodeRepairOutput",
     "NativeCodeRepairRecord",
+    "NativeCodeRuntimeFailure",
     "RepairedNativeCodeProposal",
     "generate_native_code_proposal",
     "load_native_code_generation_config",

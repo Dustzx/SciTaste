@@ -78,6 +78,7 @@ class SciTasteNativeExecutor:
         knowledge_library: KnowledgeLibrary | None = None,
         experiment_runner: NativeExperimentRunner | None = None,
         recover_completed_retrieval: bool = False,
+        recover_completed_experiment: bool = False,
     ) -> None:
         self.handlers = handlers or {}
         if workspace is None and artifact_root is not None:
@@ -91,6 +92,7 @@ class SciTasteNativeExecutor:
         )
         self.knowledge_library = knowledge_library
         self.recover_completed_retrieval = recover_completed_retrieval
+        self.recover_completed_experiment = recover_completed_experiment
         if experiment_runner is not None and self.store is None:
             raise ValueError("native experiment runner requires a project-owned workspace")
         self.experiment_runner = experiment_runner
@@ -138,11 +140,14 @@ class SciTasteNativeExecutor:
         capability: NativeCapability,
     ) -> ExecutionResult:
         input_paths: tuple[Path, ...] = ()
-        if (
+        recover_exact_success = (
             capability == NativeCapability.RETRIEVAL
             and self.recover_completed_retrieval
-            and self.store is not None
-        ):
+        ) or (
+            capability == NativeCapability.EXPERIMENT
+            and self.recover_completed_experiment
+        )
+        if recover_exact_success and self.store is not None:
             recovered = self.store.recover_successful(
                 state=state,
                 action=action,
@@ -360,6 +365,7 @@ def build_builtin_executor(
     knowledge_library: KnowledgeLibrary | None = None,
     experiment_runner: NativeExperimentRunner | None = None,
     recover_completed_retrieval: bool = False,
+    recover_completed_experiment: bool = False,
 ):
     """Build a dependency-free executor used by the integrated workflow."""
 
@@ -370,6 +376,7 @@ def build_builtin_executor(
             knowledge_library=knowledge_library,
             experiment_runner=experiment_runner,
             recover_completed_retrieval=recover_completed_retrieval,
+            recover_completed_experiment=recover_completed_experiment,
         )
     if name == "mock":
         from scitaste.executor.mock import MockExecutor

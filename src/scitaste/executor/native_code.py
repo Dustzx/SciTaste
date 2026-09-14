@@ -465,6 +465,7 @@ def prepare_native_code_experiment(
     *,
     run_root: str | Path,
     inspection: NativeCodeInspection | None = None,
+    context_directory: str = "code",
 ) -> NativeExperimentDefinition:
     """Publish or verify project-owned evidence, then return only admitted source."""
 
@@ -475,10 +476,17 @@ def prepare_native_code_experiment(
     root = Path(run_root)
     if root.is_symlink() or not root.is_dir():
         raise ValueError("native code run root must be an existing non-symlink directory")
-    context_root = root / "native_execution" / "context" / "code"
+    if re.fullmatch(_SAFE_ID, context_directory) is None:
+        raise ValueError("native code context directory must be one safe path segment")
+    context_root = root / "native_execution" / "context" / context_directory
     receipt_path = context_root / "CODE.json"
     if receipt_path.exists():
-        definition = _verify_materialized_context(inspection, root, receipt_path)
+        definition = _verify_materialized_context(
+            inspection,
+            root,
+            receipt_path,
+            context_directory=context_directory,
+        )
         if inspection.admission.decision == "rejected":
             raise NativeCodeAdmissionError(inspection.admission)
         return definition
@@ -542,16 +550,33 @@ def prepare_native_code_experiment(
         if temporary.exists():
             shutil.rmtree(temporary)
         raise
-    definition = _verify_materialized_context(inspection, root, receipt_path)
+    definition = _verify_materialized_context(
+        inspection,
+        root,
+        receipt_path,
+        context_directory=context_directory,
+    )
     if inspection.admission.decision == "rejected":
         raise NativeCodeAdmissionError(inspection.admission)
     return definition
 
 
-def load_native_code_context_record(run_root: str | Path) -> NativeCodeContextRecord | None:
+def load_native_code_context_record(
+    run_root: str | Path,
+    *,
+    context_directory: str = "code",
+) -> NativeCodeContextRecord | None:
     """Read the self-hashed context receipt for summary/reporting."""
 
-    path = Path(run_root) / "native_execution" / "context" / "code" / "CODE.json"
+    if re.fullmatch(_SAFE_ID, context_directory) is None:
+        raise ValueError("native code context directory must be one safe path segment")
+    path = (
+        Path(run_root)
+        / "native_execution"
+        / "context"
+        / context_directory
+        / "CODE.json"
+    )
     if not path.exists():
         return None
     if path.is_symlink() or not path.is_file():
@@ -731,6 +756,8 @@ def _verify_materialized_context(
     inspection: NativeCodeInspection,
     run_root: Path,
     receipt_path: Path,
+    *,
+    context_directory: str = "code",
 ) -> NativeExperimentDefinition:
     receipt_file = _verified_owned_file(run_root, _owned_locator(run_root, receipt_path))
     try:
@@ -753,7 +780,7 @@ def _verify_materialized_context(
         != _json_sha256(inspection.admission.model_dump(mode="json"))
     ):
         raise ValueError("native code proposal changed since the run was created")
-    context_root = run_root / "native_execution" / "context" / "code"
+    context_root = run_root / "native_execution" / "context" / context_directory
     expected_locators = {
         "proposal": _owned_locator(run_root, context_root / "PROPOSAL.json"),
         "policy": _owned_locator(run_root, context_root / "POLICY.json"),

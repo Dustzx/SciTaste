@@ -269,3 +269,54 @@ def test_native_knowledge_recovery_reuses_the_exact_successful_retrieval(tmp_pat
 
     assert recovered == first
     assert recovering_executor.store.verify().record_count == 1  # type: ignore[union-attr]
+
+
+def test_native_experiment_recovery_reuses_exact_success_without_reexecution(
+    tmp_path,
+) -> None:
+    root = tmp_path / "run"
+    action = ResearchAction(
+        action_id="recover-experiment",
+        type=MetaAction.EXPERIMENT,
+        description="Reuse one completed measured experiment after interruption",
+        parameters={"experiment_id": "bounded-experiment"},
+    )
+    calls = 0
+
+    def run_experiment(state, selected, *, store):
+        nonlocal calls
+        calls += 1
+        return ExecutionResult(
+            action_id=selected.action_id,
+            status=ExecutionStatus.SUCCEEDED,
+            executor="scitaste-native",
+            observations=["measured result"],
+            data={"result_basis": "sandbox-measured-replicates"},
+        )
+
+    class Runner:
+        class Definition:
+            experiment_id = "bounded-experiment"
+
+        definition = Definition()
+        input_paths = ()
+        run = staticmethod(run_experiment)
+
+    first_executor = SciTasteNativeExecutor(
+        workspace=root / "native_execution",
+        artifact_root=root,
+        experiment_runner=Runner(),  # type: ignore[arg-type]
+    )
+    first = first_executor.execute(_state(), action)
+    recovering_executor = SciTasteNativeExecutor(
+        workspace=root / "native_execution",
+        artifact_root=root,
+        experiment_runner=Runner(),  # type: ignore[arg-type]
+        recover_completed_experiment=True,
+    )
+
+    recovered = recovering_executor.execute(_state(), action)
+
+    assert recovered == first
+    assert calls == 1
+    assert recovering_executor.store.verify().record_count == 1  # type: ignore[union-attr]

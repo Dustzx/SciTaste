@@ -49,6 +49,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.13 — blind-review return and planning feedback | done | the project UI admits each exact authorized reviewer JSON through inline guards, locks the existing independent result after 3/3, projects eligibility/adjudication into model-visible evidence, and changes the generated next-step entry to Taste abstraction; the real campaign remains unreviewed |
 | Phase 9.14 — natural-source grounded abstraction handoff | done | an eligible locked review result atomically compiles one relation-blind grounded-node input per admitted source, binds same-source Raw RAG parity and two-person abstraction review, and exposes campaign-ceiling versus exact capacity to generated planning; model execution and human review remain owner-gated |
 | Phase 9.15 — live evidence-program reconciliation | done | the project-level ICLR evidence program now treats AAAR quality calibration and the F1000 blind-review/grounded-abstraction path as separate non-pooling branches in one current Taste-instrument stage, so the generated home no longer presents yesterday's AAAR-only next decision |
+| Phase 9.16 — runtime-recovering native experiment loop | done | a statically admitted generated experiment that fails inside isolation produces bounded diagnostic evidence, receives at most one configured source-only repair, repeats identical admission and isolation, and resumes Evidence-to-Paper stages while preserving both attempts; exact successful experiments are reused on recovery and no standalone post-execution preflight is run |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -800,7 +801,13 @@ citation/resource screen and exact adapters/licenses remain open.
   negative evidence stays immutable, the replacement faces identical readmission,
   accepted initial source causes zero repair calls, and a second rejection is
   terminal. Offline end-to-end execution and no-second-call recovery pass;
-  runtime-failure repair and priced live repair quality remain later gates.
+  A separately configured runtime-repair mode now consumes only a bound failed
+  isolation record, stderr digest/excerpt, failure class, and original source
+  identity. It makes one source-only proposal, preserves the first attempt,
+  repeats the same admission/isolation contract, and resumes the remaining
+  workflow. Tool Intelligence sends local reversible repair directly and keeps
+  live paid repair behind the already explicit workflow/caller opt-in. Priced
+  live repair quality remains a later empirical gate.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a

@@ -41,6 +41,7 @@ from scitaste.executor.native_code_generation import (
     GeneratedNativeCodeProposal,
     LoadedNativeCodeGeneration,
     LoadedNativeCodeRepair,
+    NativeCodeRuntimeFailure,
     RepairedNativeCodeProposal,
     generate_native_code_proposal,
     load_native_code_generation_config,
@@ -71,6 +72,13 @@ from scitaste.model_nodes.full_workflow_tool_intelligence import (
     verify_full_workflow_tool_intelligence,
 )
 from scitaste.model_nodes.runtime import ModelNodeRegistration
+from scitaste.model_nodes.verification_policy import (
+    ActionEffect,
+    ActionReversibility,
+    VerificationDecisionInput,
+    VerificationRoute,
+    decide_verification_route,
+)
 from scitaste.model_nodes.workflow_bridge import (
     FullWorkflowModelAdvisoryRecord,
     LoadedFullWorkflowModelAdvisory,
@@ -607,6 +615,7 @@ class FullWorkflow:
                 config,
                 run_root=run_root,
                 seed=self.seed,
+                recover_completed_actions=resume,
                 code_inspection=code_inspection,
                 generated_code=generated_code,
                 repaired_code=repaired_code,
@@ -619,23 +628,86 @@ class FullWorkflow:
                 native_libraries=native_libraries,
                 condition_runtime=condition_runtime,
             )
-            summaries, final_state, reused_stages, archived_attempts = self._run_stages(
-                config,
-                run_root,
-                resume=resume,
-                project_runtime=runtime,
-                run_id=run_id,
-                project_revision=snapshot.revision,
-                model_advisory=model_advisory,
-                tool_intelligence=tool_intelligence,
-                model_node_extensions=model_node_extensions,
-                allow_live_model_nodes=allow_live_model_nodes,
-                executor=executor,
-                condition_runtime=condition_runtime,
-                scenario_paths=(
+            stage_arguments = {
+                "resume": resume,
+                "project_runtime": runtime,
+                "run_id": run_id,
+                "project_revision": snapshot.revision,
+                "model_advisory": model_advisory,
+                "tool_intelligence": tool_intelligence,
+                "model_node_extensions": model_node_extensions,
+                "allow_live_model_nodes": allow_live_model_nodes,
+                "executor": executor,
+                "condition_runtime": condition_runtime,
+                "scenario_paths": (
                     prepared_intake.scenario_paths if prepared_intake is not None else None
                 ),
-            )
+            }
+            try:
+                summaries, final_state, reused_stages, archived_attempts = self._run_stages(
+                    config,
+                    run_root,
+                    **stage_arguments,
+                )
+            except Exception as stage_error:
+                runtime_failure = _runtime_code_failure(
+                    executor,
+                    generated_code=generated_code,
+                    code_repair=code_repair,
+                    caller_authorized=allow_live_model_nodes,
+                )
+                if (
+                    runtime_failure is None
+                    or code_repair is None
+                    or not code_repair.config.conditional_on_runtime_failure
+                    or generated_code is None
+                    or repaired_code is not None
+                    or self.executor is not None
+                ):
+                    raise
+                repaired_code = repair_native_code_proposal(
+                    code_repair,
+                    generated=generated_code,
+                    project_runtime=runtime,
+                    project_id=config.project_id,
+                    run_id=run_id,
+                    run_root=run_root,
+                    expected_project_revision=snapshot.revision,
+                    workflow_config_sha256=workflow_config_sha256,
+                    seed=self.seed,
+                    resume=resume,
+                    allow_live=allow_live_model_nodes,
+                    runtime_failure=runtime_failure,
+                )
+                if repaired_code.inspection.admission.decision != "accepted":
+                    raise ValueError(
+                        "runtime-repaired native source failed deterministic readmission"
+                    ) from stage_error
+                code_inspection = repaired_code.inspection
+                executor = _build_full_workflow_executor(
+                    config,
+                    run_root=run_root,
+                    seed=self.seed,
+                    recover_completed_actions=True,
+                    code_inspection=code_inspection,
+                    generated_code=generated_code,
+                    repaired_code=repaired_code,
+                    execution_profile=execution_profile,
+                    evidence_scenario_path=(
+                        prepared_intake.scenario_paths["evidence"]
+                        if prepared_intake is not None
+                        else None
+                    ),
+                    native_libraries=native_libraries,
+                    condition_runtime=condition_runtime,
+                )
+                stage_arguments["resume"] = True
+                stage_arguments["executor"] = executor
+                summaries, final_state, reused_stages, archived_attempts = self._run_stages(
+                    config,
+                    run_root,
+                    **stage_arguments,
+                )
             reloaded_advisory = (
                 load_full_workflow_model_advisory(config.model_node_advisory)
                 if config.model_node_advisory is not None
@@ -1639,6 +1711,7 @@ def _build_full_workflow_executor(
     *,
     run_root: Path,
     seed: int,
+    recover_completed_actions: bool = False,
     code_inspection: NativeCodeInspection | None = None,
     generated_code: GeneratedNativeCodeProposal | None = None,
     repaired_code: RepairedNativeCodeProposal | None = None,
@@ -1693,6 +1766,8 @@ def _build_full_workflow_executor(
             if experiment is not None
             else None
         ),
+        recover_completed_retrieval=recover_completed_actions,
+        recover_completed_experiment=recover_completed_actions,
     )
 
 
@@ -1789,6 +1864,12 @@ def _prepare_native_experiment(
             code_proposal_path,
             run_root=run_root,
             inspection=code_inspection,
+            context_directory=(
+                "code-runtime-repair"
+                if repaired_code is not None
+                and repaired_code.loaded.config.conditional_on_runtime_failure
+                else "code"
+            ),
         )
     source_config = config.native_experiment_config
     if source_config is None:
@@ -1860,6 +1941,128 @@ def _native_condition_summary(
     }
 
 
+def _runtime_code_failure(
+    executor: ResearchExecutor,
+    *,
+    generated_code: GeneratedNativeCodeProposal | None,
+    code_repair: LoadedNativeCodeRepair | None,
+    caller_authorized: bool,
+) -> NativeCodeRuntimeFailure | None:
+    """Return only source-repairable evidence from the latest isolated failure."""
+
+    if (
+        generated_code is None
+        or code_repair is None
+        or generated_code.inspection.admission.decision != "accepted"
+        or not isinstance(executor, SciTasteNativeExecutor)
+        or executor.store is None
+    ):
+        return None
+    expected_experiment = generated_code.loaded.config.experiment.experiment_id
+    expected_source = generated_code.record.generated_source_sha256
+    for record_locator, record in reversed(executor.store.entries()):
+        result = record.result
+        if (
+            record.capability != "experiment"
+            or result.status.value != "FAILED"
+            or result.data.get("result_basis") != "sandbox-failure"
+            or result.data.get("experiment_id") != expected_experiment
+            or expected_source not in record.input_sha256.values()
+        ):
+            continue
+        execution_locators = [
+            item for item in result.artifacts if item.endswith("/execution.json")
+        ]
+        stderr_locators = [item for item in result.artifacts if item.endswith("/stderr.txt")]
+        if len(execution_locators) != 1 or len(stderr_locators) != 1:
+            return None
+        execution_path = _owned_regular_file(
+            run_root=executor.store.artifact_root,
+            locator=execution_locators[0],
+        )
+        stderr_path = _owned_regular_file(
+            run_root=executor.store.artifact_root,
+            locator=stderr_locators[0],
+        )
+        try:
+            execution = json.loads(execution_path.read_bytes())
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return None
+        if not isinstance(execution, dict) or execution.get("launch_error") is not None:
+            return None
+        timed_out = execution.get("timed_out") is True
+        returncode = execution.get("returncode")
+        parse_error = execution.get("parse_error")
+        failure_code: Literal["nonzero-exit", "timeout", "measurement-contract"]
+        if timed_out:
+            failure_code = "timeout"
+        elif isinstance(returncode, int) and not isinstance(returncode, bool) and returncode != 0:
+            failure_code = "nonzero-exit"
+        elif isinstance(parse_error, str) and parse_error:
+            failure_code = "measurement-contract"
+        else:
+            return None
+        stderr = stderr_path.read_bytes()
+        message = result.error or f"isolated experiment failed: {failure_code}"
+        route = decide_verification_route(
+            VerificationDecisionInput(
+                action_id="repair-isolated-native-experiment",
+                reversibility=(
+                    ActionReversibility.COSTLY_TO_REVERSE
+                    if code_repair.config.live_enabled
+                    else ActionReversibility.REVERSIBLE
+                ),
+                effects=(
+                    (
+                        ActionEffect.NETWORK_READ,
+                        ActionEffect.SECRET_ACCESS,
+                        ActionEffect.PAID_COMPUTE,
+                        ActionEffect.DECLARED_OWNER_BOUNDARY,
+                    )
+                    if code_repair.config.live_enabled
+                    else (ActionEffect.FILESYSTEM_WRITE,)
+                ),
+                evidence_state="current",
+                semantic_uncertainty="medium",
+                failure_probability=0.2,
+                failure_impact_units=40 if code_repair.config.live_enabled else 12,
+                targeted_check_cost_units=1,
+                targeted_detection_probability=0.7,
+                full_preflight_cost_units=4,
+                full_preflight_detection_probability=0.9,
+            )
+        )
+        expected_route = (
+            VerificationRoute.OWNER_APPROVAL
+            if code_repair.config.live_enabled
+            else VerificationRoute.DIRECT_PATH
+        )
+        if route.route is not expected_route:
+            return None
+        if route.route is VerificationRoute.OWNER_APPROVAL and not caller_authorized:
+            return None
+        return NativeCodeRuntimeFailure(
+            experiment_id=expected_experiment,
+            action_id=record.action.action_id,
+            result_id=result.result_id,
+            execution_record_locator=record_locator,
+            execution_record_sha256=record.record_sha256,
+            source_sha256=expected_source,
+            failure_code=failure_code,
+            error_message=message[:4_000],
+            stderr_sha256=hashlib.sha256(stderr).hexdigest(),
+            stderr_excerpt=stderr.decode("utf-8", errors="replace")[-4_000:],
+            verification_route=route.route.value,
+            verification_reason_codes=route.reason_codes,
+            authorization_basis=(
+                "workflow-config-and-caller-opt-in"
+                if route.route is VerificationRoute.OWNER_APPROVAL
+                else "tool-intelligence-direct-path"
+            ),
+        )
+    return None
+
+
 def _native_execution_summary(
     executor: ResearchExecutor,
     *,
@@ -1870,6 +2073,20 @@ def _native_execution_summary(
         return None
     verification = executor.store.verify()
     payload = verification.model_dump(mode="json")
+    experiment_record = next(
+        (
+            record
+            for _, record in reversed(executor.store.entries())
+            if record.capability == "experiment"
+            and record.result.data.get("experiment_id")
+            == (
+                executor.experiment_runner.definition.experiment_id
+                if executor.experiment_runner is not None
+                else None
+            )
+        ),
+        None,
+    )
     payload["experiment"] = (
         None
         if executor.experiment_runner is None
@@ -1885,14 +2102,30 @@ def _native_execution_summary(
                 item.mount_path for item in executor.experiment_runner.profile.datasets
             ],
             "gpu_authorized": executor.experiment_runner.profile.gpu.enabled,
-            "availability": executor.experiment_runner.availability().model_dump(mode="json"),
+            "availability": (
+                experiment_record.result.data.get("isolation")
+                if experiment_record is not None
+                else None
+            ),
+            "availability_basis": (
+                "execution-record" if experiment_record is not None else "not-executed"
+            ),
+            "standalone_post_execution_preflight_performed": False,
         }
     )
-    code_context = load_native_code_context_record(run_root)
     code_generation = load_native_code_generation_record(run_root)
     code_generation_result = code_generation.typed_result if code_generation is not None else None
     code_repair_record = load_native_code_repair_record(run_root)
     code_repair_result = code_repair_record.typed_result if code_repair_record is not None else None
+    runtime_repair = bool(
+        code_repair is not None
+        and code_repair.config.conditional_on_runtime_failure
+        and code_repair_record is not None
+    )
+    code_context = load_native_code_context_record(
+        run_root,
+        context_directory="code-runtime-repair" if runtime_repair else "code",
+    )
     payload["code_generation"] = (
         None
         if code_generation is None
@@ -1978,6 +2211,11 @@ def _native_execution_summary(
                 code_repair_record.attempt_number if code_repair_record is not None else 0
             ),
             "max_attempts": code_repair.config.max_attempts,
+            "trigger": (
+                "isolated-runtime"
+                if code_repair.config.conditional_on_runtime_failure
+                else "static-admission"
+            ),
             "repair_proposal_only": True,
             "deterministic_readmission_required": True,
             "runtime_isolation_required": True,

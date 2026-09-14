@@ -1812,3 +1812,30 @@ plan sits directly below, project resources report 6/8 available, detailed
 evidence is progressively disclosed, and the conversation composer remains a
 horizontal bottom control. This is an engineering visual inspection, not a
 counterbalanced usability result.
+
+## Closing the generated-experiment runtime loop (2026-09-14)
+
+The next mainline pass stopped extending Generation as Content and followed its
+existing intervention contract into SciTaste Core. The audit found that Native
+already supported isolated measurement, metric normalization, Evidence,
+Writing, Figure, and resume, but a statically admitted model-produced experiment
+could still terminate the complete run on its first runtime error. Recovery also
+lacked an explicit exact-success reuse switch for experiment actions.
+
+SciTaste now derives a bounded repair input only from a verified failed native
+record and the same admitted source hash. Nonzero exits, timeouts, and malformed
+measurement envelopes are eligible; environment and launcher failures are not.
+One configured source-only repair retains the original failure, faces identical
+static admission, runs in a distinct immutable code context under the same
+Bubblewrap/resource/metric contract, and then resumes the remaining stages.
+Exact successful experiment actions are reused during recovery rather than
+executed again.
+
+A local CPU end-to-end scenario exercised a real nonzero isolated exit followed
+by one scripted repair, successful measurement, Evidence interpretation,
+manuscript construction, and figure generation. Both experiment records remain
+in the project-owned chain. Tool Intelligence selected `direct_path` for this
+zero-network reversible repair and performed no standalone preflight; paid live
+repair remains tied to explicit workflow configuration plus caller opt-in. This
+is engineering closure of an autonomous failure path, not scientific evidence
+for the ICLR claim, and it consumed no formal GPU or API campaign budget.

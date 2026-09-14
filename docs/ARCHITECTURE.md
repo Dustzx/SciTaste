@@ -1193,8 +1193,9 @@ evidence did not yet cover that model. The runtime consequently rejected the
 response for unknown cost before source materialization; independent inspection
 also found invalid Python. This negative result is retained rather than repaired
 or executed because that historical probe did not configure the later repair
-contract. Priced provider acceptance, live repair quality, runtime-failure repair,
-and scientific-effectiveness comparison remain separate gates.
+contract. The later ADR-041 runtime-repair path does not retroactively alter that
+negative record. Priced provider acceptance, live repair quality, and
+scientific-effectiveness comparison remain separate gates.
 
 ### ADR-039: Open research questions enter through a deterministic launch admission
 
@@ -1267,7 +1268,7 @@ Evidence gaps continue through the Evidence Loop; prose alone cannot close them.
 
 ### ADR-041: Native source repair is one conditional proposal, not an iterative executor
 
-Status: accepted for deterministic static-admission failures.
+Status: accepted for deterministic static-admission and bounded isolated-runtime failures.
 
 Silently rewriting rejected generated code would destroy negative evidence, while
 an unrestricted retry loop could spend an unbounded budget and gradually escape
@@ -1294,11 +1295,26 @@ path. Resume reuses a complete repair ledger/result and never performs another
 completion; incomplete paid attempts follow the existing recorded-response and
 unknown-cost rules.
 
-This closes bounded recovery from deterministic syntax/import/AST/metric-marker
-failures. It does not diagnose a sandbox/runtime failure, install a dependency,
-change an environment, or establish that a model improves scientific code.
-Priced live acceptance and comparative repair-quality evaluation remain required
-before an effectiveness claim.
+The same one-attempt envelope may instead be configured exclusively for an
+isolated-runtime failure. SciTaste accepts only a verified native execution
+record whose admitted source hash matches the generated proposal and whose
+failure is a nonzero exit, timeout, or measurement-contract error. The repair
+input adds that record identity, bounded error, stderr hash/excerpt, and
+Tool-Intelligence route. Resource and launcher failures are not mislabeled as
+code failures. The original `code/` context and failed execution remain
+immutable; the replacement is independently admitted beneath
+`code-runtime-repair/`, then the failed Evidence stage is replayed and later
+stages continue. Recovery also reuses an exact successful experiment record,
+preventing a post-execution interruption from paying for the same action twice.
+
+Local reversible repair follows `direct_path`; live paid repair requires both
+the configured repair mode and explicit caller opt-in. Neither route schedules a
+standalone preflight, and final reporting reads the execution-time availability
+record instead of probing the environment again. This mechanism does not install
+a dependency, alter an environment or experiment identity, exceed one repair,
+or establish that a model improves scientific code. Priced live acceptance and
+comparative repair-quality evaluation remain required before an effectiveness
+claim.
 
 ### ADR-042: Recursive self-development cannot evaluate itself as a headline task
 

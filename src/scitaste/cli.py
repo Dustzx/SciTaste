@@ -5135,7 +5135,12 @@ def _handle_full(args: argparse.Namespace) -> int:
                                     code_repair.profile.generation.max_output_tokens
                                 ),
                                 "max_attempts": code_repair.config.max_attempts,
-                                "conditional_on_static_rejection": True,
+                                "conditional_on_static_rejection": (
+                                    code_repair.config.conditional_on_static_rejection
+                                ),
+                                "conditional_on_runtime_failure": (
+                                    code_repair.config.conditional_on_runtime_failure
+                                ),
                                 "live_configured": code_repair.config.live_enabled,
                                 "caller_authorized": args.allow_live_model_nodes,
                                 "would_contact_provider": (
@@ -5145,7 +5150,7 @@ def _handle_full(args: argparse.Namespace) -> int:
                                 "repair_proposal_only": True,
                                 "deterministic_readmission_required": True,
                                 "runtime_isolation_required": True,
-                                "would_materialize_only_if_rejected": True,
+                                "would_materialize_only_after_bound_failure": True,
                             }
                         ),
                     },
