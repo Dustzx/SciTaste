@@ -1095,37 +1095,14 @@ def normalize_taste_source_decision_segmentation(
         source = campaigns[campaign_id][2].get(review_item_id)
         if source is None:
             raise ValueError("Taste source segmentation item is outside its campaign")
-        segments: list[TasteSourceDecisionSegment] = []
-        for ordinal, raw_segment in enumerate(raw_item["segments"], 1):
-            if not isinstance(raw_segment, dict):
-                raise ValueError("Taste source decision segment must be a mapping")
-            verbatim = raw_segment.get("verbatim_decision_text")
-            if not isinstance(verbatim, str):
-                raise ValueError("Taste source decision segment lacks verbatim source text")
-            start = source.review_comment.find(verbatim)
-            if start < 0 or source.review_comment.find(verbatim, start + 1) >= 0:
-                raise ValueError("Taste source decision span must occur exactly once")
-            segment_identity = _canonical_sha256(
-                [campaign_id, review_item_id, start, start + len(verbatim), verbatim]
+        segments = list(
+            _normalize_raw_segments(
+                raw_segments=raw_item["segments"],
+                campaign_id=campaign_id,
+                review_item_id=review_item_id,
+                review_comment=source.review_comment,
             )
-            segments.append(
-                TasteSourceDecisionSegment(
-                    segment_id=f"segment-{segment_identity[:24]}",
-                    ordinal=ordinal,
-                    start_char=start,
-                    end_char=start + len(verbatim),
-                    verbatim_decision_text=verbatim,
-                    primary_decision_family=raw_segment.get("primary_decision_family"),
-                    atomic_decision_statement=raw_segment.get("atomic_decision_statement"),
-                    rationale=raw_segment.get("rationale"),
-                    uncertainty=raw_segment.get("uncertainty"),
-                )
-            )
-        segments.sort(key=lambda item: (item.start_char, item.end_char))
-        segments = [
-            segment.model_copy(update={"ordinal": index + 1})
-            for index, segment in enumerate(segments)
-        ]
+        )
         items.append(
             TasteSourceSegmentedItem(
                 campaign_id=campaign_id,

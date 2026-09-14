@@ -9,6 +9,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from scitaste.evaluation.taste_source_segmentation import _normalize_raw_segments
 from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionAuthority,
     SegmentationExecutionFileBinding,
@@ -568,4 +569,45 @@ def test_anchored_firewall_checks_keys_inside_serialized_user_content(
             packet=packet,
             protocol=_v4_protocol(),
             raw_request_ref="calls/anchored-request.json",
+        )
+
+
+def test_legacy_normalization_uses_trusted_offsets_for_repeated_anchor_text() -> None:
+    source = "Compare A-B with A-B."
+    start = source.rfind("A-B")
+    segments = _normalize_raw_segments(
+        raw_segments=[
+            {
+                "verbatim_decision_text": "A-B",
+                "start_char": start,
+                "end_char": start + 3,
+                "primary_decision_family": "experiment",
+                "atomic_decision_statement": "Compare the second condition.",
+                "rationale": "The trusted anchor offsets select the second occurrence.",
+                "uncertainty": "low",
+            }
+        ],
+        campaign_id="campaign-opaque",
+        review_item_id="item-opaque",
+        review_comment=source,
+    )
+    assert segments[0].start_char == start
+    without_offsets = [
+        {
+            key: value
+            for key, value in {
+                "verbatim_decision_text": "A-B",
+                "primary_decision_family": "experiment",
+                "atomic_decision_statement": "Compare the second condition.",
+                "rationale": "The locator is duplicated.",
+                "uncertainty": "low",
+            }.items()
+        }
+    ]
+    with pytest.raises(ValueError, match="occur exactly once"):
+        _normalize_raw_segments(
+            raw_segments=without_offsets,
+            campaign_id="campaign-opaque",
+            review_item_id="item-opaque",
+            review_comment=source,
         )
