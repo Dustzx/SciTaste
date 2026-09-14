@@ -418,14 +418,19 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
         )
         if expected_rubric_scope not in self.input_firewall.allowed:
             raise ValueError("Segmentation firewall rubric scope differs from schema version")
-        has_anchor_scope = "deterministic source evidence-unit table" in (
+        segmenter_has_anchor_scope = "deterministic source evidence-unit table" in (
             self.input_firewall.allowed
-        ) and "deterministic source evidence-unit table" in (
+        )
+        adjudicator_has_anchor_scope = "deterministic source evidence-unit table" in (
             self.adjudication_input_firewall.allowed
             if self.adjudication_input_firewall is not None
             else ()
         )
-        if (self.schema_version == "1.3") != has_anchor_scope:
+        expected_anchor_scope = self.schema_version == "1.3"
+        if (
+            segmenter_has_anchor_scope != expected_anchor_scope
+            or adjudicator_has_anchor_scope != expected_anchor_scope
+        ):
             raise ValueError("Segmentation firewall evidence-unit scope differs from schema")
         return self
 
@@ -1209,6 +1214,7 @@ def load_taste_source_segmentation_request_pack(
             or len(packet.items) != binding.item_count
             or packet.project_id != pack.project_id
             or packet.sample_sha256 != pack.sample_sha256
+            or packet.schema_version != pack.schema_version
         ):
             raise ValueError("Segmentation request packet binding drifted")
         packets[(packet.segmenter_slot, packet.shard_index)] = packet

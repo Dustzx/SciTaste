@@ -815,6 +815,8 @@ def inspect_taste_source_segmentation_execution_authorization(
         or pack.sample_sha256 != protocol.sample.sample_sha256
     ):
         raise ValueError("Segmentation execution pack differs from the frozen protocol")
+    if (protocol.protocol.schema_version == "1.3") != (pack.schema_version == "1.1"):
+        raise ValueError("Segmentation execution pack anchor schema differs from protocol")
     if protocol.protocol.schema_version == "1.3" and any(
         timestamp > authorization.authorized_at
         for timestamp in (

@@ -17,8 +17,10 @@ from scitaste.evaluation.taste_source_segmentation_execution import (
     SegmentationExecutionPriceCeiling,
     SegmentationExecutionRunnerBinding,
     TasteSourceSegmentationExecutionAuthorization,
+    build_segmentation_adjudication_request,
     build_segmentation_provider_request,
     persist_exact_provider_request,
+    validate_adjudication_provider_output,
     validate_segmentation_provider_output,
     verify_persisted_segmentation_provider_request,
 )
@@ -479,3 +481,74 @@ def test_v4_rejects_unknown_reversed_and_overlapping_unit_ranges() -> None:
         validate_segmentation_provider_output(
             payload([later, base_segment]), packet=packet, protocol=_v4_protocol()
         )
+
+
+def test_v4_requires_anchor_scope_on_both_provider_firewalls() -> None:
+    payload = yaml.safe_load(
+        (
+            _ROOT
+            / "configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v4.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    payload["adjudication_input_firewall"]["allowed"].remove(
+        "deterministic source evidence-unit table"
+    )
+    with pytest.raises(ValidationError, match="evidence-unit scope differs"):
+        TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
+
+
+def test_v4_adjudicator_can_reselect_units_without_returning_source_text() -> None:
+    packet = _anchored_packet()
+    item = packet.items[0]
+    visible = {
+        "campaign_token": item.campaign_token,
+        "review_item_id": item.review_item_id,
+        "reviewed_abstract": item.reviewed_abstract,
+        "review_comment": item.review_comment,
+        "evidence_units": [unit.model_dump(mode="json") for unit in item.evidence_units or ()],
+        "source_blocker_codes": ["span-boundary-disagreement"],
+        "candidates": {
+            "candidate-left": {"segments": [], "residual_decision_bearing_text_possible": True},
+            "candidate-right": {"segments": [], "residual_decision_bearing_text_possible": True},
+        },
+    }
+    request = build_segmentation_adjudication_request(
+        protocol=_v4_protocol(),
+        rubric={"rubric_id": "anchored-adjudication-v1"},
+        items=[visible],
+    )
+    contract = json.loads(request["messages"][1]["content"])["output_contract"]
+    segment_contract = contract["properties"]["items"]["items"]["properties"][
+        "segments"
+    ]["items"]
+    assert "start_unit_id" in segment_contract["required"]
+    assert "verbatim_decision_text" not in segment_contract["properties"]
+
+    raw = json.dumps(
+        {
+            "items": [
+                {
+                    "campaign_token": item.campaign_token,
+                    "review_item_id": item.review_item_id,
+                    "segments": [
+                        {
+                            "start_unit_id": "u0001",
+                            "end_unit_id": "u0005",
+                            "primary_decision_family": "experiment",
+                            "atomic_decision_statement": "Compare both conditions.",
+                            "rationale": "The adjudicator selected a corrected anchor range.",
+                            "uncertainty": "low",
+                        }
+                    ],
+                    "residual_decision_bearing_text_possible": False,
+                    "resolution_rationale": "This range contains the complete comparison.",
+                }
+            ]
+        }
+    )
+    resolved = validate_adjudication_provider_output(
+        raw,
+        expected_items={(item.campaign_token, item.review_item_id): item.review_comment},
+        protocol=_v4_protocol(),
+    )
+    assert resolved.items[0].segments[0].verbatim_decision_text == "Compare A-B with"
