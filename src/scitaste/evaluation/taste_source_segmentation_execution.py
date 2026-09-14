@@ -957,7 +957,9 @@ def build_segmentation_provider_request(
 
     user_payload = {
         "rubric": packet.rubric,
-        "items": [item.model_dump(mode="json") for item in packet.items],
+        "items": [
+            item.model_dump(mode="json", exclude_none=True) for item in packet.items
+        ],
         "output_contract": packet.output_contract,
     }
     return {
@@ -2172,8 +2174,9 @@ def _resolve_anchored_segments(
                 end_char=end_char,
             )
         )
-    ordered = sorted(intervals)
-    if any(first[1] > second[0] for first, second in pairwise(ordered)):
+    if intervals != sorted(intervals):
+        raise ValueError("Segmentation provider evidence-unit ranges are out of order")
+    if any(first[1] > second[0] for first, second in pairwise(intervals)):
         raise ValueError("Segmentation provider evidence-unit ranges overlap")
     return tuple(resolved)
 

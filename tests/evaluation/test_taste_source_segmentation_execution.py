@@ -274,6 +274,8 @@ def test_exact_request_bytes_are_persisted_before_transport(tmp_path: Path) -> N
         "publisher_subject",
         "source_identity",
         '"tools"',
+        '"evidence_units"',
+        '"evidence_unit_table_sha256"',
     ):
         assert forbidden not in provider_text
     assert packet.project_id not in provider_text
@@ -471,4 +473,9 @@ def test_v4_rejects_unknown_reversed_and_overlapping_unit_ranges() -> None:
     with pytest.raises(ValueError, match="ranges overlap"):
         validate_segmentation_provider_output(
             payload([base_segment, overlap]), packet=packet, protocol=_v4_protocol()
+        )
+    later = {**base_segment, "start_unit_id": "u0005", "end_unit_id": "u0007"}
+    with pytest.raises(ValueError, match="out of order"):
+        validate_segmentation_provider_output(
+            payload([later, base_segment]), packet=packet, protocol=_v4_protocol()
         )
