@@ -166,6 +166,17 @@ from scitaste.taste.semantic_models import (
     TasteTransferBoundary,
     validate_grounded_abstraction_against_projection,
 )
+from scitaste.taste.trajectory_reconstruction import (
+    TasteTrajectoryAssignmentTiming,
+    TasteTrajectoryDecisionSeed,
+    TasteTrajectoryFollowup,
+    TasteTrajectoryInventory,
+    TasteTrajectorySamplingPlan,
+    load_taste_trajectory_sampling_plan,
+    reconstruct_taste_trajectory,
+    save_taste_trajectory_inventory,
+    save_taste_trajectory_sampling_plan,
+)
 from scitaste.taste.utility import UtilityPolicy
 
 __all__ = [
@@ -279,6 +290,11 @@ __all__ = [
     "TasteOutcomePolarity",
     "TasteSupervisionChannel",
     "TasteSupervisionScope",
+    "TasteTrajectoryAssignmentTiming",
+    "TasteTrajectoryDecisionSeed",
+    "TasteTrajectoryFollowup",
+    "TasteTrajectoryInventory",
+    "TasteTrajectorySamplingPlan",
     "TasteTransferBoundary",
     "TasteTransferVerdict",
     "UtilityPolicy",
@@ -305,11 +321,15 @@ __all__ = [
     "load_reference_search_config",
     "load_reference_search_receipt",
     "load_taste_memory_admission",
+    "load_taste_trajectory_sampling_plan",
+    "reconstruct_taste_trajectory",
     "replay_reference_search",
     "retrieve_taste_cases",
     "save_reference_mining_report",
     "save_reference_quality_qualification",
     "save_taste_memory_admission_report",
+    "save_taste_trajectory_inventory",
+    "save_taste_trajectory_sampling_plan",
     "select_deliberated_taste_cases",
     "taste_case_sha256",
     "validate_grounded_abstraction_against_projection",

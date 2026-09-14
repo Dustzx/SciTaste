@@ -5,6 +5,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a project-aware trajectory reconstruction path for continual Scientific
+  Taste. A content-bound sampling plan fixes the current Idea, source project,
+  natural trajectory group, partition, decision log, and bounded state-search
+  root before attribution review. Exact JSONL lines and content-addressed
+  pre-decision states are reconstructed without treating executor status as a
+  delayed scientific outcome. Prospective sources may proceed only to outcome
+  follow-up; retrospective self-development logs remain audit-only. The CLI can
+  freeze a plan and emit an immutable no-label inventory, while stale Idea
+  revisions, unsafe paths, split leakage, and post-hoc prospective claims fail
+  closed.
 - Added the first outcome-calibrated lifecycle Scientific Taste policy path.
   Process outcomes and delayed Generation-as-Content interventions retain
   separate producer identities, bind exact alternatives and action features,

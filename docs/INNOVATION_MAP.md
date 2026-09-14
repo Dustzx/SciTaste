@@ -77,6 +77,15 @@ execution-only credit by default. The controller changes
 ranking only when structured scope, support, pairwise probability, and a credible
 margin all pass; otherwise it records an exact abstention. This prevents a
 mistaken self-explanation from recursively becoming its own authority.
+Continual learning begins from an explicit trajectory sampling plan, not from an
+unscoped scan of successful logs. The plan binds the current Idea, natural source
+group, split, decision-log location, and bounded state-search root. Reconstruction
+then verifies each exact log line and its content-addressed pre-decision state,
+but records executor completion only as operational evidence and creates no
+scientific outcome label. A prospectively frozen comparative decision may await
+delayed outcome attribution; retrospective self-development records remain
+audit-only. This turns SciTaste's own iteration into useful defect and provenance
+evidence without silently converting it into title-level supervision.
 Formal evidence that it improves scientific outcomes remains a matched-system
 evaluation question, not an assumption of the architecture.
 

@@ -4009,13 +4009,13 @@ one source trajectory share at most one source-group unit of weight, so neither
 a large authored candidate set nor a long trajectory can masquerade as
 independent sample size. Independent Beta posteriors estimate action-type,
 stage-action, domain-action, venue-action, tag, and stage-tag features. The
-explicit update modes—outcome-updated, no-update,
-unambiguous success-only, unambiguous failure-only, and deterministically shuffled
-credit—are experimental conditions rather than hidden flags. Mixed or unresolved
+explicit update modes—outcome-updated, no-update, unambiguous success-only,
+unambiguous failure-only, and deterministically shuffled credit—are experimental
+conditions rather than hidden flags. Mixed or unresolved
 outcomes cannot leak into the success/failure controls. Source/training episode
 identities, priors, posterior counts, and policy bytes close under content
-hashes. Because these
-factor features originate from the same episode, assessment uses a fully
+hashes. Because these factor features originate from the same episode,
+assessment uses a fully
 correlated uncertainty upper bound rather than treating feature count as sample
 size.
 
@@ -4026,8 +4026,8 @@ the newer independence claim retroactively.
 Execution-only credit is excluded from the scientific policy by default; an
 explicitly separate configuration may study operational policy without mixing
 it into the title-level estimand. At decision time only feasible actions are
-scored. The caller must supply the
-currently verified Idea binding; a missing or changed Idea forces abstention.
+scored. The caller must supply the currently verified Idea binding; a missing or
+changed Idea forces abstention.
 Cross-domain transfer is off by default, stage support can be required, and
 insufficient support, low pairwise probability, or a credible margin crossing
 zero likewise forces abstention with zero score adjustment. When the policy
@@ -4038,3 +4038,34 @@ reasons, and per-action adjustments. Current scope matching is intentionally
 exact and structured. Semantic boundary transfer, natural episode reconstruction,
 independent real review, calibration, and held-out H1--H4 effects are not implied
 by the fixture-level implementation.
+
+### ADR-129: Trajectory reconstruction preserves decisions without inventing rewards
+
+Status: accepted and implemented; prospective natural collection and delayed
+scientific outcomes remain open.
+
+A continual policy cannot learn honestly by scanning old successful runs. That
+would select on observed outcomes, blur trajectory dependence, and turn executor
+completion into scientific reward. SciTaste therefore freezes a self-hashed
+trajectory sampling plan before attribution review. The plan binds the current
+Idea revision, owning and source projects, source run, natural source group,
+dataset partition, assignment timing, decision-log locator, and a bounded state
+snapshot search root. The project CLI checks that a prospective source run does
+not yet exist; retrospective sources must already exist and are development-only.
+
+Reconstruction is read-only. It hashes each exact JSONL line, parses the complete
+candidate set and selected action, and resolves the referenced pre-decision state
+from content-addressed snapshot directories anywhere below the declared root.
+Duplicate state copies are accepted only when their bytes agree; unsafe paths,
+symbolic links, malformed identities, stale Idea bindings, and unbounded trees
+fail closed. Missing states and one-action decisions remain visible as gaps.
+
+The resulting inventory records executor-result identity, status, and exact
+outcome bytes only as operational provenance. It sets both
+`scientific_outcome_labels_created` and `policy_training_authorized` to false.
+Only a prospectively frozen, state-verified, multi-alternative, executed decision
+becomes a foundation awaiting separately evidenced delayed scientific outcome
+and reviewed causal credit. A real retrospective self-development replay exposed
+one valid comparative decision and one missing intermediate state; both remained
+audit-only. This is implementation evidence for the reconstruction boundary, not
+evidence that Scientific Taste improves research.

@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -342,6 +342,7 @@ from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.state.research_state import ResearchState
 from scitaste.taste.conditions import NativeTasteRetrievalMode, load_native_condition_matrix
+from scitaste.taste.episodes import TasteEpisodePartition, TasteEpisodeSourceRelationship
 from scitaste.taste.intrinsic import (
     IntrinsicTasteCalibrator,
     load_calibration_suite,
@@ -373,6 +374,14 @@ from scitaste.taste.semantic import (
     reference_quality_from_ledger,
     save_taste_abstraction_candidate,
     taste_abstraction_candidate_from_ledger,
+)
+from scitaste.taste.trajectory_reconstruction import (
+    TasteTrajectoryAssignmentTiming,
+    TasteTrajectorySamplingPlan,
+    load_taste_trajectory_sampling_plan,
+    reconstruct_taste_trajectory,
+    save_taste_trajectory_inventory,
+    save_taste_trajectory_sampling_plan,
 )
 from scitaste.visual.workflow import FigureWorkflow, load_figure_scenario
 from scitaste.writing.argument import (
@@ -1369,6 +1378,41 @@ def build_parser() -> argparse.ArgumentParser:
     memory_admission.add_argument("--require-ready", action="store_true")
     _add_log_level_option(memory_admission)
     memory_admission.set_defaults(handler=_handle_taste_memory_admission)
+    trajectory_plan = taste_commands.add_parser(
+        "trajectory-plan",
+        help="Freeze one project-owned trajectory sampling unit before attribution review",
+    )
+    trajectory_plan.add_argument("--project-id", required=True)
+    trajectory_plan.add_argument("--source-project-id", required=True)
+    trajectory_plan.add_argument("--source-run-id", required=True)
+    trajectory_plan.add_argument("--source-group-id", default=None)
+    trajectory_plan.add_argument(
+        "--dataset-partition",
+        choices=[item.value for item in TasteEpisodePartition],
+        required=True,
+    )
+    trajectory_plan.add_argument(
+        "--assignment-timing",
+        choices=[item.value for item in TasteTrajectoryAssignmentTiming],
+        required=True,
+    )
+    trajectory_plan.add_argument("--decision-log-locator", required=True)
+    trajectory_plan.add_argument("--state-snapshot-root-locator", required=True)
+    trajectory_plan.add_argument("--plan-id", required=True)
+    trajectory_plan.add_argument("--output", type=Path, required=True)
+    trajectory_plan.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(trajectory_plan)
+    trajectory_plan.set_defaults(handler=_handle_taste_trajectory_plan)
+    trajectory_reconstruct = taste_commands.add_parser(
+        "trajectory-reconstruct",
+        help="Verify exact decisions and states without generating scientific labels",
+    )
+    trajectory_reconstruct.add_argument("--plan", type=Path, required=True)
+    trajectory_reconstruct.add_argument("--source-root", type=Path, default=None)
+    trajectory_reconstruct.add_argument("--output", type=Path, required=True)
+    trajectory_reconstruct.add_argument("--outputs-root", type=Path, default=Path("outputs"))
+    _add_log_level_option(trajectory_reconstruct)
+    trajectory_reconstruct.set_defaults(handler=_handle_taste_trajectory_reconstruct)
 
     library = commands.add_parser("library", help="Knowledge and taste libraries")
     library_commands = library.add_subparsers(dest="library_command", required=True)
@@ -2058,9 +2102,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inspect an exact archive-to-development/held-out mapping without extraction",
     )
     dataset_materialization_request.add_argument("--manifest", type=Path, required=True)
-    dataset_materialization_request.add_argument(
-        "--workspace-root", type=Path, default=Path(".")
-    )
+    dataset_materialization_request.add_argument("--workspace-root", type=Path, default=Path("."))
     dataset_materialization_request.add_argument("--output", type=Path, default=None)
     dataset_materialization_request.add_argument(
         "--require-owner-approval-ready",
@@ -2076,13 +2118,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Bind owner authority to one exact local extraction and split mapping",
     )
     dataset_materialization_approve.add_argument("--manifest", type=Path, required=True)
-    dataset_materialization_approve.add_argument(
-        "--workspace-root", type=Path, default=Path(".")
-    )
+    dataset_materialization_approve.add_argument("--workspace-root", type=Path, default=Path("."))
     dataset_materialization_approve.add_argument("--confirm-proposal-sha256", required=True)
-    dataset_materialization_approve.add_argument(
-        "--confirm-gate-report-sha256", required=True
-    )
+    dataset_materialization_approve.add_argument("--confirm-gate-report-sha256", required=True)
     dataset_materialization_approve.add_argument("--approved-by", required=True)
     dataset_materialization_approve.add_argument("--approved-at", required=True)
     dataset_materialization_approve.add_argument("--output", type=Path, required=True)
@@ -4899,6 +4937,109 @@ def _handle_taste_memory_admission(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_taste_trajectory_plan(args: argparse.Namespace) -> int:
+    runtime = ProjectRuntime(args.outputs_root)
+    snapshot = runtime.open(args.project_id)
+    idea_report = inspect_current_idea_revision(runtime, args.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"trajectory sampling requires a verified current Idea: {codes}")
+
+    try:
+        source_snapshot = (
+            snapshot
+            if args.source_project_id == args.project_id
+            else runtime.open(args.source_project_id)
+        )
+    except FileNotFoundError:
+        source_snapshot = None
+    source_run_exists = source_snapshot is not None and args.source_run_id in {
+        item.run_id for item in source_snapshot.manifest.runs
+    }
+    timing = TasteTrajectoryAssignmentTiming(args.assignment_timing)
+    if timing is TasteTrajectoryAssignmentTiming.PROSPECTIVE and source_run_exists:
+        raise ValueError("prospective trajectory sampling must be frozen before the source run")
+    if (
+        timing is TasteTrajectoryAssignmentTiming.RETROSPECTIVE_DEVELOPMENT
+        and not source_run_exists
+    ):
+        raise ValueError("retrospective trajectory sampling requires an existing source run")
+
+    plan = TasteTrajectorySamplingPlan.create(
+        plan_id=args.plan_id,
+        project_id=args.project_id,
+        observed_project_revision=snapshot.revision,
+        observed_project_snapshot_sha256=snapshot.snapshot_sha256,
+        idea_revision=idea_report.current_binding,
+        source_project_id=args.source_project_id,
+        source_run_id=args.source_run_id,
+        source_relationship=(
+            TasteEpisodeSourceRelationship.SELF_PROJECT
+            if args.source_project_id == args.project_id
+            else TasteEpisodeSourceRelationship.INDEPENDENT_PROJECT
+        ),
+        source_group_id=args.source_group_id or args.source_run_id,
+        dataset_partition=TasteEpisodePartition(args.dataset_partition),
+        assignment_timing=timing,
+        decision_log_locator=args.decision_log_locator,
+        state_snapshot_root_locator=args.state_snapshot_root_locator,
+        frozen_at=datetime.now(UTC),
+        source_absent_when_frozen=not source_run_exists,
+    )
+    path = save_taste_trajectory_sampling_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "trajectory-sampling-plan-frozen",
+                "plan": str(path),
+                "plan_id": plan.plan_id,
+                "plan_sha256": plan.plan_sha256,
+                "idea_revision_id": plan.idea_revision.revision_id,
+                "assignment_timing": plan.assignment_timing.value,
+                "dataset_partition": plan.dataset_partition.value,
+                "source_absent_when_frozen": plan.source_absent_when_frozen,
+                "execution_authorized": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_taste_trajectory_reconstruct(args: argparse.Namespace) -> int:
+    plan = load_taste_trajectory_sampling_plan(args.plan)
+    runtime = ProjectRuntime(args.outputs_root)
+    idea_report = inspect_current_idea_revision(runtime, plan.project_id)
+    if idea_report.current_binding is None:
+        codes = ", ".join(item.code for item in idea_report.findings)
+        raise ValueError(f"trajectory reconstruction requires a verified current Idea: {codes}")
+    source_root = args.source_root or (
+        runtime.projects_root / plan.source_project_id / "runs" / plan.source_run_id
+    )
+    inventory = reconstruct_taste_trajectory(
+        plan,
+        source_root=source_root,
+        current_idea_revision=idea_report.current_binding,
+    )
+    path = save_taste_trajectory_inventory(inventory, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "trajectory-reconstructed-no-scientific-labels",
+                "inventory": str(path),
+                "inventory_sha256": inventory.inventory_sha256,
+                "decision_count": inventory.decision_count,
+                "foundation_eligible_count": inventory.foundation_eligible_count,
+                "policy_training_authorized": False,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _handle_library_build(args: argparse.Namespace) -> int:
     config_path = args.config or Path("configs/taste/library_seed_v1.yaml")
     if args.dry_run:
@@ -6333,9 +6474,7 @@ def _handle_evaluation_dataset_materialization_request(args: argparse.Namespace)
     )
     payload = report.model_dump(mode="json")
     if args.output is not None:
-        payload["report_path"] = str(
-            save_dataset_materialization_gate_report(report, args.output)
-        )
+        payload["report_path"] = str(save_dataset_materialization_gate_report(report, args.output))
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_owner_approval_ready and not report.ready_for_owner_approval:
         return 1
