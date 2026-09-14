@@ -100,6 +100,7 @@ from scitaste.evaluation import (
     compile_evaluation_campaign_activation,
     compile_evaluation_cell_plan,
     compile_taste_source_ai_calibration,
+    compile_taste_source_segmentation_agreement,
     complete_objective_result_set,
     inspect_acquired_json_content,
     inspect_acquired_structured_metadata,
@@ -189,6 +190,8 @@ from scitaste.evaluation import (
     materialize_source_projections,
     materialize_taste_corpus_pair,
     normalize_taste_source_ai_screen,
+    normalize_taste_source_decision_segmentation,
+    normalize_taste_source_segmentation_resolution,
     plan_benchmark_metadata_allocation,
     plan_benchmark_metadata_projection,
     plan_clustered_power,
@@ -247,7 +250,10 @@ from scitaste.evaluation import (
     save_taste_corpus_pair_report,
     save_taste_source_ai_calibration_report,
     save_taste_source_ai_screening_run,
+    save_taste_source_decision_segmentation_run,
     save_taste_source_review_assignment_plan,
+    save_taste_source_segmentation_agreement_report,
+    save_taste_source_segmentation_resolution_run,
     screen_benchmark_metadata_population,
     source_projection_forbidden_exact_strings,
     source_projection_protocol_sha256,
@@ -2087,6 +2093,76 @@ def build_parser() -> argparse.ArgumentParser:
     taste_source_ai_calibration.add_argument("--output", type=Path, required=True)
     _add_log_level_option(taste_source_ai_calibration)
     taste_source_ai_calibration.set_defaults(handler=_handle_evaluation_taste_source_ai_calibration)
+    taste_source_segmentation = evaluation_commands.add_parser(
+        "taste-source-decision-segmentation-normalize",
+        help="Bind AI-proposed atomic decision spans to exact source-review text",
+    )
+    taste_source_segmentation.add_argument("--raw-segmentation", type=Path, required=True)
+    taste_source_segmentation.add_argument("--campaign", type=Path, action="append", required=True)
+    taste_source_segmentation.add_argument(
+        "--campaign-alias",
+        action="append",
+        default=[],
+        metavar="ALIAS=CAMPAIGN_ID",
+    )
+    taste_source_segmentation.add_argument("--run-id", required=True)
+    taste_source_segmentation.add_argument("--screener-id", required=True)
+    taste_source_segmentation.add_argument("--invocation-id", required=True)
+    taste_source_segmentation.add_argument("--runtime-surface", required=True)
+    taste_source_segmentation.add_argument("--model-identifier", required=True)
+    taste_source_segmentation.add_argument("--model-revision", default=None)
+    taste_source_segmentation.add_argument("--exact-model-identity-bound", action="store_true")
+    taste_source_segmentation.add_argument("--rubric", type=Path, required=True)
+    taste_source_segmentation.add_argument("--sample-manifest", type=Path, required=True)
+    taste_source_segmentation.add_argument("--runtime-identity-sha256", default=None)
+    taste_source_segmentation.add_argument("--completed-at", required=True)
+    taste_source_segmentation.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_segmentation.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_segmentation)
+    taste_source_segmentation.set_defaults(
+        handler=_handle_evaluation_taste_source_decision_segmentation_normalize
+    )
+    taste_source_segmentation_agreement = evaluation_commands.add_parser(
+        "taste-source-decision-segmentation-agreement",
+        help="Route non-exact dual-agent decision segmentation to adjudication",
+    )
+    taste_source_segmentation_agreement.add_argument(
+        "--segmentation", type=Path, action="append", required=True
+    )
+    taste_source_segmentation_agreement.add_argument("--report-id", required=True)
+    taste_source_segmentation_agreement.add_argument("--compiled-at", required=True)
+    taste_source_segmentation_agreement.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_segmentation_agreement.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_segmentation_agreement)
+    taste_source_segmentation_agreement.set_defaults(
+        handler=_handle_evaluation_taste_source_decision_segmentation_agreement
+    )
+    taste_source_segmentation_resolution = evaluation_commands.add_parser(
+        "taste-source-decision-segmentation-resolve",
+        help="Bind an AI adjudication to a dual-agent segmentation report",
+    )
+    taste_source_segmentation_resolution.add_argument("--raw-resolution", type=Path, required=True)
+    taste_source_segmentation_resolution.add_argument("--agreement", type=Path, required=True)
+    taste_source_segmentation_resolution.add_argument("--run-id", required=True)
+    taste_source_segmentation_resolution.add_argument("--adjudicator-id", required=True)
+    taste_source_segmentation_resolution.add_argument("--invocation-id", required=True)
+    taste_source_segmentation_resolution.add_argument("--runtime-surface", required=True)
+    taste_source_segmentation_resolution.add_argument("--model-identifier", required=True)
+    taste_source_segmentation_resolution.add_argument("--model-revision", default=None)
+    taste_source_segmentation_resolution.add_argument(
+        "--exact-model-identity-bound", action="store_true"
+    )
+    taste_source_segmentation_resolution.add_argument("--rubric", type=Path, required=True)
+    taste_source_segmentation_resolution.add_argument("--runtime-identity-sha256", default=None)
+    taste_source_segmentation_resolution.add_argument("--completed-at", required=True)
+    taste_source_segmentation_resolution.add_argument(
+        "--locator-root", type=Path, default=Path(".")
+    )
+    taste_source_segmentation_resolution.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_segmentation_resolution)
+    taste_source_segmentation_resolution.set_defaults(
+        handler=_handle_evaluation_taste_source_decision_segmentation_resolution
+    )
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -6552,12 +6628,7 @@ def _handle_evaluation_taste_source_review_assignment(args: argparse.Namespace) 
 
 
 def _handle_evaluation_taste_source_ai_screen_normalize(args: argparse.Namespace) -> int:
-    aliases: dict[str, str] = {}
-    for value in args.campaign_alias:
-        alias, separator, campaign_id = value.partition("=")
-        if not separator or not alias or not campaign_id or alias in aliases:
-            raise ValueError("campaign aliases must be unique ALIAS=CAMPAIGN_ID pairs")
-        aliases[alias] = campaign_id
+    aliases = _parse_campaign_aliases(args.campaign_alias)
     run = normalize_taste_source_ai_screen(
         raw_screen_path=args.raw_screen,
         campaign_paths=tuple(args.campaign),
@@ -6570,7 +6641,8 @@ def _handle_evaluation_taste_source_ai_screen_normalize(args: argparse.Namespace
         model_identifier=args.model_identifier,
         model_revision=args.model_revision,
         exact_model_identity_bound=args.exact_model_identity_bound,
-        task_instruction_sha256=args.task_instruction_sha256,
+        rubric_path=args.rubric,
+        sample_manifest_path=args.sample_manifest,
         runtime_identity_sha256=args.runtime_identity_sha256,
         completed_at=datetime.fromisoformat(args.completed_at),
         locator_root=args.locator_root,
@@ -6626,6 +6698,152 @@ def _handle_evaluation_taste_source_ai_calibration(args: argparse.Namespace) -> 
         )
     )
     return 0 if report.ready_for_scaled_ai_screening else 1
+
+
+def _handle_evaluation_taste_source_decision_segmentation_normalize(
+    args: argparse.Namespace,
+) -> int:
+    run = normalize_taste_source_decision_segmentation(
+        raw_segmentation_path=args.raw_segmentation,
+        campaign_paths=tuple(args.campaign),
+        campaign_aliases=_parse_campaign_aliases(args.campaign_alias),
+        run_id=args.run_id,
+        screener_id=args.screener_id,
+        invocation_id=args.invocation_id,
+        runtime_surface=args.runtime_surface,
+        model_identifier=args.model_identifier,
+        model_revision=args.model_revision,
+        exact_model_identity_bound=args.exact_model_identity_bound,
+        rubric_path=args.rubric,
+        sample_manifest_path=args.sample_manifest,
+        runtime_identity_sha256=args.runtime_identity_sha256,
+        completed_at=datetime.fromisoformat(args.completed_at),
+        locator_root=args.locator_root,
+    )
+    saved = save_taste_source_decision_segmentation_run(run, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "atomic-decision-segmentation-proposed-non-authorizing",
+                "output": str(saved),
+                "run_sha256": run.run_sha256,
+                "source_item_count": run.source_item_count,
+                "proposed_atomic_decision_count": run.proposed_atomic_decision_count,
+                "multiple_segment_item_count": run.multiple_segment_item_count,
+                "residual_risk_item_count": run.residual_risk_item_count,
+                "reproducibility_ready": run.reproducibility_ready,
+                "formal_evidence_eligible": run.formal_evidence_eligible,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _handle_evaluation_taste_source_decision_segmentation_agreement(
+    args: argparse.Namespace,
+) -> int:
+    if len(args.segmentation) != 2:
+        raise ValueError("Segmentation agreement requires exactly two --segmentation values")
+    report = compile_taste_source_segmentation_agreement(
+        report_id=args.report_id,
+        segmentation_paths=(args.segmentation[0], args.segmentation[1]),
+        compiled_at=datetime.fromisoformat(args.compiled_at),
+        locator_root=args.locator_root,
+    )
+    saved = save_taste_source_segmentation_agreement_report(report, args.output)
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "atomic-decision-segmentation-exactly-agreed"
+                    if report.all_items_exactly_agreed
+                    else "atomic-decision-segmentation-adjudication-required"
+                ),
+                "output": str(saved),
+                "report_sha256": report.report_sha256,
+                "source_item_count": report.source_item_count,
+                "segmenter_a_decision_count": report.segmenter_a_decision_count,
+                "segmenter_b_decision_count": report.segmenter_b_decision_count,
+                "exact_span_agreement_count": report.exact_span_agreement_count,
+                "exact_span_family_agreement_count": (report.exact_span_family_agreement_count),
+                "exact_span_f1_micros": report.exact_span_f1_micros,
+                "overlap_iou_threshold_micros": report.overlap_iou_threshold_micros,
+                "overlap_span_agreement_count": report.overlap_span_agreement_count,
+                "overlap_span_family_agreement_count": (report.overlap_span_family_agreement_count),
+                "overlap_span_f1_micros": report.overlap_span_f1_micros,
+                "overlap_matched_family_agreement_micros": (
+                    report.overlap_matched_family_agreement_micros
+                ),
+                "exact_span_route_item_count": report.exact_span_route_item_count,
+                "adjudication_item_count": report.adjudication_item_count,
+                "blocker_item_counts": report.blocker_item_counts,
+                "scaled_execution_blocker_codes": (report.scaled_execution_blocker_codes),
+                "scaled_execution_authorized": report.scaled_execution_authorized,
+                "formal_evidence_eligible": report.formal_evidence_eligible,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if report.all_items_exactly_agreed else 1
+
+
+def _handle_evaluation_taste_source_decision_segmentation_resolution(
+    args: argparse.Namespace,
+) -> int:
+    run = normalize_taste_source_segmentation_resolution(
+        raw_resolution_path=args.raw_resolution,
+        agreement_path=args.agreement,
+        run_id=args.run_id,
+        adjudicator_id=args.adjudicator_id,
+        invocation_id=args.invocation_id,
+        runtime_surface=args.runtime_surface,
+        model_identifier=args.model_identifier,
+        model_revision=args.model_revision,
+        exact_model_identity_bound=args.exact_model_identity_bound,
+        rubric_path=args.rubric,
+        runtime_identity_sha256=args.runtime_identity_sha256,
+        completed_at=datetime.fromisoformat(args.completed_at),
+        locator_root=args.locator_root,
+    )
+    saved = save_taste_source_segmentation_resolution_run(run, args.output)
+    print(
+        json.dumps(
+            {
+                "status": (
+                    "atomic-decision-resolution-ready-for-internal-ai-screening"
+                    if run.internal_ai_screening_ready
+                    else "atomic-decision-resolution-blocked-for-internal-ai-screening"
+                ),
+                "output": str(saved),
+                "run_sha256": run.run_sha256,
+                "source_item_count": run.source_item_count,
+                "final_atomic_decision_count": run.final_atomic_decision_count,
+                "exact_agreement_item_count": run.exact_agreement_item_count,
+                "ai_adjudicated_item_count": run.ai_adjudicated_item_count,
+                "residual_risk_item_count": run.residual_risk_item_count,
+                "internal_pilot_resolution_complete": (run.internal_pilot_resolution_complete),
+                "internal_screening_blocker_codes": run.internal_screening_blocker_codes,
+                "formal_evidence_eligible": run.formal_evidence_eligible,
+                "benchmark_admission_authorized": run.benchmark_admission_authorized,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0 if run.internal_ai_screening_ready else 1
+
+
+def _parse_campaign_aliases(values: list[str]) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for value in values:
+        alias, separator, campaign_id = value.partition("=")
+        if not separator or not alias or not campaign_id or alias in aliases:
+            raise ValueError("campaign aliases must be unique ALIAS=CAMPAIGN_ID pairs")
+        aliases[alias] = campaign_id
+    return aliases
 
 
 def _handle_evaluation_acquisition_request(args: argparse.Namespace) -> int:

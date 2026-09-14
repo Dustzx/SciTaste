@@ -5,6 +5,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added exact-span reconstruction for compound natural-source reviews. A model
+  may propose multiple uniquely occurring verbatim decision spans, but every
+  span is bound to the immutable scientific item, character offsets, one
+  decision family, and an explicit residual-coverage risk; the resulting run is
+  structurally unable to admit a source or create formal evidence. Two blind
+  segmenters proposed 50 and 46 decisions from the same 12 sources; the
+  conservative exact-span gate sent 10/12 items to a separately recorded third
+  AI adjudicator, yielding 53 atomic proposals with no residual-risk flag. This
+  demonstrates that whole reviewer reports must be segmented before scaling.
+  Exact-span F1 is 0.396; a post-hoc descriptive 0.5-IoU overlap F1 is 0.833,
+  with matched-span family agreement of 0.850. Distinct raw artifacts, bound rubrics, and an exact sample
+  manifest are enforced, while retrospective sampling, unresolved model/runtime
+  identity, and unverified network isolation explicitly block scale-out.
+  The preceding fresh-agent source calibration reached 12/12 domain, 9/12
+  family, 11/12 transferability, and only 3/12 exact five-dimensional agreement.
 - Added a typed AI source-screening and calibration layer. Independent screens
   now bind invocation IDs, raw agent-output hashes, campaign policies, exact
   reviewer-visible files, and per-item content hashes while structurally

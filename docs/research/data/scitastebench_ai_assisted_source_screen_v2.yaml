@@ -1,0 +1,83 @@
+schema_version: "1.0"
+screen_id: scitastebench-ai-assisted-source-screen-v2
+project_id: scitaste-self-development
+status: atomic-decision-unit-defect-confirmed
+purpose: >-
+  Re-run the same fixed twelve-item blind sample with two fresh independent AI
+  agents and a stricter decision-family rubric, then decide whether rubric
+  clarification alone is sufficient to scale source review.
+sample:
+  candidate_count: 12
+  aries_count: 6
+  f1000_count: 6
+  identical_to_v1_sample: true
+rubric:
+  locator: >-
+    configs/evaluation/ai_review/scitastebench_scientific_screen_rubric_v2.yaml
+  file_sha256: 6b50c10960345c0999122972bbbca4383034cfca9bd2f51c29236a13555d1c19
+  central_rule: >-
+    Label the scientific decision being changed rather than the rhetorical form
+    of its supporting argument.
+scientific_screen:
+  independent_fresh_agent_count: 2
+  completed_assessments: 24
+  domain_agreement_count: 12
+  primary_decision_family_agreement_count: 9
+  transferability_agreement_count: 11
+  exact_five_dimension_profile_agreement_count: 3
+  interpretation: >-
+    The clarified decision-family rule improves domain and family agreement but
+    does not calibrate the five quality dimensions. Inspection of disagreements
+    shows that some F1000 records contain multiple independently actionable
+    scientific and writing decisions in one reviewer report. Treating the whole
+    report as one labeled case is therefore an invalid unit of analysis.
+raw_artifacts:
+  - role: scientific-agent-c
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v2/scientific-c.json
+    file_sha256: 5ca61e906d65cdaeae065a1fbcbdd070deebfd8587d2bea7508c8e6fa1244cb4
+  - role: scientific-agent-d
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v2/scientific-d.json
+    file_sha256: c830113ef2b64f08caf71b671d3472e7f1602338e7ba8ef3b3a95b99f24879d8
+normalized_artifacts:
+  - role: scientific-agent-c
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v2/normalized/scientific-c.json
+    file_sha256: c251bbba5da20e251fea355b5e7a875684e2cfacfb0fb31654d5e06d1d57c0ac
+    screen_sha256: fedac80e18d625cae4dc055b37a6a8977c3866b4d985dab8908d600812a72906
+  - role: scientific-agent-d
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v2/normalized/scientific-d.json
+    file_sha256: fbac6011a98874be9cd6f0e72ed105a6c46d38502023346fd0bef493774322aa
+    screen_sha256: 2f409ff785421a7a3695681e2d03a41115593551ece1e24859e42ff3bc6e8ffd
+calibration_report:
+  locator: >-
+    outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v2/normalized/CALIBRATION.json
+  file_sha256: d444c74efa661c8128def893f72d96731e2310e7f30f6639dfb93e4bdb10ae8d
+  report_sha256: 908f75fb3af249515600db8b250aa704e145d671d959da3e1626e4b2d78992c6
+scaling_gate:
+  ready_for_scaled_ai_screening: false
+  blocker_codes:
+    - ai-invocation-reproducibility-bindings-incomplete
+    - exact-ai-model-identities-unbound
+    - scientific-rubric-agreement-below-calibration-threshold
+  newly_discovered_design_blocker: compound-source-records-not-atomic-decisions
+next_protocol:
+  segmentation_rubric_locator: >-
+    configs/evaluation/ai_review/scitastebench_decision_segmentation_v1.yaml
+  required_order:
+    - exact-span decision segmentation
+    - independent segmentation agreement and disagreement routing
+    - decision-family and quality assessment per atomic segment
+    - source-group-disjoint benchmark split
+authority:
+  exact_model_identity_bound: false
+  not_human_review: true
+  formal_evidence_eligible: false
+  benchmark_admission_authorized: false
+  source_segmentation_authorized: proposal-only
+claim_boundary: >-
+  This run diagnoses a benchmark-construction defect and changes the next
+  protocol. It does not establish human agreement, source quality, Taste
+  effectiveness, benchmark validity, or a formally admitted episode.

@@ -1,0 +1,71 @@
+schema_version: "2.0"
+rubric_id: scitastebench-scientific-screen-rubric-v2
+role: scientific
+purpose: >-
+  Calibrate and triage natural scientific-decision sources with independent AI
+  judges. This rubric does not create human labels or admit benchmark cases.
+input_boundary:
+  allowed:
+    - exact campaign policy
+    - assigned records from SCIENTIFIC_ITEMS.jsonl
+  forbidden:
+    - private item map
+    - publisher subject or source identity
+    - observed recommendation, author response, or later revision
+    - population outcome
+    - another screener's prompt, messages, or output
+decision_family_rule: >-
+  Label the primary scientific decision that the review asks the researcher to
+  change. Do not label the rhetorical form of the supporting argument.
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+tie_break_order:
+  - A requested comparator, control, sampling, intervention, protocol, or ablation is experiment even when justified by missing evidence.
+  - A requested change to statistical validity, causal interpretation, or whether a result supports a claim is evidence.
+  - A requested change to the research question, novelty claim, contribution, or scope is idea.
+  - Use writing only when the requested change leaves scientific content unchanged.
+  - Use visual only when the decision is primarily about graphical or tabular encoding.
+  - Use review only when the object being changed is the evaluation or peer-review process.
+  - Use cannot-assess when the visible text does not identify one primary decision.
+quality_dimensions:
+  evidential_rigor: whether visible support is adequate for the requested decision
+  decision_traceability: whether the requested decision and its reason are explicit
+  alternative_visibility: whether alternatives, comparators, or rejected options are visible
+  failure_boundary_visibility: whether limitations or conditions of failure are visible
+  transfer_potential: whether the decision principle can apply beyond the source item
+ratings:
+  insufficient: the required property is absent or contradicted
+  partial: the property is present but incomplete or implicit
+  strong: the property is explicit, specific, and supported by the visible text
+triage_candidate_rule: >-
+  triage_transferable_candidate may be true only when decision_traceability and
+  transfer_potential are both strong. It remains a routing signal, not a quality
+  label or admission decision.
+uncertainty_rule: >-
+  Record low, medium, or high uncertainty with a concrete note. cannot-assess
+  requires high uncertainty and a false triage candidate.
+output_fields:
+  - campaign
+  - review_item_id
+  - domain_label
+  - primary_decision_family
+  - quality_dimensions
+  - triage_transferable_candidate
+  - rationale
+  - uncertainty
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  human_assessment_count: 0
+  human_review_replacement_allowed: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false
+  authorizes_adjudication: false
+  statistical_independence_claimed: false

@@ -7,6 +7,7 @@ import tarfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scitaste.evaluation import (
@@ -16,12 +17,19 @@ from scitaste.evaluation import (
     TasteSourceReviewRole,
     approve_dataset_acquisition_request,
     compile_taste_source_ai_calibration,
+    compile_taste_source_segmentation_agreement,
     load_taste_source_ai_calibration_report,
+    load_taste_source_decision_segmentation_run,
     load_taste_source_review_assignment_plan,
     load_taste_source_review_policy,
+    load_taste_source_segmentation_agreement_report,
+    load_taste_source_segmentation_resolution_run,
+    load_taste_source_segmentation_sample_manifest,
     materialize_aries_taste_population,
     materialize_dataset_acquisition,
     normalize_taste_source_ai_screen,
+    normalize_taste_source_decision_segmentation,
+    normalize_taste_source_segmentation_resolution,
     plan_taste_source_review_assignments,
     prepare_taste_source_review_campaign,
     prepare_taste_source_review_session,
@@ -30,7 +38,10 @@ from scitaste.evaluation import (
     save_dataset_acquisition_request,
     save_taste_source_ai_calibration_report,
     save_taste_source_ai_screening_run,
+    save_taste_source_decision_segmentation_run,
     save_taste_source_review_assignment_plan,
+    save_taste_source_segmentation_agreement_report,
+    save_taste_source_segmentation_resolution_run,
 )
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
 from scitaste.generative_ui.workspace import ProjectProgressQuery, WorkspaceSurfaceFactory
@@ -332,6 +343,237 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     )
     assert len(assigned_session.items) == 1
     item_id = scientific_item["review_item_id"]
+    raw_segmentation = tmp_path / "raw-segmentation.json"
+    raw_segmentation.write_text(
+        json.dumps(
+            {
+                "input_boundary": {
+                    "other_segmenter_outputs_read": False,
+                    "private_item_map_read": False,
+                    "population_outcomes_read": False,
+                },
+                "items": [
+                    {
+                        "campaign": "aries",
+                        "review_item_id": item_id,
+                        "segments": [
+                            {
+                                "verbatim_decision_text": scientific_item["review_comment"],
+                                "primary_decision_family": "evidence",
+                                "atomic_decision_statement": (
+                                    "Strengthen the visible causal argument."
+                                ),
+                                "rationale": "The request concerns claim support.",
+                                "uncertainty": "low",
+                            }
+                        ],
+                        "residual_decision_bearing_text_possible": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    segmentation_rubric = tmp_path / "segmentation-rubric.yaml"
+    segmentation_rubric.write_text("schema_version: '1.0'\n", encoding="utf-8")
+    segmentation_sample = tmp_path / "segmentation-sample.yaml"
+    segmentation_sample.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": "1.0",
+                "sample_id": "aries-segmentation-sample-v1",
+                "project_id": campaign.project_id,
+                "selection_timing": "retrospective-pilot-binding",
+                "selection_rationale": "Bind the exact test source item.",
+                "sampling_algorithm": "fixed-test-item",
+                "random_seed": None,
+                "items": [
+                    {
+                        "campaign_id": campaign.campaign_id,
+                        "review_item_id": item_id,
+                    }
+                ],
+                "item_count": 1,
+                "authority": {
+                    "preregistered": False,
+                    "confirmatory_calibration_authorized": False,
+                    "scaled_execution_authorized": False,
+                    "formal_evidence_eligible": False,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    raw_segmentation_payload = json.loads(raw_segmentation.read_text(encoding="utf-8"))
+    raw_segmentation_payload.update(
+        {
+            "rubric_read": True,
+            "sample_manifest_read": True,
+            "rubric_file_sha256": hashlib.sha256(segmentation_rubric.read_bytes()).hexdigest(),
+            "sample_sha256": (
+                load_taste_source_segmentation_sample_manifest(
+                    segmentation_sample
+                ).sample.sample_sha256
+            ),
+        }
+    )
+    raw_segmentation.write_text(json.dumps(raw_segmentation_payload), encoding="utf-8")
+    segmentation = normalize_taste_source_decision_segmentation(
+        raw_segmentation_path=raw_segmentation,
+        campaign_paths=(campaign_root / "CAMPAIGN.json",),
+        campaign_aliases={"aries": campaign.campaign_id},
+        run_id="aries-decision-segmentation-v1",
+        screener_id="ai-segmenter-1",
+        invocation_id="ai-segmentation-invocation-1",
+        runtime_surface="test-agent",
+        model_identifier="unresolved-test-model",
+        model_revision=None,
+        exact_model_identity_bound=False,
+        rubric_path=segmentation_rubric,
+        sample_manifest_path=segmentation_sample,
+        runtime_identity_sha256=None,
+        completed_at=datetime(2026, 9, 14, 0, 7, tzinfo=UTC),
+        locator_root=tmp_path,
+    )
+    assert segmentation.source_item_count == 1
+    assert segmentation.proposed_atomic_decision_count == 1
+    assert segmentation.multiple_segment_item_count == 0
+    assert segmentation.formal_evidence_eligible is False
+    segmentation_path = tmp_path / "segmentation.json"
+    save_taste_source_decision_segmentation_run(segmentation, segmentation_path)
+    assert (
+        load_taste_source_decision_segmentation_run(segmentation_path).run.run_sha256
+        == segmentation.run_sha256
+    )
+    second_raw_segmentation = tmp_path / "raw-segmentation-b.json"
+    second_raw_payload = json.loads(raw_segmentation.read_text(encoding="utf-8"))
+    second_raw_payload["agent_run_nonce"] = "independent-agent-b"
+    second_raw_segmentation.write_text(json.dumps(second_raw_payload), encoding="utf-8")
+    second_segmentation = normalize_taste_source_decision_segmentation(
+        raw_segmentation_path=second_raw_segmentation,
+        campaign_paths=(campaign_root / "CAMPAIGN.json",),
+        campaign_aliases={"aries": campaign.campaign_id},
+        run_id="aries-decision-segmentation-v1-b",
+        screener_id="ai-segmenter-2",
+        invocation_id="ai-segmentation-invocation-2",
+        runtime_surface="test-agent",
+        model_identifier="unresolved-test-model",
+        model_revision=None,
+        exact_model_identity_bound=False,
+        rubric_path=segmentation_rubric,
+        sample_manifest_path=segmentation_sample,
+        runtime_identity_sha256=None,
+        completed_at=datetime(2026, 9, 14, 0, 8, tzinfo=UTC),
+        locator_root=tmp_path,
+    )
+    second_segmentation_path = tmp_path / "segmentation-b.json"
+    save_taste_source_decision_segmentation_run(second_segmentation, second_segmentation_path)
+    mismatched_rubric_segmentation = second_segmentation.model_copy(
+        update={
+            "rubric_locator": "different-rubric.yaml",
+            "rubric_file_sha256": "a" * 64,
+            "task_instruction_sha256": "a" * 64,
+        }
+    )
+    mismatched_rubric_path = tmp_path / "segmentation-different-rubric.json"
+    save_taste_source_decision_segmentation_run(
+        mismatched_rubric_segmentation, mismatched_rubric_path
+    )
+    with pytest.raises(ValueError, match="different rubrics"):
+        compile_taste_source_segmentation_agreement(
+            report_id="aries-invalid-segmentation-agreement-v1",
+            segmentation_paths=(segmentation_path, mismatched_rubric_path),
+            compiled_at=datetime(2026, 9, 14, 0, 9, tzinfo=UTC),
+            locator_root=tmp_path,
+        )
+    segmentation_agreement = compile_taste_source_segmentation_agreement(
+        report_id="aries-decision-segmentation-agreement-v1",
+        segmentation_paths=(segmentation_path, second_segmentation_path),
+        compiled_at=datetime(2026, 9, 14, 0, 9, tzinfo=UTC),
+        locator_root=tmp_path,
+    )
+    assert segmentation_agreement.all_items_exactly_agreed is True
+    assert segmentation_agreement.exact_span_route_item_count == 1
+    assert segmentation_agreement.adjudication_item_count == 0
+    assert segmentation_agreement.distinct_agent_artifacts_verified is True
+    assert segmentation_agreement.exact_span_f1_micros == 1_000_000
+    assert segmentation_agreement.overlap_span_f1_micros == 1_000_000
+    assert segmentation_agreement.scaled_execution_authorized is False
+    assert segmentation_agreement.formal_evidence_eligible is False
+    segmentation_agreement_path = tmp_path / "segmentation-agreement.json"
+    save_taste_source_segmentation_agreement_report(
+        segmentation_agreement, segmentation_agreement_path
+    )
+    assert (
+        load_taste_source_segmentation_agreement_report(
+            segmentation_agreement_path
+        ).report.report_sha256
+        == segmentation_agreement.report_sha256
+    )
+    raw_resolution = tmp_path / "raw-resolution.json"
+    raw_resolution.write_text(
+        json.dumps(
+            {
+                "input_boundary": {
+                    "segmenter_outputs_read": True,
+                    "private_item_map_read": False,
+                    "population_outcomes_read": False,
+                },
+                "rubric_read": True,
+                "rubric_file_sha256": hashlib.sha256(segmentation_rubric.read_bytes()).hexdigest(),
+                "source_agreement_report_sha256": (segmentation_agreement.report_sha256),
+                "items": [
+                    {
+                        "campaign_id": campaign.campaign_id,
+                        "review_item_id": item_id,
+                        "resolution_kind": "exact-dual-agent-agreement",
+                        "source_blocker_codes": [],
+                        "segments": [
+                            {
+                                "verbatim_decision_text": (scientific_item["review_comment"]),
+                                "primary_decision_family": "evidence",
+                                "atomic_decision_statement": (
+                                    "Strengthen the visible causal argument."
+                                ),
+                                "rationale": "Both segmenters exactly agree.",
+                                "uncertainty": "low",
+                            }
+                        ],
+                        "residual_decision_bearing_text_possible": False,
+                        "resolution_rationale": "Exact span and family agreement.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    resolution = normalize_taste_source_segmentation_resolution(
+        raw_resolution_path=raw_resolution,
+        agreement_path=segmentation_agreement_path,
+        run_id="aries-decision-segmentation-resolution-v1",
+        adjudicator_id="ai-adjudicator-1",
+        invocation_id="ai-adjudication-invocation-1",
+        runtime_surface="test-agent",
+        model_identifier="unresolved-test-model",
+        model_revision=None,
+        exact_model_identity_bound=False,
+        rubric_path=segmentation_rubric,
+        runtime_identity_sha256=None,
+        completed_at=datetime(2026, 9, 14, 0, 10, tzinfo=UTC),
+        locator_root=tmp_path,
+    )
+    assert resolution.internal_pilot_resolution_complete is True
+    assert resolution.internal_ai_screening_ready is False
+    assert resolution.exact_agreement_item_count == 1
+    assert resolution.ai_adjudicated_item_count == 0
+    assert resolution.benchmark_admission_authorized is False
+    resolution_path = tmp_path / "segmentation-resolution.json"
+    save_taste_source_segmentation_resolution_run(resolution, resolution_path)
+    assert (
+        load_taste_source_segmentation_resolution_run(resolution_path).run.run_sha256
+        == resolution.run_sha256
+    )
     quality_dimensions = {
         "evidential_rigor": "weak",
         "decision_traceability": "strong",

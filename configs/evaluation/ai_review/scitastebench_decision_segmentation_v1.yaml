@@ -1,0 +1,48 @@
+schema_version: "1.0"
+rubric_id: scitastebench-decision-segmentation-v1
+purpose: >-
+  Propose exact, atomic scientific-decision spans before source quality,
+  decision-family, or transferability assessment.
+input_boundary:
+  allowed:
+    - exact campaign policy
+    - assigned records from SCIENTIFIC_ITEMS.jsonl
+  forbidden:
+    - private item map
+    - publisher subject or source identity
+    - observed recommendation, author response, or later revision
+    - population outcome
+    - another segmenter's prompt, messages, or output
+unit_definition: >-
+  One segment must contain a single requested scientific decision change that a
+  researcher could act on and later evaluate. A paragraph or reviewer report
+  containing multiple requested changes must produce multiple segments.
+segmentation_rules:
+  - Copy an exact, uniquely occurring verbatim span from review_comment.
+  - Keep enough local context to make the requested change intelligible.
+  - Split spans when requested changes have different decision families.
+  - Split enumerated or sentence-level requests even when they share a family if they can be acted on independently.
+  - Exclude reviewer biography, boilerplate declarations, and checklist answers that contain no requested change.
+  - Do not paraphrase inside verbatim_decision_text.
+  - Set residual_decision_bearing_text_possible when any potentially actionable request remains unsegmented.
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+required_segment_fields:
+  - verbatim_decision_text
+  - primary_decision_family
+  - atomic_decision_statement
+  - rationale
+  - uncertainty
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

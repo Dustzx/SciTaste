@@ -1,0 +1,41 @@
+schema_version: "1.0"
+sample_id: scitastebench-segmentation-calibration-sample-v1
+project_id: scitaste-self-development
+selection_timing: retrospective-pilot-binding
+selection_rationale: >-
+  Bind the exact twelve records already used by the v1 and v2 source-screen
+  pilots. This prevents later artifact drift but is not a preregistration and
+  therefore cannot authorize scale-out or a confirmatory claim.
+sampling_algorithm: fixed-identical-to-ai-source-screen-v1-and-v2
+random_seed: null
+items:
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-3bf6675f2e3fa180158acfde
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-45c5e6369229321c5006d10e
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-5485351b0150fa99ecf7c99d
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-563359d57bb3bfa2e4979c46
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-629406aa316f0dc3e0a3bde6
+  - campaign_id: aries-taste-source-review-v1
+    review_item_id: item-a51c56560d220931c1669c11
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-21db7e43ae19d6a364d225e3
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-9614127ccf950556e6debb07
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-9d9579834294a86890b9dd52
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-bc95ee51afd34039a96ebf6c
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-c1bcfdb899716520786dc974
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    review_item_id: item-fab7b341139a97116dcc5406
+item_count: 12
+authority:
+  preregistered: false
+  confirmatory_calibration_authorized: false
+  scaled_execution_authorized: false
+  formal_evidence_eligible: false

@@ -1,0 +1,101 @@
+schema_version: "1.0"
+summary_id: scitastebench-atomic-decision-calibration-v1
+project_id: scitaste-self-development
+completed_on: 2026-09-15
+purpose: >-
+  Record the first outcome-blind, dual-agent exact-span segmentation and
+  third-agent adjudication over the fixed 12-source calibration set.
+input:
+  source_review_item_count: 12
+  aries_item_count: 6
+  f1000_item_count: 6
+  private_item_map_read: false
+  population_outcomes_read: false
+  author_response_or_later_revision_read: false
+independent_segmentation:
+  segmenter_a:
+    proposed_atomic_decision_count: 50
+    multiple_segment_item_count: 7
+    residual_risk_item_count: 1
+    raw_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/raw/segmenter-a-v2.json
+    raw_file_sha256: abfef5a39425915d354fa5ff091b62c1cf17797ab4cfa4d08b986be3667dc519
+    normalized_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/normalized-v3/segmenter-a.json
+    normalized_file_sha256: 92396b0ab6aaa5a286b23ecaa8e5f96561af6361feefb16d8630eb686e29818c
+    run_sha256: c18059cf62b4b16ea59ad7c6fc33e27405a36ad7651bf1e3908c1bf8856b2092
+  segmenter_b:
+    proposed_atomic_decision_count: 46
+    multiple_segment_item_count: 6
+    residual_risk_item_count: 0
+    raw_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/raw/segmenter-b-v2.json
+    raw_file_sha256: a1133d094482f5d51a45c19d1bee5df10e0592e46a45cb656b6a7393bebcaf1e
+    normalized_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/normalized-v3/segmenter-b.json
+    normalized_file_sha256: 62dff586448294d94fe28eb668d30e15bdbed3541ff006d348e842c20d4102c5
+    run_sha256: e9d8cb3b0560b895f31fcc25a686c8b4c3656a4fbae8b4ca6550df086861a0ee
+agreement:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/AGREEMENT-v5.json
+  file_sha256: 1d8e9084e8e75eebf9073d4fd11fc490de1e75522cc1c9fe53232baf7c6c2f10
+  report_sha256: 30d9dae10d6ae5725ce1fbeceb8d8b4b4b0a4f1358db413a671b55371dbd2d35
+  exact_span_agreement_count: 19
+  exact_span_family_agreement_count: 15
+  exact_span_f1_micros: 395833
+  overlap_iou_threshold_micros: 500000
+  overlap_span_agreement_count: 40
+  overlap_span_family_agreement_count: 34
+  overlap_span_f1_micros: 833333
+  overlap_matched_family_agreement_micros: 850000
+  exact_span_route_item_count: 2
+  adjudication_item_count: 10
+  blocker_item_counts:
+    decision-family-disagreement: 3
+    residual-decision-risk: 1
+    segment-count-disagreement: 3
+    span-boundary-disagreement: 10
+  interpretation: >-
+    These are conservative routing counts, not an inter-annotator reliability
+    estimate: semantically related spans with different boundaries are routed
+    to adjudication rather than credited as agreement.
+  distinct_agent_artifacts_verified: true
+  cross_output_blinding_attested: true
+  sample_selection_timing: retrospective-pilot-binding
+  scaled_execution_authorized: false
+  scaled_execution_blocker_codes:
+    - calibration-sample-not-preregistered
+    - outcome-blind-network-isolation-unverified
+    - segmenter-model-runtime-unbound
+ai_adjudication:
+  raw_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/raw/adjudicator-c-v5.json
+  raw_file_sha256: 3ee40ff48c97347c1a1ba9419d81931a1d9659e081f06180d419a562bb1d75fd
+  resolution_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/RESOLUTION-v5.json
+  resolution_file_sha256: ffebca948267990168460c213ed8cf2d916f54927de4efeb838e155fec29e114
+  resolution_run_sha256: a8a42390e60ff25560156a9d436b45a3c378d00c8bfa7150c7e0655da14b884f
+  final_atomic_decision_count: 53
+  exact_agreement_item_count: 2
+  ai_adjudicated_item_count: 10
+  residual_risk_item_count: 0
+  internal_pilot_resolution_complete: true
+  internal_ai_screening_ready: false
+  internal_screening_blocker_codes:
+    - adjudicator-model-runtime-unbound
+    - outcome-blind-network-isolation-unverified
+    - segmenter-model-runtime-unbound
+scientific_finding: >-
+  A source review is not a defensible default benchmark unit. Seven of twelve
+  items received multiple proposed segments from at least one independent agent, and
+  one F1000 report yielded more than twenty actionable decisions per pass.
+  SciTasteBench construction must therefore operate on atomic decision spans
+  before quality, transferability, abstraction, or outcome-credit assessment.
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false
+  human_preference_claim_supported: false
+next_gate: >-
+  Create a no-run prospective calibration plan on an unobserved sample. Freeze
+  the boundary-overlap metric and thresholds, bind exact model/runtime
+  identities, and enforce network isolation before deciding whether a
+  deterministic 273-source dual-segmentation plan may execute. Keep any final
+  human-effect claim conditional on real expert judgments rather than these
+  agent labels.

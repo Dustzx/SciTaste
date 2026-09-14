@@ -61,6 +61,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.25 — lifecycle evidence resource realignment | done | SciTasteBench is explicitly the H1--H3 decision instrument with 273 raw natural candidates but zero formal admissions; one exact materialized MLRC task is the H4 objective source, InnovatorBench is deferred on resource/upstream defects, and Agent Laboratory plus DeepScientist are the active accepted-method pair without authorizing execution |
 | Phase 9.26 — complete natural-source admission packets | done | the source-review compiler now admits both F1000 and ARIES population schemas into outcome-blind scientific and separate privacy packets; all 273 candidates are covered by 546 scientific and 273 privacy assessments, while reviewer contact, results, adjudication, abstraction, and benchmark admission remain closed |
 | Phase 9.27 — deadline-operational SciTasteBench review | in progress | all 273 candidates have a deterministic 8-scientific-slot/2-privacy-slot assignment; the real 12-case dual-agent screen is now typed, invocation-separated, and bound to exact reviewer-visible bytes, while v2 release governance permits internal AI screening but keeps both source populations non-public; exact model/runtime bindings and rubric calibration remain open before scaling |
+| Phase 9.28 — atomic scientific-decision reconstruction | done | two blind agents proposed 50 and 46 atomic spans from the fixed retrospective 12-source pilot; exact-span F1 is 0.396 while 0.5-IoU overlap F1 is 0.833 and matched-family agreement is 0.850; 10/12 items were explicitly routed to a third AI adjudicator, producing 53 source-bound decisions, but unbound model/runtime and network isolation keep scale and formal use blocked |
+| Phase 9.29 — prospective atomic-calibration planning | in progress | prepare a no-run unseen-sample protocol that freezes overlap metrics and thresholds, binds an exact reproducible model/runtime, and enforces network isolation; only a passing prospective calibration may authorize deterministic 273-source shards |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -126,6 +128,34 @@ internal-only modes. ARIES and F1000 remain controlled internal because their
 current campaign artifacts do not bind per-item public-release rights. This
 resolves internal screening policy without authorizing public release; formal
 human-effect claims still require genuine independent human judgments.
+
+Phase 9.28 turns an actual self-development failure into a method correction.
+Two fresh agents that did not inherit the first review context independently
+reassessed the same 12 blinded sources under an explicit family tie-break rule.
+Domain agreement reached 12/12 and family agreement 9/12, but only 3/12 exact
+five-dimensional profiles agreed. The remaining disagreements include F1000
+reports with multiple independently actionable requests spanning idea,
+experiment, evidence, writing, and visual decisions. SciTaste therefore no
+longer treats a whole review report as necessarily one Taste case. The new
+segmentation contract accepts only uniquely occurring verbatim spans, binds
+their exact character offsets and source hashes, requires one primary decision
+per span, and retains residual-coverage risk. It is proposal-only and remains
+outcome blind. Two independent segmenters then proposed 50 and 46 spans. Their
+conservative comparison found 19 exact-span matches, 15 exact span-and-family
+matches, and only two source items without a routing blocker. Ten source items
+were therefore sent to a third agent under an explicit adjudication rubric. The
+result contains 53 atomic decisions and no residual-risk flag, but remains AI
+pilot evidence rather than human evidence or benchmark admission. A protocol
+audit added distinct screener, invocation, raw-artifact, bound-rubric, and exact
+sample checks. Exact-span F1 is 0.396, while a post-hoc descriptive 0.5-IoU boundary metric
+reaches 0.833 and matched-span family agreement reaches 0.850, confirming that
+exact equality is a conservative routing gate rather than the primary
+reliability measure. Because the sample binding is retrospective and the agent
+model/runtime and network isolation are not verifiable, scale-out remains
+structurally unauthorized. Phase 9.29 must first freeze the metric, matching
+algorithm, thresholds, and failure routing on an unseen prospective calibration,
+then bind controlled transcript-bearing invocations. Only after that gate passes
+may the 273-source shards and atomic quality/transferability assessment execute.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a

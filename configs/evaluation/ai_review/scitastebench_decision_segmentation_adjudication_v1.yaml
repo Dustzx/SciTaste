@@ -1,0 +1,37 @@
+schema_version: "1.0"
+rubric_id: scitastebench-decision-segmentation-adjudication-v1
+purpose: >-
+  Resolve dual-agent exact-span or decision-family disagreements into one
+  outcome-blind internal AI segmentation proposal without conferring human or
+  benchmark authority.
+input_boundary:
+  allowed:
+    - exact campaign policy and assigned SCIENTIFIC_ITEMS records
+    - two normalized independent segmentation runs
+    - their typed exact-span agreement report
+  forbidden:
+    - private item map or privacy-review records
+    - publisher source identity beyond reviewer-visible scientific context
+    - observed recommendation, author response, later revision, or population outcome
+resolution_rules:
+  - Preserve exact dual-agent span-and-family agreements for unblocked items.
+  - For blocked items, return to review_comment and resolve every independent actionable decision.
+  - Prefer the shortest uniquely occurring exact span that remains intelligible.
+  - Never merge independently actionable changes solely because they share a sentence or family.
+  - Assign the family of the scientific decision changed, not the rhetorical form of the request.
+  - Record residual risk whenever potentially actionable text may remain unsegmented.
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

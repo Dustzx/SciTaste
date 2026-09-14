@@ -49,6 +49,24 @@ artifacts:
   - artifact_id: scitastebench-source-release-governance-v2
     path: configs/evaluation/human_review/scitastebench_source_release_governance_v2.yaml
     sha256: 5f56d50e5eb38854bade71db6e29f0656c4468e6b67fedd7b559b4718e4db8e0
+  - artifact_id: scitastebench-ai-scientific-rubric-v2
+    path: configs/evaluation/ai_review/scitastebench_scientific_screen_rubric_v2.yaml
+    sha256: 6b50c10960345c0999122972bbbca4383034cfca9bd2f51c29236a13555d1c19
+  - artifact_id: scitastebench-ai-source-screen-v2
+    path: docs/research/data/scitastebench_ai_assisted_source_screen_v2.yaml
+    sha256: 02b17e56cda57a5e27ee6705fd6503da3ab64b5365f165781626cae1e2eee060
+  - artifact_id: scitastebench-decision-segmentation-rubric-v1
+    path: configs/evaluation/ai_review/scitastebench_decision_segmentation_v1.yaml
+    sha256: f92e90ade1e40cab98c56706337613d269f473dd19031a5a3d91c40eb4b07c6d
+  - artifact_id: scitastebench-decision-segmentation-adjudication-v1
+    path: configs/evaluation/ai_review/scitastebench_decision_segmentation_adjudication_v1.yaml
+    sha256: b9fea8c1c9e52c3131892bf5ba833e20c9b314cf0dd6e74aa1b665000617cd23
+  - artifact_id: scitastebench-segmentation-calibration-sample-v1
+    path: configs/evaluation/ai_review/scitastebench_segmentation_calibration_sample_v1.yaml
+    sha256: be8ee5edf23c52ad9d5385e7deae7200c58bafda9a42d600b0bd460d3e7c76f9
+  - artifact_id: scitastebench-atomic-decision-calibration-v1
+    path: docs/research/data/scitastebench_atomic_decision_calibration_v1.yaml
+    sha256: 32ba6a822a74958f487118edb6e035a608d1341afcea6f97f7215b469ee8d261
   - artifact_id: objective-task-resource-qualification-v2
     path: docs/research/data/objective_task_resource_qualification_v2.yaml
     sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
@@ -125,6 +143,12 @@ tracks:
       - scitastebench-source-review-assignment-v1
       - scitastebench-ai-assisted-source-screen-v1
       - scitastebench-source-release-governance-v2
+      - scitastebench-ai-scientific-rubric-v2
+      - scitastebench-ai-source-screen-v2
+      - scitastebench-decision-segmentation-rubric-v1
+      - scitastebench-decision-segmentation-adjudication-v1
+      - scitastebench-segmentation-calibration-sample-v1
+      - scitastebench-atomic-decision-calibration-v1
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench
@@ -135,6 +159,7 @@ tracks:
       - primary-model-not-selected
       - power-analysis-not-complete
       - reviewers-not-secured
+      - compound-source-records-not-yet-segmented
 
   - track_id: native-objective-progress
     role: native_taste_causal
@@ -256,14 +281,18 @@ stages:
     external_actions: [recruit_humans]
     owner_approval_required: true
     blocker_codes:
+      - compound-source-records-not-yet-segmented
       - reviewer-roster-not-bound
       - quality-privacy-abstraction-and-attribution-review-not-complete
       - formal-120-case-sampling-frame-not-frozen
     completion_artifact_ids: []
     next_decision: >-
-      Approve and staff the existing outcome-blind ARIES and F1000 review
-      campaigns, then admit only independently reviewed source-group-disjoint
-      cases until the formal SciTasteBench floor is met.
+      First run two independent exact-span segmentation passes over the
+      outcome-blind ARIES and F1000 source pool and route boundary or family
+      disagreements to explicit adjudication. Then staff the attributable
+      source-review campaigns and admit only independently reviewed,
+      source-group-disjoint atomic cases until the formal SciTasteBench floor
+      is met.
   - stage_id: qualify-objective-and-external-assets
     kind: asset_acquisition
     state: blocked
