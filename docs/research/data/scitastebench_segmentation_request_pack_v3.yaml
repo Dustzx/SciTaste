@@ -1,0 +1,59 @@
+schema_version: "1.0"
+artifact_id: scitastebench-segmentation-request-pack-v3
+project_id: scitaste-self-development
+recorded_at: 2026-09-15T05:45:00+08:00
+status: prepared-no-provider-contact
+repository:
+  branch: main
+  builder_commit: f8343b2
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v3.yaml
+  file_sha256: 1fc48c4a17e394b3609608d482e9f0105e69b087eaab1b9d7e40e6729b8b8a13
+  protocol_id: scitastebench-segmentation-prospective-calibration-v3
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v3.yaml
+  file_sha256: 5296add46c25302473f4405fcd3ef46a4d1804bad7f8a3461ee8950d9d33c92d
+request_pack:
+  local_locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v3/request-pack-v5/REQUEST_PACK.json
+  file_sha256: 9ac3143bc3b51bd9de57b08fc54bfc04e5010dac4a5d31c5896f10c59f976777
+  pack_sha256: c1a844a0061072f3237c748cc151a1034c5dc01eee508bba360565d1379d6a5c
+  request_count: 8
+  unique_item_count: 24
+  segmenter_count: 2
+  shards_per_segmenter: 4
+span_reconstruction:
+  provider_field: reported_decision_text
+  source_of_record_field: original-review-comment-slice
+  algorithm: unicode-typography-normalized-unique-match-v1
+  unique_equal_length_match_required: true
+  fuzzy_matching_allowed: false
+  insertion_or_deletion_allowed: false
+sample_independence:
+  prior_item_count_excluded: 36
+  v2_failed_sample_reused: false
+  consumed_sample_registry_bound: true
+privacy_boundary:
+  structured_source_identity_withheld: true
+  explicit_outcome_fields_withheld: true
+  provider_tools_allowed: false
+  parametric_source_recognition_ruled_out: false
+  adjudicator_boundary_separately_frozen: true
+supersedes:
+  artifact: docs/research/data/scitastebench_segmentation_request_pack_v2.yaml
+  reason: >-
+    The v2 run failed closed after the provider changed two quote codepoints.
+    Its sample is consumed. Version 3 uses a disjoint sample and a precommitted
+    bounded locator reconstruction that restores final text only from source.
+authority:
+  provider_contact_performed: false
+  api_calls_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  formal_evidence_eligible: false
+  human_review_created: false
+next_gate: >-
+  Bind the current committed runner, official price/catalog snapshots, exact v5
+  pack, and one-time owner authorization; inspect hashes before the first
+  identity sentinel. Passing still requires independent AI semantic and
+  authority audits before any population-scale proposal.
