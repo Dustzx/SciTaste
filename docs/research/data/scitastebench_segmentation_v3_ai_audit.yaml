@@ -1,0 +1,101 @@
+schema_version: "1.0"
+audit_id: scitastebench-segmentation-v3-ai-audit
+project_id: scitaste-self-development
+audited_run_id: segmentation-prospective-calibration-20260915-v3
+audited_protocol_id: scitastebench-segmentation-prospective-calibration-v3
+review:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  review_count: 2
+  review_modes:
+    - execution-integrity
+    - span-failure-and-semantic-risk
+  provider_contact_performed_by_reviewers: false
+verdict:
+  status: failed-closed
+  calibration_completed: false
+  formal_evidence_eligible: false
+  scale_authorized: false
+  same_sample_recalibration_allowed: false
+execution:
+  provider_request_count: 5
+  completed_call_sequences: [1, 2, 3, 4]
+  failed_call_sequence: 5
+  retry_count: 0
+  call_roles:
+    - start-sentinel
+    - segmenter-a-shard-01
+    - segmenter-b-shard-01
+    - segmenter-a-shard-02
+    - segmenter-b-shard-02-failed
+  end_sentinel_completed: false
+  identity_window_closed: false
+  input_tokens_including_failed_call: 22121
+  output_tokens_including_failed_call: 17385
+  total_tokens_including_failed_call: 39506
+  cached_input_tokens: 0
+  estimated_cost_cny_including_failed_call: 0.0663748
+failure:
+  failed_request_sha256: 89c3119b68844881d69bcc9b5e4fa26cd2f5757195b19eb607084e0ab74d9a57
+  failed_response_sha256: 0982e63bb38e2be5809cd07ed4674f0ca1549350efb8d8bef60f97b41f8c977c
+  http_status: 200
+  proposed_span_count: 31
+  exact_span_count: 28
+  bounded_typography_reconstruction_count: 0
+  rejected_span_count: 3
+  deleted_source_codepoints:
+    U+0020_SPACE: 14
+    U+002A_ASTERISK: 2
+  finding: >-
+    The three rejected locator candidates require insertion or deletion and are
+    outside the preregistered equal-length quote/NBSP reconstruction map.
+    Accepting, repairing, or retrying them would violate the frozen protocol.
+sample:
+  sample_id: scitastebench-segmentation-prospective-calibration-v2
+  sample_sha256: 7cb4fc5a23a43d231b257c94137492096ed9ac81e23f58a5871e2e2697d58fed
+  item_count: 24
+  observed_unique_item_count: 12
+  consumption_status: whole-sample-consumed
+  rationale: >-
+    Once any fixed-sample task payload has been observed, retaining only the
+    untouched half would make reuse conditional on an outcome from the sample.
+integrity:
+  failed_marker_sha256: fbc40ca839de60ae8a013ca147060e94686d3a7711363fbc1065881ddabb3aa1
+  final_ledger_sha256: 0623ad6dc85f819b2cb279cc460182627292f67477f9bfeb2d886fb17e290023
+  authorization_file_sha256: e9978d6cc338419e49a42a76c160a63f75d73d53285852bda2d0c673b146a2ff
+  authorization_semantic_sha256: 32e6997bac84f85cb78fc4bfdc4a2043882ffdeae1365c7c8debcf670108bce8
+  raw_request_response_hashes_consistent: true
+  request_firewall_revalidated: true
+  credential_material_found: false
+  unrecorded_external_traffic_cryptographically_excluded: false
+metadata_defect:
+  present: true
+  protocol_git_commit: 7a5fca75a59ed8e16a94cf73dd1cb091c7ada0a8
+  protocol_git_commit_time: "2026-09-15T05:25:52+08:00"
+  freeze_git_commit: f8343b2
+  freeze_git_commit_time: "2026-09-15T05:26:46+08:00"
+  request_pack_summary_git_commit: 0f7ee5e
+  request_pack_summary_git_commit_time: "2026-09-15T05:27:32+08:00"
+  authorization_time: "2026-09-15T05:28:59+08:00"
+  first_provider_request_time: "2026-09-15T05:29:22+08:00"
+  embedded_protocol_created_at: "2026-09-15T05:30:00+08:00"
+  embedded_freeze_frozen_at: "2026-09-15T05:40:00+08:00"
+  embedded_request_pack_created_at: "2026-09-15T05:45:00+08:00"
+  disclosure: >-
+    The embedded YAML timestamps incorrectly postdate provider contact and
+    contradict the freeze attestation. Immutable Git history still establishes
+    that the implementation and protocol bytes preceded provider contact, but
+    v3 must not rely on the embedded timestamps as preregistration evidence.
+semantic_spot_check:
+  completeness_established: false
+  family_validity_established: false
+  observed_risks:
+    - omitted-actionable-decisions
+    - non-atomic-merged-decisions
+    - decision-family-boundary-errors
+next_gate: >-
+  Replace model-authored text locators with deterministic high-resolution
+  source-unit anchors. A new sample, protocol version, pack, authorization, and
+  independent AI integrity and semantic audits are required; do not widen the
+  v3 repair map or reuse this sample.

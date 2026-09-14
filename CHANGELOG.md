@@ -16,7 +16,17 @@ semantic versioning.
   separate receipts. Successful calls and failed calls are persisted
   independently, and failed ledgers retain the failed sequence, request,
   response, HTTP status, and artifact hashes. These are AI pipeline controls,
-  not human agreement or benchmark-validity evidence.
+  not human agreement or benchmark-validity evidence. The subsequent v3 run
+  also failed closed after five real calls: A1/B1 and A2 passed, while B2
+  removed source tokenization spaces and Markdown emphasis in three locator
+  candidates, changes intentionally outside the typography map. Both samples
+  are now recorded in a new immutable consumed-sample registry version. This
+  rules out widening textual repair and motivates an evidence-unit selection
+  contract in which the model never has to reproduce source bytes. A separate
+  two-agent AI audit also discloses that v3's embedded protocol/freeze/pack
+  timestamps incorrectly postdate provider contact; Git history preserves the
+  actual pre-contact byte order, but v3 cannot use those YAML timestamps as
+  preregistration evidence.
 - Added a deterministic prospective atomic-decision calibration planner. It
   freezes a source-balanced 24-item ARIES/F1000 sample before model execution,
   excludes every record used by the retrospective pilot, and binds the exact
