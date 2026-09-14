@@ -25,6 +25,10 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from scitaste.evaluation.aries_population import (
+    AriesTasteCandidate,
+    AriesTastePopulationReport,
+)
 from scitaste.evaluation.f1000_domain_population import (
     F1000TasteCandidate,
     F1000TastePopulationReport,
@@ -67,6 +71,7 @@ class TasteSourceReviewRole(StrEnum):
 
 
 class TasteSourceDomainLabel(StrEnum):
+    COMPUTING = "computing"
     ECOLOGY = "ecology"
     PUBLIC_HEALTH = "public-health"
     OTHER = "other"
@@ -126,9 +131,15 @@ class TasteSourceReviewPolicy(BaseModel):
             raise ValueError("Taste source review must retain all six decision families")
         if len(self.required_decision_families) != len(set(self.required_decision_families)):
             raise ValueError("Taste source review decision families must be unique")
-        expected_domains = set(TasteSourceDomainLabel)
-        if set(self.allowed_domain_labels) != expected_domains:
-            raise ValueError("Taste source review must retain both target and missingness labels")
+        labels = set(self.allowed_domain_labels)
+        missingness = {
+            TasteSourceDomainLabel.OTHER,
+            TasteSourceDomainLabel.CANNOT_ASSESS,
+        }
+        if not missingness.issubset(labels) or not labels.difference(missingness):
+            raise ValueError(
+                "Taste source review must retain target and missingness labels"
+            )
         if len(self.allowed_domain_labels) != len(set(self.allowed_domain_labels)):
             raise ValueError("Taste source review domain labels must be unique")
         if set(self.decision_family_instructions) != set(TasteTask):
@@ -197,7 +208,7 @@ class TasteSourcePrivateMapItem(BaseModel):
     review_item_id: str = Field(pattern=_ID)
     candidate_id: str = Field(pattern=_ID)
     source_group_id: str = Field(pattern=_ID)
-    publisher_subject: Literal["ecology", "public-health"]
+    publisher_subject: str = Field(pattern=_ID)
     observed_recommendation: str = Field(pattern=_ID)
 
 
@@ -220,7 +231,7 @@ class TasteSourceReviewCampaign(BaseModel):
     prepared_at: datetime
     candidate_count: int = Field(gt=0, le=100_000)
     source_group_count: int = Field(gt=0, le=100_000)
-    publisher_subject_group_counts: dict[str, int] = Field(min_length=2, max_length=2)
+    publisher_subject_group_counts: dict[str, int] = Field(min_length=1, max_length=100)
     scientific_items: TasteSourceReviewFileBinding
     privacy_items: TasteSourceReviewFileBinding
     private_item_map: TasteSourceReviewFileBinding
@@ -652,7 +663,7 @@ def prepare_taste_source_review_campaign(
     """Prepare exact blind review projections without model or human action."""
 
     report_path = _bounded_file(Path(population_report_path), maximum_bytes=_MAX_CONTROL_BYTES)
-    report = F1000TastePopulationReport.model_validate_json(report_path.read_bytes())
+    report = _load_supported_population_report(report_path)
     candidate_path = _bounded_file(
         report_path.parent / report.candidate_file,
         maximum_bytes=_MAX_ITEMS_BYTES,
@@ -664,30 +675,40 @@ def prepare_taste_source_review_campaign(
     if policy.project_id != report.project_id or policy.population_id != report.population_id:
         raise ValueError("Taste source review policy targets another population")
     candidates = _load_candidates(candidate_path, report)
+    source_group_count, source_group_counts = _population_group_counts(report)
 
     scientific_items: list[ScientificTasteSourceReviewItem] = []
     privacy_items: list[PrivacyTasteSourceReviewItem] = []
     item_map: list[TasteSourcePrivateMapItem] = []
     for candidate in candidates:
+        (
+            article_title,
+            reviewed_abstract,
+            revised_abstract,
+            review_comment,
+            author_response,
+            source_stratum,
+            observed_outcome,
+        ) = _candidate_review_projection(candidate)
         review_item_id = "item-" + _canonical_sha256(
             [report.report_sha256, candidate.candidate_id]
         )[:24]
         scientific_items.append(
             ScientificTasteSourceReviewItem(
                 review_item_id=review_item_id,
-                article_title=candidate.article_title,
-                reviewed_abstract=candidate.reviewed_abstract,
-                review_comment=candidate.review_comment,
+                article_title=article_title,
+                reviewed_abstract=reviewed_abstract,
+                review_comment=review_comment,
             )
         )
         privacy_items.append(
             PrivacyTasteSourceReviewItem(
                 review_item_id=review_item_id,
-                article_title=candidate.article_title,
-                reviewed_abstract=candidate.reviewed_abstract,
-                revised_abstract=candidate.revised_abstract,
-                review_comment=candidate.review_comment,
-                author_response=candidate.author_response,
+                article_title=article_title,
+                reviewed_abstract=reviewed_abstract,
+                revised_abstract=revised_abstract,
+                review_comment=review_comment,
+                author_response=author_response,
             )
         )
         item_map.append(
@@ -695,8 +716,8 @@ def prepare_taste_source_review_campaign(
                 review_item_id=review_item_id,
                 candidate_id=candidate.candidate_id,
                 source_group_id=candidate.source_group_id,
-                publisher_subject=candidate.source_domain,
-                observed_recommendation=candidate.recommendation,
+                publisher_subject=source_stratum,
+                observed_recommendation=observed_outcome,
             )
         )
 
@@ -771,8 +792,8 @@ def prepare_taste_source_review_campaign(
             reviewer_interface_sha256=hashlib.sha256(_interface_bytes()).hexdigest(),
             prepared_at=prepared_at or datetime.now(UTC),
             candidate_count=len(candidates),
-            source_group_count=report.candidate_source_group_count,
-            publisher_subject_group_counts=report.domain_source_group_counts,
+            source_group_count=source_group_count,
+            publisher_subject_group_counts=source_group_counts,
             scientific_items=_binding(staging, scientific_path),
             privacy_items=_binding(staging, privacy_path),
             private_item_map=_binding(staging, map_path),
@@ -1229,13 +1250,68 @@ def publish_taste_source_review_campaign_run(
 
 def _load_candidates(
     path: Path,
-    report: F1000TastePopulationReport,
-) -> tuple[F1000TasteCandidate, ...]:
-    values = _load_jsonl(path, F1000TasteCandidate)
+    report: F1000TastePopulationReport | AriesTastePopulationReport,
+) -> tuple[F1000TasteCandidate | AriesTasteCandidate, ...]:
+    item_type = (
+        AriesTasteCandidate
+        if isinstance(report, AriesTastePopulationReport)
+        else F1000TasteCandidate
+    )
+    values = _load_jsonl(path, item_type)
     ids = [item.candidate_id for item in values]
     if len(values) != report.candidate_count or len(ids) != len(set(ids)):
         raise ValueError("Taste source review candidates are incomplete or duplicated")
     return tuple(sorted(values, key=lambda item: item.candidate_id))
+
+
+def _load_supported_population_report(
+    path: Path,
+) -> F1000TastePopulationReport | AriesTastePopulationReport:
+    payload = json.loads(path.read_bytes())
+    if not isinstance(payload, dict):
+        raise ValueError("Taste source population report must contain a mapping")
+    if "split_source_group_counts" in payload:
+        return AriesTastePopulationReport.model_validate(payload)
+    if "domain_source_group_counts" in payload:
+        return F1000TastePopulationReport.model_validate(payload)
+    raise ValueError("Taste source population is not a supported natural source")
+
+
+def _population_group_counts(
+    report: F1000TastePopulationReport | AriesTastePopulationReport,
+) -> tuple[int, dict[str, int]]:
+    if isinstance(report, AriesTastePopulationReport):
+        return report.source_group_count, {
+            TasteSourceDomainLabel.COMPUTING.value: report.source_group_count
+        }
+    return report.candidate_source_group_count, dict(report.domain_source_group_counts)
+
+
+def _candidate_review_projection(
+    candidate: F1000TasteCandidate | AriesTasteCandidate,
+) -> tuple[str, str, str, str, str | None, str, str]:
+    if isinstance(candidate, F1000TasteCandidate):
+        return (
+            candidate.article_title,
+            candidate.reviewed_abstract,
+            candidate.revised_abstract,
+            candidate.review_comment,
+            candidate.author_response,
+            candidate.source_domain,
+            candidate.recommendation,
+        )
+    revised_context = "\n\n".join(
+        edit.target_text for edit in candidate.observed_edits if edit.target_text
+    )
+    return (
+        "De-identified computing manuscript",
+        candidate.paper_context,
+        revised_context or candidate.paper_context,
+        candidate.review_comment,
+        None,
+        TasteSourceDomainLabel.COMPUTING.value,
+        candidate.observed_response,
+    )
 
 
 def _campaign_item_ids(root: Path, campaign: TasteSourceReviewCampaign) -> set[str]:

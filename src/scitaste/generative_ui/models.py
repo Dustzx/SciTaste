@@ -1195,7 +1195,7 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
     campaign_sha256: Sha256
     candidate_count: int = Field(gt=0)
     source_group_count: int = Field(gt=0)
-    publisher_subject_group_counts: dict[SafeIdentifier, int] = Field(min_length=2)
+    publisher_subject_group_counts: dict[SafeIdentifier, int] = Field(min_length=1)
     scientific_reviewer_count: Literal[2]
     privacy_reviewer_count: Literal[1]
     scientific_assessment_count: int = Field(gt=0)

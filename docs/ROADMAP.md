@@ -59,6 +59,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; independent attribution review, source-group/split-aware estimation, scientific-outcome filtering, uncertainty abstention, and controller traces are implemented; a project-aware reconstruction path now freezes prospective sampling and verifies exact decisions plus pre-decision states without manufacturing outcome labels, while retrospective self logs remain audit-only; next collect prospective longitudinal episodes and run held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
 | Phase 9.24 — venue deadline and submission-pressure control | done | one content-bound schedule separates official venue guidance from calendar indexes, computes the next hard milestone and urgency from an explicit observation time, exposes a noncritical-work deferral signal, and advances only after owner-attested project evidence; the ICLR 2027 schedule is assigned to the self-development project and available to generated-interface consumption |
 | Phase 9.25 — lifecycle evidence resource realignment | done | SciTasteBench is explicitly the H1--H3 decision instrument with 273 raw natural candidates but zero formal admissions; one exact materialized MLRC task is the H4 objective source, InnovatorBench is deferred on resource/upstream defects, and Agent Laboratory plus DeepScientist are the active accepted-method pair without authorizing execution |
+| Phase 9.26 — complete natural-source admission packets | done | the source-review compiler now admits both F1000 and ARIES population schemas into outcome-blind scientific and separate privacy packets; all 273 candidates are covered by 546 scientific and 273 privacy assessments, while reviewer contact, results, adjudication, abstraction, and benchmark admission remain closed |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -98,6 +99,14 @@ best-native system comparison. ARIES and F1000 currently provide 273 raw
 SciTasteBench candidates from 81 source groups, but none is admitted until the
 independent human gates finish. The materialized MLRC Perception task proves a
 real data boundary, not environment, model, scorer, or experiment readiness.
+
+Phase 9.26 closes the ARIES-specific software gap without relabelling natural
+revisions as gold. Scientific reviewers see only de-identified manuscript
+context and review comments; revision/alignment outcomes remain hidden, while a
+separate privacy view receives the de-identified free text needed for release
+screening. The two source campaigns together define 819 item-level assessments.
+That is exact review work, not evidence that the cases passed it; staffing and
+any required sharding remain an owner decision before external contact.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a

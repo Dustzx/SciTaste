@@ -90,7 +90,10 @@ owner scope review, while external actions remain closed. SciTasteBench has a
 real 273-candidate construction pool across 81 source groups and three observed
 domain or publisher-subject strata, but zero formally admitted cases: independent
 domain, quality, privacy, grounded-abstraction, and attribution review is still
-open. One MLRC-Bench task has exact development and scorer-held-out bytes, but its
+open. Outcome-blind ARIES and F1000 review packages now cover the complete pool
+and expose an exact workload of 546 scientific plus 273 privacy assessments;
+no reviewer contact or result exists. One MLRC-Bench task has exact development
+and scorer-held-out bytes, but its
 environment/scorer and a source-group-disjoint task population are not qualified.
 InnovatorBench is deferred because its official archive exceeds the current
 resource envelope and one upstream task identity is defective. Agent Laboratory

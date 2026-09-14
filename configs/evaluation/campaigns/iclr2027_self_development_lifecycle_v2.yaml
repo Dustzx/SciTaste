@@ -28,6 +28,12 @@ artifacts:
   - artifact_id: f1000-natural-candidate-population-v1
     path: docs/research/data/f1000_multidomain_taste_pilot_result_v1.yaml
     sha256: a7578e65243324d5d0b6ace69ec715a8be73598e61583e7342839bb8e136e06e
+  - artifact_id: aries-independent-source-review-v1
+    path: docs/research/data/aries_taste_source_review_campaign_v1.yaml
+    sha256: d1ab15aedbc6c0a1ef03d9c9264e471f3501dd1f61e1b83a96ba6e55bfff72e3
+  - artifact_id: aries-review-policy-v1
+    path: configs/evaluation/human_review/aries_taste_source_review_v1.yaml
+    sha256: 6bf11cfcb4449d2d7f2b0310d3083e6b066c9afabf8f12de9bfd794571732195
   - artifact_id: f1000-independent-source-review-v1
     path: docs/research/data/f1000_multidomain_taste_source_review_campaign_v1.yaml
     sha256: 7cf0059b0490f9907a5f68cf9f997601b0cea4737109f0e47e6c7346f57dfe1e
@@ -103,6 +109,8 @@ tracks:
       - lifecycle-evidence-review-v2
       - aries-natural-candidate-population-v1
       - f1000-natural-candidate-population-v1
+      - aries-independent-source-review-v1
+      - aries-review-policy-v1
       - f1000-independent-source-review-v1
       - f1000-review-policy-v1
     blocker_codes:
@@ -241,9 +249,9 @@ stages:
       - formal-120-case-sampling-frame-not-frozen
     completion_artifact_ids: []
     next_decision: >-
-      Approve and staff the existing outcome-blind F1000 review campaign, create
-      an equivalent independent ARIES admission packet, and admit only reviewed
-      source-group-disjoint cases until the formal SciTasteBench floor is met.
+      Approve and staff the existing outcome-blind ARIES and F1000 review
+      campaigns, then admit only independently reviewed source-group-disjoint
+      cases until the formal SciTasteBench floor is met.
   - stage_id: qualify-objective-and-external-assets
     kind: asset_acquisition
     state: blocked

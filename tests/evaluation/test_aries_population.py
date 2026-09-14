@@ -7,14 +7,21 @@ import tarfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
+
 from scitaste.evaluation import (
     AcquisitionEvidenceBinding,
     AcquisitionItem,
     DatasetAcquisitionRequest,
+    TasteSourceReviewRole,
     approve_dataset_acquisition_request,
+    load_taste_source_review_policy,
     materialize_aries_taste_population,
     materialize_dataset_acquisition,
+    prepare_taste_source_review_campaign,
+    prepare_taste_source_review_session,
     publish_aries_taste_population_run,
+    publish_taste_source_review_campaign_run,
     save_dataset_acquisition_request,
 )
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
@@ -236,3 +243,65 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
         item.quick_intent_id for item in catalog.intents
     }
     assert snapshot.revision == 2
+
+    policy = load_taste_source_review_policy(
+        "configs/evaluation/human_review/aries_taste_source_review_v1.yaml"
+    ).model_copy(update={"project_id": "aries-project", "minimum_eligible_groups_per_domain": 1})
+    policy_path = tmp_path / "aries-review-policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            policy.model_dump(mode="json", exclude={"policy_sha256"}),
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    campaign_root = transaction / "derived/taste-source-review-v1"
+    campaign = prepare_taste_source_review_campaign(
+        population_report_path=derived / "REPORT.json",
+        policy_path=policy_path,
+        output_dir=campaign_root,
+        prepared_at=datetime(2026, 9, 14, 0, 3, tzinfo=UTC),
+    )
+    assert campaign.candidate_count == 1
+    assert campaign.source_group_count == 1
+    assert campaign.publisher_subject_group_counts == {"computing": 1}
+    scientific_item = json.loads(
+        (campaign_root / "SCIENTIFIC_ITEMS.jsonl").read_text(encoding="utf-8")
+    )
+    assert "observed_edits" not in scientific_item
+    assert "alignment_status" not in scientific_item
+    private_item = json.loads(
+        (campaign_root / "PRIVATE_ITEM_MAP.json").read_text(encoding="utf-8")
+    )["items"][0]
+    assert private_item["publisher_subject"] == "computing"
+    session_root = campaign_root / "scientific-session"
+    session = prepare_taste_source_review_session(
+        campaign_path=campaign_root / "CAMPAIGN.json",
+        role=TasteSourceReviewRole.SCIENTIFIC,
+        reviewer_identity_sha256="b" * 64,
+        output_dir=session_root,
+        prepared_at=datetime(2026, 9, 14, 0, 4, tzinfo=UTC),
+    )
+    assert len(session.items) == 1
+    assert '<option value="computing">Computing</option>' in (
+        session_root / "review.html"
+    ).read_text(encoding="utf-8")
+    snapshot, _ = publish_taste_source_review_campaign_run(
+        runtime,
+        project_id="aries-project",
+        run_id="aries-source-review-v1",
+        source_campaign_path=campaign_root / "CAMPAIGN.json",
+        expected_revision=snapshot.revision,
+    )
+    surface = WorkspaceSurfaceFactory(runtime).build_surface(
+        ProjectProgressQuery(project_id="aries-project")
+    )
+    board = next(
+        component
+        for component in surface.components
+        if component.component == "ProjectProgressBoard"
+    )
+    review = board.data["taste_source_review_campaigns"][0]
+    assert review["publisher_subject_group_counts"] == {"computing": 1}
+    assert review["owner_approval_required"] is True
+    assert snapshot.revision == 4

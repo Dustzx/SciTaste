@@ -18,6 +18,11 @@ publisher-subject strata, but those strata are not yet independently confirmed.
 The candidates are not benchmark items or gold outcomes. The formally admitted
 population is currently zero because independent domain, quality, privacy,
 decision-family, grounded-abstraction, and attribution review has not completed.
+Both source populations now have executable, outcome-blind review packages.
+Completing them requires 546 scientific assessments and 273 separate privacy
+assessments before adjudication or abstraction; no reviewer has been contacted
+and no result has been collected. The workload must be sharded before activation
+if the owner cannot allocate two scientific reviewers across all 273 items.
 
 Version 3 already specifies the title-critical H1/H2 conditions: same-source raw
 evidence, same-source abstracted Taste, and source-disjoint mismatched Taste under

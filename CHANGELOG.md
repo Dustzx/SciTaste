@@ -5,6 +5,15 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Extended the natural Scientific Taste source-review compiler from an
+  F1000-only implementation to both registered source schemas. ARIES now has an
+  executable outcome-blind scientific and separate privacy campaign over all
+  196 candidates and 42 source groups; observed revisions and alignment labels
+  remain hidden from scientific reviewers and cannot become quality gold. With
+  F1000, the complete SciTasteBench construction pool now exposes 546 scientific
+  and 273 privacy assessments before adjudication or abstraction. Preparation
+  was projected to the self-development project without contacting reviewers or
+  authorizing model, API, GPU, human-study, or experiment work.
 - Realigned the ICLR lifecycle evidence program around three non-substitutable
   roles. SciTasteBench is the H1--H3 Scientific Taste instrument and now records
   its complete raw ARIES/F1000 pool of 273 candidates from 81 source groups while
