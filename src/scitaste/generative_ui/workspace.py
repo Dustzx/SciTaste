@@ -60,6 +60,10 @@ from scitaste.evaluation.executable_candidate import (
     load_executable_candidate_report,
 )
 from scitaste.evaluation.f1000_domain_population import F1000TastePopulationReport
+from scitaste.evaluation.natural_taste_review import (
+    TasteSourceReviewCampaign,
+    load_taste_source_review_campaign,
+)
 from scitaste.evaluation.program_control import compile_effective_experiment_program
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.evaluation.reference_selection_comparison import (
@@ -879,6 +883,98 @@ class WorkspaceSurfaceFactory:
                     "model_calls_performed": expansion.model_calls_performed,
                     "gpu_work_performed": expansion.gpu_work_performed,
                     "experiment_performed": expansion.experiment_performed,
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        run_ref.evidence_id,
+                        artifact_ref.evidence_id,
+                    ],
+                }
+            )
+
+        taste_source_review_rows: list[dict[str, object]] = []
+        taste_source_review_ids: set[str] = set()
+        for run in snapshot.manifest.runs:
+            inspected_campaign = _taste_source_review_campaign_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_campaign is None:
+                continue
+            campaign, campaign_file_sha256 = inspected_campaign
+            if campaign.campaign_id in taste_source_review_ids:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple natural Taste review campaigns"
+                )
+            taste_source_review_ids.add(campaign.campaign_id)
+            run_ref = run_refs[run.run_id]
+            assert run.artifact is not None
+            artifact_ref = _evidence_for_locator(
+                binding,
+                EvidenceKind.ARTIFACT,
+                run.artifact,
+            )
+            evidence_ref_ids.append(artifact_ref.evidence_id)
+            taste_source_review_rows.append(
+                {
+                    "run_ref_id": run_ref.evidence_id,
+                    "artifact_ref_id": artifact_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "campaign_id": campaign.campaign_id,
+                    "population_id": campaign.population_id,
+                    "campaign_file_sha256": campaign_file_sha256,
+                    "campaign_sha256": campaign.campaign_sha256,
+                    "candidate_count": campaign.candidate_count,
+                    "source_group_count": campaign.source_group_count,
+                    "publisher_subject_group_counts": {
+                        key.replace("-", "_"): value
+                        for key, value in campaign.publisher_subject_group_counts.items()
+                    },
+                    "scientific_reviewer_count": (
+                        campaign.required_scientific_reviewer_count
+                    ),
+                    "privacy_reviewer_count": campaign.required_privacy_reviewer_count,
+                    "scientific_assessment_count": (
+                        campaign.required_scientific_assessment_count
+                    ),
+                    "privacy_assessment_count": (
+                        campaign.required_privacy_assessment_count
+                    ),
+                    "reviewer_sessions_prepared": campaign.reviewer_sessions_prepared,
+                    "reviewer_submissions_collected": (
+                        campaign.reviewer_submissions_collected
+                    ),
+                    "recruitment_status": campaign.recruitment_status,
+                    "preparation_verification_route": (
+                        campaign.preparation_verification.route.value
+                    ),
+                    "recruitment_verification_route": (
+                        campaign.recruitment_verification.route.value
+                    ),
+                    "preparation_reason_codes": (
+                        list(campaign.preparation_verification.reason_codes)
+                    ),
+                    "recruitment_reason_codes": (
+                        list(campaign.recruitment_verification.reason_codes)
+                    ),
+                    "source_outcomes_hidden_from_scientific_review": (
+                        campaign.source_outcomes_hidden_from_scientific_review
+                    ),
+                    "ready_for_taste_abstraction_review": (
+                        campaign.ready_for_taste_abstraction_review
+                    ),
+                    "ready_for_benchmark_admission": (
+                        campaign.ready_for_benchmark_admission
+                    ),
+                    "standalone_preflight_performed": (
+                        campaign.standalone_preflight_performed
+                    ),
+                    "model_calls_performed": campaign.model_calls_performed,
+                    "api_spend_performed": campaign.api_spend_performed,
+                    "gpu_work_performed": campaign.gpu_work_performed,
+                    "human_recruitment_performed": (
+                        campaign.human_recruitment_performed
+                    ),
+                    "experiment_performed": campaign.experiment_performed,
                     "support_ref_ids": [
                         project_ref.evidence_id,
                         run_ref.evidence_id,
@@ -2061,7 +2157,7 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
-        if taste_population_rows or taste_domain_expansion_rows:
+        if taste_population_rows or taste_domain_expansion_rows or taste_source_review_rows:
             next_step_candidates.append(
                 {
                     "candidate_id": "review-taste-candidate-population",
@@ -2087,6 +2183,14 @@ class WorkspaceSurfaceFactory:
                                     item["artifact_ref_id"]
                                     for item in taste_domain_expansion_rows
                                 ),
+                                *(
+                                    item["run_ref_id"]
+                                    for item in taste_source_review_rows
+                                ),
+                                *(
+                                    item["artifact_ref_id"]
+                                    for item in taste_source_review_rows
+                                ),
                             ]
                         )
                     ),
@@ -2095,6 +2199,10 @@ class WorkspaceSurfaceFactory:
                         *(
                             item["population_id"]
                             for item in taste_domain_expansion_rows
+                        ),
+                        *(
+                            item["campaign_id"]
+                            for item in taste_source_review_rows
                         ),
                     ],
                 }
@@ -2440,6 +2548,7 @@ class WorkspaceSurfaceFactory:
                     "reference_selection_comparisons": len(reference_selection_rows),
                     "taste_candidate_populations": len(taste_population_rows),
                     "taste_domain_expansions": len(taste_domain_expansion_rows),
+                    "taste_source_review_campaigns": len(taste_source_review_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -2497,6 +2606,7 @@ class WorkspaceSurfaceFactory:
                 "reference_selection_comparisons": reference_selection_rows,
                 "taste_candidate_populations": taste_population_rows,
                 "taste_domain_expansions": taste_domain_expansion_rows,
+                "taste_source_review_campaigns": taste_source_review_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -3280,6 +3390,50 @@ def _f1000_taste_population_for_run(
     ):
         raise ProjectSurfaceChangedError("registered F1000 Taste population identity differs")
     return report, hashlib.sha256(resolved.read_bytes()).hexdigest()
+
+
+def _taste_source_review_campaign_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[TasteSourceReviewCampaign, str] | None:
+    """Load only a registered self-contained natural-source review campaign."""
+
+    expected = f"runs/{run.run_id}/taste_source_review_campaign/CAMPAIGN.json"
+    if (
+        (run.model_extra or {}).get("generative_ui_projection")
+        != "natural-taste-source-review-campaign-v1"
+    ):
+        return None
+    if run.stage_path != "taste_source_review_campaign" or run.artifact != expected:
+        raise ProjectSurfaceChangedError(
+            "registered natural Taste review campaign path is invalid"
+        )
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError(
+            "registered natural Taste review campaign is unavailable"
+        )
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ProjectSurfaceChangedError(
+            "registered natural Taste review campaign escaped its project"
+        )
+    try:
+        campaign = load_taste_source_review_campaign(resolved)
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError(
+            "registered natural Taste review campaign is invalid"
+        ) from exc
+    if (
+        campaign.project_id != root.name
+        or campaign.campaign_id != (run.model_extra or {}).get("campaign_id")
+        or campaign.campaign_sha256 != (run.model_extra or {}).get("campaign_sha256")
+    ):
+        raise ProjectSurfaceChangedError(
+            "registered natural Taste review campaign identity differs"
+        )
+    return campaign, hashlib.sha256(resolved.read_bytes()).hexdigest()
 
 
 def _acquisition_report_for_run(

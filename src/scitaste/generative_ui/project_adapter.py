@@ -126,6 +126,19 @@ class ProjectSnapshotAdapter:
                         label="Multidisciplinary review-response Taste source pilot",
                     )
                 )
+            if projection == "natural-taste-source-review-campaign-v1":
+                if run.artifact is None:
+                    raise ValueError("natural Taste review run must declare its artifact")
+                refs.append(
+                    self._ref(
+                        snapshot=snapshot,
+                        project_root=project_root,
+                        evidence_id=_evidence_id("artifact", run.artifact),
+                        kind=EvidenceKind.ARTIFACT,
+                        locator=run.artifact,
+                        label="Independent natural Scientific Taste source review campaign",
+                    )
+                )
 
         if snapshot.current_stage_locator is not None:
             locator = _project_relative(snapshot, snapshot.current_stage_locator)

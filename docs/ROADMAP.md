@@ -1496,6 +1496,23 @@ citation/resource screen and exact adapters/licenses remain open.
   five-node flow that made domain/privacy review, blind quality review,
   decision-family stratification, Taste abstraction, and compute choices
   explorable without changing Core state.
+- Done: compiled the 77 F1000 candidates into a self-contained, reviewer-usable
+  campaign with two outcome-blind scientific projections, one separate privacy
+  projection, all six decision families, five Reference Quality dimensions,
+  immutable policy/interface/item bindings, and a locked-result compiler. The
+  resulting workload is 154 required scientific and 77 required privacy
+  assessments; zero sessions and zero submissions have occurred.
+- Done: projected that campaign into the project home and exercised three real
+  GLM-5.3-Flash turns starting from a free question. Feedback edited the exact
+  predecessor into a six-node decision canvas, corrected required-versus-
+  completed semantics, and removed unsupported resource edges. Fixed labels
+  remain optional cache entries; free generation and feedback editing remain the
+  primary interaction.
+- Tool Intelligence routes local campaign preparation directly because checking
+  costs more than its avoidable loss, while reviewer recruitment crosses an
+  irreversible owner boundary. The next action is therefore not another
+  technical preflight: it is the user's ethics, compensation, consent,
+  conflict-screening, and three-reviewer decision before any human contact.
 - Next: independently confirm the two publisher subjects as scientific-domain
   labels, complete free-text privacy review, define the six decision-family
   strata, collect two conflict-cleared quality judgments, and review grounded

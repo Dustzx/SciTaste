@@ -798,7 +798,16 @@ class StructuredWorkspacePlanner:
                     "and its safe surface_plan_entries in response to the current prompt. The "
                     "trusted receiver binds edited_from_turn_id to that prior turn. "
                     "Authored text is advisory and cannot "
-                    "claim execution, approval, new evidence, or completed work. Return one JSON "
+                    "claim execution, approval, new evidence, or completed work. Fields named "
+                    "required_*, planned_*, or maximum_* describe obligations or ceilings, never "
+                    "observed completion. In taste_source_review_campaigns, "
+                    "scientific_assessment_count and privacy_assessment_count are likewise "
+                    "required workload; only reviewer_sessions_prepared and "
+                    "reviewer_submissions_collected describe observed completion. Do not infer "
+                    "a dependency, block, use, or resource "
+                    "requirement merely because two entities are both visible; create a canvas "
+                    "edge only when the supplied facts or current user prompt state that exact "
+                    "relation. Return one JSON "
                     "object matching output_schema and no tool calls."
                 ),
             )
@@ -1566,6 +1575,7 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                 "acquisition_receipts",
                 "taste_candidate_populations",
                 "taste_domain_expansions",
+                "taste_source_review_campaigns",
             )
             if key in counts
         }
@@ -1627,6 +1637,35 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                 if key in row
             }
             for row in expansions
+            if isinstance(row, dict)
+        ]
+    review_campaigns = value.get("taste_source_review_campaigns")
+    if isinstance(review_campaigns, list):
+        facts["taste_source_review_campaigns"] = [
+            {
+                key: row[key]
+                for key in (
+                    "campaign_id",
+                    "population_id",
+                    "candidate_count",
+                    "source_group_count",
+                    "publisher_subject_group_counts",
+                    "scientific_reviewer_count",
+                    "privacy_reviewer_count",
+                    "scientific_assessment_count",
+                    "privacy_assessment_count",
+                    "reviewer_sessions_prepared",
+                    "reviewer_submissions_collected",
+                    "recruitment_status",
+                    "preparation_verification_route",
+                    "recruitment_verification_route",
+                    "ready_for_taste_abstraction_review",
+                    "ready_for_benchmark_admission",
+                    "standalone_preflight_performed",
+                )
+                if key in row
+            }
+            for row in review_campaigns
             if isinstance(row, dict)
         ]
     lifecycle = value.get("lifecycle")

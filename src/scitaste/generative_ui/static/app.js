@@ -1357,6 +1357,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.reference_selections"), data.counts.reference_selection_comparisons || 0, t("progress.metric.reference_selections_note")),
     progressMetric(t("progress.metric.taste_populations"), data.counts.taste_candidate_populations || 0, t("progress.metric.taste_populations_note"), "candidate"),
     progressMetric(t("progress.metric.taste_domains"), data.counts.taste_domain_expansions || 0, t("progress.metric.taste_domains_note"), "candidate"),
+    progressMetric(t("progress.metric.taste_reviews"), data.counts.taste_source_review_campaigns || 0, t("progress.metric.taste_reviews_note"), "candidate"),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1387,6 +1388,9 @@ function renderProjectProgress(data) {
   );
   const tasteDomainExpansions = renderTasteDomainExpansions(
     data.taste_domain_expansions || [],
+  );
+  const tasteSourceReviews = renderTasteSourceReviewCampaigns(
+    data.taste_source_review_campaigns || [],
   );
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
@@ -1866,6 +1870,9 @@ function renderProjectProgress(data) {
   }
   if (tasteDomainExpansions) {
     container.appendChild(tasteDomainExpansions);
+  }
+  if (tasteSourceReviews) {
+    container.appendChild(tasteSourceReviews);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -3653,6 +3660,139 @@ function renderTasteDomainExpansions(items) {
           "inline_integrity_guards_performed",
           "model_calls_performed",
           "gpu_work_performed",
+          "experiment_performed",
+          "ready_for_taste_abstraction_review",
+          "ready_for_benchmark_admission",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderTasteSourceReviewCampaigns(items) {
+  if (items.length === 0) return null;
+  const section = progressSection(
+    t("progress.taste_review.title"),
+    t("progress.taste_review.subtitle", {count: items.length}),
+  );
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card status-awaiting_owner_approval";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.taste_review.campaign"));
+    const title = document.createElement("strong");
+    appendText(title, item.campaign_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill("blocked", t("progress.taste_review.status")),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, value] of [
+      ["candidates", item.candidate_count],
+      ["groups", item.source_group_count],
+      ["reviewers", `${item.scientific_reviewer_count}+${item.privacy_reviewer_count}`],
+      ["assessments", item.scientific_assessment_count + item.privacy_assessment_count],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.taste_review.${key}`, {count: value}));
+      facts.appendChild(fact);
+    }
+
+    const routes = document.createElement("div");
+    routes.className = "component-actions";
+    routes.append(
+      progressPill("completed", t("progress.taste_review.prepare_route", {
+        route: localizedCode(item.preparation_verification_route),
+      })),
+      progressPill("blocked", t("progress.taste_review.recruit_route", {
+        route: localizedCode(item.recruitment_verification_route),
+      })),
+    );
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.taste_review.boundary"));
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t("progress.taste_review.next"));
+    const controls = document.createElement("div");
+    controls.className = "component-actions";
+    const generate = document.createElement("button");
+    generate.type = "button";
+    generate.className = "primary-button";
+    appendText(generate, t("progress.taste_review.generate"));
+    generate.addEventListener("click", () => prepareAuthoredBriefFollowup(
+      t("progress.taste_review.followup", {
+        candidates: item.candidate_count,
+        scientific: item.scientific_reviewer_count,
+        privacy: item.privacy_reviewer_count,
+        assessments: item.scientific_assessment_count + item.privacy_assessment_count,
+      }),
+    ));
+    const inspect = document.createElement("button");
+    inspect.type = "button";
+    inspect.className = "secondary-button";
+    appendText(inspect, t("progress.taste_review.inspect"));
+    inspect.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    controls.append(generate, inspect);
+    card.append(
+      header,
+      facts,
+      routes,
+      boundary,
+      next,
+      controls,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          campaign_file_sha256: item.campaign_file_sha256,
+          campaign_sha256: item.campaign_sha256,
+          publisher_subject_group_counts: item.publisher_subject_group_counts,
+          reviewer_sessions_prepared: item.reviewer_sessions_prepared,
+          reviewer_submissions_collected: item.reviewer_submissions_collected,
+          recruitment_status: item.recruitment_status,
+          preparation_reason_codes: item.preparation_reason_codes,
+          recruitment_reason_codes: item.recruitment_reason_codes,
+          source_outcomes_hidden_from_scientific_review:
+            item.source_outcomes_hidden_from_scientific_review,
+          standalone_preflight_performed: item.standalone_preflight_performed,
+          model_calls_performed: item.model_calls_performed,
+          api_spend_performed: item.api_spend_performed,
+          gpu_work_performed: item.gpu_work_performed,
+          human_recruitment_performed: item.human_recruitment_performed,
+          experiment_performed: item.experiment_performed,
+          ready_for_taste_abstraction_review: item.ready_for_taste_abstraction_review,
+          ready_for_benchmark_admission: item.ready_for_benchmark_admission,
+        },
+        names: [
+          "campaign_file_sha256",
+          "campaign_sha256",
+          "publisher_subject_group_counts",
+          "reviewer_sessions_prepared",
+          "reviewer_submissions_collected",
+          "recruitment_status",
+          "preparation_reason_codes",
+          "recruitment_reason_codes",
+          "source_outcomes_hidden_from_scientific_review",
+          "standalone_preflight_performed",
+          "model_calls_performed",
+          "api_spend_performed",
+          "gpu_work_performed",
+          "human_recruitment_performed",
           "experiment_performed",
           "ready_for_taste_abstraction_review",
           "ready_for_benchmark_admission",

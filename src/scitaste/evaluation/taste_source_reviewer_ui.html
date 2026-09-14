@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SciTaste source review</title>
+  <style>
+    :root { color-scheme: light; --ink:#17201d; --muted:#64706b; --paper:#f2f0e8; --card:#fffefa; --line:#d7d4c9; --accent:#176853; --soft:#dcece5; --warn:#98451f; }
+    * { box-sizing:border-box; }
+    html,body { height:100%; margin:0; }
+    body { overflow:hidden; background:var(--paper); color:var(--ink); font:14px/1.45 Inter,ui-sans-serif,system-ui,sans-serif; }
+    button,select,textarea,input { font:inherit; }
+    button { cursor:pointer; }
+    .shell { display:grid; grid-template-rows:auto minmax(0,1fr); height:100%; }
+    header { display:flex; align-items:center; gap:16px; min-height:62px; padding:11px 20px; border-bottom:1px solid var(--line); background:var(--card); }
+    .brand { font:600 20px Georgia,serif; }
+    .meta { color:var(--muted); font-size:12px; }
+    .progress { margin-left:auto; min-width:210px; display:flex; gap:9px; align-items:center; }
+    .track { flex:1; height:6px; border-radius:9px; overflow:hidden; background:#e3e0d6; }
+    .bar { height:100%; width:0; background:var(--accent); }
+    .layout { display:grid; grid-template-columns:190px minmax(0,1fr); min-height:0; }
+    nav { overflow:auto; padding:14px 12px; border-right:1px solid var(--line); }
+    nav h2 { margin:0 4px 10px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    .items { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .item { aspect-ratio:1; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--muted); }
+    .item.active { outline:2px solid var(--accent); border-color:transparent; }
+    .item.complete { background:var(--soft); color:var(--accent); }
+    main { min-width:0; min-height:0; display:grid; grid-template-rows:minmax(0,1fr) auto; }
+    .content { overflow:auto; padding:18px 22px; }
+    .title { margin:0 0 12px; font:600 21px/1.3 Georgia,serif; }
+    .blind { display:inline-flex; margin-bottom:14px; padding:5px 9px; border-radius:999px; color:var(--accent); background:var(--soft); font-size:12px; }
+    details.rubric { margin:0 0 14px; padding:10px 13px; border:1px solid var(--line); border-radius:10px; background:var(--card); }
+    details.rubric summary { cursor:pointer; font-weight:650; }
+    .rubric-body { display:grid; gap:8px; margin-top:10px; color:var(--muted); }
+    .rubric-body dl { display:grid; grid-template-columns:minmax(120px,180px) minmax(0,1fr); gap:5px 12px; margin:0; }
+    .rubric-body dt { color:var(--ink); font-weight:650; }
+    .rubric-body dd { margin:0; }
+    .text-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .text-card { min-width:0; padding:13px 15px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+    .text-card h2 { margin:0 0 8px; font:600 14px Georgia,serif; }
+    .text-card p { margin:0; white-space:pre-wrap; max-height:230px; overflow:auto; }
+    .form { display:grid; gap:12px; margin-top:15px; padding:15px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    label { display:grid; gap:5px; color:var(--muted); font-size:12px; }
+    select,textarea { width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:8px; background:white; color:var(--ink); }
+    textarea { min-height:72px; resize:vertical; }
+    .checks { display:flex; flex-wrap:wrap; gap:8px 14px; }
+    .checks label { display:flex; gap:6px; align-items:center; color:var(--ink); }
+    .footer { display:flex; gap:8px; align-items:center; padding:11px 20px; border-top:1px solid var(--line); background:var(--card); }
+    .footer button,.dialog-actions button { padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:white; }
+    .footer .primary,.dialog-actions .primary { color:white; background:var(--accent); border-color:var(--accent); }
+    .footer .finish { margin-left:auto; }
+    dialog { width:min(640px,calc(100% - 28px)); border:0; border-radius:14px; padding:22px; }
+    dialog::backdrop { background:rgba(20,27,24,.5); }
+    .attest { display:grid; gap:9px; margin:16px 0; }
+    .attest label { display:flex; gap:8px; align-items:flex-start; color:var(--ink); }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; }
+    .warning { color:var(--warn); }
+    .sealed { padding:40px; text-align:center; color:var(--accent); font-weight:650; }
+    [hidden] { display:none !important; }
+    @media(max-width:850px){ body{overflow:auto}.shell{height:auto;min-height:100%}.layout{grid-template-columns:1fr}nav{position:sticky;top:0;z-index:2;background:var(--paper);border:0;border-bottom:1px solid var(--line)}nav h2{display:none}.items{display:flex;overflow-x:auto}.item{width:36px;flex:0 0 36px}.text-grid,.fields{grid-template-columns:1fr}main{min-height:900px} }
+  </style>
+</head>
+<body>
+  <div class="shell" id="app">
+    <header><div class="brand">SciTaste Source Review</div><div class="meta" id="meta"></div><div class="progress"><span id="progress-label">0 / 0</span><div class="track"><div class="bar" id="bar"></div></div></div></header>
+    <div class="layout">
+      <nav><h2>Assigned episodes</h2><div class="items" id="items"></div></nav>
+      <main>
+        <section class="content">
+          <h1 class="title" id="title"></h1><div class="blind" id="blind"></div>
+          <details class="rubric"><summary>Review anchors and missingness rule</summary><div class="rubric-body" id="rubric-body"></div></details>
+          <div class="text-grid" id="text-grid"></div>
+          <section class="form" id="scientific-form" hidden>
+            <div class="fields">
+              <label>Independent domain label<select id="domain"><option value="">Select</option><option value="ecology">Ecology</option><option value="public-health">Public health</option><option value="other">Other domain</option><option value="cannot-assess">Cannot assess</option></select></label>
+              <label>Primary scientific decision family<select id="family"><option value="">Select</option><option value="idea">Idea</option><option value="experiment">Experiment</option><option value="evidence">Evidence</option><option value="writing">Writing</option><option value="review">Review</option><option value="visual">Visual</option><option value="cannot-assess">Cannot assess</option></select></label>
+            </div>
+            <div class="fields" id="dimensions"></div>
+            <div class="checks"><label><input type="checkbox" id="transferable"> This episode is a transferable Scientific Taste candidate and every quality dimension is strong.</label></div>
+            <label>Brief evidence-grounded rationale<textarea id="scientific-rationale" maxlength="4000"></textarea></label>
+          </section>
+          <section class="form" id="privacy-form" hidden>
+            <label>Release decision<select id="release-safe"><option value="">Select</option><option value="true">Safe after structured de-identification</option><option value="false">Unsafe without further redaction or exclusion</option></select></label>
+            <div class="checks" id="risks"></div>
+            <label>Brief privacy rationale<textarea id="privacy-rationale" maxlength="4000"></textarea></label>
+          </section>
+        </section>
+        <footer class="footer"><button id="previous">Previous</button><button class="primary" id="next">Save & next</button><button class="finish" id="finish">Lock review</button></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="lock-dialog"><h2>Lock this independent review?</h2><p id="lock-summary"></p><p class="warning">The exported JSON is immutable input to collection; this page does not contact SciTaste or upload data.</p><div class="attest"><label><input type="checkbox" data-attest> I completed this review independently and have not seen another reviewer's responses.</label><label><input type="checkbox" data-attest> My conflict screening remains accurate.</label><label><input type="checkbox" data-attest> I received and accept the study consent, compensation, retention, and withdrawal terms.</label><label id="scientific-attest"><input type="checkbox" data-attest> I remained blind to publisher subject, recommendation, author reply, and later revision.</label></div><div class="dialog-actions"><button id="cancel">Continue reviewing</button><button class="primary" id="confirm">Confirm and export</button></div></dialog>
+  <script id="session-data" type="application/json">__SCITASTE_TASTE_SOURCE_SESSION__</script>
+  <script>
+    "use strict";
+    const session=JSON.parse(document.getElementById("session-data").textContent), $=id=>document.getElementById(id);
+    const key=`scitaste-source-review:${session.session_sha256}`, sealed=`${key}:sealed`, memory={};
+    const get=k=>{try{return localStorage.getItem(k)}catch(_){return memory[k]||null}}, set=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){memory[k]=v}}, drop=k=>{try{localStorage.removeItem(k)}catch(_){delete memory[k]}};
+    let restored={}; try{restored=JSON.parse(get(key)||"{}")}catch(_){drop(key)}
+    const state={index:0,startedAt:restored.startedAt||new Date().toISOString(),responses:restored.responses||{},viewedAt:restored.viewedAt||{}};
+    const dimensions=["evidential_rigor","decision_traceability","alternative_visibility","failure_boundary_visibility","transfer_potential"];
+    const risks=["direct-person-name","direct-contact","institution-uniqueness","sensitive-personal-information","free-text-reidentification","other-bounded-risk"];
+    function text(node,value){node.textContent=value==null?"":String(value)} function persist(){set(key,JSON.stringify(state))}
+    function addTextCard(parent,label,value){if(value==null)return;const card=document.createElement("article"),h=document.createElement("h2"),p=document.createElement("p");card.className="text-card";text(h,label);text(p,value);card.append(h,p);parent.append(card)}
+    function buildRubric(){const body=$("rubric-body"),intro=document.createElement("p");text(intro,session.role==="scientific"?session.domain_instruction:session.privacy_instruction);body.append(intro);if(session.role==="scientific"){for(const [title,items] of [["Decision families",session.decision_family_instructions],["Quality dimensions",session.quality_dimension_instructions]]){const h=document.createElement("strong"),dl=document.createElement("dl");text(h,title);for(const [name,description] of Object.entries(items)){const dt=document.createElement("dt"),dd=document.createElement("dd");text(dt,name.replaceAll("_"," "));text(dd,description);dl.append(dt,dd)}body.append(h,dl)}const missing=document.createElement("p");text(missing,session.cannot_assess_instruction);body.append(missing)}}
+    function buildControls(){const d=$("dimensions");for(const name of dimensions){const label=document.createElement("label"),select=document.createElement("select");select.dataset.dimension=name;for(const [value,caption] of [["","Select"],["insufficient","Insufficient"],["partial","Partial"],["strong","Strong"]]){const option=document.createElement("option");option.value=value;text(option,caption);select.append(option)}text(label,name.replaceAll("_"," "));label.append(select);d.append(label)}const r=$("risks");for(const name of risks){const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.value=name;input.dataset.risk="";label.append(input,document.createTextNode(` ${name.replaceAll("-"," ")}`));r.append(label)}}
+    function scientificResponse(){return{domain_label:$("domain").value,primary_decision_family:$("family").value,dimension_ratings:[...document.querySelectorAll("[data-dimension]")].map(el=>({dimension:el.dataset.dimension,rating:el.value})),transferable_taste_candidate:$("transferable").checked,rationale:$("scientific-rationale").value.trim()}}
+    function privacyResponse(){const safe=$("release-safe").value;return{release_safe:safe===""?null:safe==="true",risk_codes:safe==="true"?["none"]:[...document.querySelectorAll("[data-risk]:checked")].map(el=>el.value),rationale:$("privacy-rationale").value.trim()}}
+    function valid(value){if(!value||!value.rationale)return false;if(session.role==="scientific"){const strong=value.dimension_ratings.length===5&&value.dimension_ratings.every(x=>x.rating);if(!value.domain_label||!value.primary_decision_family||!strong)return false;if(value.transferable_taste_candidate&&(value.domain_label==="cannot-assess"||value.primary_decision_family==="cannot-assess"||value.dimension_ratings.some(x=>x.rating!=="strong")))return false;return true}return typeof value.release_safe==="boolean"&&value.risk_codes.length>0&&(value.release_safe?value.risk_codes.length===1&&value.risk_codes[0]==="none":!value.risk_codes.includes("none"))}
+    function save(requireValid){const item=session.items[state.index],draft=session.role==="scientific"?scientificResponse():privacyResponse(),viewed=state.viewedAt[item.review_item_id]||Date.now();draft.duration_seconds=Math.max((state.responses[item.review_item_id]||{}).duration_seconds||0,Math.max(1,Math.round((Date.now()-viewed)/1000)));state.responses[item.review_item_id]=draft;persist();if(requireValid&&!valid(draft)){alert("Complete the required labels, ratings, and rationale.");return false}return true}
+    function loadResponse(item){const value=state.responses[item.review_item_id]||{};if(session.role==="scientific"){$("domain").value=value.domain_label||"";$("family").value=value.primary_decision_family||"";$("transferable").checked=!!value.transferable_taste_candidate;$("scientific-rationale").value=value.rationale||"";const by=Object.fromEntries((value.dimension_ratings||[]).map(x=>[x.dimension,x.rating]));document.querySelectorAll("[data-dimension]").forEach(el=>el.value=by[el.dataset.dimension]||"")}else{$("release-safe").value=value.release_safe===true?"true":value.release_safe===false?"false":"";$("privacy-rationale").value=value.rationale||"";document.querySelectorAll("[data-risk]").forEach(el=>el.checked=(value.risk_codes||[]).includes(el.value))}}
+    function nav(){const list=$("items");list.replaceChildren();session.items.forEach((item,index)=>{const b=document.createElement("button");b.className="item";text(b,index+1);if(index===state.index)b.classList.add("active");if(valid(state.responses[item.review_item_id]))b.classList.add("complete");b.addEventListener("click",()=>{save(false);state.index=index;render()});list.append(b)})}
+    function render(){if(get(sealed)){$("app").replaceChildren(Object.assign(document.createElement("div"),{className:"sealed",textContent:"This browser session is sealed. Use the exported JSON for collection."}));return}const item=session.items[state.index];if(!state.viewedAt[item.review_item_id]){state.viewedAt[item.review_item_id]=Date.now();persist()}text($("meta"),`${session.campaign_id} · ${session.role} · ${session.reviewer_identity_sha256.slice(0,12)}…`);text($("title"),item.article_title);text($("blind"),session.role==="scientific"?"Publisher and observed outcomes hidden":"Complete de-identified text · privacy only");const grid=$("text-grid");grid.replaceChildren();addTextCard(grid,"Reviewed abstract",item.reviewed_abstract);addTextCard(grid,"Reviewer comment",item.review_comment);if(session.role==="privacy"){addTextCard(grid,"Revised abstract",item.revised_abstract);addTextCard(grid,"Author response",item.author_response||"No response observed")}$("scientific-form").hidden=session.role!=="scientific";$("privacy-form").hidden=session.role!=="privacy";loadResponse(item);$("previous").disabled=state.index===0;$("next").textContent=state.index===session.items.length-1?"Save":"Save & next";const count=Object.values(state.responses).filter(valid).length;text($("progress-label"),`${count} / ${session.items.length}`);$("bar").style.width=`${100*count/session.items.length}%`;nav()}
+    function openLock(){save(false);const count=Object.values(state.responses).filter(valid).length;text($("lock-summary"),`${count} of ${session.items.length} assigned episodes are complete.`);$("confirm").disabled=count!==session.items.length;$("scientific-attest").hidden=session.role!=="scientific";$("lock-dialog").showModal()}
+    function exportSubmission(){if(![...document.querySelectorAll("[data-attest]")].filter(x=>!x.closest("[hidden]")).every(x=>x.checked)){alert("Confirm every applicable attestation.");return}const responses=session.items.map(item=>({review_item_id:item.review_item_id,...state.responses[item.review_item_id]})),scientific=session.role==="scientific";const output={schema_version:"1.0",session_id:session.session_id,session_sha256:session.session_sha256,campaign_sha256:session.campaign_sha256,role:session.role,reviewer_identity_sha256:session.reviewer_identity_sha256,review_started_at:state.startedAt,submitted_at:new Date().toISOString(),scientific_responses:scientific?responses:[],privacy_responses:scientific?[]:responses,conflict_cleared:true,independent_review:true,blinded_to_other_reviews:true,blinded_to_publisher_subject:scientific,blinded_to_observed_outcomes:scientific,consent_terms_accepted:true,explicit_lock_confirmed:true};const blob=new Blob([JSON.stringify(output,null,2)+"\n"],{type:"application/json"}),link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`${session.session_id}-submission.json`;link.click();URL.revokeObjectURL(link.href);set(sealed,output.submitted_at);drop(key);$("lock-dialog").close();render()}
+    buildControls();buildRubric();document.querySelectorAll("select,textarea,input").forEach(el=>el.addEventListener("change",()=>save(false)));$("scientific-rationale").addEventListener("input",()=>save(false));$("privacy-rationale").addEventListener("input",()=>save(false));$("previous").addEventListener("click",()=>{save(false);state.index--;render()});$("next").addEventListener("click",()=>{if(save(true)&&state.index<session.items.length-1){state.index++;render()}});$("finish").addEventListener("click",openLock);$("cancel").addEventListener("click",()=>$("lock-dialog").close());$("confirm").addEventListener("click",exportSubmission);render();
+  </script>
+</body>
+</html>

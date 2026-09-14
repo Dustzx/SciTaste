@@ -1,0 +1,95 @@
+schema_version: "1.0"
+observation_id: gac-flexible-project-intervention-dogfood-v1
+project_id: scitaste-self-development
+project_revision: 482
+workspace_id: workspace-9d8e7a38a4c3913e
+provider: zhipu
+model: glm-5.3-flash
+mode: model_assisted
+interaction:
+  entry_kind: free_question
+  fixed_label_used_as_static_content: false
+  turn_count: 3
+  final_turn_id: turn-0003
+  feedback_edits_exact_predecessor: true
+  final_canvas:
+    layout: decision
+    node_count: 6
+    edge_count: 4
+    component_count: 6
+    title: >-
+      SciTaste 来源审查工作台（v3）：F1000 分叉、required 工作量与待决策
+  corrections_observed:
+    - >-
+      Feedback replaced a mistaken ARIES-versus-F1000 interpretation with two
+      action routes for the same F1000 review campaign.
+    - >-
+      Feedback corrected 154 scientific and 77 privacy assessments from
+      apparent completion to required workload, with zero sessions and zero
+      submissions observed.
+    - >-
+      Feedback removed unsupported API/GPU use and blocking edges from the
+      local direct-path preparation action.
+  receiver_improvement:
+    - required, planned, and maximum fields cannot be narrated as completion
+    - co-visible entities do not imply a dependency, block, use, or resource edge
+usage:
+  input_tokens: 39317
+  output_tokens: 7640
+  cost_usd: 0.003896938233732523
+  latency_ms: 62424.25187397748
+turns:
+  - turn_id: turn-0001
+    input_tokens: 11214
+    output_tokens: 2682
+    cost_usd: 0.0012153265294082944
+    latency_ms: 23696.135306963697
+    provider_response_sha256: 8d239bedf16ebd7aef255c4caaf403993df74c96d4011c72f3086a97edf426f9
+    content_fingerprint: 285464b7e6603208f40936091f71218682bdcddf1fcb23fac437438b50d8bc98
+  - turn_id: turn-0002
+    edited_from_turn_id: turn-0001
+    authored_content_changed: true
+    layout_changed: true
+    input_tokens: 13580
+    output_tokens: 2717
+    cost_usd: 0.0013621320276089907
+    latency_ms: 21528.099057963118
+    provider_response_sha256: a470441ceb0021e66c3f04a9ae5660bffcfa9247bb3571c2471fdbe8a7c129ee
+    content_fingerprint: e0bfd0852685ff7b12225098b5004582cb305541ad2357bc939f68ff46c80557
+  - turn_id: turn-0003
+    edited_from_turn_id: turn-0002
+    authored_content_changed: true
+    layout_changed: false
+    input_tokens: 14523
+    output_tokens: 2241
+    cost_usd: 0.001319479676715238
+    latency_ms: 17200.017509050667
+    provider_response_sha256: ef20436a0f4270f7995b745e3bfa79a7d9a38a9b3ba9aa351449978da1a3d38c
+    content_fingerprint: 0b571f7ddada12a94f45b5622dd4d987080457317463d10c0833b5b3c33654d1
+parallel_and_interactive_boundary:
+  generation_as_content_owns:
+    - model-authored synthesis
+    - canvas composition
+    - predecessor-bound feedback editing
+    - optional fixed-entry warm cache
+    - proposal drafting
+  scitaste_core_owns:
+    - project evidence and lifecycle
+    - resource bindings and configuration receipts
+    - tool-intelligence routes
+    - user decisions and publication
+    - execution authority
+  bridge: explicit-user-review-and-publication
+  generated_execution_authority: none
+resource_management:
+  project_binding_and_priority_are_platform_configurable: true
+  shared_resource_definition_is_admin_managed: true
+  credentials_are_backend_only: true
+  credential_values_enter_model_context: false
+  resource_revision_is_model_authored: true
+  applying_resource_revision_requires_explicit_user_action: true
+claim_boundary: >-
+  This is real product dogfood demonstrating flexible generation, exact-turn
+  feedback editing, project-resource projection, and the Core publication
+  boundary. It is not a usability study, a scientific-plan correctness result,
+  or evidence of research-quality improvement.

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+import yaml
 
 from scitaste.evaluation.f1000_domain_population import (
     F1000DomainAcquisitionPlan,
@@ -14,6 +16,12 @@ from scitaste.evaluation.f1000_domain_population import (
     load_f1000_domain_acquisition_receipt,
     materialize_f1000_taste_population,
     publish_f1000_taste_population_run,
+)
+from scitaste.evaluation.natural_taste_review import (
+    TasteSourceReviewActivation,
+    load_taste_source_review_policy,
+    prepare_taste_source_review_campaign,
+    publish_taste_source_review_campaign_run,
 )
 from scitaste.generative_ui import (
     ProjectProgressQuery,
@@ -221,6 +229,82 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
         "f1000-multidomain-review-response-v1",
     )
     assert snapshot.revision == 2
+
+    tracked_policy = load_taste_source_review_policy(
+        "configs/evaluation/human_review/f1000_multidomain_taste_source_review_v1.yaml"
+    )
+    test_policy = tracked_policy.model_copy(
+        update={
+            "project_id": "f1000-test-project",
+            "population_id": report.population_id,
+            "minimum_eligible_groups_per_domain": 5,
+        }
+    )
+    policy_path = tmp_path / "review-policy.yaml"
+    policy_path.write_text(
+        yaml.safe_dump(
+            test_policy.model_dump(mode="json", exclude={"policy_sha256"}),
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    campaign_root = acquisition_root / "derived/taste-source-review-v1"
+    campaign = prepare_taste_source_review_campaign(
+        population_report_path=acquisition_root / "derived/taste-population-v1/REPORT.json",
+        policy_path=policy_path,
+        output_dir=campaign_root,
+        prepared_at=datetime(2026, 9, 14, 12, 2, tzinfo=UTC),
+    )
+    assert campaign.candidate_count == 10
+    assert campaign.required_scientific_assessment_count == 20
+    assert campaign.required_privacy_assessment_count == 10
+    assert campaign.preparation_verification.route.value == "direct_path"
+    assert campaign.recruitment_verification.route.value == "owner_approval"
+    assert campaign.standalone_preflight_performed is False
+    scientific_items = [
+        json.loads(line)
+        for line in (campaign_root / "SCIENTIFIC_ITEMS.jsonl").read_text().splitlines()
+    ]
+    assert all("author_response" not in item for item in scientific_items)
+    assert all("revised_abstract" not in item for item in scientific_items)
+    assert all("observed_recommendation" not in item for item in scientific_items)
+    assert (campaign_root / "POLICY.yaml").read_bytes() == policy_path.read_bytes()
+
+    snapshot, _ = publish_taste_source_review_campaign_run(
+        runtime,
+        project_id="f1000-test-project",
+        run_id="f1000-source-review-v1",
+        source_campaign_path=campaign_root / "CAMPAIGN.json",
+        expected_revision=snapshot.revision,
+    )
+    board = next(
+        component
+        for component in WorkspaceSurfaceFactory(runtime)
+        .build_surface(ProjectProgressQuery(project_id="f1000-test-project"))
+        .components
+        if component.component == "ProjectProgressBoard"
+    )
+    review = board.data["taste_source_review_campaigns"][0]
+    assert review["scientific_assessment_count"] == 20
+    assert review["privacy_assessment_count"] == 10
+    assert review["preparation_verification_route"] == "direct_path"
+    assert review["recruitment_verification_route"] == "owner_approval"
+    assert board.data["counts"]["taste_source_review_campaigns"] == 1
+    assert snapshot.revision == 4
+
+    activation = TasteSourceReviewActivation.create(
+        activation_id="test-activation",
+        campaign_id=campaign.campaign_id,
+        campaign_sha256=campaign.campaign_sha256,
+        project_id=campaign.project_id,
+        scientific_reviewer_identity_sha256s=("1" * 64, "2" * 64),
+        privacy_reviewer_identity_sha256="3" * 64,
+        ethics_status="not-required",
+        ethics_determination_ref="test-only synthetic approval",
+        maximum_reviewer_hours=3,
+        approved_at=datetime(2026, 9, 14, 12, 3, tzinfo=UTC),
+    )
+    assert len(activation.activation_sha256) == 64
 
 
 def test_f1000_acquisition_requires_explicit_network_switch(tmp_path: Path) -> None:

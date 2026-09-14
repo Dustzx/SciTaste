@@ -1672,3 +1672,43 @@ human comprehension, scientific-plan correctness, or research effectiveness.
 The generated page can propose and visualize project-resource choices, while
 the shared registry, project binding, credential material, resource observation,
 reservation, and experiment authority remain separate typed transitions.
+
+### Flexible campaign control and risk-routed intervention (2026-09-14)
+
+Revision 482 projects the first self-contained F1000 natural-source review
+campaign into the ordinary project home and the existing
+`review-taste-candidate-population` entry. The fixed entry is eligible for the
+bounded warm cache, but is not a canned page: a free question created
+`workspace-9d8e7a38a4c3913e`, and two successor feedback turns edited the exact
+predecessor. The final canvas contains six compact nodes and four grounded
+edges. It separates 154 required scientific assessments and 77 required privacy
+assessments from the observed completion state of zero sessions and zero
+submissions.
+
+The three GLM-5.3-Flash turns used 39,317 input and 7,640 output tokens, reported
+USD 0.003896938233732523, and took 62,424 ms in total. The first generation
+mistook source identities for action routes. The first edit recovered the two
+actions but narrated required workload as if it were complete and inferred
+unsupported resource edges. The second edit corrected both errors. The planner
+contract now states generally that required, planned, and maximum values are not
+observed completion, and that co-visible entities do not establish dependency,
+blocking, use, or resource relations. These turns are engineering dogfood, not
+a usability or scientific-effect result.
+
+The campaign also extends Tool Intelligence to an actual next scientific block.
+Local review-package preparation is reversible and cheap: its avoidable expected
+loss is 0.2 units, while both optional checks have negative net value, so it
+takes `direct_path` with no standalone preflight. Contacting human reviewers is
+irreversible, mutates an external relationship, and crosses a declared owner
+boundary, so it takes `owner_approval`. That route requires explicit ethics,
+compensation, consent, conflict-screening, and reviewer-identity decisions; it
+does not insert a generic preflight before asking the owner.
+
+The project resource portfolio remains present as a sibling component even when
+the model elects not to draw resource nodes in a particular canvas. A user can
+ask the model for a project-local attachment or priority revision and explicitly
+apply an admitted revision. Shared definitions and secret values remain an
+administrator/backend concern; model content never receives credentials and
+cannot itself probe, spend, reserve, or execute. This is the intended visual and
+operational relationship: Generation as Content and SciTaste Core are parallel
+surfaces, joined only by reviewable user interventions.

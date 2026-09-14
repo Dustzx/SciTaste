@@ -1,0 +1,78 @@
+schema_version: "1.0"
+campaign_id: f1000-multidomain-taste-source-review-v1
+project_id: scitaste-self-development
+population_id: f1000-multidomain-review-response-v1
+purpose: >-
+  Turn the acquired natural-review population into a self-contained,
+  outcome-blind scientific review campaign plus a separate privacy review. The
+  campaign prepares materials only; it does not recruit people or admit a Taste
+  source.
+source_population:
+  candidate_count: 77
+  source_group_count: 39
+  publisher_subject_group_counts:
+    ecology: 19
+    public-health: 20
+review_design:
+  scientific_reviewer_count: 2
+  privacy_reviewer_count: 1
+  required_scientific_assessment_count: 154
+  required_privacy_assessment_count: 77
+  reviewer_sessions_prepared: 0
+  reviewer_submissions_collected: 0
+  scientific_review_hides:
+    - publisher-subject
+    - observed-recommendation
+    - author-response
+    - later-revision
+    - other-reviewers
+  decision_family_count: 6
+  reference_quality_dimension_count: 5
+tool_intelligence:
+  preparation:
+    action_id: prepare-taste-source-review-package
+    verification_route: direct_path
+    expected_loss_units: 0.2
+    targeted_check_net_gain_units: -0.34
+    full_preflight_net_gain_units: -1.81
+    reason_codes:
+      - verification-cost-exceeds-avoidable-loss
+  recruitment:
+    action_id: recruit-taste-source-reviewers
+    verification_route: owner_approval
+    expected_loss_units: 6.4
+    reason_codes:
+      - declared-owner-boundary-requires-owner
+      - irreversible-action-requires-owner
+      - external-authority-requires-owner
+  standalone_preflight_performed: false
+authority:
+  recruitment_status: owner-and-ethics-approval-required
+  human_recruitment_performed: false
+  model_calls_performed: false
+  api_spend_performed: false
+  gpu_work_performed: false
+  experiment_performed: false
+  ready_for_taste_abstraction_review: false
+  ready_for_benchmark_admission: false
+artifact:
+  run_id: 2026-09-14__scitaste-native__f1000-taste-source-review-campaign-v1__seed-00
+  project_revision: 482
+  locator: >-
+    outputs/projects/scitaste-self-development/runs/2026-09-14__scitaste-native__f1000-taste-source-review-campaign-v1__seed-00/taste_source_review_campaign/CAMPAIGN.json
+  campaign_sha256: 74a45dc4ec755776e887ccc22ae433878abd6a5ad587a89e53690cb95cd99539
+  campaign_file_sha256: deb793bc065d09ddcfd6e02350bd430ecb81f9fc563d9f1bb7b466ebcd60263e
+  compiler_implementation_sha256: 3ba0c6d5bc9d771bc99e364ee16ddcd52d0c666dd0c7308d12688ae6337cd945
+  policy_file_sha256: 84f647b407f13ba17dda1717b2e0dfcffa2b6532e0a9274a639f8781f5dd4b49
+  scientific_items_sha256: cc6d7d283b2e7dc3a5efef90a04b3dc4d5e2433ba0717940856ba306de74eefd
+  privacy_items_sha256: 00f491329fc14d30cf9fda03a1b6cd9fc6bbcbbe4d543e77bd4685a7bd5b0bdd
+  private_item_map_sha256: c10d45ed5ea6afeb391095189f06355ebec11842a8d1497bf0b09b419d7fd365
+  reviewer_interface_sha256: 2b3c0014cc28ecd94580775b98233a33ef40a91001ef638014d47b2ff42ced44
+generation_as_content:
+  fixed_entry_intent: review-taste-candidate-population
+  fixed_entry_is_optional_cache: true
+  free_question_and_feedback_editing_remain_primary: true
+claim_boundary: >-
+  This is an executable human-review campaign and project-management result,
+  not a completed human evaluation, an admitted Taste library, a benchmark, or
+  evidence that SciTaste improves scientific outcomes.

@@ -1651,3 +1651,41 @@ The paid model call retained its declared envelope, and no GPU or experiment was
 authorized. This iteration therefore operationalizes the user's rule: check in
 advance only when avoidable failure cost justifies it, and otherwise execute the
 bounded action and inspect the actual result.
+
+## Turning the next Taste gate into an interactive campaign (2026-09-14)
+
+The previous iteration identified human review as a blocker but still left it as
+prose. SciTaste compiled the 77 F1000 candidates into a project-owned campaign:
+two outcome-blind scientific reviewers must each assess every episode across
+domain, one of six decision families, and five Reference Quality dimensions; a
+separate reviewer handles free-text privacy. The package binds its policy,
+scientific items, privacy items, private identity map, reviewer interface, and
+compiler. It requires 154 scientific and 77 privacy assessments, but records
+zero prepared sessions and zero submissions. No reviewer was contacted.
+
+This produced a concrete Tool Intelligence comparison inside one scientific
+block. Preparing the local files is reversible and has only 0.2 units of
+expected loss; both targeted checking and a full preflight have negative net
+value, so the system chose `direct_path`. Recruiting people is irreversible,
+externally mutating, and owner-declared, so the system chose `owner_approval`.
+It did not turn that owner decision into another generic preflight. Ethics,
+compensation, consent, conflict screening, and the identities of two scientific
+reviewers plus one privacy reviewer are now the explicit intervention boundary.
+
+The new evidence then exercised Generation as Content from a free question,
+rather than by replaying a fixed tab. GLM-5.3-Flash generated a project canvas
+and edited the exact predecessor twice. The first version conflated source names
+with action routes; the second retained two semantic errors; the third showed
+one F1000 campaign branching into `direct_path` and `owner_approval`, kept the
+154/77 values as required workload rather than completion, and removed
+unsupported API/GPU dependency edges. The three calls consumed 39,317 input and
+7,640 output tokens at a reported USD 0.003896938233732523.
+
+The product repair generalizes beyond this campaign. Model instructions now
+separate obligations and ceilings from observed completion and forbid graph
+edges inferred from mere co-visibility. The project resource portfolio remains
+a sibling component and can start a model-authored, user-applied project binding
+revision, but credentials, observations, reservations, spend, and execution stay
+in SciTaste Core. This establishes the requested parallel view and explicit
+interaction bridge while preserving flexible model authorship. It is still
+engineering dogfood, not a human-usability or research-effect result.

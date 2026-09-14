@@ -629,6 +629,7 @@ class ProjectProgressCounts(BaseModel):
     reference_selection_comparisons: int = Field(default=0, ge=0)
     taste_candidate_populations: int = Field(default=0, ge=0)
     taste_domain_expansions: int = Field(default=0, ge=0)
+    taste_source_review_campaigns: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1177,6 +1178,60 @@ class ProjectProgressTasteDomainExpansionItem(BaseModel):
             raise ValueError("Taste domain expansion lacks registered evidence")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("Taste domain-expansion evidence must be unique")
+        return self
+
+
+class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
+    """Independent natural-source review workload and its two Tool routes."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    artifact_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    campaign_id: SafeIdentifier
+    population_id: SafeIdentifier
+    campaign_file_sha256: Sha256
+    campaign_sha256: Sha256
+    candidate_count: int = Field(gt=0)
+    source_group_count: int = Field(gt=0)
+    publisher_subject_group_counts: dict[SafeIdentifier, int] = Field(min_length=2)
+    scientific_reviewer_count: Literal[2]
+    privacy_reviewer_count: Literal[1]
+    scientific_assessment_count: int = Field(gt=0)
+    privacy_assessment_count: int = Field(gt=0)
+    reviewer_sessions_prepared: Literal[0]
+    reviewer_submissions_collected: Literal[0]
+    recruitment_status: Literal["owner-and-ethics-approval-required"]
+    preparation_verification_route: Literal["direct_path"]
+    recruitment_verification_route: Literal["owner_approval"]
+    preparation_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    recruitment_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    source_outcomes_hidden_from_scientific_review: Literal[True]
+    ready_for_taste_abstraction_review: Literal[False]
+    ready_for_benchmark_admission: Literal[False]
+    standalone_preflight_performed: Literal[False]
+    model_calls_performed: Literal[False]
+    api_spend_performed: Literal[False]
+    gpu_work_performed: Literal[False]
+    human_recruitment_performed: Literal[False]
+    experiment_performed: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
+
+    @model_validator(mode="after")
+    def review_campaign_is_closed(
+        self,
+    ) -> ProjectProgressTasteSourceReviewCampaignItem:
+        if self.source_group_count != sum(self.publisher_subject_group_counts.values()):
+            raise ValueError("Taste source-review domain counts are inconsistent")
+        if self.scientific_assessment_count != 2 * self.candidate_count:
+            raise ValueError("Taste source-review scientific workload is inconsistent")
+        if self.privacy_assessment_count != self.candidate_count:
+            raise ValueError("Taste source-review privacy workload is inconsistent")
+        if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
+            raise ValueError("Taste source-review campaign lacks registered evidence")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("Taste source-review evidence must be unique")
         return self
 
 
@@ -2729,6 +2784,9 @@ class ProjectProgressBoardData(BaseModel):
         ProjectProgressTasteCandidatePopulationItem, ...
     ] = ()
     taste_domain_expansions: tuple[ProjectProgressTasteDomainExpansionItem, ...] = ()
+    taste_source_review_campaigns: tuple[
+        ProjectProgressTasteSourceReviewCampaignItem, ...
+    ] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -2796,6 +2854,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.reference_selection_comparisons,
             *self.taste_candidate_populations,
             *self.taste_domain_expansions,
+            *self.taste_source_review_campaigns,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -2880,6 +2939,10 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress Taste-population count must match its rows")
         if self.counts.taste_domain_expansions != len(self.taste_domain_expansions):
             raise ValueError("project progress Taste-domain count must match its rows")
+        if self.counts.taste_source_review_campaigns != len(
+            self.taste_source_review_campaigns
+        ):
+            raise ValueError("project progress Taste-review count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):
