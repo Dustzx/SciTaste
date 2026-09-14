@@ -549,7 +549,7 @@ class SegmentationEvidenceUnitSelectionReceipt(BaseModel):
     start_char: int = Field(ge=0)
     end_char: int = Field(gt=0)
     exact_source_slice_restored: Literal[True] = True
-    provider_source_text_received: Literal[False] = False
+    provider_span_text_field_received: Literal[False] = False
     normalization_performed: Literal[False] = False
     fuzzy_matching_performed: Literal[False] = False
 
@@ -798,7 +798,7 @@ def inspect_taste_source_segmentation_execution_authorization(
         locator_root=root,
     )
     if (
-        protocol.protocol.schema_version not in {"1.1", "1.2", "1.3"}
+        protocol.protocol.schema_version not in {"1.1", "1.2", "1.4"}
         or protocol.protocol.adjudication_input_firewall is None
     ):
         raise ValueError(
@@ -815,9 +815,11 @@ def inspect_taste_source_segmentation_execution_authorization(
         or pack.sample_sha256 != protocol.sample.sample_sha256
     ):
         raise ValueError("Segmentation execution pack differs from the frozen protocol")
-    if (protocol.protocol.schema_version == "1.3") != (pack.schema_version == "1.1"):
+    if (protocol.protocol.schema_version == "1.4") != (
+        pack.schema_version == "1.1"
+    ):
         raise ValueError("Segmentation execution pack anchor schema differs from protocol")
-    if protocol.protocol.schema_version == "1.3" and any(
+    if protocol.protocol.schema_version == "1.4" and any(
         timestamp > authorization.authorized_at
         for timestamp in (
             protocol.protocol.protocol_created_at,
@@ -930,6 +932,19 @@ def inspect_taste_source_segmentation_execution_authorization(
         ):
             raise ValueError("Segmentation execution packet differs from the frozen plan")
         packets.append(packet)
+    anchor_contract = protocol.protocol.evidence_unit_selection
+    if anchor_contract is not None and protocol.protocol.schema_version == "1.4":
+        assert anchor_contract.system_instruction_sha256 is not None
+        assert anchor_contract.output_contract_sha256 is not None
+        for packet in packets:
+            if (
+                hashlib.sha256(packet.system_instruction.encode()).hexdigest()
+                != anchor_contract.system_instruction_sha256
+                or _canonical_sha256(packet.output_contract)
+                != anchor_contract.output_contract_sha256
+                or any(item.evidence_units is None for item in packet.items)
+            ):
+                raise ValueError("Segmentation anchored request contract drifted")
     expected_pairs = {
         (slot, shard)
         for slot in ("segmenter-a", "segmenter-b")
@@ -1194,8 +1209,9 @@ def build_segmentation_adjudication_request(
                     "Do not infer hidden source or outcome fields, use tools, or browse. "
                     "Return one bare JSON object only. "
                     + (
-                        "Select only supplied evidence-unit IDs; final source text is copied "
-                        "by the runner."
+                        "Select only supplied evidence-unit IDs and return no dedicated "
+                        "source-span transcription field; final source text is copied by "
+                        "the runner."
                         if anchored
                         else "The reported decision text is only a locator candidate; final "
                         "source text is copied by the runner."
@@ -1238,6 +1254,7 @@ def verify_persisted_segmentation_provider_request(
         raise ValueError("Persisted segmentation request is not JSON") from error
     if observed != expected:
         raise ValueError("Persisted segmentation request differs from its frozen packet")
+    content = _parse_provider_user_content(observed)
     forbidden_keys = {
         "article_title",
         "author_response",
@@ -1250,7 +1267,16 @@ def verify_persisted_segmentation_provider_request(
         "tools",
         "tool_choice",
     }
-    if _recursive_keys(observed) & forbidden_keys:
+    if packet.schema_version == "1.1":
+        forbidden_keys.update(
+            {
+                "start_char",
+                "end_char",
+                "verbatim_decision_text",
+                "reported_decision_text",
+            }
+        )
+    if (_recursive_keys(observed) | _recursive_keys(content)) & forbidden_keys:
         raise ValueError("Persisted segmentation request violates its input firewall")
     if set(observed) != {
         "max_tokens",
@@ -1286,6 +1312,7 @@ def verify_persisted_segmentation_adjudication_request(
         raise ValueError("Persisted segmentation adjudication request is not JSON") from error
     if observed != expected_payload:
         raise ValueError("Persisted adjudication request differs from its compiled payload")
+    content = _parse_provider_user_content(observed)
     forbidden_keys = {
         "article_title",
         "author_response",
@@ -1300,7 +1327,20 @@ def verify_persisted_segmentation_adjudication_request(
         "tools",
         "tool_choice",
     }
-    if _recursive_keys(observed) & forbidden_keys:
+    anchored = any(
+        isinstance(item, dict) and "evidence_units" in item
+        for item in content.get("items", [])
+    )
+    if anchored:
+        forbidden_keys.update(
+            {
+                "start_char",
+                "end_char",
+                "verbatim_decision_text",
+                "reported_decision_text",
+            }
+        )
+    if (_recursive_keys(observed) | _recursive_keys(content)) & forbidden_keys:
         raise ValueError("Persisted adjudication request violates its input firewall")
     if set(observed) != {
         "max_tokens",
@@ -1314,7 +1354,6 @@ def verify_persisted_segmentation_adjudication_request(
         "thinking",
     }:
         raise ValueError("Persisted adjudication provider root fields drifted")
-    content = json.loads(observed["messages"][1]["content"])
     visible_items = content.get("items") if isinstance(content, dict) else None
     if not isinstance(visible_items, list) or any(
         not isinstance(item, dict)
@@ -1328,6 +1367,31 @@ def verify_persisted_segmentation_adjudication_request(
         raw_request_ref=raw_request_ref,
         raw_request_sha256=hashlib.sha256(raw).hexdigest(),
     )
+
+
+def _parse_provider_user_content(observed: object) -> dict[str, JsonValue]:
+    if not isinstance(observed, dict):
+        raise ValueError("Persisted provider request root must be an object")
+    messages = observed.get("messages")
+    if (
+        not isinstance(messages, list)
+        or len(messages) != 2
+        or not all(isinstance(message, dict) for message in messages)
+        or set(messages[0]) != {"role", "content"}
+        or set(messages[1]) != {"role", "content"}
+        or messages[0]["role"] != "system"
+        or messages[1]["role"] != "user"
+        or not isinstance(messages[0]["content"], str)
+        or not isinstance(messages[1]["content"], str)
+    ):
+        raise ValueError("Persisted provider request messages drifted")
+    try:
+        content = json.loads(messages[1]["content"])
+    except json.JSONDecodeError as error:
+        raise ValueError("Persisted provider user content is not JSON") from error
+    if not isinstance(content, dict):
+        raise ValueError("Persisted provider user content must be an object")
+    return content
 
 
 def extract_openai_chat_response(

@@ -552,3 +552,20 @@ def test_v4_adjudicator_can_reselect_units_without_returning_source_text() -> No
         protocol=_v4_protocol(),
     )
     assert resolved.items[0].segments[0].verbatim_decision_text == "Compare A-B with"
+
+
+def test_anchored_firewall_checks_keys_inside_serialized_user_content(
+    tmp_path: Path,
+) -> None:
+    packet = _anchored_packet().model_copy(
+        update={"output_contract": {"type": "object", "start_char": 0}}
+    )
+    request = build_segmentation_provider_request(packet, protocol=_v4_protocol())
+    raw = persist_exact_provider_request(tmp_path / "anchored-request.json", request)
+    with pytest.raises(ValueError, match="violates its input firewall"):
+        verify_persisted_segmentation_provider_request(
+            raw,
+            packet=packet,
+            protocol=_v4_protocol(),
+            raw_request_ref="calls/anchored-request.json",
+        )

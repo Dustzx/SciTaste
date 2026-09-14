@@ -14,7 +14,15 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    computed_field,
+    model_validator,
+)
 
 from scitaste.evaluation.model_identity import (
     ApiIdentityMode,
@@ -156,13 +164,21 @@ class SegmentationProtocolEvidenceUnitSelection(BaseModel):
     unit_id_format: Literal["u%04d"]
     unit_text_source: Literal["original-review-comment"]
     source_offsets_exposed_to_provider: Literal[False] = False
-    model_returns_source_text: Literal[False] = False
+    model_returns_source_span_field: Literal[False] = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "model_returns_source_span_field",
+            "model_returns_source_text",
+        ),
+    )
     reconstructed_text_source: Literal["original-review-comment-slice"]
     unique_text_match_required: Literal[False] = False
     normalization_allowed: Literal[False] = False
     fuzzy_matching_allowed: Literal[False] = False
     insertion_or_deletion_repair_allowed: Literal[False] = False
     overlapping_ranges_allowed: Literal[False] = False
+    system_instruction_sha256: str | None = Field(default=None, pattern=_SHA256)
+    output_contract_sha256: str | None = Field(default=None, pattern=_SHA256)
 
 
 class SegmentationProtocolInputFirewall(BaseModel):
@@ -356,7 +372,7 @@ class SegmentationProtocolScaleGate(BaseModel):
 class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_created_at: datetime
@@ -397,15 +413,17 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Segmentation output-token budget cannot cover the planned calls")
         if self.schema_version == "1.0" and self.adjudication_input_firewall is not None:
             raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
-        if self.schema_version in {"1.1", "1.2", "1.3"} and (
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4"} and (
             self.adjudication_input_firewall is None
         ):
             raise ValueError("Schema 1.1+ requires a separate adjudication firewall")
         if (self.schema_version == "1.2") != (self.span_reconstruction is not None):
             raise ValueError("Schema 1.2 uniquely requires bounded span reconstruction")
-        if (self.schema_version == "1.3") != (self.evidence_unit_selection is not None):
-            raise ValueError("Schema 1.3 uniquely requires evidence-unit selection")
-        if (self.schema_version in {"1.2", "1.3"}) != (
+        if (self.schema_version in {"1.3", "1.4"}) != (
+            self.evidence_unit_selection is not None
+        ):
+            raise ValueError("Schema 1.3+ requires evidence-unit selection")
+        if (self.schema_version in {"1.2", "1.3", "1.4"}) != (
             self.consumed_sample_registry is not None
         ):
             raise ValueError("Schema 1.2+ requires a consumed-sample registry")
@@ -426,12 +444,25 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             if self.adjudication_input_firewall is not None
             else ()
         )
-        expected_anchor_scope = self.schema_version == "1.3"
+        expected_anchor_scope = self.schema_version in {"1.3", "1.4"}
         if (
             segmenter_has_anchor_scope != expected_anchor_scope
             or adjudicator_has_anchor_scope != expected_anchor_scope
         ):
             raise ValueError("Segmentation firewall evidence-unit scope differs from schema")
+        if self.evidence_unit_selection is not None:
+            pins = (
+                self.evidence_unit_selection.system_instruction_sha256,
+                self.evidence_unit_selection.output_contract_sha256,
+            )
+            if (
+                self.schema_version == "1.4"
+                and not all(item is not None for item in pins)
+            ) or (
+                self.schema_version != "1.4"
+                and any(item is not None for item in pins)
+            ):
+                raise ValueError("Schema 1.4 uniquely requires anchored request-contract pins")
         return self
 
 
@@ -492,7 +523,7 @@ class SegmentationFreezeAuthority(BaseModel):
 class TasteSourceSegmentationFreezeReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3", "1.4"] = "1.0"
     freeze_receipt_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     frozen_at: datetime
@@ -513,11 +544,11 @@ class TasteSourceSegmentationFreezeReceipt(BaseModel):
         )
         if self.schema_version == "1.0" and any(item is not None for item in extended):
             raise ValueError("Schema 1.0 cannot bind prospective execution modules")
-        if self.schema_version in {"1.1", "1.2", "1.3"} and any(
+        if self.schema_version in {"1.1", "1.2", "1.3", "1.4"} and any(
             item is None for item in extended
         ):
             raise ValueError("Schema 1.1+ must bind protocol and execution modules")
-        if (self.schema_version in {"1.2", "1.3"}) != (
+        if (self.schema_version in {"1.2", "1.3", "1.4"}) != (
             self.bindings.consumed_sample_registry is not None
         ):
             raise ValueError("Schema 1.2+ binds the consumed-sample registry")
@@ -754,6 +785,8 @@ def inspect_taste_source_segmentation_protocol(
     freeze = TasteSourceSegmentationFreezeReceipt.model_validate(_yaml_mapping(freeze_source))
     if protocol.project_id != freeze.project_id:
         raise ValueError("Segmentation protocol and freeze target different projects")
+    if protocol.schema_version != freeze.schema_version:
+        raise ValueError("Segmentation protocol and freeze schema versions differ")
     if freeze.frozen_at < protocol.protocol_created_at:
         raise ValueError("Segmentation freeze predates its protocol")
     if freeze.freeze_attestation.item_count != protocol.sample.item_count:
@@ -1094,7 +1127,8 @@ def prepare_taste_source_segmentation_request_pack(
                         "Do not infer hidden source or outcome fields, use tools, browse, or "
                         "read another segmenter's output. "
                         + (
-                            "Select only supplied evidence-unit IDs and do not copy source text. "
+                            "Select only supplied evidence-unit IDs; do not return a dedicated "
+                            "source-span transcription field. "
                             if anchored
                             else ""
                         )
