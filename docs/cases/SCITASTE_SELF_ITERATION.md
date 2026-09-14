@@ -1793,3 +1793,21 @@ decision explaining where feedback may reorder priorities without authorizing
 work. This is the recursive case operating as intended: generated content made a
 planning lag legible, the authoritative project plan was repaired, and later
 model generations receive the repaired state.
+
+The next model turn used that repaired state instead of a manually written page.
+GLM-5.3-Flash returned proposal
+`program-revision-c9e08a016f4af238cd5a` as a bounded
+`clarify_stage_decision`: F1000 is the immediate owner/human decision, AAAR
+remains a distinct local-calibration branch, 77 remains only a capacity ceiling,
+and all API, GPU, contact, corpus, and benchmark authority remains false. The
+turn used 5,713 input and 284 output tokens, USD 0.00039566987198395376, and
+6,523 ms. It is intentionally still a draft. Accepting, feedback-editing,
+rejecting, and publishing are user actions visible in Generation as Content;
+recording this model response did not alter the Core plan.
+
+A 1,440×1,200 local browser inspection confirmed the intended first-screen
+geometry: the model-content and Core planes are side by side, the seven-phase
+plan sits directly below, project resources report 6/8 available, detailed
+evidence is progressively disclosed, and the conversation composer remains a
+horizontal bottom control. This is an engineering visual inspection, not a
+counterbalanced usability result.

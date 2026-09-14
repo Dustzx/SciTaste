@@ -1849,3 +1849,13 @@ amendments all start from one current project plan. The model may propose or edi
 their ordering and project-resource priorities; only an accepted and explicitly
 published amendment changes the Core planning overlay, and it still authorizes
 neither branch.
+
+A live GLM-5.3-Flash planning turn then exercised that path at project revision
+491. From the refreshed dossier and an explicit user-style request, it produced a
+`clarify_stage_decision` draft that prioritizes the F1000 owner/human decision,
+keeps AAAR separate, identifies 77 as a ceiling rather than exact demand, and
+retains zero execution authority. The proposal remains unaccepted and
+unpublished so the UI can expose the real feedback/accept/reject/publish sequence.
+It used 5,713 input and 284 output tokens, reported USD 0.00039566987198395376,
+and took 6,523 ms. This is an engineering interaction observation, not evidence
+that the planning advice is scientifically superior.
