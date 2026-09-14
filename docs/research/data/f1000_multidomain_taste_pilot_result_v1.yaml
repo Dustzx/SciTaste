@@ -1,0 +1,117 @@
+schema_version: "1.0"
+result_id: f1000-multidomain-review-response-v1
+project_id: scitaste-self-development
+source_id: f1000research
+source_role: multidomain-natural-review-response-revision-candidates
+official_api: https://f1000research.com/developers
+official_license_faq: https://f1000research.com/faqs
+official_policies: https://f1000research.com/about/policies
+source_license: CC-BY
+acquisition:
+  config_path: configs/evaluation/acquisition/f1000_multidomain_taste_pilot_v1.yaml
+  config_file_sha256: 9374ea05451d368a796d2677df26ef1b9fd9a0c224c56f95b12d20a8eef7f434
+  plan_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-pilot-v1/PLAN.json
+  plan_file_sha256: cf1692e15fa42d4f119b7a387c8567944eb8ab61ce2f85fa557072941b692b2c
+  plan_sha256: 0330419697cd60a220e79652171e9f55b5af16b4b901a9839db4c521a6a28590
+  receipt_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-pilot-v1/RECEIPT.json
+  receipt_file_sha256: 6c249c3c34f442f97132eb844bbfd656eafc65ad794273c1afd6cdb7bee8ffa3
+  receipt_sha256: de041cce84df00afbcfef4d1404b3823374bbc7f83d61c35239c7d954ef1dae1
+  request_count: 93
+  acquired_bytes: 11944836
+  selected_source_group_count: 40
+  cross_domain_overlap_count: 0
+  selected_source_groups_by_publisher_subject:
+    ecology: 20
+    public-health: 20
+population:
+  report_path: outputs/projects/scitaste-self-development/evaluations/acquisitions/f1000-multidomain-taste-pilot-v1/derived/taste-population-v1/REPORT.json
+  report_file_sha256: c1decd4ea234f8fb274ba8195810adf85edc857e8e432fb1e74984dc6ec683f7
+  report_sha256: 9ca3bbd2136777f9974add57078e9c3cebdd994e1876e06f89ed6d2ac7b747b6
+  candidate_file_sha256: 020f17fe4f1de71505d0d53f3b5881f4551e246b75cefe942d7eace60dc4b160
+  compiler_implementation_sha256: 9cbebde6783d465467e0ae51bc7381d3b1bff0fc280433ed6ebacafbc6c244a9
+  candidate_count: 77
+  candidate_source_group_count: 39
+  response_observed_count: 59
+  domain_source_group_counts:
+    ecology: 19
+    public-health: 20
+  recommendation_counts:
+    approved: 25
+    approved-with-reservations: 46
+    not-approved: 6
+scientific_boundary:
+  prior_observed_domain_count: 1
+  added_publisher_subject_count: 2
+  observed_domain_count: 3
+  target_domain_count: 3
+  observed_domain_floor_met: true
+  minimum_groups_per_added_domain: 15
+  added_domain_group_floor_met: true
+  publisher_subjects_are_independently_confirmed_domains: false
+  reviewer_recommendations_are_quality_gold: false
+  author_replies_are_preferred_actions: false
+  later_revisions_are_quality_gold: false
+  independent_domain_review_complete: false
+  independent_quality_review_complete: false
+  decision_family_stratification_complete: false
+  privacy_review_complete: false
+  ready_for_taste_abstraction_review: false
+  ready_for_benchmark_admission: false
+  blocker_codes:
+    - independent-domain-review-pending
+    - independent-quality-review-pending
+    - decision-family-stratification-pending
+    - free-text-privacy-review-pending
+    - taste-abstraction-review-pending
+execution:
+  verification_route: direct_path
+  verification_decision_source: deterministic
+  standalone_preflight_performed: false
+  inline_integrity_guards_performed: true
+  network_access_performed_during_compilation: false
+  model_calls_performed_during_compilation: false
+  gpu_work_performed: false
+  experiment_performed: false
+project_projection:
+  run_id: 2026-09-14__scitaste-native__f1000-multidomain-taste-population-v1__seed-00
+  stage: taste_candidate_population
+  status: complete-taste-domain-expansion
+  project_revision: 480
+  generation_as_content_intent: review-taste-candidate-population
+  projected_population_ids:
+    - aries-review-edit-taste-candidates-v1
+    - f1000-multidomain-review-response-v1
+generation_as_content_dogfood:
+  provider: zhipu
+  model: glm-5.3-flash
+  workspace_id: workspace-7784add91c0c42ba
+  source_turn_id: turn-0001
+  feedback_turn_id: turn-0004
+  status: generated
+  reason_code: model-surface-plan-admitted
+  mode: model_assisted
+  edited_from_turn_id: turn-0001
+  canvas_kind: flow
+  canvas_node_count: 5
+  edit_delta:
+    added_candidate_count: 1
+    removed_candidate_count: 2
+    retained_candidate_count: 4
+    content_changed: true
+    layout_changed: true
+  usage:
+    input_tokens: 24895
+    output_tokens: 2390
+    cost_usd: 0.0019621261
+    latency_ms: 18280
+  interpretation: >-
+    This is a real self-use observation of model-authored generation and
+    feedback-directed page editing. It is not a human-usability result, a
+    scientific-planning correctness result, or evidence of research-quality or
+    efficiency improvement.
+claim_boundary: >-
+  The F1000 result broadens the natural candidate source to two publisher
+  subject strata and makes the remaining admission work visible and editable.
+  It is not an independently domain-labelled or quality-labelled benchmark,
+  an admitted Taste library, an experiment result, or evidence that SciTaste
+  improves research outcomes.

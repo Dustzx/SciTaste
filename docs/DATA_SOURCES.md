@@ -36,6 +36,26 @@ decision principles; admit full text only after per-record license review.
 
 Dataset card: <https://huggingface.co/datasets/taln-ls2n/CASIMIR>
 
+### F1000Research
+
+The official F1000Research API exposes search results and versioned JATS XML,
+and the platform describes its articles and associated peer-review material as
+openly licensed under CC BY. Acquisition must use a bounded, no-redirect plan
+and preserve the exact version locator and receipt. Raw article, review, reply,
+and revision content stays in ignored project-owned outputs rather than Git.
+
+Publisher subject membership is a sampling stratum, not an independently
+validated domain label. Reviewer recommendations, author replies, later
+versions, and publication status are observed decisions and consequences; none
+is automatically a scientific-quality label, a preferred action, a reviewed
+Taste abstraction, or a benchmark outcome. Structured people fields must be
+removed before candidate compilation, and the remaining free text still needs a
+release privacy review.
+
+Authoritative resources: <https://f1000research.com/developers>,
+<https://f1000research.com/faqs>, and
+<https://f1000research.com/about/policies>
+
 ### Accepted papers
 
 Acceptance is not a copyright license and is not itself evidence that a research

@@ -3547,3 +3547,44 @@ duplicate-key rejection, tar path/link/expanded-byte limits, split disjointness,
 and atomic writes are intrinsic guards on the created evidence object, not a
 separate preflight. Network acquisition, secret use, paid compute, benchmark
 admission, and human labels retain their own authority boundaries.
+
+### ADR-116: Flexible generated control normalizes provider variance without weakening evidence admission
+
+Status: accepted and exercised on the multidomain self-development source gate;
+human usability and scientific effectiveness remain unevaluated.
+
+The second natural source path uses the official F1000Research API to freeze
+exact first/later version groups with their reviews and observed author replies
+from two publisher-subject strata. It broadens candidate evidence, but subject
+membership, recommendations, replies, revisions, and publication remain
+non-gold. Structured identities are removed locally, while independent domain,
+quality, decision-family, privacy, and Taste-abstraction review remain required.
+The resulting 77 episodes from 39 groups therefore enter project planning but
+not the benchmark or admitted Taste memory.
+
+A live Generation as Content pass exposed ordinary structured-provider variance:
+the model repeated the trusted candidate's display component in an otherwise
+valid entry and supplied visual focus references broader than that entry. The
+receiver now removes only an exactly matching redundant component echo,
+intersects visual focus with the selected candidate's evidence, and binds edit
+lineage to the latest trusted model-authored predecessor. Unknown or mismatched
+fields still fail closed, and authored brief/canvas claims still require exact
+admitted evidence citations. This keeps semantic layout flexible without asking
+the model to reproduce receiver-owned integrity facts.
+
+The feedback request also legitimately contained the bounded project digest,
+schema, and predecessor page. A 64,000-byte transport ceiling rejected it before
+the configured 32,000-token input budget was reached. The ceiling is now 128,000
+bytes, aligned with that token envelope; the independent 8,192-output-token,
+response-byte, latency, and cost limits remain. Oversize rejection is a reactive
+admission guard with its own reason code, not a preliminary call or generic
+preflight.
+
+Tool Intelligence likewise sends the reversible local F1000 compiler through
+`direct_path`. XML/node/byte bounds, content hashes, privacy transformation, and
+atomic publication run inline because they define the evidence object itself.
+Paid provider generation retains its declared per-call bounds, and GPU or formal
+experiment launch still stops at owner approval. The successful feedback turn
+edited an exact predecessor into a five-node project decision flow; it is a
+product dogfood observation, not proof that the model's plan is scientifically
+correct.

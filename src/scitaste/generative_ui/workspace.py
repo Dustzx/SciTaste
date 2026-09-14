@@ -59,6 +59,7 @@ from scitaste.evaluation.executable_candidate import (
     ExecutableCandidateReport,
     load_executable_candidate_report,
 )
+from scitaste.evaluation.f1000_domain_population import F1000TastePopulationReport
 from scitaste.evaluation.program_control import compile_effective_experiment_program
 from scitaste.evaluation.readiness import summarize_evaluation_readiness
 from scitaste.evaluation.reference_selection_comparison import (
@@ -787,6 +788,97 @@ class WorkspaceSurfaceFactory:
                     "model_calls_performed": population.model_calls_performed,
                     "gpu_work_performed": population.gpu_work_performed,
                     "experiment_performed": population.experiment_performed,
+                    "support_ref_ids": [
+                        project_ref.evidence_id,
+                        run_ref.evidence_id,
+                        artifact_ref.evidence_id,
+                    ],
+                }
+            )
+
+        taste_domain_expansion_rows: list[dict[str, object]] = []
+        taste_domain_expansion_ids: set[str] = set()
+        for run in snapshot.manifest.runs:
+            inspected_expansion = _f1000_taste_population_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected_expansion is None:
+                continue
+            expansion, report_file_sha256 = inspected_expansion
+            if expansion.population_id in taste_domain_expansion_ids:
+                raise ProjectSurfaceChangedError(
+                    "project registers multiple F1000 Taste domain expansions"
+                )
+            taste_domain_expansion_ids.add(expansion.population_id)
+            run_ref = run_refs[run.run_id]
+            assert run.artifact is not None
+            artifact_ref = _evidence_for_locator(binding, EvidenceKind.ARTIFACT, run.artifact)
+            evidence_ref_ids.append(artifact_ref.evidence_id)
+            taste_domain_expansion_rows.append(
+                {
+                    "run_ref_id": run_ref.evidence_id,
+                    "artifact_ref_id": artifact_ref.evidence_id,
+                    "run_id": run.run_id,
+                    "population_id": expansion.population_id,
+                    "report_file_sha256": report_file_sha256,
+                    "report_sha256": expansion.report_sha256,
+                    "acquisition_receipt_sha256": (
+                        expansion.acquisition_receipt_sha256
+                    ),
+                    "compiler_implementation_sha256": (
+                        expansion.compiler_implementation_sha256
+                    ),
+                    "selected_source_group_count": expansion.selected_source_group_count,
+                    "candidate_source_group_count": (
+                        expansion.candidate_source_group_count
+                    ),
+                    "candidate_count": expansion.candidate_count,
+                    "response_observed_count": expansion.response_observed_count,
+                    "domain_source_group_counts": {
+                        domain_id.replace("-", "_"): count
+                        for domain_id, count in expansion.domain_source_group_counts.items()
+                    },
+                    "recommendation_counts": {
+                        recommendation.replace("-", "_"): count
+                        for recommendation, count in expansion.recommendation_counts.items()
+                    },
+                    "observed_domain_count": expansion.observed_domain_count,
+                    "target_domain_count": expansion.target_domain_count,
+                    "observed_domain_floor_met": expansion.observed_domain_floor_met,
+                    "minimum_groups_per_added_domain": (
+                        expansion.minimum_groups_per_added_domain
+                    ),
+                    "added_domain_group_floor_met": (
+                        expansion.added_domain_group_floor_met
+                    ),
+                    "independent_domain_review_complete": (
+                        expansion.independent_domain_review_complete
+                    ),
+                    "independent_quality_review_complete": (
+                        expansion.independent_quality_review_complete
+                    ),
+                    "decision_family_stratification_complete": (
+                        expansion.decision_family_stratification_complete
+                    ),
+                    "privacy_review_complete": expansion.privacy_review_complete,
+                    "ready_for_taste_abstraction_review": (
+                        expansion.ready_for_taste_abstraction_review
+                    ),
+                    "ready_for_benchmark_admission": (
+                        expansion.ready_for_benchmark_admission
+                    ),
+                    "blocker_codes": [item.code for item in expansion.blockers],
+                    "verification_route": expansion.verification.route.value,
+                    "standalone_preflight_performed": (
+                        expansion.standalone_preflight_performed
+                    ),
+                    "inline_integrity_guards_performed": (
+                        expansion.inline_integrity_guards_performed
+                    ),
+                    "model_calls_performed": expansion.model_calls_performed,
+                    "gpu_work_performed": expansion.gpu_work_performed,
+                    "experiment_performed": expansion.experiment_performed,
                     "support_ref_ids": [
                         project_ref.evidence_id,
                         run_ref.evidence_id,
@@ -1969,7 +2061,7 @@ class WorkspaceSurfaceFactory:
                 "target_ids": [],
             }
         ]
-        if taste_population_rows:
+        if taste_population_rows or taste_domain_expansion_rows:
             next_step_candidates.append(
                 {
                     "candidate_id": "review-taste-candidate-population",
@@ -1987,11 +2079,23 @@ class WorkspaceSurfaceFactory:
                                     item["artifact_ref_id"]
                                     for item in taste_population_rows
                                 ),
+                                *(
+                                    item["run_ref_id"]
+                                    for item in taste_domain_expansion_rows
+                                ),
+                                *(
+                                    item["artifact_ref_id"]
+                                    for item in taste_domain_expansion_rows
+                                ),
                             ]
                         )
                     ),
                     "target_ids": [
-                        item["population_id"] for item in taste_population_rows
+                        *(item["population_id"] for item in taste_population_rows),
+                        *(
+                            item["population_id"]
+                            for item in taste_domain_expansion_rows
+                        ),
                     ],
                 }
             )
@@ -2335,6 +2439,7 @@ class WorkspaceSurfaceFactory:
                     "benchmark_metadata_allocations": len(benchmark_metadata_allocation_rows),
                     "reference_selection_comparisons": len(reference_selection_rows),
                     "taste_candidate_populations": len(taste_population_rows),
+                    "taste_domain_expansions": len(taste_domain_expansion_rows),
                 },
                 "lifecycle": {
                     "lifecycle_state": lifecycle.state,
@@ -2391,6 +2496,7 @@ class WorkspaceSurfaceFactory:
                 "benchmark_metadata_allocations": benchmark_metadata_allocation_rows,
                 "reference_selection_comparisons": reference_selection_rows,
                 "taste_candidate_populations": taste_population_rows,
+                "taste_domain_expansions": taste_domain_expansion_rows,
                 "dataset_packages": dataset_package_rows,
                 "benchmark_qualifications": benchmark_qualification_rows,
                 "review_iterations": review_iteration_rows,
@@ -3130,6 +3236,49 @@ def _aries_taste_population_for_run(
         or report.report_sha256 != (run.model_extra or {}).get("population_report_sha256")
     ):
         raise ProjectSurfaceChangedError("registered ARIES Taste population identity differs")
+    return report, hashlib.sha256(resolved.read_bytes()).hexdigest()
+
+
+def _f1000_taste_population_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[F1000TastePopulationReport, str] | None:
+    """Load only the registered publisher-stratified domain-expansion report."""
+
+    expected = f"runs/{run.run_id}/taste_candidate_population/REPORT.json"
+    if (
+        (run.model_extra or {}).get("generative_ui_projection")
+        != "f1000-multidomain-taste-population-v1"
+    ):
+        return None
+    if run.stage_path != "taste_candidate_population" or run.artifact != expected:
+        raise ProjectSurfaceChangedError("registered F1000 Taste population path is invalid")
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered F1000 Taste population is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered F1000 Taste population escaped its project")
+    try:
+        report = F1000TastePopulationReport.model_validate_json(resolved.read_bytes())
+    except (OSError, ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered F1000 Taste population is invalid") from exc
+    candidate_file = resolved.parent / report.candidate_file
+    if (
+        candidate_file.is_symlink()
+        or not candidate_file.is_file()
+        or not candidate_file.resolve(strict=True).is_relative_to(root)
+        or hashlib.sha256(candidate_file.read_bytes()).hexdigest()
+        != report.candidate_file_sha256
+    ):
+        raise ProjectSurfaceChangedError("registered F1000 Taste candidates are invalid")
+    if (
+        report.project_id != root.name
+        or report.population_id != (run.model_extra or {}).get("population_id")
+        or report.report_sha256 != (run.model_extra or {}).get("population_report_sha256")
+    ):
+        raise ProjectSurfaceChangedError("registered F1000 Taste population identity differs")
     return report, hashlib.sha256(resolved.read_bytes()).hexdigest()
 
 

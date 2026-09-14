@@ -1636,3 +1636,39 @@ evidence IDs, snapshot revision/hash, and `proposal_only` authority. A2UI events
 must return to the deterministic approval/controller boundary; only its bounded
 handoff may reach a separately validated downstream service. Events and
 controller results must not be mapped directly to shell commands or tools.
+
+### Multidomain source planning and receiver-normalized editing (2026-09-14)
+
+The self-development project now presents both natural candidate populations
+through one fixed `review-taste-candidate-population` entry. That label may be
+pre-generated into the project cache, but it opens as an ordinary editable
+conversation: free questions and feedback still invoke the bounded model rather
+than selecting canned prose. The current F1000 projection adds 77 review
+episodes from 39 Ecology/Public Health publisher-subject groups and keeps all
+independent domain, quality, privacy, decision-family, and abstraction blockers
+visible.
+
+The first real GLM-5.3-Flash response correctly selected this intent but exposed
+two integration defects rather than a model-capability failure. The provider
+echoed one trusted display-only `component` field, and the 64,000-byte request
+ceiling could not hold the already permitted project digest, output schema, and
+predecessor page. The receiver now removes only an exact redundant echo, bounds
+visual focus to the selected candidate's evidence, owns predecessor lineage,
+and classifies an oversize request separately. The request byte ceiling is
+128,000, consistent with the existing 32,000-input-token budget; output remains
+independently bounded at 8,192 tokens in the deployed GLM profile.
+
+The successful feedback edit is project-owned workspace
+`workspace-7784add91c0c42ba`, `turn-0004`, editing `turn-0001`. It generated a
+horizontal five-node flow covering parallel domain/privacy review, blind quality
+review, decision-family stratification, Taste abstraction, and the visible
+API/GPU compute plane. The receiver reports one added, two removed, and four
+retained candidates, plus both content and layout change. The call used 24,895
+input and 2,390 output tokens, reported USD 0.0019621261, and took 18,280 ms.
+
+This verifies genuine model authorship, exact-predecessor feedback editing, and
+the parallel/interactive Core boundary on the real project. It does not measure
+human comprehension, scientific-plan correctness, or research effectiveness.
+The generated page can propose and visualize project-resource choices, while
+the shared registry, project binding, credential material, resource observation,
+reservation, and experiment authority remain separate typed transitions.

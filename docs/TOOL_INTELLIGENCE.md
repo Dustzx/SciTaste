@@ -605,6 +605,26 @@ semantic uncertainty into a broader but economically worse preflight. The
 project route portfolio renders both net-gain bars and the model-advisory
 eligibility flag, making the choice inspectable before any check is run.
 
+The multidisciplinary F1000 candidate compiler is a concrete low-risk route. It
+performs a reversible local derivation over an immutable acquisition receipt, so
+Tool Intelligence selected `direct_path` and no standalone preflight ran. XML
+byte/node limits, source and output hashes, structured-identity removal, domain
+floor checks, and atomic publication remain inline because omitting them would
+make the new evidence object undefined or corrupt. They are transaction
+invariants, not advance review. The Generation as Content receiver follows the
+same distinction: it normalizes an exactly truthful redundant provider echo and
+bounds visual focus during admission, while unknown/mismatched fields and
+uncited claims are rejected. A request-size failure is reported only when the
+actual request crosses its bound; SciTaste does not first run a second simulated
+request merely to predict it.
+
+This leaves model judgment available at more useful blocks—ambiguous intent,
+semantic surface composition, feedback-directed editing, program-change advice,
+and eligible route gray zones—without turning the model into an execution
+authority. API calls retain token/cost/time/response limits because failure can
+consume money, and GPU or formal experiments retain owner approval because the
+resource and scientific costs are material.
+
 ## Threat model and extension rules
 
 The current gates address these failures:

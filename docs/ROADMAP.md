@@ -43,6 +43,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.7 — real AAAR quality projection | done | all 16 receipt-bound records pass bounded JSON/identity audit and materialize as opaque prestige-blind quality inputs with author, venue, locator, acknowledgment, bibliography, and downstream-task exclusions |
 | Phase 9.8 — local Reference Quality calibration boundary | done | two deterministic AAAR stress records compile to exact local Qwen3-VL-2B structured-node requests; local tokenizer counts, no-upload semantics, independent execution opt-in, JSON-repair evidence, checkpoint identity, and a one-GPU-hour ceiling are bound without loading the model or starting GPU work |
 | Phase 9.9 — route-bound generative project control | done | every eligible experiment gate can seed an editable model planning intervention bound to the exact project snapshot, stage, and Tool Intelligence route; stale routes or stage-drifting drafts fail closed without running checks or experiments |
+| Phase 9.10 — multidomain Taste-source and generated-control pilot | done | an official F1000 API transaction adds two publisher-subject strata, compiles 77 natural review/response/revision episodes, projects both source populations into one flexible project intent, and completes one real feedback-directed model canvas edit; independent domain, quality, privacy, abstraction, and benchmark gates remain open |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -1486,10 +1487,21 @@ citation/resource screen and exact adapters/licenses remain open.
   The same feedback then produced a valid, pending Core planning clarification
   after the semantic program-revision contract was separated from server-owned
   integrity fields. It has not been accepted or published for the user.
-- Next: add at least two genuinely distinct scientific domains, run the declared
-  privacy review, define decision-family strata, and collect two independent
-  conflict-cleared scientific-quality judgments before freezing any benchmark
-  split. The present population may support Taste-abstraction review but is not a
+- Done at the source-feasibility boundary: a bounded official F1000 API pilot
+  selected 20 exact version groups from each of the Ecology and Public Health
+  publisher subjects. Thirty-nine groups yielded 77 natural review episodes and
+  59 observed author replies. The existing one-domain ARIES population and the
+  two new strata are projected together into the project progress surface. A
+  live GLM-5.3-Flash feedback turn edited the evidence page into a compact
+  five-node flow that made domain/privacy review, blind quality review,
+  decision-family stratification, Taste abstraction, and compute choices
+  explorable without changing Core state.
+- Next: independently confirm the two publisher subjects as scientific-domain
+  labels, complete free-text privacy review, define the six decision-family
+  strata, collect two conflict-cleared quality judgments, and review grounded
+  Taste abstractions before freezing any benchmark split. Publisher subjects,
+  reviewer recommendations, author replies, later versions, and publication are
+  observed context rather than quality gold. Neither natural population is a
   benchmark or an effectiveness result.
 
 ## Project controls

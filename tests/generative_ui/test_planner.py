@@ -517,6 +517,45 @@ def test_followup_composition_edits_the_exact_prior_model_brief(tmp_path: Path) 
     }
 
 
+def test_edit_lineage_is_bound_by_receiver_not_model(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    first = StructuredWorkspacePlanner(
+        FakeStructuredBackend(_model_plan),
+        _policy(),
+    ).compose(catalog)
+    assert first.authored_brief is not None and first.plan is not None
+    context = PlannerConversationContext(
+        project_id="planner-project",
+        workspace_id="conversation-one",
+        turns=(
+            PlannerContextTurn(
+                turn_id="turn-0001",
+                ordinal=1,
+                prompt_kind="free_question",
+                prompt_text="Summarize current progress",
+                authored_brief=first.authored_brief,
+                surface_entries=first.plan.entries,
+            ),
+        ),
+    )
+
+    def stale_lineage(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        brief = payload["brief"]
+        assert isinstance(brief, dict)
+        brief["edited_from_turn_id"] = "forged-turn"
+        return payload
+
+    edited = StructuredWorkspacePlanner(
+        FakeStructuredBackend(stale_lineage),
+        _policy(),
+    ).compose(catalog, prompt_text="Edit the prior page", context=context)
+
+    assert edited.status == "planned"
+    assert edited.authored_brief is not None
+    assert edited.authored_brief.edited_from_turn_id == "turn-0001"
+
+
 def test_model_canvas_cannot_cite_hidden_evidence(tmp_path: Path) -> None:
     _, _, catalog = _inputs(_runtime(tmp_path))
 
@@ -565,6 +604,53 @@ def test_cited_server_candidate_is_admitted_into_model_layout(tmp_path: Path) ->
     assert outcome.status == "planned"
     assert outcome.plan is not None
     assert len(outcome.plan.entries) == 2
+
+
+def test_truthful_redundant_component_echo_is_admitted(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+
+    def component_echo(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        candidates = {
+            item["candidate_id"]: item
+            for item in request.input_payload["candidates"]
+            if isinstance(item, dict)
+        }
+        entries = payload["entries"]
+        assert isinstance(entries, list)
+        for entry in entries:
+            assert isinstance(entry, dict)
+            candidate = candidates[entry["candidate_id"]]
+            entry["component"] = candidate["component"]
+        return payload
+
+    outcome = StructuredWorkspacePlanner(
+        FakeStructuredBackend(component_echo),
+        _policy(),
+    ).compose(catalog)
+
+    assert outcome.status == "planned"
+    assert outcome.reason_code == "model-surface-plan-admitted"
+
+
+def test_model_visual_focus_is_bounded_to_its_selected_candidate(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+
+    def broad_focus(request: StructuredModelRequest) -> dict[str, object]:
+        payload = _model_plan(request)
+        entries = payload["entries"]
+        assert isinstance(entries, list) and isinstance(entries[0], dict)
+        entries[0]["focus_ref_ids"] = ["hidden-evidence"]
+        return payload
+
+    outcome = StructuredWorkspacePlanner(
+        FakeStructuredBackend(broad_focus),
+        _policy(),
+    ).compose(catalog)
+
+    assert outcome.status == "planned"
+    assert outcome.plan is not None
+    assert outcome.plan.entries[0].focus_ref_ids == ()
 
 
 def test_model_generates_a_non_executable_project_bound_program_amendment() -> None:
@@ -701,6 +787,19 @@ def test_provider_error_tool_call_and_resource_overruns_fail_closed(tmp_path: Pa
         _policy(max_response_cost_usd=0.15),
     )
     assert FallbackWorkspacePlanner(expensive).compose(catalog).status == "fallback"
+
+
+def test_oversized_composition_request_reports_its_inline_bound(tmp_path: Path) -> None:
+    _, _, catalog = _inputs(_runtime(tmp_path))
+    planner = StructuredWorkspacePlanner(
+        FakeStructuredBackend(_model_plan),
+        _policy(max_request_bytes=512),
+    )
+
+    outcome = planner.compose(catalog)
+
+    assert outcome.status == "unavailable"
+    assert outcome.reason_code == "model-surface-plan-request-too-large"
 
 
 def test_structured_request_carries_the_exact_finite_cost_ceiling(tmp_path: Path) -> None:

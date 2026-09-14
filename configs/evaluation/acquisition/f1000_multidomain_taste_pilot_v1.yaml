@@ -1,0 +1,38 @@
+schema_version: "1.0"
+acquisition_id: f1000-multidomain-taste-pilot-v1
+project_id: scitaste-self-development
+source_host: f1000research.com
+strata:
+  - domain_id: ecology
+    subject_query: Ecology
+    expected_page_count: 5
+    target_source_groups: 20
+  - domain_id: public-health
+    subject_query: Public Health
+    expected_page_count: 8
+    target_source_groups: 20
+rows_per_page: 100
+minimum_latest_version: 2
+selection_salt: scitaste-f1000-multidomain-pilot-v1-20260914
+per_search_response_max_bytes: 2097152
+per_article_xml_max_bytes: 4194304
+maximum_total_bytes: 362807296
+timeout_seconds: 60
+parallel_article_requests: 8
+user_agent: SciTaste-F1000-source-pilot/1.0 research-contact-local
+authorization_ref: user-standing-download-under-10gb-2026-09-14
+license_identifier: CC-BY
+purpose: >-
+  Freeze a bounded publisher-subject sample of exact F1000Research version-1
+  manuscripts, later revisions, CC-BY review reports, and observed author replies
+  for Scientific Taste source feasibility in ecology and public health.
+claim_boundary: >-
+  Publisher subject membership is a sampling stratum, not an independently
+  reviewed domain label. Review recommendations, author replies, later revisions,
+  and article publication are observed evidence, not scientific-quality labels,
+  preferred actions, admitted Taste abstractions, benchmark cases, or effects.
+redirects_allowed: false
+credentials_used: false
+authorizes_model_calls: false
+authorizes_gpu_work: false
+authorizes_experiment: false

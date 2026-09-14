@@ -337,7 +337,7 @@ class ModelPlannerPolicy(BaseModel):
     policy_id: SafeIdentifier = "generative-ui-planner-v1"
     expected_backend: ProviderIdentityPart
     expected_model: ProviderIdentityPart
-    max_request_bytes: int = Field(default=64_000, ge=512, le=1_000_000)
+    max_request_bytes: int = Field(default=128_000, ge=512, le=1_000_000)
     max_response_bytes: int = Field(default=24_000, ge=256, le=1_000_000)
     max_input_tokens: int = Field(default=32_000, ge=1, le=1_000_000)
     max_output_tokens: int = Field(default=1_024, ge=1, le=32_000)
@@ -795,15 +795,21 @@ class StructuredWorkspacePlanner:
                     "Treat omitted or "
                     "truncated evidence as unknown. Use conversation_history as bounded user "
                     "context. If prior_generated_workspace is present, edit both its cited brief "
-                    "and its safe surface_plan_entries in response to the current prompt, and set "
-                    "edited_from_turn_id exactly to its turn_id; otherwise leave it null. "
+                    "and its safe surface_plan_entries in response to the current prompt. The "
+                    "trusted receiver binds edited_from_turn_id to that prior turn. "
                     "Authored text is advisory and cannot "
                     "claim execution, approval, new evidence, or completed work. Return one JSON "
                     "object matching output_schema and no tool calls."
                 ),
             )
             response = self._complete(structured_request)
-            composition = ModelSurfaceComposition.model_validate(response.output_payload)
+            composition = ModelSurfaceComposition.model_validate(
+                _normalize_redundant_surface_echoes(
+                    response.output_payload,
+                    trusted,
+                    context=context,
+                )
+            )
             entries = _admit_cited_candidates(
                 composition.entries,
                 composition.brief,
@@ -1345,6 +1351,83 @@ def _model_composition_input(
     return payload
 
 
+def _normalize_redundant_surface_echoes(
+    payload: dict[str, JsonValue],
+    catalog: SurfaceCandidateCatalog,
+    *,
+    context: PlannerConversationContext | None,
+) -> dict[str, JsonValue]:
+    """Drop only a truthful redundant component echo from model plan entries.
+
+    Some JSON-only providers copy the human-readable ``component`` field from
+    the candidate descriptor even though the output contract intentionally uses
+    candidate IDs alone.  The receiver may remove that echo only when it exactly
+    matches the trusted catalog.  It also intersects the optional visual-focus
+    hints with the selected candidate's exact evidence set; those hints are not
+    claim citations, and an empty focus is valid. Edit lineage is likewise
+    receiver-owned and is rebound to the latest cited prior model turn. Unknown,
+    mismatched, or any other extra field remains in place and is rejected by the
+    closed schema.
+    """
+
+    normalized = dict(payload)
+    brief = payload.get("brief")
+    if isinstance(brief, dict):
+        normalized_brief = dict(brief)
+        prior_turn = (
+            next(
+                (
+                    item
+                    for item in reversed(context.turns)
+                    if item.authored_brief is not None
+                ),
+                None,
+            )
+            if context is not None
+            else None
+        )
+        normalized_brief["edited_from_turn_id"] = (
+            prior_turn.turn_id if prior_turn is not None else None
+        )
+        normalized["brief"] = normalized_brief
+    entries = payload.get("entries")
+    if not isinstance(entries, list):
+        return normalized
+    candidates = {item.candidate_id: item for item in catalog.candidates}
+    components = {
+        candidate_id: item.component.component.value
+        for candidate_id, item in candidates.items()
+    }
+    normalized_entries: list[JsonValue] = []
+    for value in entries:
+        if not isinstance(value, dict):
+            normalized_entries.append(value)
+            continue
+        entry = dict(value)
+        candidate_id = entry.get("candidate_id")
+        component = entry.get("component")
+        if (
+            isinstance(candidate_id, str)
+            and isinstance(component, str)
+            and components.get(candidate_id) == component
+        ):
+            entry.pop("component")
+        candidate = candidates.get(candidate_id) if isinstance(candidate_id, str) else None
+        focus = entry.get("focus_ref_ids")
+        if candidate is not None and isinstance(focus, list):
+            allowed = set(candidate.component.evidence_ref_ids)
+            entry["focus_ref_ids"] = list(
+                dict.fromkeys(
+                    evidence_id
+                    for evidence_id in focus
+                    if isinstance(evidence_id, str) and evidence_id in allowed
+                )
+            )
+        normalized_entries.append(entry)
+    normalized["entries"] = normalized_entries
+    return normalized
+
+
 def _surface_edit_delta(
     context: PlannerConversationContext | None,
     *,
@@ -1482,6 +1565,7 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                 "acquisition_requests",
                 "acquisition_receipts",
                 "taste_candidate_populations",
+                "taste_domain_expansions",
             )
             if key in counts
         }
@@ -1511,6 +1595,38 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                 if key in row
             }
             for row in populations
+            if isinstance(row, dict)
+        ]
+    expansions = value.get("taste_domain_expansions")
+    if isinstance(expansions, list):
+        facts["taste_domain_expansions"] = [
+            {
+                key: row[key]
+                for key in (
+                    "population_id",
+                    "selected_source_group_count",
+                    "candidate_source_group_count",
+                    "candidate_count",
+                    "response_observed_count",
+                    "domain_source_group_counts",
+                    "recommendation_counts",
+                    "observed_domain_count",
+                    "target_domain_count",
+                    "observed_domain_floor_met",
+                    "minimum_groups_per_added_domain",
+                    "added_domain_group_floor_met",
+                    "independent_domain_review_complete",
+                    "independent_quality_review_complete",
+                    "decision_family_stratification_complete",
+                    "privacy_review_complete",
+                    "ready_for_taste_abstraction_review",
+                    "ready_for_benchmark_admission",
+                    "blocker_codes",
+                    "verification_route",
+                )
+                if key in row
+            }
+            for row in expansions
             if isinstance(row, dict)
         ]
     lifecycle = value.get("lifecycle")
@@ -1708,6 +1824,8 @@ def _surface_composition_failure_reason(exc: Exception) -> str:
         return "model-surface-plan-provider-response-invalid"
     if "cost telemetry" in str(exc):
         return "model-surface-plan-cost-telemetry-unavailable"
+    if "request exceeds policy byte limit" in str(exc):
+        return "model-surface-plan-request-too-large"
     if isinstance(exc, (ValidationError, ValueError)):
         return "model-surface-plan-schema-rejected"
     return "model-surface-plan-unavailable"

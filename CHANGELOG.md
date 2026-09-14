@@ -5,6 +5,25 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the official F1000Research multidomain natural-source pilot. A bounded
+  93-request, 11,944,836-byte transaction selected 20 exact version groups from
+  each of the Ecology and Public Health publisher subjects; the de-identified
+  compiler produced 77 natural review/response/revision episodes from 39 usable
+  groups and projected them beside the ARIES population in the self-development
+  project. Publisher subjects, recommendations, replies, revisions, and
+  publication remain non-gold, with independent domain, quality, privacy,
+  decision-family, and Taste-abstraction review still blocking benchmark
+  admission. Tool Intelligence routed the reversible local compilation directly
+  and kept only evidence-defining inline guards.
+- Made flexible Generation as Content robust to bounded provider variance and
+  real predecessor-sized feedback. The receiver removes only an exactly truthful
+  redundant component echo, narrows visual focus to the selected candidate's
+  evidence, and owns edit lineage while still rejecting unknown fields and
+  uncited claims. The request byte ceiling now matches the existing 32,000-token
+  input envelope, with output/cost/time/response limits unchanged. A live
+  GLM-5.3-Flash self-use turn edited an exact prior page into a compact five-node
+  multidomain decision flow; this is product dogfood, not scientific-effect or
+  usability evidence.
 - Added the first real natural review-to-revision Scientific Taste candidate
   population from the official ARIES release. The receipt-bound compiler excludes
   all 3,892 synthetic review rows, de-identifies 196 natural candidates across 42

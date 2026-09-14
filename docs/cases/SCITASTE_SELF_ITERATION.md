@@ -1608,3 +1608,46 @@ reviewable publication event. Tool Intelligence chose a direct path for the
 local population compiler, so no standalone preflight was added; identity,
 archive-safety, bounded-read, and atomic-publication checks remained intrinsic
 because failure there would corrupt provenance or project state.
+
+## Expanding the source gate and editing its generated control surface (2026-09-14)
+
+The previous self-iteration made the one-domain limitation visible. Rather than
+declare it solved from prose, SciTaste acquired a bounded official F1000 sample:
+20 exact version groups in each of the Ecology and Public Health publisher
+subjects. Thirty-nine usable groups produced 77 natural review episodes and 59
+observed author replies. This raises observed source coverage from one to three
+strata and meets the declared group floor, but it does not turn publisher tags
+into independently confirmed domains or recommendations/revisions into quality
+gold. Domain, quality, privacy, decision-family, and Taste-abstraction reviews
+remain open, so benchmark admission remains false.
+
+The project surface then used that new evidence to test SciTaste on its own
+development. The first GLM-5.3-Flash call selected the right curation intent but
+the composition path rejected an otherwise useful answer because the provider
+repeated a display component field. A later feedback request was blocked before
+generation because the 64,000-byte transport ceiling could not hold the valid
+bounded evidence, schema, and predecessor page. These were adapter and
+infrastructure defects, not evidence that the model lacked scientific planning
+ability.
+
+The trusted receiver now removes only an exactly matching redundant echo,
+intersects visual focus with the selected candidate's evidence, and assigns edit
+lineage itself. The input transport ceiling is 128,000 bytes, aligned with the
+existing 32,000-token input contract, while independent output, response, time,
+and cost bounds remain. The repaired call produced `turn-0004` in
+`workspace-7784add91c0c42ba`, explicitly editing `turn-0001`. It changed both
+content and layout and generated a compact five-node flow joining domain/privacy,
+blind-quality, decision-family, abstraction, and compute decisions. This is the
+recursive behavior sought from the self-development case: new scientific
+evidence changes what the project can display, flexible model generation exposes
+an integration defect, feedback edits the artifact, and the repair becomes part
+of the product. It remains engineering dogfood rather than a user or scientific
+effect result.
+
+Tool Intelligence did not add a preparatory review to the local compiler. It
+selected `direct_path`; only the XML/content bounds, privacy transformation,
+hashes, and atomic write needed to make the evidence object valid ran inline.
+The paid model call retained its declared envelope, and no GPU or experiment was
+authorized. This iteration therefore operationalizes the user's rule: check in
+advance only when avoidable failure cost justifies it, and otherwise execute the
+bounded action and inspect the actual result.

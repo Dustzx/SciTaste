@@ -628,6 +628,7 @@ class ProjectProgressCounts(BaseModel):
     benchmark_metadata_allocations: int = Field(default=0, ge=0)
     reference_selection_comparisons: int = Field(default=0, ge=0)
     taste_candidate_populations: int = Field(default=0, ge=0)
+    taste_domain_expansions: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def run_states_cover_registered_runs(self) -> ProjectProgressCounts:
@@ -1108,6 +1109,74 @@ class ProjectProgressTasteCandidatePopulationItem(BaseModel):
             raise ValueError("Taste candidate population lacks registered evidence")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
             raise ValueError("Taste candidate population evidence must be unique")
+        return self
+
+
+class ProjectProgressTasteDomainExpansionItem(BaseModel):
+    """One publisher-stratified multidisciplinary population awaiting human gates."""
+
+    model_config = _DATA_MODEL_CONFIG
+
+    run_ref_id: SafeIdentifier
+    artifact_ref_id: SafeIdentifier
+    run_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    population_id: SafeIdentifier
+    report_file_sha256: Sha256
+    report_sha256: Sha256
+    acquisition_receipt_sha256: Sha256
+    compiler_implementation_sha256: Sha256
+    selected_source_group_count: int = Field(gt=0)
+    candidate_source_group_count: int = Field(gt=0)
+    candidate_count: int = Field(gt=0)
+    response_observed_count: int = Field(ge=0)
+    domain_source_group_counts: dict[SafeIdentifier, int] = Field(min_length=2)
+    recommendation_counts: dict[SafeIdentifier, int] = Field(min_length=1)
+    observed_domain_count: int = Field(gt=0)
+    target_domain_count: int = Field(gt=0)
+    observed_domain_floor_met: bool
+    minimum_groups_per_added_domain: int = Field(gt=0)
+    added_domain_group_floor_met: bool
+    independent_domain_review_complete: bool
+    independent_quality_review_complete: bool
+    decision_family_stratification_complete: bool
+    privacy_review_complete: bool
+    ready_for_taste_abstraction_review: bool
+    ready_for_benchmark_admission: bool
+    blocker_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
+    verification_route: Literal["direct_path"]
+    standalone_preflight_performed: Literal[False]
+    inline_integrity_guards_performed: Literal[True]
+    model_calls_performed: Literal[False]
+    gpu_work_performed: Literal[False]
+    experiment_performed: Literal[False]
+    support_ref_ids: tuple[SafeIdentifier, ...] = Field(min_length=3)
+
+    @model_validator(mode="after")
+    def domain_expansion_is_closed(self) -> ProjectProgressTasteDomainExpansionItem:
+        if self.candidate_source_group_count != sum(self.domain_source_group_counts.values()):
+            raise ValueError("Taste domain-expansion group counts are inconsistent")
+        if self.candidate_source_group_count > self.selected_source_group_count:
+            raise ValueError("Taste domain-expansion candidate groups exceed selection")
+        if self.candidate_count != sum(self.recommendation_counts.values()):
+            raise ValueError("Taste domain-expansion recommendations do not cover candidates")
+        if self.response_observed_count > self.candidate_count:
+            raise ValueError("Taste domain-expansion responses exceed candidates")
+        if self.observed_domain_floor_met != (
+            self.observed_domain_count >= self.target_domain_count
+        ):
+            raise ValueError("Taste domain-expansion domain floor is inconsistent")
+        expected_group_floor = all(
+            count >= self.minimum_groups_per_added_domain
+            for count in self.domain_source_group_counts.values()
+        )
+        if self.added_domain_group_floor_met != expected_group_floor:
+            raise ValueError("Taste domain-expansion group floor is inconsistent")
+        if self.ready_for_taste_abstraction_review or self.ready_for_benchmark_admission:
+            raise ValueError("unreviewed domain expansion cannot claim downstream admission")
+        if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
+            raise ValueError("Taste domain expansion lacks registered evidence")
+        if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
+            raise ValueError("Taste domain-expansion evidence must be unique")
         return self
 
 
@@ -2659,6 +2728,7 @@ class ProjectProgressBoardData(BaseModel):
     taste_candidate_populations: tuple[
         ProjectProgressTasteCandidatePopulationItem, ...
     ] = ()
+    taste_domain_expansions: tuple[ProjectProgressTasteDomainExpansionItem, ...] = ()
     dataset_packages: tuple[ProjectProgressDatasetPackageItem, ...] = ()
     benchmark_qualifications: tuple[ProjectProgressBenchmarkQualificationItem, ...] = ()
     review_iterations: tuple[ProjectProgressReviewIterationItem, ...] = ()
@@ -2725,6 +2795,7 @@ class ProjectProgressBoardData(BaseModel):
             *self.benchmark_metadata_allocations,
             *self.reference_selection_comparisons,
             *self.taste_candidate_populations,
+            *self.taste_domain_expansions,
             *self.dataset_packages,
             *self.benchmark_qualifications,
             *self.review_iterations,
@@ -2807,6 +2878,8 @@ class ProjectProgressBoardData(BaseModel):
             raise ValueError("project progress reference-selection count must match its rows")
         if self.counts.taste_candidate_populations != len(self.taste_candidate_populations):
             raise ValueError("project progress Taste-population count must match its rows")
+        if self.counts.taste_domain_expansions != len(self.taste_domain_expansions):
+            raise ValueError("project progress Taste-domain count must match its rows")
 
         qualification_ids = [item.selection_id for item in self.acquisition_qualifications]
         if len(qualification_ids) != len(set(qualification_ids)):

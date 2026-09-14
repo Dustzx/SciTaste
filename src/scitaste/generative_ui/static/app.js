@@ -1356,6 +1356,7 @@ function renderProjectProgress(data) {
     progressMetric(t("progress.metric.metadata_allocations"), data.counts.benchmark_metadata_allocations || 0, t("progress.metric.metadata_allocations_note")),
     progressMetric(t("progress.metric.reference_selections"), data.counts.reference_selection_comparisons || 0, t("progress.metric.reference_selections_note")),
     progressMetric(t("progress.metric.taste_populations"), data.counts.taste_candidate_populations || 0, t("progress.metric.taste_populations_note"), "candidate"),
+    progressMetric(t("progress.metric.taste_domains"), data.counts.taste_domain_expansions || 0, t("progress.metric.taste_domains_note"), "candidate"),
   );
   const acquisitions = renderAcquisitionRequests(data.acquisitions || []);
   const acquisitionReceipts = renderAcquisitionReceipts(data.acquisition_receipts || []);
@@ -1383,6 +1384,9 @@ function renderProjectProgress(data) {
   const reviewIterations = renderReviewIterations(data.review_iterations || []);
   const tastePopulations = renderTasteCandidatePopulations(
     data.taste_candidate_populations || [],
+  );
+  const tasteDomainExpansions = renderTasteDomainExpansions(
+    data.taste_domain_expansions || [],
   );
   const distribution = renderRunDistribution(data.counts);
   const lifecycle = renderProjectLifecycle(data.lifecycle);
@@ -1859,6 +1863,9 @@ function renderProjectProgress(data) {
   container.appendChild(hero);
   if (tastePopulations) {
     container.appendChild(tastePopulations);
+  }
+  if (tasteDomainExpansions) {
+    container.appendChild(tasteDomainExpansions);
   }
   container.append(nextSteps, direction, lifecycle, details);
   return container;
@@ -3512,6 +3519,142 @@ function renderTasteCandidatePopulations(items) {
           "model_calls_performed",
           "gpu_work_performed",
           "experiment_performed",
+          "ready_for_benchmark_admission",
+        ],
+      }),
+    );
+    grid.appendChild(card);
+  }
+  section.appendChild(grid);
+  return section;
+}
+
+function renderTasteDomainExpansions(items) {
+  if (items.length === 0) return null;
+  const section = progressSection(
+    t("progress.taste_domains.title"),
+    t("progress.taste_domains.subtitle", {count: items.length}),
+  );
+  const grid = document.createElement("div");
+  grid.className = "acquisition-grid";
+  for (const item of items) {
+    const card = document.createElement("article");
+    card.className = "acquisition-card status-candidate";
+    const header = document.createElement("div");
+    header.className = "compact-row-header";
+    const identity = document.createElement("div");
+    const label = document.createElement("span");
+    label.className = "card-label";
+    appendText(label, t("progress.taste_domains.population"));
+    const title = document.createElement("strong");
+    appendText(title, item.population_id);
+    identity.append(label, title);
+    header.append(
+      identity,
+      progressPill("candidate", t("progress.taste_domains.status")),
+    );
+
+    const facts = document.createElement("div");
+    facts.className = "acquisition-facts";
+    for (const [key, value] of [
+      ["groups", `${item.candidate_source_group_count}/${item.selected_source_group_count}`],
+      ["candidates", item.candidate_count],
+      ["responses", item.response_observed_count],
+      ["domains", `${item.observed_domain_count}/${item.target_domain_count}`],
+    ]) {
+      const fact = document.createElement("span");
+      appendText(fact, t(`progress.taste_domains.${key}`, {count: value}));
+      facts.appendChild(fact);
+    }
+    const domainRow = document.createElement("div");
+    domainRow.className = "component-actions";
+    for (const [domain, count] of Object.entries(item.domain_source_group_counts)) {
+      domainRow.appendChild(progressPill(
+        count >= item.minimum_groups_per_added_domain ? "completed" : "blocked",
+        `${readableCode(domain)} · ${count}`,
+      ));
+    }
+    const boundary = document.createElement("p");
+    boundary.className = "acquisition-boundary";
+    appendText(boundary, t("progress.taste_domains.boundary", {
+      blockers: item.blocker_codes.length,
+    }));
+    const next = document.createElement("p");
+    next.className = "acquisition-purpose";
+    appendText(next, t("progress.taste_domains.next"));
+    const controls = document.createElement("div");
+    controls.className = "component-actions";
+    const explore = document.createElement("button");
+    explore.type = "button";
+    explore.className = "primary-button";
+    appendText(explore, t("progress.taste_domains.explore"));
+    explore.addEventListener("click", () => prepareAuthoredBriefFollowup(
+      t("progress.taste_domains.followup", {
+        candidates: item.candidate_count,
+        groups: item.candidate_source_group_count,
+        domains: item.observed_domain_count,
+      }),
+    ));
+    const inspect = document.createElement("button");
+    inspect.type = "button";
+    inspect.className = "secondary-button";
+    appendText(inspect, t("progress.taste_domains.inspect"));
+    inspect.addEventListener("click", () => loadWorkspace({
+      view: "run-stage-explorer",
+      project_id: currentProjectId(),
+      run_id: item.run_id,
+    }));
+    controls.append(explore, inspect);
+    card.append(
+      header,
+      facts,
+      domainRow,
+      boundary,
+      next,
+      controls,
+      evidenceDisclosure(item.support_ref_ids, {
+        data: {
+          report_file_sha256: item.report_file_sha256,
+          report_sha256: item.report_sha256,
+          acquisition_receipt_sha256: item.acquisition_receipt_sha256,
+          compiler_implementation_sha256: item.compiler_implementation_sha256,
+          recommendation_counts: item.recommendation_counts,
+          minimum_groups_per_added_domain: item.minimum_groups_per_added_domain,
+          added_domain_group_floor_met: item.added_domain_group_floor_met,
+          independent_domain_review_complete: item.independent_domain_review_complete,
+          independent_quality_review_complete: item.independent_quality_review_complete,
+          decision_family_stratification_complete: item.decision_family_stratification_complete,
+          privacy_review_complete: item.privacy_review_complete,
+          blocker_codes: item.blocker_codes,
+          verification_route: item.verification_route,
+          standalone_preflight_performed: item.standalone_preflight_performed,
+          inline_integrity_guards_performed: item.inline_integrity_guards_performed,
+          model_calls_performed: item.model_calls_performed,
+          gpu_work_performed: item.gpu_work_performed,
+          experiment_performed: item.experiment_performed,
+          ready_for_taste_abstraction_review: item.ready_for_taste_abstraction_review,
+          ready_for_benchmark_admission: item.ready_for_benchmark_admission,
+        },
+        names: [
+          "report_file_sha256",
+          "report_sha256",
+          "acquisition_receipt_sha256",
+          "compiler_implementation_sha256",
+          "recommendation_counts",
+          "minimum_groups_per_added_domain",
+          "added_domain_group_floor_met",
+          "independent_domain_review_complete",
+          "independent_quality_review_complete",
+          "decision_family_stratification_complete",
+          "privacy_review_complete",
+          "blocker_codes",
+          "verification_route",
+          "standalone_preflight_performed",
+          "inline_integrity_guards_performed",
+          "model_calls_performed",
+          "gpu_work_performed",
+          "experiment_performed",
+          "ready_for_taste_abstraction_review",
           "ready_for_benchmark_admission",
         ],
       }),
