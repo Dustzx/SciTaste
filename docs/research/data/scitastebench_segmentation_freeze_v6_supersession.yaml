@@ -1,0 +1,24 @@
+schema_version: "1.0"
+artifact_id: scitastebench-segmentation-freeze-v6-supersession
+project_id: scitaste-self-development
+superseded_freeze_receipt: scitastebench-segmentation-prospective-freeze-v6
+replacement_freeze_receipt: scitastebench-segmentation-prospective-freeze-v7
+protocol_id: scitastebench-segmentation-prospective-calibration-v5
+sample_id: scitastebench-segmentation-prospective-calibration-v3
+sample_sha256: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+provider_contact_before_supersession: false
+sample_consumed_by_superseded_freeze: false
+reason_codes:
+  - repeated-source-span-offsets-not-used-by-primary-normalizer
+discovered_by:
+  reviewer_kind: ai
+  not_human_review: true
+  reviewer_count: 1
+resolution:
+  code_commit: 3faab25717dffd557e3a466a763673d484f2e9b2
+  repeated_source_span_offsets_preserved: true
+  focused_tests_passed: true
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  formal_evidence_eligible: false
