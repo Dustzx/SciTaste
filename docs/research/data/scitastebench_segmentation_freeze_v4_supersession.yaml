@@ -1,0 +1,31 @@
+schema_version: "1.0"
+artifact_id: scitastebench-segmentation-freeze-v4-supersession
+project_id: scitaste-self-development
+superseded_freeze_receipt: scitastebench-segmentation-prospective-freeze-v4
+replacement_freeze_receipt: scitastebench-segmentation-prospective-freeze-v6
+replacement_protocol_id: scitastebench-segmentation-prospective-calibration-v5
+superseded_protocol_id: scitastebench-segmentation-prospective-calibration-v4
+sample_id: scitastebench-segmentation-prospective-calibration-v3
+sample_sha256: 394f7819ee0a463b383246b027ac8abea09adb8e4d7e5a2fedcb9eb095b6df60
+provider_contact_before_supersession: false
+sample_consumed_by_superseded_freeze: false
+reason_codes:
+  - legacy-null-fields-entered-provider-request
+  - model-order-not-enforced-before-normalization
+  - pack-packet-anchor-schema-not-cross-checked
+  - anchor-firewall-scope-not-symmetric
+discovered_by:
+  reviewer_kind: ai
+  not_human_review: true
+  reviewer_count: 1
+resolution:
+  code_commit: 3694ea8fe555f0d77141392dad2a5107da5a00fc
+  legacy_null_fields_omitted: true
+  model_returned_range_order_required: true
+  pack_packet_protocol_schema_cross_checked: true
+  segmenter_and_adjudicator_anchor_scopes_required: true
+  focused_tests_passed: true
+authority:
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  formal_evidence_eligible: false
