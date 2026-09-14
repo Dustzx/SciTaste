@@ -1,0 +1,53 @@
+schema_version: "1.3"
+rubric_id: scitastebench-decision-segmentation-adjudication-v4
+purpose: >-
+  Resolve only disputed dual-agent evidence-unit selections into one
+  outcome-blind internal AI proposal without conferring human,
+  source-admission, or benchmark authority.
+input_boundary:
+  allowed:
+    - frozen adjudication rubric
+    - assigned disputed anonymous record text, evidence units, and typed blockers
+    - two candidates in hash-randomized anonymous order
+  forbidden:
+    - non-disputed records or segmenter slot identities
+    - private item map or privacy-review records
+    - publisher source identity
+    - recommendation, author response, later revision, or population outcome
+resolution_rules:
+  - Read the complete disputed review_comment and resolve every independently actionable decision.
+  - Select only start_unit_id and end_unit_id values from the supplied evidence-unit table.
+  - The anonymous candidates are proposals, not a forced binary choice; correct their boundaries or families when needed.
+  - Do not return a dedicated source-span transcription field or use copied text to identify a boundary.
+  - The atomic_decision_statement may briefly paraphrase the action and rationale may explain the resolution.
+  - Prefer the shortest evidence-unit range that remains intelligible.
+  - Never merge independently actionable changes solely because they share a sentence or family.
+  - Assign the family of the scientific decision changed, not the rhetorical form of the request.
+  - Record residual risk whenever potentially actionable text may remain unsegmented.
+runner_reconstruction_boundary:
+  provider_output_role: evidence-unit-selection-only
+  algorithm: unicode-word-punctuation-v1
+  token_pattern: "\\w+|[^\\w\\s]"
+  requirements:
+    - all selected IDs must exist in the assigned item
+    - ranges must be forward, ordered, non-overlapping, and item-local
+    - final text and offsets are copied deterministically from the original review_comment
+  forbidden:
+    - a dedicated provider-authored source-span field or character offsets
+    - normalization, fuzzy matching, insertion, deletion, or retry repair
+decision_families:
+  idea: research question, hypothesis, claimed contribution, or scientific scope
+  experiment: comparator, control, intervention, sample, protocol, ablation, or measurement design
+  evidence: result correctness, statistical or causal interpretation, or claim-support relationship
+  writing: communication-only wording, organization, or exposition with no scientific decision change
+  review: peer-review process, reviewer conduct, or assessment procedure itself
+  visual: figure, table, plot, or visual-encoding design
+  cannot-assess: visible text does not identify one primary decision
+authority:
+  reviewer_kind: ai
+  not_human_review: true
+  human_agreement_claim_allowed: false
+  formal_evidence_eligible: false
+  authorizes_source_admission: false
+  authorizes_taste_abstraction: false
+  authorizes_benchmark_admission: false

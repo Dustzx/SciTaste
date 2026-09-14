@@ -935,7 +935,7 @@ def prepare_taste_source_segmentation_request_pack(
     sample = inspection.sample
     if created_at.utcoffset() is None:
         raise ValueError("Segmentation request-pack time must include a timezone")
-    if getattr(protocol, "schema_version", "1.0") == "1.3" and (
+    if getattr(protocol, "schema_version", "1.0") in {"1.3", "1.4"} and (
         created_at < inspection.freeze_receipt.frozen_at
         or created_at > datetime.now().astimezone()
     ):
