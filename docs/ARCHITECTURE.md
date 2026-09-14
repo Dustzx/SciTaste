@@ -3637,3 +3637,34 @@ reviews. Its next authority boundary is the already preregistered objective
 analysis or condition-blinded human-review workflow. Thus automation removes
 manual experiment bookkeeping without weakening the scientific separation
 between execution, inference, review, and claim admission.
+
+### ADR-118: Formal task cells receive a content-bound model-visible workspace
+
+Status: accepted for source workspace materialization; autonomous benchmark
+iteration and held-out execution remain pending.
+
+The campaign ledger previously knew which task a cell named but not which bytes
+the research agent could see or edit. Reusing an external benchmark agent would
+also import its file and process authority into SciTaste. A formal task runtime
+specification now binds the exact upstream repository commit, clean checkout,
+task and visible roots, visible-tree digest, research brief, read-only and
+environment manifests, editable globs, writable output directories, separate
+development and held-out commands, hidden-test materialization paths, objective
+metric, baseline scores, and acquired archive/license evidence.
+
+Inspection is non-mutating and reports source drift, unsafe tree entries, empty
+edit surfaces, hidden-test leakage, bounded-tree violations, evidence mismatch,
+and the independent readiness state of source, archives, licenses, ingestion,
+environment, and scorer. Source-only materialization requires a separate explicit
+flag, copies only the model-visible tree into a new cell-owned directory, marks
+every non-editable file read-only, creates only declared output directories, and
+publishes a portable self-hashed receipt. It does not extract datasets, install
+the benchmark's pinned external Python environment, call a model, or execute a
+development or held-out command.
+
+SciTaste therefore owns the future research loop and its authority boundary;
+MLRC-Bench supplies frozen task bytes and objective scoring semantics only. The
+benchmark's Python 3.10/3.11 environment versions are task-local external
+runtimes and do not widen SciTaste's Python 3.12 support target. Held-out bytes
+must remain absent while ideas and patches are selected, and may be introduced
+only by a later scorer-owned transition after the candidate is frozen.

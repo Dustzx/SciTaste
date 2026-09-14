@@ -1,0 +1,83 @@
+schema_version: "1.0"
+spec_id: mlrc-meta-learning-v1
+project_id: scitaste-self-development
+benchmark_id: mlrc-bench
+task_id: meta-learning
+source_checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout
+repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+require_clean_checkout: true
+task_root: MLAgentBench/benchmarks_base/meta-learning
+visible_root: MLAgentBench/benchmarks_base/meta-learning/env
+visible_tree_sha256: 9765a1c46c97e69f947c429ef320c908b50164851f43952b091bbe646df85a05
+maximum_visible_files: 100
+maximum_visible_bytes: 1048576
+research_problem:
+  locator: MLAgentBench/benchmarks_base/meta-learning/scripts/research_problem.txt
+  file_sha256: 3fd8fc9d50c1070b9c8b5c1b980567831161aa7c2df95fff670fad8ac9327f9c
+read_only_manifest:
+  locator: MLAgentBench/benchmarks_base/meta-learning/scripts/read_only_files.txt
+  file_sha256: b45cdf36cbae55436a3b3c4510fabb5a8d31ee820cdec4964c9a51bf07197f5c
+environment_manifest:
+  locator: MLAgentBench/benchmarks_base/meta-learning/scripts/environment.yml
+  file_sha256: c898e44c3e20cf708e8521ddf8c9f51baeac574918a795eadbfccd91012ce146
+editable_globs:
+  - methods/MyMethod/*.json
+  - methods/MyMethod/*.py
+writable_output_directories:
+  - ingestion_output
+  - output
+  - scoring_output
+development_command:
+  - python
+  - main.py
+  - -m
+  - my_method
+  - -p
+  - dev
+heldout_command:
+  - python
+  - main.py
+  - -m
+  - my_method
+  - -p
+  - test
+heldout_materialization_paths:
+  - data/AWA
+  - data/INS
+  - data/FNG
+  - data/PLT_DOC
+  - data/PRT
+  - data/RSD
+  - data/BTS
+  - data/TEX_ALOT
+  - data/ACT_410
+  - data/MD_6
+primary_metric: normalized_balanced_accuracy
+metric_direction: higher
+baseline_development_score: 0.1821651453
+baseline_heldout_score: 0.1727912574
+asset_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+  file_sha256: 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+  semantic_field: receipt_sha256
+  semantic_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+archive_qualification:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/ARCHIVE_QUALIFICATION.json
+  file_sha256: a2bd52569e01ae1af9719ede41981cebbe3d9188917e288dd4b4f3502e9e819f
+  semantic_field: report_sha256
+  semantic_sha256: 68f24ffd8cd5fa6ac284eec77cbf65f3be491cc7a458bd8e66a2a841cdd16db4
+license_evidence:
+  locator: outputs/projects/scitaste-self-development/runs/2026-09-14__scitaste-native__mlrc-awa-license-coverage-v1__seed-00/dataset_license_coverage/LICENSE_COVERAGE.json
+  file_sha256: ecee20eb300407df172b0d7783f9c4c78edc0efcd49ca1f1abce92265a63c48a
+  semantic_field: report_sha256
+  semantic_sha256: fd7a1df8cc7dd38ab759013fd40a2f2ad67ce9bfbeb4bf1b299f8114d9d688c9
+source_status: verified
+archive_status: verified
+license_status: blocked
+ingestion_status: blocked
+environment_status: pending
+scorer_status: pending
+agent_network_access: false
+heldout_visible_during_development: false
+model_execution_authorized: false
+benchmark_execution_authorized: false

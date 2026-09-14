@@ -1,0 +1,82 @@
+schema_version: "1.0"
+spec_id: mlrc-perception-temporal-action-loc-v1
+project_id: scitaste-self-development
+benchmark_id: mlrc-bench
+task_id: perception-temporal-action-loc
+source_checkout: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-bench-source-v1/checkout
+repository_commit: 0d26417034811d2d4587646c4520cc305ea09dd6
+require_clean_checkout: true
+task_root: MLAgentBench/benchmarks_base/perception_temporal_action_loc
+visible_root: MLAgentBench/benchmarks_base/perception_temporal_action_loc/env
+visible_tree_sha256: 225fd533b702f2e5f63583237cbc63a8ab550fa0dbb9b6e39c72c367be92f0b6
+maximum_visible_files: 100
+maximum_visible_bytes: 1048576
+research_problem:
+  locator: MLAgentBench/benchmarks_base/perception_temporal_action_loc/scripts/research_problem.txt
+  file_sha256: 7860f247b72b8c14172a78880d42310b7990cf4b4775e6faed437d35d20975be
+read_only_manifest:
+  locator: MLAgentBench/benchmarks_base/perception_temporal_action_loc/scripts/read_only_files.txt
+  file_sha256: c2357290bfae33834a1b1dbc723ef66a792e2e26165acea135fa298b419e3dfe
+environment_manifest:
+  locator: MLAgentBench/benchmarks_base/perception_temporal_action_loc/scripts/environment.yml
+  file_sha256: c1891d2ece598de6a57ecf3c2d36721f1628228f465f6ef50d721a6c8c4c4639
+editable_globs:
+  - configs/core_configs.yaml
+  - libs/modeling/*.py
+  - libs/utils/__init__.py
+  - libs/utils/lr_schedulers.py
+  - libs/utils/nms.py
+  - libs/utils/setup.py
+  - libs/utils/train_utils.py
+  - methods/*.py
+  - train.py
+writable_output_directories:
+  - ckpt
+  - output
+development_command:
+  - python
+  - main.py
+  - -m
+  - my_method
+  - -p
+  - dev
+heldout_command:
+  - python
+  - main.py
+  - -m
+  - my_method
+  - -p
+  - test
+heldout_materialization_paths:
+  - data/pt/action_localisation_test_video_features
+  - data/pt/sound_localisation_test_audio_features
+  - data/pt/challenge_action_localisation_test.json
+primary_metric: mean_average_precision
+metric_direction: higher
+baseline_development_score: 0.2370039379
+baseline_heldout_score: 0.1263531695
+asset_receipt:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/RECEIPT.json
+  file_sha256: 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+  semantic_field: receipt_sha256
+  semantic_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+archive_qualification:
+  locator: outputs/projects/scitaste-self-development/evaluations/acquisitions/mlrc-first-preflight-assets-v1/ARCHIVE_QUALIFICATION.json
+  file_sha256: a2bd52569e01ae1af9719ede41981cebbe3d9188917e288dd4b4f3502e9e819f
+  semantic_field: report_sha256
+  semantic_sha256: 68f24ffd8cd5fa6ac284eec77cbf65f3be491cc7a458bd8e66a2a841cdd16db4
+license_evidence:
+  locator: outputs/projects/scitaste-self-development/runs/2026-09-12__scitaste-native__mlrc-license-policy-v1__seed-00/dataset_package_acquisition/LICENSE_POLICY_REPORT.json
+  file_sha256: c375940f7af297a9544ee96f4cead7ad94c050992831a6ebf394abb1d48a308d
+  semantic_field: report_sha256
+  semantic_sha256: 5b774d7cb0b3ce31108511a1ad115295720022843b5ea8c1af80a01d9b1983ca
+source_status: verified
+archive_status: verified
+license_status: verified
+ingestion_status: pending
+environment_status: pending
+scorer_status: pending
+agent_network_access: false
+heldout_visible_during_development: false
+model_execution_authorized: false
+benchmark_execution_authorized: false

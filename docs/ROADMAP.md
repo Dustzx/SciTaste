@@ -51,6 +51,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.15 — live evidence-program reconciliation | done | the project-level ICLR evidence program now treats AAAR quality calibration and the F1000 blind-review/grounded-abstraction path as separate non-pooling branches in one current Taste-instrument stage, so the generated home no longer presents yesterday's AAAR-only next decision |
 | Phase 9.16 — runtime-recovering native experiment loop | done | a statically admitted generated experiment that fails inside isolation produces bounded diagnostic evidence, receives at most one configured source-only repair, repeats identical admission and isolation, and resumes Evidence-to-Paper stages while preserving both attempts; exact successful experiments are reused on recovery and no standalone post-execution preflight is run |
 | Phase 9.17 — authorized evaluation campaign execution | done | the formal `EvaluationCellPlan` now has a project-owned, shell-free, budget-enforcing runner that refuses blocked proposals, executes exact approved cells, checkpoints every real attempt, preserves failures, resumes successes without recomputation, and hands a raw `EvaluationResultSet` to preregistered analysis or blind review |
+| Phase 9.18 — content-bound benchmark task workspaces | done | two real MLRC-Bench tasks now bind an exact upstream commit, model-visible source tree, editable surface, development/held-out commands, objective metric, baselines, acquired archive evidence, and current readiness; source-only workspaces can be explicitly materialized without exposing held-out bytes or pretending that data, environments, scorers, models, or experiments are ready |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -824,6 +825,18 @@ citation/resource screen and exact adapters/licenses remain open.
   cannot fabricate either. A real local subprocess exercise closes this software
   path, while the self-development prepilot remains correctly blocked by its
   unqualified tasks, condition adapters, Taste corpora, resources, and reviewers.
+- The first two MLRC-Bench tasks now cross the repository-to-cell boundary through
+  strict runtime specifications rather than an operator's implicit checkout. The
+  Perception and Meta-learning contracts pin upstream commit
+  `0d26417034811d2d4587646c4520cc305ea09dd6`, exact visible-tree and evidence
+  hashes, editable files, writable outputs, distinct development/held-out
+  commands, objective metrics, and published baselines. Inspection observes the
+  source without copying it; explicit materialization copies only the bounded
+  model-visible tree and makes non-editable files read-only. Perception is now
+  source-workspace-ready but remains blocked on ingestion, its pinned external
+  environment, and an objective scorer. Meta-learning additionally remains
+  blocked by the already observed AWA per-image license gap. No archive was
+  extracted and no environment, model, benchmark, API, or GPU job was run.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a

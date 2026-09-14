@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added content-bound runtime contracts for real multi-file benchmark tasks.
+  The first Perception and Meta-learning MLRC-Bench specifications pin the
+  upstream commit, model-visible code tree, editable surface, development and
+  held-out commands, objective metric/baselines, and acquired archive/license
+  evidence. Inspection is no-run; explicitly authorized materialization copies
+  only bounded visible source, protects non-editable files, excludes held-out
+  bytes, and records a portable self-hashed receipt. It neither extracts data nor
+  installs environments nor grants model, benchmark, API, or GPU execution.
 - Added project-owned execution for authorized `EvaluationCellPlan` campaigns.
   The new shell-free runner rehashes the registered proposal and resources,
   refuses blocked or unapproved evaluations before creating a run, enforces API
