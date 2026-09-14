@@ -73,6 +73,9 @@ artifacts:
   - artifact_id: scitastebench-segmentation-prospective-protocol-v1
     path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v1.yaml
     sha256: 9b7f3bdee8d822fcb3771a3a5aa5e82ebdcd39aa438f060ecccf3adf4e6d2b17
+  - artifact_id: scitastebench-segmentation-prospective-freeze-v1
+    path: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v1.yaml
+    sha256: 6f4357d6d671335c71d210f4e72faf3fecb5f6cb92d35b950788d91555ecf6a8
   - artifact_id: objective-task-resource-qualification-v2
     path: docs/research/data/objective_task_resource_qualification_v2.yaml
     sha256: abb4fe2dd36431cada47e23cc8a1ed1bdf623d12bac11440663ad64e70076c34
@@ -157,6 +160,7 @@ tracks:
       - scitastebench-atomic-decision-calibration-v1
       - scitastebench-segmentation-prospective-sample-v1
       - scitastebench-segmentation-prospective-protocol-v1
+      - scitastebench-segmentation-prospective-freeze-v1
     blocker_codes:
       - admitted-benchmark-population-below-formal-120-case-floor
       - raw-candidate-population-not-yet-scitastebench

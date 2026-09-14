@@ -62,7 +62,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.26 — complete natural-source admission packets | done | the source-review compiler now admits both F1000 and ARIES population schemas into outcome-blind scientific and separate privacy packets; all 273 candidates are covered by 546 scientific and 273 privacy assessments, while reviewer contact, results, adjudication, abstraction, and benchmark admission remain closed |
 | Phase 9.27 — deadline-operational SciTasteBench review | in progress | all 273 candidates have a deterministic 8-scientific-slot/2-privacy-slot assignment; the real 12-case dual-agent screen is now typed, invocation-separated, and bound to exact reviewer-visible bytes, while v2 release governance permits internal AI screening but keeps both source populations non-public; exact model/runtime bindings and rubric calibration remain open before scaling |
 | Phase 9.28 — atomic scientific-decision reconstruction | done | two blind agents proposed 50 and 46 atomic spans from the fixed retrospective 12-source pilot; exact-span F1 is 0.396 while 0.5-IoU overlap F1 is 0.833 and matched-family agreement is 0.850; 10/12 items were explicitly routed to a third AI adjudicator, producing 53 source-bound decisions, but unbound model/runtime and network isolation keep scale and formal use blocked |
-| Phase 9.29 — prospective atomic-calibration planning | in progress | a deterministic planner has frozen 24 previously unseen, source-balanced records and a no-run GLM-5.3-Flash protocol candidate records input isolation, metrics, thresholds, identity-window, request/token/cost limits, and failure routing; next commit an external freeze receipt, implement and inspect the bounded transcript-bearing runner, then execute only this calibration before any 273-source shard |
+| Phase 9.29 — prospective atomic-calibration planning | in progress | a deterministic planner has frozen 24 previously unseen, source-balanced records; a no-run GLM-5.3-Flash protocol records input isolation, metrics, thresholds, identity-window, request/token/cost limits, and failure routing, and an external receipt binds it to clean commit `e843e3c` before provider contact; next implement and inspect the bounded transcript-bearing runner, then execute only this calibration before any 273-source shard |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -161,8 +161,10 @@ four six-item shards per segmenter, a third-agent adjudication route, at most 14
 provider requests, 300,000 input and 120,000 output tokens, and a USD 10 ceiling.
 Its pass gate requires 0.5-IoU overlap F1 and matched-family agreement of at
 least 0.80, adjudication on at most half the items, and zero residual risk after
-adjudication. It remains a no-run draft awaiting an external Git freeze receipt:
-it does not establish
+adjudication. A separate freeze receipt binds this candidate to clean commit
+`e843e3c`, the exact sample, rubrics, provider resource, identity policy,
+planner, and CLI before any provider request. It remains a no-run engineering
+protocol: it does not establish
 human agreement or benchmark validity, and it authorizes neither an API call nor
 scale-out. Only after a bounded runner records the exact request, provider
 identity window, runtime, usage, price, raw response, and input-firewall receipt

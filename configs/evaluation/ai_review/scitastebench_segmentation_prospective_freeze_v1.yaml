@@ -1,0 +1,57 @@
+schema_version: "1.0"
+freeze_receipt_id: scitastebench-segmentation-prospective-freeze-v1
+project_id: scitaste-self-development
+frozen_at: 2026-09-15T04:05:10+08:00
+git:
+  repository: Dustzx/SciTaste
+  branch: main
+  commit: e843e3cea37aca9729bff2d9200bcb090bd2162a
+  worktree_clean_at_commit: true
+bindings:
+  protocol:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v1.yaml
+    file_sha256: 9b7f3bdee8d822fcb3771a3a5aa5e82ebdcd39aa438f060ecccf3adf4e6d2b17
+  sample:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v1.yaml
+    file_sha256: 77d6a74690ee11200c6f2099e2eb078e919216bc82af1cf3a57246870f161a41
+    sample_sha256: 83abf856f011835714ee0cb2c9629584d55b402bbed82effb0d08fa7014c46cc
+  segmentation_rubric:
+    locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_v1.yaml
+    file_sha256: f92e90ade1e40cab98c56706337613d269f473dd19031a5a3d91c40eb4b07c6d
+  adjudication_rubric:
+    locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_adjudication_v1.yaml
+    file_sha256: b9fea8c1c9e52c3131892bf5ba833e20c9b314cf0dd6e74aa1b665000617cd23
+  provider_resource:
+    locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+    file_sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a
+  identity_policy:
+    locator: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+    file_sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+implementation:
+  segmentation_module:
+    locator: src/scitaste/evaluation/taste_source_segmentation.py
+    file_sha256: ac65479f7d03ed9f78aa04502d5311ba69986db13db6d7d7671c89399a5ec037
+  cli:
+    locator: src/scitaste/cli.py
+    file_sha256: 7ad18daf97617a572ac7bf696da7c4fa1a85cfe9e867bf67a8046ea26628ee30
+freeze_attestation:
+  first_provider_request_performed_before_freeze: false
+  task_or_sample_content_sent_before_freeze: false
+  source_records_manually_inspected_for_selection: false
+  sample_replay_verified: true
+  retrospective_sample_overlap_count: 0
+  item_count: 24
+  creates_immutable_protocol_version: true
+  protocol_change_requires_new_version: true
+authority:
+  protocol_preregistered_by_external_receipt: true
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  authorizes_benchmark_admission: false
+  formal_evidence_eligible: false
+next_gate: >-
+  A typed protocol inspector and bounded request/response runner must verify this
+  receipt and every binding before an authenticated identity sentinel. A
+  separate execution authorization must still be created; this receipt alone
+  never permits provider contact.

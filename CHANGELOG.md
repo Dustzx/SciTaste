@@ -13,9 +13,11 @@ semantic versioning.
   GLM-5.3-Flash protocol specifies an input firewall, temporal identity
   window, request/token/cost ceilings, no-retry failure handling, overlap and
   family thresholds, a maximum adjudication rate, and zero residual-risk
-  requirement. It remains explicitly awaiting a Git freeze receipt, performs no
-  provider call, and grants no scale, admission, or formal-evidence authority
-  until a bounded runner and authenticated receipts are separately accepted.
+  requirement. A separate receipt now binds the exact clean Git commit,
+  protocol, sample, rubrics, provider resource, identity policy, planner module,
+  and CLI before any provider request. It grants no provider, scale, admission,
+  or formal-evidence authority until a bounded runner and authenticated receipts
+  are separately accepted.
 - Added exact-span reconstruction for compound natural-source reviews. A model
   may propose multiple uniquely occurring verbatim decision spans, but every
   span is bound to the immutable scientific item, character offsets, one
