@@ -1,0 +1,73 @@
+schema_version: "1.0"
+plan_id: scitastebench-natural-source-review-assignment-v1
+project_id: scitaste-self-development
+status: owner-private-plan-awaiting-staffing-and-ethics-approval
+purpose: >-
+  Turn the complete ARIES and F1000 natural-source construction pool into
+  bounded reviewer workloads before the ICLR 2027 abstract deadline, without
+  contacting a reviewer or relabelling a reviewer slot as a person.
+deadline:
+  target_completion_at: "2026-09-18T12:00:00+08:00"
+  target_role: >-
+    Internal evidence-integration target; it is earlier than the ICLR abstract
+    deadline and does not change any official venue milestone.
+campaigns:
+  - campaign_id: aries-taste-source-review-v1
+    candidate_count: 196
+    source_group_count: 42
+    campaign_sha256: 83c95d2d0dcbc9f96708aedf95caa9808a093383efb8d61a063572f52adb6af3
+  - campaign_id: f1000-multidomain-taste-source-review-v1
+    candidate_count: 77
+    source_group_count: 39
+    campaign_sha256: 74a45dc4ec755776e887ccc22ae433878abd6a5ad587a89e53690cb95cd99539
+workload:
+  candidate_count: 273
+  source_group_count: 81
+  scientific_assessment_count: 546
+  privacy_assessment_count: 273
+  scientific_seconds_per_assessment: 300
+  privacy_seconds_per_assessment: 120
+  estimated_total_human_hours: 54.6
+assignment:
+  algorithm_id: globally-balanced-source-aware-sha256-v1
+  random_seed: 20260915
+  scientific_reviewer_slot_count: 8
+  privacy_reviewer_slot_count: 2
+  scientific_slot_loads:
+    scientific-01: 68
+    scientific-02: 69
+    scientific-03: 68
+    scientific-04: 69
+    scientific-05: 68
+    scientific-06: 68
+    scientific-07: 68
+    scientific-08: 68
+  privacy_slot_loads:
+    privacy-01: 137
+    privacy-02: 136
+  batch_count: 20
+  every_item_has_two_distinct_scientific_slots: true
+  every_item_has_one_separate_privacy_slot: true
+artifact:
+  locator: >-
+    outputs/projects/scitaste-self-development/evaluations/human-review/scitastebench-natural-source-review-assignment-v1/PLAN.json
+  file_sha256: 1688dfbca8e5deae019249ae1fd671b69481d43dddf324ba9033f17dd0f359df
+  plan_sha256: 13facdbf8c79e99f4e4d49c5e4d301a04b8b2c4f9882ebbf88afd60176a3af3d
+  planner_implementation_sha256: 9f1c6812c3274504291ed0f70db48589790d03906de0d54a32fa9a27721c3cfa
+authority:
+  ready_for_owner_staffing_review: true
+  reviewer_identities_bound: false
+  ethics_determination_bound: false
+  compensation_and_consent_bound: false
+  human_recruitment_performed: false
+  reviewer_contact_performed: false
+  authorizes_reviewer_recruitment: false
+  authorizes_model_calls: false
+  authorizes_api_spend: false
+  authorizes_gpu_work: false
+  authorizes_experiment: false
+claim_boundary: >-
+  This artifact proves exact and balanced coverage only. Reviewer slots are not
+  reviewers; no assessment, adjudication, benchmark admission, or SciTaste
+  effectiveness result exists until separately authorized reviews are returned
+  and locked.

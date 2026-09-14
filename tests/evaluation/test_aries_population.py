@@ -15,14 +15,17 @@ from scitaste.evaluation import (
     DatasetAcquisitionRequest,
     TasteSourceReviewRole,
     approve_dataset_acquisition_request,
+    load_taste_source_review_assignment_plan,
     load_taste_source_review_policy,
     materialize_aries_taste_population,
     materialize_dataset_acquisition,
+    plan_taste_source_review_assignments,
     prepare_taste_source_review_campaign,
     prepare_taste_source_review_session,
     publish_aries_taste_population_run,
     publish_taste_source_review_campaign_run,
     save_dataset_acquisition_request,
+    save_taste_source_review_assignment_plan,
 )
 from scitaste.generative_ui.intent import WorkspaceIntentResolver
 from scitaste.generative_ui.workspace import ProjectProgressQuery, WorkspaceSurfaceFactory
@@ -31,8 +34,7 @@ from scitaste.project import ProjectManifest, ProjectRuntime
 
 def _jsonl(*rows: dict[str, object]) -> bytes:
     return b"".join(
-        json.dumps(row, separators=(",", ":"), sort_keys=True).encode() + b"\n"
-        for row in rows
+        json.dumps(row, separators=(",", ":"), sort_keys=True).encode() + b"\n" for row in rows
     )
 
 
@@ -239,9 +241,7 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     )
     assert board.data["taste_candidate_populations"][0]["candidate_count"] == 1
     catalog = WorkspaceIntentResolver(runtime).quick_catalog("aries-project")
-    assert "review-taste-candidate-population" in {
-        item.quick_intent_id for item in catalog.intents
-    }
+    assert "review-taste-candidate-population" in {item.quick_intent_id for item in catalog.intents}
     assert snapshot.revision == 2
 
     policy = load_taste_source_review_policy(
@@ -286,6 +286,46 @@ def test_natural_aries_population_is_projected_without_becoming_benchmark(
     assert '<option value="computing">Computing</option>' in (
         session_root / "review.html"
     ).read_text(encoding="utf-8")
+    assignment = plan_taste_source_review_assignments(
+        plan_id="aries-source-review-assignment-v1",
+        campaign_paths=(campaign_root / "CAMPAIGN.json",),
+        created_at=datetime(2026, 9, 14, 0, 5, tzinfo=UTC),
+        target_completion_at=datetime(2026, 9, 15, tzinfo=UTC),
+        random_seed=20260914,
+        locator_root=tmp_path,
+        scientific_reviewer_slot_count=2,
+        privacy_reviewer_slot_count=1,
+    )
+    assert assignment.required_scientific_assessment_count == 2
+    assert assignment.required_privacy_assessment_count == 1
+    assert assignment.scientific_slot_loads == {
+        "scientific-01": 1,
+        "scientific-02": 1,
+    }
+    assert assignment.privacy_slot_loads == {"privacy-01": 1}
+    assert assignment.ai_screening_can_replace_human_evidence is False
+    assignment_path = tmp_path / "assignment.json"
+    save_taste_source_review_assignment_plan(assignment, assignment_path)
+    assert (
+        load_taste_source_review_assignment_plan(assignment_path).plan.plan_sha256
+        == assignment.plan_sha256
+    )
+    assigned_session = prepare_taste_source_review_session(
+        campaign_path=campaign_root / "CAMPAIGN.json",
+        role=TasteSourceReviewRole.SCIENTIFIC,
+        reviewer_identity_sha256="c" * 64,
+        output_dir=campaign_root / "assigned-scientific-session",
+        assigned_item_ids=tuple(
+            item.review_item_id
+            for item in next(
+                batch
+                for batch in assignment.batches
+                if batch.role is TasteSourceReviewRole.SCIENTIFIC
+            ).items
+        ),
+        prepared_at=datetime(2026, 9, 14, 0, 6, tzinfo=UTC),
+    )
+    assert len(assigned_session.items) == 1
     snapshot, _ = publish_taste_source_review_campaign_run(
         runtime,
         project_id="aries-project",

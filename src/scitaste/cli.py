@@ -190,6 +190,7 @@ from scitaste.evaluation import (
     plan_benchmark_metadata_projection,
     plan_clustered_power,
     plan_structured_metadata_audit,
+    plan_taste_source_review_assignments,
     prepare_agent_laboratory_adapter,
     prepare_human_outcome_study,
     prepare_human_reviewer_session,
@@ -241,6 +242,7 @@ from scitaste.evaluation import (
     save_structured_metadata_audit_report,
     save_taste_corpus_curation_report,
     save_taste_corpus_pair_report,
+    save_taste_source_review_assignment_plan,
     screen_benchmark_metadata_population,
     source_projection_forbidden_exact_strings,
     source_projection_protocol_sha256,
@@ -1999,6 +2001,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_log_level_option(taste_corpus_pair)
     taste_corpus_pair.set_defaults(handler=_handle_evaluation_taste_corpus_pair)
+    taste_source_review_assignment = evaluation_commands.add_parser(
+        "taste-source-review-assignment",
+        help="Balance immutable source-review campaigns into non-authorizing slots",
+    )
+    taste_source_review_assignment.add_argument("--plan-id", required=True)
+    taste_source_review_assignment.add_argument(
+        "--campaign",
+        type=Path,
+        action="append",
+        required=True,
+        help="campaign CAMPAIGN.json; repeat for each source population",
+    )
+    taste_source_review_assignment.add_argument("--created-at", required=True)
+    taste_source_review_assignment.add_argument("--target-completion-at", required=True)
+    taste_source_review_assignment.add_argument(
+        "--scientific-reviewer-slots", type=int, required=True
+    )
+    taste_source_review_assignment.add_argument("--privacy-reviewer-slots", type=int, required=True)
+    taste_source_review_assignment.add_argument(
+        "--scientific-seconds-per-assessment", type=int, default=300
+    )
+    taste_source_review_assignment.add_argument(
+        "--privacy-seconds-per-assessment", type=int, default=120
+    )
+    taste_source_review_assignment.add_argument("--seed", type=int, required=True)
+    taste_source_review_assignment.add_argument("--locator-root", type=Path, default=Path("."))
+    taste_source_review_assignment.add_argument("--output", type=Path, required=True)
+    _add_log_level_option(taste_source_review_assignment)
+    taste_source_review_assignment.set_defaults(
+        handler=_handle_evaluation_taste_source_review_assignment
+    )
     decision_dossier = evaluation_commands.add_parser(
         "decision-dossier",
         help="Inspect a compact API/GPU experiment campaign without external actions",
@@ -6424,6 +6457,42 @@ def _handle_evaluation_decision_dossier(args: argparse.Namespace) -> int:
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     if args.require_artifacts and not report.artifact_bindings_verified:
         return 1
+    return 0
+
+
+def _handle_evaluation_taste_source_review_assignment(args: argparse.Namespace) -> int:
+    plan = plan_taste_source_review_assignments(
+        plan_id=args.plan_id,
+        campaign_paths=tuple(args.campaign),
+        locator_root=args.locator_root,
+        created_at=datetime.fromisoformat(args.created_at),
+        target_completion_at=datetime.fromisoformat(args.target_completion_at),
+        random_seed=args.seed,
+        scientific_reviewer_slot_count=args.scientific_reviewer_slots,
+        privacy_reviewer_slot_count=args.privacy_reviewer_slots,
+        scientific_seconds_per_assessment=args.scientific_seconds_per_assessment,
+        privacy_seconds_per_assessment=args.privacy_seconds_per_assessment,
+    )
+    saved = save_taste_source_review_assignment_plan(plan, args.output)
+    print(
+        json.dumps(
+            {
+                "status": "assignment-planned-awaiting-owner-staffing-review",
+                "output": str(saved),
+                "plan_sha256": plan.plan_sha256,
+                "candidate_count": plan.candidate_count,
+                "scientific_assessment_count": (plan.required_scientific_assessment_count),
+                "privacy_assessment_count": plan.required_privacy_assessment_count,
+                "estimated_total_human_hours": (plan.estimated_total_human_seconds / 3_600),
+                "authorizes_reviewer_recruitment": (plan.authorizes_reviewer_recruitment),
+                "ai_screening_can_replace_human_evidence": (
+                    plan.ai_screening_can_replace_human_evidence
+                ),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

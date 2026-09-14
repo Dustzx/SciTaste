@@ -137,9 +137,7 @@ class TasteSourceReviewPolicy(BaseModel):
             TasteSourceDomainLabel.CANNOT_ASSESS,
         }
         if not missingness.issubset(labels) or not labels.difference(missingness):
-            raise ValueError(
-                "Taste source review must retain target and missingness labels"
-            )
+            raise ValueError("Taste source review must retain target and missingness labels")
         if len(self.allowed_domain_labels) != len(set(self.allowed_domain_labels)):
             raise ValueError("Taste source review domain labels must be unique")
         if set(self.decision_family_instructions) != set(TasteTask):
@@ -286,9 +284,7 @@ class TasteSourceReviewCampaign(BaseModel):
             raise ValueError("local review-package preparation must remain direct")
         if self.recruitment_verification.route is not VerificationRoute.OWNER_APPROVAL:
             raise ValueError("human recruitment must remain owner-gated")
-        expected = _canonical_sha256(
-            self.model_dump(mode="json", exclude={"campaign_sha256"})
-        )
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"campaign_sha256"}))
         if self.campaign_sha256 != expected:
             raise ValueError("Taste source review campaign hash mismatch")
         return self
@@ -298,9 +294,7 @@ class TasteSourceReviewCampaign(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("campaign_sha256", None)
         unsigned = cls.model_construct(campaign_sha256="0" * 64, **payload)
-        digest = _canonical_sha256(
-            unsigned.model_dump(mode="json", exclude={"campaign_sha256"})
-        )
+        digest = _canonical_sha256(unsigned.model_dump(mode="json", exclude={"campaign_sha256"}))
         return cls(**payload, campaign_sha256=digest)
 
 
@@ -344,9 +338,7 @@ class TasteSourceReviewActivation(BaseModel):
             re.fullmatch(_SHA256, item) is None for item in reviewers
         ):
             raise ValueError("Taste source review activation requires three distinct hashes")
-        expected = _canonical_sha256(
-            self.model_dump(mode="json", exclude={"activation_sha256"})
-        )
+        expected = _canonical_sha256(self.model_dump(mode="json", exclude={"activation_sha256"}))
         if self.activation_sha256 != expected:
             raise ValueError("Taste source review activation hash mismatch")
         return self
@@ -356,9 +348,7 @@ class TasteSourceReviewActivation(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("activation_sha256", None)
         unsigned = cls.model_construct(activation_sha256="0" * 64, **payload)
-        digest = _canonical_sha256(
-            unsigned.model_dump(mode="json", exclude={"activation_sha256"})
-        )
+        digest = _canonical_sha256(unsigned.model_dump(mode="json", exclude={"activation_sha256"}))
         return cls(**payload, activation_sha256=digest)
 
 
@@ -635,9 +625,7 @@ class TasteSourceReviewResult(BaseModel):
         payload = {"schema_version": "1.0", **values}
         payload.pop("result_sha256", None)
         unsigned = cls.model_construct(result_sha256="0" * 64, **payload)
-        digest = _canonical_sha256(
-            unsigned.model_dump(mode="json", exclude={"result_sha256"})
-        )
+        digest = _canonical_sha256(unsigned.model_dump(mode="json", exclude={"result_sha256"}))
         return cls(**payload, result_sha256=digest)
 
 
@@ -690,9 +678,9 @@ def prepare_taste_source_review_campaign(
             source_stratum,
             observed_outcome,
         ) = _candidate_review_projection(candidate)
-        review_item_id = "item-" + _canonical_sha256(
-            [report.report_sha256, candidate.candidate_id]
-        )[:24]
+        review_item_id = (
+            "item-" + _canonical_sha256([report.report_sha256, candidate.candidate_id])[:24]
+        )
         scientific_items.append(
             ScientificTasteSourceReviewItem(
                 review_item_id=review_item_id,
@@ -726,9 +714,7 @@ def prepare_taste_source_review_campaign(
         raise FileExistsError(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(
-        tempfile.mkdtemp(
-            prefix=f".{target.name}.", suffix=".staging", dir=target.parent
-        )
+        tempfile.mkdtemp(prefix=f".{target.name}.", suffix=".staging", dir=target.parent)
     )
     try:
         scientific_path = staging / "SCIENTIFIC_ITEMS.jsonl"
@@ -808,10 +794,7 @@ def prepare_taste_source_review_campaign(
         )
         _write_new(
             staging / "CAMPAIGN.json",
-            _canonical_json(
-                campaign.model_dump(mode="json", exclude_computed_fields=True)
-            )
-            + b"\n",
+            _canonical_json(campaign.model_dump(mode="json", exclude_computed_fields=True)) + b"\n",
         )
         os.rename(staging, target)
         return campaign
@@ -835,6 +818,17 @@ def load_taste_source_review_campaign(path: str | Path) -> TasteSourceReviewCamp
     return campaign
 
 
+def load_taste_source_review_private_map(
+    path: str | Path,
+) -> tuple[TasteSourcePrivateMapItem, ...]:
+    """Load the owner-private item map bound to one immutable campaign."""
+
+    source = _bounded_file(Path(path), maximum_bytes=_MAX_CONTROL_BYTES)
+    campaign = load_taste_source_review_campaign(source)
+    root = source.parent.resolve(strict=True)
+    return _load_private_map(_bound_file(root, campaign.private_item_map))
+
+
 def load_taste_source_review_activation(path: str | Path) -> TasteSourceReviewActivation:
     source = _bounded_file(Path(path), maximum_bytes=_MAX_CONTROL_BYTES)
     return TasteSourceReviewActivation.model_validate_json(source.read_bytes())
@@ -846,6 +840,7 @@ def prepare_taste_source_review_session(
     role: TasteSourceReviewRole,
     reviewer_identity_sha256: str,
     output_dir: str | Path,
+    assigned_item_ids: tuple[str, ...] | None = None,
     prepared_at: datetime | None = None,
 ) -> TasteSourceReviewSession:
     """Create a local reviewer workspace; this does not authorize contacting them."""
@@ -867,6 +862,20 @@ def prepare_taste_source_review_session(
         else PrivacyTasteSourceReviewItem
     )
     items = _load_jsonl(_bound_file(root, binding), item_type)
+    scope_identity = "full-campaign"
+    if assigned_item_ids is not None:
+        if not assigned_item_ids or len(assigned_item_ids) != len(set(assigned_item_ids)):
+            raise ValueError("assigned taste source-review item IDs must be nonempty and unique")
+        requested = set(assigned_item_ids)
+        available = {item.review_item_id for item in items}
+        missing = requested - available
+        if missing:
+            raise ValueError(
+                "assigned taste source-review item IDs are outside the campaign: "
+                + ", ".join(sorted(missing))
+            )
+        items = [item for item in items if item.review_item_id in requested]
+        scope_identity = _canonical_sha256(sorted(requested))
     ordered = tuple(
         sorted(
             items,
@@ -881,9 +890,14 @@ def prepare_taste_source_review_session(
         )
     )
     blind = role is TasteSourceReviewRole.SCIENTIFIC
-    identity = _canonical_sha256(
-        [campaign.campaign_sha256, role.value, reviewer_identity_sha256]
-    )
+    identity_components = [
+        campaign.campaign_sha256,
+        role.value,
+        reviewer_identity_sha256,
+    ]
+    if assigned_item_ids is not None:
+        identity_components.append(scope_identity)
+    identity = _canonical_sha256(identity_components)
     session = TasteSourceReviewSession(
         session_id=f"session-{identity[:24]}",
         campaign_id=campaign.campaign_id,
@@ -908,9 +922,7 @@ def prepare_taste_source_review_session(
         raise FileExistsError(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(
-        tempfile.mkdtemp(
-            prefix=f".{target.name}.", suffix=".staging", dir=target.parent
-        )
+        tempfile.mkdtemp(prefix=f".{target.name}.", suffix=".staging", dir=target.parent)
     )
     try:
         payload = session.model_dump(mode="json", exclude={"session_sha256"})
@@ -918,9 +930,7 @@ def prepare_taste_source_review_session(
             staging / "session.json",
             json.dumps(payload, indent=2, ensure_ascii=False).encode() + b"\n",
         )
-        template = _bound_file(root, campaign.reviewer_interface).read_text(
-            encoding="utf-8"
-        )
+        template = _bound_file(root, campaign.reviewer_interface).read_text(encoding="utf-8")
         embedded = json.dumps(
             {**payload, "session_sha256": session.session_sha256},
             ensure_ascii=False,
@@ -1040,8 +1050,7 @@ def lock_taste_source_review_submissions(
         domain_agreement = len(domains) == 1
         agreed_domain = next(iter(domains)) if domain_agreement else None
         domain_confirmed = bool(
-            agreed_domain is not None
-            and agreed_domain.value == private.publisher_subject
+            agreed_domain is not None and agreed_domain.value == private.publisher_subject
         )
         families = {item.primary_decision_family for item in scientific}
         family_agreement = len(families) == 1 and "cannot-assess" not in families
@@ -1051,8 +1060,7 @@ def lock_taste_source_review_submissions(
         quality_opinions = [
             item.transferable_taste_candidate
             and all(
-                rating.rating is ReferenceQualityRating.STRONG
-                for rating in item.dimension_ratings
+                rating.rating is ReferenceQualityRating.STRONG for rating in item.dimension_ratings
             )
             for item in scientific
         ]
@@ -1067,11 +1075,7 @@ def lock_taste_source_review_submissions(
             blockers.append("decision-family-agreement-failed")
         if not privacy_passed:
             blockers.append("privacy-review-failed")
-        adjudication = (
-            not domain_agreement
-            or len(families) != 1
-            or len(set(quality_opinions)) != 1
-        )
+        adjudication = not domain_agreement or len(families) != 1 or len(set(quality_opinions)) != 1
         if adjudication:
             blockers.append("scientific-adjudication-required")
         eligible = not blockers
@@ -1235,9 +1239,7 @@ def publish_taste_source_review_campaign_run(
         source_group_count=campaign.source_group_count,
         required_scientific_reviewer_count=campaign.required_scientific_reviewer_count,
         required_privacy_reviewer_count=campaign.required_privacy_reviewer_count,
-        required_scientific_assessment_count=(
-            campaign.required_scientific_assessment_count
-        ),
+        required_scientific_assessment_count=(campaign.required_scientific_assessment_count),
         required_privacy_assessment_count=campaign.required_privacy_assessment_count,
         reviewer_sessions_prepared=0,
         reviewer_submissions_collected=0,
@@ -1318,9 +1320,7 @@ def _campaign_item_ids(root: Path, campaign: TasteSourceReviewCampaign) -> set[s
     scientific = _load_jsonl(
         _bound_file(root, campaign.scientific_items), ScientificTasteSourceReviewItem
     )
-    privacy = _load_jsonl(
-        _bound_file(root, campaign.privacy_items), PrivacyTasteSourceReviewItem
-    )
+    privacy = _load_jsonl(_bound_file(root, campaign.privacy_items), PrivacyTasteSourceReviewItem)
     scientific_ids = {item.review_item_id for item in scientific}
     privacy_ids = {item.review_item_id for item in privacy}
     if scientific_ids != privacy_ids or len(scientific_ids) != campaign.candidate_count:
@@ -1410,9 +1410,7 @@ def _load_jsonl(path: Path, model: type[BaseModel]) -> tuple[BaseModel, ...]:
 
 
 def _jsonl_bytes(values: list[BaseModel]) -> bytes:
-    return b"".join(
-        _canonical_json(value.model_dump(mode="json")) + b"\n" for value in values
-    )
+    return b"".join(_canonical_json(value.model_dump(mode="json")) + b"\n" for value in values)
 
 
 def _binding(root: Path, path: Path) -> TasteSourceReviewFileBinding:
@@ -1546,6 +1544,7 @@ __all__ = [
     "load_taste_source_review_activation",
     "load_taste_source_review_campaign",
     "load_taste_source_review_policy",
+    "load_taste_source_review_private_map",
     "lock_taste_source_review_submissions",
     "prepare_taste_source_review_campaign",
     "prepare_taste_source_review_session",

@@ -60,6 +60,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.24 — venue deadline and submission-pressure control | done | one content-bound schedule separates official venue guidance from calendar indexes, computes the next hard milestone and urgency from an explicit observation time, exposes a noncritical-work deferral signal, and advances only after owner-attested project evidence; the ICLR 2027 schedule is assigned to the self-development project and available to generated-interface consumption |
 | Phase 9.25 — lifecycle evidence resource realignment | done | SciTasteBench is explicitly the H1--H3 decision instrument with 273 raw natural candidates but zero formal admissions; one exact materialized MLRC task is the H4 objective source, InnovatorBench is deferred on resource/upstream defects, and Agent Laboratory plus DeepScientist are the active accepted-method pair without authorizing execution |
 | Phase 9.26 — complete natural-source admission packets | done | the source-review compiler now admits both F1000 and ARIES population schemas into outcome-blind scientific and separate privacy packets; all 273 candidates are covered by 546 scientific and 273 privacy assessments, while reviewer contact, results, adjudication, abstraction, and benchmark admission remain closed |
+| Phase 9.27 — deadline-operational SciTasteBench review | in progress | all 273 candidates have a deterministic 8-scientific-slot/2-privacy-slot assignment with 68--69 and 136--137 assessments per slot; a 12-case dual-agent screen calibrates disagreement and exposes a public-attribution/privacy-policy conflict, but cannot replace human labels or admit a formal case |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -107,6 +108,20 @@ separate privacy view receives the de-identified free text needed for release
 screening. The two source campaigns together define 819 item-level assessments.
 That is exact review work, not evidence that the cases passed it; staffing and
 any required sharding remain an owner decision before external contact.
+
+Phase 9.27 removes the earlier assumption that exactly three people must each
+read a whole campaign. The content-bound assignment covers every item twice in
+distinct scientific slots and once in a separate privacy slot, estimates 54.6
+total human hours, and targets internal completion by 2026-09-18 12:00 China
+time. Reviewer identities, ethics, consent, compensation, and contact remain
+closed. Two independent SciTaste agents also screened a fixed 12-case blind
+subset: they agreed on domain for 11 cases, decision family for 8, exact
+five-dimension profiles for 9, and transferability for all 12. That is useful
+workflow calibration, not human evidence. The privacy agent rejected all 12
+under the current de-identification wording because exact public scholarly text
+can reveal a publication. Before staffing, the project must explicitly choose
+an attributable-public-source release policy or a genuinely de-identified
+derived-text policy; it cannot claim both.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a

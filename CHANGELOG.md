@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a deterministic, content-bound source-review assignment layer for
+  SciTasteBench. The complete 273-case ARIES/F1000 pool is balanced across eight
+  scientific and two privacy reviewer slots while preserving two independent
+  scientific judgments and one separate privacy judgment per item. Subset
+  reviewer sessions can now be materialized without changing historical full-
+  campaign session identities. The first real plan exposes 546 scientific and
+  273 privacy assessments (54.6 estimated human hours) but grants no staffing,
+  contact, model, API, GPU, experiment, or benchmark-admission authority. A
+  fixed 12-case three-agent screen is retained only as process calibration: it
+  shows decision-family disagreement and a public-attribution/privacy ambiguity,
+  is explicitly non-human, and is ineligible for formal evidence.
 - Extended the natural Scientific Taste source-review compiler from an
   F1000-only implementation to both registered source schemas. ARIES now has an
   executable outcome-blind scientific and separate privacy campaign over all

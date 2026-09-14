@@ -52,6 +52,26 @@ rubric and precedent-corpus hashes, source/Taste group disjointness, and the
 formal population floor before it emits an executable suite. Until these checks
 pass, no model can be run on the formal split.
 
+Reviewer work may be split across any number of content-bound slots as long as
+every case receives two judgments from distinct scientific identities and one
+separate privacy/release judgment. Slot allocation is not recruitment: an owner-
+approved ethics, consent, compensation, conflict, retention, and withdrawal
+record must bind the actual pseudonymous identities before contact.
+
+AI agents may pre-screen cases, surface likely disagreement, test reviewer
+instructions, and prioritize adjudication. Their outputs must state that they
+are not human review and are ineligible for benchmark admission. They cannot be
+silently counted toward the two primary labels or the privacy decision. If a
+later study wants an automated judge, a separately powered human--model
+validation sample and an explicitly secondary estimand are required.
+
+Public-source attribution and de-identification are different release modes.
+Exact titles, coined methods, abstracts, affiliations, or URLs may identify a
+public paper even after structured names are removed. A release policy must
+either preserve lawful attribution and stop calling the record de-identified,
+or publish a reviewed derived-text representation that passes re-identification
+screening. Reviewer blindness alone does not establish privacy.
+
 ## Conditions and negative controls
 
 All conditions receive the same decision context and action set:

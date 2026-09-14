@@ -1,0 +1,70 @@
+schema_version: "1.0"
+screen_id: scitastebench-ai-assisted-source-screen-v1
+project_id: scitaste-self-development
+status: exploratory-process-calibration-only
+purpose: >-
+  Dogfood parallel SciTaste agents on a real, fixed, source-group-diverse
+  twelve-item subset to expose rubric ambiguity and triage needs before human
+  review. This is not a benchmark label source or a formal model evaluation.
+sample:
+  candidate_count: 12
+  aries_count: 6
+  f1000_count: 6
+  source_group_distinct_within_campaign: true
+  selection_rule: >-
+    For each campaign, order items by SHA-256 of
+    scitastebench-ai-screen-v1:<review_item_id> and retain the first six distinct
+    source groups.
+  sorted_item_id_list_sha256: 34d7dd3eab297a124d744ef9aa98b671936fd9314a5a0f49c846dc2d7eec3f79
+scientific_screen:
+  independent_agent_count: 2
+  publisher_and_outcome_blind: true
+  completed_assessments: 24
+  transferable_candidate_count_agent_a: 11
+  transferable_candidate_count_agent_b: 11
+  transferable_binary_agreement_count: 12
+  domain_agreement_count: 11
+  primary_decision_family_agreement_count: 8
+  exact_five_dimension_profile_agreement_count: 9
+  interpretation: >-
+    Agents agree on coarse transferability but disagree materially on the
+    decision family and some quality dimensions. They are useful for triage and
+    disagreement routing, not as interchangeable expert labels.
+privacy_screen:
+  independent_agent_count: 1
+  completed_assessments: 12
+  release_safe_count: 0
+  release_unsafe_count: 12
+  high_uncertainty_count: 5
+  interpretation: >-
+    The current privacy instruction makes exact public paper titles, coined
+    methods, institutions, URLs, and verbatim abstracts potential publication
+    fingerprints. Human governance must choose between attributable public-
+    source release and genuinely de-identified derived text; the project must
+    not claim both.
+artifacts:
+  - role: scientific-agent-a
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/scientific-a.json
+    file_sha256: d74aab7f8e2b4fe6631e5b97de3d99690137ef631fce83d604a5c1d5bfaf0ef4
+  - role: scientific-agent-b
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/scientific-b.json
+    file_sha256: 419c4d30b0b893d3b8a0d59a8ed73b8d1d9723cd6c28f2a4da8a658687496a3b
+  - role: privacy-agent
+    locator: >-
+      outputs/projects/scitaste-self-development/evaluations/ai-assisted-source-screen-v1/privacy.json
+    file_sha256: 5ba7399de150794630547cb90c8e8d564d4d14497984f8619adfcf7e0ae5afbc
+authority:
+  screening_method: interactive-codex-subagents
+  exact_model_identity_bound: false
+  not_human_review: true
+  not_ethics_review: true
+  formal_evidence_eligible: false
+  benchmark_admission_authorized: false
+  human_review_replacement_allowed: false
+  model_calls_performed: true
+claim_boundary: >-
+  The screen diagnoses workflow and policy ambiguity. It cannot satisfy the two
+  independent human scientific labels, privacy review, conflicts screening,
+  adjudication, or judge-validation requirements of formal SciTasteBench.

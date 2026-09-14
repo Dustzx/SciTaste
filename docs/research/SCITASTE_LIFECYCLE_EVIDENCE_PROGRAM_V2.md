@@ -92,7 +92,13 @@ domain or publisher-subject strata, but zero formally admitted cases: independen
 domain, quality, privacy, grounded-abstraction, and attribution review is still
 open. Outcome-blind ARIES and F1000 review packages now cover the complete pool
 and expose an exact workload of 546 scientific plus 273 privacy assessments;
-no reviewer contact or result exists. One MLRC-Bench task has exact development
+no reviewer contact or result exists. A deterministic assignment now partitions
+that workload across eight scientific and two privacy slots, with 68--69 and
+136--137 assessments per slot respectively, but no slot has a reviewer identity
+or staffing authority. A fixed 12-case dual-agent screen exposed material
+decision-family disagreement and a public-attribution versus de-identification
+ambiguity; it is process calibration and cannot satisfy human review. One
+MLRC-Bench task has exact development
 and scorer-held-out bytes, but its
 environment/scorer and a source-group-disjoint task population are not qualified.
 InnovatorBench is deferred because its official archive exceeds the current
