@@ -1,0 +1,65 @@
+schema_version: "1.2"
+freeze_receipt_id: scitastebench-segmentation-prospective-freeze-v3
+project_id: scitaste-self-development
+frozen_at: 2026-09-15T05:40:00+08:00
+git:
+  repository: Dustzx/SciTaste
+  branch: main
+  commit: 7a5fca75a59ed8e16a94cf73dd1cb091c7ada0a8
+  worktree_clean_at_commit: true
+bindings:
+  protocol:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v3.yaml
+    file_sha256: 1fc48c4a17e394b3609608d482e9f0105e69b087eaab1b9d7e40e6729b8b8a13
+  sample:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_sample_v2.yaml
+    file_sha256: 2820dc77ad3663f2d603a2cafb0c9deb27bd2e32e5849df2ca9f1363814700b7
+    sample_sha256: 7cb4fc5a23a43d231b257c94137492096ed9ac81e23f58a5871e2e2697d58fed
+  segmentation_rubric:
+    locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_v2.yaml
+    file_sha256: 342fa94d8965c427f99b97d7a171e7a4df2898d1de49d276f9459ff4316e09d8
+  adjudication_rubric:
+    locator: configs/evaluation/ai_review/scitastebench_decision_segmentation_adjudication_v2.yaml
+    file_sha256: 263568c7b6801d7802d5dca09d6f5ed9195719e65cdedef9c91b1748b51c9261
+  provider_resource:
+    locator: configs/resources/api/zhipu_glm53_flash_v3.yaml
+    file_sha256: 0810d7b015a6d4d3de3572e1a47689221410096ec0bd4ec061b087ac67d5373a
+  identity_policy:
+    locator: configs/evaluation/model_identity/iclr2027_api_identity_v3.yaml
+    file_sha256: 237f79c76b873a32b2c2b06f510aef5179e16bdace9b9de2af4ad56257db9fac
+  consumed_sample_registry:
+    locator: configs/evaluation/ai_review/scitastebench_segmentation_consumed_samples_v1.yaml
+    file_sha256: ba8bd5b0c8171a98e4654823ad590a5b35dd76f875123ce3fce0215d7070a935
+implementation:
+  segmentation_module:
+    locator: src/scitaste/evaluation/taste_source_segmentation.py
+    file_sha256: ac65479f7d03ed9f78aa04502d5311ba69986db13db6d7d7671c89399a5ec037
+  cli:
+    locator: src/scitaste/cli.py
+    file_sha256: 984003cc05a031356f772a77d47825151052ee657a4e6d386947d43e6649fde7
+  protocol_module:
+    locator: src/scitaste/evaluation/taste_source_segmentation_protocol.py
+    file_sha256: 0e60890e24d1068c0bc57fcb831f44cd4955beb3a144b6118f99ef5a3591c110
+  execution_module:
+    locator: src/scitaste/evaluation/taste_source_segmentation_execution.py
+    file_sha256: 8a7a5548665b61235a752175a5440b7fb7084632be09b1583af731d9669ff667
+freeze_attestation:
+  first_provider_request_performed_before_freeze: false
+  task_or_sample_content_sent_before_freeze: false
+  source_records_manually_inspected_for_selection: false
+  sample_replay_verified: true
+  retrospective_sample_overlap_count: 0
+  item_count: 24
+  creates_immutable_protocol_version: true
+  protocol_change_requires_new_version: true
+authority:
+  protocol_preregistered_by_external_receipt: true
+  authorizes_provider_contact: false
+  authorizes_calibration_execution: false
+  authorizes_scaled_execution: false
+  authorizes_benchmark_admission: false
+  formal_evidence_eligible: false
+next_gate: >-
+  Compile and inspect the v5 no-contact request pack, then bind this clean Git
+  snapshot, current provider price/catalog bytes, and a fresh one-time owner
+  authorization before the first v3 request. The consumed v2 sample is excluded.
