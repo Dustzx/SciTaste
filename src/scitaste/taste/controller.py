@@ -13,8 +13,10 @@ from scitaste.backends.base import (
     PreferenceRequest,
     PreferenceResponse,
 )
+from scitaste.project.idea_revision import ProjectIdeaRevisionBinding
 from scitaste.schema.actions import ResearchAction
 from scitaste.schema.decisions import (
+    LifecycleTastePolicyTrace,
     ModelCandidateGenerationTrace,
     ModelDecisionTrace,
     ModelDecisionUsage,
@@ -31,6 +33,11 @@ from scitaste.taste.deliberation import (
     VerifiedTasteDeliberation,
     build_taste_deliberation_input,
     select_deliberated_taste_cases,
+)
+from scitaste.taste.episode_learning import (
+    LifecycleTastePolicyAssessment,
+    LifecycleTastePolicyModel,
+    assess_lifecycle_taste_policy,
 )
 from scitaste.taste.retriever import (
     RetrievedTasteCase,
@@ -76,6 +83,8 @@ class TasteController:
         candidate_generation_prompt_version: str = "native-candidate-generation-v1",
         expected_candidate_generation_backend: str | None = None,
         expected_candidate_generation_model: str | None = None,
+        lifecycle_policy: LifecycleTastePolicyModel | None = None,
+        lifecycle_policy_weight: float = 1.0,
     ) -> None:
         self.policy = policy or UtilityPolicy()
         self.seed = seed
@@ -97,6 +106,8 @@ class TasteController:
         self.candidate_generation_prompt_version = candidate_generation_prompt_version
         self.expected_candidate_generation_backend = expected_candidate_generation_backend
         self.expected_candidate_generation_model = expected_candidate_generation_model
+        self.lifecycle_policy = lifecycle_policy
+        self.lifecycle_policy_weight = lifecycle_policy_weight
         if mode == TasteMode.AUGMENTED and retriever is None:
             raise ValueError("augmented taste mode requires a TasteRetriever")
         if retrieval_limit < 1:
@@ -120,6 +131,12 @@ class TasteController:
             and candidate_generation_backend is None
         ):
             raise ValueError("expected candidate identity requires a candidate backend")
+        if (
+            lifecycle_policy_weight < 0
+            or lifecycle_policy_weight != lifecycle_policy_weight
+            or lifecycle_policy_weight == float("inf")
+        ):
+            raise ValueError("lifecycle policy weight must be finite and nonnegative")
 
     def decide(
         self,
@@ -128,6 +145,7 @@ class TasteController:
         candidate_actions: Sequence[ResearchAction],
         budget: ResourceBudget | None = None,
         taste_deliberation: VerifiedTasteDeliberation | None = None,
+        current_idea_revision: ProjectIdeaRevisionBinding | None = None,
     ) -> ResearchDecision:
         actions = list(candidate_actions)
         if not actions:
@@ -192,11 +210,26 @@ class TasteController:
                     precedent_bonus[action.action_id] += (
                         self.precedent_weight * result.score * result.case.confidence
                     )
+        lifecycle_assessment: LifecycleTastePolicyAssessment | None = None
+        lifecycle_adjustment = {action.action_id: 0.0 for action in actions}
+        if self.lifecycle_policy is not None:
+            feasible_ids = {item.action_id for item in feasible}
+            lifecycle_assessment = assess_lifecycle_taste_policy(
+                self.lifecycle_policy,
+                state=state,
+                actions=tuple(action for action in actions if action.action_id in feasible_ids),
+                current_idea_revision=current_idea_revision,
+            )
+            for item in lifecycle_assessment.action_scores:
+                lifecycle_adjustment[item.action_id] = (
+                    self.lifecycle_policy_weight * item.adjustment
+                )
         adjusted_scores = {
             item.action_id: (
                 (item.score if self.utility_enabled else 0.0)
                 + precedent_bonus[item.action_id]
                 + critic_adjustments[item.action_id]
+                + lifecycle_adjustment[item.action_id]
             )
             for item in assessments
             if item.feasible
@@ -222,6 +255,7 @@ class TasteController:
                 utility_enabled=self.utility_enabled,
                 taste_enabled=self.mode is TasteMode.AUGMENTED,
                 critics_enabled=self.critics_enabled,
+                lifecycle_policy_assessment=lifecycle_assessment,
             )
             request = PreferenceRequest(
                 request_id=_preference_request_id(state, feasible, seed=self.seed),
@@ -286,6 +320,7 @@ class TasteController:
             else ""
         )
         critic_text = _critic_rationale(critic_findings)
+        lifecycle_text = _lifecycle_policy_rationale(lifecycle_assessment)
         utility_text = (
             "configurable scientific-value and resource-cost weights"
             if self.utility_enabled
@@ -304,7 +339,7 @@ class TasteController:
                 f"{model_response.rationale}"
             )
         )
-        rationale += precedent_text + critic_text
+        rationale += precedent_text + critic_text + lifecycle_text
         if generation_trace is not None:
             rationale += (
                 " Candidate templates were concretized by the bound model and admitted "
@@ -330,6 +365,7 @@ class TasteController:
             ),
             model_candidate_generation=generation_trace,
             taste_deliberation=deliberation_trace,
+            lifecycle_taste_policy=_lifecycle_policy_trace(lifecycle_assessment),
             model_decision=model_trace,
         )
 
@@ -452,6 +488,7 @@ def _model_decision_context(
     utility_enabled: bool,
     taste_enabled: bool,
     critics_enabled: bool,
+    lifecycle_policy_assessment: LifecycleTastePolicyAssessment | None = None,
 ) -> str:
     """Build the bounded, condition-sensitive context seen by the shared model path."""
 
@@ -541,7 +578,47 @@ def _model_decision_context(
             "findings": [item.model_dump(mode="json") for item in critic_findings],
         },
     }
+    if lifecycle_policy_assessment is not None:
+        payload["learned_lifecycle_taste"] = lifecycle_policy_assessment.model_dump(mode="json")
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _lifecycle_policy_trace(
+    assessment: LifecycleTastePolicyAssessment | None,
+) -> LifecycleTastePolicyTrace | None:
+    if assessment is None:
+        return None
+    return LifecycleTastePolicyTrace(
+        policy_id=assessment.policy_id,
+        policy_sha256=assessment.policy_sha256,
+        idea_revision_id=assessment.idea_revision_id,
+        idea_revision_record_sha256=assessment.idea_revision_record_sha256,
+        observed_idea_revision_id=assessment.observed_idea_revision_id,
+        observed_idea_revision_record_sha256=(assessment.observed_idea_revision_record_sha256),
+        assessment_sha256=assessment.assessment_sha256,
+        candidate_set_sha256=assessment.candidate_set_sha256,
+        recommended_action_id=assessment.recommended_action_id,
+        abstained=assessment.abstained,
+        reason_codes=assessment.reason_codes,
+        action_adjustments={item.action_id: item.adjustment for item in assessment.action_scores},
+    )
+
+
+def _lifecycle_policy_rationale(
+    assessment: LifecycleTastePolicyAssessment | None,
+) -> str:
+    if assessment is None:
+        return ""
+    if assessment.abstained:
+        return (
+            " Learned lifecycle Taste abstained without changing the ranking "
+            f"({', '.join(assessment.reason_codes)})."
+        )
+    return (
+        " Learned lifecycle Taste applied reviewed outcome evidence and recommended "
+        f"{assessment.recommended_action_id} "
+        f"(pairwise probability={assessment.pairwise_probability:.3f})."
+    )
 
 
 def _preference_request_id(

@@ -113,8 +113,26 @@ class TasteEpisodeAlternative(BaseModel):
     model_config = _CONFIG
 
     action_id: str = Field(min_length=1, max_length=300)
+    action_type: str = Field(default="unspecified", min_length=1, max_length=200)
     summary: str = Field(min_length=1, max_length=4_000)
+    tags: tuple[str, ...] = Field(default=(), max_length=30)
+    expected_value: dict[str, float] = Field(default_factory=dict)
+    expected_cost: dict[str, float] = Field(default_factory=dict)
     selected: bool
+
+    @model_validator(mode="after")
+    def features_are_closed(self) -> TasteEpisodeAlternative:
+        if len(self.tags) != len(set(tag.casefold() for tag in self.tags)):
+            raise ValueError("Taste episode action tags must be unique")
+        for mapping in (self.expected_value, self.expected_cost):
+            if any(
+                value != value or value in {float("inf"), float("-inf")}
+                for value in mapping.values()
+            ):
+                raise ValueError("Taste episode action features must be finite")
+        if any(value < 0 for value in self.expected_cost.values()):
+            raise ValueError("Taste episode action costs must be nonnegative")
+        return self
 
 
 class TasteEpisodeOutcome(BaseModel):
@@ -171,7 +189,7 @@ class TasteEpisodeCandidate(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.1"
     candidate_id: str = Field(pattern=_ID)
     project_id: str
     source_project_revision: int = Field(ge=0)
@@ -180,6 +198,8 @@ class TasteEpisodeCandidate(BaseModel):
     channel: TasteSupervisionChannel
     producer_role: TasteEpisodeProducerRole
     producer_id: str = Field(pattern=_ID)
+    attribution_producer_role: TasteEpisodeProducerRole | None = None
+    attribution_producer_id: str | None = Field(default=None, pattern=_ID)
     maturity: TasteEpisodeMaturity
     supervision_scope: TasteSupervisionScope
     human_operation: TasteInterventionOperation | None = None
@@ -195,6 +215,8 @@ class TasteEpisodeCandidate(BaseModel):
     applicability_conditions: tuple[str, ...] = Field(min_length=1, max_length=30)
     failure_conditions: tuple[str, ...] = Field(min_length=1, max_length=30)
     counterfactual_probe: str = Field(min_length=1, max_length=10_000)
+    domain_tags: tuple[str, ...] = Field(default=(), max_length=30)
+    venue_tags: tuple[str, ...] = Field(default=(), max_length=30)
     confounders: tuple[TasteEpisodeConfounder, ...] = Field(default=(), max_length=100)
     evidence: tuple[TasteEpisodeEvidence, ...] = Field(min_length=2, max_length=200)
     missing_evidence_questions: tuple[str, ...] = Field(default=(), max_length=30)
@@ -218,6 +240,10 @@ class TasteEpisodeCandidate(BaseModel):
         selected = [item.action_id for item in self.alternatives if item.selected]
         if selected != [self.selected_action_id]:
             raise ValueError("Taste episode must mark exactly its selected action")
+        if self.schema_version == "1.1" and any(
+            item.action_type == "unspecified" for item in self.alternatives
+        ):
+            raise ValueError("schema-1.1 Taste alternatives require action types")
         outcome_ids = [item.outcome_id for item in self.outcomes]
         credit_ids = [item.credit_id for item in self.credit_assignments]
         confounder_ids = [item.confounder_id for item in self.confounders]
@@ -274,26 +300,49 @@ class TasteEpisodeCandidate(BaseModel):
         elif self.human_operation is not None:
             raise ValueError("only human-intervention episodes carry a human operation")
         if self.maturity is TasteEpisodeMaturity.AWAITING_OUTCOME:
-            if self.outcomes or self.credit_assignments:
+            if (
+                self.outcomes
+                or self.credit_assignments
+                or self.attribution_producer_role is not None
+                or self.attribution_producer_id is not None
+            ):
                 raise ValueError("outcome-pending Taste episodes cannot carry attribution")
         elif not self.outcomes or not self.credit_assignments:
             raise ValueError("attribution-proposed episodes require outcomes and credit")
+        elif self.schema_version == "1.1":
+            if self.attribution_producer_role is None or self.attribution_producer_id is None:
+                raise ValueError("outcome attribution requires its producer identity")
+            expected_attribution_role = (
+                TasteEpisodeProducerRole.REFERENCE_MINER
+                if self.channel is TasteSupervisionChannel.EXTERNAL_PRECEDENT
+                else TasteEpisodeProducerRole.PROCESS_TASTE_MINER
+            )
+            if self.attribution_producer_role is not expected_attribution_role:
+                raise ValueError("Taste attribution producer role violates channel ownership")
         for label, values in (
             ("applicability", self.applicability_conditions),
             ("failure", self.failure_conditions),
+            ("domain", self.domain_tags),
+            ("venue", self.venue_tags),
             ("missing evidence", self.missing_evidence_questions),
         ):
             folded = [value.casefold() for value in values]
             if len(folded) != len(set(folded)):
                 raise ValueError(f"Taste episode {label} items must be unique")
-        expected = content_sha256(self.model_dump(mode="json", exclude={"candidate_sha256"}))
-        if self.candidate_sha256 != expected:
+        payload = self.model_dump(mode="json", exclude={"candidate_sha256"})
+        expected = content_sha256(payload)
+        legacy_expected = (
+            content_sha256(_legacy_v1_candidate_payload(payload))
+            if self.schema_version == "1.0"
+            else None
+        )
+        if self.candidate_sha256 not in {expected, legacy_expected}:
             raise ValueError("Taste episode candidate hash mismatch")
         return self
 
     @classmethod
     def create(cls, **values: object) -> TasteEpisodeCandidate:
-        payload = {"schema_version": "1.0", **values}
+        payload = {"schema_version": "1.1", **values}
         payload.pop("candidate_sha256", None)
         unsigned = cls.model_construct(candidate_sha256="0" * 64, **payload)
         return cls(
@@ -348,6 +397,8 @@ def compile_process_taste_episode_candidate(
     failure_conditions: tuple[str, ...],
     counterfactual_probe: str,
     evidence: tuple[TasteEpisodeEvidence, ...],
+    domain_tags: tuple[str, ...] = (),
+    venue_tags: tuple[str, ...] = (),
     confounders: tuple[TasteEpisodeConfounder, ...] = (),
     missing_evidence_questions: tuple[str, ...] = (),
 ) -> TasteEpisodeCandidate:
@@ -358,7 +409,11 @@ def compile_process_taste_episode_candidate(
     alternatives = tuple(
         TasteEpisodeAlternative(
             action_id=action.action_id,
+            action_type=action.type.value,
             summary=action.description,
+            tags=tuple(action.tags),
+            expected_value=dict(action.expected_value),
+            expected_cost=dict(action.expected_cost),
             selected=action.action_id == decision.selected_action.action_id,
         )
         for action in decision.candidate_actions
@@ -372,6 +427,8 @@ def compile_process_taste_episode_candidate(
         channel=TasteSupervisionChannel.INTERNAL_OUTCOME,
         producer_role=TasteEpisodeProducerRole.PROCESS_TASTE_MINER,
         producer_id=producer_id,
+        attribution_producer_role=TasteEpisodeProducerRole.PROCESS_TASTE_MINER,
+        attribution_producer_id=producer_id,
         maturity=TasteEpisodeMaturity.ATTRIBUTION_PROPOSED,
         supervision_scope=TasteSupervisionScope.PROJECT,
         stage=decision.stage,
@@ -386,10 +443,56 @@ def compile_process_taste_episode_candidate(
         applicability_conditions=applicability_conditions,
         failure_conditions=failure_conditions,
         counterfactual_probe=counterfactual_probe,
+        domain_tags=domain_tags,
+        venue_tags=venue_tags,
         confounders=confounders,
         evidence=evidence,
         missing_evidence_questions=missing_evidence_questions,
     )
+
+
+def attach_outcome_attribution_to_human_intervention(
+    candidate: TasteEpisodeCandidate,
+    *,
+    source_project_revision: int,
+    source_project_snapshot_sha256: str,
+    attribution_producer_id: str,
+    outcomes: tuple[TasteEpisodeOutcome, ...],
+    credit_assignments: tuple[TasteCreditAssignment, ...],
+    outcome_evidence: tuple[TasteEpisodeEvidence, ...],
+    confounders: tuple[TasteEpisodeConfounder, ...] = (),
+    missing_evidence_questions: tuple[str, ...] = (),
+) -> TasteEpisodeCandidate:
+    """Join a later process observation to a preserved human correction."""
+
+    if candidate.channel is not TasteSupervisionChannel.HUMAN_INTERVENTION:
+        raise ValueError("outcome join accepts only a human-intervention candidate")
+    if candidate.maturity is not TasteEpisodeMaturity.AWAITING_OUTCOME:
+        raise ValueError("human intervention already carries outcome attribution")
+    if source_project_revision < candidate.source_project_revision:
+        raise ValueError("outcome attribution cannot move a project revision backward")
+    if not any(item.role is TasteEpisodeEvidenceRole.OUTCOME for item in outcome_evidence):
+        raise ValueError("human intervention outcome join requires outcome evidence")
+    payload = {
+        name: getattr(candidate, name)
+        for name in type(candidate).model_fields
+        if name != "candidate_sha256"
+    }
+    payload.update(
+        {
+            "source_project_revision": source_project_revision,
+            "source_project_snapshot_sha256": source_project_snapshot_sha256,
+            "attribution_producer_role": TasteEpisodeProducerRole.PROCESS_TASTE_MINER,
+            "attribution_producer_id": attribution_producer_id,
+            "maturity": TasteEpisodeMaturity.ATTRIBUTION_PROPOSED,
+            "outcomes": outcomes,
+            "credit_assignments": credit_assignments,
+            "confounders": confounders,
+            "evidence": (*candidate.evidence, *outcome_evidence),
+            "missing_evidence_questions": missing_evidence_questions,
+        }
+    )
+    return TasteEpisodeCandidate.create(**payload)
 
 
 def compile_human_taste_intervention_candidate(
@@ -410,6 +513,8 @@ def compile_human_taste_intervention_candidate(
     failure_conditions: tuple[str, ...],
     counterfactual_probe: str,
     evidence: tuple[TasteEpisodeEvidence, ...],
+    domain_tags: tuple[str, ...] = (),
+    venue_tags: tuple[str, ...] = (),
     missing_evidence_questions: tuple[str, ...] = (),
 ) -> TasteEpisodeCandidate:
     """Compile a GAC correction that waits for outcomes before attribution."""
@@ -417,7 +522,11 @@ def compile_human_taste_intervention_candidate(
     alternatives = tuple(
         TasteEpisodeAlternative(
             action_id=action.action_id,
+            action_type=action.type.value,
             summary=action.description,
+            tags=tuple(action.tags),
+            expected_value=dict(action.expected_value),
+            expected_cost=dict(action.expected_cost),
             selected=action.action_id == decision.selected_action.action_id,
         )
         for action in decision.candidate_actions
@@ -444,6 +553,8 @@ def compile_human_taste_intervention_candidate(
         applicability_conditions=applicability_conditions,
         failure_conditions=failure_conditions,
         counterfactual_probe=counterfactual_probe,
+        domain_tags=domain_tags,
+        venue_tags=venue_tags,
         evidence=evidence,
         missing_evidence_questions=missing_evidence_questions,
     )
@@ -504,6 +615,16 @@ def inspect_taste_episode_candidate(
             "outcome-attribution-pending",
             "human intervention is retained but cannot be reviewed as reusable Taste yet",
         )
+    attribution_producer_bound = (
+        candidate.attribution_producer_role is not None
+        and candidate.attribution_producer_id is not None
+    )
+    if attribution_proposed and not attribution_producer_bound:
+        _episode_add(
+            findings,
+            "attribution-producer-unbound",
+            "legacy attribution lacks an independently identifiable producer",
+        )
     attributable = any(
         item.direction is not TasteCreditDirection.NOT_ATTRIBUTABLE
         for item in candidate.credit_assignments
@@ -514,7 +635,13 @@ def inspect_taste_episode_candidate(
             "no-attributable-credit",
             "episode contains no reviewable contribution to a research outcome",
         )
-    ready = evidence_verified and idea_matches and attribution_proposed and attributable
+    ready = (
+        evidence_verified
+        and idea_matches
+        and attribution_proposed
+        and attribution_producer_bound
+        and attributable
+    )
     return TasteEpisodeInspection(
         candidate_id=candidate.candidate_id,
         candidate_sha256=candidate.candidate_sha256,
@@ -538,6 +665,27 @@ def _episode_add(
         findings.append(TasteEpisodeFinding(code=code, message=message))
 
 
+def _legacy_v1_candidate_payload(payload: dict[str, object]) -> dict[str, object]:
+    """Reproduce the schema-1.0 hash after additive schema-1.1 parsing."""
+
+    legacy = dict(payload)
+    for field in (
+        "attribution_producer_role",
+        "attribution_producer_id",
+        "domain_tags",
+        "venue_tags",
+    ):
+        legacy.pop(field, None)
+    alternatives = []
+    for value in legacy.get("alternatives", []):
+        alternative = dict(value)
+        for field in ("action_type", "tags", "expected_value", "expected_cost"):
+            alternative.pop(field, None)
+        alternatives.append(alternative)
+    legacy["alternatives"] = alternatives
+    return legacy
+
+
 __all__ = [
     "TasteCreditAssignment",
     "TasteCreditDirection",
@@ -556,6 +704,7 @@ __all__ = [
     "TasteOutcomePolarity",
     "TasteSupervisionChannel",
     "TasteSupervisionScope",
+    "attach_outcome_attribution_to_human_intervention",
     "compile_human_taste_intervention_candidate",
     "compile_process_taste_episode_candidate",
     "inspect_taste_episode_candidate",

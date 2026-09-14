@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 
 from scitaste.project import ProjectIdeaRevisionBinding
+from scitaste.project.models import content_sha256
 from scitaste.schema.actions import MetaAction, ResearchAction
 from scitaste.schema.decisions import ResearchDecision
 from scitaste.taste import (
@@ -16,6 +17,7 @@ from scitaste.taste import (
     TasteOutcomeFamily,
     TasteOutcomePolarity,
     TasteSupervisionScope,
+    attach_outcome_attribution_to_human_intervention,
     compile_human_taste_intervention_candidate,
     compile_process_taste_episode_candidate,
     inspect_taste_episode_candidate,
@@ -229,3 +231,135 @@ def test_gac_intervention_waits_for_outcome_and_stays_project_scoped(tmp_path: P
     assert report.attribution_proposed is False
     assert report.ready_for_independent_review is False
     assert {finding.code for finding in report.findings} == {"outcome-attribution-pending"}
+
+
+def test_process_miner_joins_outcome_to_human_intervention(tmp_path: Path) -> None:
+    binding = _idea_binding()
+    candidate = compile_human_taste_intervention_candidate(
+        _decision(executed=False),
+        candidate_id="human-episode-01",
+        project_id="episode-project",
+        source_project_revision=4,
+        source_project_snapshot_sha256="4" * 64,
+        idea_revision=binding,
+        producer_id="generation-as-content-turn-01",
+        operation=TasteInterventionOperation.REPRIORITIZE,
+        supervision_scope=TasteSupervisionScope.PROJECT,
+        state_summary="The user prioritizes a diagnostic experiment.",
+        decision_principle="Resolve the ambiguity before scaling.",
+        why_preferred="The outcome may reverse the next research action.",
+        applicability_conditions=("the ambiguity changes the next experiment",),
+        failure_conditions=("the probe is nondiagnostic",),
+        counterfactual_probe="Scale if independent evidence resolves the ambiguity.",
+        evidence=_evidence(tmp_path, human=True),
+    )
+    outcome_path = tmp_path / "delayed-outcome.json"
+    outcome_path.write_text('{"boundary_resolved":true}\n', encoding="utf-8")
+    outcome = TasteEpisodeOutcome(
+        outcome_id="delayed-outcome",
+        family=TasteOutcomeFamily.DESIGN,
+        summary="The later probe resolved the decision boundary.",
+        horizon="next experiment decision",
+        polarity=TasteOutcomePolarity.SUPPORTS,
+        evidence_ids=("delayed-outcome-evidence",),
+    )
+    joined = attach_outcome_attribution_to_human_intervention(
+        candidate,
+        source_project_revision=5,
+        source_project_snapshot_sha256="5" * 64,
+        attribution_producer_id="process-taste-miner-01",
+        outcomes=(outcome,),
+        credit_assignments=(
+            TasteCreditAssignment(
+                credit_id="credit-human-probe",
+                family=TasteOutcomeFamily.DESIGN,
+                direction=TasteCreditDirection.BENEFICIAL,
+                outcome_ids=(outcome.outcome_id,),
+                rationale="The proposed probe produced the resolving observation.",
+                confidence=0.8,
+            ),
+        ),
+        outcome_evidence=(
+            TasteEpisodeEvidence(
+                evidence_id="delayed-outcome-evidence",
+                role=TasteEpisodeEvidenceRole.OUTCOME,
+                locator=outcome_path.name,
+                sha256=_sha(outcome_path),
+            ),
+        ),
+    )
+
+    report = inspect_taste_episode_candidate(
+        joined,
+        evidence_root=tmp_path,
+        current_idea_revision=binding,
+    )
+
+    assert joined.schema_version == "1.1"
+    assert joined.producer_id == "generation-as-content-turn-01"
+    assert joined.attribution_producer_id == "process-taste-miner-01"
+    assert report.ready_for_independent_review is True
+    assert report.findings == ()
+
+
+def test_schema_10_episode_replays_but_cannot_enter_new_training(tmp_path: Path) -> None:
+    outcome = TasteEpisodeOutcome(
+        outcome_id="resolved-boundary",
+        family=TasteOutcomeFamily.DESIGN,
+        summary="The boundary was resolved.",
+        horizon="next decision",
+        polarity=TasteOutcomePolarity.SUPPORTS,
+        evidence_ids=("outcome-evidence",),
+    )
+    current = compile_process_taste_episode_candidate(
+        _decision(),
+        candidate_id="legacy-process-episode-01",
+        project_id="episode-project",
+        source_project_revision=4,
+        source_project_snapshot_sha256="4" * 64,
+        idea_revision=_idea_binding(),
+        producer_id="process-taste-miner-01",
+        state_summary="A decision boundary is unresolved.",
+        decision_principle="Probe before scaling.",
+        why_preferred="The probe is diagnostic.",
+        outcomes=(outcome,),
+        credit_assignments=(
+            TasteCreditAssignment(
+                credit_id="credit-probe",
+                family=TasteOutcomeFamily.DESIGN,
+                direction=TasteCreditDirection.BENEFICIAL,
+                outcome_ids=(outcome.outcome_id,),
+                rationale="The probe resolved the boundary.",
+                confidence=0.7,
+            ),
+        ),
+        applicability_conditions=("the probe can reverse the decision",),
+        failure_conditions=("the probe is nondiagnostic",),
+        counterfactual_probe="Scale if the boundary is already known.",
+        evidence=_evidence(tmp_path),
+    )
+    payload = current.model_dump(mode="json", exclude={"candidate_sha256"})
+    payload["schema_version"] = "1.0"
+    for field in (
+        "attribution_producer_role",
+        "attribution_producer_id",
+        "domain_tags",
+        "venue_tags",
+    ):
+        payload.pop(field)
+    for alternative in payload["alternatives"]:
+        for field in ("action_type", "tags", "expected_value", "expected_cost"):
+            alternative.pop(field)
+    legacy_sha256 = content_sha256(payload)
+    legacy = type(current).model_validate({**payload, "candidate_sha256": legacy_sha256})
+
+    report = inspect_taste_episode_candidate(
+        legacy,
+        evidence_root=tmp_path,
+        current_idea_revision=_idea_binding(),
+    )
+
+    assert legacy.schema_version == "1.0"
+    assert legacy.candidate_sha256 == legacy_sha256
+    assert report.ready_for_independent_review is False
+    assert {item.code for item in report.findings} == {"attribution-producer-unbound"}

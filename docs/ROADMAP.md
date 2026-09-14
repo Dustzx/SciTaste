@@ -56,7 +56,7 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.20 — isolated development feedback loop | done | the durable model node drives a bounded propose/stop → admit → isolated development score → adopt/rollback loop; output artifacts and every transition are retained, and the six native conditions compile only from one content-bound five-channel guidance set |
 | Phase 9.21 — frozen-candidate held-out campaign closure | done | the first-party adapter binds an authorized campaign cell to separate development/test resource profiles, freezes the selected source and required artifacts before hidden data opens, executes one scorer-owned held-out command with no later model call, and publishes raw objective/usage/evidence artifacts to the campaign runner |
 | Phase 9.22 — first real native prepilot activation | in progress | the Perception nine-archive mapping passes license, receipt, ZIP-safety, and exact development/held-out isolation gates; a five-arm matrix and multi-candidate claim contract now encode Full-vs-Base, matched-Taste-vs-same-source-Raw-RAG, and matched-vs-mismatched-Taste without a policy confound; an unapproved 10-cell v12 proposal and executable two-task objective contract now freeze the intended closure, while only the complete five-arm Perception block may be activated first; after materialization, pin its task environment, reproduce the scorer, curate the formal contexts, bind the adapter launcher, disclose the full model/data/GPU budget, and request block execution authority |
-| Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; next implement reviewed trajectory attribution, policy estimation/update, abstention, and held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
+| Phase 9.23 — lifecycle Taste policy and self-revising Idea contract | in progress | the project verifies one current content-bound Idea revision and all of its inputs; external precedents, Tool Intelligence outcomes, and Generation as Content corrections converge on one quarantined, revision-bound episode schema; independent attribution review, episode admission, an outcome-updated factorized policy, causal controls, uncertainty abstention, and controller traces are implemented; next collect real longitudinal episodes and run held-out lifecycle evaluation before any old prepilot is treated as the title-level experiment |
 
 Phase 9.23 changes the scientific dependency order without discarding the Phase
 9.22 executor. The current self-development Idea revision is structurally
@@ -68,10 +68,18 @@ sufficient test of the newly central lifecycle-policy and outcome-credit claim.
 Tool Intelligence and Generation as Content now have one stable, proposal-only
 handoff into Taste Core. The former can provide observed execution outcomes and
 credit hypotheses; the latter can provide scoped human corrections that wait for
-later outcomes. Neither may certify its own lesson, admit retrieval memory,
-update the policy, or authorize an experiment. The next mainline operator is the
-reviewed outcome-attribution and policy-update path, followed by a revised H1--H4
-program bound to an accepted Idea revision.
+later outcomes. A process miner can join those delayed outcomes without replacing
+the original human producer. Two independent reviewers must agree on preference
+and supported credit; substantive splits require an independent adjudicator, and
+neither producer may review its own attribution. Admitted episodes can feed an
+explicit factorized Beta pairwise fit, while no-update, success-only,
+failure-only, and shuffled-credit modes preserve the planned controls. The
+controller applies a recommendation only under exact Idea/domain/stage support
+and a positive uncertainty margin; otherwise it records abstention and preserves
+the pre-existing ranking. These mechanisms are implemented only on authored
+fixtures so far. The next mainline operator is real trajectory reconstruction and
+independent review, followed by a revised held-out H1--H4 program bound to an
+accepted Idea revision.
 
 Phase 9.22 was deliberately advancing one real task before widening the task set.
 The Perception materialization proposal maps 698,506,926 compressed bytes to a

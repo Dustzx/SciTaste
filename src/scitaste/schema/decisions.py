@@ -121,6 +121,50 @@ class TasteDeliberationTrace(BaseModel):
         return self
 
 
+class LifecycleTastePolicyTrace(BaseModel):
+    """Exact learned-policy assessment applied or abstained for one candidate set."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    policy_id: str = Field(min_length=1)
+    policy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    idea_revision_id: str = Field(min_length=1)
+    idea_revision_record_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observed_idea_revision_id: str | None = None
+    observed_idea_revision_record_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+    assessment_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    candidate_set_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    recommended_action_id: str | None = None
+    abstained: bool
+    reason_codes: tuple[str, ...] = Field(min_length=1)
+    action_adjustments: dict[str, float] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def trace_is_closed(self) -> LifecycleTastePolicyTrace:
+        if self.abstained != (self.recommended_action_id is None):
+            raise ValueError("lifecycle Taste trace abstention and recommendation disagree")
+        if len(self.reason_codes) != len(set(self.reason_codes)):
+            raise ValueError("lifecycle Taste trace reason codes must be unique")
+        if (self.observed_idea_revision_id is None) != (
+            self.observed_idea_revision_record_sha256 is None
+        ):
+            raise ValueError("observed lifecycle Taste Idea identity is incomplete")
+        if self.recommended_action_id is not None and (
+            self.recommended_action_id not in self.action_adjustments
+        ):
+            raise ValueError("lifecycle Taste trace recommendation is outside the candidates")
+        if any(
+            value != value or value in {float("inf"), float("-inf")}
+            for value in self.action_adjustments.values()
+        ):
+            raise ValueError("lifecycle Taste trace adjustments must be finite")
+        return self
+
+
 class ResearchDecision(BaseModel):
     """Controller output and the unit of future taste memory."""
 
@@ -140,6 +184,7 @@ class ResearchDecision(BaseModel):
     candidate_scores: dict[str, float | None] = Field(default_factory=dict)
     model_candidate_generation: ModelCandidateGenerationTrace | None = None
     taste_deliberation: TasteDeliberationTrace | None = None
+    lifecycle_taste_policy: LifecycleTastePolicyTrace | None = None
     model_decision: ModelDecisionTrace | None = None
     executor_result_id: str | None = None
     actual_outcome: dict[str, Any] | None = None
@@ -151,6 +196,8 @@ class ResearchDecision(BaseModel):
             payload.pop("model_candidate_generation", None)
         if self.taste_deliberation is None:
             payload.pop("taste_deliberation", None)
+        if self.lifecycle_taste_policy is None:
+            payload.pop("lifecycle_taste_policy", None)
         if self.model_decision is None:
             payload.pop("model_decision", None)
         return payload

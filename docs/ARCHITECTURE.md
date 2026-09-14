@@ -3942,7 +3942,7 @@ revision; it has no experiment or claim authority.
 ### ADR-127: Idea revision invalidates downstream Taste supervision and experiment freeze
 
 Status: accepted; revision binding and cross-channel candidate contract
-implemented, reviewed policy update remains open.
+implemented, with reviewed policy estimation continued in ADR-128.
 
 The self-development case showed that an experiment can be mechanically ready
 while the scientific thesis is still being revised. Treating the Idea as prose
@@ -3968,8 +3968,60 @@ All three producers have the same negative authority: their output is not
 canonical evidence, is not retrieval-eligible, cannot update the policy, and
 cannot execute an action. Taste Core verifies the bytes and current Idea binding,
 then may send an outcome-bearing candidate to independent review. Later work must
-join delayed outcomes, adjudicate attribution and scope, admit a reusable episode,
-and demonstrate that an estimated boundary-aware policy changes held-out
-decisions. The existing five-arm native design is retained as a representation
-and specificity mechanism slice, but it cannot alone establish lifecycle-policy
-learning or trajectory credit.
+demonstrate that the ADR-128 reviewed outcome-attribution and estimated policy
+path changes held-out decisions on natural trajectories. The existing five-arm
+native design is retained as a representation and specificity mechanism slice,
+but it cannot alone establish lifecycle-policy learning or trajectory credit.
+
+### ADR-128: Outcome-reviewed episodes estimate preference and abstain outside support
+
+Status: accepted and implemented on authored fixtures; real longitudinal evidence
+and held-out effectiveness remain open.
+
+An executed action is not a reward label. Success may be accidental, a failed
+probe may still be the correct decision, and an authored expected-value field is
+part of the original judgment rather than independent evidence for that judgment.
+SciTaste therefore makes outcome attribution a reviewed scientific object. A
+schema-1.1 episode records action types and tags while retaining the full
+alternative set, exact delayed outcomes, confounders, credit hypotheses, and
+Idea revision. Generation as Content remains the intervention producer when a
+process miner later joins an outcome; the two identities cannot be collapsed.
+Schema-1.0 episodes remain replayable under their original hash, but an unbound
+legacy attribution cannot enter the new training path.
+
+Two distinct, conflict-cleared primary reviewers must independently accept the
+same preferred action and at least one shared credit assignment. A split verdict
+or preference requires one distinct adjudicator; two rejections close the
+episode. Neither the episode producer nor the attribution producer may review
+the record. Admission freezes the candidate, decisive review identities,
+supported credit, and conservative minimum confidence into a self-hashed episode.
+Admission grants training eligibility only: it does not silently mutate a
+running controller or authorize an experiment.
+
+The first estimator is `factorized-beta-pairwise-v1`. For every admitted episode,
+the reviewed preferred action is compared with each recorded alternative. Its
+total confidence weight is divided across alternatives so a large authored
+candidate set cannot masquerade as independent sample size. Independent Beta
+posteriors estimate action-type, stage-action, domain-action, venue-action, tag,
+and stage-tag features. The explicit update modes—outcome-updated, no-update,
+unambiguous success-only, unambiguous failure-only, and deterministically shuffled
+credit—are experimental conditions rather than hidden flags. Mixed or unresolved
+outcomes cannot leak into the success/failure controls. Source/training episode
+identities, priors,
+posterior counts, and policy bytes close under content hashes. Because these
+factor features originate from the same episode, assessment uses a fully
+correlated uncertainty upper bound rather than treating feature count as sample
+size.
+
+At decision time only feasible actions are scored. The caller must supply the
+currently verified Idea binding; a missing or changed Idea forces abstention.
+Cross-domain transfer is off by default, stage support can be required, and
+insufficient support, low pairwise probability, or a credible margin crossing
+zero likewise forces abstention with zero score adjustment. When the policy
+applies, adjustments are centered and bounded before entering the existing
+controller; hard budget feasibility remains unchanged. The decision log binds
+the policy, policy and observed Idea revisions, candidate set, assessment,
+reasons, and per-action adjustments. Current scope matching is intentionally
+exact and structured. Semantic boundary transfer, natural episode reconstruction,
+independent real review, calibration, and held-out H1--H4 effects are not implied
+by the fixture-level implementation.

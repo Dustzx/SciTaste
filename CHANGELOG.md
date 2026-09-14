@@ -5,6 +5,17 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first outcome-calibrated lifecycle Scientific Taste policy path.
+  Process outcomes and delayed Generation-as-Content interventions retain
+  separate producer identities, bind exact alternatives and action features,
+  and require two independent attribution reviews plus conditional adjudication
+  before becoming immutable training episodes. A reproducible factorized Beta
+  pairwise estimator now supports outcome-updated, no-update, success-only,
+  failure-only, and shuffled-credit arms; exact Idea/domain/stage scope and
+  uncertainty gates make it abstain outside support. The controller records the
+  bound assessment and changes only feasible-action scores, never hard budgets.
+  Schema-1.0 episode artifacts remain replayable but cannot train without a
+  newly bound attribution producer.
 - Added a first-class, content-bound project Idea-revision ledger reader and
   registration path. A current revision now verifies its narrative and every
   declared input byte, exposes a stable method-development binding, and keeps
