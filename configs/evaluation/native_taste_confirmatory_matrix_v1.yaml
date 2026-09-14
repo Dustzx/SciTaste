@@ -1,0 +1,44 @@
+schema_version: "1.1"
+matrix_id: scitaste-native-confirmatory-mechanisms-v1
+component_only_effect_claims_forbidden: true
+profiles:
+  - condition_id: native-base
+    role: bundle_control
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: false
+      taste_retrieval: disabled
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: raw-source-rag
+    role: representation_control
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: true
+      taste_retrieval: disabled
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: matched-abstracted-taste
+    role: mechanism_treatment
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: false
+      taste_retrieval: matched
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: mismatched-taste
+    role: matched_placebo
+    components:
+      utility_policy_enabled: false
+      knowledge_retrieval_enabled: false
+      taste_retrieval: mismatched
+      taste_critics_enabled: false
+      integrity_gates_enabled: true
+  - condition_id: full-scitaste
+    role: full_system
+    components:
+      utility_policy_enabled: true
+      knowledge_retrieval_enabled: true
+      taste_retrieval: matched
+      taste_critics_enabled: true
+      integrity_gates_enabled: true

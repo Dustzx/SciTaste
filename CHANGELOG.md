@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added a separate five-arm native confirmatory matrix for the paper's actual
+  causal questions: Base, same-source Raw RAG, matched abstracted Taste,
+  source-disjoint mismatched Taste, and Full SciTaste. Formal guidance schema
+  1.1 embeds the exact token-accounted mechanism bundle, so Raw RAG and matched
+  Taste must use identical source identities and all three reference arms must
+  match source count, tokenizer, query, template, observed tokens, truncation,
+  provenance, curation, and outcome policy. The original six-arm matrix remains
+  available only for compatibility and optional component diagnostics.
 - Added an approval-gated dataset materialization transaction between safe
   archive acquisition and native experiment execution. It rebinds receipt,
   archive-safety, ingestion-license, task-spec, asset, member-count, and byte

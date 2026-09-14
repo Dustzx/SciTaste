@@ -3841,3 +3841,32 @@ and scientific claims. The receipt repeats those negative facts. Perception is
 the first real proposal: six train/validation archives form the development view
 and three test archives form the scorer-only view. Meta-learning remains blocked
 at its separate AWA license boundary and cannot inherit Perception's authority.
+
+### ADR-124: Formal native conditions identify representation before components
+
+Status: accepted; executable contract implemented, real treatment content not
+yet curated or launched.
+
+The original six-condition native matrix was built to prove component routing
+and diagnose sufficiency. It cannot identify the paper's abstraction claim:
+`native-knowledge` supplies raw Knowledge, while `native-taste` simultaneously
+adds both matched Taste and the Utility policy. A difference between those arms
+would mix reference representation with policy changes. More seeds would not
+repair that confound.
+
+SciTaste keeps the six-arm schema 1.0 matrix for compatibility and introduces an
+independent schema 1.1 confirmatory matrix with exactly five conditions: Native
+Base, same-source Raw RAG, matched abstracted Taste, source-disjoint mismatched
+Taste, and Full SciTaste. The three reference-mechanism conditions keep Utility
+and Critics off. Raw RAG versus matched Taste changes only representation;
+matched versus mismatched Taste changes only source-domain relation. Full versus
+Base estimates the complete Scientific Taste bundle.
+
+Formal guidance must carry the existing `MechanismContextBundle`, not merely
+three plausible strings. It requires identical ordered source identities for
+Raw RAG and matched Taste, complete source disjointness for mismatched Taste, and
+parity in tokenizer identity, retrieval query, rendering template, source count,
+observed tokens, token ceiling, truncation, provenance/curation tier, and outcome
+availability. Old guidance cannot be attached to the formal matrix. Knowledge-
+only, Taste-plus-Utility, and Critics-only cells remain optional diagnostics and
+do not inflate the confirmatory allocation.

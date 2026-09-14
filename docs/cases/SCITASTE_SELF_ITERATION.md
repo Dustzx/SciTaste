@@ -1915,3 +1915,22 @@ reusable authority and evidence boundary rather than bypassing it with a manual
 unzip. Environment reproduction and the first scorer run remain separate next
 steps; the upstream CUDA 11.8/12.4 mixture and compiled NMS extension must be
 measured rather than inferred from an environment file.
+
+## Refusing to spend compute on a confounded matrix (2026-09-14)
+
+While preparing the first real Perception task, the project compared the paper's
+registered H1 estimand with the executable six-arm condition matrix. The former
+requires same-source Raw RAG versus abstracted Taste with representation as the
+only difference. The latter paired Knowledge-only with a `native-taste` arm that
+also enabled Utility. More repetitions would estimate an uninterpretable bundle
+difference rather than the title-level abstraction claim.
+
+SciTaste retained the old matrix for compatibility and routing diagnostics, but
+created a separate five-arm confirmatory matrix. Its three reference treatments
+disable Utility and Critics; its guidance schema embeds the token-accounted
+mechanism bundle and rejects substituted contexts, non-identical Raw/Taste
+sources, mismatched-source overlap, or token/evidence-tier asymmetry. Full versus
+Base remains the complete-system contrast. This is a direct example of
+Scientific Taste and Tool Intelligence acting together: a semantic design defect
+changed the experiment plan before GPU spend, while verification was limited to
+the affected condition paths.

@@ -22,12 +22,25 @@ _MAX_CONFIG_BYTES = 256 * 1024
 
 
 class NativeTasteCondition(StrEnum):
+    """Legacy six-arm integration/diagnostic condition identifiers."""
+
     BASE = "native-base"
     KNOWLEDGE = "native-knowledge"
     TASTE = "native-taste"
     CRITICS = "native-critics"
     FULL = "full-scitaste"
     MISMATCHED_PLACEBO = "mismatched-taste-placebo"
+
+
+class NativeConfirmatoryCondition(StrEnum):
+    """Reference treatments needed to identify the formal H1/H2 mechanisms."""
+
+    RAW_SOURCE_RAG = "raw-source-rag"
+    MATCHED_ABSTRACTED_TASTE = "matched-abstracted-taste"
+    MISMATCHED_TASTE = "mismatched-taste"
+
+
+NativeConditionId = NativeTasteCondition | NativeConfirmatoryCondition
 
 
 class NativeTasteRetrievalMode(StrEnum):
@@ -41,6 +54,8 @@ class NativeConditionRole(StrEnum):
     COMPONENT_SUFFICIENCY = "component_sufficiency"
     FULL_SYSTEM = "full_system"
     MATCHED_PLACEBO = "matched_placebo"
+    REPRESENTATION_CONTROL = "representation_control"
+    MECHANISM_TREATMENT = "mechanism_treatment"
 
 
 class NativeConditionComponents(BaseModel):
@@ -56,7 +71,7 @@ class NativeConditionComponents(BaseModel):
 class NativeConditionProfile(BaseModel):
     model_config = _CONFIG
 
-    condition_id: NativeTasteCondition
+    condition_id: NativeConditionId
     role: NativeConditionRole
     components: NativeConditionComponents
 
@@ -109,28 +124,63 @@ _EXPECTED_PROFILES: dict[
     ),
 }
 
+_EXPECTED_CONFIRMATORY_PROFILES: dict[
+    NativeConditionId,
+    tuple[NativeConditionRole, bool, bool, NativeTasteRetrievalMode, bool],
+] = {
+    NativeTasteCondition.BASE: _EXPECTED_PROFILES[NativeTasteCondition.BASE],
+    NativeConfirmatoryCondition.RAW_SOURCE_RAG: (
+        NativeConditionRole.REPRESENTATION_CONTROL,
+        False,
+        True,
+        NativeTasteRetrievalMode.DISABLED,
+        False,
+    ),
+    NativeConfirmatoryCondition.MATCHED_ABSTRACTED_TASTE: (
+        NativeConditionRole.MECHANISM_TREATMENT,
+        False,
+        False,
+        NativeTasteRetrievalMode.MATCHED,
+        False,
+    ),
+    NativeConfirmatoryCondition.MISMATCHED_TASTE: (
+        NativeConditionRole.MATCHED_PLACEBO,
+        False,
+        False,
+        NativeTasteRetrievalMode.MISMATCHED,
+        False,
+    ),
+    NativeTasteCondition.FULL: _EXPECTED_PROFILES[NativeTasteCondition.FULL],
+}
+
 
 class NativeConditionMatrix(BaseModel):
-    """The exact six-arm training-free component matrix.
+    """A closed legacy-diagnostic or formal-confirmatory condition matrix.
 
-    The component-only arms estimate sufficiency, not leave-one-out marginal
-    effects. Full versus Base estimates the complete Scientific Taste bundle;
-    Full versus the placebo changes only the Taste corpus/domain relation.
+    Schema 1.0 preserves the original six-arm integration/diagnostic matrix.
+    Schema 1.1 is the five-arm formal matrix: Raw RAG versus matched abstracted
+    Taste changes representation over identical sources, matched versus
+    mismatched Taste changes source-domain relation, and Full versus Base tests
+    the complete Scientific Taste bundle.
     """
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     matrix_id: str = Field(pattern=r"^[a-z0-9]+(?:[a-z0-9_-]*[a-z0-9])?$")
-    profiles: tuple[NativeConditionProfile, ...] = Field(min_length=6, max_length=6)
+    profiles: tuple[NativeConditionProfile, ...] = Field(min_length=5, max_length=6)
     component_only_effect_claims_forbidden: Literal[True] = True
 
     @model_validator(mode="after")
     def exact_scientific_matrix(self) -> NativeConditionMatrix:
         by_id = {profile.condition_id: profile for profile in self.profiles}
-        if len(by_id) != len(self.profiles) or set(by_id) != set(NativeTasteCondition):
-            raise ValueError("native condition matrix must contain every condition exactly once")
-        for condition_id, expected in _EXPECTED_PROFILES.items():
+        expected_profiles = (
+            _EXPECTED_PROFILES if self.schema_version == "1.0" else _EXPECTED_CONFIRMATORY_PROFILES
+        )
+        if len(by_id) != len(self.profiles) or set(by_id) != set(expected_profiles):
+            label = "legacy six-arm" if self.schema_version == "1.0" else "confirmatory five-arm"
+            raise ValueError(f"native condition matrix must contain the exact {label} set")
+        for condition_id, expected in expected_profiles.items():
             profile = by_id[condition_id]
             observed = (
                 profile.role,
@@ -141,12 +191,13 @@ class NativeConditionMatrix(BaseModel):
             )
             if observed != expected:
                 raise ValueError(f"native condition profile drift: {condition_id.value}")
-        full = by_id[NativeTasteCondition.FULL].components
-        placebo = by_id[NativeTasteCondition.MISMATCHED_PLACEBO].components
-        if full.model_copy(update={"taste_retrieval": placebo.taste_retrieval}) != placebo:
-            raise ValueError(
-                "mismatched placebo may differ from Full only by Taste corpus relation"
-            )
+        if self.schema_version == "1.0":
+            full = by_id[NativeTasteCondition.FULL].components
+            placebo = by_id[NativeTasteCondition.MISMATCHED_PLACEBO].components
+            if full.model_copy(update={"taste_retrieval": placebo.taste_retrieval}) != placebo:
+                raise ValueError(
+                    "mismatched placebo may differ from Full only by Taste corpus relation"
+                )
         return self
 
     @computed_field
@@ -154,8 +205,11 @@ class NativeConditionMatrix(BaseModel):
     def fingerprint(self) -> str:
         return _canonical_sha256(self.model_dump(mode="json", exclude={"fingerprint"}))
 
-    def profile(self, condition: str | NativeTasteCondition) -> NativeConditionProfile:
-        condition_id = NativeTasteCondition(condition)
+    def profile(self, condition: str | NativeConditionId) -> NativeConditionProfile:
+        try:
+            condition_id: NativeConditionId = NativeTasteCondition(condition)
+        except ValueError:
+            condition_id = NativeConfirmatoryCondition(condition)
         return next(item for item in self.profiles if item.condition_id is condition_id)
 
 
@@ -268,11 +322,13 @@ def _canonical_sha256(value: object) -> str:
 
 __all__ = [
     "NativeConditionComponents",
+    "NativeConditionId",
     "NativeConditionMatrix",
     "NativeConditionMatrixInspection",
     "NativeConditionProfile",
     "NativeConditionRole",
     "NativeConditionRuntime",
+    "NativeConfirmatoryCondition",
     "NativeTasteCondition",
     "NativeTasteRetrievalMode",
     "build_native_condition_runtime",

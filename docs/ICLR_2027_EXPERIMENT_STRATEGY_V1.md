@@ -282,6 +282,16 @@ Full SciTaste may be added as a supporting condition, but v2 Knowledge-only,
 Critics-only, and legacy-placebo cells are not mandatory. This prevents an old
 software matrix from inflating the powered experiment without answering H1/H2a.
 
+The same correction is now executable for native end-to-end tasks in
+`configs/evaluation/native_taste_confirmatory_matrix_v1.yaml`. Its five closed
+arms are `native-base`, `raw-source-rag`, `matched-abstracted-taste`,
+`mismatched-taste`, and `full-scitaste`. The three reference arms compile only
+from guidance schema 1.1 containing an exact `MechanismContextBundle`; Raw RAG
+and matched Taste therefore share ordered source identities and all three arms
+have observed-token parity before launch. The older six-arm matrix remains an
+integration/diagnostic contract. In particular, `native-taste` is not renamed
+into the formal Taste arm because it also enables Utility and would confound H1.
+
 Runner accuracy measures agreement with a previously collected expert action
 label. It is a useful diagnostic, but it is not the frozen confirmatory endpoint.
 For H0/H1/H2a/H2b, the primary endpoint remains condition-blinded independent expert
@@ -302,8 +312,8 @@ experiment, and it grants no execution authority.
 ### 2. Native end-to-end causal study
 
 Use independent executable tasks with objective progress signals. The
-confirmatory block contains only `native-base`, `abstracted-matched-taste`,
-`abstracted-mismatched-taste`, `raw-source-rag`, and `full-scitaste`. Knowledge-
+confirmatory block contains only `native-base`, `matched-abstracted-taste`,
+`mismatched-taste`, `raw-source-rag`, and `full-scitaste`. Knowledge-
 only and critics-only arms may run as mechanism diagnostics on a frozen subset;
 they do not need the full confirmatory allocation.
 

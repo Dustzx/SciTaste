@@ -9,13 +9,16 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
+from scitaste.benchmark.models import MechanismContextBundle
 from scitaste.project.models import (
     content_sha256,
     validate_entry_id,
     validate_relative_locator,
 )
 from scitaste.taste.conditions import (
+    NativeConditionId,
     NativeConditionMatrixInspection,
+    NativeConfirmatoryCondition,
     NativeTasteCondition,
     NativeTasteRetrievalMode,
 )
@@ -75,7 +78,7 @@ class BenchmarkResearchGuidanceSet(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     guidance_set_id: str
     condition_matrix_sha256: str = Field(pattern=_SHA256)
     condition_matrix_fingerprint: str = Field(pattern=_SHA256)
@@ -85,6 +88,7 @@ class BenchmarkResearchGuidanceSet(BaseModel):
     matched_taste: BenchmarkGuidanceArtifact
     mismatched_taste: BenchmarkGuidanceArtifact
     critic: BenchmarkGuidanceArtifact
+    mechanism_context: MechanismContextBundle | None = None
 
     @model_validator(mode="after")
     def complete_channels_are_distinct(self) -> BenchmarkResearchGuidanceSet:
@@ -119,6 +123,23 @@ class BenchmarkResearchGuidanceSet(BaseModel):
             or self.matched_taste.source_sha256 == self.mismatched_taste.source_sha256
         ):
             raise ValueError("matched and mismatched Taste guidance sources must be disjoint")
+        if self.schema_version == "1.0":
+            if self.mechanism_context is not None:
+                raise ValueError("guidance schema 1.0 cannot carry a formal mechanism context")
+            return self
+        if self.mechanism_context is None:
+            raise ValueError("guidance schema 1.1 requires a formal mechanism context")
+        context = self.mechanism_context
+        expected_entries = {
+            "knowledge": (context.raw_source_rag.rendered_context,),
+            "matched_taste": (context.matched_abstracted_taste.rendered_context,),
+            "mismatched_taste": (context.mismatched_taste.rendered_context,),
+        }
+        for field, expected in expected_entries.items():
+            if getattr(self, field).entries != expected:
+                raise ValueError(
+                    "formal mechanism guidance must expose the exact token-accounted context"
+                )
         return self
 
     @computed_field
@@ -133,7 +154,7 @@ class BenchmarkResearchConditionGuidance(BaseModel):
     model_config = _CONFIG
 
     schema_version: Literal["1.0"] = "1.0"
-    condition_id: NativeTasteCondition
+    condition_id: NativeConditionId
     condition_matrix_fingerprint: str = Field(pattern=_SHA256)
     guidance_set_sha256: str = Field(pattern=_SHA256)
     utility_guidance: tuple[str, ...] = Field(default=(), max_length=32)
@@ -157,6 +178,14 @@ class BenchmarkResearchConditionGuidance(BaseModel):
             NativeTasteCondition.CRITICS: (False, False, False, True),
             NativeTasteCondition.FULL: (True, True, True, True),
             NativeTasteCondition.MISMATCHED_PLACEBO: (True, True, True, True),
+            NativeConfirmatoryCondition.RAW_SOURCE_RAG: (False, True, False, False),
+            NativeConfirmatoryCondition.MATCHED_ABSTRACTED_TASTE: (
+                False,
+                False,
+                True,
+                False,
+            ),
+            NativeConfirmatoryCondition.MISMATCHED_TASTE: (False, False, True, False),
         }[self.condition_id]
         if tuple(present.values()) != expected:
             raise ValueError("benchmark condition guidance does not match its component matrix")
@@ -175,14 +204,16 @@ class BenchmarkResearchConditionGuidance(BaseModel):
 def compile_benchmark_condition_guidance(
     matrix: NativeConditionMatrixInspection,
     guidance: BenchmarkResearchGuidanceSet,
-    condition: str | NativeTasteCondition,
+    condition: str | NativeConditionId,
 ) -> BenchmarkResearchConditionGuidance:
-    """Project the common guidance pool through the immutable six-arm matrix."""
+    """Project one guidance pool through a closed diagnostic or confirmatory matrix."""
 
     if guidance.condition_matrix_sha256 != matrix.file_sha256:
         raise ValueError("benchmark guidance set binds another condition-matrix file")
     if guidance.condition_matrix_fingerprint != matrix.matrix.fingerprint:
         raise ValueError("benchmark guidance set binds another condition matrix")
+    if (matrix.matrix.schema_version == "1.1") != (guidance.schema_version == "1.1"):
+        raise ValueError("formal condition matrix and mechanism guidance schema must match")
     profile = matrix.matrix.profile(condition)
     components = profile.components
     selected: dict[str, BenchmarkGuidanceArtifact] = {}
