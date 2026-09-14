@@ -1,0 +1,73 @@
+schema_version: "1.0"
+summary_id: scitastebench-segmentation-request-pack-v1
+project_id: scitaste-self-development
+recorded_at: 2026-09-15T04:24:46+08:00
+status: prepared-no-provider-contact
+protocol:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v1.yaml
+  file_sha256: 9b7f3bdee8d822fcb3771a3a5aa5e82ebdcd39aa438f060ecccf3adf4e6d2b17
+freeze_receipt:
+  locator: configs/evaluation/ai_review/scitastebench_segmentation_prospective_freeze_v1.yaml
+  file_sha256: 6f4357d6d671335c71d210f4e72faf3fecb5f6cb92d35b950788d91555ecf6a8
+builder:
+  git_commit: 111010b6e0bdf9edcabb01466cfedcf4544a0edf
+  module_locator: src/scitaste/evaluation/taste_source_segmentation_protocol.py
+  module_file_sha256: f027445b6df273e8bdc950c3b6c5c5c7667d9287fe542dd700885ec426f795a9
+  cli_locator: src/scitaste/cli.py
+  cli_file_sha256: 1d6f0fd81694c2ae2d11f8491cc571d33773962532cdc651f13ebacbebc53c23
+request_pack:
+  locator: outputs/projects/scitaste-self-development/evaluations/decision-segmentation-v1/prospective-v1/request-pack-v3/REQUEST_PACK.json
+  file_sha256: 5f1250d362b34747180ef5d0c4dbdf85e46504db5c48d888e88f8081ffb6f45a
+  pack_sha256: 7ea80242f6bb743308ab935daec667958867058b9e48344e4da38ef74a9010d9
+  request_count: 8
+  unique_item_count: 24
+  items_per_request: 6
+  per_request_source_token_counts: [3, 3]
+  segmenter_slots: [segmenter-a, segmenter-b]
+  shards_per_segmenter: 4
+  item_field_names:
+    - campaign_token
+    - review_item_id
+    - reviewed_abstract
+    - review_comment
+  structured_source_identity_fields_withheld: true
+  explicit_outcome_fields_withheld: true
+  provider_tools_allowed: false
+  provider_contact_performed: false
+  execution_authorized: false
+superseded_local_drafts:
+  - request-pack-v1
+  - request-pack-v2
+  reason: >-
+    v1 exposed source-bearing campaign identifiers; v2 did not carry the final
+    rubric/sample hashes or strict response schema. Neither is registered or
+    executable.
+independent_ai_audit:
+  status: passed-for-no-run-infrastructure
+  reviewer_kind: ai
+  not_human_review: true
+  item_text_values_read: false
+  verified:
+    - protocol and freeze bindings
+    - pack, packet, file, and semantic hashes
+    - eight requests with six items each
+    - three-plus-three token balance in every shard
+    - identical 24-item coverage across segmenter slots
+    - structured source and outcome field exclusion
+    - strict output schema
+    - false provider, tool, and execution authority
+authority:
+  protocol_and_sample_frozen: true
+  request_pack_builder_bound: true
+  provider_contact_authorized: false
+  calibration_execution_authorized: false
+  scaled_execution_authorized: false
+  benchmark_admission_authorized: false
+  human_evidence_created: false
+  formal_evidence_eligible: false
+next_gate: >-
+  Implement a bounded GLM-5.3-Flash runner that cross-checks this pack against
+  the protocol, records start/end identity sentinels, price/runtime/usage and raw
+  request/response bytes, maps campaign tokens only outside provider outputs,
+  and constructs a separate normalizer receipt. Bind that committed runner in a
+  new execution authorization before any provider request.
