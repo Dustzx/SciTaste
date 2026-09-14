@@ -47,6 +47,10 @@ from scitaste.evaluation.benchmark_metadata_screening import (
     BenchmarkMetadataScreeningReport,
     inspect_benchmark_metadata_screening_chain,
 )
+from scitaste.evaluation.dataset_license_coverage import (
+    DatasetLicenseCoverageReport,
+    load_dataset_license_coverage_report,
+)
 from scitaste.evaluation.dataset_package import (
     DatasetPackageGateReport,
     load_dataset_package_gate_report,
@@ -127,6 +131,9 @@ from scitaste.generative_ui.safety import (
     SafeLocator,
     SafeText,
     Sha256,
+)
+from scitaste.generative_ui.taste_review_control import (
+    ProjectTasteSourceReviewControlService,
 )
 from scitaste.lifecycle import assess_project_lifecycle
 from scitaste.project import ProjectRuntime
@@ -515,6 +522,7 @@ class WorkspaceSurfaceFactory:
         self._runtime = runtime
         self._adapter = ProjectSnapshotAdapter(runtime)
         self._overview_factory = ProjectSurfaceFactory(runtime)
+        self._taste_review_controls = ProjectTasteSourceReviewControlService(runtime)
 
     def project_list(self) -> ProjectListDocument:
         projects: list[WorkspaceProjectItem] = []
@@ -901,6 +909,17 @@ class WorkspaceSurfaceFactory:
             if inspected_campaign is None:
                 continue
             campaign, campaign_file_sha256 = inspected_campaign
+            control = self._taste_review_controls.current(
+                snapshot.project_id,
+                campaign.campaign_id,
+            )
+            if (
+                control.project_revision != snapshot.revision
+                or control.snapshot_sha256 != snapshot.snapshot_sha256
+            ):
+                raise ProjectSurfaceChangedError(
+                    "natural Taste review control changed during projection"
+                )
             if campaign.campaign_id in taste_source_review_ids:
                 raise ProjectSurfaceChangedError(
                     "project registers multiple natural Taste review campaigns"
@@ -939,11 +958,39 @@ class WorkspaceSurfaceFactory:
                     "privacy_assessment_count": (
                         campaign.required_privacy_assessment_count
                     ),
-                    "reviewer_sessions_prepared": campaign.reviewer_sessions_prepared,
+                    "reviewer_sessions_prepared": control.reviewer_sessions_prepared,
                     "reviewer_submissions_collected": (
-                        campaign.reviewer_submissions_collected
+                        control.reviewer_submissions_collected
                     ),
-                    "recruitment_status": campaign.recruitment_status,
+                    "recruitment_status": (
+                        "authorized-sessions-prepared-no-contact"
+                        if control.record is not None
+                        else campaign.recruitment_status
+                    ),
+                    "owner_approval_required": control.owner_approval_required,
+                    "review_sessions_ready": control.record is not None,
+                    "activation_id": (
+                        control.record.activation_id if control.record is not None else None
+                    ),
+                    "activation_sha256": (
+                        control.record.activation_sha256 if control.record is not None else None
+                    ),
+                    "control_id": (
+                        control.record.control_id if control.record is not None else None
+                    ),
+                    "control_sha256": (
+                        control.record.control_sha256 if control.record is not None else None
+                    ),
+                    "session_locators": (
+                        [
+                            f"{PurePosixPath(run.artifact).parent.as_posix()}/"
+                            f"{item.session_locator}"
+                            for item in control.record.sessions
+                        ]
+                        if control.record is not None
+                        else []
+                    ),
+                    "next_action": control.next_action,
                     "preparation_verification_route": (
                         campaign.preparation_verification.route.value
                     ),
@@ -1609,6 +1656,48 @@ class WorkspaceSurfaceFactory:
                         *row["support_ref_ids"],
                         run_ref.evidence_id,
                     ],
+                }
+            )
+        dataset_package_rows = list(dataset_package_by_request.values())
+        for run in snapshot.manifest.runs:
+            inspected = _dataset_license_coverage_for_run(
+                self._runtime.projects_root / snapshot.project_id,
+                run,
+            )
+            if inspected is None:
+                continue
+            report, report_file_sha256 = inspected
+            row = dataset_package_by_request.get(report.request_id)
+            if row is None:
+                raise ProjectSurfaceChangedError(
+                    "registered license coverage has no dataset package request"
+                )
+            if (
+                report.proposal_sha256 != row["proposal_sha256"]
+                or report.archive_qualification_sha256
+                != row.get("archive_qualification_report_sha256")
+            ):
+                raise ProjectSurfaceChangedError(
+                    "registered license coverage differs from its dataset package"
+                )
+            run_ref = run_refs[run.run_id]
+            row.update(
+                {
+                    "license_coverage_status": (
+                        "qualified" if report.ingestion_license_ready else "blocked"
+                    ),
+                    "license_coverage_run_ref_id": run_ref.evidence_id,
+                    "license_coverage_run_id": run.run_id,
+                    "license_coverage_report_sha256": report.report_sha256,
+                    "license_coverage_file_sha256": report_file_sha256,
+                    "license_policy_sha256": report.policy_sha256,
+                    "license_verification_route": report.verification_decision.route,
+                    "license_image_count": report.image_member_count,
+                    "license_record_count": report.license_record_member_count,
+                    "license_ingestion_ready": report.ingestion_license_ready,
+                    "license_blocker_codes": list(report.blocker_codes),
+                    "pending_qualification_codes": list(report.blocker_codes),
+                    "support_ref_ids": [*row["support_ref_ids"], run_ref.evidence_id],
                 }
             )
         dataset_package_rows = list(dataset_package_by_request.values())
@@ -3851,6 +3940,33 @@ def _dataset_archive_qualification_for_run(
         report = load_dataset_archive_qualification_report(resolved)
     except (ValidationError, ValueError) as exc:
         raise ProjectSurfaceChangedError("registered archive qualification is invalid") from exc
+    return report, hashlib.sha256(raw).hexdigest()
+
+
+def _dataset_license_coverage_for_run(
+    project_root: Path,
+    run: ProjectRun,
+) -> tuple[DatasetLicenseCoverageReport, str] | None:
+    """Read one canonical, targeted post-acquisition license coverage result."""
+
+    stage = "dataset_license_coverage"
+    expected = f"runs/{run.run_id}/{stage}/LICENSE_COVERAGE.json"
+    if run.stage_path != stage or run.artifact != expected:
+        return None
+    root = project_root.resolve(strict=True)
+    candidate = root.joinpath(*PurePosixPath(expected).parts)
+    if candidate.is_symlink() or not candidate.is_file():
+        raise ProjectSurfaceChangedError("registered license coverage is unavailable")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root) or resolved.stat().st_size > 4 * 1024 * 1024:
+        raise ProjectSurfaceChangedError("registered license coverage escaped its project")
+    raw = resolved.read_bytes()
+    try:
+        report = load_dataset_license_coverage_report(resolved)
+    except (ValidationError, ValueError) as exc:
+        raise ProjectSurfaceChangedError("registered license coverage is invalid") from exc
+    if report.project_id != project_root.name:
+        raise ProjectSurfaceChangedError("registered license coverage belongs to another project")
     return report, hashlib.sha256(raw).hexdigest()
 
 

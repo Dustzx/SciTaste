@@ -1200,9 +1200,20 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
     privacy_reviewer_count: Literal[1]
     scientific_assessment_count: int = Field(gt=0)
     privacy_assessment_count: int = Field(gt=0)
-    reviewer_sessions_prepared: Literal[0]
-    reviewer_submissions_collected: Literal[0]
-    recruitment_status: Literal["owner-and-ethics-approval-required"]
+    reviewer_sessions_prepared: int = Field(ge=0, le=3)
+    reviewer_submissions_collected: int = Field(ge=0, le=3)
+    recruitment_status: Literal[
+        "owner-and-ethics-approval-required",
+        "authorized-sessions-prepared-no-contact",
+    ]
+    owner_approval_required: bool
+    review_sessions_ready: bool
+    activation_id: SafeIdentifier | None = None
+    activation_sha256: Sha256 | None = None
+    control_id: SafeIdentifier | None = None
+    control_sha256: Sha256 | None = None
+    session_locators: tuple[SafeLocator, ...] = Field(default=(), max_length=3)
+    next_action: SafeIdentifier
     preparation_verification_route: Literal["direct_path"]
     recruitment_verification_route: Literal["owner_approval"]
     preparation_reason_codes: tuple[SafeIdentifier, ...] = Field(min_length=1)
@@ -1228,6 +1239,23 @@ class ProjectProgressTasteSourceReviewCampaignItem(BaseModel):
             raise ValueError("Taste source-review scientific workload is inconsistent")
         if self.privacy_assessment_count != self.candidate_count:
             raise ValueError("Taste source-review privacy workload is inconsistent")
+        ready = self.recruitment_status == "authorized-sessions-prepared-no-contact"
+        if self.review_sessions_ready != ready or self.owner_approval_required == ready:
+            raise ValueError("Taste source-review control state is inconsistent")
+        if self.reviewer_sessions_prepared != (3 if ready else 0):
+            raise ValueError("Taste source-review session count is inconsistent")
+        control_fields = (
+            self.activation_id,
+            self.activation_sha256,
+            self.control_id,
+            self.control_sha256,
+        )
+        if ready != all(control_fields) or (not ready and any(control_fields)):
+            raise ValueError("Taste source-review control lineage is inconsistent")
+        if len(self.session_locators) != (3 if ready else 0):
+            raise ValueError("Taste source-review session locators differ from readiness")
+        if len(self.session_locators) != len(set(self.session_locators)):
+            raise ValueError("Taste source-review session locators must be unique")
         if {self.run_ref_id, self.artifact_ref_id} - set(self.support_ref_ids):
             raise ValueError("Taste source-review campaign lacks registered evidence")
         if len(self.support_ref_ids) != len(set(self.support_ref_ids)):
@@ -1692,6 +1720,20 @@ class ProjectProgressDatasetPackageItem(BaseModel):
     archive_member_count: int | None = Field(default=None, ge=0)
     archive_expanded_bytes: int | None = Field(default=None, ge=0)
     all_receipt_hashes_reverified: bool | None = None
+    license_coverage_status: Literal["pending", "qualified", "blocked"] = "pending"
+    license_coverage_run_ref_id: SafeIdentifier | None = None
+    license_coverage_run_id: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    license_coverage_report_sha256: Sha256 | None = None
+    license_coverage_file_sha256: Sha256 | None = None
+    license_policy_sha256: Sha256 | None = None
+    license_verification_route: Literal["targeted_check"] | None = None
+    license_image_count: int | None = Field(default=None, ge=0)
+    license_record_count: int | None = Field(default=None, ge=0)
+    license_ingestion_ready: bool | None = None
+    license_blocker_codes: tuple[SafeText, ...] = ()
     extraction_performed: Literal[False] = False
     authorizes_network_preflight: Literal[False] = False
     authorizes_download: Literal[False] = False
@@ -1757,6 +1799,38 @@ class ProjectProgressDatasetPackageItem(BaseModel):
             and self.archive_qualification_run_ref_id not in self.support_ref_ids
         ):
             raise ValueError("archive qualification must cite its registered run")
+        license_fields = (
+            self.license_coverage_run_ref_id,
+            self.license_coverage_run_id,
+            self.license_coverage_report_sha256,
+            self.license_coverage_file_sha256,
+            self.license_policy_sha256,
+            self.license_verification_route,
+            self.license_image_count,
+            self.license_record_count,
+            self.license_ingestion_ready,
+        )
+        if self.license_coverage_status == "pending" and (
+            any(value is not None for value in license_fields) or self.license_blocker_codes
+        ):
+            raise ValueError("pending license coverage cannot expose result evidence")
+        if self.license_coverage_status != "pending" and not all(
+            value is not None for value in license_fields
+        ):
+            raise ValueError("observed license coverage requires complete evidence")
+        if self.license_coverage_status == "qualified" and (
+            self.license_ingestion_ready is not True or self.license_blocker_codes
+        ):
+            raise ValueError("qualified license coverage differs from its evidence")
+        if self.license_coverage_status == "blocked" and (
+            self.license_ingestion_ready is not False or not self.license_blocker_codes
+        ):
+            raise ValueError("blocked license coverage differs from its evidence")
+        if (
+            self.license_coverage_run_ref_id is not None
+            and self.license_coverage_run_ref_id not in self.support_ref_ids
+        ):
+            raise ValueError("license coverage must cite its registered run")
         return self
 
 

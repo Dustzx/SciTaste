@@ -1,0 +1,72 @@
+schema_version: "1.0"
+evidence_id: mlrc-awa-license-coverage-v1
+project_id: scitaste-self-development
+project_registration:
+  source_revision: 482
+  registered_revision: 484
+  run_id: 2026-09-14__scitaste-native__mlrc-awa-license-coverage-v1__seed-00
+  stage_path: dataset_license_coverage
+  status: blocked-missing-per-image-license-records
+source_chain:
+  request_id: mlrc-first-preflight-assets-v1
+  proposal_sha256: c0b37f72588c9a89a5c4247f139c8b0595571cf639846066b7d7c538c5138ed4
+  receipt_sha256: 6b452da1f723e4c77914fac0e4b37b8bb2ce5aa8af059759f70557fcbcdcc379
+  receipt_file_sha256: 823dc40826223ae5b0e02cb8807e4a15e30a223c3dcdac4f5a5a6962918aed2e
+  archive_qualification_sha256: 68f24ffd8cd5fa6ac284eec77cbf65f3be491cc7a458bd8e66a2a841cdd16db4
+  archive_qualification_file_sha256: a2bd52569e01ae1af9719ede41981cebbe3d9188917e288dd4b4f3502e9e819f
+  policy_id: mlrc-first-preflight-license-policy-v1
+  policy_sha256: 01a9773d6ca00e0fed60294d4d78ee7c84c535a2fd93c98e8d81421d9f92d0c6
+  policy_file_sha256: d88c818ceacae51ac51a5db2266a10a8224a973dcb7cd596094ed1c09a93a27d
+observation:
+  asset_id: meta-44305-awa-mini
+  task_id: meta-learning
+  archive_sha256: f041c1069e7697e3d8f5bf7e0cd7fd5ac2b300b2680164cb3b180a671e4425fc
+  archive_bytes: 19532558
+  archive_member_count: 2004
+  image_member_count: 2000
+  label_record_count: 2000
+  image_label_identity_complete: true
+  metadata_member_names:
+    - AWA_Mini/info.json
+    - AWA_Mini/labels.csv
+  license_record_member_count: 0
+  license_columns_present: false
+  license_metadata_keys_present: false
+  report_sha256: fd7a1df8cc7dd38ab759013fd40a2f2ad67ce9bfbeb4bf1b299f8114d9d688c9
+  report_file_sha256: ecee20eb300407df172b0d7783f9c4c78edc0efcd49ca1f1abce92265a63c48a
+tool_intelligence:
+  action_id: qualify-held-out-task-bytes
+  route: targeted_check
+  reason_code: targeted-check-is-cheapest-sufficient-verification
+  standalone_full_preflight_performed: false
+  owner_approval_required_for_local_read: false
+  execution_authority: none
+decision:
+  ingestion_license_ready: false
+  blocker_codes:
+    - license-post-acquisition:meta-learning:awa-per-image-license-records-present
+    - license-post-acquisition:meta-learning:awa-per-image-license-coverage-complete
+  options:
+    - obtain-an-exact-image-to-license-manifest-under-separate-owner-authority
+    - revise-and-disclose-the-protocol-to-exclude-awa
+  forbidden_shortcut: infer-per-image-coverage-from-dataset-level-creative-commons-label
+boundary:
+  archive_content_read: true
+  extraction_performed: false
+  network_access_performed: false
+  model_calls: 0
+  api_calls: 0
+  gpu_jobs: 0
+  experiment_runs: 0
+  authorizes_download: false
+  authorizes_extraction: false
+  authorizes_ingestion: false
+  authorizes_api_calls: false
+  authorizes_gpu_work: false
+  authorizes_execution: false
+claim_boundary: >-
+  This targeted local read proves that the exact acquired AWA Mini archive has
+  a complete 2,000-image/2,000-label identity set but contains no per-image
+  license records. It establishes a concrete ingestion blocker, not a legal
+  conclusion, experiment result, held-out-task qualification, or authority to
+  acquire replacement bytes.

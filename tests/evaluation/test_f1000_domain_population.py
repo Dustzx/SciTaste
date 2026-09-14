@@ -18,12 +18,12 @@ from scitaste.evaluation.f1000_domain_population import (
     publish_f1000_taste_population_run,
 )
 from scitaste.evaluation.natural_taste_review import (
-    TasteSourceReviewActivation,
     load_taste_source_review_policy,
     prepare_taste_source_review_campaign,
     publish_taste_source_review_campaign_run,
 )
 from scitaste.generative_ui import (
+    GenerativeUIApplication,
     ProjectProgressQuery,
     WorkspaceIntentResolver,
     WorkspaceSurfaceFactory,
@@ -292,19 +292,69 @@ def test_f1000_acquisition_and_population_are_exact_and_non_gold(tmp_path: Path)
     assert board.data["counts"]["taste_source_review_campaigns"] == 1
     assert snapshot.revision == 4
 
-    activation = TasteSourceReviewActivation.create(
-        activation_id="test-activation",
-        campaign_id=campaign.campaign_id,
-        campaign_sha256=campaign.campaign_sha256,
-        project_id=campaign.project_id,
-        scientific_reviewer_identity_sha256s=("1" * 64, "2" * 64),
-        privacy_reviewer_identity_sha256="3" * 64,
-        ethics_status="not-required",
-        ethics_determination_ref="test-only synthetic approval",
-        maximum_reviewer_hours=3,
-        approved_at=datetime(2026, 9, 14, 12, 3, tzinfo=UTC),
+    app = GenerativeUIApplication(runtime)
+    pending = app.current_taste_source_review_control(
+        "f1000-test-project",
+        campaign.campaign_id,
     )
-    assert len(activation.activation_sha256) == 64
+    assert pending.status == "awaiting_owner_approval"
+    assert pending.owner_approval_required is True
+    authorization_request = {
+        "schema_version": "1.0",
+        "project_id": "f1000-test-project",
+        "campaign_id": campaign.campaign_id,
+        "campaign_sha256": campaign.campaign_sha256,
+        "expected_project_revision": snapshot.revision,
+        "expected_snapshot_sha256": snapshot.snapshot_sha256,
+        "owner_alias": "test-owner",
+        "scientific_reviewer_aliases": ["reviewer-a", "reviewer-b"],
+        "privacy_reviewer_alias": "reviewer-privacy",
+        "ethics_status": "not-required",
+        "ethics_determination_ref": "test-only synthetic determination",
+        "maximum_reviewer_hours": 3,
+        "compensation_terms_confirmed": True,
+        "consent_terms_confirmed": True,
+        "retention_and_withdrawal_terms_confirmed": True,
+        "conflicts_screened": True,
+        "confirm_prepare_local_sessions": True,
+    }
+    authorized = app.authorize_taste_source_review(
+        "f1000-test-project",
+        campaign.campaign_id,
+        authorization_request,
+    )
+    assert authorized.status == "authorized_sessions_ready"
+    assert authorized.project_revision == 5
+    assert authorized.reviewer_sessions_prepared == 3
+    assert authorized.human_contact_performed is False
+    assert authorized.record is not None
+    assert len({item.reviewer_identity_sha256 for item in authorized.record.sessions}) == 3
+    control_root = (
+        runtime.projects_root
+        / "f1000-test-project/runs/f1000-source-review-v1"
+        / "taste_source_review_campaign/review-control"
+    )
+    assert all(
+        (control_root / name / "review.html").is_file()
+        for name in ("scientific-1", "scientific-2", "privacy-1")
+    )
+    repeated = app.authorize_taste_source_review(
+        "f1000-test-project",
+        campaign.campaign_id,
+        authorization_request,
+    )
+    assert repeated.record == authorized.record
+    refreshed_board = next(
+        component
+        for component in WorkspaceSurfaceFactory(runtime)
+        .build_surface(ProjectProgressQuery(project_id="f1000-test-project"))
+        .components
+        if component.component == "ProjectProgressBoard"
+    )
+    refreshed_review = refreshed_board.data["taste_source_review_campaigns"][0]
+    assert refreshed_review["reviewer_sessions_prepared"] == 3
+    assert refreshed_review["owner_approval_required"] is False
+    assert refreshed_review["human_recruitment_performed"] is False
 
 
 def test_f1000_acquisition_requires_explicit_network_switch(tmp_path: Path) -> None:

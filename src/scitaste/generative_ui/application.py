@@ -73,6 +73,11 @@ from scitaste.generative_ui.resource_configuration import (
     apply_project_resource_configuration,
 )
 from scitaste.generative_ui.safety import ProjectIdentifier
+from scitaste.generative_ui.taste_review_control import (
+    ProjectTasteSourceReviewControlService,
+    TasteSourceReviewAuthorizationRequest,
+    TasteSourceReviewControlView,
+)
 from scitaste.generative_ui.warm_cache import (
     CachedWorkspaceStartRequest,
     ModelWarmCacheStatus,
@@ -148,6 +153,7 @@ class GenerativeUIApplication:
         self._model_warm_cache = ModelWarmCacheStore(runtime.projects_root)
         self._program_revisions = ProgramRevisionService(runtime, planner)
         self._gate_actions = ProjectGateActionService(runtime)
+        self._taste_source_reviews = ProjectTasteSourceReviewControlService(runtime)
         self._request_lock = RLock()
         self._generated: OrderedDict[
             tuple[str, str],
@@ -270,6 +276,38 @@ class GenerativeUIApplication:
             raise ValueError("gate-action decision belongs to another project")
         with self._request_lock:
             return self._gate_actions.decide(parsed)
+
+    def current_taste_source_review_control(
+        self,
+        project_id: str,
+        campaign_id: str,
+    ) -> TasteSourceReviewControlView:
+        """Return owner-decision and local-session state without contacting anyone."""
+
+        validate_project_id(project_id)
+        validate_entry_id(campaign_id, field_name="campaign_id")
+        with self._request_lock:
+            return self._taste_source_reviews.current(project_id, campaign_id)
+
+    def authorize_taste_source_review(
+        self,
+        project_id: str,
+        campaign_id: str,
+        request: TasteSourceReviewAuthorizationRequest | dict[str, object],
+    ) -> TasteSourceReviewControlView:
+        """Record owner approval and prepare three local blind sessions only."""
+
+        validate_project_id(project_id)
+        validate_entry_id(campaign_id, field_name="campaign_id")
+        parsed = (
+            request
+            if isinstance(request, TasteSourceReviewAuthorizationRequest)
+            else TasteSourceReviewAuthorizationRequest.model_validate(request)
+        )
+        if parsed.project_id != project_id or parsed.campaign_id != campaign_id:
+            raise ValueError("Taste review authorization route identity mismatch")
+        with self._request_lock:
+            return self._taste_source_reviews.authorize(parsed)
 
     def propose_program_revision(
         self,

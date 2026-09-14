@@ -533,6 +533,31 @@ class GenerativeUIRequestHandler(BaseHTTPRequestHandler):
             decision = self.server.application.decide_gate_action(project_id, payload)
             self._send_model(HTTPStatus.CREATED, decision)
             return
+        if len(parts) == 7 and resource == "taste-source-reviews":
+            if method != "GET":
+                raise _method_not_allowed("GET")
+            self._send_model(
+                HTTPStatus.OK,
+                self.server.application.current_taste_source_review_control(
+                    project_id,
+                    parts[6],
+                ),
+            )
+            return
+        if (
+            len(parts) == 8
+            and resource == "taste-source-reviews"
+            and parts[7] == "authorize"
+        ):
+            if method != "POST":
+                raise _method_not_allowed("POST")
+            view = self.server.application.authorize_taste_source_review(
+                project_id,
+                parts[6],
+                self._read_json_object(),
+            )
+            self._send_model(HTTPStatus.CREATED, view)
+            return
         if len(parts) in {7, 8} and resource == "generations":
             generation_id = parts[6]
             operation = parts[7] if len(parts) == 8 else None

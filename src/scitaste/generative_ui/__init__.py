@@ -283,6 +283,13 @@ from scitaste.generative_ui.server import (
     create_http_server,
     serve_local_application,
 )
+from scitaste.generative_ui.taste_review_control import (
+    ProjectTasteSourceReviewControlService,
+    TasteSourceReviewAuthorizationRequest,
+    TasteSourceReviewControlRecord,
+    TasteSourceReviewControlView,
+    TasteSourceReviewSessionBinding,
+)
 from scitaste.generative_ui.warm_cache import (
     CachedWorkspaceStartRequest,
     ModelWarmCacheAttempt,
@@ -498,6 +505,7 @@ __all__ = [
     "ProjectSurfaceEvidenceError",
     "ProjectSurfaceFactory",
     "ProjectSurfaceOutput",
+    "ProjectTasteSourceReviewControlService",
     "ProposalControlledAudit",
     "ProposalController",
     "ProposalControllerDecision",
@@ -561,6 +569,10 @@ __all__ = [
     "SurfaceRevision",
     "SurfaceSession",
     "SurfaceSpec",
+    "TasteSourceReviewAuthorizationRequest",
+    "TasteSourceReviewControlRecord",
+    "TasteSourceReviewControlView",
+    "TasteSourceReviewSessionBinding",
     "TrustedComponent",
     "UnknownActionError",
     "UnknownWorkspaceSelectionError",

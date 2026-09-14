@@ -1689,3 +1689,44 @@ revision, but credentials, observations, reservations, spend, and execution stay
 in SciTaste Core. This establishes the requested parallel view and explicit
 interaction bridge while preserving flexible model authorship. It is still
 engineering dogfood, not a human-usability or research-effect result.
+
+## Converting visible blockers into bounded project interventions (2026-09-14)
+
+The next iteration removed two “read-only dashboard” gaps. First, the F1000
+campaign can now accept a project-owner decision and generate three locally
+usable blind sessions. The decision binds the exact campaign and project
+snapshot and requires ethics, reviewer-time, compensation, consent, retention,
+withdrawal, and conflict controls. Aliases are pseudonymized and no reviewer is
+contacted. The project surface will update its observed session count only after
+this transition; the model cannot fabricate or authorize it.
+
+Second, the held-out-task route performed a real cost-sensitive check rather
+than another broad preflight. The acquired AWA Mini ZIP contains 2,000 images,
+2,000 exactly matching label rows, and only two non-image metadata files. It
+contains zero per-image license records. Revision 484 registers that exact
+negative result, leaves ingestion and execution closed, and exposes two honest
+choices: separately obtain a license manifest or revise the benchmark protocol
+to exclude AWA. This result used no extraction, network, model/API/GPU, or
+experiment resource.
+
+Together these changes make Generation as Content an active project interface:
+the model generates and feedback-edits decision artifacts from bounded evidence;
+the user can cross an explicit Core boundary; and the resulting project state is
+fed back into later generated content. Fixed intent labels remain cache seeds,
+not fixed pages. The project resource portfolio follows the same pattern as a
+parallel configurable surface, while secret storage and physical resource use
+remain separate administrative and execution transitions.
+
+The revision-484 model pass also caught an adapter defect through ordinary
+feedback. Turn one surfaced the AWA blocker but emphasized an older Taste
+population. Turn two was asked to promote the F1000 campaign and refused to
+claim the supplied workload numbers because the bounded evidence view had
+dropped campaign fields after an arbitrary key limit. SciTaste expanded only the
+already purpose-selected progress projection, retaining the privacy filters and
+overall byte ceiling. Turn three then grounded 77 candidates, 39 groups, 154
+scientific and 77 privacy judgments, zero of three sessions, and the owner
+decision boundary, while removing an irrelevant failed-run component. The same
+conversation preserved AWA and resource choices and changed both content and
+layout. This is the intended recursive workflow: model-generated content exposes
+a product fault, feedback identifies the missing evidence, the adapter is
+repaired, and the next generated artifact demonstrates the correction.

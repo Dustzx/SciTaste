@@ -1712,3 +1712,72 @@ administrator/backend concern; model content never receives credentials and
 cannot itself probe, spend, reserve, or execute. This is the intended visual and
 operational relationship: Generation as Content and SciTaste Core are parallel
 surfaces, joined only by reviewable user interventions.
+
+### Owner-gated review sessions and evidence-changing feedback (2026-09-14)
+
+The natural Taste campaign is now actionable from the same project page. Its
+collapsed control asks the project owner for pseudonymous reviewer aliases, the
+ethics determination reference, a reviewer-hour ceiling, and explicit
+compensation, consent, retention/withdrawal, and conflict-screening
+confirmations. Submission is bound to the current project revision, snapshot,
+campaign bytes, and a final browser confirmation. The server hashes the aliases,
+materializes two outcome-blind scientific sessions and one separate privacy
+session, and records an immutable activation/control receipt before advancing
+the project run. It stores no name, email address, or contact channel and sends
+no message.
+
+This is a user-to-Core intervention, not a model tool call. The generated canvas
+can explain, reorganize, or propose the review plan; it cannot supply ethics or
+human-recruitment authority. After a valid decision, the ordinary progress
+projection changes from zero to three prepared sessions and tells the next model
+turn to reason about external distribution and blind collection. API, GPU,
+experiment, and model-call authority remain false. Thus feedback can change the
+project evidence that later generations see, while the flexible content plane
+and the authoritative Core plane remain visually parallel.
+
+Project resources use the same separation. The sibling resource card exposes
+the project-owned API/GPU/checkpoint membership, access state, priority, and
+planner binding. A model may author a resource revision and the user may apply
+it; the shared registry and secret material remain backend-owned, and applying a
+configuration does not probe, reserve, spend, or execute a resource.
+
+### Tool-routed post-acquisition blocker (2026-09-14)
+
+The self-project also demonstrates why Tool Intelligence is not a generic
+preflight framework. The current evidence program named
+`qualify-held-out-task-bytes` as a `targeted_check`. SciTaste therefore read only
+the exact acquired AWA Mini ZIP metadata needed by its frozen license policy. It
+rehashes the receipt-bound archive, joins the prior archive-safety and policy
+hashes, and reads `labels.csv` plus `info.json` directly from the ZIP without
+extracting it. A full package inspection, model judgment, network lookup, GPU
+job, and experiment would add no value to this decision and were not run.
+
+The registered result has 2,000 unique image members and 2,000 exactly matching
+label records, but the only non-image files are `labels.csv` and `info.json`;
+there are zero license files, license columns, or license metadata keys. The
+project data card now shows this as an observed blocker instead of the older
+generic “license remains open” prose. Its user-facing decision is to obtain an
+exact image-to-license manifest under separate authority or explicitly revise
+the protocol to exclude AWA. Generation as Content receives these bounded facts
+and can flexibly compare or edit those options, but cannot infer coverage from a
+dataset-level label or launch the blocked task.
+
+A live self-use conversation at project revision 484 verified the feedback
+loop. GLM-5.3-Flash first generated a compact project decision page that surfaced
+the new AWA result but selected an older Taste population. The user-style second
+turn asked it to promote the F1000 campaign; it correctly refused to repeat the
+prompt's 77/39/154/77 values because the old bounded projection had silently
+dropped fields after the first sixteen sorted keys. The model was behaving
+correctly; the evidence adapter was incomplete. The progress digest now retains
+the complete purpose-built safe-field projection while still filtering hashes,
+locators, credentials, deep containers, and arbitrary non-progress data.
+
+The third turn then evidence-grounded all four counts, the zero-of-three session
+state, `owner_approval`, and `record_owner_decision`; removed the irrelevant
+failed-run panel; retained the AWA two-way choice and project resource entry; and
+changed both the authored content and component layout relative to turn two.
+Workspace `workspace-b70478939bba9a48`, turns `turn-0001` through `turn-0003`,
+used 41,165 input and 7,322 output tokens, reported USD
+0.0039402985074626865, and took 59,116 ms total. This is an engineering
+observation of evidence recovery and feedback editing, not a usability or
+scientific-effect result.

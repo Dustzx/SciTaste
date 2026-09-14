@@ -1525,7 +1525,16 @@ def _bounded_evidence_digest(
             "component": candidate.component.component.value,
             "title": candidate.component.title,
             "evidence_ref_ids": list(candidate.component.evidence_ref_ids),
-            "facts": _bounded_model_value(_model_visible_facts(candidate), depth=0),
+            "facts": _bounded_model_value(
+                _model_visible_facts(candidate),
+                depth=0,
+                dict_key_limit=(
+                    None
+                    if candidate.component.component
+                    is TrustedComponent.PROJECT_PROGRESS_BOARD
+                    else 16
+                ),
+            ),
         }
         encoded = _canonical_json(entry).encode("utf-8")
         if used_bytes + len(encoded) > _MAX_MODEL_EVIDENCE_BYTES:
@@ -1657,6 +1666,9 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                     "reviewer_sessions_prepared",
                     "reviewer_submissions_collected",
                     "recruitment_status",
+                    "owner_approval_required",
+                    "review_sessions_ready",
+                    "next_action",
                     "preparation_verification_route",
                     "recruitment_verification_route",
                     "ready_for_taste_abstraction_review",
@@ -1666,6 +1678,31 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
                 if key in row
             }
             for row in review_campaigns
+            if isinstance(row, dict)
+        ]
+    dataset_packages = value.get("dataset_packages")
+    if isinstance(dataset_packages, list):
+        facts["dataset_packages"] = [
+            {
+                key: row[key]
+                for key in (
+                    "request_id",
+                    "selected_task_ids",
+                    "asset_count",
+                    "archive_safety_status",
+                    "archive_member_count",
+                    "license_coverage_status",
+                    "license_verification_route",
+                    "license_image_count",
+                    "license_record_count",
+                    "license_ingestion_ready",
+                    "license_blocker_codes",
+                    "authorizes_ingestion",
+                    "authorizes_execution",
+                )
+                if key in row
+            }
+            for row in dataset_packages
             if isinstance(row, dict)
         ]
     lifecycle = value.get("lifecycle")
@@ -1721,7 +1758,12 @@ def _model_visible_facts(candidate: SurfaceCandidate) -> JsonValue:
     return facts
 
 
-def _bounded_model_value(value: JsonValue, *, depth: int) -> JsonValue:
+def _bounded_model_value(
+    value: JsonValue,
+    *,
+    depth: int,
+    dict_key_limit: int | None = 16,
+) -> JsonValue:
     # Keep leaf facts at the boundary.  Bounding every value at depth three
     # erased the scalar fields of list-backed progress rows (for example the
     # exact candidate and domain counts) while still paying to send the row
@@ -1730,11 +1772,21 @@ def _bounded_model_value(value: JsonValue, *, depth: int) -> JsonValue:
         return "[bounded]"
     if depth >= 3 and isinstance(value, list):
         if all(not isinstance(item, (dict, list)) for item in value):
-            return [_bounded_model_value(item, depth=depth + 1) for item in value[:5]]
+            return [
+                _bounded_model_value(
+                    item,
+                    depth=depth + 1,
+                    dict_key_limit=dict_key_limit,
+                )
+                for item in value[:5]
+            ]
         return "[bounded]"
     if isinstance(value, dict):
         result: dict[str, JsonValue] = {}
-        for key in sorted(value)[:16]:
+        keys = sorted(value)
+        if dict_key_limit is not None:
+            keys = keys[:dict_key_limit]
+        for key in keys:
             lowered = key.lower()
             if (
                 lowered in {"locator", "path", "credential_env"}
@@ -1743,10 +1795,21 @@ def _bounded_model_value(value: JsonValue, *, depth: int) -> JsonValue:
                 or lowered.endswith("_sha256")
             ):
                 continue
-            result[key] = _bounded_model_value(value[key], depth=depth + 1)
+            result[key] = _bounded_model_value(
+                value[key],
+                depth=depth + 1,
+                dict_key_limit=dict_key_limit,
+            )
         return result
     if isinstance(value, list):
-        return [_bounded_model_value(item, depth=depth + 1) for item in value[:5]]
+        return [
+            _bounded_model_value(
+                item,
+                depth=depth + 1,
+                dict_key_limit=dict_key_limit,
+            )
+            for item in value[:5]
+        ]
     if isinstance(value, str) and len(value) > 320:
         return value[:319] + "…"
     return value

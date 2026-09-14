@@ -196,6 +196,12 @@ from scitaste.evaluation.critics import (
     EvaluationCriticSuite,
     EvaluationCriticVerdict,
 )
+from scitaste.evaluation.dataset_license_coverage import (
+    DatasetLicenseCoverageReport,
+    inspect_awa_license_coverage,
+    load_dataset_license_coverage_report,
+    save_dataset_license_coverage_report,
+)
 from scitaste.evaluation.dataset_license_policy import (
     DatasetLicenseAcquisitionStatus,
     DatasetLicenseAssetBinding,
@@ -971,6 +977,7 @@ __all__ = [
     "DatasetAssetSourceKind",
     "DatasetLicenseAcquisitionStatus",
     "DatasetLicenseAssetBinding",
+    "DatasetLicenseCoverageReport",
     "DatasetLicenseFinding",
     "DatasetLicenseIngestionStatus",
     "DatasetLicensePolicyInspection",
@@ -1356,6 +1363,7 @@ __all__ = [
     "inspect_adapter_contract",
     "inspect_adapter_preflight",
     "inspect_api_identity_window",
+    "inspect_awa_license_coverage",
     "inspect_benchmark_metadata_allocation_chain",
     "inspect_benchmark_metadata_allocation_plan_chain",
     "inspect_benchmark_metadata_population_chain",
@@ -1403,6 +1411,7 @@ __all__ = [
     "load_dataset_acquisition_request",
     "load_dataset_archive_qualification_report",
     "load_dataset_archive_read_approval",
+    "load_dataset_license_coverage_report",
     "load_dataset_license_policy",
     "load_dataset_license_policy_report",
     "load_dataset_package_approval",
@@ -1505,6 +1514,7 @@ __all__ = [
     "save_dataset_acquisition_request",
     "save_dataset_archive_qualification_report",
     "save_dataset_archive_read_approval",
+    "save_dataset_license_coverage_report",
     "save_dataset_license_policy_report",
     "save_dataset_package_approval",
     "save_dataset_package_gate_report",

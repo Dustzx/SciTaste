@@ -1381,7 +1381,10 @@ function renderProjectProgress(data) {
   const benchmarkQualifications = renderBenchmarkQualifications(
     data.benchmark_qualifications || [],
   );
-  const datasetPackages = renderDatasetPackages(data.dataset_packages || []);
+  const datasetPackages = renderDatasetPackages(
+    data.dataset_packages || [],
+    data.evidence_program,
+  );
   const reviewIterations = renderReviewIterations(data.review_iterations || []);
   const tastePopulations = renderTasteCandidatePopulations(
     data.taste_candidate_populations || [],
@@ -3682,7 +3685,9 @@ function renderTasteSourceReviewCampaigns(items) {
   grid.className = "acquisition-grid";
   for (const item of items) {
     const card = document.createElement("article");
-    card.className = "acquisition-card status-awaiting_owner_approval";
+    card.className = `acquisition-card status-${item.review_sessions_ready
+      ? "complete"
+      : "awaiting_owner_approval"}`;
     const header = document.createElement("div");
     header.className = "compact-row-header";
     const identity = document.createElement("div");
@@ -3694,7 +3699,12 @@ function renderTasteSourceReviewCampaigns(items) {
     identity.append(label, title);
     header.append(
       identity,
-      progressPill("blocked", t("progress.taste_review.status")),
+      progressPill(
+        item.review_sessions_ready ? "completed" : "blocked",
+        t(item.review_sessions_ready
+          ? "progress.taste_review.status.sessions_ready"
+          : "progress.taste_review.status.awaiting_owner"),
+      ),
     );
 
     const facts = document.createElement("div");
@@ -3704,6 +3714,7 @@ function renderTasteSourceReviewCampaigns(items) {
       ["groups", item.source_group_count],
       ["reviewers", `${item.scientific_reviewer_count}+${item.privacy_reviewer_count}`],
       ["assessments", item.scientific_assessment_count + item.privacy_assessment_count],
+      ["sessions", `${item.reviewer_sessions_prepared}/3`],
     ]) {
       const fact = document.createElement("span");
       appendText(fact, t(`progress.taste_review.${key}`, {count: value}));
@@ -3725,7 +3736,9 @@ function renderTasteSourceReviewCampaigns(items) {
     appendText(boundary, t("progress.taste_review.boundary"));
     const next = document.createElement("p");
     next.className = "acquisition-purpose";
-    appendText(next, t("progress.taste_review.next"));
+    appendText(next, t(item.review_sessions_ready
+      ? "progress.taste_review.next.sessions_ready"
+      : "progress.taste_review.next.awaiting_owner"));
     const controls = document.createElement("div");
     controls.className = "component-actions";
     const generate = document.createElement("button");
@@ -3750,6 +3763,9 @@ function renderTasteSourceReviewCampaigns(items) {
       run_id: item.run_id,
     }));
     controls.append(generate, inspect);
+    const authorization = item.owner_approval_required
+      ? renderTasteSourceReviewAuthorization(item)
+      : renderTasteSourceReviewAuthorizationReceipt(item);
     card.append(
       header,
       facts,
@@ -3757,6 +3773,7 @@ function renderTasteSourceReviewCampaigns(items) {
       boundary,
       next,
       controls,
+      authorization,
       evidenceDisclosure(item.support_ref_ids, {
         data: {
           campaign_file_sha256: item.campaign_file_sha256,
@@ -3765,6 +3782,14 @@ function renderTasteSourceReviewCampaigns(items) {
           reviewer_sessions_prepared: item.reviewer_sessions_prepared,
           reviewer_submissions_collected: item.reviewer_submissions_collected,
           recruitment_status: item.recruitment_status,
+          owner_approval_required: item.owner_approval_required,
+          review_sessions_ready: item.review_sessions_ready,
+          activation_id: item.activation_id,
+          activation_sha256: item.activation_sha256,
+          control_id: item.control_id,
+          control_sha256: item.control_sha256,
+          session_locators: item.session_locators,
+          next_action: item.next_action,
           preparation_reason_codes: item.preparation_reason_codes,
           recruitment_reason_codes: item.recruitment_reason_codes,
           source_outcomes_hidden_from_scientific_review:
@@ -3785,6 +3810,14 @@ function renderTasteSourceReviewCampaigns(items) {
           "reviewer_sessions_prepared",
           "reviewer_submissions_collected",
           "recruitment_status",
+          "owner_approval_required",
+          "review_sessions_ready",
+          "activation_id",
+          "activation_sha256",
+          "control_id",
+          "control_sha256",
+          "session_locators",
+          "next_action",
           "preparation_reason_codes",
           "recruitment_reason_codes",
           "source_outcomes_hidden_from_scientific_review",
@@ -3803,6 +3836,155 @@ function renderTasteSourceReviewCampaigns(items) {
   }
   section.appendChild(grid);
   return section;
+}
+
+function renderTasteSourceReviewAuthorization(item) {
+  const details = document.createElement("details");
+  details.className = "taste-review-authorization";
+  const summary = document.createElement("summary");
+  appendText(summary, t("progress.taste_review.authorize.open"));
+  const explanation = document.createElement("p");
+  explanation.className = "acquisition-boundary";
+  appendText(explanation, t("progress.taste_review.authorize.boundary"));
+  const form = document.createElement("form");
+  form.className = "taste-review-authorization-form";
+
+  const fields = document.createElement("div");
+  fields.className = "taste-review-authorization-fields";
+  const owner = tasteReviewTextField("owner_alias", "progress.taste_review.authorize.owner");
+  owner.input.value = "project-owner";
+  const scientificOne = tasteReviewTextField(
+    "scientific_reviewer_1",
+    "progress.taste_review.authorize.scientific_one",
+  );
+  scientificOne.input.value = "scientific-reviewer-a";
+  const scientificTwo = tasteReviewTextField(
+    "scientific_reviewer_2",
+    "progress.taste_review.authorize.scientific_two",
+  );
+  scientificTwo.input.value = "scientific-reviewer-b";
+  const privacy = tasteReviewTextField(
+    "privacy_reviewer",
+    "progress.taste_review.authorize.privacy",
+  );
+  privacy.input.value = "privacy-reviewer";
+  const ethicsRef = tasteReviewTextField(
+    "ethics_determination_ref",
+    "progress.taste_review.authorize.ethics_ref",
+    false,
+  );
+  const ethicsLabel = document.createElement("label");
+  appendText(ethicsLabel, t("progress.taste_review.authorize.ethics_status"));
+  const ethics = document.createElement("select");
+  ethics.name = "ethics_status";
+  ethics.required = true;
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  appendText(placeholder, t("progress.taste_review.authorize.choose"));
+  const approved = document.createElement("option");
+  approved.value = "approved";
+  appendText(approved, t("progress.taste_review.authorize.ethics_approved"));
+  const notRequired = document.createElement("option");
+  notRequired.value = "not-required";
+  appendText(notRequired, t("progress.taste_review.authorize.ethics_not_required"));
+  ethics.append(placeholder, approved, notRequired);
+  ethicsLabel.appendChild(ethics);
+  const hoursLabel = document.createElement("label");
+  appendText(hoursLabel, t("progress.taste_review.authorize.hours"));
+  const hours = document.createElement("input");
+  hours.name = "maximum_reviewer_hours";
+  hours.type = "number";
+  hours.min = "0.1";
+  hours.max = "500";
+  hours.step = "0.1";
+  hours.value = "16";
+  hours.required = true;
+  hoursLabel.appendChild(hours);
+  fields.append(
+    owner.label,
+    scientificOne.label,
+    scientificTwo.label,
+    privacy.label,
+    ethicsLabel,
+    ethicsRef.label,
+    hoursLabel,
+  );
+
+  const confirmations = document.createElement("fieldset");
+  const legend = document.createElement("legend");
+  appendText(legend, t("progress.taste_review.authorize.confirmations"));
+  confirmations.appendChild(legend);
+  for (const [name, key] of [
+    ["compensation_terms_confirmed", "compensation"],
+    ["consent_terms_confirmed", "consent"],
+    ["retention_and_withdrawal_terms_confirmed", "retention"],
+    ["conflicts_screened", "conflicts"],
+  ]) {
+    const label = document.createElement("label");
+    label.className = "taste-review-confirmation";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.name = name;
+    input.required = true;
+    const text = document.createElement("span");
+    appendText(text, t(`progress.taste_review.authorize.${key}`));
+    label.append(input, text);
+    confirmations.appendChild(label);
+  }
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "primary-button";
+  appendText(submit, t("progress.taste_review.authorize.submit"));
+  form.append(fields, confirmations, submit);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const values = new FormData(form);
+    await authorizeTasteSourceReview(item, {
+      ownerAlias: String(values.get("owner_alias") || ""),
+      scientificReviewerAliases: [
+        String(values.get("scientific_reviewer_1") || ""),
+        String(values.get("scientific_reviewer_2") || ""),
+      ],
+      privacyReviewerAlias: String(values.get("privacy_reviewer") || ""),
+      ethicsStatus: String(values.get("ethics_status") || ""),
+      ethicsDeterminationRef: String(values.get("ethics_determination_ref") || ""),
+      maximumReviewerHours: Number(values.get("maximum_reviewer_hours")),
+    });
+  });
+  details.append(summary, explanation, form);
+  return details;
+}
+
+function tasteReviewTextField(name, labelKey, identifier = true) {
+  const label = document.createElement("label");
+  appendText(label, t(labelKey));
+  const input = document.createElement("input");
+  input.name = name;
+  input.type = "text";
+  input.required = true;
+  input.maxLength = identifier ? 100 : 1000;
+  if (identifier) input.pattern = "[a-z0-9][a-z0-9._-]*";
+  label.appendChild(input);
+  return {label, input};
+}
+
+function renderTasteSourceReviewAuthorizationReceipt(item) {
+  const receipt = document.createElement("div");
+  receipt.className = "taste-review-authorization-receipt";
+  const title = document.createElement("strong");
+  appendText(title, t("progress.taste_review.authorize.ready"));
+  const boundary = document.createElement("small");
+  appendText(boundary, t("progress.taste_review.authorize.ready_boundary"));
+  const sessions = document.createElement("ul");
+  sessions.className = "taste-review-session-locators";
+  for (const locator of item.session_locators || []) {
+    const row = document.createElement("li");
+    appendText(row, locator);
+    sessions.appendChild(row);
+  }
+  receipt.append(title, boundary, sessions);
+  return receipt;
 }
 
 function renderBenchmarkMetadataPopulations(items) {
@@ -4602,7 +4784,7 @@ function renderAcquisitionQualifications(items) {
   return section;
 }
 
-function renderDatasetPackages(items) {
+function renderDatasetPackages(items, evidenceProgram = null) {
   const section = progressSection(
     t("progress.dataset_package.title"),
     items.length > 0
@@ -4708,6 +4890,57 @@ function renderDatasetPackages(items) {
       : t("progress.dataset_package.control_steps"));
     controlPath.append(controlLabel, controlSteps);
 
+    const licenseCoverage = document.createElement("div");
+    licenseCoverage.className = `dataset-license-coverage ${item.license_coverage_status}`;
+    const licenseCoverageHeader = document.createElement("div");
+    const licenseCoverageTitle = document.createElement("strong");
+    appendText(licenseCoverageTitle, t("progress.dataset_package.license_coverage.title"));
+    const licenseCoverageStatus = document.createElement("span");
+    appendText(licenseCoverageStatus, t(
+      `progress.dataset_package.license_coverage.${item.license_coverage_status}`,
+    ));
+    licenseCoverageHeader.append(licenseCoverageTitle, licenseCoverageStatus);
+    const licenseCoverageSummary = document.createElement("p");
+    appendText(licenseCoverageSummary, item.license_coverage_status === "pending"
+      ? t("progress.dataset_package.license_coverage.pending_summary")
+      : t("progress.dataset_package.license_coverage.result", {
+        images: item.license_image_count,
+        records: item.license_record_count,
+        route: localizedCode(item.license_verification_route),
+      }));
+    licenseCoverage.append(licenseCoverageHeader, licenseCoverageSummary);
+    if (item.license_coverage_status === "blocked") {
+      const licenseDecision = document.createElement("p");
+      licenseDecision.className = "dataset-license-decision";
+      appendText(licenseDecision, t("progress.dataset_package.license_coverage.next"));
+      licenseCoverage.appendChild(licenseDecision);
+      const decisionControls = document.createElement("div");
+      decisionControls.className = "component-actions";
+      const compare = document.createElement("button");
+      compare.type = "button";
+      compare.className = "secondary-button";
+      appendText(compare, t("progress.dataset_package.license_coverage.compare"));
+      compare.addEventListener("click", () => prepareAuthoredBriefFollowup(
+        t("progress.dataset_package.license_coverage.compare_prompt"),
+      ));
+      decisionControls.appendChild(compare);
+      const heldOutRoute = evidenceProgram?.next_gate_action_routes?.find(
+        (route) => route.stage_id === "qualify-held-out-task-bytes",
+      );
+      if (heldOutRoute) {
+        const revise = document.createElement("button");
+        revise.type = "button";
+        revise.className = "primary-button";
+        appendText(revise, t("progress.dataset_package.license_coverage.revise"));
+        revise.addEventListener("click", () => prepareGateRouteQuestion(
+          evidenceProgram,
+          heldOutRoute,
+        ));
+        decisionControls.appendChild(revise);
+      }
+      licenseCoverage.appendChild(decisionControls);
+    }
+
     const boundary = document.createElement("p");
     boundary.className = "acquisition-boundary";
     appendText(boundary, item.archive_safety_status === "qualified"
@@ -4728,6 +4961,7 @@ function renderDatasetPackages(items) {
       taskGrid,
       blockers,
       controlPath,
+      licenseCoverage,
       boundary,
       review,
       evidenceDisclosure(item.support_ref_ids, {
@@ -4750,6 +4984,16 @@ function renderDatasetPackages(items) {
           archive_expanded_bytes: item.archive_expanded_bytes,
           all_receipt_hashes_reverified: item.all_receipt_hashes_reverified,
           extraction_performed: item.extraction_performed,
+          license_coverage_status: item.license_coverage_status,
+          license_coverage_run_id: item.license_coverage_run_id,
+          license_coverage_report_sha256: item.license_coverage_report_sha256,
+          license_coverage_file_sha256: item.license_coverage_file_sha256,
+          license_policy_sha256: item.license_policy_sha256,
+          license_verification_route: item.license_verification_route,
+          license_image_count: item.license_image_count,
+          license_record_count: item.license_record_count,
+          license_ingestion_ready: item.license_ingestion_ready,
+          license_blocker_codes: item.license_blocker_codes,
         },
         names: [
           "proposal_sha256",
@@ -4770,6 +5014,16 @@ function renderDatasetPackages(items) {
           "archive_expanded_bytes",
           "all_receipt_hashes_reverified",
           "extraction_performed",
+          "license_coverage_status",
+          "license_coverage_run_id",
+          "license_coverage_report_sha256",
+          "license_coverage_file_sha256",
+          "license_policy_sha256",
+          "license_verification_route",
+          "license_image_count",
+          "license_record_count",
+          "license_ingestion_ready",
+          "license_blocker_codes",
         ],
       }),
     );
@@ -6709,6 +6963,61 @@ async function applyResourceConfiguration(portfolio, directive) {
   }
 }
 
+async function authorizeTasteSourceReview(item, values) {
+  if (!quickIntentCatalog || !item?.owner_approval_required) {
+    intentResultState = {kind: "error", error: uiError("error.reload_catalog")};
+    renderIntentResult();
+    return;
+  }
+  if (!window.confirm(t("progress.taste_review.authorize.confirm"))) return;
+  const requestedProject = activeProjectId;
+  setIntentEnabled(false);
+  intentResultState = {kind: "taste_review_authorizing"};
+  renderIntentResult();
+  try {
+    await api(
+      `/api/v3/generative/projects/${encodeURIComponent(requestedProject)}`
+        + `/taste-source-reviews/${encodeURIComponent(item.campaign_id)}/authorize`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "1.0",
+          project_id: requestedProject,
+          campaign_id: item.campaign_id,
+          campaign_sha256: item.campaign_sha256,
+          expected_project_revision: quickIntentCatalog.snapshot.snapshot_revision,
+          expected_snapshot_sha256: quickIntentCatalog.snapshot.snapshot_sha256,
+          owner_alias: values.ownerAlias,
+          scientific_reviewer_aliases: values.scientificReviewerAliases,
+          privacy_reviewer_alias: values.privacyReviewerAlias,
+          ethics_status: values.ethicsStatus,
+          ethics_determination_ref: values.ethicsDeterminationRef,
+          maximum_reviewer_hours: values.maximumReviewerHours,
+          compensation_terms_confirmed: true,
+          consent_terms_confirmed: true,
+          retention_and_withdrawal_terms_confirmed: true,
+          conflicts_screened: true,
+          confirm_prepare_local_sessions: true,
+        }),
+      },
+    );
+    if (activeProjectId !== requestedProject) return;
+    intentResultState = {kind: "taste_review_authorized"};
+    await loadWorkspace({
+      view: "project-progress",
+      project_id: requestedProject,
+    }, "replace");
+    renderIntentResult();
+  } catch (error) {
+    intentResultState = {kind: "error", error};
+    renderIntentResult();
+  } finally {
+    if (activeProjectId === requestedProject && quickIntentCatalog) {
+      setIntentEnabled(true);
+    }
+  }
+}
+
 function renderGenerationFailure(documentValue) {
   intentResultState = {kind: "failure", documentValue};
   renderIntentResult();
@@ -6806,6 +7115,20 @@ function renderIntentResult() {
     applied.className = "generation-accepted";
     appendText(applied, t("generation.resource_configuration_applied"));
     intentResult.appendChild(applied);
+    return;
+  }
+  if (intentResultState.kind === "taste_review_authorizing") {
+    const authorizing = document.createElement("p");
+    authorizing.className = "muted";
+    appendText(authorizing, t("generation.taste_review_authorizing"));
+    intentResult.appendChild(authorizing);
+    return;
+  }
+  if (intentResultState.kind === "taste_review_authorized") {
+    const authorized = document.createElement("p");
+    authorized.className = "generation-accepted";
+    appendText(authorized, t("generation.taste_review_authorized"));
+    intentResult.appendChild(authorized);
     return;
   }
   if (intentResultState.kind === "gate_action_deciding") {

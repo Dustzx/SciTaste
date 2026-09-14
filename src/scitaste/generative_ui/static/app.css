@@ -1748,6 +1748,99 @@ fieldset {
   padding: 0.52rem;
 }
 
+.taste-review-authorization {
+  background: rgb(255 255 255 / 70%);
+  border: 1px solid #c9d7ce;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.taste-review-authorization > summary {
+  color: var(--forest);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.taste-review-authorization-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.taste-review-authorization-fields {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.taste-review-authorization-fields label,
+.taste-review-authorization-form fieldset {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.68rem;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.taste-review-authorization-fields input,
+.taste-review-authorization-fields select {
+  background: #fff;
+  border: 1px solid #b8c7bd;
+  border-radius: 0.35rem;
+  color: var(--ink);
+  font: inherit;
+  min-height: 2rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.taste-review-authorization-form fieldset {
+  border: 1px solid #d5ddd7;
+  border-radius: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0.5rem;
+}
+
+.taste-review-authorization-form legend {
+  color: var(--forest);
+  font-weight: 700;
+  padding: 0 0.25rem;
+}
+
+.taste-review-confirmation {
+  align-items: start;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.taste-review-confirmation input {
+  margin-top: 0.12rem;
+}
+
+.taste-review-authorization-receipt {
+  background: #e8f1eb;
+  border-left: 0.2rem solid #247549;
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.taste-review-authorization-receipt small {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.taste-review-session-locators {
+  color: var(--muted);
+  display: grid;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  gap: 0.25rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding-left: 1rem;
+}
+
 .review-activation-facts {
   display: grid;
   gap: 0.3rem;
@@ -1965,6 +2058,49 @@ fieldset {
 .dataset-package-control-path span {
   color: var(--muted);
   font-size: 0.68rem;
+}
+
+.dataset-license-coverage {
+  background: #f5f4ec;
+  border: 1px solid #d8d3b8;
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.55rem 0.62rem;
+}
+
+.dataset-license-coverage > div {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  justify-content: space-between;
+}
+
+.dataset-license-coverage strong,
+.dataset-license-coverage span {
+  font-size: 0.7rem;
+}
+
+.dataset-license-coverage span {
+  color: #765431;
+  font-weight: 750;
+}
+
+.dataset-license-coverage p {
+  color: var(--muted);
+  font-size: 0.69rem;
+  margin: 0;
+}
+
+.dataset-license-coverage.blocked {
+  background: #fff5ee;
+  border-color: #e7c2aa;
+}
+
+.dataset-license-decision {
+  border-top: 1px solid #ead7c8;
+  color: #784927 !important;
+  padding-top: 0.35rem;
 }
 
 .benchmark-funnel {

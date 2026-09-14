@@ -204,6 +204,9 @@ def test_empty_progress_is_explicit_and_never_invents_a_percentage(tmp_path: Pat
         "benchmark_metadata_allocation_plans": 0,
         "benchmark_metadata_allocations": 0,
         "reference_selection_comparisons": 0,
+        "taste_candidate_populations": 0,
+        "taste_domain_expansions": 0,
+        "taste_source_review_campaigns": 0,
     }
     assert data["stage_state"] == "empty"
     assert data["milestone_state"] == "empty"
@@ -266,6 +269,9 @@ def test_progress_status_mapping_is_exact_and_keeps_current_selection_separate(
         "benchmark_metadata_allocation_plans": 0,
         "benchmark_metadata_allocations": 0,
         "reference_selection_comparisons": 0,
+        "taste_candidate_populations": 0,
+        "taste_domain_expansions": 0,
+        "taste_source_review_campaigns": 0,
     }
     activity = {item["run_id"]: item for item in data["recent_activity"]}
     assert activity["referenced-run"]["observed_state"] == "unknown"
@@ -1255,6 +1261,17 @@ def test_progress_surfaces_large_dataset_package_decision(tmp_path: Path) -> Non
             "archive_member_count": 390,
             "archive_expanded_bytes": 4_680,
             "all_receipt_hashes_reverified": True,
+            "license_coverage_status": "pending",
+            "license_coverage_run_ref_id": None,
+            "license_coverage_run_id": None,
+            "license_coverage_report_sha256": None,
+            "license_coverage_file_sha256": None,
+            "license_policy_sha256": None,
+            "license_verification_route": None,
+            "license_image_count": None,
+            "license_record_count": None,
+            "license_ingestion_ready": None,
+            "license_blocker_codes": [],
             "extraction_performed": False,
             "authorizes_network_preflight": False,
             "authorizes_download": False,
