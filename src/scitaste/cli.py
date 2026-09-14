@@ -75,6 +75,7 @@ from scitaste.evaluation import (
     EvaluationResultSet,
     MetadataFieldBinding,
     OutcomeInformationAvailability,
+    ProjectEvaluationCampaignRunner,
     ProjectionSemanticRole,
     SourceProjectionField,
     align_evidence_program_to_benchmark,
@@ -140,6 +141,7 @@ from scitaste.evaluation import (
     load_dataset_package_approval,
     load_dataset_package_receipt,
     load_dataset_package_request,
+    load_evaluation_campaign_launch_config,
     load_evaluation_cell_plan,
     load_evidence_program,
     load_evidence_review_package,
@@ -650,6 +652,25 @@ def build_parser() -> argparse.ArgumentParser:
     project_evaluation_status.add_argument("--outputs-root", type=Path, default=Path("outputs"))
     _add_log_level_option(project_evaluation_status)
     project_evaluation_status.set_defaults(handler=_handle_project_evaluation_status)
+    project_evaluation_campaign = project_evaluation_commands.add_parser(
+        "run-campaign",
+        help="Run only an exact execution-authorized evaluation cell plan",
+    )
+    project_evaluation_campaign.add_argument("--project-id", required=True)
+    project_evaluation_campaign.add_argument("--evaluation-id", required=True)
+    project_evaluation_campaign.add_argument("--run-id", required=True)
+    project_evaluation_campaign.add_argument("--launch-config", type=Path, required=True)
+    project_evaluation_campaign.add_argument("--cell-id", action="append", default=None)
+    project_evaluation_campaign.add_argument("--max-cells", type=int, default=None)
+    project_evaluation_campaign.add_argument("--resume", action="store_true")
+    project_evaluation_campaign.add_argument("--retry-failed-cells", action="store_true")
+    project_evaluation_campaign.add_argument(
+        "--allow-execution",
+        action="store_true",
+        help="permit only cells already authorized by the registered proposal",
+    )
+    _add_project_options(project_evaluation_campaign)
+    project_evaluation_campaign.set_defaults(handler=_handle_project_evaluation_campaign)
     project_evaluation_result_register = project_evaluation_commands.add_parser(
         "register-result",
         help="Verify and register a project-owned evaluation result set",
@@ -3065,6 +3086,23 @@ def _handle_project_evaluation_status(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _handle_project_evaluation_campaign(args: argparse.Namespace) -> int:
+    launch_config = load_evaluation_campaign_launch_config(args.launch_config)
+    summary = ProjectEvaluationCampaignRunner(ProjectRuntime(args.outputs_root), launch_config).run(
+        project_id=args.project_id,
+        evaluation_id=args.evaluation_id,
+        run_id=args.run_id,
+        allow_execution=args.allow_execution,
+        resume=args.resume,
+        retry_failed_cells=args.retry_failed_cells,
+        cell_ids=tuple(args.cell_id) if args.cell_id else None,
+        max_cells=args.max_cells,
+        dry_run=args.dry_run,
+    )
+    print(summary.model_dump_json(indent=2))
+    return 1 if summary.run_status in {"blocked", "cells_complete_with_failures"} else 0
 
 
 def _handle_project_evaluation_register_result(args: argparse.Namespace) -> int:

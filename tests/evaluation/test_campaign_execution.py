@@ -1,0 +1,469 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+from scitaste.benchmark.study_models import StudyOutcome
+from scitaste.evaluation import (
+    AnalysisContract,
+    EvaluationCampaignLaunchConfig,
+    EvaluationCommandLauncher,
+    ExecutionLane,
+    ExecutionLaneKind,
+    ExperimentPrelaunchManifest,
+    GpuModelResource,
+    HumanReviewResource,
+    IntegrityContract,
+    PrelaunchApproval,
+    PrelaunchSystem,
+    PrelaunchTask,
+    ProjectEvaluationCampaignRunner,
+    ReadinessStatus,
+    RetentionContract,
+    ScientificLaneRole,
+    SystemRole,
+    compile_evaluation_cell_plan,
+)
+from scitaste.project import (
+    ProjectEvaluationArtifact,
+    ProjectEvaluationBundle,
+    ProjectManifest,
+    ProjectRuntime,
+)
+from scitaste.project.models import content_sha256
+
+SHA = "a" * 64
+
+
+def _manifest() -> ExperimentPrelaunchManifest:
+    systems = (
+        PrelaunchSystem(
+            system_id="scitaste-native",
+            role=SystemRole.SCITASTE,
+            implementation_ref="git://scitaste@0123456789abcdef",
+            availability=ReadinessStatus.VERIFIED,
+            real_implementation=True,
+        ),
+        PrelaunchSystem(
+            system_id="native-base",
+            role=SystemRole.ABLATION,
+            implementation_ref="git://scitaste@0123456789abcdef#base",
+            availability=ReadinessStatus.VERIFIED,
+            real_implementation=True,
+        ),
+    )
+    lane = ExecutionLane(
+        lane_id="gpu-pilot",
+        kind=ExecutionLaneKind.GPU,
+        scientific_role=ScientificLaneRole.SMALL_MODEL_ROBUSTNESS,
+        system_ids=tuple(item.system_id for item in systems),
+        task_ids=("heldout-task",),
+        seeds=(7,),
+        repetitions=1,
+        planned_cells=2,
+        gpu_resource=GpuModelResource(
+            host_alias="local-test",
+            device_count=1,
+            device_name="test-device",
+            minimum_memory_mb_per_device=1,
+            checkpoint_id="test-checkpoint",
+            checkpoint_source_path="/weights/test-checkpoint",
+            checkpoint_sha256=SHA,
+            checkpoint_bytes=1,
+            license_identifier="Apache-2.0",
+            local_preflight_status=ReadinessStatus.VERIFIED,
+            remote_inventory_status=ReadinessStatus.VERIFIED,
+            remote_inventory_ref="evidence/inventory.json",
+            remote_inventory_sha256=SHA,
+            remote_checkpoint_status=ReadinessStatus.VERIFIED,
+            remote_checkpoint_attestation_ref="evidence/checkpoint.json",
+            remote_checkpoint_attestation_sha256=SHA,
+            max_gpu_hours=1,
+            max_storage_bytes=1_000_000,
+            network_access=False,
+        ),
+    )
+    payload = {
+        "schema_version": "1.0",
+        "manifest_id": "campaign-runtime-test",
+        "protocol_id": "campaign-runtime-test",
+        "protocol_version": "test-v1",
+        "study_scope": "robustness",
+        "scientific_question": "Can the exact authorized matrix execute and resume?",
+        "claim_allowed": "Engineering execution evidence only.",
+        "claim_forbidden": "No scientific effectiveness claim.",
+        "source_commit": "0" * 40,
+        "resource_corpus_sha256": SHA,
+        "systems": systems,
+        "tasks": (
+            PrelaunchTask(
+                task_id="heldout-task",
+                benchmark_resource_id="benchmark-test",
+                split="source-disjoint-test",
+                selected_asset_manifest="evidence/task.json",
+                asset_manifest_sha256=SHA,
+                license_status=ReadinessStatus.VERIFIED,
+                asset_status=ReadinessStatus.VERIFIED,
+                held_out=True,
+                source_group_disjoint=True,
+            ),
+        ),
+        "lanes": (lane,),
+        "human_review": HumanReviewResource(
+            required=False,
+            minimum_reviewers_per_artifact=0,
+            condition_blinded=False,
+            conflict_check_required=False,
+            recruitment_status=ReadinessStatus.PENDING,
+            rubric_status=ReadinessStatus.PENDING,
+            adjudication_status=ReadinessStatus.PENDING,
+            maximum_reviewer_hours=0,
+        ),
+        "retention": RetentionContract(
+            output_root="outputs/projects/campaign-project/runs/campaign",
+            archive_root="outputs/archive/campaign-project",
+            maximum_output_bytes=1_000_000,
+            retain_raw_provider_responses=True,
+            retain_failed_runs=True,
+            secrets_forbidden=True,
+        ),
+        "analysis": AnalysisContract(
+            primary_outcome="Measured task progress.",
+            estimand="Paired condition difference.",
+            analysis_unit="held-out task",
+            aggregation_method="paired mean",
+            uncertainty_method="task-clustered interval",
+            power_analysis_ref="evidence/power.json",
+            power_analysis_sha256=SHA,
+        ),
+        "integrity": IntegrityContract(
+            preregistration_ref="evidence/preregistration.md",
+            preregistration_sha256=SHA,
+            task_freeze_ref="evidence/tasks.json",
+            task_freeze_sha256=SHA,
+            failure_policy_ref="evidence/failures.md",
+            failure_policy_sha256=SHA,
+            repair_policy_ref="evidence/repairs.md",
+            repair_policy_sha256=SHA,
+            leakage_audit_ref="evidence/leakage.json",
+            leakage_audit_sha256=SHA,
+            judge_protocol_ref="evidence/judge.json",
+            judge_protocol_sha256=SHA,
+        ),
+        "launch_order": (lane.lane_id,),
+        "stop_rules": ("Stop at the exact cell resource ceiling.",),
+        "approval": PrelaunchApproval(),
+    }
+    draft = ExperimentPrelaunchManifest.model_validate(payload)
+    payload["approval"] = PrelaunchApproval(
+        approved=True,
+        approved_proposal_sha256=draft.proposal_sha256,
+        approved_by="project-owner",
+        approved_at="2026-09-14T00:00:00Z",
+    )
+    return ExperimentPrelaunchManifest.model_validate(payload)
+
+
+def _publish_evaluation(
+    runtime: ProjectRuntime, manifest: ExperimentPrelaunchManifest, *, authorized: bool
+) -> None:
+    plan = compile_evaluation_cell_plan(manifest)
+    payloads = {
+        "PRELAUNCH.yaml": yaml.safe_dump(
+            manifest.model_dump(mode="json"), sort_keys=False
+        ).encode(),
+        "RESOURCE_CORPUS.yaml": b"schema_version: 'test'\nresources: []\n",
+        "GATE_REPORT.json": b"{}\n",
+        "CRITIC_REPORT.json": b"{}\n",
+        "CELL_PLAN.json": (plan.model_dump_json(indent=2) + "\n").encode(),
+    }
+    names = {
+        "prelaunch_manifest": "PRELAUNCH.yaml",
+        "resource_corpus": "RESOURCE_CORPUS.yaml",
+        "gate_report": "GATE_REPORT.json",
+        "critic_report": "CRITIC_REPORT.json",
+        "cell_plan": "CELL_PLAN.json",
+    }
+    files = {
+        label: ProjectEvaluationArtifact(
+            locator=locator,
+            sha256=hashlib.sha256(payloads[locator]).hexdigest(),
+            size_bytes=len(payloads[locator]),
+        )
+        for label, locator in names.items()
+    }
+    bundle_payload = {
+        "schema_version": "1.0",
+        "project_id": "campaign-project",
+        "evaluation_id": "authorized-pilot",
+        "manifest_id": manifest.manifest_id,
+        "protocol_id": manifest.protocol_id,
+        "study_scope": manifest.study_scope,
+        "status": "execution_authorized" if authorized else "blocked",
+        "proposal_sha256": manifest.proposal_sha256,
+        "planned_cells": len(plan.cells),
+        "system_ids": [item.system_id for item in manifest.systems],
+        "task_ids": [item.task_id for item in manifest.tasks],
+        "lane_ids": [item.lane_id for item in manifest.lanes],
+        "api_resources": [],
+        "gpu_resources": ["local-test/1xtest-device/test-checkpoint@sha256:" + SHA],
+        "ready_for_author_review": authorized,
+        "execution_authorized": authorized,
+        "observed_source_commit": "0" * 40,
+        "source_tree_clean": True,
+        "readiness_blocker_codes": [] if authorized else ["adapter:not-ready"],
+        "authorization_blocker_codes": [] if authorized else ["readiness_gates_failed"],
+        "critic_blocking_codes": [],
+        "cell_plan_blockers": [],
+        "files": {key: value.model_dump(mode="json") for key, value in files.items()},
+        "no_execution_performed": True,
+    }
+    bundle_payload["bundle_sha256"] = content_sha256(bundle_payload)
+    runtime.publish_evaluation(
+        "campaign-project",
+        ProjectEvaluationBundle.model_validate(bundle_payload),
+        artifact_payloads=payloads,
+        expected_revision=0,
+    )
+
+
+def _outcome() -> StudyOutcome:
+    return StudyOutcome(
+        useful_results=1,
+        proposed_ideas=1,
+        valid_ideas=1,
+        pilots=1,
+        discarded_ideas=0,
+        unproductive_experiments=0,
+        total_experiments=1,
+        gpu_hours_before_useful_signal=0.0,
+        pivots=0,
+        correct_pivots=0,
+        evidence_sufficiency=0.8,
+        reviewer_concerns_opened=0,
+        reviewer_concerns_closed=0,
+        total_claims=1,
+        unsupported_claims=0,
+    )
+
+
+def _launch_config() -> EvaluationCampaignLaunchConfig:
+    outcome = json.dumps(_outcome().model_dump(mode="json"), separators=(",", ":"))
+    script = (
+        "import json,os,pathlib;"
+        "root=pathlib.Path(os.environ['SCITASTE_EVALUATION_CELL_DIR']);"
+        "artifact=root/'paper.md';artifact.write_text('measured output\\n');"
+        f"outcome={outcome};"
+        "payload={'schema_version':'1.0','status':'succeeded','evidence_class':'real',"
+        "'usage':{'experiment_count':1},'outcome':outcome,'artifact_paths':['paper.md']};"
+        "pathlib.Path(os.environ['SCITASTE_EVALUATION_CELL_RESULT']).write_text("
+        "json.dumps(payload))"
+    )
+    launcher = EvaluationCommandLauncher(
+        command=(sys.executable, "-c", script),
+        timeout_seconds=30,
+        gpu_count=1,
+    )
+    return EvaluationCampaignLaunchConfig(
+        launchers={"scitaste-native": launcher, "native-base": launcher}
+    )
+
+
+def _fail_once_launch_config() -> EvaluationCampaignLaunchConfig:
+    outcome = json.dumps(_outcome().model_dump(mode="json"), separators=(",", ":"))
+    script = (
+        "import json,os,pathlib;"
+        "root=pathlib.Path(os.environ['SCITASTE_EVALUATION_CELL_DIR']);"
+        "marker=root.parent/(root.name+'.attempted');first=not marker.exists();"
+        "marker.write_text('attempted');"
+        "artifact=root/'paper.md';"
+        f"outcome={outcome};"
+        "payload=({'schema_version':'1.0','status':'failed','evidence_class':'real',"
+        "'usage':{'experiment_count':1},'error_code':'measured-first-attempt-failure'}"
+        " if first else {'schema_version':'1.0','status':'succeeded','evidence_class':'real',"
+        "'usage':{'experiment_count':1},'outcome':outcome,'artifact_paths':['paper.md']});"
+        "artifact.write_text('measured output\\n') if not first else None;"
+        "pathlib.Path(os.environ['SCITASTE_EVALUATION_CELL_RESULT']).write_text("
+        "json.dumps(payload))"
+    )
+    fail_once = EvaluationCommandLauncher(
+        command=(sys.executable, "-c", script),
+        timeout_seconds=30,
+        gpu_count=1,
+    )
+    always_succeed = _launch_config().launchers["native-base"]
+    return EvaluationCampaignLaunchConfig(
+        launchers={"scitaste-native": fail_once, "native-base": always_succeed}
+    )
+
+
+def _runtime(tmp_path: Path, *, authorized: bool = True) -> ProjectRuntime:
+    runtime = ProjectRuntime(tmp_path / "outputs")
+    runtime.create(
+        ProjectManifest(
+            project_id="campaign-project",
+            title="Campaign project",
+            research_direction="Exercise an authorized evaluation matrix.",
+            status="active",
+        )
+    )
+    _publish_evaluation(runtime, _manifest(), authorized=authorized)
+    return runtime
+
+
+def test_campaign_executes_real_subprocesses_and_resumes_exact_successes(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    runner = ProjectEvaluationCampaignRunner(runtime, _launch_config())
+
+    first = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="campaign-run",
+        allow_execution=True,
+        max_cells=1,
+    )
+    assert first.run_status == "partial"
+    assert first.executed_cells == 1
+    assert first.total_recorded_cells == 1
+
+    completed = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="campaign-run",
+        allow_execution=True,
+        resume=True,
+        max_cells=1,
+    )
+    assert completed.run_status == "cells_complete"
+    assert completed.executed_cells == 1
+    assert completed.recovered_successes == 1
+    assert completed.succeeded_cells == 2
+    result_path = runtime.projects_root / "campaign-project" / completed.result_set_locator
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    assert len(result["cell_results"]) == 2
+    assert {item["status"] for item in result["cell_results"]} == {"succeeded"}
+    assert completed.next_required_stage == "objective_analysis_or_blind_review"
+    assert completed.handoff_locator is not None
+    handoff = json.loads(
+        (runtime.projects_root / "campaign-project" / completed.handoff_locator).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert handoff["result_set_sha256"] == completed.result_set_sha256
+    assert handoff["next_interface"] == "project.evaluation.select-analysis-path"
+    assert handoff["performs_next_stage"] is False
+
+
+def test_campaign_refuses_unready_project_evaluation_without_starting_a_run(
+    tmp_path: Path,
+) -> None:
+    runtime = _runtime(tmp_path, authorized=False)
+    summary = ProjectEvaluationCampaignRunner(runtime, _launch_config()).run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="blocked-run",
+        allow_execution=True,
+    )
+
+    assert summary.run_status == "blocked"
+    assert "evaluation:not-execution-authorized" in summary.blocker_codes
+    assert runtime.open("campaign-project").manifest.runs == []
+
+
+def test_campaign_retains_failed_attempt_then_retries_only_when_explicit(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    runner = ProjectEvaluationCampaignRunner(runtime, _fail_once_launch_config())
+
+    failed = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="retry-run",
+        allow_execution=True,
+    )
+    assert failed.run_status == "cells_complete_with_failures"
+    assert failed.succeeded_cells == 1
+    assert failed.failed_cells == 1
+    assert failed.next_required_stage == "retry_or_accept_failures"
+    failed_handoff = json.loads(
+        (runtime.projects_root / "campaign-project" / failed.handoff_locator).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert failed_handoff["next_interface"] == "project.evaluation.resolve-cell-failures"
+    assert failed_handoff["explicit_retry_decision_required"] is True
+
+    repaired = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="retry-run",
+        allow_execution=True,
+        resume=True,
+        retry_failed_cells=True,
+    )
+    assert repaired.run_status == "cells_complete"
+    assert repaired.executed_cells == 1
+    assert repaired.recovered_successes == 1
+    failed_attempts = list(
+        (runtime.projects_root / "campaign-project/runs/retry-run/evaluation_campaign/cells").glob(
+            "*/failed_attempts/attempt-001/CELL_RESULT.json"
+        )
+    )
+    assert len(failed_attempts) == 1
+    assert json.loads(failed_attempts[0].read_text(encoding="utf-8"))["status"] == "failed"
+
+
+def test_campaign_archives_an_interrupted_cell_before_resume(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    runner = ProjectEvaluationCampaignRunner(runtime, _launch_config())
+    first = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="interrupted-run",
+        allow_execution=True,
+        max_cells=1,
+    )
+    assert first.run_status == "partial"
+
+    result = json.loads(
+        (
+            runtime.projects_root
+            / "campaign-project"
+            / "runs/interrupted-run/evaluation_campaign/RESULT_SET.json"
+        ).read_text(encoding="utf-8")
+    )
+    pending_cell_id = next(
+        cell_id
+        for cell_id in json.loads(
+            (
+                runtime.projects_root
+                / "campaign-project"
+                / "runs/interrupted-run/evaluation_campaign/CAMPAIGN.json"
+            ).read_text(encoding="utf-8")
+        )["selected_cell_ids"]
+        if cell_id not in {item["cell_id"] for item in result["cell_results"]}
+    )
+    interrupted_dir = (
+        runtime.projects_root
+        / "campaign-project"
+        / "runs/interrupted-run/evaluation_campaign/cells"
+        / pending_cell_id
+    )
+    interrupted_dir.mkdir(parents=True)
+    (interrupted_dir / "stdout.log").write_text("partial output\n", encoding="utf-8")
+
+    completed = runner.run(
+        project_id="campaign-project",
+        evaluation_id="authorized-pilot",
+        run_id="interrupted-run",
+        allow_execution=True,
+        resume=True,
+    )
+    assert completed.run_status == "cells_complete"
+    archived = interrupted_dir / "failed_attempts/attempt-001/stdout.log"
+    assert archived.read_text(encoding="utf-8") == "partial output\n"
+    checkpoint = json.loads((interrupted_dir / "CHECKPOINT.json").read_text(encoding="utf-8"))
+    assert checkpoint["attempt"] == 2

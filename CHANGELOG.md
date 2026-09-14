@@ -5,6 +5,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added project-owned execution for authorized `EvaluationCellPlan` campaigns.
+  The new shell-free runner rehashes the registered proposal and resources,
+  refuses blocked or unapproved evaluations before creating a run, enforces API
+  and GPU cell budgets, checkpoints every real attempt, resumes verified
+  successes without recomputation, and archives failed attempts before an
+  explicitly requested retry. It emits a raw `EvaluationResultSet` for the
+  existing objective-analysis or blind-review paths and cannot manufacture
+  inference, reviews, or scientific-effect claims.
 - Added the official F1000Research multidomain natural-source pilot. A bounded
   93-request, 11,944,836-byte transaction selected 20 exact version groups from
   each of the Ecology and Public Health publisher subjects; the de-identified

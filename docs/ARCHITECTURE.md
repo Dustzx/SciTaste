@@ -3604,3 +3604,36 @@ experiment launch still stops at owner approval. The successful feedback turn
 edited an exact predecessor into a five-node project decision flow; it is a
 product dogfood observation, not proof that the model's plan is scientifically
 correct.
+
+### ADR-117: Approved evaluation plans execute through one project-owned campaign ledger
+
+Status: accepted for exact-cell execution; formal SciTaste evidence remains
+uncollected.
+
+The evaluation subsystem previously ended its automated path at a no-run
+`EvaluationCellPlan`, while the older matched-study runner used a different
+protocol type. Consequently an approved current proposal still needed an
+untracked operator loop to translate cells into commands, collect results, and
+decide what could be resumed. SciTaste now executes the registered evaluation
+type directly. The campaign identity binds the project evaluation bundle,
+proposal, cell plan, launcher configuration, and selected cells before any
+adapter starts.
+
+The runner has no design or approval authority. It reopens the exact registered
+artifacts and will not create a run unless the proposal is execution-authorized,
+owner-approved, preparation-ready, and covered by a compatible shell-free
+launcher. Each adapter sees one content-bound cell request; only explicitly
+declared environment variables cross the process boundary. The runner owns
+elapsed time and GPU allocation, requires complete API counters, enforces
+per-call and cumulative cell ceilings, hashes every retained artifact, and turns
+budget excess into a failed measured cell rather than a successful result.
+
+Every attempt publishes a checkpoint before it enters the aggregate result set.
+Resume revalidates that checkpoint and skips successful cells; a failed cell is
+retried only under an explicit retry instruction, with its preceding request,
+logs, result, and evidence moved into an immutable attempt archive. The resulting
+raw `EvaluationResultSet` intentionally contains neither invented comparisons nor
+reviews. Its next authority boundary is the already preregistered objective
+analysis or condition-blinded human-review workflow. Thus automation removes
+manual experiment bookkeeping without weakening the scientific separation
+between execution, inference, review, and claim admission.
