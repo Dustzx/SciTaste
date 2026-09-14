@@ -24,8 +24,13 @@ from scitaste.evaluation.taste_source_segmentation_execution import (
 )
 from scitaste.evaluation.taste_source_segmentation_protocol import (
     TasteSourceSegmentationProspectiveProtocol,
+    TasteSourceSegmentationRequestItem,
+    TasteSourceSegmentationRequestPacket,
     inspect_taste_source_segmentation_protocol,
     load_taste_source_segmentation_request_packet,
+    taste_source_comment_unit_offsets,
+    taste_source_evidence_unit_table_sha256,
+    unitize_taste_source_comment,
 )
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -66,6 +71,69 @@ def _v3_protocol():
         ).read_text(encoding="utf-8")
     )
     return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
+
+
+def _v4_protocol():
+    payload = yaml.safe_load(
+        (
+            _ROOT
+            / "configs/evaluation/ai_review/scitastebench_segmentation_prospective_protocol_v3.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    payload["schema_version"] = "1.3"
+    payload.pop("span_reconstruction")
+    payload["evidence_unit_selection"] = {
+        "unitizer_algorithm": "unicode-word-punctuation-v1",
+        "token_pattern": r"\w+|[^\w\s]",
+        "unit_id_format": "u%04d",
+        "unit_text_source": "original-review-comment",
+        "source_offsets_exposed_to_provider": False,
+        "model_returns_source_text": False,
+        "reconstructed_text_source": "original-review-comment-slice",
+        "unique_text_match_required": False,
+        "normalization_allowed": False,
+        "fuzzy_matching_allowed": False,
+        "insertion_or_deletion_repair_allowed": False,
+        "overlapping_ranges_allowed": False,
+    }
+    payload["input_firewall"]["allowed"].append(
+        "deterministic source evidence-unit table"
+    )
+    payload["adjudication_input_firewall"]["allowed"].append(
+        "deterministic source evidence-unit table"
+    )
+    return TasteSourceSegmentationProspectiveProtocol.model_validate(payload)
+
+
+def _anchored_packet() -> TasteSourceSegmentationRequestPacket:
+    source = "Compare A-B with A-B. Also preserve *quoted* spacing around (x, y)."
+    return TasteSourceSegmentationRequestPacket(
+        schema_version="1.1",
+        packet_id="anchored-packet-v1",
+        project_id="scitaste-self-development",
+        protocol_id="anchored-protocol-v1",
+        sample_sha256=_SHA,
+        sample_manifest_file_sha256=_SHA,
+        rubric_file_sha256=_SHA,
+        segmenter_slot="segmenter-a",
+        shard_index=1,
+        shard_count=1,
+        requested_provider="zhipu",
+        requested_model="glm-5.3-flash",
+        system_instruction="Select only evidence unit identifiers.",
+        rubric={"rubric_id": "anchored-v1"},
+        items=(
+            TasteSourceSegmentationRequestItem(
+                campaign_token="campaign-opaque",
+                review_item_id="item-opaque",
+                reviewed_abstract="A test abstract.",
+                review_comment=source,
+                evidence_units=unitize_taste_source_comment(source),
+                evidence_unit_table_sha256=taste_source_evidence_unit_table_sha256(source),
+            ),
+        ),
+        output_contract={"type": "object"},
+    )
 
 
 def _authorization() -> TasteSourceSegmentationExecutionAuthorization:
@@ -303,4 +371,104 @@ def test_v3_reconstructs_only_unique_equal_length_typography_changes() -> None:
             json.dumps({"items": items_forbidden}, ensure_ascii=False),
             packet=packet,
             protocol=_v3_protocol(),
+        )
+
+
+def test_v4_selects_source_units_without_copying_or_searching_text() -> None:
+    packet = _anchored_packet()
+    source = packet.items[0].review_comment
+    rows = taste_source_comment_unit_offsets(source)
+    second_a_start = [row[0] for row in rows if row[1] == "A"][1]
+    second_b_end = [row[0] for row in rows if row[1] == "B"][1]
+    quoted_start = next(row[0] for row in rows if row[1] == "*" and row[2] > 20)
+    quoted_end = [row[0] for row in rows if row[1] == "*" and row[2] > 20][1]
+    raw = json.dumps(
+        {
+            "items": [
+                {
+                    "campaign_token": "campaign-opaque",
+                    "review_item_id": "item-opaque",
+                    "segments": [
+                        {
+                            "start_unit_id": second_a_start,
+                            "end_unit_id": second_b_end,
+                            "primary_decision_family": "experiment",
+                            "atomic_decision_statement": "Compare against the second condition.",
+                            "rationale": "The selected surface units identify the comparison.",
+                            "uncertainty": "low",
+                        },
+                        {
+                            "start_unit_id": quoted_start,
+                            "end_unit_id": quoted_end,
+                            "primary_decision_family": "writing",
+                            "atomic_decision_statement": "Preserve the emphasized term.",
+                            "rationale": "The Markdown markers belong to the source evidence.",
+                            "uncertainty": "low",
+                        },
+                    ],
+                    "residual_decision_bearing_text_possible": False,
+                }
+            ]
+        }
+    )
+
+    output = validate_segmentation_provider_output(
+        raw,
+        packet=packet,
+        protocol=_v4_protocol(),
+    )
+    assert [segment.verbatim_decision_text for segment in output.items[0].segments] == [
+        "A-B",
+        "*quoted*",
+    ]
+    assert output.items[0].segments[0].start_char == source.rfind("A-B")
+    request = build_segmentation_provider_request(packet, protocol=_v4_protocol())
+    user_payload = json.loads(request["messages"][1]["content"])
+    assert "start_char" not in request["messages"][1]["content"]
+    assert "end_char" not in request["messages"][1]["content"]
+    assert user_payload["items"][0]["evidence_units"][0] == {
+        "unit_id": "u0001",
+        "surface": "Compare",
+    }
+
+
+def test_v4_rejects_unknown_reversed_and_overlapping_unit_ranges() -> None:
+    packet = _anchored_packet()
+    base_segment = {
+        "start_unit_id": "u0001",
+        "end_unit_id": "u0003",
+        "primary_decision_family": "experiment",
+        "atomic_decision_statement": "Test one decision.",
+        "rationale": "The units express one request.",
+        "uncertainty": "low",
+    }
+
+    def payload(segments: list[dict[str, object]]) -> str:
+        return json.dumps(
+            {
+                "items": [
+                    {
+                        "campaign_token": "campaign-opaque",
+                        "review_item_id": "item-opaque",
+                        "segments": segments,
+                        "residual_decision_bearing_text_possible": False,
+                    }
+                ]
+            }
+        )
+
+    unknown = {**base_segment, "start_unit_id": "u9999"}
+    with pytest.raises(ValueError, match="unknown evidence-unit"):
+        validate_segmentation_provider_output(
+            payload([unknown]), packet=packet, protocol=_v4_protocol()
+        )
+    reversed_range = {**base_segment, "start_unit_id": "u0003", "end_unit_id": "u0001"}
+    with pytest.raises(ValueError, match="range is reversed"):
+        validate_segmentation_provider_output(
+            payload([reversed_range]), packet=packet, protocol=_v4_protocol()
+        )
+    overlap = {**base_segment, "start_unit_id": "u0002", "end_unit_id": "u0004"}
+    with pytest.raises(ValueError, match="ranges overlap"):
+        validate_segmentation_provider_output(
+            payload([base_segment, overlap]), packet=packet, protocol=_v4_protocol()
         )

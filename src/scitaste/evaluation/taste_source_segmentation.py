@@ -184,7 +184,7 @@ class TasteSourceDecisionSegment(BaseModel):
     ordinal: int = Field(ge=1, le=128)
     start_char: int = Field(ge=0, le=2_000_000)
     end_char: int = Field(gt=0, le=2_000_000)
-    verbatim_decision_text: str = Field(min_length=8, max_length=16_000)
+    verbatim_decision_text: str = Field(min_length=1, max_length=16_000)
     primary_decision_family: TasteTask | Literal["cannot-assess"]
     atomic_decision_statement: str = Field(min_length=1, max_length=2_000)
     rationale: str = Field(min_length=1, max_length=2_000)
@@ -1714,18 +1714,35 @@ def _normalize_raw_segments(
         verbatim = raw_segment.get("verbatim_decision_text")
         if not isinstance(verbatim, str):
             raise ValueError("Taste source decision segment lacks verbatim source text")
-        start = review_comment.find(verbatim)
-        if start < 0 or review_comment.find(verbatim, start + 1) >= 0:
-            raise ValueError("Taste source decision span must occur exactly once")
+        raw_start = raw_segment.get("start_char")
+        raw_end = raw_segment.get("end_char")
+        if raw_start is None and raw_end is None:
+            start = review_comment.find(verbatim)
+            if start < 0 or review_comment.find(verbatim, start + 1) >= 0:
+                raise ValueError("Taste source decision span must occur exactly once")
+            end = start + len(verbatim)
+        else:
+            if (
+                not isinstance(raw_start, int)
+                or isinstance(raw_start, bool)
+                or not isinstance(raw_end, int)
+                or isinstance(raw_end, bool)
+                or raw_start < 0
+                or raw_end <= raw_start
+                or raw_end > len(review_comment)
+                or review_comment[raw_start:raw_end] != verbatim
+            ):
+                raise ValueError("Taste source decision offsets differ from source bytes")
+            start, end = raw_start, raw_end
         segment_identity = _canonical_sha256(
-            [campaign_id, review_item_id, start, start + len(verbatim), verbatim]
+            [campaign_id, review_item_id, start, end, verbatim]
         )
         segments.append(
             TasteSourceDecisionSegment(
                 segment_id=f"segment-{segment_identity[:24]}",
                 ordinal=ordinal,
                 start_char=start,
-                end_char=start + len(verbatim),
+                end_char=end,
                 verbatim_decision_text=verbatim,
                 primary_decision_family=raw_segment.get("primary_decision_family"),
                 atomic_decision_statement=raw_segment.get("atomic_decision_statement"),

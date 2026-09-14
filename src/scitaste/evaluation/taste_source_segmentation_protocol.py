@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -145,6 +146,25 @@ class SegmentationProtocolSpanReconstruction(BaseModel):
     insertion_or_deletion_allowed: Literal[False] = False
 
 
+class SegmentationProtocolEvidenceUnitSelection(BaseModel):
+    """Deterministic source anchors selected by ID, never copied by the model."""
+
+    model_config = _CONFIG
+
+    unitizer_algorithm: Literal["unicode-word-punctuation-v1"]
+    token_pattern: Literal[r"\w+|[^\w\s]"]
+    unit_id_format: Literal["u%04d"]
+    unit_text_source: Literal["original-review-comment"]
+    source_offsets_exposed_to_provider: Literal[False] = False
+    model_returns_source_text: Literal[False] = False
+    reconstructed_text_source: Literal["original-review-comment-slice"]
+    unique_text_match_required: Literal[False] = False
+    normalization_allowed: Literal[False] = False
+    fuzzy_matching_allowed: Literal[False] = False
+    insertion_or_deletion_repair_allowed: Literal[False] = False
+    overlapping_ranges_allowed: Literal[False] = False
+
+
 class SegmentationProtocolInputFirewall(BaseModel):
     model_config = _CONFIG
 
@@ -171,6 +191,9 @@ class SegmentationProtocolInputFirewall(BaseModel):
             "assigned scientific item review comment",
             "opaque campaign and review item identifiers",
         }
+        anchored_segmenter_allowed = segmenter_allowed | {
+            "deterministic source evidence-unit table"
+        }
         required_forbidden = {
             "private item map",
             "publisher or source identity",
@@ -182,7 +205,11 @@ class SegmentationProtocolInputFirewall(BaseModel):
             "arbitrary tools",
             "web search",
         }
-        if set(self.allowed) not in (legacy_allowed, segmenter_allowed):
+        if set(self.allowed) not in (
+            legacy_allowed,
+            segmenter_allowed,
+            anchored_segmenter_allowed,
+        ):
             raise ValueError("Segmentation input allowlist drifted")
         if not required_forbidden.issubset(self.forbidden):
             raise ValueError("Segmentation input firewall is incomplete")
@@ -220,6 +247,9 @@ class SegmentationProtocolAdjudicationInputFirewall(BaseModel):
             "two anonymous segmenter candidates in hash-randomized order",
             "opaque campaign and review item identifiers",
         }
+        anchored_required_allowed = required_allowed | {
+            "deterministic source evidence-unit table"
+        }
         required_forbidden = {
             "private item map",
             "publisher or source identity",
@@ -232,7 +262,7 @@ class SegmentationProtocolAdjudicationInputFirewall(BaseModel):
             "arbitrary tools",
             "web search",
         }
-        if set(self.allowed) != required_allowed:
+        if set(self.allowed) not in (required_allowed, anchored_required_allowed):
             raise ValueError("Segmentation adjudication input allowlist drifted")
         if not required_forbidden.issubset(self.forbidden):
             raise ValueError("Segmentation adjudication input firewall is incomplete")
@@ -326,7 +356,7 @@ class SegmentationProtocolScaleGate(BaseModel):
 class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
     protocol_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_created_at: datetime
@@ -340,6 +370,7 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
     model_condition: SegmentationProtocolModelCondition
     generation: SegmentationProtocolGeneration
     span_reconstruction: SegmentationProtocolSpanReconstruction | None = None
+    evidence_unit_selection: SegmentationProtocolEvidenceUnitSelection | None = None
     consumed_sample_registry: SegmentationProtocolFileBinding | None = None
     input_firewall: SegmentationProtocolInputFirewall
     adjudication_input_firewall: SegmentationProtocolAdjudicationInputFirewall | None = None
@@ -366,12 +397,20 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
             raise ValueError("Segmentation output-token budget cannot cover the planned calls")
         if self.schema_version == "1.0" and self.adjudication_input_firewall is not None:
             raise ValueError("Schema 1.0 cannot carry a separate adjudication firewall")
-        if self.schema_version in {"1.1", "1.2"} and self.adjudication_input_firewall is None:
+        if self.schema_version in {"1.1", "1.2", "1.3"} and (
+            self.adjudication_input_firewall is None
+        ):
             raise ValueError("Schema 1.1+ requires a separate adjudication firewall")
         if (self.schema_version == "1.2") != (self.span_reconstruction is not None):
             raise ValueError("Schema 1.2 uniquely requires bounded span reconstruction")
-        if (self.schema_version == "1.2") != (self.consumed_sample_registry is not None):
-            raise ValueError("Schema 1.2 uniquely requires a consumed-sample registry")
+        if (self.schema_version == "1.3") != (self.evidence_unit_selection is not None):
+            raise ValueError("Schema 1.3 uniquely requires evidence-unit selection")
+        if (self.schema_version in {"1.2", "1.3"}) != (
+            self.consumed_sample_registry is not None
+        ):
+            raise ValueError("Schema 1.2+ requires a consumed-sample registry")
+        if self.span_reconstruction is not None and self.evidence_unit_selection is not None:
+            raise ValueError("Text reconstruction and evidence-unit selection are exclusive")
         expected_rubric_scope = (
             "frozen segmentation or adjudication rubric"
             if self.schema_version == "1.0"
@@ -379,6 +418,15 @@ class TasteSourceSegmentationProspectiveProtocol(BaseModel):
         )
         if expected_rubric_scope not in self.input_firewall.allowed:
             raise ValueError("Segmentation firewall rubric scope differs from schema version")
+        has_anchor_scope = "deterministic source evidence-unit table" in (
+            self.input_firewall.allowed
+        ) and "deterministic source evidence-unit table" in (
+            self.adjudication_input_firewall.allowed
+            if self.adjudication_input_firewall is not None
+            else ()
+        )
+        if (self.schema_version == "1.3") != has_anchor_scope:
+            raise ValueError("Segmentation firewall evidence-unit scope differs from schema")
         return self
 
 
@@ -439,7 +487,7 @@ class SegmentationFreezeAuthority(BaseModel):
 class TasteSourceSegmentationFreezeReceipt(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0", "1.1", "1.2"] = "1.0"
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"] = "1.0"
     freeze_receipt_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     frozen_at: datetime
@@ -460,10 +508,14 @@ class TasteSourceSegmentationFreezeReceipt(BaseModel):
         )
         if self.schema_version == "1.0" and any(item is not None for item in extended):
             raise ValueError("Schema 1.0 cannot bind prospective execution modules")
-        if self.schema_version in {"1.1", "1.2"} and any(item is None for item in extended):
+        if self.schema_version in {"1.1", "1.2", "1.3"} and any(
+            item is None for item in extended
+        ):
             raise ValueError("Schema 1.1+ must bind protocol and execution modules")
-        if (self.schema_version == "1.2") != (self.bindings.consumed_sample_registry is not None):
-            raise ValueError("Schema 1.2 uniquely binds the consumed-sample registry")
+        if (self.schema_version in {"1.2", "1.3"}) != (
+            self.bindings.consumed_sample_registry is not None
+        ):
+            raise ValueError("Schema 1.2+ binds the consumed-sample registry")
         return self
 
 
@@ -485,6 +537,51 @@ class TasteSourceSegmentationProtocolInspection(BaseModel):
     calibration_execution_authorized: Literal[False] = False
 
 
+class TasteSourceEvidenceUnit(BaseModel):
+    model_config = _CONFIG
+
+    unit_id: str = Field(pattern=r"^u[0-9]{4}$")
+    surface: str = Field(min_length=1, max_length=8_000)
+
+
+def taste_source_comment_unit_offsets(
+    review_comment: str,
+) -> tuple[tuple[str, str, int, int], ...]:
+    """Return the one authoritative unit-ID/surface/offset mapping."""
+
+    matches = tuple(re.finditer(r"\w+|[^\w\s]", review_comment, flags=re.UNICODE))
+    if not matches:
+        raise ValueError("Taste source comment has no evidence units")
+    if len(matches) > 9_999:
+        raise ValueError("Taste source comment exceeds evidence-unit capacity")
+    return tuple(
+        (f"u{ordinal:04d}", match.group(), match.start(), match.end())
+        for ordinal, match in enumerate(matches, 1)
+    )
+
+
+def unitize_taste_source_comment(review_comment: str) -> tuple[TasteSourceEvidenceUnit, ...]:
+    """Create provider-visible word/punctuation anchors without exposing offsets."""
+
+    return tuple(
+        TasteSourceEvidenceUnit(unit_id=unit_id, surface=surface)
+        for unit_id, surface, _, _ in taste_source_comment_unit_offsets(review_comment)
+    )
+
+
+def taste_source_evidence_unit_table_sha256(review_comment: str) -> str:
+    """Bind the source bytes, unitizer version, unit IDs, and visible surfaces."""
+
+    units = unitize_taste_source_comment(review_comment)
+    return _canonical_sha256(
+        {
+            "algorithm": "unicode-word-punctuation-v1",
+            "review_comment_sha256": hashlib.sha256(review_comment.encode()).hexdigest(),
+            "evidence_units": [item.model_dump(mode="json") for item in units],
+        }
+    )
+
+
 class TasteSourceSegmentationRequestItem(BaseModel):
     model_config = _CONFIG
 
@@ -492,12 +589,28 @@ class TasteSourceSegmentationRequestItem(BaseModel):
     review_item_id: str = Field(pattern=_ID)
     reviewed_abstract: str = Field(min_length=1, max_length=8_000)
     review_comment: str = Field(min_length=1, max_length=8_000)
+    evidence_units: tuple[TasteSourceEvidenceUnit, ...] | None = None
+    evidence_unit_table_sha256: str | None = Field(default=None, pattern=_SHA256)
+
+    @model_validator(mode="after")
+    def evidence_units_are_exact(self) -> TasteSourceSegmentationRequestItem:
+        if (self.evidence_units is None) != (self.evidence_unit_table_sha256 is None):
+            raise ValueError("Segmentation evidence-unit table binding is incomplete")
+        if self.evidence_units is None:
+            return self
+        expected = unitize_taste_source_comment(self.review_comment)
+        if self.evidence_units != expected:
+            raise ValueError("Segmentation evidence-unit table differs from source bytes")
+        observed_hash = taste_source_evidence_unit_table_sha256(self.review_comment)
+        if self.evidence_unit_table_sha256 != observed_hash:
+            raise ValueError("Segmentation evidence-unit table hash drifted")
+        return self
 
 
 class TasteSourceSegmentationRequestPacket(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     packet_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     protocol_id: str = Field(pattern=_ID)
@@ -526,12 +639,22 @@ class TasteSourceSegmentationRequestPacket(BaseModel):
         keys = [(item.campaign_token, item.review_item_id) for item in self.items]
         if keys != sorted(set(keys)):
             raise ValueError("Segmentation request items must be sorted and unique")
+        anchored = all(item.evidence_units is not None for item in self.items)
+        if any(item.evidence_units is not None for item in self.items) != anchored:
+            raise ValueError("Segmentation request packet mixes anchored and legacy items")
+        if (self.schema_version == "1.1") != anchored:
+            raise ValueError("Segmentation request packet schema differs from anchor mode")
         return self
 
     @computed_field
     @property
     def packet_sha256(self) -> str:
-        return _canonical_sha256(self.model_dump(mode="json", exclude={"packet_sha256"}))
+        payload = self.model_dump(mode="json", exclude={"packet_sha256"})
+        if self.schema_version == "1.0":
+            for item in payload["items"]:
+                item.pop("evidence_units", None)
+                item.pop("evidence_unit_table_sha256", None)
+        return _canonical_sha256(payload)
 
 
 class TasteSourceSegmentationRequestBinding(BaseModel):
@@ -548,7 +671,7 @@ class TasteSourceSegmentationRequestBinding(BaseModel):
 class TasteSourceSegmentationRequestPack(BaseModel):
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     pack_id: str = Field(pattern=_ID)
     project_id: str = Field(pattern=_ID)
     created_at: datetime
@@ -559,10 +682,7 @@ class TasteSourceSegmentationRequestPack(BaseModel):
     unique_item_count: int = Field(gt=0)
     segmenter_count: Literal[2] = 2
     request_count: int = Field(gt=0)
-    input_field_names: tuple[
-        Literal["campaign_token", "review_item_id", "reviewed_abstract", "review_comment"],
-        ...,
-    ]
+    input_field_names: tuple[str, ...]
     forbidden_source_field_names: tuple[str, ...]
     all_request_payloads_persisted: Literal[True] = True
     provider_contact_performed: Literal[False] = False
@@ -580,12 +700,19 @@ class TasteSourceSegmentationRequestPack(BaseModel):
             raise ValueError("Segmentation request packets must be unique")
         if sum(item.item_count for item in self.requests) != 2 * self.unique_item_count:
             raise ValueError("Segmentation request-pack item coverage is inconsistent")
-        if self.input_field_names != (
+        legacy_fields = (
             "campaign_token",
             "review_item_id",
             "reviewed_abstract",
             "review_comment",
-        ):
+        )
+        anchored_fields = (
+            *legacy_fields,
+            "evidence_units",
+            "evidence_unit_table_sha256",
+        )
+        expected_fields = anchored_fields if self.schema_version == "1.1" else legacy_fields
+        if self.input_field_names != expected_fields:
             raise ValueError("Segmentation request-pack input fields drifted")
         required_forbidden = {
             "article_title",
@@ -768,6 +895,13 @@ def prepare_taste_source_segmentation_request_pack(
     root = Path(locator_root).resolve(strict=True)
     protocol = inspection.protocol
     sample = inspection.sample
+    if created_at.utcoffset() is None:
+        raise ValueError("Segmentation request-pack time must include a timezone")
+    if getattr(protocol, "schema_version", "1.0") == "1.3" and (
+        created_at < inspection.freeze_receipt.frozen_at
+        or created_at > datetime.now().astimezone()
+    ):
+        raise ValueError("Segmentation request-pack time is outside its observable freeze window")
     selected_keys = {(item.campaign_id, item.review_item_id) for item in sample.items}
     campaign_tokens = {
         campaign_id: segmentation_campaign_token(pack_id, campaign_id)
@@ -787,15 +921,28 @@ def prepare_taste_source_segmentation_request_pack(
             and (campaign_id, item.review_item_id) in selected_keys
         ]
         observed_keys.update((campaign_id, item.review_item_id) for item in selected_source_items)
-        selected = [
-            TasteSourceSegmentationRequestItem(
-                campaign_token=campaign_tokens[campaign_id],
-                review_item_id=item.review_item_id,
-                reviewed_abstract=item.reviewed_abstract,
-                review_comment=item.review_comment,
+        selected = []
+        for item in selected_source_items:
+            units = (
+                unitize_taste_source_comment(item.review_comment)
+                if getattr(protocol, "evidence_unit_selection", None) is not None
+                else None
             )
-            for item in selected_source_items
-        ]
+            unit_hash = (
+                taste_source_evidence_unit_table_sha256(item.review_comment)
+                if units is not None
+                else None
+            )
+            selected.append(
+                TasteSourceSegmentationRequestItem(
+                    campaign_token=campaign_tokens[campaign_id],
+                    review_item_id=item.review_item_id,
+                    reviewed_abstract=item.reviewed_abstract,
+                    review_comment=item.review_comment,
+                    evidence_units=units,
+                    evidence_unit_table_sha256=unit_hash,
+                )
+            )
         items_by_campaign[campaign_id] = sorted(selected, key=lambda item: item.review_item_id)
     if observed_keys != selected_keys:
         raise ValueError("Segmentation request pack does not resolve its exact sample")
@@ -809,11 +956,56 @@ def prepare_taste_source_segmentation_request_pack(
     ):
         raise ValueError("Segmentation sample cannot satisfy the source-balanced shard plan")
     rubric_payload = _yaml_mapping(root / protocol.segmentation_rubric.locator)
+    anchored = getattr(protocol, "evidence_unit_selection", None) is not None
     reported_text_field = (
-        "reported_decision_text"
-        if protocol.span_reconstruction is not None
-        else "verbatim_decision_text"
+        None
+        if anchored
+        else (
+            "reported_decision_text"
+            if getattr(protocol, "span_reconstruction", None) is not None
+            else "verbatim_decision_text"
+        )
     )
+    required_segment_fields = [
+        "start_unit_id",
+        "end_unit_id",
+        "primary_decision_family",
+        "atomic_decision_statement",
+        "rationale",
+        "uncertainty",
+    ] if anchored else [
+        str(reported_text_field),
+        "primary_decision_family",
+        "atomic_decision_statement",
+        "rationale",
+        "uncertainty",
+    ]
+    segment_properties: dict[str, JsonValue] = {
+        "primary_decision_family": {
+            "enum": [
+                "idea",
+                "experiment",
+                "evidence",
+                "writing",
+                "review",
+                "visual",
+                "cannot-assess",
+            ]
+        },
+        "atomic_decision_statement": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "uncertainty": {"enum": ["low", "medium", "high"]},
+    }
+    if anchored:
+        segment_properties.update(
+            {
+                "start_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+                "end_unit_id": {"type": "string", "pattern": "^u[0-9]{4}$"},
+            }
+        )
+    else:
+        assert reported_text_field is not None
+        segment_properties[reported_text_field] = {"type": "string", "minLength": 8}
     output_contract: dict[str, JsonValue] = {
         "type": "object",
         "additionalProperties": False,
@@ -842,36 +1034,8 @@ def prepare_taste_source_segmentation_request_pack(
                             "items": {
                                 "type": "object",
                                 "additionalProperties": False,
-                                "required": [
-                                    reported_text_field,
-                                    "primary_decision_family",
-                                    "atomic_decision_statement",
-                                    "rationale",
-                                    "uncertainty",
-                                ],
-                                "properties": {
-                                    reported_text_field: {
-                                        "type": "string",
-                                        "minLength": 8,
-                                    },
-                                    "primary_decision_family": {
-                                        "enum": [
-                                            "idea",
-                                            "experiment",
-                                            "evidence",
-                                            "writing",
-                                            "review",
-                                            "visual",
-                                            "cannot-assess",
-                                        ]
-                                    },
-                                    "atomic_decision_statement": {
-                                        "type": "string",
-                                        "minLength": 1,
-                                    },
-                                    "rationale": {"type": "string", "minLength": 1},
-                                    "uncertainty": {"enum": ["low", "medium", "high"]},
-                                },
+                                "required": required_segment_fields,
+                                "properties": segment_properties,
                             },
                         },
                         "residual_decision_bearing_text_possible": {"type": "boolean"},
@@ -882,10 +1046,15 @@ def prepare_taste_source_segmentation_request_pack(
         "item_rule": (
             "Return every assigned campaign_token and review_item_id exactly once. "
             + (
+                "Select start_unit_id and end_unit_id from the supplied deterministic "
+                "evidence_units. Never return or reconstruct source text; the runner "
+                "copies the exact source slice from the selected anchors. "
+                if anchored
+                else
                 "Return reported_decision_text as an exact locator candidate; the runner "
                 "may repair only the frozen one-character typography map and will copy "
                 "the final source-of-record span from review_comment. "
-                if protocol.span_reconstruction is not None
+                if getattr(protocol, "span_reconstruction", None) is not None
                 else "Copy each verbatim_decision_text exactly from review_comment. "
             )
             + "Emit one primary family per atomic decision."
@@ -903,6 +1072,7 @@ def prepare_taste_source_segmentation_request_pack(
             packet_id = f"{pack_id}-{slot}-shard-{shard_index + 1:02d}"
             packets.append(
                 TasteSourceSegmentationRequestPacket(
+                    schema_version="1.1" if anchored else "1.0",
                     packet_id=packet_id,
                     project_id=protocol.project_id,
                     protocol_id=protocol.protocol_id,
@@ -917,7 +1087,13 @@ def prepare_taste_source_segmentation_request_pack(
                     system_instruction=(
                         "Segment only the supplied review comments under the bound rubric. "
                         "Do not infer hidden source or outcome fields, use tools, browse, or "
-                        "read another segmenter's output. Return one JSON object only."
+                        "read another segmenter's output. "
+                        + (
+                            "Select only supplied evidence-unit IDs and do not copy source text. "
+                            if anchored
+                            else ""
+                        )
+                        + "Return one JSON object only."
                     ),
                     rubric=rubric_payload,
                     items=tuple(
@@ -941,7 +1117,7 @@ def prepare_taste_source_segmentation_request_pack(
         bindings: list[TasteSourceSegmentationRequestBinding] = []
         for packet in packets:
             packet_path = request_dir / f"{packet.packet_id}.json"
-            _atomic_json(packet_path, packet.model_dump(mode="json"))
+            _atomic_json(packet_path, packet.model_dump(mode="json", exclude_none=True))
             bindings.append(
                 TasteSourceSegmentationRequestBinding(
                     locator=packet_path.relative_to(staging).as_posix(),
@@ -953,6 +1129,7 @@ def prepare_taste_source_segmentation_request_pack(
                 )
             )
         pack = TasteSourceSegmentationRequestPack(
+            schema_version="1.1" if anchored else "1.0",
             pack_id=pack_id,
             project_id=protocol.project_id,
             created_at=created_at,
@@ -967,6 +1144,7 @@ def prepare_taste_source_segmentation_request_pack(
                 "review_item_id",
                 "reviewed_abstract",
                 "review_comment",
+                *(("evidence_units", "evidence_unit_table_sha256") if anchored else ()),
             ),
             forbidden_source_field_names=(
                 "article_title",
