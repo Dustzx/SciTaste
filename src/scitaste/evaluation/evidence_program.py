@@ -33,6 +33,8 @@ class EvidenceHypothesis(StrEnum):
     TASTE_SPECIFICITY = "H2_taste_specificity"
     TASTE_SELECTION = "H2b_taste_selection"
     NATIVE_EFFECT = "H3_native_effect"
+    LIFECYCLE_CREDIT = "H3_lifecycle_credit"
+    LIFECYCLE_NATIVE_EFFECT = "H4_native_effect"
     ECOLOGICAL_COMPARISON = "E1_ecological_comparison"
     INTEGRITY_DIAGNOSTIC = "D1_integrity_diagnostic"
     SELF_DEVELOPMENT = "P1_self_development"
@@ -62,6 +64,11 @@ class ProgramConditionKind(StrEnum):
     MISMATCHED_TASTE = "source_disjoint_mismatched_taste"
     DELIBERATIVE_TASTE_SELECTION = "decision_grounded_taste_selection"
     LEXICAL_TASTE_RETRIEVAL = "lexical_taste_retrieval"
+    OUTCOME_UPDATED_POLICY = "outcome_updated_policy"
+    NO_UPDATE_POLICY = "no_update_policy"
+    SUCCESS_ONLY_POLICY = "success_only_policy"
+    FAILURE_ONLY_POLICY = "failure_only_policy"
+    SHUFFLED_CREDIT_POLICY = "shuffled_credit_policy"
     NATIVE_BASE = "native_base"
     DIRECT_TOOL_AGENT = "direct_tool_agent"
 
@@ -242,7 +249,7 @@ class IclrEvidenceProgram(BaseModel):
 
     model_config = _CONFIG
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     program_id: str = Field(pattern=_ID)
     paper_title: str = Field(min_length=1, max_length=500)
     target_venue: Literal["ICLR 2027"]
@@ -519,7 +526,7 @@ def _scientific_findings(
     conditions = {item.condition_id: item.kind for item in program.conditions}
     sources = {item.source_id: item for item in program.task_sources}
     resources = {item.resource_id: item for item in corpus.resources}
-    required = {
+    required_v1 = {
         EvidenceHypothesis.REFERENCE_QUALITY: {
             ProgramConditionKind.QUALITY_GROUNDED_REFERENCE_ADMISSION,
             ProgramConditionKind.PRESTIGE_ONLY_REFERENCE_SELECTION,
@@ -541,12 +548,38 @@ def _scientific_findings(
             ProgramConditionKind.NATIVE_BASE,
         },
     }
+    required_v2 = {
+        EvidenceHypothesis.TASTE_ABSTRACTION: {
+            ProgramConditionKind.MATCHED_TASTE,
+            ProgramConditionKind.RAW_SOURCE_RAG,
+        },
+        EvidenceHypothesis.TASTE_SPECIFICITY: {
+            ProgramConditionKind.MATCHED_TASTE,
+            ProgramConditionKind.MISMATCHED_TASTE,
+        },
+        EvidenceHypothesis.TASTE_SELECTION: {
+            ProgramConditionKind.DELIBERATIVE_TASTE_SELECTION,
+            ProgramConditionKind.LEXICAL_TASTE_RETRIEVAL,
+        },
+        EvidenceHypothesis.LIFECYCLE_CREDIT: {
+            ProgramConditionKind.OUTCOME_UPDATED_POLICY,
+            ProgramConditionKind.NO_UPDATE_POLICY,
+            ProgramConditionKind.SHUFFLED_CREDIT_POLICY,
+        },
+        EvidenceHypothesis.LIFECYCLE_NATIVE_EFFECT: {
+            ProgramConditionKind.FULL_SCITASTE,
+            ProgramConditionKind.NATIVE_BASE,
+        },
+    }
+    required = required_v2 if program.schema_version == "1.1" else required_v1
     expected_layers = {
         EvidenceHypothesis.REFERENCE_QUALITY: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_ABSTRACTION: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_SPECIFICITY: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.TASTE_SELECTION: EvidenceLayer.DECISION_MECHANISM,
         EvidenceHypothesis.NATIVE_EFFECT: EvidenceLayer.OBJECTIVE_PROGRESS,
+        EvidenceHypothesis.LIFECYCLE_CREDIT: EvidenceLayer.DECISION_MECHANISM,
+        EvidenceHypothesis.LIFECYCLE_NATIVE_EFFECT: EvidenceLayer.OBJECTIVE_PROGRESS,
         EvidenceHypothesis.ECOLOGICAL_COMPARISON: EvidenceLayer.FULL_LIFECYCLE,
         EvidenceHypothesis.INTEGRITY_DIAGNOSTIC: EvidenceLayer.EXPERIMENT_INTEGRITY,
         EvidenceHypothesis.SELF_DEVELOPMENT: EvidenceLayer.PROCESS_CASE,
@@ -672,15 +705,20 @@ def _scientific_findings(
         for study in program.study_layers
         for source_id in study.task_source_ids
     }
-    h3 = studies.get(EvidenceHypothesis.NATIVE_EFFECT)
-    if h3 and not any(
-        source_roles[item] is TaskSourceRole.OBJECTIVE_PROGRESS for item in h3.task_source_ids
+    native_effect = studies.get(
+        EvidenceHypothesis.LIFECYCLE_NATIVE_EFFECT
+        if program.schema_version == "1.1"
+        else EvidenceHypothesis.NATIVE_EFFECT
+    )
+    if native_effect and not any(
+        source_roles[item] is TaskSourceRole.OBJECTIVE_PROGRESS
+        for item in native_effect.task_source_ids
     ):
         findings.append(
             _finding(
                 FindingPhase.SCIENTIFIC,
                 "native_effect_without_objective_tasks",
-                h3.study_id,
+                native_effect.study_id,
             )
         )
     ecological = studies.get(EvidenceHypothesis.ECOLOGICAL_COMPARISON)

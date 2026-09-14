@@ -4,21 +4,30 @@ Status: scientific design freeze candidate. This document selects questions and
 estimands, not compute. It authorizes no dataset download, API call, GPU job,
 model transfer, human recruitment, or experiment.
 
-The executable contract is
-[`iclr2027_scitaste_evidence_program_v1.yaml`](../configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml),
+This strategy document is retained as the design history that established the
+source, abstraction, selection, objective-progress, and ecological layers. The
+current executable scientific contract is
+[`iclr2027_scitaste_lifecycle_evidence_program_v2.yaml`](../configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml),
+summarized in
+[`SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md`](research/SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md).
+It supersedes evidence-program v1 by adding a direct delayed-credit learning
+intervention; v1 remains immutable history. The v2 program is
 inspected against the additive
 [`autoresearch_evaluation_resources_v9.yaml`](research/data/autoresearch_evaluation_resources_v9.yaml)
 snapshot. The current deterministic report is scientifically coherent but not
 acquisition-ready, experiment-ready, or execution-authorized. In particular,
 the program fixes claims and roles before choosing a model: changes in local or
-remote inventory update feasibility evidence, not H0--H3.
+remote inventory update feasibility evidence, not H1--H4.
 
-The separate
+The v2
+[`iclr2027_lifecycle_evidence_review_package_v2.yaml`](../configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml)
+binds the current program to exact existing source and accepted-method proposals.
+It authorizes no action. The historical v1
 [`iclr2027_evidence_review_package_v1.yaml`](../configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml)
-binds the exact next source and method proposals. It is ready for owner review,
+binds the exact source and method proposals for evidence-program v1. It is ready for owner review,
 not for experiment execution: all four selected task-source roles and all three
 accepted-method candidates are covered, while every external-action flag remains
-false.
+false; it cannot authorize or stand in for the v2 package.
 
 ## What the paper must establish
 

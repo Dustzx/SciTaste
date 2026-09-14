@@ -1,0 +1,392 @@
+schema_version: "1.1"
+program_id: scitaste-iclr2027-lifecycle-evidence-program-v2
+paper_title: "SciTaste: Grounded Scientific Taste for Autonomous Research"
+target_venue: ICLR 2027
+design_authority: scientific_question_not_available_inventory
+resource_corpus_sha256: bb53a816b3a5479713f7cd6b9ccd027ef0e5ea5d9bd879941ce268228de0f010
+
+claims:
+  - claim_id: grounded-episodes-beat-raw-retrieval
+    statement: >-
+      With source bytes, model, information, tools, and context budget fixed,
+      grounded decision episodes improve held-out scientific action quality over
+      retrieving the same source material as raw evidence.
+    title_critical: true
+    study_ids: [taste-abstraction-mechanism]
+  - claim_id: contextual-transfer-is-causal
+    statement: >-
+      Matched grounded episodes outperform source-disjoint, quality- and
+      token-matched episodes outside their transfer scope.
+    title_critical: true
+    study_ids: [taste-specificity-mechanism]
+  - claim_id: autonomous-selection-is-decision-grounded
+    statement: >-
+      Decision-grounded applicability deliberation improves held-out scientific
+      actions over lexical selection from the same closed precedent pool.
+    title_critical: true
+    study_ids: [taste-selection-mechanism]
+  - claim_id: reviewed-delayed-credit-improves-policy
+    statement: >-
+      A lifecycle policy updated from independently reviewed delayed outcomes
+      improves held-out decisions over the same policy without outcome updates
+      and over a policy trained with shuffled causal credit.
+    title_critical: true
+    study_ids: [lifecycle-credit-mechanism]
+  - claim_id: learned-taste-improves-objective-progress
+    statement: >-
+      Under a fixed native executor, model, task, tools, information, repair
+      policy, and budget, enabling the learned lifecycle Taste policy improves
+      held-out objective research progress.
+    title_critical: true
+    study_ids: [lifecycle-native-objective-progress]
+  - claim_id: content-quality-supports-episode-construction
+    statement: >-
+      Content-grounded source qualification yields more useful decision-bearing
+      precedents than prestige-only source selection from the same broad pool.
+    title_critical: false
+    study_ids: [reference-quality-support]
+
+conditions:
+  - condition_id: quality-grounded-reference-admission
+    kind: quality_grounded_reference_admission
+    intervention: >-
+      Admit prestige-blind sources only when exact content supports evidential
+      rigor, decision traceability, alternatives, failure boundaries, and transfer.
+    keeps_fixed: [candidate source pool, source count, abstraction procedure, context budget]
+  - condition_id: prestige-only-reference-selection
+    kind: prestige_only_reference_selection
+    intervention: >-
+      Select the same stratum counts using only frozen prestige metadata.
+    keeps_fixed: [candidate source pool, source count, abstraction procedure, context budget]
+  - condition_id: matched-abstracted-taste
+    kind: matched_abstracted_taste
+    intervention: >-
+      Supply source-grounded decision episodes within the registered transfer scope.
+    keeps_fixed: [source bytes, source count, model, prompt, context budget, tools]
+  - condition_id: raw-source-rag
+    kind: raw_source_rag
+    intervention: >-
+      Supply equal-budget excerpts from the same admitted sources without episode abstraction.
+    keeps_fixed: [source bytes, source count, model, prompt, context budget, tools]
+  - condition_id: mismatched-taste
+    kind: source_disjoint_mismatched_taste
+    intervention: >-
+      Supply source-disjoint, quality- and token-matched episodes outside the decision scope.
+    keeps_fixed: [source count, evidence quality, outcome availability, model, prompt, context budget, tools]
+  - condition_id: deliberative-taste-selection
+    kind: decision_grounded_taste_selection
+    intervention: >-
+      Select from a closed hard-negative pool using state, evidence, failure,
+      reversal, and transfer constraints without oracle relation labels.
+    keeps_fixed: [candidate pool, source bytes, model, prompt, context budget, tools]
+  - condition_id: lexical-taste-retrieval
+    kind: lexical_taste_retrieval
+    intervention: >-
+      Select from the identical pool using lexical and metadata retrieval only.
+    keeps_fixed: [candidate pool, source bytes, model, prompt, context budget, tools]
+  - condition_id: outcome-updated-policy
+    kind: outcome_updated_policy
+    intervention: >-
+      Fit the frozen estimator on admitted episodes carrying both positive and
+      negative outcomes with independently reviewed action-specific causal credit.
+    keeps_fixed: [episode structure, episode count, source groups, split, estimator, prior, inference gates]
+  - condition_id: no-update-policy
+    kind: no_update_policy
+    intervention: >-
+      Use the identical estimator, prior, and inference gates without applying
+      any delayed-outcome win or loss updates.
+    keeps_fixed: [episode structure, source groups, split, estimator, prior, inference gates]
+  - condition_id: shuffled-credit-policy
+    kind: shuffled_credit_policy
+    intervention: >-
+      Permute reviewed credit within frozen blocks while preserving episode,
+      outcome, action-frequency, source-group, and split marginals.
+    keeps_fixed: [episodes, outcomes, action frequencies, source groups, split, estimator, prior, inference gates]
+  - condition_id: success-only-policy
+    kind: success_only_policy
+    intervention: >-
+      Apply reviewed updates only from positive outcome families as a survivorship diagnostic.
+    keeps_fixed: [episodes, source groups, split, estimator, prior, inference gates]
+  - condition_id: failure-only-policy
+    kind: failure_only_policy
+    intervention: >-
+      Apply reviewed updates only from negative outcome families as a failure-avoidance diagnostic.
+    keeps_fixed: [episodes, source groups, split, estimator, prior, inference gates]
+  - condition_id: full-scitaste-learned-policy
+    kind: full_scitaste
+    intervention: >-
+      Enable the learned outcome-updated policy within the bounded SciTaste Native controller.
+    keeps_fixed: [model, task, starting information, tools, repair policy, resource budget, executor]
+  - condition_id: native-base-without-learned-taste
+    kind: native_base
+    intervention: >-
+      Run the same native controller and executor with zero learned-policy adjustment.
+    keeps_fixed: [model, task, starting information, tools, repair policy, resource budget, executor]
+  - condition_id: direct-tool-agent
+    kind: direct_tool_agent
+    intervention: >-
+      Run an admitted real external research system under the closest disclosed common task boundary.
+    keeps_fixed: [task, starting information, tool permissions, resource ceiling]
+
+task_sources:
+  - source_id: scitastebench-decision-cases
+    role: decision_cases
+    formal_role: construction_target
+    resource_id: null
+    accepted_venue: null
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Natural source-group-disjoint decisions are required for representation,
+      transfer, selection, delayed-credit, abstention, and reversal tests.
+  - source_id: innovatorbench-objective-tasks
+    role: objective_progress
+    formal_role: primary
+    resource_id: innovator-bench
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Held-out executable tasks with scorer-owned objective progress can test the
+      within-native policy intervention after asset and adapter qualification.
+  - source_id: mlrbench-full-lifecycle
+    role: full_lifecycle
+    formal_role: primary
+    resource_id: mlr-bench
+    accepted_venue: NeurIPS 2025 Datasets and Benchmarks Track
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Complete research-package tasks support a separately interpreted ecological comparison.
+  - source_id: expbench-integrity
+    role: integrity_diagnostic
+    formal_role: diagnostic
+    resource_id: exp-bench
+    accepted_venue: ICLR 2026
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: true
+    rationale: >-
+      Experiment-chain tasks diagnose where policy effects fail without replacing objective evidence.
+  - source_id: scitaste-self-development
+    role: process_case
+    formal_role: contingent
+    resource_id: null
+    accepted_venue: null
+    selection_basis: scientific_fit
+    selected_for_acquisition_proposal: false
+    rationale: >-
+      Dogfooding supplies process evidence and candidate episodes but is excluded from confirmatory estimates.
+
+system_candidates:
+  - system_id: agent-laboratory
+    resource_id: agent-laboratory
+    accepted_venue: Findings of EMNLP 2025
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: Real accepted research workflow; eligible only after unchanged-core adapter qualification.
+  - system_id: ai-researcher
+    resource_id: ai-researcher
+    accepted_venue: NeurIPS 2025 Main Conference Spotlight
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: Accepted end-to-end method; license and runnable-system equivalence remain gates.
+  - system_id: deep-scientist
+    resource_id: deep-scientist
+    accepted_venue: ICLR 2026
+    accepted_archival_method: true
+    selection_basis: scientific_relevance
+    selected_for_adapter_proposal: true
+    rationale: Accepted autonomous-discovery method; product-to-paper equivalence remains unverified.
+
+study_layers:
+  - study_id: reference-quality-support
+    hypothesis: H0_reference_quality
+    layer: decision_mechanism
+    inference_role: supporting
+    claim_ids: [content-quality-supports-episode-construction]
+    condition_ids: [quality-grounded-reference-admission, prestige-only-reference-selection]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Blinded expert utility of the resulting decision-bearing source set.
+    estimand: Supporting effect of content-grounded versus prestige-only qualification.
+    experimental_unit: frozen source-pool stratum
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: taste-abstraction-mechanism
+    hypothesis: H1_taste_abstraction
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [grounded-episodes-beat-raw-retrieval]
+    condition_ids: [matched-abstracted-taste, raw-source-rag]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Paired condition-blinded expert preference on action quality and claim calibration.
+    estimand: Effect of grounded episode abstraction versus equal-budget raw evidence from the same source bytes.
+    experimental_unit: held-out source-group-disjoint natural decision
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: taste-specificity-mechanism
+    hypothesis: H2_taste_specificity
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [contextual-transfer-is-causal]
+    condition_ids: [matched-abstracted-taste, mismatched-taste]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Paired blinded expert preference plus transfer-error and reversal diagnostics.
+    estimand: Effect of in-scope versus source-disjoint out-of-scope episodes at quality and token parity.
+    experimental_unit: held-out source-group-disjoint natural decision
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: taste-selection-mechanism
+    hypothesis: H2b_taste_selection
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [autonomous-selection-is-decision-grounded]
+    condition_ids: [deliberative-taste-selection, lexical-taste-retrieval]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Paired blinded expert preference over the selected action and calibrated abstention.
+    estimand: Effect of decision-grounded selection versus lexical retrieval from one frozen hard-negative pool.
+    experimental_unit: held-out source-group-disjoint natural decision
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: lifecycle-credit-mechanism
+    hypothesis: H3_lifecycle_credit
+    layer: decision_mechanism
+    inference_role: confirmatory
+    claim_ids: [reviewed-delayed-credit-improves-policy]
+    condition_ids: [outcome-updated-policy, no-update-policy, shuffled-credit-policy, success-only-policy, failure-only-policy]
+    task_source_ids: [scitastebench-decision-cases]
+    primary_endpoint: Held-out action preference with calibration, abstention, reversal, and transfer-error diagnostics.
+    estimand: >-
+      Primary paired effect of outcome-updated versus no-update policy; shuffled
+      credit is the negative control, while success-only and failure-only are diagnostics.
+    experimental_unit: held-out source-group-disjoint natural decision with one unit maximum weight per source trajectory
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: lifecycle-native-objective-progress
+    hypothesis: H4_native_effect
+    layer: objective_progress
+    inference_role: confirmatory
+    claim_ids: [learned-taste-improves-objective-progress]
+    condition_ids: [full-scitaste-learned-policy, native-base-without-learned-taste]
+    task_source_ids: [innovatorbench-objective-tasks]
+    primary_endpoint: Paired held-out objective progress with every failure retained.
+    estimand: Effect of the learned lifecycle policy under an otherwise identical SciTaste Native system.
+    experimental_unit: held-out source-group-disjoint executable research task
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: accepted-system-ecological-comparison
+    hypothesis: E1_ecological_comparison
+    layer: full_lifecycle
+    inference_role: supporting
+    claim_ids: []
+    condition_ids: [full-scitaste-learned-policy, direct-tool-agent]
+    task_source_ids: [mlrbench-full-lifecycle]
+    system_candidate_ids: [agent-laboratory, ai-researcher, deep-scientist]
+    primary_endpoint: Blinded expert preference over complete evidence-bearing research packages.
+    estimand: Separately reported system difference on common tasks with model and adapter confounding disclosed.
+    experimental_unit: complete held-out task-system trajectory
+    matched_backbone: false
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: true
+  - study_id: experiment-chain-diagnostic
+    hypothesis: D1_integrity_diagnostic
+    layer: experiment_integrity
+    inference_role: diagnostic
+    claim_ids: []
+    condition_ids: [full-scitaste-learned-policy, native-base-without-learned-taste]
+    task_source_ids: [expbench-integrity]
+    primary_endpoint: Design, implementation, execution, conclusion, and conjunctive success.
+    estimand: Stagewise diagnostic difference, not an autonomous-research superiority claim.
+    experimental_unit: held-out executable experiment-chain task
+    matched_backbone: true
+    matched_starting_information: true
+    matched_tool_permissions: true
+    matched_repair_policy: true
+    final_paper_required: false
+  - study_id: longitudinal-self-development-case
+    hypothesis: P1_self_development
+    layer: process_case
+    inference_role: process_only
+    claim_ids: []
+    condition_ids: [full-scitaste-learned-policy]
+    task_source_ids: [scitaste-self-development]
+    primary_endpoint: Versioned decisions, interventions, admitted evidence, product changes, paper changes, and costs.
+    estimand: Descriptive recursive process evidence only; excluded from every confirmatory estimate.
+    experimental_unit: one longitudinal self-development project
+    matched_backbone: false
+    matched_starting_information: false
+    matched_tool_permissions: false
+    matched_repair_policy: false
+    final_paper_required: true
+
+model_policy:
+  inventory_can_select_scientific_design: false
+  primary_model_id: null
+  primary_selection_stage: after_conformance_pilot
+  selection_criteria:
+    - instruction and tool conformance on task-excluded representative cases
+    - sufficient context and stable structured-output behavior
+    - reproducible exact model identity and serving path
+    - cost and capacity only after scientific validity requirements pass
+  matched_within_confirmatory_study: true
+  robustness_provider_non_pooled: true
+  local_models_role: capacity_and_robustness_candidates
+
+sampling_policy:
+  sample_size_basis: pilot_then_power_analysis
+  fixed_formal_sample_size: null
+  fixed_repetitions: null
+  independent_unit: held_out_task
+  source_group_split_required: true
+  intention_to_run: true
+  failures_are_outcomes: true
+  pilot_data_excluded_from_formal_test: true
+
+human_review:
+  minimum_independent_reviewers: 2
+  condition_blinded: true
+  conflict_screening: true
+  adjudication: true
+  automated_judge_role: secondary_calibrated_measure
+  judge_validation_required: true
+
+operational_readiness:
+  task_subset_freeze: pending
+  task_data_acquisition: pending
+  adapter_preflight: pending
+  model_conformance_pilot: pending
+  power_analysis: pending
+  reviewer_recruitment: pending
+  judge_validation: pending
+
+approval:
+  approved: false
+  approved_program_sha256: null
+  approved_by: null
+  approved_at: null
+
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_execution: false

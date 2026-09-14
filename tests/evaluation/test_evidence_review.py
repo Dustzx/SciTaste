@@ -14,6 +14,10 @@ from scitaste.evaluation import (
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / "configs/evaluation/programs/iclr2027_evidence_review_package_v1.yaml"
+LIFECYCLE_PACKAGE = (
+    ROOT
+    / "configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml"
+)
 
 
 def test_repository_review_package_is_exact_but_never_execution_ready() -> None:
@@ -43,6 +47,21 @@ def test_repository_review_package_is_exact_but_never_execution_ready() -> None:
     assert statuses["ai-researcher"].proposal_viable is False
     assert statuses["ai-researcher"].resource_gate_blockers == ("blocked_gate:code_license",)
     assert all(not item.ready_for_adapter_implementation for item in statuses.values())
+
+
+def test_lifecycle_review_package_is_exact_but_does_not_inherit_authority() -> None:
+    inspection = load_evidence_review_package(LIFECYCLE_PACKAGE)
+
+    report = inspect_evidence_review_package(inspection, workspace_root=ROOT)
+
+    assert report.scientifically_coherent is True
+    assert report.exact_bindings_verified is True
+    assert report.source_proposal_coverage_complete is True
+    assert report.method_proposal_coverage_complete is True
+    assert report.ready_for_owner_review is True
+    assert report.ready_for_experiment is False
+    assert report.findings == ()
+    assert report.authorizes_execution is False
 
 
 def test_review_package_fails_closed_on_bound_file_drift() -> None:

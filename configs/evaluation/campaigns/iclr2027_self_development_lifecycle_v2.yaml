@@ -1,0 +1,275 @@
+schema_version: "1.2"
+dossier_id: iclr2027-scitaste-lifecycle-v2
+project_id: scitaste-self-development
+paper_title: "SciTaste: Grounded Scientific Taste for Autonomous Research"
+target_venue: ICLR 2027
+central_question: >-
+  Under the same model, information, tools, executor, and budget, does a unified
+  lifecycle Scientific Taste policy learned from grounded decisions and reviewed
+  delayed outcomes improve held-out research decisions and objective progress?
+claim_boundary: >-
+  A title-level improvement claim requires positive source-group-disjoint H1
+  grounding, H2 transfer, H2b selection, H3 delayed-credit, and H4 objective
+  progress evidence. The self-development case, repository tests, generated
+  papers, and external best-native systems cannot establish that causal effect.
+artifacts:
+  - artifact_id: lifecycle-evidence-program-v2
+    path: configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml
+    sha256: 10461f83d60736f9f9a14e07eb485e97e509d937b873cb04efbbd1d4b6c78266
+  - artifact_id: lifecycle-evidence-review-v2
+    path: configs/evaluation/programs/iclr2027_lifecycle_evidence_review_package_v2.yaml
+    sha256: 64f028e0c65471dc59557471bfd9a876c8970f2b76db7dcdafa2178bd65cad0b
+  - artifact_id: accepted-resource-corpus-v9
+    path: docs/research/data/autoresearch_evaluation_resources_v9.yaml
+    sha256: f6c44b7416f2532c8949993401bc9a1f72ae705891f27367cf81a8e74bd05c8f
+
+tracks:
+  - track_id: lifecycle-decision-mechanism
+    role: scientific_taste_mechanism
+    state: design_only
+    scientific_question: >-
+      Do grounded, in-scope precedents selected without oracle labels improve
+      decisions beyond raw retrieval, and does independently reviewed delayed
+      credit improve the same policy beyond no update and shuffled credit?
+    primary_endpoint: >-
+      Condition-blinded expert preference over held-out actions and claim
+      calibration, with abstention, reversal, transfer error, and calibration diagnostics.
+    comparison_design: >-
+      H1 same-source grounding, H2 matched transfer, H2b decision-grounded
+      selection, and H3 outcome-updated versus no-update policy with shuffled credit.
+    model:
+      kind: unselected
+      usage_scope: >-
+        One exact capable model is frozen only after a task-excluded conformance pilot.
+    data:
+      dataset_id: scitastebench-natural-lifecycle-v1
+      role: >-
+        Natural decisions with pre-action evidence, closed alternatives, delayed
+        outcomes, attribution review, source groups, and held-out partitions.
+      item_ids: []
+      population_floor: 120
+      exact_bytes_available: false
+      held_out_verified: false
+      acquisition_approved: false
+    matrix:
+      system_ids:
+        - matched-abstracted-taste
+        - raw-source-rag
+        - mismatched-taste
+        - deliberative-taste-selection
+        - lexical-taste-retrieval
+        - outcome-updated-policy
+        - no-update-policy
+        - shuffled-credit-policy
+      task_ids: []
+      seeds: []
+      repetitions: 1
+      order_arms: 2
+      planned_cells: null
+      planned_model_calls: null
+    budget:
+      api_requests: null
+      total_tokens: null
+      api_cost_usd: null
+      allocated_gpu_hours: null
+      output_storage_bytes: 107374182400
+      human_hours: null
+      compute_unallocated: true
+    claim_allowed: >-
+      A powered, independently reviewed formal split may support bounded H1--H3 effects.
+    claim_forbidden: >-
+      Fixtures, self-project episodes, automated judges, or an arbitrary cell count
+      cannot establish learned Scientific Taste.
+    evidence_artifact_ids:
+      - lifecycle-evidence-program-v2
+      - lifecycle-evidence-review-v2
+    blocker_codes:
+      - natural-episodes-not-admitted
+      - independent-attribution-not-complete
+      - formal-split-not-frozen
+      - primary-model-not-selected
+      - power-analysis-not-complete
+      - reviewers-not-secured
+
+  - track_id: native-objective-progress
+    role: native_taste_causal
+    state: design_only
+    scientific_question: >-
+      Does toggling only the learned lifecycle policy improve objective progress
+      in the same SciTaste Native executor?
+    primary_endpoint: Paired scorer-owned held-out objective progress with every failure retained.
+    comparison_design: >-
+      Learned outcome-updated policy on versus zero learned-policy adjustment,
+      with model, state, information, tools, repair rules, executor, and budget fixed.
+    model:
+      kind: unselected
+      usage_scope: One exact capable model is frozen after task-excluded conformance.
+    data:
+      dataset_id: innovatorbench-heldout-objective-v1
+      role: Independently qualified executable tasks with scorer-owned hidden outcomes.
+      item_ids: []
+      population_floor: 1
+      exact_bytes_available: false
+      held_out_verified: false
+      acquisition_approved: false
+    matrix:
+      system_ids: [full-scitaste-learned-policy, native-base-without-learned-taste]
+      task_ids: []
+      seeds: []
+      repetitions: 1
+      order_arms: 1
+      planned_cells: null
+      planned_model_calls: null
+    budget:
+      api_requests: null
+      total_tokens: null
+      api_cost_usd: null
+      allocated_gpu_hours: null
+      output_storage_bytes: 107374182400
+      human_hours: null
+      compute_unallocated: true
+    claim_allowed: A powered held-out formal block may support the H4 within-native effect.
+    claim_forbidden: Package persuasiveness or unequal executor resources cannot support H4.
+    evidence_artifact_ids:
+      - lifecycle-evidence-program-v2
+      - accepted-resource-corpus-v9
+    blocker_codes:
+      - objective-task-assets-not-qualified
+      - native-policy-toggle-not-preflighted
+      - primary-model-not-selected
+      - power-analysis-not-complete
+
+  - track_id: accepted-system-ecology
+    role: end_to_end_external_systems
+    state: design_only
+    scientific_question: >-
+      Is SciTaste competitive with real accepted autonomous-research systems on
+      common full-lifecycle tasks under disclosed best-native configurations?
+    primary_endpoint: Blinded expert preference over complete evidence-bearing packages.
+    comparison_design: >-
+      SciTaste Native and at least two accepted unchanged-core systems; model and
+      adapter confounding are disclosed and results are not pooled with H4.
+    model:
+      kind: unselected
+      usage_scope: Best-native identities remain per-system and require separate admission.
+    data:
+      dataset_id: mlrbench-common-lifecycle-v1
+      role: Common full-lifecycle tasks with independently reviewable final packages.
+      item_ids: []
+      population_floor: 2
+      exact_bytes_available: false
+      held_out_verified: false
+      acquisition_approved: false
+    matrix:
+      system_ids: [scitaste-native, agent-laboratory, ai-researcher, deep-scientist]
+      task_ids: []
+      seeds: []
+      repetitions: 1
+      order_arms: 1
+      planned_cells: null
+      planned_model_calls: null
+    budget:
+      api_requests: null
+      total_tokens: null
+      api_cost_usd: null
+      allocated_gpu_hours: null
+      output_storage_bytes: 107374182400
+      human_hours: null
+      compute_unallocated: true
+    claim_allowed: Supporting ecological competitiveness under fully disclosed conditions.
+    claim_forbidden: External results cannot identify Taste causality or justify pooled superiority.
+    evidence_artifact_ids:
+      - lifecycle-evidence-review-v2
+      - accepted-resource-corpus-v9
+    blocker_codes:
+      - external-adapters-not-qualified
+      - common-task-assets-not-qualified
+      - best-native-models-not-frozen
+      - blinded-reviewers-not-secured
+
+stages:
+  - stage_id: freeze-lifecycle-science
+    kind: design_decision
+    state: complete
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
+    depends_on: []
+    external_actions: []
+    owner_approval_required: false
+    blocker_codes: []
+    completion_artifact_ids: [lifecycle-evidence-program-v2, lifecycle-evidence-review-v2]
+    next_decision: Preserve v2 science while materializing natural evidence and exact resources.
+  - stage_id: admit-natural-lifecycle-episodes
+    kind: human_curation
+    state: blocked
+    track_ids: [lifecycle-decision-mechanism]
+    depends_on: [freeze-lifecycle-science]
+    external_actions: [download_data, recruit_humans]
+    owner_approval_required: true
+    blocker_codes: [source-rights-not-closed, reviewer-roster-not-bound, formal-sampling-frame-not-frozen]
+    completion_artifact_ids: []
+    next_decision: Review exact source rights, sampling frame, and independent attribution campaign.
+  - stage_id: qualify-objective-and-external-assets
+    kind: asset_acquisition
+    state: blocked
+    track_ids: [native-objective-progress, accepted-system-ecology]
+    depends_on: [freeze-lifecycle-science]
+    external_actions: [download_data]
+    owner_approval_required: true
+    blocker_codes: [objective-task-assets-not-qualified, accepted-system-adapters-not-qualified]
+    completion_artifact_ids: []
+    next_decision: Bind exact tasks, licenses, commits, environments, and adapter equivalence.
+  - stage_id: freeze-independent-review
+    kind: independent_review
+    state: blocked
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
+    depends_on: [freeze-lifecycle-science]
+    external_actions: [recruit_humans]
+    owner_approval_required: true
+    blocker_codes: [reviewer-roster-not-bound, blinding-and-adjudication-packet-not-frozen]
+    completion_artifact_ids: []
+    next_decision: Bind conflict-screened reviewers, blinding, adjudication, and endpoint rubrics.
+  - stage_id: select-primary-model
+    kind: runtime_preflight
+    state: future
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress]
+    depends_on: [admit-natural-lifecycle-episodes, qualify-objective-and-external-assets]
+    external_actions: [call_api, run_gpu]
+    owner_approval_required: true
+    blocker_codes: [task-excluded-conformance-pilot-not-approved]
+    completion_artifact_ids: []
+    next_decision: Compare exact candidate identities on task-excluded conformance only.
+  - stage_id: run-disjoint-pilots-and-power
+    kind: pilot_execution
+    state: future
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
+    depends_on: [select-primary-model, freeze-independent-review]
+    external_actions: [call_api, run_gpu, recruit_humans]
+    owner_approval_required: true
+    blocker_codes: [exact-pilot-manifest-not-approved]
+    completion_artifact_ids: []
+    next_decision: Run one complete pilot block, estimate variance, then present a formal scale-out decision.
+  - stage_id: run-formal-evidence
+    kind: formal_scale_out
+    state: future
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
+    depends_on: [run-disjoint-pilots-and-power]
+    external_actions: [call_api, run_gpu, recruit_humans]
+    owner_approval_required: true
+    blocker_codes: [formal-sample-size-not-powered, exact-scale-out-hash-not-approved]
+    completion_artifact_ids: []
+    next_decision: Execute only the powered, hash-approved population with registered stop rules.
+  - stage_id: revise-and-review-paper
+    kind: paper_revision
+    state: future
+    track_ids: [lifecycle-decision-mechanism, native-objective-progress, accepted-system-ecology]
+    depends_on: [run-formal-evidence]
+    external_actions: [recruit_humans]
+    owner_approval_required: true
+    blocker_codes: [formal-results-not-admitted, independent-paper-review-not-complete]
+    completion_artifact_ids: []
+    next_decision: Bind admitted results, calibrate title and claims, then obtain independent review.
+
+authorizes_download: false
+authorizes_api_calls: false
+authorizes_gpu_work: false
+authorizes_human_recruitment: false

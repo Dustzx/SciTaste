@@ -14,6 +14,9 @@ from scitaste.evaluation import (
 )
 
 PROGRAM = Path("configs/evaluation/programs/iclr2027_scitaste_evidence_program_v1.yaml")
+LIFECYCLE_PROGRAM = Path(
+    "configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml"
+)
 CORPUS = Path("docs/research/data/autoresearch_evaluation_resources_v9.yaml")
 
 
@@ -55,6 +58,45 @@ def test_tracked_program_is_coherent_but_does_not_authorize_external_work() -> N
     assert {item.code for item in report.authorization_blockers} == {
         "evidence_program_is_no_run_contract",
         "owner_approval_required",
+    }
+
+
+def test_lifecycle_program_is_coherent_and_keeps_execution_closed() -> None:
+    program = load_evidence_program(LIFECYCLE_PROGRAM).program
+    report = inspect_evidence_program(
+        program,
+        load_external_resource_corpus(CORPUS).corpus,
+    )
+
+    assert program.schema_version == "1.1"
+    assert report.scientifically_coherent is True
+    assert report.scientific_blockers == ()
+    assert report.ready_for_experiment is False
+    assert report.execution_authorized is False
+
+
+def test_lifecycle_credit_requires_static_and_shuffled_controls(tmp_path: Path) -> None:
+    program = load_evidence_program(LIFECYCLE_PROGRAM).program
+    studies = list(program.study_layers)
+    index = next(
+        index
+        for index, study in enumerate(studies)
+        if study.hypothesis is EvidenceHypothesis.LIFECYCLE_CREDIT
+    )
+    studies[index] = studies[index].model_copy(
+        update={"condition_ids": ("outcome-updated-policy",)}
+    )
+    invalid = program.model_copy(update={"study_layers": tuple(studies)})
+
+    loaded = load_evidence_program(_write_program(tmp_path, invalid))
+    report = inspect_evidence_program(
+        loaded.program,
+        load_external_resource_corpus(CORPUS).corpus,
+    )
+
+    assert report.scientifically_coherent is False
+    assert "missing_required_contrast" in {
+        item.code for item in report.scientific_blockers
     }
 
 

@@ -70,6 +70,50 @@ def test_effective_core_order_controls_the_primary_generation_as_content_phase()
     assert projected.no_external_action_performed is True
 
 
+def test_lifecycle_program_uses_the_same_seven_user_facing_phases() -> None:
+    repository = Path(__file__).resolve().parents[2]
+    dossier = load_experiment_decision_dossier(
+        repository
+        / "configs/evaluation/campaigns/iclr2027_self_development_lifecycle_v2.yaml"
+    ).dossier
+    report = inspect_experiment_decision_dossier(dossier, evidence_root=repository)
+    effective = compile_effective_experiment_program(
+        report,
+        project_id="scitaste-self-development",
+    )
+
+    projected = project_iclr_evidence_program(
+        report,
+        effective_program=effective,
+        run=ProjectRun(
+            run_id="lifecycle-program-run",
+            provider="scitaste-native",
+            model="deterministic",
+            condition="test",
+            seed=0,
+            status="complete",
+            evidence_scope="test-only",
+        ),
+        project_ref_id="project-record",
+        run_ref_id="program-run-record",
+        artifact_ref_id="program-artifact",
+    )
+
+    assert projected.current_stage_id == "admit-natural-lifecycle-episodes"
+    assert projected.current_phase_id == "taste-instrument"
+    assert tuple(item.phase_id for item in projected.phases) == (
+        "research-basis",
+        "taste-instrument",
+        "method-readiness",
+        "independent-review",
+        "prepilot-evidence",
+        "formal-evidence",
+        "paper-review-loop",
+    )
+    assert projected.exact_cell_count == 0
+    assert projected.no_external_action_performed is True
+
+
 def test_published_gray_zone_advice_is_visible_in_the_core_route() -> None:
     repository = Path(__file__).resolve().parents[2]
     dossier = load_experiment_decision_dossier(

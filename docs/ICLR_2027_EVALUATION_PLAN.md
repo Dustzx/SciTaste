@@ -5,11 +5,16 @@ or formal-cell execution is authorized by this document**.
 
 The resource-independent title strategy is now
 [`ICLR_2027_EXPERIMENT_STRATEGY_V1.md`](ICLR_2027_EXPERIMENT_STRATEGY_V1.md).
-It adds content-grounded versus prestige-only source qualification, raw-source
-RAG versus abstracted Taste, and decision-grounded versus lexical same-pool
-selection as title-critical contrasts, and requires model selection before
-outcomes. The earlier Qwen v11 and DeepSeek V4.1 proposals
-below remain feasibility/history artifacts rather than the final formal design.
+The current machine-readable scientific authority is the lifecycle-policy
+[`evidence program v2`](../configs/evaluation/programs/iclr2027_scitaste_lifecycle_evidence_program_v2.yaml),
+with a concise rationale in
+[`SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md`](research/SCITASTE_LIFECYCLE_EVIDENCE_PROGRAM_V2.md).
+It preserves same-source abstraction and contextual-selection controls while
+adding outcome-updated versus no-update and shuffled-credit interventions. This
+closes the design gap between static Taste retrieval and the paper's learned
+lifecycle policy. The earlier evidence-program v1, Qwen v11, and DeepSeek V4.1
+proposals remain immutable feasibility/history artifacts rather than the final
+formal design.
 
 The broad source pool is now governed by the no-action contract in
 [`SCIENTIFIC_REFERENCE_MINING.md`](SCIENTIFIC_REFERENCE_MINING.md). It starts
@@ -29,7 +34,7 @@ domain. The current v7 receipt binds all control, derived, request, and response
 files; earlier selector failures and the integrity-only v6 supersession remain
 in project history. This advances construction readiness only. The selected
 source bodies, prestige-blind quality judgments, independent reviews, and
-H0--H3 effects are still absent, so the experiment contract remains unauthorized.
+H1--H4 effects are still absent, so the experiment contract remains unauthorized.
 
 Target venue: [ICLR 2027](https://iclr.cc/Conferences/2027/CallForPapers).
 The genuine abstract is due September 18, 2026 at 23:59 AoE and the full paper
@@ -116,7 +121,7 @@ comparison inventory rather than a frozen census.
 |---|---|---|---|
 | A. Decision benchmark | Do content-qualified references and Taste improve local scientific decisions? | prestige-only references, quality-qualified references, raw RAG, matched/mismatched Taste, direct LM, experts | source-quality, abstraction, selection, and scalable mechanism evidence |
 | B. External end-to-end systems | How does independent SciTaste Native compare with real accepted systems? | direct agent where applicable, accepted qualified systems, and SciTaste Native; preprint systems only in sensitivity analysis | ecological external validity under best-native models; external superiority only under a separately admissible matched design |
-| C. SciTaste native causal intervention | Does the complete Taste bundle and matched Taste context change executable research outcomes, and what mechanisms do component-only arms suggest? | Native Base, Knowledge-only, Taste-only, critics-only, Full SciTaste, plus a mismatched-Taste placebo | title-supporting bundle/context attribution plus separately labelled mechanism diagnostics on held-out tasks |
+| C. SciTaste native causal intervention | Does reviewed delayed credit teach a lifecycle policy, and does that policy change executable research outcomes? | outcome-updated, no-update, shuffled-credit, diagnostic success/failure-only updates; then learned-policy on/off in the same Native executor | title-supporting lifecycle-learning and objective-progress evidence on held-out tasks |
 | D. Product-supporting studies | Do Tool Intelligence and Generation as Content improve grounded use? | paired task-resolution and counterbalanced human/browser studies | secondary system evidence; never pooled into scientific effectiveness |
 
 Benchmark papers and method papers are never rows in the same role. Track B

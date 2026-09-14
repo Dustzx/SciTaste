@@ -29,7 +29,7 @@ ICLR_EVIDENCE_PROGRAM_PROJECTION = "iclr-evidence-program-v1"
 ICLR_EVIDENCE_PROGRAM_STAGE_PATH = "iclr_evidence_program"
 _MAX_REPORT_BYTES = 2 * 1024 * 1024
 
-_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+_LEGACY_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "research-basis",
         "research-basis",
@@ -80,6 +80,26 @@ _PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ),
     ),
 )
+
+_LIFECYCLE_PHASES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("research-basis", "research-basis", ("freeze-lifecycle-science",)),
+    ("taste-instrument", "taste-instrument", ("admit-natural-lifecycle-episodes",)),
+    (
+        "method-readiness",
+        "method-readiness",
+        ("qualify-objective-and-external-assets",),
+    ),
+    ("independent-review", "independent-review", ("freeze-independent-review",)),
+    (
+        "prepilot-evidence",
+        "prepilot-evidence",
+        ("select-primary-model", "run-disjoint-pilots-and-power"),
+    ),
+    ("formal-evidence", "formal-evidence", ("run-formal-evidence",)),
+    ("paper-review-loop", "paper-review-loop", ("revise-and-review-paper",)),
+)
+
+_PHASE_VOCABULARIES = (_LEGACY_PHASES, _LIFECYCLE_PHASES)
 
 
 def find_iclr_evidence_program_run(snapshot: ProjectSnapshot) -> ProjectRun | None:
@@ -134,8 +154,16 @@ def project_iclr_evidence_program(
     """Collapse the full campaign DAG into seven truthful, progressive-disclosure phases."""
 
     stages = {item.stage_id: item for item in report.stages}
-    expected_stage_ids = {stage_id for _, _, phase in _PHASES for stage_id in phase}
-    if set(stages) != expected_stage_ids:
+    phases = next(
+        (
+            vocabulary
+            for vocabulary in _PHASE_VOCABULARIES
+            if set(stages)
+            == {stage_id for _, _, phase in vocabulary for stage_id in phase}
+        ),
+        None,
+    )
+    if phases is None:
         raise ProjectSurfaceChangedError(
             "registered ICLR evidence program does not match the canonical phase vocabulary"
         )
@@ -156,7 +184,7 @@ def project_iclr_evidence_program(
     support_ref_ids = list(dict.fromkeys(support_ref_ids))
 
     phase_rows: list[dict[str, object]] = []
-    for phase_id, label_code, stage_ids in _PHASES:
+    for phase_id, label_code, stage_ids in phases:
         rows = [stages[stage_id] for stage_id in stage_ids]
         decision_ids = tuple(
             stage_id for stage_id in effective_next_stage_ids if stage_id in stage_ids

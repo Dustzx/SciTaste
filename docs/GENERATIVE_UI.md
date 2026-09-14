@@ -460,8 +460,13 @@ normal `ProjectRuntime` workflow before they can appear in this view.
 ### Unified intent and surface-plan contracts
 
 The self-development project can additionally register one run-owned
-`iclr-evidence-program-v1` report. The default project home puts its compact
-seven-phase evidence route before the large run synopsis: research basis,
+`iclr-evidence-program-v1` projection report. The projection identifier is a
+stable receiver contract rather than the scientific-program revision: it now
+accepts either the exact historical stage vocabulary or the exact lifecycle-v2
+vocabulary and rejects any mixture or unknown stage. The current lifecycle
+dossier is
+[`iclr2027_self_development_lifecycle_v2.yaml`](../configs/evaluation/campaigns/iclr2027_self_development_lifecycle_v2.yaml).
+The default project home puts its compact seven-phase evidence route before the large run synopsis: research basis,
 Scientific Taste instrument, task/method readiness, independent review design,
 bounded prepilots, formal evidence, and the paper/reviewer loop. The current
 gate, parallel next gates, exact blocker counts, owner-decision status, external
