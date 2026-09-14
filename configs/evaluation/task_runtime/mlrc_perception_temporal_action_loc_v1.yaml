@@ -30,6 +30,8 @@ editable_globs:
   - libs/utils/train_utils.py
   - methods/*.py
   - train.py
+dataset_directories:
+  - data
 writable_output_directories:
   - ckpt
   - output

@@ -8,7 +8,22 @@ from pathlib import Path
 
 import pytest
 
+from scitaste.backends.base import Usage
 from scitaste.evaluation.prelaunch import ReadinessStatus
+from scitaste.evaluation.task_patch import (
+    BenchmarkPatchEdit,
+    BenchmarkPatchPolicy,
+    BenchmarkPatchProducer,
+    BenchmarkPatchProposal,
+    apply_benchmark_patch,
+    inspect_benchmark_patch,
+    snapshot_benchmark_editable_files,
+)
+from scitaste.evaluation.task_patch_generation import (
+    BenchmarkPatchGenerationInput,
+    BenchmarkPatchGenerationNode,
+    materialize_benchmark_patch_proposal,
+)
 from scitaste.evaluation.task_runtime import (
     BenchmarkTaskRuntimeSpec,
     RuntimeEvidenceBinding,
@@ -16,6 +31,14 @@ from scitaste.evaluation.task_runtime import (
     inspect_benchmark_task_runtime,
     prepare_benchmark_workspace,
 )
+from scitaste.model_nodes import (
+    NodeContext,
+    NodePolicy,
+    NodeResultStatus,
+    ScriptedStructuredBackend,
+    ScriptedStructuredReply,
+)
+from scitaste.model_nodes.registry import first_party_node_types
 
 
 def _sha256(path: Path) -> str:
@@ -93,6 +116,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, BenchmarkTaskRuntimeSpec]:
             "task/environment.yml",
         ),
         editable_globs=("methods/MyMethod.py",),
+        dataset_directories=("data",),
         writable_output_directories=("outputs",),
         development_command=("python", "main.py", "-p", "dev"),
         heldout_command=("python", "main.py", "-p", "test"),
@@ -173,3 +197,271 @@ def test_task_runtime_refuses_source_drift_and_size_excess(tmp_path: Path) -> No
     assert "source-checkout-dirty" in inspection.blocker_codes
     assert "visible-tree-drift" in inspection.blocker_codes
     assert "visible-tree-byte-limit-exceeded" in inspection.blocker_codes
+
+
+def test_benchmark_patch_replaces_exact_context_without_running_task(tmp_path: Path) -> None:
+    root, spec = _fixture(tmp_path)
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+    context = snapshot_benchmark_editable_files(
+        spec,
+        prepared,
+        workspace,
+        selected_paths=("methods/MyMethod.py",),
+    )
+    replacement = "VALUE = 2\n"
+    edit = BenchmarkPatchEdit(
+        path=context.files[0].path,
+        expected_sha256=context.files[0].sha256,
+        replacement=replacement,
+        replacement_sha256=hashlib.sha256(replacement.encode()).hexdigest(),
+    )
+    policy = BenchmarkPatchPolicy()
+    proposal = BenchmarkPatchProposal(
+        proposal_id="fixture-patch-1",
+        spec_id=spec.spec_id,
+        spec_fingerprint=spec.fingerprint,
+        policy_fingerprint=policy.fingerprint,
+        context_sha256=context.context_sha256,
+        iteration=1,
+        base_editable_surface_sha256=context.editable_surface_sha256,
+        hypothesis="Changing the registered method value should alter the controlled fixture.",
+        expected_effect="The development fixture should observe value two.",
+        edits=(edit,),
+        producer=BenchmarkPatchProducer(mode="registered", producer_id="fixture"),
+    )
+
+    admission = inspect_benchmark_patch(
+        proposal,
+        context,
+        spec,
+        prepared,
+        policy,
+        workspace=workspace,
+    )
+    assert admission.decision == "accepted"
+    with pytest.raises(ValueError, match="explicit authorization"):
+        apply_benchmark_patch(
+            proposal,
+            admission,
+            spec,
+            policy,
+            workspace=workspace,
+            receipt_path=root / "cells" / "patch-1.json",
+        )
+
+    receipt = apply_benchmark_patch(
+        proposal,
+        admission,
+        spec,
+        policy,
+        workspace=workspace,
+        receipt_path=root / "cells" / "patch-1.json",
+        allow_mutation=True,
+    )
+
+    assert (workspace / "methods" / "MyMethod.py").read_text() == replacement
+    assert receipt.model_invocation_performed_by_application is False
+    assert receipt.benchmark_execution_performed is False
+    assert receipt.edits[0].before_sha256 == context.files[0].sha256
+    assert json.loads((root / "cells" / "patch-1.json").read_text())["receipt_sha256"] == (
+        receipt.receipt_sha256
+    )
+
+
+def test_benchmark_patch_rejects_invalid_or_stale_source(tmp_path: Path) -> None:
+    root, spec = _fixture(tmp_path)
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+    context = snapshot_benchmark_editable_files(
+        spec,
+        prepared,
+        workspace,
+        selected_paths=("methods/MyMethod.py",),
+    )
+    replacement = "not valid python !\n"
+    policy = BenchmarkPatchPolicy()
+    proposal = BenchmarkPatchProposal(
+        proposal_id="fixture-patch-invalid",
+        spec_id=spec.spec_id,
+        spec_fingerprint=spec.fingerprint,
+        policy_fingerprint=policy.fingerprint,
+        context_sha256=context.context_sha256,
+        iteration=1,
+        base_editable_surface_sha256=context.editable_surface_sha256,
+        hypothesis="Exercise deterministic rejection.",
+        expected_effect="No mutation should occur.",
+        edits=(
+            BenchmarkPatchEdit(
+                path=context.files[0].path,
+                expected_sha256=context.files[0].sha256,
+                replacement=replacement,
+                replacement_sha256=hashlib.sha256(replacement.encode()).hexdigest(),
+            ),
+        ),
+        producer=BenchmarkPatchProducer(mode="registered", producer_id="fixture"),
+    )
+
+    admission = inspect_benchmark_patch(
+        proposal,
+        context,
+        spec,
+        prepared,
+        policy,
+        workspace=workspace,
+    )
+
+    assert admission.decision == "rejected"
+    assert [item.code for item in admission.violations] == ["replacement-syntax"]
+    with pytest.raises(ValueError, match="rejected benchmark patch"):
+        apply_benchmark_patch(
+            proposal,
+            admission,
+            spec,
+            policy,
+            workspace=workspace,
+            receipt_path=root / "cells" / "patch-invalid.json",
+            allow_mutation=True,
+        )
+    assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 1\n"
+    protected = workspace / "main.py"
+    protected.chmod(protected.stat().st_mode | stat.S_IWUSR)
+    protected.write_text("print('tampered')\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="protected benchmark source changed"):
+        snapshot_benchmark_editable_files(
+            spec,
+            prepared,
+            workspace,
+            selected_paths=("methods/MyMethod.py",),
+        )
+
+
+def test_benchmark_patch_model_node_can_propose_or_stop_without_authority(tmp_path: Path) -> None:
+    root, spec = _fixture(tmp_path)
+    inspection = inspect_benchmark_task_runtime(
+        spec,
+        workspace_root=root,
+        spec_sha256="d" * 64,
+    )
+    prepared = prepare_benchmark_workspace(
+        spec,
+        inspection,
+        workspace_root=root,
+        destination=root / "cells" / "cell-1",
+        allow_materialization=True,
+    )
+    workspace = root / "cells" / "cell-1"
+    context = snapshot_benchmark_editable_files(
+        spec,
+        prepared,
+        workspace,
+        selected_paths=("methods/MyMethod.py",),
+    )
+    policy = BenchmarkPatchPolicy()
+    input_data = BenchmarkPatchGenerationInput(
+        task_id=spec.task_id,
+        research_problem="Improve the development score without using held-out data.",
+        primary_metric=spec.primary_metric,
+        metric_direction=spec.metric_direction,
+        baseline_development_score=spec.baseline_development_score,
+        current_development_score=0.1,
+        best_development_score=0.1,
+        iteration=1,
+        remaining_experiment_runs=2,
+        patch_context=context,
+        patch_policy=policy,
+        taste_guidance=("Prefer a falsifiable structural change over parameter churn.",),
+        constraints=("Only replace source included in the exact context.",),
+    )
+    output = {
+        "schema_version": "1.0",
+        "decision": "propose",
+        "hypothesis": "A different controlled value should improve the fixture score.",
+        "expected_effect": "Development score should increase above 0.1.",
+        "edits": [{"path": "methods/MyMethod.py", "replacement": "VALUE = 2\n"}],
+        "stop_reason": None,
+    }
+    backend = ScriptedStructuredBackend(
+        name="scripted",
+        model="scripted-v1",
+        replies={
+            "patch-node-1": ScriptedStructuredReply(
+                output_payload=output,
+                usage=Usage(input_tokens=10, output_tokens=10, cost_usd=0.0),
+            )
+        },
+    )
+    node_policy = NodePolicy(
+        policy_id="fixture-patch-node",
+        enabled=True,
+        allowed_node_names=["benchmark-research-patch"],
+        expected_backend="scripted",
+        expected_model="scripted-v1",
+        max_request_bytes=100_000,
+        max_input_tokens=100,
+        max_output_tokens=100,
+        max_total_tokens=200,
+        max_api_cost_usd=0.1,
+        max_latency_ms=1_000,
+    )
+    result = BenchmarkPatchGenerationNode().run(
+        input_data,
+        context=NodeContext(
+            project_id=spec.project_id,
+            stage="EXPERIMENTATION",
+            state_snapshot_id=context.context_sha256,
+            cumulative_api_cost_usd=0,
+        ),
+        backend=backend,
+        policy=node_policy,
+        request_id="patch-node-1",
+    )
+
+    assert result.status is NodeResultStatus.ACCEPTED
+    assert result.proposal is not None
+    proposal = materialize_benchmark_patch_proposal(
+        result.proposal,
+        input_data,
+        proposal_id="fixture-model-patch-1",
+        producer=BenchmarkPatchProducer(
+            mode="model",
+            producer_id="fixture-node",
+            provider="scripted",
+            model="scripted-v1",
+            request_sha256=result.request.fingerprint,
+            response_sha256=result.response.raw_response_sha256,
+        ),
+    )
+    admission = inspect_benchmark_patch(
+        proposal,
+        context,
+        spec,
+        prepared,
+        policy,
+        workspace=workspace,
+    )
+    assert admission.decision == "accepted"
+    assert "benchmark-research-patch" in first_party_node_types()
+    assert (workspace / "methods" / "MyMethod.py").read_text() == "VALUE = 1\n"

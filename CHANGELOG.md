@@ -5,6 +5,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+- Added the first-party `benchmark-research-patch` node and controller-owned
+  multi-file replacement transaction. A research turn can condition separately
+  on Knowledge, Taste, critic, and development feedback, propose edits only for
+  exact visible source, or stop when another experiment is unjustified.
+  Deterministic admission binds predecessor bytes and rejects stale, invalid,
+  out-of-surface, no-op, or oversized changes; accepted edits are applied with
+  rollback and a self-hashed receipt, without granting experiment execution.
 - Added content-bound runtime contracts for real multi-file benchmark tasks.
   The first Perception and Meta-learning MLRC-Bench specifications pin the
   upstream commit, model-visible code tree, editable surface, development and

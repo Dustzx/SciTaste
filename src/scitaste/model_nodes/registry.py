@@ -9,10 +9,16 @@ def first_party_node_types() -> dict[str, ModelNodeRegistration]:
     """Load all extension registries lazily so runtime verification cannot drift."""
 
     from scitaste.discovery.semantic import discovery_node_types
+    from scitaste.evaluation.task_patch_generation import benchmark_patch_node_types
     from scitaste.taste.semantic import taste_node_types
     from scitaste.writing.semantic import writing_node_types
 
-    registries = (discovery_node_types(), taste_node_types(), writing_node_types())
+    registries = (
+        discovery_node_types(),
+        taste_node_types(),
+        benchmark_patch_node_types(),
+        writing_node_types(),
+    )
     combined: dict[str, ModelNodeRegistration] = {}
     for registry in registries:
         overlap = set(combined) & set(registry)

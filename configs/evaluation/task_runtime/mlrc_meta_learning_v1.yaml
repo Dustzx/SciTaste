@@ -23,6 +23,8 @@ environment_manifest:
 editable_globs:
   - methods/MyMethod/*.json
   - methods/MyMethod/*.py
+dataset_directories:
+  - data
 writable_output_directories:
   - ingestion_output
   - output

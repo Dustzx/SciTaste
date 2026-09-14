@@ -79,6 +79,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
     read_only_manifest: RuntimeEvidenceBinding
     environment_manifest: RuntimeEvidenceBinding
     editable_globs: tuple[str, ...] = Field(min_length=1, max_length=50)
+    dataset_directories: tuple[str, ...] = Field(min_length=1, max_length=20)
     writable_output_directories: tuple[str, ...] = Field(min_length=1, max_length=20)
     development_command: tuple[str, ...] = Field(min_length=1, max_length=50)
     heldout_command: tuple[str, ...] = Field(min_length=1, max_length=50)
@@ -118,6 +119,7 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
 
     @field_validator(
         "editable_globs",
+        "dataset_directories",
         "writable_output_directories",
         "heldout_materialization_paths",
     )
@@ -142,6 +144,8 @@ class BenchmarkTaskRuntimeSpec(BaseModel):
             raise ValueError("development and held-out commands must be distinct")
         if set(self.editable_globs) & set(self.heldout_materialization_paths):
             raise ValueError("held-out paths cannot be editable")
+        if set(self.dataset_directories) & set(self.writable_output_directories):
+            raise ValueError("dataset and writable output directories must be distinct")
         return self
 
     @computed_field
@@ -180,6 +184,7 @@ class PreparedBenchmarkWorkspace(BaseModel):
     spec_fingerprint: str = Field(pattern=_SHA256)
     workspace_locator: str
     workspace_tree_sha256: str = Field(pattern=_SHA256)
+    protected_surface_sha256: str = Field(pattern=_SHA256)
     visible_file_count: int = Field(ge=1)
     visible_total_bytes: int = Field(ge=1)
     editable_files: tuple[str, ...] = Field(min_length=1)
@@ -392,12 +397,14 @@ def prepare_benchmark_workspace(
                 raise ValueError("benchmark writable output collides with a file")
             output.mkdir(parents=True, exist_ok=True)
         observed_sha256, observed_files, observed_bytes = hash_benchmark_tree(prepared)
+        protected_sha256 = hash_protected_surface(spec, prepared)
         os.replace(prepared, target)
         receipt = PreparedBenchmarkWorkspace.create(
             spec_id=spec.spec_id,
             spec_fingerprint=spec.fingerprint,
             workspace_locator=target.name,
             workspace_tree_sha256=observed_sha256,
+            protected_surface_sha256=protected_sha256,
             visible_file_count=len(observed_files),
             visible_total_bytes=observed_bytes,
             editable_files=tuple(sorted(editable)),
@@ -458,6 +465,43 @@ def hash_benchmark_tree(root: str | Path) -> tuple[str, tuple[Path, ...], int]:
     return digest.hexdigest(), tuple(files), total
 
 
+def hash_protected_surface(spec: BenchmarkTaskRuntimeSpec, root: str | Path) -> str:
+    """Hash immutable task source while excluding datasets, outputs, and editable files."""
+
+    directory = Path(root).resolve(strict=True)
+    if not directory.is_dir():
+        raise ValueError("benchmark workspace root must be a directory")
+    excluded_roots = (*spec.dataset_directories, *spec.writable_output_directories)
+    protected: list[tuple[str, Path]] = []
+    for path in directory.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("benchmark workspace cannot contain symbolic links")
+        if path.is_dir():
+            continue
+        if not path.is_file():
+            raise ValueError("benchmark workspace contains a non-regular entry")
+        relative = path.relative_to(directory).as_posix()
+        if any(_is_at_or_under(relative, locator) for locator in excluded_roots):
+            continue
+        if any(fnmatch.fnmatchcase(relative, pattern) for pattern in spec.editable_globs):
+            continue
+        protected.append((relative, path))
+    protected.sort(key=lambda item: item[0])
+    if not protected:
+        raise ValueError("benchmark protected source surface is empty")
+    digest = hashlib.sha256(b"SCITASTE_BENCHMARK_PROTECTED_SURFACE_V1\0")
+    for relative, path in protected:
+        raw = path.read_bytes()
+        encoded = relative.encode("utf-8")
+        mode = stat.S_IMODE(path.stat().st_mode)
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+        digest.update(mode.to_bytes(4, "big"))
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+    return digest.hexdigest()
+
+
 def _verify_binding(
     root: Path | None,
     binding: RuntimeEvidenceBinding,
@@ -516,6 +560,10 @@ def _relative_locator(value: str, *, label: str) -> str:
     return value
 
 
+def _is_at_or_under(path: str, root: str) -> bool:
+    return path == root or path.startswith(f"{root}/")
+
+
 def _git(root: Path, *arguments: str) -> str:
     process = subprocess.run(
         ["git", *arguments],
@@ -560,6 +608,7 @@ __all__ = [
     "PreparedBenchmarkWorkspace",
     "RuntimeEvidenceBinding",
     "hash_benchmark_tree",
+    "hash_protected_surface",
     "inspect_benchmark_task_runtime",
     "load_benchmark_task_runtime_spec",
     "prepare_benchmark_workspace",

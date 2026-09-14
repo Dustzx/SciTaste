@@ -52,6 +52,8 @@ Status values: `done`, `in progress`, `next`, `planned`, `deferred`.
 | Phase 9.16 — runtime-recovering native experiment loop | done | a statically admitted generated experiment that fails inside isolation produces bounded diagnostic evidence, receives at most one configured source-only repair, repeats identical admission and isolation, and resumes Evidence-to-Paper stages while preserving both attempts; exact successful experiments are reused on recovery and no standalone post-execution preflight is run |
 | Phase 9.17 — authorized evaluation campaign execution | done | the formal `EvaluationCellPlan` now has a project-owned, shell-free, budget-enforcing runner that refuses blocked proposals, executes exact approved cells, checkpoints every real attempt, preserves failures, resumes successes without recomputation, and hands a raw `EvaluationResultSet` to preregistered analysis or blind review |
 | Phase 9.18 — content-bound benchmark task workspaces | done | two real MLRC-Bench tasks now bind an exact upstream commit, model-visible source tree, editable surface, development/held-out commands, objective metric, baselines, acquired archive evidence, and current readiness; source-only workspaces can be explicitly materialized without exposing held-out bytes or pretending that data, environments, scorers, models, or experiments are ready |
+| Phase 9.19 — model-authored multi-file benchmark patches | done | a first-party model node can use condition-specific Knowledge, Taste, critic, and development feedback to propose bounded replacements for exact visible source or stop spending experiments; the controller binds predecessor bytes, rejects stale/out-of-surface/invalid edits, applies accepted replacements atomically, and retains a self-hashed transition without granting experiment authority |
+| Phase 9.20 — isolated development feedback loop | next | materialize licensed development assets and a pinned task-local environment, execute the frozen development command under cell budgets, parse the objective score without the benchmark's secondary LLM judge, and feed the result into the next bounded patch decision |
 
 Phase 8.1 now has its first core-source transaction processed under the standing
 download and local-read policies. The receipt binds sixteen
@@ -837,6 +839,20 @@ citation/resource screen and exact adapters/licenses remain open.
   environment, and an objective scorer. Meta-learning additionally remains
   blocked by the already observed AWA per-image license gap. No archive was
   extracted and no environment, model, benchmark, API, or GPU job was run.
+- A registered `benchmark-research-patch` model node now represents the semantic
+  action inside each real-task iteration. Its input keeps Knowledge, Taste,
+  critic, and prior-development feedback in separate condition-visible fields,
+  binds caller-selected editable source bytes and the remaining experiment
+  budget, and permits an evidence-based stop decision. A model can propose only
+  complete replacement text for source present in that context. The controller
+  derives predecessor/replacement hashes, checks the current editable-surface
+  identity, file and byte ceilings, allowed suffixes, and Python/JSON/YAML
+  syntax, then applies an accepted multi-file transition atomically under a
+  separate opt-in. Model generation stays in its own durable ledger; the
+  application receipt records source change and confirms that the application
+  step itself invoked no model and ran no benchmark. The next missing edge is
+  isolated development execution and objective feedback, not another UI or
+  planning layer.
 - The measured result is now projected from canonical state and the original
   native execution/metrics records into Communication claim/evidence contracts.
   The audit draft retains trace markers, while the project paper is built from a

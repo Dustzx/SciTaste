@@ -3648,7 +3648,8 @@ the research agent could see or edit. Reusing an external benchmark agent would
 also import its file and process authority into SciTaste. A formal task runtime
 specification now binds the exact upstream repository commit, clean checkout,
 task and visible roots, visible-tree digest, research brief, read-only and
-environment manifests, editable globs, writable output directories, separate
+environment manifests, editable globs, controller-owned dataset directories,
+writable output directories, separate
 development and held-out commands, hidden-test materialization paths, objective
 metric, baseline scores, and acquired archive/license evidence.
 
@@ -3658,7 +3659,9 @@ and the independent readiness state of source, archives, licenses, ingestion,
 environment, and scorer. Source-only materialization requires a separate explicit
 flag, copies only the model-visible tree into a new cell-owned directory, marks
 every non-editable file read-only, creates only declared output directories, and
-publishes a portable self-hashed receipt. It does not extract datasets, install
+publishes a portable self-hashed receipt. The receipt separately binds the
+protected source surface so later dataset/output writes and admitted source edits
+cannot mask changes to evaluation code. It does not extract datasets, install
 the benchmark's pinned external Python environment, call a model, or execute a
 development or held-out command.
 
@@ -3668,3 +3671,35 @@ benchmark's Python 3.10/3.11 environment versions are task-local external
 runtimes and do not widen SciTaste's Python 3.12 support target. Held-out bytes
 must remain absent while ideas and patches are selected, and may be introduced
 only by a later scorer-owned transition after the candidate is frozen.
+
+### ADR-119: Research models propose bounded source transitions or stop
+
+Status: accepted for proposal and mutation; development execution remains
+pending.
+
+A real autonomous-research loop needs model judgment inside the cell, but giving
+the model a shell, patch command, or unrestricted repository would merge
+scientific choice with execution authority. The `benchmark-research-patch` node
+therefore receives only an exact caller-selected snapshot of editable UTF-8
+files, objective metric and development scores, remaining experiment count,
+hard constraints, and four separate evidence channels: experiment feedback,
+Knowledge guidance, Taste guidance, and critic guidance. That separation lets
+the registered native conditions vary the intended mechanism without changing
+the executor.
+
+The node may either propose complete replacement text for files already present
+in its snapshot or stop because another development experiment is not justified.
+It cannot name commands, dependencies, held-out material, resource policy, or
+execution. A controller-owned proposal binds the model ledger identities,
+context, policy, task, predecessor surface, and iteration. Deterministic
+admission then rejects stale predecessors, paths outside the exact editable
+surface, no-op or oversized replacements, forbidden file types, and invalid
+Python/JSON/YAML syntax.
+
+Applying an accepted proposal is a separately authorized, rollback-capable
+multi-file transaction. All replacements are staged before the first source
+transition; any failure restores preceding bytes. The resulting portable,
+self-hashed receipt binds before/after editable surfaces and explicitly states
+that no model or benchmark was executed by the mutation step. Development
+execution, score parsing, best-candidate selection, and held-out scoring remain
+separate later authorities.
